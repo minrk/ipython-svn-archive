@@ -57,6 +57,7 @@ import inspect, pydoc
 import bdb, pdb
 import UserList # don't subclass list so this works with Python2.1
 from pprint import pprint, pformat
+import cPickle as pickle
 
 # Homebrewed modules
 import OInspect,PyColorize
@@ -518,6 +519,24 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.init_auto_alias()
     # end __init__
 
+    def post_config_initialization(self):
+        """Post configuration init method
+
+        This is called after the configuration files have been processed to
+        'finalize' the initialization."""
+        
+        # dynamic data that survives through sessions
+        # XXX make the filename a config option?
+        persist_base = 'persist'
+        if self.rc.profile:
+            persist_base += '_%s' % self.rc.profile
+        self.persist_fname =  os.path.join(self.rc.ipythondir,persist_base)
+
+        try:
+            self.persist = pickle.load(file(self.persist_fname))
+        except:
+            self.persist = {}
+            
     def init_auto_alias(self):
         """Define some aliases automatically.
 
@@ -690,6 +709,24 @@ want to merge them back into the new files.""" % locals()
         os.chdir(cwd)
         # end user_setup()
 
+    def atexit_operations(self):
+        """This will be executed at the time of exit.
+
+        Saving of persistent data should be performed here. """
+
+        # input history
+        self.savehist()
+
+        # Cleanup all tempfiles left around
+        for tfile in self.tempfiles:
+            try:
+                os.unlink(tfile)
+            except OSError:
+                pass
+
+        # save the "persistent data" catch-all dictionary
+        pickle.dump(self.persist, open(self.persist_fname,"w"))
+        
     def savehist(self):
         """Save input history to a file (via readline library)."""
         try:
@@ -738,7 +775,7 @@ want to merge them back into the new files.""" % locals()
             except IOError:
                 pass  # It doesn't exist yet.
 
-            atexit.register(self.savehist)
+            atexit.register(self.atexit_operations)
             del atexit
 
         except ImportError,msg:
@@ -826,7 +863,6 @@ want to merge them back into the new files.""" % locals()
         if self.rc.c:  # Emulate Python's -c option
             self.exec_init_cmd()
         self.interact(self.BANNER)
-        self.exit_cleanup()
 
     def exec_init_cmd(self):
         """Execute a command given at the command line.
@@ -835,14 +871,6 @@ want to merge them back into the new files.""" % locals()
 
         sys.argv = ['-c']
         self.push(self.rc.c)
-
-    def exit_cleanup(self):
-        """Cleanup actions to execute at exit time."""
-        for tfile in self.tempfiles:
-            try:
-                os.unlink(tfile)
-            except OSError:
-                pass
 
     def embed_mainloop(self,header='',local_ns=None,global_ns=None,stack_depth=0):
         """Embeds IPython into a running python program.
