@@ -52,7 +52,7 @@ from IPython.genutils import *
 
 #-----------------------------------------------------------------------------
 def make_IPython(argv=None,user_ns=None,debug=0,rc_override=None,
-                 shell_class=InteractiveShell,**kw):
+                 shell_class=InteractiveShell,embedded=False,**kw):
     """This is a dump of IPython into a single function.
 
     Later it will have to be broken up in a sensible manner.
@@ -563,7 +563,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
 
     for mod_fn in IP.rc.import_some:
         if mod_fn == []: break
-        mod,fn = mod_fn[0],' '.join(mod_fn[1:])
+        mod,fn = mod_fn[0],','.join(mod_fn[1:])
         try:
             exec 'from '+mod+' import '+fn in IP.user_ns
         except :
@@ -635,7 +635,16 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     # Load remaining files in command line
     msg.user_exec.trap_all()
 
-    if IP.rc.args:
+    # Do NOT execute files named in the command line as scripts to be loaded
+    # by embedded instances.  Doing so has the potential for an infinite
+    # recursion if there are exceptions thrown in the process.
+
+    # XXX FIXME: the execution of user files should be moved out to after
+    # ipython is fully initialized, just as if they were run via %run at the
+    # ipython prompt.  This would also give them the benefit of ipython's
+    # nice tracebacks.
+    
+    if not embedded and IP.rc.args:
         name_save = IP.user_ns['__name__']
         IP.user_ns['__name__'] = '__main__'
         try:
