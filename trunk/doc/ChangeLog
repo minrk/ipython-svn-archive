@@ -1,3 +1,11 @@
+2004-04-01  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.handle_shell_escape): added
+	'!!' as a special syntax (shorthand) to access @sx.
+
+	* IPython/Magic.py (Magic.magic_sx): new magic, to execute a shell
+	command and return its output as a list split on '\n'.
+
 2004-03-31  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/FakeModule.py (FakeModule.__init__): added __nonzero__
