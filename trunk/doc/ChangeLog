@@ -1,3 +1,54 @@
+2004-06-26  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Logger.py (Logger.log): fix to handle correctly empty
+	continue prompts.
+
+	* IPython/Extensions/InterpreterExec.py (pysh): moved the pysh()
+	function (basically a big docstring) and a few more things here to
+	speedup startup. pysh.py is now very lightweight.  We want because
+	it gets execfile'd, while InterpreterExec gets imported, so
+	byte-compilation saves time.
+
+2004-06-25  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.magic_cd): Fixed to restore usage of 'cd
+	-NUM', which was recently broken.
+
+	* IPython/iplib.py (InteractiveShell.handle_shell_escape): allow !
+	in multi-line input (but not !!, which doesn't make sense there).
+
+	* IPython/UserConfig/ipythonrc: made autoindent on by default.
+	It's just too useful, and people can turn it off in the less
+	common cases where it's a problem.
+
+2004-06-24  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell._prefilter): big change -
+	special syntaxes (like alias calling) is now allied in multi-line
+	input.  This is still _very_ experimental, but it's necessary for
+	efficient shell usage combining python looping syntax with system
+	calls.  For now it's restricted to aliases, I don't think it
+	really even makes sense to have this for magics.
+
+2004-06-23  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Extensions/InterpreterExec.py (prefilter_shell): Added
+	$var=cmd <=> @sc var=cmd and  $$var=cmd <=> @sc -l var=cmd.
+
+	* IPython/Magic.py (Magic.magic_rehashx): modified to handle
+	extensions under Windows (after code sent by Gary Bishop).  The
+	extensions considered 'executable' are stored in IPython's rc
+	structure as win_exec_ext.
+
+	* IPython/genutils.py (shell): new function, like system() but
+	without return value.  Very useful for interactive shell work.
+
+	* IPython/Magic.py (Magic.magic_unalias): New @unalias function to
+	delete aliases.
+
+	* IPython/iplib.py (InteractiveShell.alias_table_update): make
+	sure that the alias table doesn't contain python keywords.
+
 2004-06-21  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py (Magic.magic_rehash): Fix crash when
