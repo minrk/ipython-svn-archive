@@ -843,30 +843,78 @@ want to merge them back into the new files.""" % locals()
             except:
                 # We should never get here except in fairly bizarre situations
                 # (or b/c of an IPython bug). One reasonable exception is if
-                # the user sets stdout/err to a broken object.
-                fixed_out_err = 0
-                
+                # the user sets stdin/out/err to a broken object (or closes
+                # any of them!)
+		
+                fixed_in_out_err = 0
+
+		# Call the Term I/O class and have it reopen any stream which
+		# the user might have closed.
+		
+		Term.reopen_all()
+		
+		# Do the same manually for sys.stderr/out/in
+		
+		# err first, so we can print at least warnings
+		if sys.__stderr__.closed:
+		    sys.__stderr__ = os.fdopen(os.dup(2),'w',0)
+                    fixed_err_err = 1
+		    print >> sys.__stderr__,"""
+WARNING:
+sys.__stderr__ was closed!
+I've tried to reopen it, but bear in mind that things may not work normally
+from now.  In particular, readline support may have broken.
+"""
+		# Next, check stdin/out    
+		if sys.__stdin__.closed:
+		    sys.__stdin__ = os.fdopen(os.dup(0),'r',0)
+                    fixed_in_out_err = 1
+		    print >> sys.__stderr__,"""
+WARNING:
+sys.__stdin__ was closed!
+I've tried to reopen it, but bear in mind that things may not work normally
+from now.  In particular, readline support may have broken.
+"""		    
+		if sys.__stdout__.closed:
+		    sys.__stdout__ = os.fdopen(os.dup(1),'w',0)
+                    fixed_in_out_err = 1
+		    print >> sys.__stderr__,"""
+WARNING:
+sys.__stdout__ was closed!
+I've tried to reopen it, but bear in mind that things may not work normally
+from now.  In particular, readline support may have broken.
+"""		    
+
+		# Now, check mismatch of objects
+                if sys.stdin is not sys.__stdin__:
+                    sys.stdin = sys.__stdin__
+                    fixed_in_out_err = 1
+                    print >> sys.__stderr__,"""
+WARNING:
+sys.stdin has been reset to sys.__stdin__.
+There seemed to be a problem with your sys.stdin.
+"""
                 if sys.stdout is not sys.__stdout__:
                     sys.stdout = sys.__stdout__
-                    fixed_out_err = 1
-                    print """
+                    fixed_in_out_err = 1
+                    print >> sys.__stderr__,"""
 WARNING:
-sys.sdtout has been reset to sys.__stdout__.
+sys.stdout has been reset to sys.__stdout__.
 There seemed to be a problem with your sys.stdout.
 """
 
                 if sys.stderr is not sys.__stderr__:
                     sys.stderr = sys.__stderr__
-                    fixed_out_err = 1
-                    print """
+                    fixed_in_out_err = 1
+                    print >> sys.__stderr__,"""
 WARNING:
-sys.sdterr has been reset to sys.__stderr__.
+sys.stderr has been reset to sys.__stderr__.
 There seemed to be a problem with your sys.stderr.
 """
                 # If the problem wasn't a broken out/err, it's an IPython bug
                 # I wish we could ask the user whether to crash or not, but
                 # calling any function at this point messes up the stack.
-                if not fixed_out_err:
+                if not fixed_in_out_err:
                     raise
                 
         # We are off again...
@@ -943,6 +991,29 @@ There seemed to be a problem with your sys.stderr.
         """
         return self.prefilter(raw_input(prompt),
                               prompt==self.outputcache.prompt2)
+        
+    def raw_input2(self, prompt=""):
+        """Write a prompt and read a line.
+
+        The returned line does not include the trailing newline.
+        When the user enters the EOF key sequence, EOFError is raised.
+
+        The base implementation uses the built-in function
+        raw_input(); a subclass may replace this with a different
+        implementation.
+        """
+        try:
+            return self.prefilter(raw_input(prompt),
+				  prompt==self.outputcache.prompt2)
+        except ValueError:
+
+	    # If we get here, it's probably because the user closed stdin/out.
+	    # This is obviously quite a disaster.  We'll try to recover
+	    # somewhat gracefully nonetheless.
+
+            sys.stdout = os.fdopen(os.dup(1), 'w',0)
+	    Term.out = os.fdopen(os.dup(Term.out_fileno), 'w',0)
+	    return ''
         
     def split_user_input(self,line):
         """Split user input into pre-char, function part and rest."""
