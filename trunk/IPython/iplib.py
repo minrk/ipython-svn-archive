@@ -25,6 +25,14 @@ from __future__ import nested_scopes
 #  The full text of the LGPL is available at:
 #
 #                  http://www.gnu.org/copyleft/lesser.html
+#
+#
+# Note: this code originally subclassed code.InteractiveConsole from the
+# Python standard library.  Over time, much of that class has been copied
+# verbatim here for modifications which could not be accomplished by
+# subclassing.  The Python License (sec. 2) allows for this, but it's always
+# nice to acknowledge credit where credit is due.
+#
 #*****************************************************************************
 
 #****************************************************************************
@@ -57,7 +65,7 @@ from Logger import Logger
 from Magic import Magic,magic2python
 from usage import cmd_line_usage,interactive_usage
 from Struct import Struct
-from Itpl import Itpl,itpl,printpl
+from Itpl import Itpl,itpl,printpl,ItplNS,itplns
 from FakeModule import FakeModule
 from genutils import *
 
@@ -91,7 +99,7 @@ try:
     class MagicCompleter(FlexCompleter.Completer):
         """Extension of the completer class to work on @-prefixed lines."""
 
-        def __init__(self, namespace = None, omit__names = 0):
+        def __init__(self, namespace = None, omit__names = 0,alias_table=None):
             """MagicCompleter(namespace = None, omit__names = 0) -> completer
 
             Return a completer object suitable for use by the readline library
@@ -99,13 +107,20 @@ try:
 
             The optional omit__names parameter sets the completer to omit the
             'magic' names (__magicname__) for python objects unless the text
-            to be completed explicitly starts with one or more underscores."""
+            to be completed explicitly starts with one or more underscores.
+
+            If alias_table is supplied, it should be a dictionary of aliases
+            to complete. """
 
             FlexCompleter.Completer.__init__(self,namespace)
             delims = FlexCompleter.readline.get_completer_delims()
             delims = delims.replace('@','')
             FlexCompleter.readline.set_completer_delims(delims)
             self.omit__names = omit__names
+            if alias_table is None:
+                alias_table = {}
+            self.alias_table = alias_table
+            self.matchers = ['python_matches','file_matches','alias_matches']
 
         # Code contributed by Alex Schmolck, for ipython/emacs integration
         def all_completions(self, text):
@@ -126,6 +141,8 @@ try:
         # /end Alex Schmolck code.
 
         def file_matches(self, text, state):
+            """Match filneames, expanding ~USER type strings"""
+            #print 'Completer->file_matches' # dbg
             text = os.path.expanduser(text)
             if text == "":
                 return glob.glob("*") # current directory
@@ -136,41 +153,55 @@ try:
                     matches[0] += os.sep
             return matches
 
+        def alias_matches(self, text, state):
+            """Match internal system aliases"""
+            #print 'Completer->alias_matches:',text # dbg
+            text = os.path.expanduser(text)
+            aliases =  self.alias_table.keys()
+            if text == "":
+                return aliases
+            else:
+                return [alias for alias in aliases if alias.startswith(text)]
+            
+        def python_matches(self,text,state):
+            """Match attributes or global python names"""
+            #print 'Completer->python_matches' # dbg
+            if "." in text:
+                try:
+                    matches = self.attr_matches(text)
+                    if text.endswith('.') and self.omit__names:
+                        # true if txt is _not_ a __ name, false otherwise:
+                        no__name = (lambda txt:
+                                    re.match(r'.*\.__.*?__',txt) is None)
+                        matches = filter(no__name, matches)
+                except NameError:
+                    # catches <undefined attributes>.<tab>
+                    matches = []
+            else:
+                matches = self.global_matches(text)
+                # this is so completion finds magics when automagic is on:
+                if matches == [] and not text.startswith(os.sep):
+                    matches = self.attr_matches('__IP.magic_'+text)
+            return matches
 
         def complete(self, text, state):
             """Return the next possible completion for 'text'.
 
             This is called successively with state == 0, 1, 2, ... until it
             returns None.  The completion should begin with 'text'.  """
-
+            
             #print '\n*** COMPLETE: <%s>' % text  # dbg
             if text.startswith('@'):
                 text = text.replace('@','__IP.magic_')
             if text.startswith('~'):
                 text = os.path.expanduser(text)
+            self.matches = []
             if state == 0:
-                if "." in text:
-                    try:
-                        self.matches = self.attr_matches(text)
-                        if text.endswith('.') and self.omit__names:
-                            # true if txt is _not_ a __ name, false otherwise:
-                            no__name = (lambda txt:
-                                        re.match(r'.*\.__.*?__',txt) is None)
-                            self.matches = filter(no__name, self.matches)
-                    except NameError:
-                        # catches <undefined attributes>.<tab>
-                        self.matches = []
-                else:
-                    self.matches = self.global_matches(text)
-                    # this is so completion finds magics when automagic is on:
-                    if self.matches == [] and not text.startswith(os.sep):
-                        self.matches = self.attr_matches('__IP.magic_'+text)
-                if self.matches == []:
-                    #
-                    # Default: Match filenames
-                    #
-                    self.matches = self.file_matches(text, state)
-
+                for matcher in self.matchers:
+                    #print 'Calling matcher:',matcher # dbg
+                    self.matches = getattr(self,matcher)(text,state)
+                    if self.matches:
+                        break
             try:
                 return self.matches[state].replace('__IP.magic_','@')
             except IndexError:
@@ -197,7 +228,6 @@ class InputList(UserList.UserList):
 
     def __getslice__(self,i,j):
         return ''.join(UserList.UserList.__getslice__(self,i,j))
-
 
 #****************************************************************************
 # Local use exceptions
@@ -270,6 +300,11 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # dict of output history
         self.output_hist = {}
 
+        # dict of names to be treated as system aliases.  Each entry in the
+        # alias table must be a 2-tuple of the form (N,name), where N is the
+        # number of positional arguments of the alias.
+        self.alias_table = {}
+        
         # make global variables for user access to these
         self.user_ns['_ih'] = self.input_hist
         self.user_ns['_oh'] = self.output_hist
@@ -396,22 +431,37 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         ins_colors = OInspect.InspectColors
         code_colors = PyColorize.ANSICodeColors
         self.inspector = OInspect.Inspector(ins_colors,code_colors,'NoColor')
-        # List of shell commands to auto-define
-        if os.name == 'posix':
-            auto_shell = {'ls': 'ls -F', 'mkdir': 'mkdir', 'rmdir':'rmdir',
-                          'mv':'mv -i','rm':'rm -i','rmf':'rm -f','less':'less',
-                          'cat':'cat','clear':'clear','lc':'ls -F -o --color',
-                          'cp':'cp -i','ll':'ls -l'}
-        elif os.name =='nt':
-            auto_shell = {'dir':'dir /on', 'ls':'dir /on',
-                          'ddir':'dir /ad /on', 'ld':'dir /ad /on',
-                          'mkdir': 'mkdir','rmdir':'rmdir',
-                          'ren':'ren','cls':'cls','cp':'copy','copy':'copy',
-                          'more':'type','type':'type' }
+        # List of shell aliases to auto-define
+        if os.name == 'posix':            
+            auto_alias = ('mkdir mkdir', 'rmdir rmdir',
+                          'mv mv -i','rm rm -i','rmf rm -f','cp cp -i',
+                          'cat cat','less less','clear clear',
+                          # a better ls
+                          'ls ls -F',
+                          # long ls
+                          'll ls -lF',
+                          # color ls
+                          'lc ls -F -o --color',
+                          # ls normal files only
+                          'lf ls -F -o --color %l | grep ^-',
+                          # ls symbolic links 
+                          'lk ls -F -o --color %l | grep ^l',
+                          # directories or links to directories, both as 'ld'
+                          # and 'ldir' in case users load the real 'ld' linker
+                          'ld ls -F -o --color %l | grep /$',
+                          'ldir ls -F -o --color %l | grep /$',
+                          # things which are executable
+                          'lx ls -F -o --color %l | grep ^-..x',
+                          )
+        elif os.name in ['nt','dos']:
+            auto_alias = ('dir dir /on', 'ls dir /on',
+                          'ddir dir /ad /on', 'ld dir /ad /on',
+                          'mkdir mkdir','rmdir rmdir',
+                          'ren ren','cls cls','cp copy','copy copy',
+                          'more type','type type')
         else:
-            auto_shell = {}
-        for name,cmd in auto_shell.items():
-            self.magic_alias(name+' '+cmd)
+            auto_alias = ()
+        map(self.magic_alias,auto_alias)
 
         self.autoindent = 0
     # end __init__
@@ -580,7 +630,8 @@ want to merge them back into the new files.""" % locals()
             self.readline = readline
             self.readline_indent = 0  # for auto-indenting via readline
             self.Completer = MagicCompleter(self.user_ns,
-                                            self.rc.readline_omit__names)
+                                            self.rc.readline_omit__names,
+                                            self.alias_table)
             # save this in sys so embedded copies can restore it properly
             sys.ipcompleter = self.Completer.complete
             readline.set_completer(self.Completer.complete)
@@ -941,8 +992,38 @@ There seemed to be a problem with your sys.stderr.
       self.InteractiveTB(type, value, tb, tb_offset=0)
       if self.InteractiveTB.call_pdb and self.has_readline:
           self.readline.set_completer(self.Completer.complete)
-      
-    def runcode(self, code_obj):
+
+    def call_alias(self,alias,rest=''):
+        """Call an alias given its name and the rest of the line.
+
+        This function MUST be given a proper alias, because it doesn't make
+        any checks when looking up into the alias table.  The caller is
+        responsible for invoking it only with a valid alias."""
+
+        #print 'ALIAS: <%s>+<%s>' % (alias,rest) # dbg
+        nargs,cmd = self.alias_table[alias]
+        # Expand the %l special to be the user's input line
+        if cmd.find('%l') >= 0:
+            cmd = cmd.replace('%l',rest)
+            rest = ''
+        if nargs==0:
+            # Simple, argument-less aliases
+            cmd = '%s %s' % (cmd,rest)
+        else:
+            # Handle aliases with positional arguments
+            args = rest.split(None,nargs)
+            if len(args)< nargs:
+                error('Alias <%s> requires %s arguments, %s given.' %
+                      (alias,nargs,len(args)))
+                return
+            cmd = '%s %s' % (cmd % tuple(args[:nargs]),' '.join(args[nargs:]))
+        # Now call the macro, evaluating in the user's namespace
+        try:
+            os.system(itplns(cmd,self.user_ns))
+        except:
+            self.showtraceback()
+
+    def runcode(self,code_obj):
         """Execute a code object.
 
         When an exception occurs, self.showtraceback() is called to display a
@@ -992,17 +1073,29 @@ There seemed to be a problem with your sys.stderr.
             pre,iFun,theRest = '',line,''
         else:
             pre,iFun,theRest = lsplit.groups()
-        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest)  # dbg
-        return pre,iFun,theRest
+        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest)  # dbg
+        return pre,iFun.strip(),theRest
 
     def _prefilter(self, line, continue_prompt):
         """Calls different preprocessors, depending on the form of line."""
 
         # All handlers *must* return a value, even if it's blank ('').
 
-        # Only normal lines are logged here. Handlers should process the line
-        # as needed, update the cache AND log it (so that the input cache
-        # array stays synced).
+        # Lines are NOT logged here. Handlers should process the line as
+        # needed, update the cache AND log it (so that the input cache array
+        # stays synced).
+
+        # This function is _very_ delicate, and since it's also the one which
+        # determines IPython's response to user input, it must be as efficient
+        # as possible.  For this reason it has _many_ returns in it, trying
+        # always to exit as quickly as it can figure out what it needs to do.
+
+        # This function is the main responsible for maintaining IPython's
+        # behavior respectful of Python's semantics.  So be _very_ careful if
+        # making changes to anything here.
+
+        #.....................................................................
+        # Code begins
 
         #if line.startswith('@crash'): raise RuntimeError,'Crash now!'  # dbg
 
@@ -1017,7 +1110,7 @@ There seemed to be a problem with your sys.stderr.
             return self.handle_normal('',continue_prompt)
 
         # print '***cont',continue_prompt  # dbg
-        # special handlers only allowed for single line statements
+        # special handlers are only allowed for single line statements
         if continue_prompt:
             return self.handle_normal(line,continue_prompt)
 
@@ -1039,8 +1132,8 @@ There seemed to be a problem with your sys.stderr.
 
         # Let's try to find if the input line is a magic fn
         oinfo = None
-        if hasattr(self,'magic_'+iFun.strip()):
-            oinfo = self._ofind(iFun.strip()) # FIXME - _ofind is part of Magic
+        if hasattr(self,'magic_'+iFun):
+            oinfo = self._ofind(iFun) # FIXME - _ofind is part of Magic
             if oinfo['ismagic']:
                 # Be careful not to call magics when a variable assignment is
                 # being made (ls='hi', for example)
@@ -1051,14 +1144,22 @@ There seemed to be a problem with your sys.stderr.
                     return self.handle_normal(line,continue_prompt)
 
         if oinfo is None:
-            oinfo = self._ofind(iFun.strip()) # FIXME - _ofind is part of Magic
+            oinfo = self._ofind(iFun) # FIXME - _ofind is part of Magic
 
         if not oinfo['found']:
             #print 'not found'  # dbg
             return self.handle_normal(line,continue_prompt)
-
         else:
             #print 'iFun <%s> rest <%s>' % (iFun,theRest) # dbg
+            if oinfo['isalias']:
+                # Same logic for aliases we had for magics: give precedence
+                # to normal python code so an alias can be redefined as a
+                # variable, for example.
+                if len(theRest)==0 or theRest[0] not in '!=()<>,':
+                    return self.handle_alias(line,iFun,theRest)
+                else:
+                    return self.handle_normal(line,continue_prompt)
+                
             if self.rc.autocall and \
                    (len(theRest)==0 or theRest[0] not in '!=()<>[,') and \
                    self.fun_name.match(iFun) and \
@@ -1088,6 +1189,15 @@ There seemed to be a problem with your sys.stderr.
         self.update_cache(line)
         return line
 
+    def handle_alias(self,line,iFun,theRest):
+        """Handle alias input lines. """
+
+        # Log the call, but comment it out 
+        self.log('#%s' % line)
+        self.update_cache(line)
+        self.call_alias(iFun,theRest)
+        return ''
+
     def handle_shell_escape(self, line, continue_prompt=None):
         """Execute the line in a shell, empty return value"""
 
@@ -1100,12 +1210,16 @@ There seemed to be a problem with your sys.stderr.
         # input exactly as it was entered at the prompt.
 
         if line.startswith('!!'):
-            return self.handle_magic('@sx '+line[2:],continue_prompt)
+            return self.handle_magic('@sx %s' % line[2:],continue_prompt)
         else:
-            self.log('#'+line)        # comment out into log/_ih
+            self.log('#%s' % line)    # comment out into log/_ih
             self.update_cache(line)   # readline cache gets normal line
-            line = line.strip()[1:]
-            os.system(line)
+            try:
+                line = itplns(line.strip()[1:],self.user_ns)
+            except:
+                self.showtraceback()
+            else:
+                os.system(line)
             return ''     # MUST return something, at least an empty string
 
     def handle_emacs(self,line,continue_prompt):

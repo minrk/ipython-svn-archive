@@ -42,7 +42,7 @@ from cStringIO import StringIO
 # Homebrewed
 from genutils import *
 from Struct import Struct
-from Itpl import Itpl, itpl, printpl
+from Itpl import Itpl, itpl, printpl,itplns
 from FakeModule import FakeModule
 
 #***************************************************************************
@@ -149,7 +149,6 @@ class Magic:
     # some utility functions
 
     def __init__(self):
-        self.alias_table = {}
         self.options_table = {}
 
     def default_option(self,fn,optstr):
@@ -187,6 +186,7 @@ class Magic:
     
     def set_shell(self,shell):
         self.shell = shell
+        self.alias_table = shell.alias_table
 
     def extract_input_slices(self,slices):
         """Return as a string a set of input history slices.
@@ -220,17 +220,20 @@ class Magic:
         user_config_ns = self.shell.user_config_ns
         internal_ns    = self.shell.internal_ns
         builtin_ns     = __builtin__.__dict__
+        alias_ns       = self.shell.alias_table
 
         # Put them in a list. The order is important so that we find things in
         # the same order that Python finds them.
         namespaces = [ ('Interactive',user_ns),
                        ('User-defined configuration',user_config_ns),
                        ('IPython internal',internal_ns),
-                       ('Python builtin',builtin_ns)
+                       ('Python builtin',builtin_ns),
+                       ('Alias',alias_ns),
                        ]
 
         # initialize results to 'null'
-        found = 0; obj = None;  ospace = None;  ds = None; ismagic = 0
+        found = 0; obj = None;  ospace = None;  ds = None;
+        ismagic = 0; isalias = 0
 
         # Look for the given name by splitting it in parts.  If the head is
         # found, then we look for all the remaining parts as members, and only
@@ -255,6 +258,8 @@ class Magic:
                     # If we finish the for loop (no break), we got all members
                     found = 1
                     ospace = nsname
+                    if ns == alias_ns:
+                        isalias = 1
                     break  # namespace loop
 
         # Try to see if it's magic
@@ -275,15 +280,18 @@ class Magic:
             
         # Get the object's docstring
         if found:
-            try:
-                ds = inspect.getdoc(obj)
-            except:
-                # Harden against an inspect failure, which can occur with
-                # SWIG-wrapped extensions.
-                pass
+            if isalias:
+                ds = "Alias to the system command:\n  %s" % obj[1]
+            else:
+                try:
+                    ds = inspect.getdoc(obj)
+                except:
+                    # Harden against an inspect failure, which can occur with
+                    # SWIG-wrapped extensions.
+                    pass
 
         return {'found':found, 'obj':obj, 'namespace':ospace,
-                'docstring':ds, 'ismagic':ismagic}
+                'docstring':ds, 'ismagic':ismagic, 'isalias':isalias}
         
     def arg_err(self,func):
         """Print docstring if incorrect arguments were passed"""
@@ -335,7 +343,11 @@ class Magic:
           returned as a list (split on whitespace) instead of a string.
 
           -list_all: put all option values in lists. Normally only options
-          appearing more than once are put in a list."""
+          appearing more than once are put in a list.
+
+          -use_shell (True): don't make a call to the shell to construct the
+          argument vector.  In this mode, no proper quoting is obtained, but
+          the danger of shell expansions is also avoided."""
 
 
         caller = sys._getframe(1).f_code.co_name.replace('magic_','')
@@ -347,6 +359,7 @@ class Magic:
             raise ValueError,'incorrect mode given:'+`mode`
         
         list_all = kw.get('list_all',0)
+        use_shell = kw.get('use_shell',1)
 
         # Check if we have more than one argument to warrant extra processing:
         args = arg_str.split()
@@ -366,27 +379,29 @@ class Magic:
 
             # We still need to do a bit of quoting, so the shell doesn't get
             # things like naked parens.
-            qarg = arg_str.replace('(',r'\(').replace(')',r'\)')
-            
-            out,err = getoutputerror('%s -SEc "import sys;print sys.argv[1:]" %s' %
-                                     (sys.executable,qarg))
-
-            # If there is any problem with the shell-based expansions, we punt
-            # and do a simple arg_str.split()
-            if err:
-                warn(err)
-                argv = args
-            # Also don't call eval() unless what we get looks like a list's
-            # repr()
-            elif not out.startswith('[') or not out.endswith(']'):
-                argv = args
-            else:
-                # Try to make the eval as safe as possible by doing it in
-                # empty namespaces, and punt if anything fails
-                try:
-                    argv = eval(out,{})
-                except:
+            if use_shell:
+                qarg = arg_str.replace('(',r'\(').replace(')',r'\)').replace('$',r'\$')
+                out,err = getoutputerror('%s -SEc "import sys;print sys.argv[1:]" %s'
+                                         % (sys.executable,qarg))
+                #print 'out:',out # dbg
+                # If there is any problem with the shell-based expansions, we punt
+                # and do a simple arg_str.split()
+                if err:
+                    warn(err)
                     argv = args
+                # Also don't call eval() unless what we get looks like a list's
+                # repr()
+                elif not out.startswith('[') or not out.endswith(']'):
+                    argv = args
+                else:
+                    # Try to make the eval as safe as possible by doing it in
+                    # empty namespaces, and punt if anything fails
+                    try:
+                        argv = eval(out,{})
+                    except:
+                        argv = args
+            else:  # no use of the shell
+                argv = args
 
             # Do regular option processing
             opts,args = getopt(argv,opt_str,*long_opts)
@@ -409,7 +424,7 @@ class Magic:
         opts = Struct(odict)
         if mode == 'string':
             args = ' '.join(args)
-            
+
         return opts,args
     
     #......................................................................
@@ -473,9 +488,9 @@ configuration directory, typically $HOME/.ipython/).
 You can also define your own aliased names for magic functions. In your
 ipythonrc file, placing a line like:
 
-  execute __IP.magic_cl = __IP.magic_clear
+  execute __IP.magic_pf = __IP.magic_profile
 
-will define @cl as a new name for @clear.
+will define @pf as a new name for @profile.
 
 For a list of the available magic functions, use @lsmagic. For a description
 of any of them, type @magic_name?.
@@ -638,8 +653,7 @@ Currently the magic system has the following functions:\n"""
                 pmethod(info.obj,oname,formatter)
             elif meth == 'pinfo':
                 formatter = info.ismagic and self.format_screen or None
-                pmethod(info.obj,oname,info.namespace,formatter,
-                        ismagic=info.ismagic,**kw)
+                pmethod(info.obj,oname,formatter,info,**kw)
             else:
                 pmethod(info.obj,oname)
         else:
@@ -1644,16 +1658,25 @@ Defaulting color scheme to 'NoColor'"""
         
     #......................................................................
     # Functions to implement unix shell-type things
-
-    # Cool trick using Python's dynamic features:
-    # @alias dynamically generates new functions as requested.
+    
     def magic_alias(self, parameter_s = ''):
         """Define an alias for a system command.
 
         '@alias alias_name cmd' defines 'alias_name' as an alias for 'cmd'
 
-        Then, typing '@alias_name params' will execute the system command 'cmd
+        Then, typing 'alias_name params' will execute the system command 'cmd
         params' (from your underlying operating system).
+
+        Aliases have lower precedence than magic functions and Python normal
+        variables, so if 'foo' is both a Python variable and an alias, the
+        alias can not be executed until 'del foo' removes the Python variable.
+
+        You can use the %l specifier in an alias definition to represent the
+        whole line when the alias is called.  For example:
+
+          In [2]: alias all echo "Input in brackets: <%l>"\\
+          In [3]: all hello world\\
+          Input in brackets: <hello world>\\
 
         You can also define aliases with parameters using %s specifiers (one
         per parameter):
@@ -1665,6 +1688,28 @@ Defaulting color scheme to 'NoColor'"""
           Incorrect number of arguments: 2 expected.\\
           parts is an alias to: 'echo first %s second %s'\\
 
+        Note that %l and %s are mutually exclusive.  You can only use one or
+        the other in your aliases.
+
+        Aliases expand Python variables just like system calls using ! or !! 
+        do: all expressions prefixed with '$' get expanded.  For details of
+        the semantic rules, see PEP-215:
+        http://www.python.org/peps/pep-0215.html.  This is the library used by
+        IPython for variable expansion.  If you want to access a true shell
+        variable, an extra $ is necessary to prevent its expansion by IPython.
+
+        For example:
+        In [6]: alias show echo
+        In [7]: PATH='A Python string'
+        In [8]: show $PATH
+        A Python string
+        In [9]: show $$PATH
+        /usr/local/lf9560/bin:/usr/local/intel/compiler70/ia32/bin:...
+
+        You can use the alias facility to acess all of $PATH.  See the @rehash
+        and @rehashx functions, which automatically create aliases for the
+        contents of your $PATH.
+
         If called with no parameters, @alias prints the current alias table."""
 
         par = parameter_s.strip()
@@ -1674,72 +1719,71 @@ Defaulting color scheme to 'NoColor'"""
             else:
                 prechar = '@'
             print 'Alias\t\tSystem Command\n'+'-'*30
-            aliases = self.alias_table.keys()
+            atab = self.shell.alias_table
+            aliases = atab.keys()
             aliases.sort()
             for alias in aliases:
-                print prechar+alias+'\t\t'+self.alias_table[alias]
+                print prechar+alias+'\t\t'+atab[alias][1]
+            print '-'*30+'\nTotal number of aliases:',len(aliases)
             return
         try:
-            alias,cmd = par.split(' ',1)
+            alias,cmd = par.split(None,1)
         except:
             print inspect.getdoc(self.magic_alias)
-            return
-        nargs = cmd.count('%s')
-        if nargs == 0:  # simple aliases
-            fndef = itpl(
-"""
-def magic_${alias}(parameter_s = ''):
-    '''Alias to the system command '$cmd' '''
-    xsys('$cmd '+str(parameter_s))
-
-self.magic_$alias = magic_$alias
-""")
-        else:  # parametric aliases
-            fndef = itpl(
-"""
-def magic_${alias}(parameter_s = ''):
-    '''Alias to the system command '$cmd' '''
-    cmd = '$cmd'
-    nargs = cmd.count('%s')
-    args = str(parameter_s).split()
-
-    if len(args) != nargs:
-        print 'Incorrect number of arguments:',nargs,'expected.'
-        print "$alias is an alias to: '$cmd'"
-        return
-    else:
-        cmd_call = cmd % tuple(args)
-        xsys(cmd_call)
-
-self.magic_$alias = magic_$alias
-""")
-        try:
-            exec fndef in globals(),locals()
-        except:
-            print self.magic_alias.__doc__
-        self.alias_table.update({alias:cmd})
+        else:
+            nargs = cmd.count('%s')
+            if nargs>0 and cmd.find('%l')>=0:
+                error('The %s and %l specifiers are mutually exclusive '
+                      'in alias definitions.')
+            else:  # all looks OK
+                self.shell.alias_table[alias] = (nargs,cmd)
     # end magic_alias
+
+    def magic_rehash(self, parameter_s = ''):
+        """Update the alias table with all entries in $PATH.
+
+        This version does no checks on execute permissions or whether the
+        contents of $PATH are truly files (instead of directories or something
+        else).  For such a safer (but slower) version, use @rehashx."""
+
+        # This function (and rehashx) manipulate the alias_table directly
+        # rather than calling magic_alias, for speed reasons.  A rehash on a
+        # typical Linux box involves several thousand entries, so efficiency
+        # here is a top concern.
+        
+        path = os.environ['PATH'].split(os.pathsep)
+        alias_table = self.shell.alias_table
+        for pdir in path:
+            for ff in os.listdir(pdir):
+                # each entry in the alias table must be (N,name), where
+                # N is the number of positional arguments of the alias.
+                alias_table[ff] = (0,ff)
+    
+    def magic_rehashx(self, parameter_s = ''):
+        """Update the alias table with all executable files in $PATH.
+
+        This version explicitly checks that every entry in $PATH is a file
+        with execute access (os.X_OK), so it is much slower than @rehash."""
+        
+        path = os.environ['PATH'].split(os.pathsep)
+        alias_table = self.shell.alias_table
+        isexec = lambda fname:os.path.isfile(fname) and os.access(fname,os.X_OK)
+        savedir = os.getcwd()
+        try:
+            for pdir in path:
+                os.chdir(pdir)
+                for ff in os.listdir(pdir):
+                    if isexec(ff):
+                        # each entry in the alias table must be (N,name),
+                        # where N is the number of positional arguments of the
+                        # alias.
+                        alias_table[ff] = (0,ff)
+        finally:
+            os.chdir(savedir)
         
     def magic_pwd(self, parameter_s = ''):
         """Return the current working directory path."""
         return os.getcwd()
-
-    if os.name == 'posix':
-        def magic_lf(self, parameter_s=''):
-            """List (in color) things which are normal files."""
-            self.magic_lc(parameter_s+' | grep ^-')
-
-        def magic_ll(self, parameter_s=''):
-            """List (in color) things which are symbolic links."""
-            self.magic_lc(parameter_s+' | grep ^l')
-
-        def magic_ld(self, parameter_s=''):
-            """List (in color) things which are directories or links to directories."""
-            self.magic_lc(parameter_s+' | grep /$')
-
-        def magic_lx(self, parameter_s=''):
-            """List (in color) things which are executable."""
-            self.magic_lc(parameter_s+'| grep ^-..x')
 
     def magic_cd(self, parameter_s=''):
         """Change the current working directory.
@@ -1882,7 +1926,7 @@ self.magic_$alias = magic_$alias
 
           -v: verbose.  Print the contents of the variable."""
 
-        opts,args = self.parse_options(parameter_s,'lv')
+        opts,args = self.parse_options(parameter_s,'lv',use_shell=0)
         # Try to get a variable name and command to run
         try:
             var,cmd = args.split('=',1)
@@ -1893,6 +1937,7 @@ self.magic_$alias = magic_$alias
             error('you must specify a variable to assign the command to.')
             return
         # If all looks ok, proceed
+        cmd = itplns(cmd,self.shell.user_ns)
         out,err = getoutputerror(cmd)
         if err:
             print >> sys.stderr,err
@@ -1929,7 +1974,7 @@ self.magic_$alias = magic_$alias
 	typing."""
 
         if parameter_s:
-            out,err = getoutputerror(parameter_s)
+            out,err = getoutputerror(itplns(parameter_s,self.shell.user_ns))
             if err:
                 print >> sys.stderr,err
             return out.split('\n')
