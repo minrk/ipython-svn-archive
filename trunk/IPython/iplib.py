@@ -114,13 +114,19 @@ try:
             to complete. """
 
             FlexCompleter.Completer.__init__(self,namespace)
-            delims = FlexCompleter.readline.get_completer_delims()
+            self.readline = FlexCompleter.readline
+            delims = self.readline.get_completer_delims()
             delims = delims.replace('@','')
-            FlexCompleter.readline.set_completer_delims(delims)
+            self.readline.set_completer_delims(delims)
+            self.get_line_buffer = self.readline.get_line_buffer
             self.omit__names = omit__names
             if alias_table is None:
                 alias_table = {}
             self.alias_table = alias_table
+            # Regexp to split filenames with spaces in them
+            self.space_name_re = re.compile(r'([^\\] )')
+            # Hold a local ref. to glob.glob for speed
+            self.glob = glob.glob
             self.matchers = ['python_matches','file_matches','alias_matches']
 
         # Code contributed by Alex Schmolck, for ipython/emacs integration
@@ -142,16 +148,43 @@ try:
         # /end Alex Schmolck code.
 
         def file_matches(self, text, state):
-            """Match filneames, expanding ~USER type strings"""
-            #print 'Completer->file_matches: <%s>' % text # dbg
-            text = os.path.expanduser(text)
-            if text == "":
-                return [f.replace(' ',r'\ ') for f in glob.glob("*")]
+            """Match filneames, expanding ~USER type strings.
+
+            Most of the seemingly convoluted logic in this completer is an
+            attempt to handle filenames with spaces in them.  And yet it's not
+            quite perfect, because Python's readline doesn't expose all of the
+            GNU readline details needed for this to be done correctly.
+
+            For a filename with a space in it, the printed completions will be
+            only the parts after what's already been typed (instead of the
+            full completions, as is normally done).  I don't think with the
+            current (as of Python 2.3) Python readline it's possible to do
+            better."""
             
-            matches = [f.replace(' ',r'\ ') for f in glob.glob("%s*"%text)]
-            #print '\nmatches:',matches # dbg
+            #print 'Completer->file_matches: <%s>, state:%s' % (text,state) # dbg
+            lbuf = self.get_line_buffer()
+            lsplit = self.space_name_re.split(lbuf)[-1]
+            if '\\' in lsplit:
+                # if spaces are found, do matching on the whole escaped name
+                has_spaces = 1
+                text0,text = text,lsplit
+            else:
+                has_spaces = 0
+                text = os.path.expanduser(text)
+            
+            if text == "":
+                return [f.replace(' ',r'\ ') for f in self.glob("*")]
+
+            m0 = self.glob("%s*"%text.replace(r'\ ',' '))
+            if has_spaces:
+                # If we had spaces, we need to revert our changes so that
+                # we don't double-write the part of the filename we have so far
+                matches = [f.replace(' ',r'\ ').replace(lsplit,text0) for f in m0]
+            else:
+                matches = [f.replace(' ',r'\ ') for f in m0]
             if len(matches) == 1:
-                if os.path.isdir(matches[0]): # takes care of links to directories also
+                if os.path.isdir(matches[0]):
+                    # takes care of links to directories also
                     matches[0] += os.sep
             return matches
 
@@ -1267,6 +1300,7 @@ There seemed to be a problem with your sys.stderr.
     def handle_alias(self,line,continue_prompt,pre,iFun,theRest):
         """Handle alias input lines. """
 
+        theRest = theRest.replace("'","\\'")
         line_out = "%s%s.call_alias('%s','%s')" % (pre,self.name,iFun,theRest)
         self.log(line_out,continue_prompt)
         self.update_cache(line_out)
