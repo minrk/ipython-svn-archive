@@ -143,6 +143,7 @@ try:
             This is called successively with state == 0, 1, 2, ... until it
             returns None.  The completion should begin with 'text'.  """
 
+            #print '\n*** COMPLETE: <%s>' % text  # dbg
             if text.startswith('@'):
                 text = text.replace('@','__IP.magic_')
             if text.startswith('~'):
@@ -1000,29 +1001,6 @@ There seemed to be a problem with your sys.stderr.
         return self.prefilter(raw_input(prompt),
                               prompt==self.outputcache.prompt2)
         
-    def raw_input2(self, prompt=""):
-        """Write a prompt and read a line.
-
-        The returned line does not include the trailing newline.
-        When the user enters the EOF key sequence, EOFError is raised.
-
-        The base implementation uses the built-in function
-        raw_input(); a subclass may replace this with a different
-        implementation.
-        """
-        try:
-            return self.prefilter(raw_input(prompt),
-				  prompt==self.outputcache.prompt2)
-        except ValueError:
-
-	    # If we get here, it's probably because the user closed stdin/out.
-	    # This is obviously quite a disaster.  We'll try to recover
-	    # somewhat gracefully nonetheless.
-
-            sys.stdout = os.fdopen(os.dup(1), 'w',0)
-            Term.cout = os.fdopen(os.dup(Term.cout_fileno), 'w',0)
-            return ''
-        
     def split_user_input(self,line):
         """Split user input into pre-char, function part and rest."""
 
@@ -1051,6 +1029,8 @@ There seemed to be a problem with your sys.stderr.
 
         # the input history needs to track even empty lines
         if not line.strip():
+            if not continue_prompt:
+                self.outputcache.prompt_count -= 1
             return self.handle_normal('',continue_prompt)
 
         # print '***cont',continue_prompt  # dbg
