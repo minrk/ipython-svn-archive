@@ -329,7 +329,12 @@ class MTInteractiveShell(InteractiveShell):
         self.ready.acquire()
 
         # Install sigint handler
-        signal.signal(signal.SIGINT, sigint_handler)
+        try:
+            signal.signal(signal.SIGINT, sigint_handler)
+        except SystemError:
+            # This happens under Windows, which seems to have all sorts
+            # of problems with signal handling.  Oh well...
+            pass
 
         if self._kill:
             print >>Term.cout, 'Closing threads...',
