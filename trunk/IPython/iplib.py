@@ -281,12 +281,12 @@ try:
                 matches = [text0 + protect_filename(f[len_lsplit:]) for f in m0]
             else:
                 matches = [protect_filename(f) for f in m0]
-            if len(matches) == 1:
-                if os.path.isdir(matches[0]):
-                    # Takes care of links to directories also.  Use '/' explicitly,
-                    # even under Windows, so that name completions don't end up
-                    # escaped.
-                    matches[0] += '/'
+            if len(matches) == 1 and os.path.isdir(matches[0]):
+                # Takes care of links to directories also.  Use '/' explicitly,
+                # even under Windows, so that name completions don't end up
+                # escaped.
+                matches[0] += '/'
+
             return matches
 
         def alias_matches(self, text, state):

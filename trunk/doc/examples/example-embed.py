@@ -16,7 +16,7 @@ The code in this file is deliberately extra-verbose, meant for learning."""
 # copies running.
 
 # Try running this code both at the command line and from inside IPython (with
-# @run example-embed.py)
+# %run example-embed.py)
 try:
     __IPYTHON__
 except NameError:
