@@ -773,6 +773,20 @@ want to merge them back into the new files.""" % locals()
                 warn('Readline services not available on this platform.')
         else:
             import atexit
+
+            # Load user's initrc file (readline config)
+            inputrc_name = os.environ.get('INPUTRC')
+            if inputrc_name is None:
+                home_dir = get_home_dir()
+                if home_dir is not None:
+                    inputrc_name = os.path.join(home_dir,'.inputrc')
+            if os.path.isfile(inputrc_name):
+                try:
+                    readline.read_init_file(inputrc_name)
+                except:
+                    warn('Problems reading readline initialization file <%s>'
+                         % inputrc_name)
+            
             self.has_readline = 1
             self.readline = readline
             self.readline_indent = 0  # for auto-indenting via readline
