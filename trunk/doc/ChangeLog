@@ -1,3 +1,12 @@
+2003-05-16  Fernando Perez  <fperez@colorado.edu>
+
+	* ipython.1 (Default): Thanks to Jack's work, we now have manpages!
+
+2003-05-15  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.user_setup): Fix crash when
+	installing for a new user under Windows.
+
 2003-05-12  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.handle_emacs): New line
