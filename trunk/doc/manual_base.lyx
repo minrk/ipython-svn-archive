@@ -2339,7 +2339,8 @@ The
 \family typewriter 
 @run
 \family default 
- command to correctly execute any matplotlib-based script which calls 
+ command to correctly execute any matplotlib-based script, whether or not
+ it calls 
 \family typewriter 
 show()
 \family default 
