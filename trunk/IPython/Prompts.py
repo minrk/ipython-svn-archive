@@ -7,7 +7,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando PÃ©rez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2004 Fernando PÃ��©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -143,13 +143,16 @@ HOSTNAME       = socket.gethostname()
 HOSTNAME_SHORT = HOSTNAME.split(".")[0]
 ROOT_SYMBOL    = "$#"[os.name=='nt' or os.getuid()==0]
 
-prompt_specials = {
+prompt_specials_color = {
     # Prompt/history count
     '%n' : '${self.col_num}' '${self.cache.prompt_count}' '${self.col_p}',
     '\\#': '${self.col_num}' '${self.cache.prompt_count}' '${self.col_p}',
+    # Prompt/history count, with the actual digits replaced by dots.  Used
+    # mainly in continuation prompts (prompt_in2)
+    '\\D': '${"."*len(str(self.cache.prompt_count))}',
     # Current working directory
     '\\w': '${os.getcwd()}',
-    # Basename of current working directory, filtered out to depth 5
+    # Basename of current working directory.
     # (use os.sep to make this portable across OSes)
     '\\W' : '${os.getcwd().split("%s")[-1]}' % os.sep,
     # These X<N> are an extension to the normal bash prompts.  They return
@@ -188,7 +191,7 @@ prompt_specials = {
 
 # A copy of the prompt_specials dictionary but with all color escapes removed,
 # so we can correctly compute the prompt length for the auto_rewrite method.
-prompt_specials_nocolor = prompt_specials.copy()
+prompt_specials_nocolor = prompt_specials_color.copy()
 prompt_specials_nocolor['%n'] = '${self.cache.prompt_count}'
 prompt_specials_nocolor['\\#'] = '${self.cache.prompt_count}'
 
@@ -199,38 +202,62 @@ prompt_specials_nocolor['\\#'] = '${self.cache.prompt_count}'
 # anything else.
 for _color in dir(ColorANSI.InputTermColors):
     if _color[0] != '_':
-        prompt_specials['\\C_%s' % _color] = getattr(ColorANSI.InputTermColors,_color)
+        prompt_specials_color['\\C_%s' % _color] = \
+                                       getattr(ColorANSI.InputTermColors,_color)
         prompt_specials_nocolor['\\C_%s' % _color] = ''
+
+# we default to no color for safety.  Note that prompt_specials is a global
+# variable used by all prompt objects.
+prompt_specials = prompt_specials_nocolor
 #-----------------------------------------------------------------------------
 class BasePrompt:
     """Interactive prompt similar to Mathematica's."""
-    def __init__(self,cache,input_sep,prompt):
+    def __init__(self,cache,sep,prompt):
 
         # Hack: we access information about the primary prompt through the
         # cache argument.  We need this, because we want the secondary prompt
         # to be aligned with the primary one.  Color table info is also shared
         # by all prompt classes through the cache.  Nice OO spaghetti code!
         self.cache = cache
-        self.input_sep = input_sep
+        self.sep = sep
         # Set template to create each actual prompt (where numbers change)
         self.p_template = prompt
+        self.set_p_str()
+
+    def set_p_str(self):
+        """ Set the interpolating prompt strings.
+
+        This must be called every time the color settings change, because the
+        prompt_specials global may have changed."""
+        
         self.p_str = Itpl('%s%s%s ' %
-                          ('$self.input_sep${self.col_p}',
+                          ('$self.sep${self.col_p}',
                            multiple_replace(prompt_specials, self.p_template),
                           '$self.col_norm'))
         self.p_str_nocolor = Itpl(multiple_replace(prompt_specials_nocolor,
                                                    self.p_template))
 
     def __str__(self):
-        return str(self.p_str)
+        """Return a string form of the prompt.
+
+        This for is useful for continuation and output prompts, since it
+        matches lengths with the primary one."""
+
+        # We must find the amount of padding required to match lengths, taking
+        # the color escapes (which are invisible on-screen) into account.
+        out_str = str(self.p_str)
+        esc_pad = len(out_str) - len(str(self.p_str_nocolor))
+        format = '%%%ss' % (len(str(self.cache.last_prompt))+esc_pad)
+        return format % out_str
 
 class Prompt1(BasePrompt):
     """Input interactive prompt similar to Mathematica's."""
 
-    def __init__(self,cache,input_sep='\n',prompt='In [%n]:'):
-        BasePrompt.__init__(self,cache,input_sep,prompt)
+    def __init__(self,cache,sep='\n',prompt='In [\\#]:'):
+        BasePrompt.__init__(self,cache,sep,prompt)
 
     def set_colors(self):
+        self.set_p_str()
         Colors = self.cache.color_table.active_colors # shorthand
         self.col_p = Colors.in_prompt
         self.col_num = Colors.in_number
@@ -256,68 +283,39 @@ class Prompt1(BasePrompt):
 class PromptOut(BasePrompt):
     """Output interactive prompt similar to Mathematica's."""
 
-    def __init__(self,cache,input_sep='\n',prompt='Out[%n]:'):
-        BasePrompt.__init__(self,cache,input_sep,prompt)
+    def __init__(self,cache,sep='',prompt='Out[\\#]:'):
+        BasePrompt.__init__(self,cache,sep,prompt)
+        if not self.p_template:
+            self.__str__ = lambda: ''
 
     def set_colors(self):
+        self.set_p_str()
         Colors = self.cache.color_table.active_colors # shorthand
         self.col_p = Colors.out_prompt
         self.col_num = Colors.out_number
         self.col_norm = Colors.normal
 
-    def __str__(self):
-        if not self.p_template:
-            return ''
-        else:
-            # We must find the amount of padding required to match lengths, #
-            # taking the color escapes (which are invisible on-screen) into
-            # account.
-            out_str = str(self.p_str)
-            esc_pad = len(out_str) - len(str(self.p_str_nocolor))
-            format = '%%%ss' % (len(str(self.cache.last_prompt))+esc_pad)
-            return format % out_str
-        
-class Prompt2:
+class Prompt2(BasePrompt):
     """Interactive continuation prompt."""
     
-    def __init__(self,cache,prompt='   .%n.:'):
-
+    def __init__(self,cache,prompt='   .\\D.:'):
         self.cache = cache
         self.p_template = prompt
-        # Choose the actual string representation based on the form of the
-        # primary prompt: if PS1 has the prompt counter pattern in it, use
-        # _str_numprompt, else use _str_other.  See their docstrings for
-        # details.        
-        if re.search('%n',cache.ps1_str) or re.search('\\#',cache.ps1_str):
-            self.__str__ = self._str_numprompt
-        else:
-            self.__str__ = self._str_other
+        self.set_p_str()
+
+    def set_p_str(self):
+        self.p_str = Itpl('%s%s%s ' %
+                          ('${self.col_p2}',
+                           multiple_replace(prompt_specials, self.p_template),
+                          '$self.col_norm'))
+        self.p_str_nocolor = Itpl(multiple_replace(prompt_specials_nocolor,
+                                                   self.p_template))
 
     def set_colors(self):
-        Colors = self.cache.color_table.active_colors # shorthand
+        self.set_p_str()
+        Colors = self.cache.color_table.active_colors
         self.col_p2 = Colors.in_prompt2
         self.col_norm = Colors.normal
-
-    def _str_numprompt(self):
-        """String form of the prompt, for use with counted prompts.
-
-        We evaluate the provided template, replacing the prompt counter
-        pattern (%n or \\#) with the corresponding number of dots."""
-        
-        dots = '.'*len(`self.cache.prompt_count`)
-        return '%s%s%s ' % (self.col_p2,
-                            self.p_template.replace('%n',dots).replace('\\#',dots),
-                            self.col_norm)
-    
-    def _str_other(self):
-        """String form of the prompt, for use with non-counted prompts.
-
-        In this form, the internal template is COMPLETELY IGNORED.  The
-        returned string simply consists of dots plus ': '.  There are as many
-        dots as needed to line up with the previous primary prompt."""
-
-        dots = '.'*(len(str(self.cache.last_prompt))-2)
-        return '%s%s:%s ' % (self.col_p2,dots,self.col_norm)
 
 #-----------------------------------------------------------------------------
 class CachedOutput:
@@ -359,9 +357,9 @@ class CachedOutput:
         self.ps2_str = self._set_prompt_str(ps2,'   .%n.:','...')
         self.ps_out_str = self._set_prompt_str(ps_out,'Out[%n]:','')
 
-        self.prompt1 = Prompt1(self,input_sep=input_sep,prompt=self.ps1_str)
+        self.prompt1 = Prompt1(self,sep=input_sep,prompt=self.ps1_str)
         self.prompt2 = Prompt2(self,prompt=self.ps2_str)
-        self.prompt_out = PromptOut(self,input_sep=input_sep,prompt=self.ps_out_str)
+        self.prompt_out = PromptOut(self,sep='',prompt=self.ps_out_str)
         self.color_table = PromptColors
         self.set_colors(colors)
 
@@ -399,6 +397,14 @@ class CachedOutput:
     def set_colors(self,colors):
         """Set the active color scheme and configure colors for the three
         prompt subsystems."""
+
+        # FIXME: the prompt_specials global should be gobbled inside this
+        # class instead.  Do it when cleaning up the whole 3-prompt system.
+        global prompt_specials
+        if colors.lower()=='nocolor':
+            prompt_specials = prompt_specials_nocolor
+        else:
+            prompt_specials = prompt_specials_color
         
         self.color_table.set_active_scheme(colors)
         self.prompt1.set_colors()
