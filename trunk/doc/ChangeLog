@@ -1,5 +1,10 @@
 2003-09-24  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/Magic.py (Magic._ofind): blanket except around getattr()
+	to protect against poorly written user objects where __getattr__
+	raises exceptions other than AttributeError.  Thanks to a bug
+	report by Oliver Sander <osander@gmx.de>.
+
 	* IPython/FakeModule.py (FakeModule.__repr__): this method was
 	missing.  Thanks to bug report by Ralf Schmitt <ralf@brainbot.com>.
 
