@@ -119,25 +119,35 @@ very
  tricky in all corner cases.
 \layout Itemize
 
+Redesign the output traps.
+ They cause problems when users try to execute code which relies on sys.stdout
+ being the 'true' sys.stdout.
+ They also prevent scripts which use raw_input() to work as command-line
+ arguments.
+\newline 
+The best solution is probably to print the banner first, and then just execute
+ all the user code straight with no output traps at all.
+ Whatever comes out comes out.
+ This makes the ipython code actually simpler, and eliminates the problem
+ altogether.
+\layout Itemize
+
 Make the output cache depth independent of the input one.
  This way one can have say only the last 10 results stored and still have
  a long input history/cache.
+\layout Itemize
+
+Refactor all functions which print color so that they use an optional file-like
+ object for printing.
+ This will enable Gary Bishop to trap things and get color working under
+ Windows.
+ Besides, it makes the architecture more flexible in general.
 \layout Itemize
 
 Fix the fact that importing a shell for embedding screws up the command-line
  history.
  This can be done by not importing the history file when the shell is already
  inside ipython.
-\layout Itemize
-
-Consider redesigning the output traps.
- They cause problems when users try to execute code which relies on sys.stdout
- being the 'true' sys.stdout.
- The best solution is probably to print the banner first, and then just
- execute all the user code straight with no output traps at all.
- Whatever comes out comes out.
- This makes the ipython code actually simpler, and eliminates the problem
- altogether.
 \layout Itemize
 
 Fix Windows bug reported by Tony Cappellini.
@@ -200,6 +210,12 @@ Add @showopt/@setopt (decide name) for viewing/setting all options.
 
 'cd' under windows doesn't know how to change drive letters.
  
+\layout Itemize
+
+Suggestion by Francois Pinard: When I enter many empty lines in a row to
+ IPython, the `N' in the successive `In [N]' prompts gets incremented.
+ Would it not be more meaningful if it was only incremented when there is
+ actual (non-empty) input?
 \layout Itemize
 
 It would be nice to be able to continue with python stuff after an @ command.

@@ -1,3 +1,124 @@
+2003-08-19  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/deep_reload.py (load_tail): single tiny change here
+	seems to fix the long-standing bug of dreload() failing to work
+	for dotted names.  But this module is pretty tricky, so I may have
+	missed some subtlety.  Needs more testing!.
+
+	* IPython/ultraTB.py (VerboseTB.linereader): harden against user
+	exceptions which have badly implemented __str__ methods.
+	(VerboseTB.text): harden against inspect.getinnerframes crashing,
+	which I've been getting reports about from Python 2.3 users.  I
+	wish I had a simple test case to reproduce the problem, so I could
+	either write a cleaner workaround or file a bug report if
+	necessary.
+
+	* IPython/Magic.py (Magic.magic_edit): fixed bug where after
+	making a class 'foo', file 'foo.py' couldn't be edited.  Thanks to
+	a bug report by Tjabo Kloppenburg.
+
+	* IPython/ultraTB.py (VerboseTB.debugger): hardened against pdb
+	crashes.  Wrapped the pdb call in a blanket try/except, since pdb
+	seems rather unstable.  Thanks to a bug report by Tjabo
+	Kloppenburg <tjabo.kloppenburg@unix-ag.uni-siegen.de>.
+
+	* IPython/Release.py (version): release 0.5.0-rc1.  I want to put
+	this out soon because of the critical fixes in the inner loop for
+	generators.
+
+	* IPython/Magic.py (Magic.getargspec): removed.  This (and
+	_get_def) have been obsoleted by OInspect for a long time, I
+	hadn't noticed that they were dead code.
+	(Magic._ofind): restored _ofind functionality for a few literals
+	(those in ["''",'""','[]','{}','()']).  But it won't work anymore
+	for things like "hello".capitalize?, since that would require a
+	potentially dangerous eval() again.
+
+	* IPython/iplib.py (InteractiveShell._prefilter): reorganized the
+	logic a bit more to clean up the escapes handling and minimize the
+	use of _ofind to only necessary cases.  The interactive 'feel' of
+	IPython should have improved quite a bit with the changes in
+	_prefilter and _ofind (besides being far safer than before).
+
+	* IPython/Magic.py (Magic.magic_edit): Fixed old bug (but rather
+	obscure, never reported).  Edit would fail to find the object to
+	edit under some circumstances.
+	(Magic._ofind): CRITICAL FIX.  Finally removed the eval() calls
+	which were causing double-calling of generators.  Those eval calls
+	were _very_ dangerous, since code with side effects could be
+	triggered.  As they say, 'eval is evil'...  These were the
+	nastiest evals in IPython.  Besides, _ofind is now far simpler,
+	and it should also be quite a bit faster.  Its use of inspect is
+	also safer, so perhaps some of the inspect-related crashes I've
+	seen lately with Python 2.3 might be taken care of.  That will
+	need more testing.
+
+2003-08-17  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell._prefilter): significant
+	simplifications to the logic for handling user escapes.  Faster
+	and simpler code.
+
+2003-08-14  Fernando Perez  <fperez@colorado.edu>
+
+        * IPython/numutils.py (sum_flat): rewrote to be non-recursive.
+        Now it requires O(N) storage (N=size(a)) for non-contiguous input,
+        but it should be quite a bit faster.  And the recursive version
+        generated O(log N) intermediate storage for all rank>1 arrays,
+        even if they were contiguous.
+        (l1norm): Added this function.
+        (norm):  Added this function for arbitrary norms (including
+        l-infinity).  l1 and l2 are still special cases for convenience
+        and speed.
+	
+2003-08-03  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.magic_edit): Removed all remaining string
+	exceptions, which now raise PendingDeprecationWarnings in Python
+	2.3.  There were some in Magic and some in Gnuplot2.
+
+2003-06-30  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (page): modified to call curses only for
+	terminals where TERM=='xterm'.  After problems under many other
+	terminals were reported by Keith Beattie <KSBeattie@lbl.gov>.
+
+	* IPython/iplib.py (complete): removed spurious 'print "IE"' which
+	would be triggered when readline was absent.  This was just an old
+	debugging statement I'd forgotten to take out.
+
+2003-06-20  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (clock): modified to return only user time
+	(not counting system time), after a discussion on scipy.  While
+	system time may be a useful quantity occasionally, it may much
+	more easily be skewed by occasional swapping or other similar
+	activity.
+
+2003-06-05  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/numutils.py (identity): new function, for building
+	arbitrary rank Kronecker deltas (mostly backwards compatible with
+	Numeric.identity)
+
+2003-06-03  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.handle_magic): protect
+	arguments passed to magics with spaces, to allow trailing '\' to
+	work normally (mainly for Windows users).
+
+2003-05-29  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/ipmaker.py (make_IPython): Load site._Helper() as help
+	instead of pydoc.help.  This fixes a bizarre behavior where
+	printing '%s' % locals() would trigger the help system.  Now
+	ipython behaves like normal python does.  
+
+	Note that if one does 'from pydoc import help', the bizarre
+	behavior returns, but this will also happen in normal python, so
+	it's not an ipython bug anymore (it has to do with how pydoc.help
+	is implemented).
+
 2003-05-22  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/FlexCompleter.py (Completer.attr_matches): fixed to
