@@ -371,7 +371,16 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # Function to call the underlying shell.  Similar to os.system, but it
         # doesn't return a value, and it allows interpolation of variables in
         # the user's namespace.
-        self.system = lambda cmd: shell(str(ItplNS(cmd,self.user_ns)))
+        self.system = lambda cmd: shell(str(ItplNS(cmd.replace('#','\#'),
+                                                   self.user_ns)),
+                                        header='IPython system call: ',
+                                        verbose=self.rc.system_verbose)
+        # Similar one for getoutputerror.
+        self.getoutputerror = lambda cmd: \
+                              getoutputerror(str(ItplNS(cmd.replace('#','\#'),
+                                                        self.user_ns)),
+                                             header='IPython system call: ',
+                                             verbose=self.rc.system_verbose)
     
         # escapes for automatic behavior on the command line
         self.ESC_SHELL = '!'
@@ -510,6 +519,19 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
             self.autoindent = not self.autoindent
         else:
             self.autoindent = value
+
+    def rc_set_toggle(self,rc_field,value=None):
+        """Set or toggle a field in IPython's rc config. structure.
+
+        If called with no arguments, it acts as a toggle.
+
+        If called with a non-existent field, the resulting AttributeError
+        exception will propagate out."""
+
+        rc_val = getattr(self.rc,rc_field)
+        if value is None:
+            value = not rc_val
+        setattr(self.rc,rc_field,value)
 
     def user_setup(self,ipythondir,rc_suffix,mode='install'):
         """Install the user configuration directory.
@@ -1051,7 +1073,7 @@ There seemed to be a problem with your sys.stderr.
         try:
             # flush stdout so we don't mangle python's buffering
             sys.stdout.flush()
-            os.system(itplns(cmd,self.user_ns))
+            self.system(cmd)
         except:
             self.showtraceback()
 

@@ -1,3 +1,30 @@
+2004-06-28  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/ipmaker.py (__call__): Added per-profile histories.  Now
+	the history file will be called 'history-PROFNAME' (or just
+	'history' if no profile is loaded).  I was getting annoyed at
+	getting my Numerical work history clobbered by pysh sessions.
+
+	* IPython/iplib.py (InteractiveShell.__init__): Internal
+	getoutputerror() function so that we can honor the system_verbose
+	flag for _all_ system calls.  I also added escaping of #
+	characters here to avoid confusing Itpl.
+
+	* IPython/Magic.py (shlex_split): removed call to shell in
+	parse_options and replaced it with shlex.split().  The annoying
+	part was that in Python 2.2, shlex.split() doesn't exist, so I had
+	to backport it from 2.3, with several frail hacks (the shlex
+	module is rather limited in 2.2).  Thanks to a suggestion by Ville
+	Vainio <vivainio@kolumbus.fi>.  For Python 2.3 there should be no
+	problem.
+	
+	(Magic.magic_system_verbose): new toggle to print the actual
+	system calls made by ipython.  Mainly for debugging purposes.
+
+	* IPython/GnuplotRuntime.py (gnu_out): fix bug for cygwin, which
+	doesn't support persistence.  Reported (and fix suggested) by
+	Travis Caldwell <travis_caldwell2000@yahoo.com>.
+
 2004-06-26  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Logger.py (Logger.log): fix to handle correctly empty
