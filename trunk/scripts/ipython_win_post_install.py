@@ -17,7 +17,7 @@ def install():
 
     # Get some system constants
     prefix = sys.prefix
-    python = prefix + r'\python.exe'
+    python = sys.executable
     # Lookup path to common startmenu ...
     ip_dir = get_special_folder_path('CSIDL_COMMON_PROGRAMS') + r'\IPython'
     

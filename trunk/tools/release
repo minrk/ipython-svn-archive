@@ -41,13 +41,13 @@ cd $ipdir/tools
 
 # Build source and binary distros
 cd $ipdir
-./setup.py sdist --formats=gztar,zip
+./setup.py sdist --formats=gztar
 ./setup.py bdist_rpm --release=py$PYVER
 
 # Call the windows build separately, so that the extra Windows scripts don't
 # get pulled into Unix builds (setup.py has code which checks for
 # bdist_wininst)
-#./setup.py bdist_wininst --install-script=ipython_win_post_install.py
+./setup.py bdist_wininst --install-script=ipython_win_post_install.py
 
 # Register with the Python Package Index (PyPI)
 echo "Registering with PyPI..."
