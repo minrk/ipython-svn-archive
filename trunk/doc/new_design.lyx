@@ -859,21 +859,25 @@ Syntax highlighting in listings.
  Use py2html code, implement color schemes.
 \layout Section
 
-Notes on a Python-based system shell
+A Python-based system shell - pysh?
 \layout Standard
 
-These notes are meant as a working draft for discussions on the possibility
+Note: as of IPython 0.6.1, most of this functionality has actually been implemente
+d.
+\layout Standard
+
+This section is meant as a working draft for discussions on the possibility
  of having a python-based system shell.
- They are the result of my own thinking about these issues as much of discussion
-s on the ipython lists.
+ It is the result of my own thinking about these issues as much of discussions
+ on the ipython lists.
  I apologize in advance for not giving individual credit to the various
  contributions, but right now I don't have the time to track down each message
  from the archives.
- So please consider this document as the result of a collective effort by
- the ipython user community.
+ So please consider this as the result of a collective effort by the ipython
+ user community.
 \layout Standard
 
-While ipyhton is (and will remain) a python shell first, it does offer a
+While IPyhton is (and will remain) a python shell first, it does offer a
  fair amount of system access functionality:
 \layout Standard
 
@@ -886,7 +890,7 @@ While ipyhton is (and will remain) a python shell first, it does offer a
 - @sc and @sx, for shell output capture into python variables,
 \layout Standard
 
-- @alias, for defining new magics for system commands.
+- @alias, for aliasing system commands.
 \layout Standard
 
 This has prompted many users, over time, to ask for a way of extending ipython
@@ -909,9 +913,9 @@ I'll try to outline here what I see as the key issues which need to be taken
 
 In what follows, I'll represent the hypothetical python-based shell ('pysh'
  for now) prompt with '>>'.
-\layout Standard
+\layout Subsection
 
-Basic design principles -----------------------
+Basic design principles
 \layout Standard
 
 I think the basic design guideline should be the following: a hypothetical

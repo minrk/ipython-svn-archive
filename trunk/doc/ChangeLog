@@ -1,3 +1,70 @@
+2004-06-20  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (complete): modified the completer so that the
+	order of priorities can be easily changed at runtime.
+
+	* IPython/Extensions/InterpreterExec.py (prefilter_shell):
+	Modified to auto-execute all lines beginning with '~', '/' or '.'.
+
+	* IPython/Magic.py (Magic.magic_sx): modified @sc and @sx to
+	expand Python variables prepended with $ in all system calls.  The
+	same was done to InteractiveShell.handle_shell_escape.  Now all
+	system access mechanisms (!, !!, @sc, @sx and aliases) allow the
+	expansion of python variables and expressions according to the
+	syntax of PEP-215 - http://www.python.org/peps/pep-0215.html.
+
+	Though PEP-215 has been rejected, a similar (but simpler) one
+	seems like it will go into Python 2.4, PEP-292 -
+	http://www.python.org/peps/pep-0292.html.
+
+	I'll keep the full syntax of PEP-215, since IPython has since the
+	start used Ka-Ping Yee's reference implementation discussed there
+	(Itpl), and I actually like the powerful semantics it offers.
+
+	In order to access normal shell variables, the $ has to be escaped
+	via an extra $.  For example:
+
+	In [7]: PATH='a python variable'
+
+	In [8]: !echo $PATH
+	a python variable
+
+	In [9]: !echo $$PATH
+	/usr/local/lf9560/bin:/usr/local/intel/compiler70/ia32/bin:...
+
+	(Magic.parse_options): escape $ so the shell doesn't evaluate
+	things prematurely.
+
+	* IPython/iplib.py (InteractiveShell.call_alias): added the
+	ability for aliases to expand python variables via $.
+
+	* IPython/Magic.py (Magic.magic_rehash): based on the new alias
+	system, now there's a @rehash/@rehashx pair of magics.  These work
+	like the csh rehash command, and can be invoked at any time.  They
+	build a table of aliases to everything in the user's $PATH
+	(@rehash uses everything, @rehashx is slower but only adds
+	executable files).  With this, the pysh.py-based shell profile can
+	now simply call rehash upon startup, and full access to all
+	programs in the user's path is obtained.
+
+	* IPython/iplib.py (InteractiveShell.call_alias): The new alias
+	functionality is now fully in place.  I removed the old dynamic
+	code generation based approach, in favor of a much lighter one
+	based on a simple dict.  The advantage is that this allows me to
+	now have thousands of aliases with negligible cost (unthinkable
+	with the old system).
+
+2004-06-19  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (__init__): extended MagicCompleter class to
+	also complete (last in priority) on user aliases.
+
+	* IPython/Itpl.py (Itpl.__str__): fixed order of globals/locals in
+	call to eval.
+	(ItplNS.__init__): Added a new class which functions like Itpl,
+	but allows configuring the namespace for the evaluation to occur
+	in.
+
 2004-06-18  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.runcode): modify to print a
