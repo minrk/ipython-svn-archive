@@ -2,15 +2,16 @@
 # IPython release script
 
 version=`ipython -Version`
+ipdir = ~/ipython/ipython
 
 echo
-echo Releasing IPython version $version
-echo ==================================
+echo "Releasing IPython version $version"
+echo "=================================="
 
-echo Marking ChangeLog with release information and making NEWS file...
+echo "Marking ChangeLog with release information and making NEWS file..."
 
 # stamp changelog
-cd ~/ipython/doc
+cd $ipdir/doc
 cp ChangeLog ChangeLog.old
 daystamp=`date +%Y-%m-%d`
 echo $daystamp " ***" Released version $version > ChangeLog
@@ -20,46 +21,48 @@ rm ChangeLog.old
 
 # build NEWS file
 echo "Changes between the last two releases (major or minor)" > NEWS
-echo Note that this is an auto-generated diff of the ChangeLogs >> NEWS
+echo "Note that this is an auto-generated diff of the ChangeLogs" >> NEWS
 echo >> NEWS
 diff ChangeLog.previous ChangeLog | grep -v '^0a' | sed 's/^> //g' >> NEWS
 cp ChangeLog ChangeLog.previous
 
 # clean up dist directory
-cd ~/ipython/dist
+cd $ipdir/dist
 rm -f *
 
 # do backup
-cd ~/ipython/tools
+cd $ipdir/tools
 ./bkp.py
 
-# build source distros
-cd ~/ipython
-./setup.py sdist --formats=gztar,zip
+# build source and binary distros
+cd $ipdir
+#./setup.py sdist --formats=gztar,zip bdist --formats=rpm,wininst
+./setup.py sdist --formats=gztar,zip bdist --formats=rpm
 
-# build rpms
-# CURRENTLY BROKEN (as of RedHat 8.0)
-#./setup.py bdist_rpm
+# Keep a local Windows copy
+cd $ipdir/dist
+echo "Copying to Windows directory..."
+cp *.zip *.exe ~/win/IPython
 
 # upload
-cd ~/ipython/dist
-echo Uploading distribution files...
-scp * fperez@culogin.colorado.edu:"~/ipython/dist"
+cd $ipdir/dist
+echo "Uploading distribution files..."
+scp * fperez@scipy.org:www/dist/
 
-echo Copying to Windows directory...
-cp *.zip ~/win/IPython
-
-echo Uploading backup files...
+echo "Uploading backup files..."
 cd ~/ipython/backup
-scp `ls -1tr | tail -1` fperez@culogin.colorado.edu:"~/ipython/backup"
+scp `ls -1tr | tail -1` fperez@scipy.org:www/backup/
 
-cd ~/ipython/doc
-echo Uploading changes information
-scp ChangeLog NEWS fperez@culogin.colorado.edu:"~/public_html/ipython"
+cd $ipdir/doc
+echo "Uploading changes information"
+scp ChangeLog NEWS fperez@scipy.org:www/
 
-echo "Alerting Andrea Riciputi (Fink IPython maintainer)..."
-addr=andrea.riciputi@libero.it
-mail -s "[ANN] A new IPython is out. Version: $version" fperez@colorado.edu  < NEWS
-mail -s "[ANN] A new IPython is out. Version: $version" $addr  < NEWS
+echo "Alerting package maintainers..."
+maintainers='fperez@colorado.edu andrea.riciputi@libero.it jack@xiph.org'
+for email in $maintainers
+    do
+	echo "Emailing $email..."
+	mail -s "[ANN] A new IPython is out. Version: $version" $email < NEWS
+    done
 
-echo Done!
+echo "Done!"
