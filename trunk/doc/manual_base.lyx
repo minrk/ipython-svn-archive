@@ -1729,6 +1729,16 @@ Use the Python profiler.
 \family default 
  command does a similar job for single Python expressions (like function
  calls).
+\layout Itemize
+
+Use 
+\family typewriter 
+@edit
+\family default 
+ to have almost multiline editing.
+ While IPython doesn't support true multiline editing, this command allows
+ you to call an editor on the spot, and IPython will execute the code you
+ type in there as if it were typed interactively.
 \layout Standard
 
 If you have your own favorite tip on using IPython efficiently for a certain
@@ -5755,4 +5765,13 @@ Souren
 <Kasper.Souren@ircam.fr>
 \family default 
  Bug reports, ideas.
+\layout List
+\labelwidthstring 00.00.0000
+
+Gever\SpecialChar ~
+Tulley 
+\family typewriter 
+<gever@helium.com>
+\family default 
+ Code contributions.
 \the_end
