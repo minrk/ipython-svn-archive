@@ -1,3 +1,35 @@
+2005-02-07  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (magic_edit): Fix 'ed -p' not working when the
+	previous call produced a syntax error.
+
+	* IPython/OInspect.py (Inspector.pinfo): Fix crash when inspecting
+	classes without constructor.
+
+2005-02-06  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (MagicCompleter.complete): Extend the list of
+	completions with the results of each matcher, so we return results
+	to the user from all namespaces.  This breaks with ipython
+	tradition, but I think it's a nicer behavior.  Now you get all
+	possible completions listed, from all possible namespaces (python,
+	filesystem, magics...)  After a request by John Hunter
+	<jdhunter@nitace.bsd.uchicago.edu>.
+
+2005-02-05  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (magic_prun): Fix bug where prun would fail if
+	the call had quote characters in it (the quotes were stripped).
+
+2005-01-31  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.__init__): reduce reliance on
+	Itpl.itpl() to make the code more robust against psyco
+	optimizations.
+
+	* IPython/Itpl.py (Itpl.__str__): Use a _getframe() call instead
+	of causing an exception.  Quicker, cleaner.
+
 2005-01-28  Fernando Perez  <fperez@colorado.edu>
 
 	* scripts/ipython_win_post_install.py (install): hardcode

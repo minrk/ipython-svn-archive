@@ -915,12 +915,11 @@ ipython-XXX.tar.gz
 `python setup.py install'
 \family default 
 .
- After the installation, you can create a shortcut to the main IPython script,
- located in the 
+ After this completes, you can run the supplied 
 \family typewriter 
-Scripts
+win32_py24_manual_post_install.py
 \family default 
- subdirectory of your Python installation directory.
+ script which will add the relevant shortcuts to your startup menu.
 \layout Subsection
 
 
@@ -1640,6 +1639,17 @@ IPython can be used as an improved replacement for the Python prompt, and
  things you might miss in the rest of the manual (which is getting long).
  We'll give references to parts in the manual which provide more detail
  when appropriate.
+\layout Standard
+
+The following article by Jeremy Jones provides an introductory tutorial
+ about IPython:
+\newline 
+
+\begin_inset LatexCommand \htmlurl{http://www.onlamp.com/pub/a/python/2005/01/27/ipython.html}
+
+\end_inset 
+
+
 \layout Itemize
 
 The TAB key.

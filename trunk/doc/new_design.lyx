@@ -831,7 +831,54 @@ a) For file related commands (ls, cat, ...) it would be nice to be able to
 \layout Standard
 
 More general, this might lead to something like command specific completion
- ?
+ ? 
+\layout Standard
+
+Here's John Hunter's suggestion:
+\layout Standard
+
+The *right way to do it* would be to make intelligent or customizable choices
+ about which namespace to add to the completion list depending on the string
+ match up to the prompt, eg programmed completions.
+ In the simplest implementation, one would only complete on files and directorie
+s if the line preceding the tab press matched 'cd ' or 'run ' (eg you don't
+ want callable showing up in 'cd ca<TAB>')
+\layout Standard
+
+In a more advanced scenario, you might imaging that functions supplied the
+ TAB namespace, and the user could configure a dictionary that mapped regular
+ expressions to namespace providing functions (with sensible defaults).
+ Something like
+\layout Standard
+
+completed = {
+\newline 
+'^cd
+\backslash 
+s+(.*)' : complete_files_and_dirs,
+\newline 
+'^run
+\backslash 
+s+(.*)' : complete_files_and_dirs,
+\newline 
+'^run
+\backslash 
+s+(-.*)' : complete_run_options,
+\newline 
+}
+\layout Standard
+
+I don't know if this is feasible, but I really like programmed completions,
+ which I use extensively in tcsh.
+ My feeling is that something like this is eminently doable in ipython.
+\layout Standard
+
+/JDH
+\layout Standard
+
+For something like this to work cleanly, the magic command system needs
+ also a clean options framework, so all valid options for a given magic
+ can be extracted programatically.
 \layout Section
 
 Debugger
