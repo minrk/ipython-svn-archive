@@ -1790,8 +1790,9 @@ self.magic_$alias = magic_$alias
 
         Options:
 
-          -l: list output.  Split the output into a list before assigning it
-          to the given variable.  By default the output is stored as a string.
+          -l: list output.  Split the output on newlines into a list before
+          assigning it to the given variable.  By default the output is stored
+          as a single string.
 
           -v: verbose.  Print the contents of the variable."""
 
@@ -1808,7 +1809,7 @@ self.magic_$alias = magic_$alias
         # If all looks ok, proceed
         out = commands.getoutput(cmd)
         if opts.has_key('l'):
-            out = out.split()
+            out = out.split('\n')
         if opts.has_key('v'):
             print '%s ==\n%s' % (var,pformat(out))
         self.shell.user_ns.update({var:out})
