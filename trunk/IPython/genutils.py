@@ -700,33 +700,36 @@ class HomeDirError(Error):
 def get_home_dir():
     """Return the closest possible equivalent to a 'home' directory.
 
-    For Posix systems, this is $HOME, and on NT it's $HOMEDRIVE\$HOMEPATH.
+    We first try $HOME.  Absent that, on NT it's $HOMEDRIVE\$HOMEPATH.
 
     Currently only Posix and NT are implemented, a HomeDirError exception is
     raised for all other OSes. """ #'
-    
-    if os.name == 'posix':
+
+    try:
         return os.environ['HOME']
-    elif os.name == 'nt':
-        # For some strange reason, win9x returns 'nt' for os.name.
-        try:
-            return os.path.join(os.environ['HOMEDRIVE'],os.environ['HOMEPATH'])
-        except:
+    except KeyError:
+        if os.name == 'posix':
+            raise HomeDirError,'undefined $HOME, IPython can not proceed.'
+        elif os.name == 'nt':
+            # For some strange reason, win9x returns 'nt' for os.name.
             try:
-                # Use the registry to get the 'My Documents' folder.
-                import _winreg as wreg
-                key = wreg.OpenKey(wreg.HKEY_CURRENT_USER,
-                                   "Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders")
-                homedir = wreg.QueryValueEx(key,'Personal')[0]
-                key.Close()
-                return homedir
+                return os.path.join(os.environ['HOMEDRIVE'],os.environ['HOMEPATH'])
             except:
-                return 'C:\\'
-    elif os.name == 'dos':
-        # Desperate, may do absurd things in classic MacOS. May work under DOS.
-        return 'C:\\'
-    else:
-        raise HomeDirError,'support for your operating system not implemented.'
+                try:
+                    # Use the registry to get the 'My Documents' folder.
+                    import _winreg as wreg
+                    key = wreg.OpenKey(wreg.HKEY_CURRENT_USER,
+                                       "Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders")
+                    homedir = wreg.QueryValueEx(key,'Personal')[0]
+                    key.Close()
+                    return homedir
+                except:
+                    return 'C:\\'
+        elif os.name == 'dos':
+            # Desperate, may do absurd things in classic MacOS. May work under DOS.
+            return 'C:\\'
+        else:
+            raise HomeDirError,'support for your operating system not implemented.'
 
 #****************************************************************************
 # strings and text
@@ -984,23 +987,16 @@ def page_dumb(strng,start=0,screen_lines=25):
     Only moves forward, same interface as page(), except for pager_cmd and
     mode."""
 
-    ncols = 80
-    out_ln = strng.splitlines()[start:]
-    out = []
-    for ln in out_ln:
-        if len(ln) <= ncols:
-            out.append(ln)
-        else:
-            out.extend(chop(ln,ncols))
-    screens = chop(out,screen_lines-1)
-    #print '\nscreens is:',screens,os.linesep  # dbg
+    out_ln  = strng.splitlines()[start:]
+    screens = chop(out_ln,screen_lines-1)
     if len(screens) == 1:
         print >>Term.cout, os.linesep.join(screens[0])
     else:
         for scr in screens[0:-1]:
             print >>Term.cout, os.linesep.join(scr)
             ans = raw_input('---Return to continue, q to quit--- ')
-            if ans.lower().startswith('q'): return
+            if ans.lower().startswith('q'):
+                return
         print >>Term.cout, os.linesep.join(screens[-1])
 
 #----------------------------------------------------------------------------
@@ -1030,7 +1026,6 @@ def page(strng,start=0,screen_lines=0,pager_cmd = None):
     if TERM in ['dumb','emacs'] and os.name != 'nt':
         print strng
         return
-    
     # chop off the topmost part of the string we don't want to see
     str_lines = strng.split(os.linesep)[start:]
     str_toprint = os.linesep.join(str_lines)
@@ -1072,20 +1067,28 @@ def page(strng,start=0,screen_lines=0,pager_cmd = None):
     if numlines <= screen_lines :
         #print '*** normal print'  # dbg
         print >>Term.cout, str_toprint
-    else:  # try to open pager and default to internal one if that fails
+    else:
+        # Try to open pager and default to internal one if that fails.
+        # All failure modes are tagged as 'retval=1', to match the return
+        # value of a failed system command.  If any intermediate attempt
+        # sets retval to 1, at the end we resort to our own page_dumb() pager.
         pager_cmd = get_pager_cmd(pager_cmd)
         pager_cmd += ' ' + get_pager_start(pager_cmd,start)
-        if os.name == 'nt' and not pager_cmd.startswith('type'):
-            tmpname = tempfile.mktemp('.txt')
-            tmpfile = file(tmpname,'wt')
-            tmpfile.write(strng)
-            tmpfile.close()
-            cmd = "%s < %s" % (pager_cmd,tmpname)
-            if os.system(cmd):
-              retval = 1
+        if os.name == 'nt':
+            if pager_cmd.startswith('type'):
+                # The default WinXP 'type' command is failing on complex strings.
+                retval = 1
             else:
-              retval = None
-            os.remove(tmpname)
+                tmpname = tempfile.mktemp('.txt')
+                tmpfile = file(tmpname,'wt')
+                tmpfile.write(strng)
+                tmpfile.close()
+                cmd = "%s < %s" % (pager_cmd,tmpname)
+                if os.system(cmd):
+                  retval = 1
+                else:
+                  retval = None
+                os.remove(tmpname)
         else:
             try:
                 retval = None
@@ -1432,3 +1435,4 @@ def popkey(dct,key,default=NotGiven):
         del dct[key]
         return val
 #*************************** end of file <genutils.py> **********************
+
