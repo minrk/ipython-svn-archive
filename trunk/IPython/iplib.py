@@ -1453,6 +1453,9 @@ There seemed to be a problem with your sys.stderr.
         lines = lines.split('\n')
         more = 0
         for line in lines:
+            if not line:
+                # skip blank lines so we don't mess up the prompt counter
+                continue
             more = self.push((self.prefilter(line,more)))
             if more is None:
                 # IPython's runsource returns None if there was an error
