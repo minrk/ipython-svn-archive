@@ -279,6 +279,8 @@ try:
                     return self.matches[state].replace('__IP.magic_','@')
                 except IndexError:
                     return None
+            except SyntaxError:
+                pass
             except:
                 # needed because readline doesn't deal with exceptions
                 # properly (just beeps and ignores)
