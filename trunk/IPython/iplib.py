@@ -121,6 +121,18 @@ try:
             return completions
         # /end Alex Schmolck code.
 
+        def file_matches(self, text, state):
+            text = os.path.expanduser(text)
+            if text == "":
+                return glob.glob("*") # current directory
+            
+            matches = glob.glob(text + "*")
+            if len(matches) == 1:
+                if os.path.isdir(matches[0]): # takes care of links to directories also
+                    matches[0] += os.sep
+            return matches
+
+
         def complete(self, text, state):
             """Return the next possible completion for 'text'.
 
@@ -133,17 +145,27 @@ try:
                 text = os.path.expanduser(text)
             if state == 0:
                 if "." in text:
-                    self.matches = self.attr_matches(text)
-                    if text.endswith('.') and self.omit__names:
-                        # true if txt is _not_ a __ name, false otherwise:
-                        no__name = (lambda txt:
-                                    re.match(r'.*\.__.*?__',txt) is None)
-                        self.matches = filter(no__name,self.matches)
+                    try:
+                        self.matches = self.attr_matches(text)
+                        if text.endswith('.') and self.omit__names:
+                            # true if txt is _not_ a __ name, false otherwise:
+                            no__name = (lambda txt:
+                                        re.match(r'.*\.__.*?__',txt) is None)
+                            self.matches = filter(no__name, self.matches)
+                    except NameError:
+                        # catches <undefined attributes>.<tab>
+                        self.matches = []
                 else:
                     self.matches = self.global_matches(text)
                     # this is so completion finds magics when automagic is on:
                     if self.matches == [] and not text.startswith(os.sep):
                         self.matches = self.attr_matches('__IP.magic_'+text)
+                if self.matches == []:
+                    #
+                    # Default: Match filenames
+                    #
+                    self.matches = self.file_matches(text, state)
+
             try:
                 return self.matches[state].replace('__IP.magic_','@')
             except IndexError:
@@ -1122,7 +1144,7 @@ There seemed to be a problem with your sys.stderr.
                 return iFun + ' '+theRest+'\n'
             newcmd = iFun.rstrip() + '(' + theRest + ')\n'
 
-        print self.outputcache.prompt1.auto_rewrite() + newcmd,
+        print >>Term.out, self.outputcache.prompt1.auto_rewrite() + newcmd,
         # log what is now valid Python, not the actual user input (without end \n)
         self.log(newcmd.strip())
         return newcmd
