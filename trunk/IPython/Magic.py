@@ -7,7 +7,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Janko Hauser <jh@comunit.de> and
+#       Copyright (C) 2001-2004 Janko Hauser <jhauser@zscout.de> and
 #                          Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
@@ -45,15 +45,17 @@ from Struct import Struct
 from Itpl import Itpl, itpl, printpl,itplns
 from FakeModule import FakeModule
 
-# Globals
-MAGIC_PREFIX = ''  # to be set later by Magic constructor
+# Globals to be set later by Magic constructor
+MAGIC_PREFIX = ''
+MAGIC_ESCAPE = ''
 
 #***************************************************************************
 # Utility functions
 def magic2python(cmd):
     """Convert a command string of magic syntax to valid Python code."""
 
-    if cmd.startswith('#@') or cmd.startswith('@'):
+    if cmd.startswith('#'+MAGIC_ESCAPE) or \
+           cmd.startswith(MAGIC_ESCAPE):
         if cmd[0]=='#':
             cmd = cmd[1:]
         # we need to return the proper line end later
@@ -98,6 +100,7 @@ except AttributeError:
                   'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.~*?'
                   'ﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ¯˘˙˚¸˝˛ˇ'
                   '¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷ÿŸ⁄€‹›ﬁ%s' % os.sep)
+    
     def shlex_split(s):
         """Simplified backport to Python 2.2 of shlex.split().
 
@@ -147,24 +150,25 @@ class Macro:
 class Magic:
     """Magic functions for InteractiveShell.
 
-    Shell functions which can be reached as @function_name. All magic
+    Shell functions which can be reached as %function_name. All magic
     functions should accept a string, which they can parse for their own
-    needs. This can make some functions easier to type, eg `@cd ../`
-    vs. `@cd("../")`
+    needs. This can make some functions easier to type, eg `%cd ../`
+    vs. `%cd("../")`
 
     ALL definitions MUST begin with the prefix magic_. The user won't need it
     at the command line, but it is is needed in the definition. """
 
     # class globals
-    auto_status = ['Automagic is OFF, @ prefix IS needed for magic functions.',
-                   'Automagic is ON, @ prefix NOT needed for magic functions.']
+    auto_status = ['Automagic is OFF, % prefix IS needed for magic functions.',
+                   'Automagic is ON, % prefix NOT needed for magic functions.']
 
     #......................................................................
     # some utility functions
 
-    def __init__(self,name):
+    def __init__(self,shell):
         self.options_table = {}
-        MAGIC_PREFIX = name+'.magic_'
+        MAGIC_PREFIX = shell.name+'.magic_'
+        MAGIC_ESCAPE = shell.ESC_MAGIC
 
     def default_option(self,fn,optstr):
         """Make an entry in the options_table for fn, with value optstr"""
@@ -277,7 +281,7 @@ class Magic:
 
         # Try to see if it's magic
         if not found:
-            if oname.startswith('@'):
+            if oname.startswith(self.shell.ESC_MAGIC):
                 oname = oname[1:]
             obj = getattr(self,'magic_'+oname,None)
             if obj is not None:
@@ -318,9 +322,11 @@ class Magic:
         # Characters that need to be escaped for latex:
         escape_re = re.compile(r'(%|_|\$)',re.MULTILINE)
         # Magic command names as headers:
-        cmd_name_re = re.compile(r'^(@.*?):',re.MULTILINE)
+        cmd_name_re = re.compile(r'^(%s.*?):' % self.shell.ESC_MAGIC,
+                                 re.MULTILINE)
         # Magic commands 
-        cmd_re = re.compile(r'(?P<cmd>@.+?\b)(?!\}\}:)',re.MULTILINE)
+        cmd_re = re.compile(r'(?P<cmd>%s.+?\b)(?!\}\}:)' % self.shell.ESC_MAGIC,
+                            re.MULTILINE)
         # Paragraph continue
         par_re = re.compile(r'\\$',re.MULTILINE)
 
@@ -405,7 +411,9 @@ class Magic:
     # Functions for IPython shell work (vars,funcs, config, etc)
     def magic_lsmagic(self, parameter_s = ''):
         """List currently available magic functions."""
-        print 'Available magic functions:\n@'+'  @'.join(self.lsmagic())
+        mesc = self.shell.ESC_MAGIC
+        print 'Available magic functions:\n'+mesc+\
+              ('  '+mesc).join(self.lsmagic())
         print '\n' + Magic.auto_status[self.shell.rc.automagic]
         return None
         
@@ -429,7 +437,8 @@ class Magic:
                     pass
                 else:
                     break
-            magic_docs.append('@%s:\n\t%s\n' %(fname,fn.__doc__))
+            magic_docs.append('%s%s:\n\t%s\n' %(self.shell.ESC_MAGIC,
+                                                fname,fn.__doc__))
         magic_docs = ''.join(magic_docs)
 
         if mode == 'latex':
@@ -444,14 +453,14 @@ IPython's 'magic' functions
 
 The magic function system provides a series of functions which allow you to
 control the behavior of IPython itself, plus a lot of system-type
-features. All these functions are prefixed with a @ character, but parameters
+features. All these functions are prefixed with a % character, but parameters
 are given without parentheses or quotes.
 
-Example: typing '@cd mydir' (without the quotes) changes you working directory
+Example: typing '%cd mydir' (without the quotes) changes you working directory
 to 'mydir', if it exists.
 
 If you have 'automagic' enabled (via the command line option or with the
-@automagic function), you don't need to type in the @ explicitly.
+%automagic function), you don't need to type in the % explicitly.
 
 You can define your own magic functions to extend the system. See the supplied
 ipythonrc and example-magic.py files for details (in your ipython
@@ -462,25 +471,29 @@ ipythonrc file, placing a line like:
 
   execute __IPYTHON__.magic_pf = __IPYTHON__.magic_profile
 
-will define @pf as a new name for @profile.
+will define %pf as a new name for %profile.
 
-For a list of the available magic functions, use @lsmagic. For a description
-of any of them, type @magic_name?, e.g. '@cd?'.
+You can also call magics in code using the ipmagic() function, which IPython
+automatically adds to the builtin namespace.  Type 'ipmagic?' for details.
+
+For a list of the available magic functions, use %lsmagic. For a description
+of any of them, type %magic_name?, e.g. '%cd?'.
 
 Currently the magic system has the following functions:\n"""
 
-        outmsg = ("%s\n%s\n\nSummary of magic functions (from @lsmagic):"
-                  "\n\n@%s\n\n%s" % (outmsg,
-                                     magic_docs,
-                                     '  @'.join(self.lsmagic()),
+        mesc = self.shell.ESC_MAGIC
+        outmsg = ("%s\n%s\n\nSummary of magic functions (from %slsmagic):"
+                  "\n\n%s%s\n\n%s" % (outmsg,
+                                     magic_docs,mesc,mesc,
+                                     ('  '+mesc).join(self.lsmagic()),
                                      Magic.auto_status[self.shell.rc.automagic] ) )
 
         page(outmsg,screen_lines=self.shell.rc.screen_length)
   
     def magic_automagic(self, parameter_s = ''):
-        """Make magic functions callable without having to type the initial @.
+        """Make magic functions callable without having to type the initial %.
         
-        Toggles on/off (when off, you must call it as @automagic, of
+        Toggles on/off (when off, you must call it as %automagic, of
         course). Note that magic functions have lowest priority, so if there's
         a variable whose name collides with that of a magic fn, automagic
         won't work for that function (you get the variable instead). However,
@@ -516,9 +529,9 @@ Currently the magic system has the following functions:\n"""
     def magic_hist(self, parameter_s = ''):
         """Print input history (_i<n> variables), with most recent last.
         
-        @hist [-n]       -> print at most 40 inputs (some may be multi-line)\\
-        @hist [-n] n     -> print at most n inputs\\
-        @hist [-n] n1 n2 -> print inputs between n1 and n2 (n2 not included)\\
+        %hist [-n]       -> print at most 40 inputs (some may be multi-line)\\
+        %hist [-n] n     -> print at most n inputs\\
+        %hist [-n] n1 n2 -> print inputs between n1 and n2 (n2 not included)\\
 
         Each input's number <n> is shown, and is accessible as the
         automatically generated variable _i<n>.  Multi-line statements are
@@ -545,7 +558,7 @@ Currently the magic system has the following functions:\n"""
         elif len(args) == 2:
             init,final = map(int,args)
         else:
-            warn('@hist takes 0, 1 or 2 arguments separated by spaces.')
+            warn('%hist takes 0, 1 or 2 arguments separated by spaces.')
             print self.magic_hist.__doc__
             return
         width = len(str(final))
@@ -557,7 +570,8 @@ Currently the magic system has the following functions:\n"""
             multiline = inline.count('\n') > 1
             if print_nums:
                 print str(in_num).ljust(width)+':'+ line_sep[multiline],
-            if inline.startswith('#@') or inline.startswith('#!'):
+            if inline.startswith('#'+self.shell.ESC_MAGIC) or \
+                   inline.startswith('#!'):
                 print inline[1:],
             else:
                 print inline,
@@ -577,21 +591,22 @@ Currently the magic system has the following functions:\n"""
         """
 
         start = parameter_s.strip()
+        esc_magic = self.shell.ESC_MAGIC
         # Identify magic commands even if automagic is on (which means
         # the in-memory version is different from that typed by the user).
         if self.shell.rc.automagic:
-            start_magic = '@'+start
+            start_magic = esc_magic+start
         else:
             start_magic = start
         # Look through the input history in reverse
         for n in range(len(self.shell.input_hist)-2,0,-1):
             input = self.shell.input_hist[n]
-            if input.startswith('#@'):
+            if input.startswith('#'+esc_magic):
                 input = input[1:]
-            if input != '@r\n' and \
+            if input != '%sr\n' + esc_magic and \
                (input.startswith(start) or input.startswith(start_magic)):
                 #print 'match',`input`  # dbg
-                if input.startswith('@'):
+                if input.startswith(esc):
                     input = magic2python(input)
                     #print 'modified',`input`  # dbg
                 print 'Executing:',input,
@@ -666,7 +681,7 @@ Currently the magic system has the following functions:\n"""
 
         If the given argument is not an object currently defined, IPython will
         try to interpret it as a filename (automatically adding a .py extension
-        if needed). You can thus use @pfile as a syntax highlighting code
+        if needed). You can thus use %pfile as a syntax highlighting code
         viewer."""
 
         # first interpret argument as an object name
@@ -683,7 +698,7 @@ Currently the magic system has the following functions:\n"""
     def magic_pinfo(self, parameter_s=''):
         """Provide detailed information about an object.
 
-        '@pinfo object' is just a synonym for object? or ?object."""
+        '%pinfo object' is just a synonym for object? or ?object."""
         
         # look for the given object in all namespaces
         qmark1,oname,qmark2 = re.match('(\?*)(.*?)(\??$)',parameter_s).groups()
@@ -716,7 +731,7 @@ Currently the magic system has the following functions:\n"""
         file and things which are internal to IPython.
 
         This is deliberate, as typically you may load many modules and the
-        purpose of @who is to show you only what you've manually defined."""
+        purpose of %who is to show you only what you've manually defined."""
 
         varlist = self.magic_who_ls()
         if not varlist:
@@ -736,7 +751,7 @@ Currently the magic system has the following functions:\n"""
         print # well, this does force a flush at the expense of an extra \n
 
     def magic_whos(self, parameter_s=''):
-        """Like @who, but gives some extra information about each variable.
+        """Like %who, but gives some extra information about each variable.
 
         For all variables, the type is printed. Additionally it prints:\\
           - For {},[],(): their length.\\
@@ -803,15 +818,15 @@ Currently the magic system has the following functions:\n"""
     def magic_logstart(self,parameter_s=''):
         """Start logging anywhere in a session.
 
-        @logstart [log_name [log_mode]]
+        %logstart [log_name [log_mode]]
 
         If no name is given, it defaults to a file named 'ipython.log' in your
         current directory, in 'rotate' mode (see below).
 
-        '@logstart name' saves to file 'name' in 'backup' mode.  It saves your
+        '%logstart name' saves to file 'name' in 'backup' mode.  It saves your
         history up to that point and then continues logging.
 
-        @logstart takes a second optional parameter: logging mode. This can be one
+        %logstart takes a second optional parameter: logging mode. This can be one
         of (note that the modes are given unquoted):\\
           over: overwrite existing log.\\
           backup: rename (if exists) to name~ and start name.\\
@@ -838,11 +853,11 @@ Currently the magic system has the following functions:\n"""
                     logname = par
                     logmode = 'backup'
                 except:
-                    warn('Usage: @log [log_name [log_mode]]')
+                    warn('Usage: %log [log_name [log_mode]]')
                     return
         if not logmode in valid_modes:
             warn('Logging NOT activated.\n'
-                 'Usage: @log [log_name [log_mode]]\n'
+                 'Usage: %log [log_name [log_mode]]\n'
                  'Valid modes: '+str(valid_modes))
             return
 
@@ -879,8 +894,8 @@ Currently the magic system has the following functions:\n"""
         """Restart logging.
 
         This function is for restarting logging which you've temporarily
-        stopped with @logoff. For starting logging for the first time, you
-        must use the @logstart function, which allows you to specify an
+        stopped with %logoff. For starting logging for the first time, you
+        must use the %logstart function, which allows you to specify an
         optional log filename."""
         
         self.switch_log(1)
@@ -893,11 +908,11 @@ Currently the magic system has the following functions:\n"""
     def magic_pdb(self, parameter_s=''):
         """Control the calling of the pdb interactive debugger.
 
-        Call as '@pdb on', '@pdb 1', '@pdb off' or '@pdb 0'. If called without
+        Call as '%pdb on', '%pdb 1', '%pdb off' or '%pdb 0'. If called without
         argument it works as a toggle.
 
         When an exception is triggered, IPython can optionally call the
-        interactive pdb debugger after the traceback printout. @pdb toggles
+        interactive pdb debugger after the traceback printout. %pdb toggles
         this feature on and off."""
 
         par = parameter_s.strip().lower()
@@ -921,7 +936,7 @@ Currently the magic system has the following functions:\n"""
         """Run a statement through the python code profiler.
 
         Usage:\\
-          @prun [options] statement
+          %prun [options] statement
 
         The given statement (which doesn't require quote marks) is run via the
         python profiler in a manner similar to the profile.run() function.
@@ -952,9 +967,9 @@ Currently the magic system has the following functions:\n"""
 
         Since magic functions have a particular form of calling which prevents
         you from writing something like:\\
-          In [1]: p = @prun -r print 4  # invalid!\\
+          In [1]: p = %prun -r print 4  # invalid!\\
         you must instead use IPython's automatic variables to assign this:\\
-          In [1]: @prun -r print 4  \\
+          In [1]: %prun -r print 4  \\
           Out[1]: <pstats.Stats instance at 0x8222cec>\\
           In [2]: stats = _
 
@@ -1010,7 +1025,7 @@ Currently the magic system has the following functions:\n"""
         objects. The profile is still shown on screen.
 
         If you want to run complete programs under the profiler's control, use
-        '@run -p [prof_opts] filename.py [args to program]' where prof_opts
+        '%run -p [prof_opts] filename.py [args to program]' where prof_opts
         contains profiler specific options as described here.
         
         You can read the complete documentation for the profile module with:
@@ -1021,7 +1036,7 @@ Currently the magic system has the following functions:\n"""
             opts,arg_str = self.parse_options(parameter_s,'d:l:rs:t:',
                                               list_all=1)
             namespace = self.shell.user_ns
-        else:  # called to run a program by @run -p
+        else:  # called to run a program by %run -p
             try:
                 filename = get_py_filename(arg_lst[0])
             except IOError,msg:
@@ -1088,7 +1103,7 @@ Currently the magic system has the following functions:\n"""
         """Run the named file inside IPython as a program.
 
         Usage:\\
-          @run [-n -i -p [profile options]] file [args]
+          %run [-n -i -p [profile options]] file [args]
 
         Parameters after the filename are passed as command-line arguments to
         the program (put in sys.argv). Then, control returns to IPython's
@@ -1123,13 +1138,13 @@ Currently the magic system has the following functions:\n"""
         prints a detailed report of execution times, function calls, etc).
 
         You can pass other options after -p which affect the behavior of the
-        profiler itself. See the docs for @prun for details.
+        profiler itself. See the docs for %prun for details.
 
         In this mode, the program's variables do NOT propagate back to the
         IPython interactive namespace (because they remain in the namespace
         where the profiler executes them).
 
-        Internally this triggers a call to @prun, see its documentation for
+        Internally this triggers a call to %prun, see its documentation for
         details on the options available specifically for profiling."""
 
         # get arguments and set sys.argv for program to be run.
@@ -1140,7 +1155,7 @@ Currently the magic system has the following functions:\n"""
             filename = get_py_filename(arg_lst[0])
         except IndexError:
             warn('you must provide at least a filename.')
-            print '\n@run:\n',inspect.getdoc(self.magic_run)
+            print '\n%run:\n',inspect.getdoc(self.magic_run)
             return
         except IOError,msg:
             error(msg)
@@ -1188,15 +1203,15 @@ Currently the magic system has the following functions:\n"""
         """Run files as logs.
 
         Usage:\\
-          @runlog file1 file2 ...
+          %runlog file1 file2 ...
 
         Run the named files (treating them as log files) in sequence inside
         the interpreter, and return to the prompt.  This is much slower than
-        @run because each line is executed in a try/except block, but it
+        %run because each line is executed in a try/except block, but it
         allows running files with syntax errors in them.
 
         Normally IPython will guess when a file is one of its own logfiles, so
-        you can typically use @run even for logs. This shorthand allows you to
+        you can typically use %run even for logs. This shorthand allows you to
         force any file to be treated as a log file."""
 
         for f in parameter_s.split():
@@ -1206,7 +1221,7 @@ Currently the magic system has the following functions:\n"""
         """Define a set of input lines as a macro for future re-execution.
 
         Usage:\\
-          @macro name n1:n2 n3:n4 ... n5 .. n6 ...
+          %macro name n1:n2 n3:n4 ... n5 .. n6 ...
 
         This will define a global variable called `name` which is a string
         made of joining the slices and lines you specify (n1,n2,... numbers
@@ -1218,7 +1233,7 @@ Currently the magic system has the following functions:\n"""
         Note that the slices use the standard Python slicing notation (5:8
         means include lines numbered 5,6,7).
 
-        For example, if your history contains (@hist prints it):
+        For example, if your history contains (%hist prints it):
         
           44: x=1\\
           45: y=3\\
@@ -1230,7 +1245,7 @@ Currently the magic system has the following functions:\n"""
         you can create a macro with lines 44 through 47 (included) and line 49
         called my_macro with:
 
-          In [51]: @macro my_macro 44:48 49
+          In [51]: %macro my_macro 44:48 49
 
         Now, typing `my_macro` (without quotes) will re-execute all this code
         in one pass.
@@ -1267,9 +1282,9 @@ Currently the magic system has the following functions:\n"""
         """Save a set of lines to a given filename.
 
         Usage:\\
-          @save filename n1:n2 n3:n4 ... n5 .. n6 ...
+          %save filename n1:n2 n3:n4 ... n5 .. n6 ...
 
-        This function uses the same syntax as @macro for line extraction, but
+        This function uses the same syntax as %macro for line extraction, but
         instead of creating a macro it saves the resulting string to the
         filename you specify.
 
@@ -1293,16 +1308,16 @@ Currently the magic system has the following functions:\n"""
         print cmds
 
     def magic_ed(self,parameter_s = ''):
-        """Alias to @edit."""
+        """Alias to %edit."""
         return self.magic_edit(parameter_s)
 
     def magic_edit(self,parameter_s = '',last_call=['','']):
         """Bring up an editor and execute the resulting code.
 
         Usage:
-          @edit [options] [args]
+          %edit [options] [args]
 
-        @edit will use the editor you have configured in your environment as
+        %edit will use the editor you have configured in your environment as
         the EDITOR variable. If this isn't found, it will default to vi under
         Linux/Unix and to notepad under Windows.
 
@@ -1314,7 +1329,7 @@ Currently the magic system has the following functions:\n"""
         This command allows you to conveniently edit multi-line code right in
         your IPython session.
         
-        If called without arguments, @edit opens up an empty editor with a
+        If called without arguments, %edit opens up an empty editor with a
         temporary file and will execute the contents of this file when you
         close it (don't forget to save it!).
 
@@ -1326,7 +1341,7 @@ Currently the magic system has the following functions:\n"""
 
         -x: do not execute the edited code immediately upon exit. This is
         mainly useful if you are editing programs which need to be called with
-        command line arguments, which you can then do using @run.
+        command line arguments, which you can then do using %run.
 
         Arguments:
 
@@ -1334,7 +1349,7 @@ Currently the magic system has the following functions:\n"""
 
         - The arguments are numbers or pairs of colon-separated numbers (like
         1 4:8 9). These are interpreted as lines of previous input to be
-        loaded into the editor. The syntax is the same of the @macro command.
+        loaded into the editor. The syntax is the same of the %macro command.
 
         - If the argument doesn't start with a number, it is evaluated as a
         variable and its contents loaded into the editor. You can thus edit
@@ -1343,7 +1358,7 @@ Currently the magic system has the following functions:\n"""
 
         - If the argument is the name of an object (other than a string),
         IPython will try to locate the file where it was defined and open the
-        editor at the point where it is defined. You can use `@edit function`
+        editor at the point where it is defined. You can use `%edit function`
         to load an editor exactly at the point where 'function' is defined,
         edit it and have the file be executed automatically.
 
@@ -1357,13 +1372,13 @@ Currently the magic system has the following functions:\n"""
         editor. It will execute its contents with execfile() when you exit,
         loading any code in the file into your interactive namespace.
 
-        After executing your code, @edit will return as output the code you
+        After executing your code, %edit will return as output the code you
         typed in the editor (except when it was an existing file). This way
-        you can reload the code in further invocations of @edit as a variable,
+        you can reload the code in further invocations of %edit as a variable,
         via _<NUMBER> or Out[<NUMBER>], where <NUMBER> is the prompt number of
         the output.
 
-        Note that @edit is also available through the alias @ed.
+        Note that %edit is also available through the alias %ed.
 
         This is an example of creating a simple function inside the editor and
         then modifying it. First, start up the editor:
@@ -1446,7 +1461,7 @@ Currently the magic system has the following functions:\n"""
         linemark = ''
 
         if re.match(r'\d',args):
-            # Mode where user specifies ranges of lines, like in @macro.
+            # Mode where user specifies ranges of lines, like in %macro.
             # This means that you can't edit files whose names begin with
             # numbers this way. Tough.
             ranges = args.split()
@@ -1609,7 +1624,7 @@ Defaulting color scheme to 'NoColor'"""
         """Toggle color_info.
 
         The color_info configuration parameter controls whether colors are
-        used for displaying object details (by things like @psource, @pfile or
+        used for displaying object details (by things like %psource, %pfile or
         the '?' system). This function toggles this value with each call.
 
         Note that unless you have a fairly recent pager (less works better
@@ -1634,7 +1649,7 @@ Defaulting color scheme to 'NoColor'"""
         raise SystemExit,'IPythonExit'
 
     def magic_Quit(self, parameter_s=''):
-        """Exit IPython without confirmation (like @Exit)."""
+        """Exit IPython without confirmation (like %Exit)."""
 
         raise SystemExit,'IPythonExit'
         
@@ -1644,7 +1659,7 @@ Defaulting color scheme to 'NoColor'"""
     def magic_alias(self, parameter_s = ''):
         """Define an alias for a system command.
 
-        '@alias alias_name cmd' defines 'alias_name' as an alias for 'cmd'
+        '%alias alias_name cmd' defines 'alias_name' as an alias for 'cmd'
 
         Then, typing 'alias_name params' will execute the system command 'cmd
         params' (from your underlying operating system).
@@ -1664,9 +1679,9 @@ Defaulting color scheme to 'NoColor'"""
         per parameter):
         
           In [1]: alias parts echo first %s second %s\\
-          In [2]: @parts A B\\
+          In [2]: %parts A B\\
           first A second B\\
-          In [3]: @parts A\\
+          In [3]: %parts A\\
           Incorrect number of arguments: 2 expected.\\
           parts is an alias to: 'echo first %s second %s'\\
 
@@ -1688,18 +1703,18 @@ Defaulting color scheme to 'NoColor'"""
         In [9]: show $$PATH
         /usr/local/lf9560/bin:/usr/local/intel/compiler70/ia32/bin:...
 
-        You can use the alias facility to acess all of $PATH.  See the @rehash
-        and @rehashx functions, which automatically create aliases for the
+        You can use the alias facility to acess all of $PATH.  See the %rehash
+        and %rehashx functions, which automatically create aliases for the
         contents of your $PATH.
 
-        If called with no parameters, @alias prints the current alias table."""
+        If called with no parameters, %alias prints the current alias table."""
 
         par = parameter_s.strip()
         if not par:
             if self.shell.rc.automagic:
                 prechar = ''
             else:
-                prechar = '@'
+                prechar = self.shell.ESC_MAGIC
             print 'Alias\t\tSystem Command\n'+'-'*30
             atab = self.shell.alias_table
             aliases = atab.keys()
@@ -1734,7 +1749,7 @@ Defaulting color scheme to 'NoColor'"""
 
         This version does no checks on execute permissions or whether the
         contents of $PATH are truly files (instead of directories or something
-        else).  For such a safer (but slower) version, use @rehashx."""
+        else).  For such a safer (but slower) version, use %rehashx."""
 
         # This function (and rehashx) manipulate the alias_table directly
         # rather than calling magic_alias, for speed reasons.  A rehash on a
@@ -1751,14 +1766,14 @@ Defaulting color scheme to 'NoColor'"""
         # Make sure the alias table doesn't contain keywords or builtins
         self.shell.alias_table_validate()
         # Call again init_auto_alias() so we get 'rm -i' and other modified
-        # aliases since @rehash will probably clobber them
+        # aliases since %rehash will probably clobber them
         self.shell.init_auto_alias()
 
     def magic_rehashx(self, parameter_s = ''):
         """Update the alias table with all executable files in $PATH.
 
         This version explicitly checks that every entry in $PATH is a file
-        with execute access (os.X_OK), so it is much slower than @rehash.
+        with execute access (os.X_OK), so it is much slower than %rehash.
 
         Under Windows, it checks executability as a match agains a
         '|'-separated string of extensions, stored in the IPython config
@@ -1801,7 +1816,7 @@ Defaulting color scheme to 'NoColor'"""
             # Make sure the alias table doesn't contain keywords or builtins
             self.shell.alias_table_validate()
             # Call again init_auto_alias() so we get 'rm -i' and other
-            # modified aliases since @rehashx will probably clobber them
+            # modified aliases since %rehashx will probably clobber them
             self.shell.init_auto_alias()
         finally:
             os.chdir(savedir)
@@ -1815,7 +1830,7 @@ Defaulting color scheme to 'NoColor'"""
 
         This command automatically maintains an internal list of directories
         you visit during your IPython session, in the variable _dh. The
-        command @dhist shows this history nicely formatted.
+        command %dhist shows this history nicely formatted.
 
         Usage:
 
@@ -1825,7 +1840,7 @@ Defaulting color scheme to 'NoColor'"""
 
           cd -<n>: changes to the n-th directory in the directory history.
 
-          cd -b <bookmark_name>: jump to a bookmark set by @bookmark
+          cd -b <bookmark_name>: jump to a bookmark set by %bookmark
              (note: cd <bookmark_name> is enough if there is no
               directory <bookmark_name>, but a bookmark with the name exists.)
 
@@ -1870,9 +1885,9 @@ Defaulting color scheme to 'NoColor'"""
             else:
                 if bkms:
                     error("Bookmark '%s' not found.  "
-                          "Use '@bookmark -l' to see your bookmarks." % ps)
+                          "Use '%bookmark -l' to see your bookmarks." % ps)
                 else:
-                    print "Bookmarks not set - use @bookmark <bookmarkname>"
+                    print "Bookmarks not set - use %bookmark <bookmarkname>"
                 return
             
         # at this point ps should point to the target dir
@@ -1892,12 +1907,12 @@ Defaulting color scheme to 'NoColor'"""
     def magic_dhist(self, parameter_s=''):
         """Print your history of visited directories.
 
-        @dhist       -> print full history\\
-        @dhist n     -> print last n entries only\\
-        @dhist n1 n2 -> print entries between n1 and n2 (n1 not included)\\
+        %dhist       -> print full history\\
+        %dhist n     -> print last n entries only\\
+        %dhist n1 n2 -> print entries between n1 and n2 (n1 not included)\\
 
-        This history is automatically maintained by the @cd command, and
-        always available as the global list variable _dh. You can use @cd -<n>
+        This history is automatically maintained by the %cd command, and
+        always available as the global list variable _dh. You can use %cd -<n>
         to go to directory number <n>."""
 
         dh = self.shell.user_ns['_dh']
@@ -1930,9 +1945,9 @@ Defaulting color scheme to 'NoColor'"""
         """Place the current dir on stack and change directory.
         
         Usage:\\
-          @pushd ['dirname']
+          %pushd ['dirname']
 
-        @pushd with no arguments does a @pushd to your home directory.
+        %pushd with no arguments does a %pushd to your home directory.
         """
         if parameter_s == '': parameter_s = '~'
         if len(self.dir_stack)>0 and os.path.expanduser(parameter_s) != \
@@ -1965,7 +1980,7 @@ Defaulting color scheme to 'NoColor'"""
     def magic_sc(self, parameter_s=''):
         """Shell capture - execute a shell command and capture its output.
 
-        @sc [options] varname=command
+        %sc [options] varname=command
 
         IPython will run the given command using commands.getoutput(), and
         will then update the user's interactive namespace with a variable
@@ -2006,7 +2021,7 @@ Defaulting color scheme to 'NoColor'"""
     def magic_sx(self, parameter_s=''):
         """Shell execute - run a shell command and capture its output.
 
-        @sx command
+        %sx command
 
         IPython will run the given command using commands.getoutput(), and
         return the result formatted as a list (split on '\\n').  Since the
@@ -2015,18 +2030,18 @@ Defaulting color scheme to 'NoColor'"""
 
         Notes:
 
-        1) If an input line begins with '!!', then @sx is automatically
+        1) If an input line begins with '!!', then %sx is automatically
         invoked.  That is, while:
           !ls
         causes ipython to simply issue system('ls'), typing
           !!ls
         is a shorthand equivalent to:
-          @sx ls
+          %sx ls
         
-        2) @sx differs from @sc in that @sx automatically splits into a list,
-        like '@sc -l'.  The reason for this is to make it as easy as possible
+        2) %sx differs from %sc in that %sx automatically splits into a list,
+        like '%sc -l'.  The reason for this is to make it as easy as possible
         to process line-oriented shell output via further python commands.
-        @sc is meant to provide much finer control, but requires more
+        %sc is meant to provide much finer control, but requires more
         typing."""
 
         if parameter_s:
@@ -2038,15 +2053,15 @@ Defaulting color scheme to 'NoColor'"""
     def magic_bookmark(self, parameter_s=''):
         """Manage IPython's bookmark system.
 
-        @bookmark <name>       - set bookmark to current dir
-        @bookmark <name> <dir> - set bookmark to <dir>
-        @bookmark -l           - list all bookmarks
-        @bookmark -d <name>    - remove bookmark
-        @bookmark -r           - remove all bookmarks
+        %bookmark <name>       - set bookmark to current dir
+        %bookmark <name> <dir> - set bookmark to <dir>
+        %bookmark -l           - list all bookmarks
+        %bookmark -d <name>    - remove bookmark
+        %bookmark -r           - remove all bookmarks
 
         You can later on access a bookmarked folder with:
-          @cd -b <name>
-        or simply '@cd <name>' if there is no directory called <name> AND
+          %cd -b <name>
+        or simply '%cd <name>' if there is no directory called <name> AND
         there is such a bookmark defined.
 
         Your bookmarks persist through IPython sessions, but they are

@@ -429,7 +429,7 @@ class MatplotlibShellBase:
             self.matplotlib.rcParams['backend'] = self.mpl_backend
         
     def magic_run(self,parameter_s=''):
-        """Modified @run for Matplotlib"""
+        """Modified %run for Matplotlib"""
 
         Magic.magic_run(self,parameter_s,runner=self.mplot_exec)
 
@@ -590,6 +590,21 @@ class IPShellMatplotlibWX(IPShellWX):
     Multi-threaded class, meant for the WX* backends."""
     
     def __init__(self,argv=None,user_ns=None,debug=0):
+        IPShellWX.__init__(self,argv,user_ns,debug,shell_class=MatplotlibMTShell)
+
+
+# Experimental gui_thread code...
+class IPShellMatplotlibWX_gui_thread(IPShellWX):
+    """Subclass IPShellWX with MatplotlibMTShell as the internal shell.
+
+    Multi-threaded class, meant for the WX* backends."""
+    
+    def __init__(self,argv=None,user_ns=None,debug=0):
+
+        print 'gui_thread...' # dbg
+        import gui_thread
+        gui_thread.start()
+        
         IPShellWX.__init__(self,argv,user_ns,debug,shell_class=MatplotlibMTShell)
 
 #-----------------------------------------------------------------------------

@@ -44,7 +44,7 @@ Main features:
 license = 'LGPL'
 
 authors = {'Fernando' : ('Fernando Perez','fperez@colorado.edu'),
-           'Janko' : ('Janko Hauser','jh@comunit.de'),
+           'Janko' : ('Janko Hauser','jhauser@zscout.de'),
            'Nathan' : ('Nathaniel Gray','n8gray@caltech.edu')
            }
 

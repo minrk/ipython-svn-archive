@@ -85,21 +85,21 @@ method lives in python and does know about these variables.
 New magic functions
 -------------------
 
-@gpc: pass one command to Gnuplot and execute it or open a Gnuplot shell where
+%gpc: pass one command to Gnuplot and execute it or open a Gnuplot shell where
 each line of input is executed.
 
-@gp_set_default: reset the value of IPython's global Gnuplot instance.""")
+%gp_set_default: reset the value of IPython's global Gnuplot instance.""")
     
 # Code below is all for IPython use
 # Define the magic functions for communicating with the above gnuplot instance.
 def magic_gpc(self,parameter_s=''):
     """Execute a gnuplot command or open a gnuplot shell.
 
-    Usage (omit the @ if automagic is on). There are two ways to use it:
+    Usage (omit the % if automagic is on). There are two ways to use it:
 
-      1) @gpc 'command' -> passes 'command' directly to the gnuplot instance.
+      1) %gpc 'command' -> passes 'command' directly to the gnuplot instance.
 
-      2) @gpc -> will open up a prompt (gnuplot>>>) which takes input like the
+      2) %gpc -> will open up a prompt (gnuplot>>>) which takes input like the
       standard gnuplot interactive prompt. If you need to type a multi-line
       command, use \\ at the end of each intermediate line.
 
@@ -113,9 +113,9 @@ def magic_gpc(self,parameter_s=''):
         self.shell.gnuplot.interact()
 
 def magic_gp_set_default(self,parameter_s=''):
-    """Set the default gnuplot instance accessed by the @gp magic function.
+    """Set the default gnuplot instance accessed by the %gp magic function.
 
-    @gp_set_default name
+    %gp_set_default name
 
     Call with the name of the new instance at the command line. If you want to
     set this instance in your own code (using an embedded IPython, for

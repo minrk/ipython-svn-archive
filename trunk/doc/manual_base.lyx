@@ -172,7 +172,7 @@ Numbered input/output prompts with command history (persistent across sessions
 User-extensible `magic' commands.
  A set of commands prefixed with 
 \family typewriter 
-@
+%
 \family default 
  is available for controlling IPython itself and provides directory control,
  namespace information and many aliases to common system shell commands.
@@ -209,11 +209,11 @@ $PATH
 
 Filesystem navigation, via a magic 
 \family typewriter 
-@cd
+%cd
 \family default 
  command, along with a persistent bookmark system (using 
 \family typewriter 
-@bookmark
+%bookmark
 \family default 
 ) for fast access to frequently visited directories.
 \layout Itemize
@@ -313,11 +313,11 @@ profile
 \family default 
  module, IPython wraps this functionality with magic commands (see 
 \family typewriter 
-`@prun'
+`%prun'
 \family default 
  and 
 \family typewriter 
-`@run -p
+`%run -p
 \family default 
 ')convenient for rapid interactive work.
 \layout Subsection
@@ -985,7 +985,7 @@ readline
 \family default 
  library at startup and any time the 
 \family typewriter 
-@colors
+%colors
 \family default 
  command is issued, so you can consider it to be a quasi-requirement.
 \layout Subsubsection
@@ -1250,11 +1250,11 @@ Editor
 
 The 
 \family typewriter 
-@edit
+%edit
 \family default 
  command (and its alias 
 \family typewriter 
-@ed
+%ed
 \family default 
 ) will invoke the editor set in your environment as 
 \family typewriter 
@@ -1541,11 +1541,11 @@ Input/Output prompts and exception tracebacks
 You can test whether the colored prompts and tracebacks work on your system
  interactively by typing 
 \family typewriter 
-'@colors Linux'
+'%colors Linux'
 \family default 
  at the prompt (use '
 \family typewriter 
-@colors LightBG'
+%colors LightBG'
 \family default 
  if your terminal has a light background).
  If the input prompt shows garbage like:
@@ -1567,7 +1567,7 @@ In [1]:
 this means that your terminal doesn't properly handle color escape sequences.
  You can go to a 'no color' mode by typing '
 \family typewriter 
-@colors NoColor
+%colors NoColor
 \family default 
 '.
  
@@ -1837,25 +1837,25 @@ object_name?
  for classes.
  The magic commands 
 \family typewriter 
-@pdoc
+%pdoc
 \family default 
 , 
 \family typewriter 
-@pdef
+%pdef
 \family default 
 , 
 \family typewriter 
-@psource
+%psource
 \family default 
  and 
 \family typewriter 
-@pfile
+%pfile
 \family default 
  will respectively print the docstring, function definition line, full source
  code and the complete file for any object (when they can be found).
  If automagic is on (it is by default), you don't need to type the '
 \family typewriter 
-@
+%
 \family default 
 ' explicitly.
  See sec.
@@ -1869,7 +1869,7 @@ object_name?
 
 The 
 \family typewriter 
-@run
+%run
 \family default 
  magic command allows you to run any python script and load all of its data
  directly into the interactive namespace.
@@ -1885,7 +1885,7 @@ import
 \family default 
  for code I am testing, relying on 
 \family typewriter 
-@run
+%run
 \family default 
  instead.
  See sec.
@@ -1918,7 +1918,7 @@ Thanks to Christian Hart for the suggestions leading to this feature and
 .
  The 
 \family typewriter 
-@pdb
+%pdb
 \family default 
  command allows you to toggle on and off the automatic invocation of the
  pdb debugger at any uncaught exception.
@@ -1933,7 +1933,7 @@ inside
 \newline 
 Running programs with 
 \family typewriter 
-@run
+%run
 \family default 
  and pdb active can be an efficient to develop and debug code, in many cases
  eliminating the need for 
@@ -2036,7 +2036,7 @@ In
  If you need to execute the same set of lines often, you can assign them
  to a macro with the 
 \family typewriter 
-@macro
+%macro
 \family default 
  
 \family typewriter 
@@ -2055,7 +2055,7 @@ See sec.
 Use your input history.
  The 
 \family typewriter 
-@hist
+%hist
 \family default 
  command can show you all previous input, without line numbers if desired
  (option 
@@ -2066,7 +2066,7 @@ Use your input history.
  text editor.
  You can also save all your history by turning on logging via 
 \family typewriter 
-@logstart
+%logstart
 \family default 
 ; these logs can later be either reloaded as IPython sessions or used as
  code for your programs.
@@ -2074,7 +2074,7 @@ Use your input history.
 
 Define your own macros with 
 \family typewriter 
-@macro
+%macro
 \family default 
 .
  This can be useful for automating sequences of expressions when working
@@ -2094,19 +2094,19 @@ Define your own system aliases.
 IPython comes with some pre-defined aliases and a complete system for changing
  directories, both via a stack (see 
 \family typewriter 
-@pushd
+%pushd
 \family default 
 , 
 \family typewriter 
-@popd
+%popd
 \family default 
  and 
 \family typewriter 
-@ds
+%ds
 \family default 
 ) and via direct 
 \family typewriter 
-@cd
+%cd
 \family default 
 .
  The latter keeps a history of visited directories and allows you to go
@@ -2120,11 +2120,11 @@ Use Python to manipulate the results of system commands.
 \family default 
 ' special syntax, and the 
 \family typewriter 
-@sc
+%sc
 \family default 
  and 
 \family typewriter 
-@sx
+%sx
 \family default 
  magic commands allow you to capture system output into Python variables.
 \layout Itemize
@@ -2180,7 +2180,7 @@ Embed IPython in your programs.
 Use the Python profiler.
  When dealing with performance issues, the 
 \family typewriter 
-@run
+%run
 \family default 
  command with a 
 \family typewriter 
@@ -2190,7 +2190,7 @@ Use the Python profiler.
  profiler.
  The 
 \family typewriter 
-@prun
+%prun
 \family default 
  command does a similar job for single Python expressions (like function
  calls).
@@ -2198,7 +2198,7 @@ Use the Python profiler.
 
 Use 
 \family typewriter 
-@edit
+%edit
 \family default 
  to have almost multiline editing.
  While IPython doesn't support true multiline editing, this command allows
@@ -2383,7 +2383,7 @@ first
  of matplotlib backend requires it.
  It also modifies the 
 \family typewriter 
-@run
+%run
 \family default 
  command to correctly execute (without blocking) any matplotlib-based script
  which calls 
@@ -2411,12 +2411,12 @@ show()
  make magic commands automatic (without needing their first character to
  be 
 \family typewriter 
-@
+%
 \family default 
 ).
  Type 
 \family typewriter 
-@magic
+%magic
 \family default 
  at the IPython prompt for more information.
 \layout List
@@ -2514,9 +2514,9 @@ show()
 
 \SpecialChar ~
  Test it and turn it on permanently if it works with your system.
- The magic function @
+ The magic function 
 \family typewriter 
-color_info
+%color_info
 \family default 
  allows you to toggle this interactively for testing.
 \layout List
@@ -2594,7 +2594,7 @@ dreload()
 \series default 
 : Which editor to use with the 
 \family typewriter 
-@edit
+%edit
 \family default 
  command.
  By default, IPython will honor your 
@@ -3232,7 +3232,7 @@ most
 \newline 
 
 \family typewriter 
-@copy 
+%copy 
 \backslash 
 opt/foo/bar.txt 
 \backslash 
@@ -3267,21 +3267,21 @@ Magic command system
 
 IPython will treat any line whose first character is a 
 \family typewriter 
-@
+%
 \family default 
  as a special call to a 'magic' function.
  These allow you to control the behavior of IPython itself, plus a lot of
  system-type features.
  They are all prefixed with a 
 \family typewriter 
-@
+%
 \family default 
  character, but parameters are given without parentheses or quotes.
 \layout Standard
 
 Example: typing 
 \family typewriter 
-'@cd mydir'
+'%cd mydir'
 \family default 
  (without the quotes) changes you working directory to 
 \family typewriter 
@@ -3300,11 +3300,11 @@ ipythonrc
 \family default 
 or with the 
 \family typewriter 
-@automagic
+%automagic
 \family default 
  function), you don't need to type in the 
 \family typewriter 
-@
+%
 \family default 
  explicitly.
  IPython will scan its internal list of magic functions and call one if
@@ -3324,7 +3324,7 @@ mydir
  You can still access the shadowed magic function by explicitly using the
  
 \family typewriter 
-@
+%
 \family default 
  character at the beginning of the line.
 \layout Standard
@@ -3334,7 +3334,7 @@ An example (with automagic on) should clarify all this:
 
 
 \family typewriter 
-In [1]: cd ipython # @cd is called by automagic
+In [1]: cd ipython # %cd is called by automagic
 \newline 
 /usr/local/home/fperez/ipython
 \newline 
@@ -3400,12 +3400,12 @@ SyntaxError: invalid syntax
 \SpecialChar ~
 
 \newline 
-In [4]: @cd ..
+In [4]: %cd ..
 
 \family default 
  
 \family typewriter 
-# but @cd always works
+# but %cd always works
 \family default 
 
 \newline 
@@ -3453,24 +3453,24 @@ execute __IP.magic_cl = __IP.magic_clear
 
 will define 
 \family typewriter 
-@cl
+%cl
 \family default 
  as a new name for 
 \family typewriter 
-@clear
+%clear
 \family default 
 .
 \layout Standard
 
 Type 
 \family typewriter 
-@magic
+%magic
 \family default 
  for more information, including a list of all available magic functions
  at any time and their docstrings.
  You can also type 
 \family typewriter 
-@magic_function_name?
+%magic_function_name?
 \family default 
  (see sec.
  
@@ -3502,7 +3502,7 @@ default
  installation follows.
  This is similar to what you'll see by simply typing 
 \family typewriter 
-@magic
+%magic
 \family default 
  at the prompt, but that will also give you information about magic commands
  you may have added as part of your personal customizations.
@@ -3597,15 +3597,15 @@ The following magic functions are particularly useful for gathering information
  about your working environment.
  You can get more details by typing 
 \family typewriter 
-@magic
+%magic
 \family default 
  or querying them individually (use 
 \family typewriter 
-@function_name?
+%function_name?
 \family default 
  with or without the 
 \family typewriter 
-@
+%
 \family default 
 ), this is just a summary:
 \layout List
@@ -3614,7 +3614,7 @@ The following magic functions are particularly useful for gathering information
 
 \family typewriter 
 \series bold 
-@pdoc\SpecialChar ~
+%pdoc\SpecialChar ~
 <object>
 \family default 
 \series default 
@@ -3627,7 +3627,7 @@ r docstrings.
 
 \family typewriter 
 \series bold 
-@pdef\SpecialChar ~
+%pdef\SpecialChar ~
 <object>
 \family default 
 \series default 
@@ -3639,7 +3639,7 @@ r docstrings.
 
 \family typewriter 
 \series bold 
-@psource\SpecialChar ~
+%psource\SpecialChar ~
 <object>
 \family default 
 \series default 
@@ -3650,7 +3650,7 @@ r docstrings.
 
 \family typewriter 
 \series bold 
-@pfile\SpecialChar ~
+%pfile\SpecialChar ~
 <object>
 \family default 
 \series default 
@@ -3662,25 +3662,25 @@ r docstrings.
 
 \family typewriter 
 \series bold 
-@who/@whos
+%who/%whos
 \family default 
 \series default 
 : These functions give information about identifiers you have defined interactiv
 ely (not things you loaded or defined in your configuration files).
  
 \family typewriter 
-@who
+%who
 \family default 
  just prints a list of identifiers and 
 \family typewriter 
-@whos
+%whos
 \family default 
  prints a table with some basic details about each identifier.
 \layout Standard
 
 Note that the dynamic object information functions (
 \family typewriter 
-?/??, @pdoc, @pfile, @pdef, @psource
+?/??, %pdoc, %pfile, %pdef, %psource
 \family default 
 ) give you access to documentation even on things which are not really defined
  as separate identifiers.
@@ -3849,7 +3849,7 @@ Warning:
  of multi-line indented code (the pasted code gets re-indented on each line).
  A magic function 
 \family typewriter 
-@autoindent
+%autoindent
 \family default 
  allows you to toggle it on/off at runtime.
  You can also disable it permanently on in your 
@@ -3997,7 +3997,7 @@ You can log all input from a session either by starting IPython with the
 
 )or by activating the logging at any moment with the magic function 
 \family typewriter 
-@logstart
+%logstart
 \family default 
 .
  
@@ -4021,14 +4021,14 @@ The log files can also be used as a way to have a permanent record of any
 
 The 
 \family typewriter 
-@logstart
+%logstart
 \family default 
  function for activating logging in mid-session is used as follows:
 \layout Standard
 
 
 \family typewriter 
-@logstart [log_name [log_mode]]
+%logstart [log_name [log_mode]]
 \layout Standard
 
 If no name is given, it defaults to a file named 
@@ -4044,7 +4044,7 @@ If no name is given, it defaults to a file named
 
 '
 \family typewriter 
-@logstart name
+%logstart name
 \family default 
 ' saves to file 
 \family typewriter 
@@ -4060,7 +4060,7 @@ If no name is given, it defaults to a file named
 
 
 \family typewriter 
-@logstart
+%logstart
 \family default 
  takes a second optional parameter: logging mode.
  This can be one of (note that the modes are given unquoted):
@@ -4124,16 +4124,16 @@ log_name.2~
 
 The 
 \family typewriter 
-@logoff
+%logoff
 \family default 
  and 
 \family typewriter 
-@logon
+%logon
 \family default 
  functions allow you to temporarily stop and resume logging to a file which
  had previously been started with 
 \family typewriter 
-@logstart
+%logstart
 \family default 
 .
  They will fail (with an explanation) if you try to use them before logging
@@ -4186,18 +4186,18 @@ two
 \family default 
  syntax is a shorthand for the 
 \family typewriter 
-@sx
+%sx
 \family default 
  magic command.
 \layout Standard
 
 Finally, the 
 \family typewriter 
-@sc
+%sc
 \family default 
  magic (short for `shell capture') is similar to 
 \family typewriter 
-@sx
+%sx
 \family default 
 , but allowing more fine-grained control of the capture details, and storing
  the result directly into a named variable.
@@ -4211,11 +4211,11 @@ See Sec.\SpecialChar ~
 
  for details on the magics 
 \family typewriter 
-@sc
+%sc
 \family default 
  and 
 \family typewriter 
-@sx
+%sx
 \family default 
 , or use IPython's own help (
 \family typewriter 
@@ -4299,7 +4299,7 @@ System command aliases
 
 The 
 \family typewriter 
-@alias
+%alias
 \family default 
  magic function and the 
 \family typewriter 
@@ -4317,7 +4317,7 @@ ipythonrc
 
 '
 \family typewriter 
-@alias alias_name cmd
+%alias alias_name cmd
 \family default 
 ' defines '
 \family typewriter 
@@ -4332,7 +4332,7 @@ cmd
 
 Then, typing '
 \family typewriter 
-@alias_name params
+%alias_name params
 \family default 
 ' will execute the system command '
 \family typewriter 
@@ -4349,7 +4349,7 @@ You can also define aliases with parameters using
  specifiers (one per parameter).
  The following example defines the 
 \family typewriter 
-@parts
+%parts
 \family default 
  function as an alias to the command '
 \family typewriter 
@@ -4361,18 +4361,18 @@ echo first %s second %s
 \family default 
  will be replaced by a positional parameter to the call to 
 \family typewriter 
-@parts:
+%parts:
 \layout Standard
 
 
 \family typewriter 
 In [1]: alias parts echo first %s second %s
 \newline 
-In [2]: @parts A B
+In [2]: %parts A B
 \newline 
 first A second B 
 \newline 
-In [3]: @parts A 
+In [3]: %parts A 
 \newline 
 Incorrect number of arguments: 2 expected.
  
@@ -4382,14 +4382,14 @@ parts is an alias to: 'echo first %s second %s'
 
 If called with no parameters, 
 \family typewriter 
-@alias
+%alias
 \family default 
  prints the table of currently defined aliases.
 \layout Standard
 
 The 
 \family typewriter 
-@rehash/rehashx
+%rehash/rehashx
 \family default 
  magics allow you to load your entire 
 \family typewriter 
@@ -4415,7 +4415,7 @@ Recursive reload
 
 The 
 \family typewriter 
-@dreload
+%dreload
 \family default 
  command does a recursive reload of a module: changes made to the module
  since you imported will actually be available without having to exit.
@@ -4428,7 +4428,7 @@ IPython provides the option to see very detailed exception tracebacks, which
  can be especially useful when debugging large programs.
  You can run any Python file with the 
 \family typewriter 
-@run
+%run
 \family default 
  function to benefit from these detailed tracebacks.
  Furthermore, both normal and verbose tracebacks can be colored (if your
@@ -4445,7 +4445,7 @@ colors
 \family default 
  functions for details (just type 
 \family typewriter 
-@magic
+%magic
 \family default 
 ).
 \layout Standard
@@ -4562,7 +4562,7 @@ exec In[9:14]+In[18]
 You can also re-execute multiple lines of input easily by using the magic
  
 \family typewriter 
-@macro
+%macro
 \family default 
  function (which automates the process and allows re-execution without having
  to type '
@@ -4574,7 +4574,7 @@ exec
  magic function calls (which require special processing).
  Type 
 \family typewriter 
-@macro?
+%macro?
 \family default 
  or see sec.
  
@@ -4587,7 +4587,7 @@ exec
 
 A history function 
 \family typewriter 
-@hist
+%hist
 \family default 
  allows you to see any part of your input history by printing a range of
  the 
@@ -4762,12 +4762,12 @@ _dh
 \family default 
 , and the magic 
 \family typewriter 
-@cd
+%cd
 \family default 
  command can be used to go to any entry in that list.
  The 
 \family typewriter 
-@dhist
+%dhist
 \family default 
  command allows you to view this history.
 \layout Subsection
@@ -5122,7 +5122,7 @@ alias\SpecialChar ~
 \series default 
 : this is equivalent to calling '
 \family typewriter 
-@alias\SpecialChar ~
+%alias\SpecialChar ~
 <alias_def>
 \family default 
 ' at the IPython command line.
@@ -5738,7 +5738,7 @@ It can also be useful in scientific computing situations where it is common
  to need to do some automatic, computationally intensive part and then stop
  to look at data, plots, etc
 \begin_inset Foot
-collapsed true
+collapsed false
 
 \layout Standard
 
@@ -5777,7 +5777,7 @@ ipshell() # this call anywhere in your program will start IPython
 You can run embedded instances even in code which is itself being run at
  the IPython interactive prompt with '
 \family typewriter 
-@run\SpecialChar ~
+%run\SpecialChar ~
 <filename>
 \family default 
 '.
@@ -5859,7 +5859,7 @@ Many thanks to Christopher Hart for the request which prompted adding this
 .
  This feature can also be turned on and off at any time with the 
 \family typewriter 
-@pdb
+%pdb
 \family default 
  magic command.
  This can be extremely useful in order to find the origin of subtle bugs,
@@ -6399,20 +6399,20 @@ $PATH
  system command and have it executed.
  See 
 \family typewriter 
-@alias?
+%alias?
 \family default 
  and 
 \family typewriter 
-@unalias?
+%unalias?
 \family default 
  for details on the alias facilities.
  See also 
 \family typewriter 
-@rehash?
+%rehash?
 \family default 
  and 
 \family typewriter 
-@rehashx? 
+%rehashx? 
 \family default 
 for details on the mechanism used to load 
 \family typewriter 
@@ -6931,16 +6931,16 @@ Since each command passed by pysh to the underlying system is executed in
 
 Pysh provides its own builtin 
 \family typewriter 
-`@cd
+`%cd
 \family default 
 ' magic command to move in the filesystem (the 
 \family typewriter 
-@
+%
 \family default 
  is not required with automagic on).
  It also maintains a list of visited directories (use 
 \family typewriter 
-@dhist
+%dhist
 \family default 
  to see it) and allows direct switching to any of them.
  Type 
@@ -6952,15 +6952,15 @@ Pysh provides its own builtin
 
 
 \family typewriter 
-@pushd
+%pushd
 \family default 
 , 
 \family typewriter 
-@popd
+%popd
 \family default 
  and 
 \family typewriter 
-@dirs
+%dirs
 \family default 
  are provided for directory stack handling.
 \layout Subsection
@@ -7441,11 +7441,11 @@ gp
 \family default 
  (a Gnuplot active instance), the new magic commands 
 \family typewriter 
-@gpc
+%gpc
 \family default 
  and 
 \family typewriter 
-@gp_set_instance
+%gp_set_instance
 \family default 
  and several other convenient globals.
  Type 
@@ -7526,11 +7526,11 @@ IPython accepts the special option
 lly select the proper threading model to prevent blocking.
  It also sets matplotlib in interactive mode and modifies 
 \family typewriter 
-@run
+%run
 \family default 
  slightly, so that any matplotlib-based script can be executed using 
 \family typewriter 
-@run
+%run
 \family default 
  and the final 
 \family typewriter 
@@ -7611,7 +7611,7 @@ Using one of these options (you can only use one at a time), the graphical
  loop and IPython's code execution run in separate threads, allowing you
  to test interactively (with 
 \family typewriter 
-@run
+%run
 \family default 
 , for example) your code without blocking issues.
 \layout Subsection
@@ -7822,7 +7822,7 @@ Fernando Pérez
 
 Janko Hauser 
 \family typewriter 
-<jhauser@comunit.de>
+<jhauser@zscout.de>
 \family default 
  
 \layout Standard
@@ -7901,8 +7901,8 @@ Fernando would also like to thank Stephen Figgins
 .
 \layout Standard
 
-And last but not least, all the kind IPython users who have emailed bug
- reports, fixes, comments and ideas.
+And last but not least, all the kind IPython users who have emailed new
+ code, bug reports, fixes, comments and ideas.
  A brief list follows, please let me know if I have ommitted your name by
  accident: 
 \layout List

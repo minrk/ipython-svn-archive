@@ -12,7 +12,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001 Janko Hauser <jh@comunit.de> and
+#       Copyright (C) 2001 Janko Hauser <jhauser@zscout.de> and
 #                          Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
@@ -94,13 +94,41 @@ def qw_lol(indata):
     else:
         return qw(indata)
 
+def ipmagic(magic_name,arg=''):
+    """Call a magic function by name.
+
+    Inputs:
+
+      - magic_name: string containing the name of the magic function to call.
+
+      - arg: optional string with the arguments to pass to the magic.
+
+    ipmagic('name','-opt foo bar') is equivalent to typing at the ipython
+    prompt:
+
+    In[1]: %name -opt foo bar
+
+    The second (string) argument is optional, so you can use ipmagic('name')
+    to call a magic without arguments.
+
+    This provides a proper Python function to call IPython's magics in any
+    valid Python code you can type at the interpreter, including loops and
+    compound statements.  It is added by IPython to the Python builtin
+    namespace upon initialization."""
+
+    fn = getattr(__IPYTHON__,'magic_'+magic_name,None)
+    if fn is None:
+        print "Magic function `%s` not found." % magic_name
+    else:
+        fn(arg)
+
 #-----------------------------------------------------------------------------
 # Local use classes
 try:
     import FlexCompleter
 
     class MagicCompleter(FlexCompleter.Completer):
-        """Extension of the completer class to work on @-prefixed lines."""
+        """Extension of the completer class to work on %-prefixed lines."""
 
         def __init__(self,shell,namespace=None,omit__names=0,alias_table=None):
             """MagicCompleter() -> completer
@@ -124,12 +152,13 @@ try:
             to complete. """
 
             FlexCompleter.Completer.__init__(self,namespace)
+            self.magic_prefix = shell.name+'.magic_'
+            self.magic_escape = shell.ESC_MAGIC
             self.readline = FlexCompleter.readline
             delims = self.readline.get_completer_delims()
-            delims = delims.replace('@','')
+            delims = delims.replace(self.magic_escape,'')
             self.readline.set_completer_delims(delims)
             self.get_line_buffer = self.readline.get_line_buffer
-            self.magic_prefix = shell.name+'.magic_'
             self.omit__names = omit__names
             
             if alias_table is None:
@@ -275,8 +304,8 @@ try:
             
             #print '\n*** COMPLETE: <%s>' % text  # dbg
             try:
-                if text.startswith('@'):
-                    text = text.replace('@',self.magic_prefix)
+                if text.startswith(self.magic_escape):
+                    text = text.replace(self.magic_escape,self.magic_prefix)
                 if text.startswith('~'):
                     text = os.path.expanduser(text)
                 if state == 0:
@@ -286,7 +315,8 @@ try:
                         if self.matches:
                             break
                 try:
-                    return self.matches[state].replace(self.magic_prefix,'@')
+                    return self.matches[state].replace(self.magic_prefix,
+                                                       self.magic_escape)
                 except IndexError:
                     return None
             except SyntaxError:
@@ -338,6 +368,9 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # imported code can test for being inside IPython.
         __builtin__.__IPYTHON__ = self
 
+        # And load into builtins ipmagic as well
+        __builtin__.ipmagic = ipmagic
+
         # Keep in the builtins a flag for when IPython is active.  We set it
         # with setdefault so that multiple nested IPythons don't clobber one
         # another.  Each will increase its value by one upon being activated,
@@ -345,7 +378,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         __builtin__.__dict__.setdefault('__IPYTHON__active',0)
 
         # Inform the user of ipython's fast exit magics.
-        _exit = ' Use @Exit or @Quit to exit without confirmation.'
+        _exit = ' Use %Exit or %Quit to exit without confirmation.'
         __builtin__.exit += _exit
         __builtin__.quit += _exit
 
@@ -355,6 +388,28 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # level as a dict instead of a module. This is a manual fix, but I
         # should really track down where the problem is coming from. Alex
         # Schmolck reported this problem first.
+
+        # A useful post by Alex Martelli on this topic:
+        # Re: inconsistent value from __builtins__
+        # Von: Alex Martelli <aleaxit@yahoo.com>
+        # Datum: Freitag 01 Oktober 2004 04:45:34 nachmittags/abends
+        # Gruppen: comp.lang.python
+        # Referenzen: 1
+
+        # Michael Hohn <hohn@hooknose.lbl.gov> wrote:
+        # > >>> print type(builtin_check.get_global_binding('__builtins__'))
+        # > <type 'dict'>
+        # > >>> print type(__builtins__)
+        # > <type 'module'>
+        # > Is this difference in return value intentional?
+
+        # Well, it's documented that '__builtins__' can be either a dictionary
+        # or a module, and it's been that way for a long time. Whether it's
+        # intentional (or sensible), I don't know. In any case, the idea is that
+        # if you need to access the built-in namespace directly, you should start
+        # with "import __builtin__" (note, no 's') which will definitely give you
+        # a module. Yeah, it is somewhatÂ confusing:-(.
+        
         if user_ns is None:
             # Set __name__ to __main__ to better match the behavior of the
             # normal interpreter.
@@ -412,10 +467,27 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.user_ns['In']  = self.input_hist
         self.user_ns['Out'] = self.output_hist
 
+        self.name = name
+
+        # escapes for automatic behavior on the command line
+        self.ESC_SHELL = '!'
+        self.ESC_HELP  = '?'
+        self.ESC_MAGIC = '%'
+        self.ESC_QUOTE = ','
+        self.ESC_PAREN = '/'
+
+        # And their associated handlers
+        self.esc_handlers = {self.ESC_PAREN:self.handle_auto,
+                             self.ESC_QUOTE:self.handle_auto,
+                             self.ESC_MAGIC:self.handle_magic,
+                             self.ESC_HELP:self.handle_help,
+                             self.ESC_SHELL:self.handle_shell_escape,
+                             }
+
         # class initializations
         code.InteractiveConsole.__init__(self,locals = self.user_ns)
         Logger.__init__(self,log_ns = self.user_ns)
-        Magic.__init__(self,name)
+        Magic.__init__(self,self)
         # an ugly hack to get a pointer to the shell, so I can start writing magic
         # code via this pointer instead of the current mixin salad.
         Magic.set_shell(self,self)
@@ -425,7 +497,6 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         #self.hooks = Struct(ps1 = sys.ps1,ps2 = sys.ps2,display = sys.displayhook)
         self.hooks = Struct()
 
-        self.name = name
 
         self.usage_min =  """\
         An enhanced console for Python.
@@ -434,8 +505,8 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         - Tab completion in the local namespace.
         - Logging of input, see command-line options.
         - System shell escape via ! , eg !ls.
-        - Magic commands, starting with a @ (like @ls, @pwd, @cd, etc.)
-        - Keeps track of locally defined variables via @who, @whos.
+        - Magic commands, starting with a % (like %ls, %pwd, %cd, etc.)
+        - Keeps track of locally defined variables via %who, %whos.
         - Show object information with a ? eg ?x or x? (use ?? for more info).
         """
         if usage: self.usage = usage
@@ -475,21 +546,6 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
                                              header='IPython system call: ',
                                              verbose=self.rc.system_verbose)
     
-        # escapes for automatic behavior on the command line
-        self.ESC_SHELL = '!'
-        self.ESC_HELP  = '?'
-        self.ESC_MAGIC = '@'
-        self.ESC_QUOTE = ','
-        self.ESC_PAREN = '/'
-
-        # And their associated handlers
-        self.esc_handlers = {self.ESC_PAREN:self.handle_auto,
-                             self.ESC_QUOTE:self.handle_auto,
-                             self.ESC_MAGIC:self.handle_magic,
-                             self.ESC_HELP:self.handle_help,
-                             self.ESC_SHELL:self.handle_shell_escape,
-                             }
-
         # RegExp for splitting line contents into pre-char//first word-method//rest
         # update the regexp if the above escapes are changed
 
@@ -497,7 +553,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # much:  it's better to be conservative rather than to trigger hidden
         # evals() somewhere and end up causing side effects.
 
-        self.line_split = re.compile(r'(^[\s*!\?@,/]?)([\?\w\.]+\w*\s+)(\(?.*$)')
+        self.line_split = re.compile(r'(^[\s*!\?%,/]?)([\?\w\.]+\w*\s+)(\(?.*$)')
 
         # RegExp to identify potential function names
         self.re_fun_name = re.compile(r'[a-zA-Z_]([a-zA-Z0-9_.]*) *$')
@@ -974,7 +1030,7 @@ want to merge them back into the new files.""" % locals()
           it will get its locals and globals from the immediate caller.
 
         Warning: it's possible to use this in a program which is being run by
-        IPython itself (via @run), but some funny things will happen (a few
+        IPython itself (via %run), but some funny things will happen (a few
         globals get overwritten). In the future this will be cleaned up, as
         there is no fundamental reason why it can't work perfectly."""
 
@@ -1075,7 +1131,7 @@ want to merge them back into the new files.""" % locals()
                     self.readline_indent = 0
 
             except SystemExit:
-                # If a SystemExit gets here, it's from an IPython @Exit call
+                # If a SystemExit gets here, it's from an IPython %Exit call
                 break
 
             except bdb.BdbQuit:
@@ -1306,7 +1362,7 @@ There seemed to be a problem with your sys.stderr.
         #.....................................................................
         # Code begins
 
-        #if line.startswith('@crash'): raise RuntimeError,'Crash now!'  # dbg
+        #if line.startswith('%crash'): raise RuntimeError,'Crash now!'  # dbg
 
         # save the line away in case we crash, so the post-mortem handler can
         # record it
@@ -1358,7 +1414,8 @@ There seemed to be a problem with your sys.stderr.
                 if self.rc.automagic and \
                        (len(theRest)==0 or theRest[0] not in '!=()<>,') and \
                        not continue_prompt:
-                    return self.handle_magic('@'+line.lstrip(),continue_prompt)
+                    return self.handle_magic(self.ESC_MAGIC+line.lstrip(),
+                                             continue_prompt)
                 else:
                     return self.handle_normal(line,continue_prompt)
 
@@ -1431,7 +1488,8 @@ There seemed to be a problem with your sys.stderr.
                                                      
         else: # single-line input
             if line.startswith('!!'):
-                return self.handle_magic('@sx %s' % line[2:],continue_prompt)
+                return self.handle_magic('%ssx %s' % (self.ESC_MAGIC,
+                                                      line[2:]),continue_prompt)
             else:
                 cmd = line[1:].replace('"','\\"')
                 line_out = '%s.system("%s")' % (self.name,cmd)
@@ -1449,7 +1507,7 @@ There seemed to be a problem with your sys.stderr.
         self.log('#'+line,continue_prompt)
         self.update_cache(line)
         shell = self.name+'.'
-        # remove @ and de-mangle magic name
+        # remove % and de-mangle magic name
         line = 'magic_'+ line.strip()[1:]
         try:
             scommand, parameter_s = line.split(' ',1)
@@ -1579,7 +1637,7 @@ There seemed to be a problem with your sys.stderr.
                 # don't re-insert logger status info into cache
                 if line.startswith('#log#'):
                     continue
-                elif line.startswith('#@'):
+                elif line.startswith('#%s'% self.ESC_MAGIC):
                     self.update_cache(line[1:])
                     line = magic2python(line)
                 elif line.startswith('#!'):

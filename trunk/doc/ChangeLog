@@ -1,3 +1,12 @@
+2004-10-04  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (ipmagic): New function for accessing magics
+	via a normal python function call.
+
+	* IPython/Magic.py (Magic.magic_magic): Change the magic escape
+	from '@' to '%', to accomodate the new @decorator syntax of python
+	2.4.
+
 2004-09-29  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Shell.py (MatplotlibShellBase.use): Added a wrapper to

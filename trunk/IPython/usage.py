@@ -1,6 +1,6 @@
 # -*- coding: iso-8859-1 -*-
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando PÃ��©rez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando Perez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -70,7 +70,7 @@ instead of -option) to turn the feature off.
  matplotlib library (http://matplotlib.sourceforge.net), allowing interactive
  usage of any of its backends as defined in the user's .matplotlibrc file.  It
  automatically activates GTK or WX threading for IPyhton if the choice of
- matplotlib backend requires it.  It also modifies the @run command to
+ matplotlib backend requires it.  It also modifies the %run command to
  correctly execute (without blocking) any matplotlib-based script which calls
  show() at the end.
 
@@ -81,7 +81,7 @@ instead of -option) to turn the feature off.
  -no|autoindent: turn automatic indentation on/off.
 
  -no|automagic: make magic commands automatic (without needing their first
- character to be @). Type @magic at the IPython prompt for more information.
+ character to be %). Type %magic at the IPython prompt for more information.
 
  -no|banner: Print the initial information banner (default on).
 
@@ -109,11 +109,11 @@ instead of -option) to turn the feature off.
  supplied with Mandrake 8.2 works ok, but that in RedHat 7.2 doesn't.
 
  Test it and turn it on permanently if it works with your system. The magic
- function @color_info allows you to toggle this interactively for testing.
+ function %color_info allows you to toggle this interactively for testing.
 
  -no|confirm_exit: set to confirm when you try to exit IPython with an EOF
  (Control-d in Unix, Control-Z/Enter in Windows). Note that using the magic
- functions @Exit or @Quit you can force a direct exit, bypassing any
+ functions %Exit or %Quit you can force a direct exit, bypassing any
  confirmation.
 
  -no|debug: Show information about the loading process. Very useful to pin
@@ -129,7 +129,7 @@ instead of -option) to turn the feature off.
  deep_reload will still be available as dreload(). This feature is off by
  default [which means that you have both normal reload() and dreload()].
  
- -editor <name>: Which editor to use with the @edit command. By default,
+ -editor <name>: Which editor to use with the %edit command. By default,
  IPython will honor your EDITOR environment variable (if not set, vi is the
  Unix default and notepad the Windows one). Since this editor is invoked on
  the fly by IPython and is meant for editing small code snippets, you may want
@@ -313,9 +313,9 @@ MAIN FEATURES
   available with access to object docstrings and the Python manuals. Simply
   type 'help' (no quotes) to access it.
 
-* Magic commands: type @magic for information on the magic subsystem.
+* Magic commands: type %magic for information on the magic subsystem.
 
-* System command aliases, via the @alias command or the ipythonrc config file.
+* System command aliases, via the %alias command or the ipythonrc config file.
 
 * Dynamic object information:
 
@@ -330,12 +330,12 @@ MAIN FEATURES
   The ?/?? system gives access to the full source code for any object (if
   available), shows function prototypes and other useful information.
 
-  If you just want to see an object's docstring, type '@pdoc object' (without
-  quotes, and without @ if you have automagic on).
+  If you just want to see an object's docstring, type '%pdoc object' (without
+  quotes, and without % if you have automagic on).
 
-  Both @pdoc and ?/?? give you access to documentation even on things which are
+  Both %pdoc and ?/?? give you access to documentation even on things which are
   not explicitely defined. Try for example typing {}.get? or after import os,
-  type os.path.abspath??. The magic functions @pdef, @source and @file operate
+  type os.path.abspath??. The magic functions %pdef, %source and %file operate
   similarly.
 
 * Completion in the local namespace, by typing TAB at the prompt.
@@ -368,7 +368,7 @@ MAIN FEATURES
   module since you imported will actually be available without having to exit.
 
 * Verbose and colored exception traceback printouts. See the magic xmode and
-  xcolor functions for details (just type @magic).
+  xcolor functions for details (just type %magic).
 
 * Input caching system:
 
@@ -388,11 +388,11 @@ MAIN FEATURES
   For example, what you typed at prompt 14 is available as _i14 and _ih[14].
 
   You can create macros which contain multiple input lines from this history,
-  for later re-execution, with the @macro function.
+  for later re-execution, with the %macro function.
 
-  The history function @hist allows you to see any part of your input history
+  The history function %hist allows you to see any part of your input history
   by printing a range of the _i variables. Note that inputs which contain
-  magic functions (@) appear in the history with a prepended comment. This is
+  magic functions (%) appear in the history with a prepended comment. This is
   because they aren't really valid Python code, so you can't exec them.
 
 * Output caching system:
@@ -417,7 +417,7 @@ MAIN FEATURES
 * Directory history:
 
   Your history of visited directories is kept in the global list _dh, and the
-  magic @cd command can be used to go to any entry in that list.
+  magic %cd command can be used to go to any entry in that list.
 
 * Auto-parentheses and auto-quotes (adapted from Nathan Gray's LazyPython)
 

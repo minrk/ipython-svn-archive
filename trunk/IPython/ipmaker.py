@@ -134,7 +134,7 @@ def make_IPython(argv=None,user_ns=None,debug=0,rc_override=None,
                          "IPython %s -- An enhanced Interactive Python."
                          % (__version__,),
 """?       -> Introduction to IPython's features.
-@magic  -> Information about IPython's 'magic' @ functions.
+%magic  -> Information about IPython's 'magic' % functions.
 help    -> Python's own help system.
 object? -> Details about 'object'. ?object also works, ?? prints more.
 """ ]
@@ -555,12 +555,12 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     # Save the current state of our namespace so that the interactive shell
     # can later know which variables have been created by us from config files
     # and loading. This way, loading a file (in any way) is treated just like
-    # defining things on the command line, and @who works as expected.
+    # defining things on the command line, and %who works as expected.
 
     # DON'T do anything that affects the namespace beyond this point!
     IP.internal_ns = __main__.__dict__.copy()
 
-    #IP.internal_ns.update(locals()) # so our stuff doesn't show up in @who
+    #IP.internal_ns.update(locals()) # so our stuff doesn't show up in %who
 
     # Now run through the different sections of the users's config
     if IP.rc.debug:

@@ -8,7 +8,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001 Janko Hauser <jh@comunit.de> and
+#       Copyright (C) 2001 Janko Hauser <jhauser@zscout.de> and
 #                          Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
@@ -130,11 +130,11 @@ class Logger:
             _ = self.logfile
         except AttributeError:
             print """
-Logging hasn't been started yet (use @logstart for that).
+Logging hasn't been started yet (use %logstart for that).
 
-@logon/@logoff are for temporarily starting and stopping logging for a logfile
+%logon/%logoff are for temporarily starting and stopping logging for a logfile
 which already exists. But you must first start the logging process with
-@logstart (optionally giving a logfile name)."""
+%logstart (optionally giving a logfile name)."""
             
         else:
             if self._dolog == val:

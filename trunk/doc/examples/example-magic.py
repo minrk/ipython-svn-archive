@@ -1,7 +1,7 @@
 """Example of how to define a magic function for extending IPython.
 
 The name of the function *must* begin with magic_. IPython mangles it so
-that magic_foo() becomes available as @foo.
+that magic_foo() becomes available as %foo.
 
 The argument list must be *exactly* (self,parameter_s='').
 
@@ -9,7 +9,7 @@ The single string parameter_s will have the user's input. It is the magic
 function's responsability to parse this string.
 
 That is, if the user types
->>>@foo a b c
+>>>%foo a b c
 
 The followinng internal call is generated:
    self.magic_foo(parameter_s='a b c').
