@@ -49,8 +49,13 @@ cd $ipdir
 # bdist_wininst)
 ./setup.py bdist_wininst --install-script=ipython_win_post_install.py
 
+echo "Fix the name in the win32 installer to add the python version to it..."
+cd $ipdir/dist
+rename win32.exe win32-py${PYVER}.exe *win32.exe
+
 # Register with the Python Package Index (PyPI)
 echo "Registering with PyPI..."
+cd $ipdir
 ./setup.py register
 
 # Upload all files

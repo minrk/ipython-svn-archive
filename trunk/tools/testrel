@@ -11,17 +11,14 @@ cd ~/ipython/ipython
 
 PYVER=`python -V 2>&1 | awk '{print $2}' | awk -F '.' '{print $1$2}' `
 
-#./setup.py sdist --formats=gztar
-#./setup.py bdist_rpm --release=py$PYVER --requires=python --provides=ipython
+./setup.py sdist --formats=gztar
+./setup.py bdist_rpm --release=py$PYVER
+./setup.py bdist_wininst --install-script=ipython_win_post_install.py
 
-# Call the windows build separately, so that the extra Windows scripts don't
-# get pulled into Unix builds (setup.py has code which checks for
-# bdist_wininst)
-#python2.3 ./setup.py bdist_wininst --install-script=ipython_win_post_install.py
+# Fix the name in the win32 installer to add the python version to it
+cd dist
+rename win32.exe win32-py${PYVER}.exe *win32.exe
+cd -
 
-
-./setup.py sdist --formats=gztar,zip
-#python2.2 ./setup.py bdist_rpm --release=py22
-
-# py2.3 still makes the rpms for /usr/lib/python2.2, don't know why
-python2.3 ./setup.py bdist_rpm --release=py23
+# To get a specific python in the spec file, we must fix it:
+#python2.3 ./setup.py bdist_rpm --release=py23 --fix-python
