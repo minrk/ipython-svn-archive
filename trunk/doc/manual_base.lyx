@@ -5710,9 +5710,9 @@ The following code snippet is the bare minimum you need to include in your
 
 
 \family typewriter 
-from IPython.Shell import IPythonShellEmbed
+from IPython.Shell import IPShellEmbed
 \newline 
-ipshell = IPythonShellEmbed()
+ipshell = IPShellEmbed()
 \newline 
 ipshell() # this call anywhere in your program will start IPython
 \layout Standard
