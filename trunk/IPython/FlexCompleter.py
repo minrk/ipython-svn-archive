@@ -167,10 +167,10 @@ class Completer:
 	#m = re.match(r"([\w\[\]]+(\.[\w\[\]]+)*)\.(\w*)", text)
 
         # Another option, seems to work great. Catches things like ''.<tab>
-        m = re.match(r"(\S+(\.\w+)*)\.(\w*)", text)
+        m = re.match(r"(\S+(\.\w+)*)\.(\w*)$", text)
 
         if not m:
-            return
+            return []
         expr, attr = m.group(1, 3)
         object = eval(expr, self.namespace)
         words = dir(object)
