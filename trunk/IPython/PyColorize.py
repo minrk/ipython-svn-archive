@@ -4,7 +4,7 @@
     Based on an HTML code highlighter by Jürgen Hermann found at:
     http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52298
 
-    Modifications by Fernando Perez (fperez@pizero.colorado.edu).
+    Modifications by Fernando Perez (fperez@colorado.edu).
 
     Information on the original HTML highlighter follows:
     

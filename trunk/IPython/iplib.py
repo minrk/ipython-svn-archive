@@ -11,8 +11,8 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001 Janko Hauser <jhauser@ifm.uni-kiel.de> and
-#                          Fernando Pérez <fperez@pizero.colorado.edu>
+#       Copyright (C) 2001 Janko Hauser <jh@comunit.de> and
+#                          Fernando Pérez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -379,7 +379,8 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         If called with no arguments, it acts as a toggle."""
 
         if not self.has_readline:
-            warn("The auto-indent feature requires the readline library")
+            if os.name == 'posix':
+                warn("The auto-indent feature requires the readline library")
             self.autoindent = 0
             return
         if value is None:
@@ -564,7 +565,6 @@ want to merge them back into the new files.""" % locals()
             readline.set_completer_delims(delims)
             # otherwise we end up with a monster history after a while:
             readline.set_history_length(1000)
-            self.set_autoindent(self.rc.autoindent)
             try:
                 #print '*** Reading readline history'  # dbg
                 readline.read_history_file(self.histfile)
@@ -582,6 +582,9 @@ want to merge them back into the new files.""" % locals()
 
         except KeyError:
             pass  # under windows, no environ['term'] key
+
+        # Configure auto-indent for all platforms
+        self.set_autoindent(self.rc.autoindent)
 
     def showsyntaxerror(self, filename=None):
         """Display the syntax error that just occurred.

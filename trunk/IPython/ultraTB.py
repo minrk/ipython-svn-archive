@@ -68,7 +68,7 @@ possible inclusion in future releases.  """
 
 #*****************************************************************************
 #       Copyright (C) 2001 Nathaniel Gray <n8gray@caltech.edu>
-#       Copyright (C) 2001 Fernando Pérez <fperez@pizero.colorado.edu>
+#       Copyright (C) 2001 Fernando Pérez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -84,7 +84,7 @@ possible inclusion in future releases.  """
 
 __version__ = '0.2' 
 __author__  = ('Nathaniel Gray <n8gray@caltech.edu>\n'
-               'Fernando Pérez <fperez@pizero.colorado.edu>')
+               'Fernando Pérez <fperez@colorado.edu>')
 __license__ = 'LGPL'
 __date__    = 'Tue Dec 11 00:27:58 MST 2001'
 

@@ -8,7 +8,7 @@ these things are also convenient when working at the command line.
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@pizero.colorado.edu>
+#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -22,7 +22,7 @@ from __future__ import nested_scopes
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Pérez. <fperez@pizero.colorado.edu>'
+__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
 __version__= '0.1.1'
 __license__ = 'LGPL'
 __date__   = 'Tue Dec 11 00:27:58 MST 2001'
@@ -274,6 +274,8 @@ def target_outdated(target,deps):
     for dep in deps:
         dep_time = os.path.getmtime(dep)
         if dep_time > target_time:
+            #print "For target",target,"Dep failed:",dep # dbg
+            #print "times (dep,tar):",dep_time,target_time # dbg
             return 1
     return 0
 

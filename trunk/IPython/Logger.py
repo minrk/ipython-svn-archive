@@ -5,8 +5,8 @@ Logger class for IPython's logging facilities.
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001 Janko Hauser <jhauser@ifm.uni-kiel.de> and
-#                          Fernando Pérez <fperez@pizero.colorado.edu>
+#       Copyright (C) 2001 Janko Hauser <jh@comunit.de> and
+#                          Fernando Pérez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #

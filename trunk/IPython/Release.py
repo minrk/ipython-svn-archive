@@ -42,12 +42,12 @@ Main features:
 
 license = 'LGPL'
 
-authors = {'Fernando' : ('Fernando Perez','fperez@pizero.colorado.edu'),
-           'Janko' : ('Janko Hauser','jhauser@ifm.uni-kiel.de'),
+authors = {'Fernando' : ('Fernando Perez','fperez@colorado.edu'),
+           'Janko' : ('Janko Hauser','jh@comunit.de'),
            'Nathan' : ('Nathaniel Gray','n8gray@caltech.edu')
            }
 
-url = 'http://www-hep.colorado.edu/~fperez/ipython'
+url = 'http://ipython.scipy.org'
 
 platforms = ['Linux','Mac OSX','Windows XP/2000/NT','Windows 95/98/ME']
 

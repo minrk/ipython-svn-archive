@@ -13,7 +13,7 @@ a = 2.3 m/s^2   # ^ -> ** automatically
 All other input is processed normally.
 """
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@pizero.colorado.edu>
+#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -27,7 +27,7 @@ All other input is processed normally.
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Pérez. <fperez@pizero.colorado.edu>'
+__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
 __version__= '0.1.0'
 __license__ = 'LGPL'
 __date__   = 'Tue Dec 11 00:27:58 MST 2001'

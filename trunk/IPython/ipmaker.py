@@ -11,7 +11,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@pizero.colorado.edu>
+#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -31,10 +31,17 @@ __date__    = Release.date
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
 
-credits._Printer__data = '\nPython: '+credits._Printer__data+'\n\nIPython: '\
-                         'Fernando Pérez, Janko Hauser, Nathan Gray.'
-copyright._Printer__data += '\n\nCopyright (c) 2001 Fernando Pérez, '\
-                            'Janko Hauser, Nathan Gray.\nAll Rights Reserved.'
+credits._Printer__data = """
+Python: %s
+
+IPython: Fernando Pérez, Janko Hauser, Nathan Gray, and many users.
+See http://ipython.scipy.org for more information.""" \
+% credits._Printer__data
+
+copyright._Printer__data += """
+
+Copyright (c) 2001-2003 Fernando Pérez, Janko Hauser, Nathan Gray.
+All Rights Reserved."""
 
 #****************************************************************************
 # Required modules
