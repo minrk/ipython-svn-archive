@@ -837,6 +837,32 @@ eadline.html.
 \layout Itemize
 
 Finish the Emacs integration (Alex & François).
+ This includes fixing the manual and deciding whether to include ipython.el
+ along with IPython itself (seems like a good idea, talk to Alex).
+\layout Itemize
+
+Allow ipython to handle input from stdin.
+ Typical test case:
+\newline 
+
+\family typewriter 
+[~]> [~]> echo "print 2+4" | python 
+\newline 
+6 
+\newline 
+[~]> echo "print 2+4" | ipython 
+\newline 
+python: Objects/stringobject.c:111: PyString_FromString: Assertion `str !=
+ ((void *)0)' failed.
+ 
+\newline 
+Abort 
+\family default 
+
+\newline 
+This matters also for emacs integration, since a C-c-| will crash if ipython
+ hasn't been opened yet.
+ This should include supporting option '-c' just like the regular python.
 \layout Itemize
 
 Get Holger's completer in, once he adds filename completion.
@@ -860,24 +886,6 @@ Consider redesigning the output traps.
 \layout Standard
 
 Lower priority stuff:
-\layout Itemize
-
-Allow ipython to handle input from stdin.
- Typical test case:
-\newline 
-
-\family typewriter 
-[~]> python -c 'print "print 32"'|ipython 
-\newline 
-python: Objects/stringobject.c:111: PyString_FromString: Assertion `str !=
- ((void *)0)' failed.
- 
-\newline 
-Abort 
-\newline 
-[~]> python -c 'print "print 32"' | python 
-\newline 
-32 
 \layout Itemize
 
 'cd' under windows doesn't know how to change drive letters.

@@ -60,6 +60,6 @@ scp ChangeLog NEWS fperez@culogin.colorado.edu:"~/public_html/ipython"
 echo "Alerting Andrea Riciputi (Fink IPython maintainer)..."
 addr=andrea.riciputi@libero.it
 mail -s "[ANN] A new IPython is out. Version: $version" fperez@colorado.edu  < NEWS
-#mail -s "[ANN] A new IPython is out. Version: $version" $addr  < NEWS
+mail -s "[ANN] A new IPython is out. Version: $version" $addr  < NEWS
 
 echo Done!

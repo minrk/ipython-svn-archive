@@ -1,5 +1,5 @@
-#LyX 1.2 created this file. For more info see http://www.lyx.org/
-\lyxformat 220
+#LyX 1.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 221
 \textclass article
 \begin_preamble
 \usepackage{ae,aecompl}
@@ -2955,6 +2955,7 @@ $HOME/.ipython/:
 
 
 \begin_inset Include \verbatiminput{../IPython/UserConfig/example-magic.py}
+preview false
 
 \end_inset 
 
@@ -3033,6 +3034,7 @@ default
 
 
 \begin_inset Include \input{magic.tex}
+preview false
 
 \end_inset 
 
@@ -4430,6 +4432,7 @@ directory contains lots of comments on all of these options.
 
 
 \begin_inset Include \verbatiminput{../IPython/UserConfig/ipythonrc.py}
+preview false
 
 \end_inset 
 
@@ -4680,6 +4683,7 @@ example-embed.py
 
 
 \begin_inset Include \verbatiminput{../IPython/UserConfig/example-embed.py}
+preview false
 
 \end_inset 
 
@@ -4701,6 +4705,7 @@ example-embed-short.py
 
 
 \begin_inset Include \verbatiminput{../IPython/UserConfig/example-embed-short.py}
+preview false
 
 \end_inset 
 
@@ -5363,6 +5368,7 @@ example-gnuplot.py
 
 
 \begin_inset Include \verbatiminput{../IPython/UserConfig/example-gnuplot.py}
+preview false
 
 \end_inset 
 
@@ -5804,4 +5810,17 @@ Dodt
 <cdodt@fcoe.k12.ca.us>
 \family default 
  Bug reports and Windows ideas.
+\layout List
+\labelwidthstring 00.00.0000
+
+Jack\SpecialChar ~
+Moffit 
+\family typewriter 
+<jack@xiph.org>
+\family default 
+ Bug fixes, including the infamous color problem.
+ This bug alone caused many lost hours and frustration, many thanks to him
+ for the fix.
+ I've always been a fan of Ogg & friends, now I have one more reason to
+ like these folks.
 \the_end
