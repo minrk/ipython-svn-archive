@@ -2,7 +2,7 @@
 # IPython release script
 
 version=`ipython -Version`
-ipdir = ~/ipython/ipython
+ipdir=~/ipython/ipython
 
 echo
 echo "Releasing IPython version $version"
