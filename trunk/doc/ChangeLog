@@ -1,3 +1,41 @@
+2004-06-08  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Prompts.py (Prompt2.set_p_str): fixed all prompt
+	alignment and color management.  All 3 prompt subsystems now
+	inherit from BasePrompt.
+
+	* tools/release: updates for windows installer build and tag rpms
+	with python version (since paths are fixed).
+
+	* IPython/UserConfig/ipythonrc: modified to use \# instead of %n,
+	which will become eventually obsolete.  Also fixed the default
+	prompt_in2 to use \D, so at least new users start with the correct
+	defaults.
+	WARNING: Users with existing ipythonrc files will need to apply
+	this fix manually!
+
+	* setup.py: make windows installer (.exe).  This is finally the
+	integration of an old patch by Cory Dodt <dodt@fcoe.k12.ca.us>,
+	which I hadn't included because it required Python 2.3 (or recent
+	distutils).
+
+	* IPython/usage.py (__doc__): update docs (and manpage) to reflect
+	usage of new '\D' escape.
+
+	* IPython/Prompts.py (ROOT_SYMBOL): Small fix for Windows (which
+	lacks os.getuid())
+	(CachedOutput.set_colors): Added the ability to turn coloring
+	on/off with @colors even for manually defined prompt colors.  It
+	uses a nasty global, but it works safely and via the generic color
+	handling mechanism.
+	(Prompt2.__init__): Introduced new escape '\D' for continuation
+	prompts. It represents the counter ('\#') as dots.
+	*** NOTE *** THIS IS A BACKWARDS-INCOMPATIBLE CHANGE.  Users will
+	need to update their ipythonrc files and replace '%n' with '\D' in
+	their prompt_in2 settings everywhere.  Sorry, but there's
+	otherwise no clean way to get all prompts to properly align.  The
+	ipythonrc shipped with IPython has been updated.
+
 2004-06-07  Fernando Perez  <fperez@colorado.edu>
 
 	* setup.py (isfile): Pass local_icons option to latex2html, so the
