@@ -102,17 +102,25 @@ try:
     class MagicCompleter(FlexCompleter.Completer):
         """Extension of the completer class to work on @-prefixed lines."""
 
-        def __init__(self, namespace = None, omit__names = 0,alias_table=None):
-            """MagicCompleter(namespace = None, omit__names = 0) -> completer
+        def __init__(self,shell,namespace=None,omit__names=0,alias_table=None):
+            """MagicCompleter() -> completer
 
             Return a completer object suitable for use by the readline library
             via readline.set_completer().
 
-            The optional omit__names parameter sets the completer to omit the
+            Inputs:
+
+            - shell: a pointer to the ipython shell itself.  This is needed
+            because this completer knows about magic functions, and those can
+            only be accessed via the ipython instance.
+
+            - namespace: an optional dict where completions are performed.
+            
+            - The optional omit__names parameter sets the completer to omit the
             'magic' names (__magicname__) for python objects unless the text
             to be completed explicitly starts with one or more underscores.
 
-            If alias_table is supplied, it should be a dictionary of aliases
+            - If alias_table is supplied, it should be a dictionary of aliases
             to complete. """
 
             FlexCompleter.Completer.__init__(self,namespace)
@@ -121,7 +129,9 @@ try:
             delims = delims.replace('@','')
             self.readline.set_completer_delims(delims)
             self.get_line_buffer = self.readline.get_line_buffer
+            self.magic_prefix = shell.name+'.magic_'
             self.omit__names = omit__names
+            
             if alias_table is None:
                 alias_table = {}
             self.alias_table = alias_table
@@ -254,7 +264,7 @@ try:
                 matches = self.global_matches(text)
                 # this is so completion finds magics when automagic is on:
                 if matches == [] and not text.startswith(os.sep):
-                    matches = self.attr_matches('__IP.magic_'+text)
+                    matches = self.attr_matches(self.magic_prefix+text)
             return matches
 
         def complete(self, text, state):
@@ -266,7 +276,7 @@ try:
             #print '\n*** COMPLETE: <%s>' % text  # dbg
             try:
                 if text.startswith('@'):
-                    text = text.replace('@','__IP.magic_')
+                    text = text.replace('@',self.magic_prefix)
                 if text.startswith('~'):
                     text = os.path.expanduser(text)
                 if state == 0:
@@ -276,7 +286,7 @@ try:
                         if self.matches:
                             break
                 try:
-                    return self.matches[state].replace('__IP.magic_','@')
+                    return self.matches[state].replace(self.magic_prefix,'@')
                 except IndexError:
                     return None
             except SyntaxError:
@@ -346,15 +356,16 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # should really track down where the problem is coming from. Alex
         # Schmolck reported this problem first.
         if user_ns is None:
-
             # Set __name__ to __main__ to better match the behavior of the
             # normal interpreter.
-            self.user_ns = {'__name__':'__main__',
-                            name:self,
+            self.user_ns = {'__name__'     :'__main__',
                             '__builtins__' : __builtin__,
                             }
         else:
             self.user_ns = user_ns
+
+        # The user namespace MUST have a pointer to the shell itself.
+        self.user_ns[name] = self
 
         # We need to insert into sys.modules something that looks like a
         # module but which accesses the IPython namespace, for shelve and
@@ -404,7 +415,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # class initializations
         code.InteractiveConsole.__init__(self,locals = self.user_ns)
         Logger.__init__(self,log_ns = self.user_ns)
-        Magic.__init__(self)
+        Magic.__init__(self,name)
         # an ugly hack to get a pointer to the shell, so I can start writing magic
         # code via this pointer instead of the current mixin salad.
         Magic.set_shell(self,self)
@@ -796,7 +807,8 @@ want to merge them back into the new files.""" % locals()
         """Command history completion/saving/reloading."""
         try:
             import readline
-            self.Completer = MagicCompleter(self.user_ns,
+            self.Completer = MagicCompleter(self,
+                                            self.user_ns,
                                             self.rc.readline_omit__names,
                                             self.alias_table)
         except ImportError,NameError:
@@ -919,15 +931,20 @@ want to merge them back into the new files.""" % locals()
         # We want this to be a method to facilitate embedded initialization.
         code.InteractiveConsole.__init__(self,self.user_ns)
 
-    def mainloop(self):
-        """Creates the local namespace and starts the mainloop"""
+    def mainloop(self,banner=None):
+        """Creates the local namespace and starts the mainloop.
+
+        If an optional banner argument is given, it will override the
+        internally created default banner."""
+        
         self.name_space_init()
         if self.rc.c:  # Emulate Python's -c option
             self.exec_init_cmd()
-        if self.rc.banner:
-            banner = self.BANNER+self.banner2
-        else:
-            banner = ''
+        if banner is None:
+            if self.rc.banner:
+                banner = self.BANNER+self.banner2
+            else:
+                banner = ''
         self.interact(banner)
 
     def exec_init_cmd(self):
