@@ -5,6 +5,9 @@ This module imports Gnuplot and replaces some of its functionality with
 improved versions. They add better handling of arrays for plotting and more
 convenient PostScript generation, plus some fixes for hardcopy().
 
+It also adds a convenient plot2 method for plotting dictionaries and
+lists/tuples of arrays.
+
 This module is meant to be used as a drop-in replacement to the original
 Gnuplot, so it should be safe to do:
 
@@ -438,6 +441,27 @@ class Gnuplot(Gnuplot_ori.Gnuplot):
         
         self.__plot_ps(Gnuplot_ori.Gnuplot.plot,*items,**keyw)
         
+    def plot2(self,arg,**kw):
+        """Plot the entries of a dictionary or a list/tuple of arrays.        
+        
+        This simple utility calls plot() with a list of Gnuplot.Data objects
+        constructed either from the values of the input dictionary, or the entries
+        in it if it is a tuple or list.  Each item gets labeled with the key/index
+        in the Gnuplot legend.
+
+        Each item is plotted by zipping it with a list of its indices.
+
+        Any keywords are passed directly to plot()."""
+
+        if hasattr(arg,'keys'):
+            keys = arg.keys()
+            keys.sort()
+        else:
+            keys = range(len(arg))
+
+        pitems = [Data(zip(range(len(arg[k])),arg[k]),title=`k`) for k in keys]
+        self.plot(*pitems,**kw)
+
     def splot(self, *items, **keyw):
         """Draw a new three-dimensional plot.
 

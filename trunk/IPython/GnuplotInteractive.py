@@ -12,27 +12,28 @@ Inspired by a suggestion/request from Arnd Baecker.
 
 $Id$"""
 
-__all__ = ('Gnuplot gp gp_new plot splot replot hardcopy '
+__all__ = ('Gnuplot gp gp_new plot plot2 splot replot hardcopy '
            'gpdata gpfile gpstring gpfunc gpgrid gphelp'.split())
 
 import IPython.GnuplotRuntime as GRun
 from genutils import page,warn
 
 # Set global names for interactive use
-Gnuplot = GRun.Gnuplot
-gp_new = GRun.gp_new
-gp = GRun.gp
-plot = gp.plot
-splot = gp.splot
-replot = gp.replot
+Gnuplot  = GRun.Gnuplot
+gp_new   = GRun.gp_new
+gp       = GRun.gp
+plot     = gp.plot
+plot2    = gp.plot2
+splot    = gp.splot
+replot   = gp.replot
 hardcopy = gp.hardcopy
 
 # Accessors for the main plot object constructors:
-gpdata = Gnuplot.Data
-gpfile = Gnuplot.File
+gpdata   = Gnuplot.Data
+gpfile   = Gnuplot.File
 gpstring = Gnuplot.String
-gpfunc = Gnuplot.Func
-gpgrid = Gnuplot.GridData
+gpfunc   = Gnuplot.Func
+gpgrid   = Gnuplot.GridData
 
 def gphelp():
     """Print information about the Gnuplot facilities in IPython."""
@@ -124,7 +125,7 @@ def magic_gp_set_default(self,parameter_s=''):
     gname = parameter_s.strip()
     G = eval(gname,self.shell.user_ns)
     self.shell.gnuplot = G
-    self.shell.user_ns.update({'plot':G.plot,'splot':G.splot,
+    self.shell.user_ns.update({'plot':G.plot,'splot':G.splot,'plot2':G.plot2,
                                'replot':G.replot,'hardcopy':G.hardcopy})
 
 try:
