@@ -123,7 +123,7 @@ class Prompt1:
         input string. Useful for systems which re-write the user input when
         handling automatically special syntaxes."""
 
-        curr = self.p_template % self.cache.prompt_count
+        curr = self.p_template.replace('%s',str(self.cache.prompt_count))
         return self.col_p_ni + '-'*(len(curr)-2)+'> ' + self.col_norm_ni
         
 
