@@ -252,7 +252,7 @@ class ListTB(TBTools):
         TBTools.__init__(self,color_scheme = color_scheme,call_pdb=0)
         
     def __call__(self, etype, value, elist):
-        print >> Term.err, self.text(etype,value,elist)
+        print >> Term.cerr, self.text(etype,value,elist)
 
     def text(self,etype, value, elist,context=5):
         """Return a color formatted string with the traceback info."""
@@ -608,7 +608,7 @@ class VerboseTB(TBTools):
     def handler(self, info=None):
         (etype, evalue, etb) = info or sys.exc_info()
         self.tb = etb
-        print >> Term.err, self.text(etype, evalue, etb)
+        print >> Term.cerr, self.text(etype, evalue, etb)
 
     # Changed so an instance can just be called as VerboseTB_inst() and print
     # out the right info on its own.
@@ -719,7 +719,7 @@ class AutoFormattedTB(FormattedTB):
           given at initialization time.  """
         
         if out is None:
-            out = Term.err
+            out = Term.cerr
         if tb_offset is not None:
             tb_offset, self.tb_offset = self.tb_offset, tb_offset
             print >> out, self.text(etype, evalue, etb)
