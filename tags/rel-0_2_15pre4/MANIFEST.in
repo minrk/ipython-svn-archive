@@ -1,0 +1,21 @@
+include README_Windows.txt
+
+graft scripts
+
+graft setupext
+
+graft IPython/UserConfig
+
+graft doc
+exclude doc/*.lyx
+exclude doc/*.previous
+exclude doc/magic.tex
+exclude doc/update_magic.sh
+exclude doc/update_version.sh
+exclude doc/manual/WARNINGS
+exclude doc/manual/internals.pl
+
+global-exclude *~
+global-exclude *.flc
+global-exclude *.pyc
+global-exclude .dircopy.log

@@ -1,0 +1,999 @@
+#LyX 1.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 221
+\textclass article
+\begin_preamble
+\usepackage{ae,aecompl}
+\usepackage{hyperref}
+\usepackage{html}
+\end_preamble
+\language english
+\inputencoding auto
+\fontscheme default
+\graphics default
+\paperfontsize default
+\spacing single 
+\papersize Default
+\paperpackage a4
+\use_geometry 1
+\use_amsmath 0
+\use_natbib 0
+\use_numerical_citations 0
+\paperorientation portrait
+\leftmargin 1.25in
+\topmargin 1in
+\rightmargin 1.25in
+\bottommargin 1in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation skip
+\defskip medskip
+\quotes_language english
+\quotes_times 2
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+
+\layout Title
+
+IPython
+\newline 
+
+\size larger 
+New design notes
+\layout Author
+
+Fernando Pérez
+\layout Section
+
+Introduction
+\layout Standard
+
+This is a draft document with notes and ideas for the IPython rewrite.
+ The section order and structure of this document roughly reflects in which
+ order things should be done and what the dependencies are.
+ This document is mainly a draft for developers, a pdf version is provided
+ with the standard distribution in case regular users are interested and
+ wish to contribute ideas.
+\layout Standard
+
+A tentative plan for the future:
+\layout Itemize
+
+0.2.x: series for bug fixing only and as a reference of functionality.
+\layout Itemize
+
+0.3.x: Start from a stable 0.2.x and restructure the code (see below) in 0.3.x
+ until it has all the 0.2.x functionality but with a sound internal architecture.
+\layout Itemize
+
+0.4.x: once the 0.3.x series is completed and stable, release 0.4.x for future
+ bug fixing.
+\layout Itemize
+
+0.5.x: future development on the new architecture.
+\layout Standard
+
+Ideally, IPython should have a clean class setup that would allow further
+ extensions for special-purpose systems.
+ I view IPython as a base system that provides a great interactive environment
+ with full access to the Python language, and which could be used in many
+ different contexts.
+ The basic hooks are there: the magic extension syntax and the flexible
+ system of recursive configuration files and profiles.
+ But with a code as messy as the current one, nobody is going to touch it.
+\layout Section
+
+Lighten the code
+\layout Standard
+
+If we decide to base future versions of IPython on Python 2.3, which has
+ the new Optik module (called optparse), it should be possible to drop DPyGetOpt.
+ We should also remove the need for Itpl.
+ Another area for trimming is the Gnuplot stuff: much of that could be merged
+ into the mainline project.
+ With these changes we could shed a fair bit of code from the main trunk.
+\layout Section
+
+Unit testing
+\layout Standard
+
+All new code should use a testing framework.
+ Python seems to have very good testing facilities, I just need to learn
+ how to use them.
+ I should also check out QMTest at 
+\begin_inset LatexCommand \htmlurl{http://www.codesourcery.com/qm/qmtest}
+
+\end_inset 
+
+, it sounds interesting (it's Python-based too).
+\layout Section
+
+Configuration system
+\layout Standard
+
+Move away from the current ipythonrc format to using standard python files
+ for configuration.
+ This will require users to be slightly more careful in their syntax, but
+ reduces code in IPython, is more in line with Python's normal form (using
+ the $PYTHONSTARTUP file) and allows much more flexibility.
+ I also think it's more 'pythonic', in using a single language for everything.
+\layout Standard
+
+Options can be set up with a function call which takes keywords and updates
+ the options Struct.
+\layout Standard
+
+In order to maintain the recursive inclusion system, write an 'include'
+ function which is basically a wrapper around safe_execfile().
+ Also for alias definitions an alias() function will do.
+ All functionality which we want to have at startup time for the users can
+ be wrapped in a small module so that config files look like:
+\layout Standard
+
+
+\family typewriter 
+from IPython.Startup import *
+\newline 
+...
+\newline 
+set_options(automagic=1,colors='NoColor',...)
+\newline 
+...
+\newline 
+include('mysetup.py')
+\newline 
+...
+\newline 
+alias('ls ls --color -l')
+\newline 
+...
+ etc.
+\layout Standard
+
+Also, put 
+\series bold 
+all
+\series default 
+ aliases in here, out of the core code.
+\layout Standard
+
+The new system should allow for more seamless upgrading, so that:
+\layout Itemize
+
+It automatically recognizes when the config files need updating and does
+ the upgrade.
+\layout Itemize
+
+It simply adds the new options to the user's config file without overwriting
+ it.
+ The current system is annoying since users need to manually re-sync their
+ configuration after every update.
+\layout Itemize
+
+It detects obsolete options and informs the user to remove them from his
+ config file.
+\layout Standard
+
+Here's a copy of Arnd Baecker suggestions on the matter:
+\layout Standard
+
+1.) upgrade: it might be nice to have an "auto" upgrade procedure: i.e.
+ imagine that IPython is installed system-wide and gets upgraded, how does
+ a user know, that an upgrade of the stuff in ~/.ipython is necessary ? So
+ maybe one has to a keep a version number in ~/.ipython and if there is a
+ mismatch with the started ipython, then invoke the upgrade procedure.
+\layout Standard
+
+2.) upgrade: I find that replacing the old files in ~/.ipython (after copying
+ them to .old not optimal (for example, after every update, I have to change
+ my color settings (and some others) in ~/.ipython/ipthonrc).
+ So somehow keeping the old files and merging the new features would be
+ nice.
+ (but how to distinguish changes from version to version with changes made
+ by the user ?) For, example, I would have to change in GnuplotMagic.py gnuplot_m
+ouse to 1 after every upgrade ...
+\layout Standard
+
+This is surely a minor point - also things will change during the "BIG"
+ rewrite, but maybe this is a point to keep in mind for this ?
+\layout Standard
+
+3.) upgrade: old, sometimes obsolete files stay in the ~/.ipython subdirectory.
+ (hmm, maybe one could move all these into some subdirectory, but which
+ name for that (via version-number ?) ?)
+\layout Subsection
+
+Command line options
+\layout Standard
+
+It would be great to design the command-line processing system so that it
+ can be dynamically modified in some easy way.
+ This would allow systems based on IPython to include their own command-line
+ processing to either extend or fully replace IPython's.
+\layout Section
+
+OS-dependent code
+\layout Standard
+
+Options which are OS-dependent (such as colors and aliases) should be loaded
+ via include files.
+ That is, the general file will have:
+\layout Standard
+
+
+\family typewriter 
+if os.name == 'posix':
+\newline 
+include('ipythonrc-posix.py')
+\newline 
+elif os.name == 'nt':
+\newline 
+include('ipythonrc-nt.py')...
+\layout Standard
+
+In the 
+\family typewriter 
+-posix
+\family default 
+, 
+\family typewriter 
+-nt
+\family default 
+, etc.
+ files we'll set all os-specific options.
+\layout Section
+
+Merging with other shell systems
+\layout Standard
+
+This is listed before the big design issues, as it is something which should
+ be kept in mind when that design is made.
+\layout Standard
+
+The following shell systems are out there and I think the whole design of
+ IPython should try to be modular enough to make it possible to integrate
+ its features into these.
+ In all cases IPython should exist as a stand-alone, terminal based program.
+ But it would be great if users of these other shells (some of them which
+ have very nice features of their own, especially the graphical ones) could
+ keep their environment but gain IPython's features.
+\layout List
+\labelwidthstring 00.00.0000
+
+IDLE This is the standard, distributed as part of Python.
+ 
+\layout List
+\labelwidthstring 00.00.0000
+
+pyrepl 
+\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mwh/hacks/pyrepl.html}
+
+\end_inset 
+
+.
+ This is a text (curses-based) shell-like replacement which doesn't have
+ some of IPython's features, but has a crucially useful (and hard to implement)
+ one: full multi-line editing.
+ This turns the interactive interpreter into a true code testing and development
+ environment.
+ 
+\layout List
+\labelwidthstring 00.00.0000
+
+PyCrust 
+\begin_inset LatexCommand \htmlurl{http://sourceforge.net/projects/pycrust/}
+
+\end_inset 
+
+.
+ Very nice, wxWindows based system.
+\layout List
+\labelwidthstring 00.00.0000
+
+PythonWin 
+\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mhammond/}
+
+\end_inset 
+
+.
+ Similar to PyCrust in some respects, a very good and free Python development
+ environment for Windows systems.
+\layout Section
+
+Class design
+\layout Standard
+
+This is the big one.
+ Currently classes use each other in a very messy way, poking inside one
+ another for data and methods.
+ ipmaker() adds tons of stuff to the main __IP instance by hand, and the
+ mix-ins used (Logger, Magic, etc) mean the final __IP instance has a million
+ things in it.
+ All that needs to be cleanly broken down with well defined interfaces amongst
+ the different classes, and probably no mix-ins.
+\layout Standard
+
+The best approach is probably to have all the sub-systems which are currently
+ mixins be fully independent classes which talk back only to the main instance
+ (and 
+\series bold 
+not
+\series default 
+ to each other).
+ In the main instance there should be an object whose job is to handle communica
+tion with the sub-systems.
+\layout Standard
+
+I should probably learn a little UML and diagram this whole thing before
+ I start coding.
+\layout Subsection
+
+Magic
+\layout Standard
+
+Now all methods which will become publicly available are called Magic.magic_name,
+ the magic_ should go away.
+ Then, Magic instead of being a mix-in should simply be an attribute of
+ __IP:
+\layout Standard
+
+__IP.Magic = Magic()
+\layout Standard
+
+This will then give all the magic functions as __IP.Magic.name(), which is
+ much cleaner.
+ This will also force a better separation so that Magic doesn't poke inside
+ __IP so much.
+ In the constructor, Magic should get whatever information it needs to know
+ about __IP (even if it means a pointer to __IP itself, but at least we'll
+ know where it is.
+ Right now since it's a mix-in, there's no way to know which variables belong
+ to whom).
+\layout Standard
+
+Build a class MagicFunction so that adding new functions is a matter of:
+\layout Standard
+
+
+\family typewriter 
+my_magic = MagicFunction(category = 'System utilities')
+\newline 
+my_magic.__call__ = ...
+\layout Standard
+
+Features:
+\layout Itemize
+
+The class constructor should automatically register the functions and keep
+ a table with category sections for easy sorting/viewing.
+\layout Itemize
+
+The object interface must allow automatic building of a GUI for them.
+ This requires registering the options the command takes, the number of
+ arguments, etc, in a formal way.
+ The advantage of this approach is that it allows not only to add GUIs to
+ the magics, but also for a much more intelligent building of docstrings,
+ and better parsing of options and arguments.
+\layout Standard
+
+Also think through better an alias system for magics.
+ Since the magic system is like a command shell inside ipython, the relation
+ between these aliases and system aliases should be cleanly thought out.
+\layout Subsection
+
+Color schemes
+\layout Standard
+
+These should be loaded from some kind of resource file so they are easier
+ to modify by the user.
+\layout Section
+
+Hooks
+\layout Standard
+
+IPython should have a modular system where functions can register themselves
+ for certain tasks.
+ Currently changing functionality requires overriding certain specific methods,
+ there should be a clean API for this to be done.
+\layout Subsection
+
+whos hook
+\layout Standard
+
+This was a very nice suggestion from Alexander Schmolck <a.schmolck@gmx.net>:
+\layout Standard
+
+2.
+ I think it would also be very helpful if there where some sort of hook
+ for ``whos`` that let one customize display formaters depending on the
+ object type.
+\layout Standard
+
+For example I'd rather have a whos that formats an array like:
+\layout Standard
+
+
+\family typewriter 
+Variable Type Data/Length
+\newline 
+------------------------------ 
+\newline 
+a array size: 4x3 type: 'Float'
+\layout Standard
+
+than
+\layout Standard
+
+
+\family typewriter 
+Variable Type Data/Length 
+\newline 
+------------------------------
+\newline 
+a array [[ 0.
+ 1.
+ 2.
+ 3<...> 8.
+ 9.
+ 10.
+ 11.]]
+\layout Section
+
+Manuals
+\layout Standard
+
+The documentation should be generated from docstrings for the command line
+ args and all the magic commands.
+ Look into one of the simple text markup systems to see if we can get latex
+ (for reLyXing later) out of this.
+ Part of the build command would then be to make an update of the docs based
+ on this, thus giving more complete manual (and guaranteed to be in sync
+ with the code docstrings).
+\layout Standard
+
+[PARTLY DONE] At least now all magics are auto-documented, works farily
+ well.
+ Limited Latex formatting yet.
+\layout Subsection
+
+Integration with pydoc-help
+\layout Standard
+
+It should be possible to have access to the manual via the pydoc help system
+ somehow.
+ This might require subclassing the pydoc help, or figuring out how to add
+ the IPython docs in the right form so that help() finds them.
+\layout Standard
+
+Some comments from Arnd and my reply on this topic:
+\layout Standard
+
+> ((Generally I would like to have the nice documentation > more easily
+ accessable from within ipython ...
+ > Many people just don't read documentation, even if it is > as good as
+ the one of IPython ))
+\layout Standard
+
+That's an excellent point.
+ I've added a note to this effect in new_design.
+ Basically I'd like help() to naturally access the IPython docs.
+ Since they are already there in html for the user, it's probably a matter
+ of playing a bit with pydoc to tell it where to find them.
+ It would definitely make for a much cleaner system.
+ Right now the information on IPython is:
+\layout Standard
+
+-ipython --help at the command line: info on command line switches 
+\layout Standard
+
+-? at the ipython prompt: overview of IPython 
+\layout Standard
+
+-magic at the ipython prompt: overview of the magic system 
+\layout Standard
+
+-external docs (html/pdf)
+\layout Standard
+
+All that should be better integrated seamlessly in the help() system, so
+ that you can simply say:
+\layout Standard
+
+help ipython -> full documentation access 
+\layout Standard
+
+help magic -> magic overview 
+\layout Standard
+
+help profile -> help on current profile 
+\layout Standard
+
+help -> normal python help access.
+\layout Section
+
+Graphical object browsers
+\layout Standard
+
+I'd like a system for graphically browsing through objects.
+ 
+\family typewriter 
+@obrowse
+\family default 
+ should open a widged with all the things which 
+\family typewriter 
+@who
+\family default 
+ lists, but cliking on each object would open a dedicated object viewer
+ (also accessible as 
+\family typewriter 
+@oview <object>
+\family default 
+).
+ This object viewer could show a summary of what 
+\family typewriter 
+<object>?
+\family default 
+ currently shows, but also colorize source code and show it via an html
+ browser, show all attributes and methods of a given object (themselves
+ openable in their own viewers, since in Python everything is an object),
+ links to the parent classes, etc.
+\layout Standard
+
+The object viewer widget should be extensible, so that one can add methods
+ to view certain types of objects in a special way (for example, plotting
+ Numeric arrays via grace or gnuplot).
+ This would be very useful when using IPython as part of an interactive
+ complex system for working with certain types of data.
+\layout Standard
+
+I should look at what PyCrust has to offer along these lines, at least as
+ a starting point.
+\layout Section
+
+Miscellaneous small things
+\layout Itemize
+
+Collect whatever variables matter from the environment in some globals for
+ __IP, so we're not testing for them constantly (like $HOME, $TERM, etc.)
+\layout Section
+
+Session restoring
+\layout Standard
+
+I've convinced myself that session restore by log replay is too fragile
+ and tricky to ever work reliably.
+ Plus it can be dog slow.
+ I'd rather have a way of saving/restoring the *current* memory state of
+ IPython.
+ I tried with pickle but failed (can't pickle modules).
+ This seems the right way to do it to me, but it will have to wait until
+ someone tells me of a robust way of dumping/reloading *all* of the user
+ namespace in a file.
+\layout Standard
+
+Probably the best approach will be to pickle as much as possible and record
+ what can not be pickled for manual reload (such as modules).
+ This is not trivial to get to work reliably, so it's best left for after
+ the code restructuring.
+\layout Standard
+
+The following issues exist (old notes, see above paragraph for my current
+ take on the issue):
+\layout Itemize
+
+magic lines aren't properly re-executed when a log file is reloaded (and
+ some of them, like clear or run, may change the environment).
+ So session restore isn't 100% perfect.
+\layout Itemize
+
+auto-quote/parens lines aren't replayed either.
+ All this could be done, but it needs some work.
+ Basically it requires re-running the log through IPython itself, not through
+ python.
+\layout Itemize
+
+_p variables aren't restored with a session.
+ Fix: same as above.
+\layout Section
+
+Tips system
+\layout Standard
+
+It would be nice to have a tip() function which gives tips to users in some
+ situations, but keeps track of already-given tips so they aren't given
+ every time.
+ This could be done by pickling a dict of given tips to IPYTHONDIR.
+\layout Section
+
+TAB completer
+\layout Standard
+
+Some suggestions from Arnd Baecker:
+\layout Standard
+
+a) For file related commands (ls, cat, ...) it would be nice to be able to
+ TAB complete the files in the current directory.
+ (once you started typing something which is uniquely a file, this leads
+ to this effect, apart from going through the list of possible completions
+ ...).
+ (I know that this point is in your documentation.)
+\layout Standard
+
+More general, this might lead to something like command specific completion
+ ?
+\layout Section
+
+Debugger
+\layout Standard
+
+Current system uses a minimally tweaked pdb.
+ Fine-tune it a bit, to provide at least:
+\layout Itemize
+
+Tab-completion in each stack frame.
+ See email to Chris Hart for details.
+\layout Itemize
+
+Object information via ? at least.
+ Break up magic_oinfo a bit so that pdb can call it without loading all
+ of IPython.
+ If possible, also have the other magics for object study: doc, source,
+ pdef and pfile.
+\layout Itemize
+
+Shell access via !
+\layout Itemize
+
+Syntax highlighting in listings.
+ Use py2html code, implement color schemes.
+\layout Section
+
+Future improvements
+\layout Itemize
+
+When from <mod> import * is used, first check the existing namespace and
+ at least issue a warning on screen if names are overwritten.
+\layout Itemize
+
+Auto indent? This would be nice to have, don't know how tricky to do.
+\layout Subsection
+
+Better completion a la zsh
+\layout Standard
+
+This was suggested by Arnd:
+\layout Standard
+
+> >\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ More general, this might lead to something like
+\layout Standard
+
+> >\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ command specific completion ?
+\layout Standard
+
+>
+\layout Standard
+
+> I'm not sure what you mean here.
+\layout Standard
+
+\SpecialChar ~
+
+\layout Standard
+
+Sorry, that was not understandable, indeed ...
+\layout Standard
+
+I thought of something like
+\layout Standard
+
+\SpecialChar ~
+- cd and then use TAB to go through the list of directories
+\layout Standard
+
+\SpecialChar ~
+- ls and then TAB to consider all files and directories
+\layout Standard
+
+\SpecialChar ~
+- cat and TAB: only files (no directories ...)
+\layout Standard
+
+\SpecialChar ~
+
+\layout Standard
+
+For zsh things like this are established by defining in .zshrc
+\layout Standard
+
+\SpecialChar ~
+
+\layout Standard
+
+compctl -g '*.dvi' xdvi
+\layout Standard
+
+compctl -g '*.dvi' dvips
+\layout Standard
+
+compctl -g '*.tex' latex
+\layout Standard
+
+compctl -g '*.tex' tex
+\layout Standard
+
+...
+\layout Section
+
+Immediate TODO and bug list
+\layout Standard
+
+Things that should be done for the current series, before starting major
+ changes.
+\layout Itemize
+
+Clean up FakeModule issues.
+ Currently, unittesting with embedded ipython breaks because a FakeModule
+ instance overwrites __main__.
+ Maybe ipython should revert back to using __main__ directly as the user
+ namespace? Handling a separate namespace is proving 
+\emph on 
+very
+\emph default 
+ tricky in all corner cases.
+\layout Itemize
+
+Fix exception reporting.
+ It seems that inspect is getting the build paths for sources instead of
+ the current paths, and that's confusing ultraTB.
+\newline 
+The problem is actually with the way redhat built python:
+\newline 
+
+\family typewriter 
+In [3]: pickle.dump.func_code.co_filename 
+\newline 
+Out[3]: '/usr/src/build/143041-i386/install/usr/lib/python2.2/pickle.py'
+\newline 
+In [4]: pickle.__file__ 
+\newline 
+Out[4]: '/usr/lib/python2.2/pickle.pyc'
+\newline 
+
+\family default 
+Since those build files can't be found, we get None as filenames for all
+ functions which are part of the standard distribution.
+ Who knows how they built python, because this problem does _not_ occur
+ with normal distutils-based builds:
+\newline 
+
+\family typewriter 
+In [2]: Numeric.array_str.func_code.co_filename
+\newline 
+Out[2]: '/usr/lib/python2.2/site-packages/Numeric/Numeric.py'
+\newline 
+
+\family default 
+Even though Numeric was first built in some separate directory and only
+ later installed there.
+\layout Itemize
+
+When ';' is appended to the end of the line, the output cache is still being
+ set (along with _).
+\layout Itemize
+
+Make the output cache depth independent of the input one.
+ This way one can have say only the last 10 results stored and still have
+ a long input history/cache.
+\layout Itemize
+
+Fix the fact that importing a shell for embedding screws up the command-line
+ history.
+ This can be done by not importing the history file when the shell is already
+ inside ipython.
+\layout Itemize
+
+Simplify a bit the output of ?.
+ There seems to be more detail in ? than necessary for daily work, maybe
+ some things should be moved to ??.
+\layout Itemize
+
+Fix Windows bug reported by Tony Cappellini.
+\layout Itemize
+
+Improve Windows installer.
+ Suggestion by Cory Dodt:
+\newline 
+
+\newline 
+And the suggestion: I noticed that you do some tricks with setup.py so that
+ you can double-click it.
+ I _suspect_ you did this because bdist_wininst doesn't do post-installation
+ stuff, meaning you can't install your data files and documentation to a
+ sensible place, all you can do is drop code into c:
+\backslash 
+pythonxx.
+\newline 
+
+\newline 
+I hit this problem on my own project.
+ The solution, if you're interested in it, is to get cvs distutils (version
+ 1.0.3 currently).
+\newline 
+
+\newline 
+c:
+\backslash 
+>python setup.py bdist_wininst --install-script your_post_install_stuff.py
+\newline 
+
+\newline 
+your_post_install_stuff.py can do anything you want.
+ It sends stdout to a frame that's displayed directly in the installer,
+ which is very nice and Windows-y.
+ And you can distribute an executable, instead of a zip file.
+ 
+\layout Itemize
+
+Try to add readline support to windows: http://newcenturycomputers.net/projects/r
+eadline.html.
+ Currently using this apparently crashes everything (see report by Thilo
+ Ernst).
+ It may be fixable.
+\layout Itemize
+
+Finish the Emacs integration (Alex & François).
+ This includes fixing the manual and deciding whether to include ipython.el
+ along with IPython itself (seems like a good idea, talk to Alex).
+\layout Itemize
+
+Allow ipython to handle input from stdin.
+ Typical test case:
+\newline 
+
+\family typewriter 
+[~]> [~]> echo "print 2+4" | python 
+\newline 
+6 
+\newline 
+[~]> echo "print 2+4" | ipython 
+\newline 
+python: Objects/stringobject.c:111: PyString_FromString: Assertion `str !=
+ ((void *)0)' failed.
+ 
+\newline 
+Abort 
+\family default 
+
+\newline 
+This matters also for emacs integration, since a C-c-| will crash if ipython
+ hasn't been opened yet.
+ This should include supporting option '-c' just like the regular python.
+\layout Itemize
+
+Get Holger's completer in, once he adds filename completion.
+\layout Itemize
+
+Add an error() function which is basically warn(level=4), or similar.
+\layout Itemize
+
+Add @showopt/@setopt (decide name) for viewing/setting all options.
+ The existing option-setting magics should become aliases for setopt calls.
+\layout Itemize
+
+Consider redesigning the output traps.
+ They cause problems when users try to execute code which relies on sys.stdout
+ being the 'true' sys.stdout.
+ The best solution is probably to print the banner first, and then just
+ execute all the user code straight with no output traps at all.
+ Whatever comes out comes out.
+ This makes the ipython code actually simpler, and eliminates the problem
+ altogether.
+\layout Standard
+
+Lower priority stuff:
+\layout Itemize
+
+'cd' under windows doesn't know how to change drive letters.
+ 
+\layout Itemize
+
+It would be nice to be able to continue with python stuff after an @ command.
+ For instance "@run something; test_stuff()" in order to test stuff even
+ faster.
+ Suggestion by Kasper Souren <Kasper.Souren@ircam.fr>
+\layout Itemize
+
+Look at how f2py colors strings.
+ It works just fine with an xterm, so maybe this will also solve the windows
+ problems.
+ Maybe.
+ If nothing else, fixing the xterm behavior is good (also for cygwin users
+ who don't know about rxvt).
+\newline 
+Done(partly).
+ I changed some code which seems to work better.
+ But I should refactor ultraTB & friends to use the colors as string templates
+ which can color a string in one pass.
+ Something like 'Colors.filename % filename' should do the necessary wrapping
+ without the need for open/close color calls.
+ The f2py approach uses function calls for everything, which is probably
+ a performance problem for something with as much coloring as tracebacks.
+\layout Itemize
+
+Check problems with rpm generation (see email by Vasudev Ram).
+ Currently (RedHat 8.0) rpm generation is just broken.
+ This seems to be a distutils bug, as it is calling rpm with the -ba option
+ which rpm doesn't recognize.
+ I think the problem is that RedHat moved rpm building to the rpmbuild command.
+ This means I won't be distributing rpms for the time being.
+\layout Itemize
+
+Run a 'first time wizard' which configures a few things for the user, such
+ as color_info, editor and the like.
+\layout Itemize
+
+Logging: @logstart and -log should start logfiles in ~.ipython, but with
+ unique names in case of collisions.
+ This would prevent ipython.log files all over while also allowing multiple
+ sessions.
+ Also the -log option should take an optional filename, instead of having
+ a separate -logfile option.
+\newline 
+In general the logging system needs a serious cleanup.
+ Many functions now in Magic should be moved to Logger, and the magic @s
+ should be very simple wrappers to the Logger methods.
+\layout Section
+
+Outline of steps
+\layout Standard
+
+Here's a rough outline of the order in which to start implementing the various
+ parts of the redesign.
+ The first 'test of success' should be a clean pychecker run (not the mess
+ we get right now).
+\layout Itemize
+
+Make Logger and Magic not be mixins but attributes of the main class.
+ 
+\begin_deeper 
+\layout Itemize
+
+Magic should have a pointer back to the main instance (even if this creates
+ a recursive structure) so it can control it with minimal message-passing
+ machinery.
+ 
+\layout Itemize
+
+Logger can be a standalone object, simply with a nice, clean interface.
+\end_deeper 
+\layout Itemize
+
+Change to python-based config system.
+\layout Itemize
+
+Move make_IPython() into the main shell class, as part of the constructor.
+ Do this 
+\emph on 
+after 
+\emph default 
+the config system has been changed, debugging will be a lot easier then.
+\layout Itemize
+
+Merge the embeddable class and the normal one into one.
+ After all, the standard ipython script 
+\emph on 
+is
+\emph default 
+ a python program with IPython embedded in it.
+ There's no need for two separate classes (
+\emph on 
+maybe
+\emph default 
+ keep the old one around for the sake of backwards compatibility).
+\the_end
