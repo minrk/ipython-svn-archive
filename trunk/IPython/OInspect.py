@@ -68,6 +68,18 @@ InspectColors = ColorSchemeTable([NoColor,LinuxColors,LightBGColors],
                                  'Linux')
 
 #****************************************************************************
+# Auxiliary functions
+def getdoc(obj):
+    "Wrapper around inspect.getdoc which can't crash because of attribute problems"
+    try:
+        ds = inspect.getdoc(obj)
+    except:
+        # Harden against an inspect failure, which can occur with
+        # SWIG-wrapped extensions.
+        ds = None
+    return ds
+
+#****************************************************************************
 # Class definitions
 
 class myStringIO(StringIO.StringIO):
@@ -160,17 +172,17 @@ class Inspector:
         
         head = self.__head  # so that itpl can find it even if private
         if formatter is None:
-            ds = inspect.getdoc(obj)
+            ds = getdoc(obj)
         else:
-            ds = formatter(inspect.getdoc(obj))
+            ds = formatter(getdoc(obj))
         if type(obj) is types.ClassType:
-            init_ds = inspect.getdoc(obj.__init__)
+            init_ds = getdoc(obj.__init__)
             output = itpl('$head("Class Docstring:")\n'
                           '$indent(ds)\n'
                           '$head("Constructor Docstring"):\n'
                           '$indent(init_ds)')
         elif type(obj) is types.InstanceType and hasattr(obj,'__call__'):
-            call_ds = inspect.getdoc(obj.__call__)
+            call_ds = getdoc(obj.__call__)
             if call_ds:
                 output = itpl('$head("Class Docstring:")\n$indent(ds)\n'
                               '$head("Calling Docstring:")\n$indent(call_ds)')
@@ -211,15 +223,16 @@ class Inspector:
 
         Optional arguments:
         
-        - ospace: name of the namespace where object is defined.
+        - oname: name of the variable pointing to the object.
         - formatter: special formatter for docstrings (see pdoc)
+        - info: a structure with some information fields (such as the
+        docstring) which may have been precomputed already.
         - detail_level: if set to 1, more information is given.
-        - ismagic: special parameter for IPython's magic functions.
         """
 
         header = self.__head
         if info is None:
-            ds = indent(inspect.getdoc(obj))
+            ds = indent(getdoc(obj))
             ismagic = 0
             isalias = 0
             ospace = ''
@@ -317,7 +330,7 @@ class Inspector:
             except:
                 gotdef = 0
             try:
-                init_ds = inspect.getdoc(obj.__init__)
+                init_ds = getdoc(obj.__init__)
             except:
                 init_ds = None
 
@@ -340,7 +353,7 @@ class Inspector:
                           'Calling definition not available.')
             else:
                 out.write(header('Call def:\t')+self.format(call_def))
-            call_ds = inspect.getdoc(obj.__call__)
+            call_ds = getdoc(obj.__call__)
             if call_ds:
                 out.writeln(header('Call docstring:\n') + indent(call_ds))
 

@@ -40,6 +40,7 @@ from IPython.Struct import Struct
 from IPython.Itpl import Itpl, itpl, printpl,itplns
 from IPython.FakeModule import FakeModule
 from IPython.genutils import *
+from IPython import OInspect
 
 # Globals to be set later by Magic constructor
 MAGIC_PREFIX = ''
@@ -300,12 +301,7 @@ class Magic:
             if isalias:
                 ds = "Alias to the system command:\n  %s" % obj[1]
             else:
-                try:
-                    ds = inspect.getdoc(obj)
-                except:
-                    # Harden against an inspect failure, which can occur with
-                    # SWIG-wrapped extensions.
-                    pass
+                ds = OInspect.getdoc(obj)
 
         return {'found':found, 'obj':obj, 'namespace':ospace,
                 'docstring':ds, 'ismagic':ismagic, 'isalias':isalias}
@@ -313,7 +309,7 @@ class Magic:
     def arg_err(self,func):
         """Print docstring if incorrect arguments were passed"""
         print 'Error in arguments:'
-        print inspect.getdoc(func)
+        print OInspect.getdoc(func)
 
 
     def format_latex(self,str):
@@ -644,11 +640,10 @@ Currently the magic system has the following functions:\n"""
         info = Struct(self._ofind(oname))
         if info.found:
             pmethod = getattr(self.shell.inspector,meth)
+            formatter = info.ismagic and self.format_screen or None
             if meth == 'pdoc':
-                formatter = info.ismagic and self.format_screen or None
                 pmethod(info.obj,oname,formatter)
             elif meth == 'pinfo':
-                formatter = info.ismagic and self.format_screen or None
                 pmethod(info.obj,oname,formatter,info,**kw)
             else:
                 pmethod(info.obj,oname)
@@ -701,10 +696,9 @@ Currently the magic system has the following functions:\n"""
 
         '%pinfo object' is just a synonym for object? or ?object."""
         
-        # look for the given object in all namespaces
-        qmark1,oname,qmark2 = re.match('(\?*)(.*?)(\??$)',parameter_s).groups()
         # detail_level: 0 -> obj? , 1 -> obj??
         detail_level = 0
+        qmark1,oname,qmark2 = re.match('(\?*)(.*?)(\??$)',parameter_s).groups()
         if qmark1 or qmark2:
             detail_level = 1
         self._inspect('pinfo',oname,detail_level=detail_level)
@@ -1173,7 +1167,7 @@ Currently the magic system has the following functions:\n"""
             filename = get_py_filename(arg_lst[0])
         except IndexError:
             warn('you must provide at least a filename.')
-            print '\n%run:\n',inspect.getdoc(self.magic_run)
+            print '\n%run:\n',OInspect.getdoc(self.magic_run)
             return
         except IOError,msg:
             error(msg)
@@ -1744,7 +1738,7 @@ Defaulting color scheme to 'NoColor'"""
         try:
             alias,cmd = par.split(None,1)
         except:
-            print inspect.getdoc(self.magic_alias)
+            print OInspect.getdoc(self.magic_alias)
         else:
             nargs = cmd.count('%s')
             if nargs>0 and cmd.find('%l')>=0:
