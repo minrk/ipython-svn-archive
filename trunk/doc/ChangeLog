@@ -1,3 +1,24 @@
+2003-03-25  Fernando Perez  <fperez@pizero.colorado.edu>
+
+	* IPython/Magic.py (Magic.magic_prun): rstrip() output of profiler
+	before printing it (it had a lot of spurious blank lines at the
+	end).
+
+	* IPython/Gnuplot2.py (Gnuplot.hardcopy): fixed bug where lpr
+	output would be sent 21 times!  Obviously people don't use this
+	too often, or I would have heard about it.
+
+2003-03-24  Fernando Perez  <fperez@pizero.colorado.edu>
+
+	* setup.py (scriptfiles): renamed the data_files parameter from
+	'base' to 'data' to fix rpm build issues.  Thanks to Ralf Ahlbrink
+	for the patch.
+
+2003-03-20  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (error): added error() and fatal()
+	functions.
+
 2003-03-18  *** Released version 0.2.15pre3
 
 2003-03-18  Fernando Perez  <fperez@colorado.edu>
