@@ -29,8 +29,7 @@ set xlabel 'theta'
 set ylabel 'sin(theta)'
 """)
 
-# Now start an embedded ipython. g2 is a visible global, but it's also the one
-# accessed by @gp now
+# Now start an embedded ipython.
 ipshell('Starting the embedded IPyhton.\n'
         'Try calling plot(x,y), or @gpc for direct access to Gnuplot"\n')
 
