@@ -1,3 +1,25 @@
+2004-10-09  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.magic_whos): modify output of Numeric
+	arrays to print a more useful summary, without calling str(arr).
+	This avoids the problem of extremely lengthy computations which
+	occur if arr is large, and appear to the user as a system lockup
+	with 100% cpu activity.  After a suggestion by Kristian Sandberg
+	<Kristian.Sandberg@colorado.edu>.
+
+2004-10-08  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (__license__): change to absolute imports of
+	ipython's own internal packages, to start adapting to the absolute
+	import requirement of PEP-328.
+
+	* IPython/genutils.py (__author__): Fix coding to utf-8 on all
+	files, and standardize author/license marks through the Release
+	module instead of having per/file stuff (except for files with
+	particular licenses, like the MIT/PSF-licensed codes).
+
+	* IPython/Debugger.py: remove dead code for python 2.1
+
 2004-10-04  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (ipmagic): New function for accessing magics
