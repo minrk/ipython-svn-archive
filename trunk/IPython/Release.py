@@ -17,7 +17,9 @@ $Id$"""
 # the tarballs and RPMs made by distutils, so it's best to lowercase it.
 name = 'ipython'
 
-version = '0.6.7-rc1'
+# For versions with substrings (like 0.6.7_rc1), use _ but NOT -, since
+# bdist_rpm chokes on dashes in the version string.
+version = '0.6.7_rc1'
 
 description = "An enhanced interactive Python shell."
 
