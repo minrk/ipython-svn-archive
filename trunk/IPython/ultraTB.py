@@ -583,7 +583,6 @@ class VerboseTB(TBTools):
             sys.displayhook = dhook
         del self.tb
 
-    # Shouldn't this be printing to stderr?? Changed it (ok?)
     def handler(self, info=None):
         (etype, evalue, etb) = info or sys.exc_info()
         self.tb = etb
@@ -684,16 +683,32 @@ class AutoFormattedTB(FormattedTB):
     try:
       ...
     except:
-      AutoTB()  # or AutoTB(logfile) where logfile is an open file object
+      AutoTB()  # or AutoTB(out=logfile) where logfile is an open file object
     """
-    def __call__(self, etype=None, evalue=None, etb=None,out=None):
+    def __call__(self,etype=None,evalue=None,etb=None,
+                 out=None,tb_offset=None):
+        """Print out a formatted exception traceback.
+
+        Optional arguments:
+          - out: an open file-like object to direct output to.
+
+          - tb_offset: the number of frames to skip over in the stack, on a
+          per-call basis (this overrides temporarily the instance's tb_offset
+          given at initialization time.  """
+        
         if out is None:
             out = sys.stderr
-        print >> out, self.text()
+        if tb_offset is not None:
+            tb_offset, self.tb_offset = self.tb_offset, tb_offset
+            print >> out, self.text(etype, evalue, etb)
+            self.tb_offset = tb_offset
+        else:
+            print >> out, self.text()
         self.debugger()
 
     def text(self,etype=None,value=None,tb=None,context=5,mode=None):
-        etype,value,tb = sys.exc_info()
+        if etype is None:
+            etype,value,tb = sys.exc_info()
         self.tb = tb
         return FormattedTB.text(self,etype,value,tb,context=5,mode=mode)
 
