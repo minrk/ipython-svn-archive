@@ -400,11 +400,11 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # > Is this difference in return value intentional?
 
         # Well, it's documented that '__builtins__' can be either a dictionary
-        # or a module, and it's been that way for a long time. Whether it's
-        # intentional (or sensible), I don't know. In any case, the idea is that
+        # or a module, and it's been that way for a long time. Whether it's
+        # intentional (or sensible), I don't know. In any case, the idea is that
         # if you need to access the built-in namespace directly, you should start
         # with "import __builtin__" (note, no 's') which will definitely give you
-        # a module. Yeah, it is somewhatÂ confusing:-(.
+        # a module. Yeah, it's somewhatÂ confusing:-(.
         
         if user_ns is None:
             # Set __name__ to __main__ to better match the behavior of the
