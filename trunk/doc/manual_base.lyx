@@ -168,6 +168,10 @@ Complete system shell access.
  !! captures shell output into python variables for further use.
 \layout Itemize
 
+All calls to the system (via aliases or via !) have their standard output/error
+ automatically stored as strings, and also available as lists.
+\layout Itemize
+
 Background execution of Python commands in a separate thread.
  IPython has an internal job manager called 
 \family typewriter 
@@ -4149,9 +4153,167 @@ Any input line beginning with a
 'ls'
 \family default 
  in the current directory.
+\layout Subsubsection
+
+Automatic capture of command output
 \layout Standard
 
-If the input begins with 
+IPython will always store the contents of the standard output and error
+ of the last command passed to the system (whether via 
+\family typewriter 
+!
+\family default 
+ or via an alias) in the special variables 
+\family typewriter 
+_o
+\family default 
+ (for stdout) and 
+\family typewriter 
+_e
+\family default 
+ (for stderr).
+ These variables hold the resulting strings, but they also provide a special
+ attributes:
+\layout Description
+
+.l\SpecialChar ~
+(or\SpecialChar ~
+.list): value as list (split on newlines).
+ 
+\layout Description
+
+.n\SpecialChar ~
+(or\SpecialChar ~
+.nlstr): original value (the string itself).
+ 
+\layout Description
+
+.s\SpecialChar ~
+(or\SpecialChar ~
+.spstr): value as whitespace-separated string.
+ 
+\layout Standard
+
+This system is similar to that used by IPython for caching the results of
+ Python computations, described in Sec.\SpecialChar ~
+
+\begin_inset LatexCommand \ref{sec:cache_input}
+
+\end_inset 
+
+.
+ It makes it very conveninent to quickly perform operations on the result
+ of any system command:
+\layout LyX-Code
+
+In [11]: ls *py
+\layout LyX-Code
+
+setup.py*
+\layout LyX-Code
+
+win32_manual_post_install.py
+\layout LyX-Code
+
+\layout LyX-Code
+
+# the original output:
+\layout LyX-Code
+
+In [12]: _o
+\layout LyX-Code
+
+Out[12]: 'setup.py*
+\backslash 
+nwin32_manual_post_install.py'
+\layout LyX-Code
+
+\layout LyX-Code
+
+# the output as a string with whitespace
+\layout LyX-Code
+
+In [13]: _o.s
+\layout LyX-Code
+
+Out[13]: 'setup.py* win32_manual_post_install.py'
+\layout LyX-Code
+
+\layout LyX-Code
+
+# this can be passed to a shell command:
+\layout LyX-Code
+
+In [14]: !wc -l $_o.s
+\layout LyX-Code
+
+  146 setup.py
+\layout LyX-Code
+
+  130 win32_manual_post_install.py
+\layout LyX-Code
+
+  276 total
+\layout Standard
+
+Similarly, you can use the list form for more complex manipulations:
+\layout LyX-Code
+
+In [15]: ls *py
+\layout LyX-Code
+
+setup.py*
+\layout LyX-Code
+
+win32_manual_post_install.py
+\layout LyX-Code
+
+\layout LyX-Code
+
+# this output as a list:
+\layout LyX-Code
+
+In [16]: _o.l
+\layout LyX-Code
+
+Out[16]: ['setup.py*', 'win32_manual_post_install.py']
+\layout LyX-Code
+
+\layout LyX-Code
+
+# You can loop on the list form with Python code:
+\layout LyX-Code
+
+In [17]: for f in _o.l:
+\layout LyX-Code
+
+   ....:      !wc -l $f
+\layout LyX-Code
+
+   ....:
+\layout LyX-Code
+
+146 setup.py
+\layout LyX-Code
+
+130 win32_manual_post_install.py
+\layout LyX-Code
+
+\layout LyX-Code
+
+# Again, _o will hold the last system call:
+\layout LyX-Code
+
+In [18]: _o
+\layout LyX-Code
+
+Out[18]: '130 win32_manual_post_install.py'
+\layout Subsubsection
+
+Manual capture of command output
+\layout Standard
+
+If the input line begins with 
 \emph on 
 two
 \emph default 

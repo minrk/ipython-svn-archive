@@ -1,3 +1,22 @@
+2005-03-18  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (magic_sc): 
+
+	* IPython/genutils.py (LSString): New class to be used for
+	automatic storage of the results of all alias/system calls in _o
+	and _e (stdout/err).  These provide a .l/.list attribute which
+	does automatic splitting on newlines.  This means that for most
+	uses, you'll never need to do capturing of output with %sc/%sx
+	anymore, since ipython keeps this always done for you.  Note that
+	only the LAST results are stored, the _o/e variables are
+	overwritten on each call.  If you need to save their contents
+	further, simply bind them to any other name.
+
+2005-03-17  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Prompts.py (BasePrompt.cwd_filt): a few more fixes for
+	prompt namespace handling.
+
 2005-03-16  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Prompts.py (CachedOutput.__init__): Fix default and

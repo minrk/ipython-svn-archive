@@ -128,6 +128,14 @@ These things need to be ripped out, they cause no end of problems.
  For now I've just disabled them, and I'll live with the ugly error messages.
 \layout Itemize
 
+The prompt specials dictionary should be turned into a class which does
+ proper namespace management, since the prompt specials need to be evaluated
+ in a certain namespace.
+ Currently it's just globals, which need to be managed manually by code
+ below.
+ 
+\layout Itemize
+
 Fix coloring of prompts: the pysh color strings don't have any effect on
  prompt numbers, b/c these are controlled by the global scheme.
  Make the prompts fully user-definable, colors and all.
