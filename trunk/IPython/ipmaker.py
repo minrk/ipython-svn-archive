@@ -161,7 +161,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                     'pprint! prompt_in1|pi1=s prompt_in2|pi2=s prompt_out|po=s '
                     'quick screen_length|sl=i prompts_pad_left=i '
                     'logfile|lf=s logplay|lp=s profile|p=s '
-                    'readline! readline_omit__names! '
+                    'readline! readline_merge_completions! '
+                    'readline_omit__names! '
                     'rcfile=s separate_in|si=s separate_out|so=s '
                     'separate_out2|so2=s xmode=s '
                     'magic_docstrings system_verbose! '
@@ -210,6 +211,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       prompts_pad_left = 1,
                       quick = 0,
                       readline = 1,
+                      readline_merge_completions = 1,
                       readline_omit__names = 0,
                       rcfile = 'ipythonrc' + rc_suffix,
                       screen_length = 0,

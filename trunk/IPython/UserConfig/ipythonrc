@@ -353,7 +353,17 @@ readline_remove_delims '"-/~
 
 #"' -- just to fix emacs coloring which gets confused by unmatched quotes.
 
-# (iii) readline_omit__names: normally hitting <tab> after a '.' in a name
+# (iii) readline_merge_completions: whether to merge the result of all
+# possible completions or not.  If true, IPython will complete filenames,
+# python names and aliases and return all possible completions.  If you set it
+# to false, each completer is used at a time, and only if it doesn't return
+# any completions is the next one used.
+
+# The default order is: [python_matches, file_matches, alias_matches]
+
+readline_merge_completions 1
+
+# (iv) readline_omit__names: normally hitting <tab> after a '.' in a name
 # will complete all attributes of an object, including all the special methods
 # whose names start with single or double underscores (like __getitem__ or
 # __class__).
