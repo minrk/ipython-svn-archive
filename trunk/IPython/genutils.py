@@ -179,8 +179,7 @@ bq = getoutput
 
 #-----------------------------------------------------------------------------
 def warn(msg,level=2,exit_val=1):
-    """
-    Standard warning printer. Gives formatting consistency.
+    """Standard warning printer. Gives formatting consistency.
 
     Output is sent to sys.stderr.
     
@@ -198,18 +197,29 @@ def warn(msg,level=2,exit_val=1):
     
     """
     
-    if level:
+    if level>0:
         header = ['','','WARNING: ','ERROR: ','FATAL ERROR: ']
         sys.stderr.write('%s%s\n' % (header[level],msg))
-        #print >> sys.stderr, header[level],msg
         if level == 4:
-            print >> sys.stderr,'Aborting operation.\n'
+            print >> sys.stderr,'Exiting.\n'
+            sys.stderr.flush()
             sys.exit(exit_val)
         sys.stderr.flush()
+
+def error(msg):
+    """Equivalent to warn(msg,level=3). """
+
+    warn(msg,level=3)
+
+def fatal(msg,exit_val=1):
+    """Equivalent to warn(msg,exit_val=exit_val,level=4). """
+
+    warn(msg,exit_val=exit_val,level=4)
 
 #----------------------------------------------------------------------------
 def mutex_opts(dict,ex_op):
     """Check for presence of mutually exclusive keys in a dict.
+
     Call: mutex_opts(dict,[[op1a,op1b],[op2a,op2b]...]"""
     for op1,op2 in ex_op:
         if op1 in dict and op2 in dict:
