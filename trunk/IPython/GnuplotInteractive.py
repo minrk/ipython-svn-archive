@@ -119,7 +119,7 @@ def magic_gp_set_default(self,parameter_s=''):
 
     Call with the name of the new instance at the command line. If you want to
     set this instance in your own code (using an embedded IPython, for
-    example), simply set the variable __IP.gnuplot to your own gnuplot
+    example), simply set the variable __IPYTHON__.gnuplot to your own gnuplot
     instance object."""
 
     gname = parameter_s.strip()

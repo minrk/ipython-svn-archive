@@ -3,7 +3,7 @@ Section: devel
 Priority: optional
 Maintainer: Jack Moffitt <jack@xiph.org>
 Build-Depends-Indep: debhelper (>> 4.1.65), python, python-dev
-Standards-Version: 3.5.8
+Standards-Version: 3.6.1
 
 Package: ipython
 Architecture: all

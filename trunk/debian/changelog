@@ -1,3 +1,9 @@
+ipython (0.6.3-1) unstable; urgency=low
+
+  * New upstream release (Closes: #262244, #252525)
+
+ -- Jack Moffitt <jack@xiph.org>  Wed, 22 Sep 2004 21:39:38 -0600
+
 ipython (0.6.0-1) unstable; urgency=low
 
   * New upstream release
