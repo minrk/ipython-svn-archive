@@ -1,3 +1,9 @@
+2005-03-23  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (runlines): Add a public method to expose
+	IPython's code execution machinery, so that users can run strings
+	as if they had been typed at the prompt interactively.
+
 2005-03-20  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.set_custom_exc): new system
