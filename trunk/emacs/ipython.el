@@ -1,7 +1,7 @@
 ;;; ipython.el --- Adds support for IPython to python-mode.el
 
 ;; Copyright (C) 2002, 2003, 2004 Alexander Schmolck
-;; Author:        Alexander Schmolck
+;; Author:        Alexander Schmolck <a.schmolck@gmx.net>
 ;; Keywords:      ipython python languages oop
 ;; URL:           http://www-hep.colorado.edu/~fperez/ipython/dist/
 ;; Compatibility: Emacs21, XEmacs21

@@ -2,8 +2,7 @@
 
 ;; Copyright (C) 1992,1993,1994  Tim Peters
 
-;; Author: 2003-2004 http://sf.net/projects/python-mode
-;;         1995-2002 Barry A. Warsaw
+;; Author: 1995-2002 Barry A. Warsaw
 ;;         1992-1994 Tim Peters
 ;; Maintainer: python-mode@python.org
 ;; Created:    Feb 1992
@@ -60,7 +59,7 @@
 (require 'comint)
 (require 'custom)
 (require 'cl)
-(require 'compile)
+(require 'ansi-color)
 
 
 ;; user definable variables
@@ -324,6 +323,17 @@ buffer is prepended to come up with a file name.")
   "*Alist of interpreters and python shells. Used by `py-choose-shell'
 to select the appropriate python interpreter mode for a file.")
 
+(defcustom py-shell-input-prompt-1-regexp "^>>> "
+  "*A regular expression to match the input prompt of the shell."
+  :type 'string
+  :group 'python)
+
+(defcustom py-shell-input-prompt-2-regexp "^[.][.][.] "
+  "*A regular expression to match the input prompt of the shell after the
+  first line of input."
+  :type 'string
+  :group 'python)
+
 
 ;; ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ;; NO USER DEFINABLE VARIABLES BEYOND THIS POINT
@@ -340,24 +350,9 @@ support for features needed by `python-mode'.")
   "Face for pseudo keywords in Python mode, like self, True, False, Ellipsis.")
 (make-face 'py-pseudo-keyword-face)
 
-;; PEP 318 decorators
-(defvar py-decorators-face 'py-decorators-face
-  "Face method decorators.")
-(make-face 'py-decorators-face)
-
-;; Face for builtins
-(defvar py-builtins-face 'py-builtins-face
-  "Face for builtins like TypeError, object, open, and exec.")
-(make-face 'py-builtins-face)
-
 (defun py-font-lock-mode-hook ()
   (or (face-differs-from-default-p 'py-pseudo-keyword-face)
-      (copy-face 'font-lock-keyword-face 'py-pseudo-keyword-face))
-  (or (face-differs-from-default-p 'py-builtins-face)
-      (copy-face 'font-lock-keyword-face 'py-builtins-face))
-  (or (face-differs-from-default-p 'py-decorators-face)
-      (copy-face 'py-pseudo-keyword-face 'py-decorators-face))
-  )
+      (copy-face 'font-lock-keyword-face 'py-pseudo-keyword-face)))
 (add-hook 'font-lock-mode-hook 'py-font-lock-mode-hook)
 
 (defvar python-font-lock-keywords
@@ -374,54 +369,10 @@ support for features needed by `python-mode'.")
 	(kw2 (mapconcat 'identity
 			'("else:" "except:" "finally:" "try:")
 			"\\|"))
-	(kw3 (mapconcat 'identity
-			;; Don't include True, False, None, or
-			;; Ellipsis in this list, since they are
-			;; already defined as pseudo keywords.
-			'("ArithmeticError" "AssertionError"
-			  "AttributeError" "DeprecationWarning" "EOFError"
-			  "EnvironmentError" "Exception"
-			  "FloatingPointError" "FutureWarning" "IOError"
-			  "ImportError" "IndentationError" "IndexError"
-			  "KeyError" "KeyboardInterrupt" "LookupError"
-			  "MemoryError" "NameError" "NotImplemented"
-			  "NotImplementedError" "OSError" "OverflowError"
-			  "OverflowWarning" "PendingDeprecationWarning"
-			  "ReferenceError" "RuntimeError" "RuntimeWarning"
-			  "StandardError" "StopIteration" "SyntaxError"
-			  "SyntaxWarning" "SystemError" "SystemExit"
-			  "TabError" "TypeError" "UnboundLocalError"
-			  "UnicodeDecodeError" "UnicodeEncodeError"
-			  "UnicodeError" "UnicodeTranslateError"
-			  "UserWarning" "ValueError" "Warning"
-			  "ZeroDivisionError" "__debug__"
-			  "__import__" "__name__" "abs" "apply" "basestring"
-			  "bool" "buffer" "callable" "chr" "classmethod"
-			  "cmp" "coerce" "compile" "complex" "copyright"
-			  "delattr" "dict" "dir" "divmod"
-			  "enumerate" "eval" "execfile" "exit" "file"
-			  "filter" "float" "getattr" "globals" "hasattr"
-			  "hash" "hex" "id" "input" "int" "intern"
-			  "isinstance" "issubclass" "iter" "len" "license"
-			  "list" "locals" "long" "map" "max" "min" "object"
-			  "oct" "open" "ord" "pow" "property" "range"
-			  "raw_input" "reduce" "reload" "repr" "round"
-			  "setattr" "slice" "staticmethod" "str" "sum"
-			  "super" "tuple" "type" "unichr" "unicode" "vars"
-			  "xrange" "zip")
-			"\\|"))
 	)
     (list
-     ;; decorators -- this comes before keywords so "... [ staticmethod ]"
-     ;; decorators are colored in py-decorators-face not py-builtins-face
-     '("\\bdef[ \t]+\\([a-zA-Z_]+[a-zA-Z0-9_]*\\)[ \t]*(.*)[ \t]*\\(\\[[^]]*\\]\\)"
-       (1 font-lock-function-name-face)
-       (2 py-decorators-face))
      ;; keywords
      (cons (concat "\\b\\(" kw1 "\\)\\b[ \n\t(]") 1)
-     ;; builtins when they don't appear as object attributes
-     (list (concat "\\([^. \t]\\|^\\)[ \t]*\\b\\(" kw3 "\\)\\b[ \n\t(]") 2
-	   'py-builtins-face)
      ;; block introducing keywords with immediately following colons.
      ;; Yes "except" is in both lists.
      (cons (concat "\\b\\(" kw2 "\\)[ \n\t(]") 1)
@@ -446,13 +397,6 @@ support for features needed by `python-mode'.")
 Currently-active file is at the head of the list.")
 
 (defvar py-pdbtrack-is-tracking-p nil)
-(defvar py-pdbtrack-last-grubbed-buffer nil
-  "Record of the last buffer used when the source path was invalid.
-
-This buffer is consulted before the buffer-list history for satisfying
-`py-pdbtrack-grub-for-buffer', since it's the most often the likely
-prospect as debugging continues.")
-(make-variable-buffer-local 'py-pdbtrack-last-grubbed-buffer)
 (defvar py-pychecker-history nil)
 
 
@@ -520,17 +464,29 @@ prospect as debugging continues.")
 	  "\\)")
   "Regular expression matching lines not to dedent after.")
 
-(defconst py-traceback-line-re
+(defconst py-defun-start-re
+  "^\\([ \t]*\\)def[ \t]+\\([a-zA-Z_0-9]+\\)\\|\\(^[a-zA-Z_0-9]+\\)[ \t]*="
+  ;; If you change this, you probably have to change py-current-defun
+  ;; as well.  This is only used by py-current-defun to find the name
+  ;; for add-log.el.
+  "Regular expression matching a function, method, or variable assignment.")
+
+(defconst py-class-start-re "^class[ \t]*\\([a-zA-Z_0-9]+\\)"
+  ;; If you change this, you probably have to change py-current-defun
+  ;; as well.  This is only used by py-current-defun to find the name
+  ;; for add-log.el.
+  "Regular expression for finding a class name.")
+
+(defvar py-traceback-line-re
   "[ \t]+File \"\\([^\"]+\\)\", line \\([0-9]+\\)"
   "Regular expression that describes tracebacks.")
 
 ;; pdbtrack contants
 (defconst py-pdbtrack-stack-entry-regexp
-;  "^> \\([^(]+\\)(\\([0-9]+\\))\\([?a-zA-Z0-9_]+\\)()"
-  "^> \\(.*\\)(\\([0-9]+\\))\\([?a-zA-Z0-9_]+\\)()"
+  "> \\([^(]+\\)(\\([0-9]+\\))[?a-zA-Z0-9_]+()"
   "Regular expression pdbtrack uses to find a stack trace entry.")
 
-(defconst py-pdbtrack-input-prompt "\n[(<]*pdb[>)]+ "
+(defconst py-pdbtrack-input-prompt "\n[(<]?pdb[>)]? "
   "Regular expression pdbtrack uses to recognize a pdb prompt.")
 
 (defconst py-pdbtrack-track-range 10000
@@ -610,6 +566,7 @@ prospect as debugging continues.")
   (define-key py-mode-map "\C-c\C-u"  'py-goto-block-up)
   (define-key py-mode-map "\C-c#"     'py-comment-region)
   (define-key py-mode-map "\C-c?"     'py-describe-mode)
+  (define-key py-mode-map [f1]        'py-help-at-point)
   (define-key py-mode-map "\C-c\C-h"  'py-help-at-point)
   (define-key py-mode-map "\e\C-a"    'py-beginning-of-def-or-class)
   (define-key py-mode-map "\e\C-e"    'py-end-of-def-or-class)
@@ -752,8 +709,8 @@ This function does not modify point or mark."
     (cond
      ((eq position 'bol) (beginning-of-line))
      ((eq position 'eol) (end-of-line))
-     ((eq position 'bod) (py-beginning-of-def-or-class 'either))
-     ((eq position 'eod) (py-end-of-def-or-class 'either))
+     ((eq position 'bod) (py-beginning-of-def-or-class))
+     ((eq position 'eod) (py-end-of-def-or-class))
      ;; Kind of funny, I know, but useful for py-up-exception.
      ((eq position 'bob) (beginning-of-buffer))
      ((eq position 'eob) (end-of-buffer))
@@ -1000,8 +957,6 @@ of the first definition found."
       ;; what level is the next definition on?  must be same, deeper
       ;; or shallower indentation
       (cond
-       ;; Skip code in comments and strings
-       ((py-in-literal))
        ;; at the same indent level, add it to the list...
        ((= start-indent cur-indent)
 	(push (cons def-name def-pos) index-alist))
@@ -1126,7 +1081,6 @@ py-beep-if-tab-change\t\tring the bell if `tab-width' is changed"
   (make-local-variable 'indent-region-function)
   (make-local-variable 'indent-line-function)
   (make-local-variable 'add-log-current-defun-function)
-  (make-local-variable 'fill-paragraph-function)
   ;;
   (set-syntax-table py-mode-syntax-table)
   (setq major-mode              'python-mode
@@ -1145,8 +1099,6 @@ py-beep-if-tab-change\t\tring the bell if `tab-width' is changed"
 	indent-line-function    'py-indent-line
 	;; tell add-log.el how to find the current function/method/variable
 	add-log-current-defun-function 'py-current-defun
-
-	fill-paragraph-function 'py-fill-paragraph
 	)
   (use-local-map py-mode-map)
   ;; add the menu
@@ -1204,7 +1156,6 @@ It is added to `interpreter-mode-alist' and `py-choose-shell'.
 ;; can specify different `derived-modes' based on the #! line, but
 ;; with the latter, we can't.  So we just won't add them if they're
 ;; already added.
-;;;###autoload
 (let ((modes '(("jpython" . jpython-mode)
 	       ("jython" . jpython-mode)
 	       ("python" . python-mode))))
@@ -1212,7 +1163,7 @@ It is added to `interpreter-mode-alist' and `py-choose-shell'.
     (when (not (assoc (car modes) interpreter-mode-alist))
       (push (car modes) interpreter-mode-alist))
     (setq modes (cdr modes))))
-;;;###autoload
+
 (when (not (or (rassq 'python-mode auto-mode-alist)
 	       (rassq 'jpython-mode auto-mode-alist)))
   (push '("\\.py$" . python-mode) auto-mode-alist))
@@ -1235,14 +1186,14 @@ It is added to `interpreter-mode-alist' and `py-choose-shell'.
 		  (backward-to-indentation 1))
 		(not (looking-at py-no-outdent-re)))
 	 )))
-
+      
 (defun py-electric-colon (arg)
   "Insert a colon.
 In certain cases the line is dedented appropriately.  If a numeric
 argument ARG is provided, that many colons are inserted
 non-electrically.  Electric behavior is inhibited inside a string or
 comment."
-  (interactive "*P")
+  (interactive "P")
   (self-insert-command (prefix-numeric-value arg))
   ;; are we in a string or comment?
   (if (save-excursion
@@ -1286,7 +1237,8 @@ comint believe the user typed this string so that
 	(procbuf (process-buffer proc))
 ;	(comint-scroll-to-bottom-on-output t)
 	(msg (format "## working on region in file %s...\n" filename))
-	(cmd (format "execfile(r'%s')\n" filename)))
+        ;; add some comment, so that we can filter it out of history
+	(cmd (format "execfile(r'%s') # PYTHON-MODE\n" filename)))
     (unwind-protect
 	(save-excursion
 	  (set-buffer procbuf)
@@ -1299,17 +1251,17 @@ comint believe the user typed this string so that
 (defun py-comint-output-filter-function (string)
   "Watch output for Python prompt and exec next file waiting in queue.
 This function is appropriate for `comint-output-filter-functions'."
-  ;; TBD: this should probably use split-string
-  (when (and (or (string-equal string ">>> ")
-		 (and (>= (length string) 5)
-		      (string-equal (substring string -5) "\n>>> ")))
-	     py-file-queue)
+  ;;remove ansii termninal escape sequences from string, not sure why they are
+  ;;still around...
+  (setq string (ansi-color-filter-apply string))
+  (when (and (string-match py-shell-input-prompt-1-regexp string)
+                   py-file-queue)
     (pop-to-buffer (current-buffer))
     (py-safe (delete-file (car py-file-queue)))
     (setq py-file-queue (cdr py-file-queue))
     (if py-file-queue
-	(let ((pyproc (get-buffer-process (current-buffer))))
-	  (py-execute-file pyproc (car py-file-queue))))
+    (let ((pyproc (get-buffer-process (current-buffer))))
+      (py-execute-file pyproc (car py-file-queue))))
     ))
 
 (defun py-pdbtrack-overlay-arrow (activation)
@@ -1332,127 +1284,49 @@ Activity is disabled if the buffer-local variable
 `py-pdbtrack-do-tracking-p' is nil.
 
 We depend on the pdb input prompt matching `py-pdbtrack-input-prompt'
-at the beginning of the line.
-
-If the traceback target file path is invalid, we look for the most
-recently visited python-mode buffer which either has the name of the
-current function \(or class) or which defines the function \(or
-class).  This is to provide for remote scripts, eg, Zope's 'Script
-(Python)' - put a _copy_ of the script in a buffer named for the
-script, and set to python-mode, and pdbtrack will find it.)"
+at the beginning of the line."
   ;; Instead of trying to piece things together from partial text
   ;; (which can be almost useless depending on Emacs version), we
   ;; monitor to the point where we have the next pdb prompt, and then
   ;; check all text from comint-last-input-end to process-mark.
   ;;
-  ;; Also, we're very conservative about clearing the overlay arrow,
-  ;; to minimize residue.  This means, for instance, that executing
-  ;; other pdb commands wipe out the highlight.  You can always do a
-  ;; 'where' (aka 'w') command to reveal the overlay arrow.
+  ;; KLM: It might be nice to provide an optional override, so this
+  ;; routine could be fed debugger output strings as the text
+  ;; argument, for deliberate application elsewhere.
+  ;;
+  ;; KLM: We're very conservative about clearing the overlay arrow, to
+  ;; minimize residue.  This means, for instance, that executing other
+  ;; pdb commands wipes out the highlight.
   (let* ((origbuf (current-buffer))
 	 (currproc (get-buffer-process origbuf)))
-
     (if (not (and currproc py-pdbtrack-do-tracking-p))
         (py-pdbtrack-overlay-arrow nil)
-
-      (let* ((procmark (process-mark currproc))
+      (let* (;(origdir default-directory)
+             (procmark (process-mark currproc))
              (block (buffer-substring (max comint-last-input-end
                                            (- procmark
                                               py-pdbtrack-track-range))
                                       procmark))
-             target target_fname target_lineno target_buffer)
-
+             fname lineno)
         (if (not (string-match (concat py-pdbtrack-input-prompt "$") block))
             (py-pdbtrack-overlay-arrow nil)
-
-          (setq target (py-pdbtrack-get-source-buffer block))
-
-          (if (stringp target)
-              (message "pdbtrack: %s" target)
-
-            (setq target_lineno (car target))
-            (setq target_buffer (cadr target))
-            (setq target_fname (buffer-file-name target_buffer))
-            (switch-to-buffer-other-window target_buffer)
-            (goto-line target_lineno)
-            (message "pdbtrack: line %s, file %s" target_lineno target_fname)
-            (py-pdbtrack-overlay-arrow t)
-            (pop-to-buffer origbuf t)
-
-            )))))
-  )
-
-(defun py-pdbtrack-get-source-buffer (block)
-  "Return line number and buffer of code indicated by block's traceback text.
-
-We look first to visit the file indicated in the trace.
-
-Failing that, we look for the most recently visited python-mode buffer
-with the same name or having 
-having the named function.
-
-If we're unable find the source code we return a string describing the
-problem as best as we can determine."
-
-  (if (not (string-match py-pdbtrack-stack-entry-regexp block))
-
-      "Traceback cue not found"
-
-    (let* ((filename (match-string 1 block))
-           (lineno (string-to-int (match-string 2 block)))
-           (funcname (match-string 3 block))
-           funcbuffer)
-
-      (cond ((file-exists-p filename)
-             (list lineno (find-file-noselect filename)))
-
-            ((setq funcbuffer (py-pdbtrack-grub-for-buffer funcname lineno))
-             (if (string-match "/Script (Python)$" filename)
-                 ;; Add in number of lines for leading '##' comments:
-                 (setq lineno
-                       (+ lineno
-                          (save-excursion
-                            (set-buffer funcbuffer)
-                            (count-lines
-                             (point-min)
-                             (max (point-min)
-                                  (string-match "^\\([^#]\\|#[^#]\\|#$\\)"
-                                                (buffer-substring (point-min)
-                                                                  (point-max)))
-                                  ))))))
-             (list lineno funcbuffer))
-
-            ((= (elt filename 0) ?\<)
-             (format "(Non-file source: '%s')" filename))
-
-            (t (format "Not found: %s(), %s" funcname filename)))
-      )
-    )
-  )
-
-(defun py-pdbtrack-grub-for-buffer (funcname lineno)
-  "Find most recent buffer itself named or having function funcname.
-
-We first check the last buffer this function found, if any, then walk
-throught the buffer-list history for python-mode buffers that are
-named for funcname or define a function funcname."
-  (let ((buffers (buffer-list))
-        buf
-        got)
-    (while (and buffers (not got))
-      (setq buf (car buffers)
-            buffers (cdr buffers))
-      (if (and (save-excursion (set-buffer buf)
-                               (string= major-mode "python-mode"))
-               (or (string-match funcname (buffer-name buf))
-                   (string-match (concat "^\\s-*\\(def\\|class\\)\\s-+"
-                                         funcname "\\s-*(")
-                                 (save-excursion
-                                   (set-buffer buf)
-                                   (buffer-substring (point-min)
-                                                     (point-max))))))
-          (setq got buf)))
-    (setq py-pdbtrack-last-grubbed-buffer got)))
+          (if (not (string-match
+                    (concat ".*" py-pdbtrack-stack-entry-regexp ".*")
+                    block))
+              (py-pdbtrack-overlay-arrow nil)
+            (setq fname (match-string 1 block)
+                  lineno (match-string 2 block))
+            (if (file-exists-p fname)
+                (progn
+                  (find-file-other-window fname)
+                  (goto-line (string-to-int lineno))
+                  (message "pdbtrack: line %s, file %s" lineno fname)
+                  (py-pdbtrack-overlay-arrow t)
+                  (pop-to-buffer origbuf t) )
+              (if (= (elt fname 0) ?\<)
+                  (message "pdbtrack: (Non-file source: '%s')" fname)
+                (message "pdbtrack: File not found: %s" fname))
+              )))))))
 
 (defun py-postprocess-output-buffer (buf)
   "Highlight exceptions found in BUF.
@@ -1587,7 +1461,9 @@ filter."
     (switch-to-buffer-other-window
      (apply 'make-comint py-which-bufname py-which-shell nil args))
     (make-local-variable 'comint-prompt-regexp)
-    (setq comint-prompt-regexp "^>>> \\|^[.][.][.] \\|^(pdb) ")
+    (setq comint-prompt-regexp (concat py-shell-input-prompt-1-regexp "\\|"
+                                       py-shell-input-prompt-2-regexp "\\|"
+                                       "^(Pdb) "))
     (add-hook 'comint-output-filter-functions
 	      'py-comint-output-filter-function)
     ;; pdbtrack
@@ -1995,8 +1871,6 @@ number of characters to delete (default is 1)."
     (py-electric-backspace arg)))
 
 ;; required for pending-del and delsel modes
-(put 'py-electric-colon 'delete-selection t) ;delsel
-(put 'py-electric-colon 'pending-delete   t) ;pending-del
 (put 'py-electric-backspace 'delete-selection 'supersede) ;delsel
 (put 'py-electric-backspace 'pending-delete   'supersede) ;pending-del
 (put 'py-electric-delete    'delete-selection 'supersede) ;delsel
@@ -2902,34 +2776,25 @@ A `nomenclature' is a fancy way of saying AWordWithMixedCaseNotUnderscores."
 
 
 ;; Pychecker
+
+;; hack for FSF Emacs
+(unless (fboundp 'read-shell-command)
+  (defalias 'read-shell-command 'read-string))
+
 (defun py-pychecker-run (command)
   "*Run pychecker (default on the file currently visited)."
   (interactive
    (let ((default
            (format "%s %s %s" py-pychecker-command
 		   (mapconcat 'identity py-pychecker-command-args " ")
-		   (buffer-file-name)))
-	 (last (when py-pychecker-history
-		 (let* ((lastcmd (car py-pychecker-history))
-			(cmd (cdr (reverse (split-string lastcmd))))
-			(newcmd (reverse (cons (buffer-file-name) cmd))))
-		   (mapconcat 'identity newcmd " ")))))
+		   (buffer-file-name))))
 
      (list
-      (if (fboundp 'read-shell-command)
-	  (read-shell-command "Run pychecker like this: "
-			      (if last
-				  last
-				default)
-			      'py-pychecker-history)
-	(read-string "Run pychecker like this: "
-		     (if last
-			 last
-		       default)
-		     'py-pychecker-history))
-	)))
+      (read-shell-command "Run pychecker like this: "
+                          default
+                          py-pychecker-history))))
   (save-some-buffers (not py-ask-about-save) nil)
-  (compile-internal command "No more errors"))
+  (compile command))
 
 
 
@@ -3293,7 +3158,7 @@ local bindings to py-newline-and-indent."))
 ;; Helper functions
 (defvar py-parse-state-re
   (concat
-   "^[ \t]*\\(elif\\|else\\|while\\|def\\|class\\)\\>"
+   "^[ \t]*\\(if\\|elif\\|else\\|while\\|def\\|class\\)\\>"
    "\\|"
    "^[^ #\t\n]"))
 
@@ -3553,49 +3418,14 @@ Prefix with \"...\" if leading whitespace was skipped."
   "Python value for `add-log-current-defun-function'.
 This tells add-log.el how to find the current function/method/variable."
   (save-excursion
-
-    ;; Move back to start of the current statement.
-
-    (py-goto-initial-line)
-    (back-to-indentation)
-    (while (and (or (looking-at py-blank-or-comment-re)
-		    (py-in-literal))
-		(not (bobp)))
-      (backward-to-indentation 1))
-    (py-goto-initial-line)
-
-    (let ((scopes "")
-	  (sep "")
-	  dead assignment)
-
-      ;; Check for an assignment.  If this assignment exists inside a
-      ;; def, it will be overwritten inside the while loop.  If it
-      ;; exists at top lever or inside a class, it will be preserved.
-
-      (when (looking-at "[ \t]*\\([a-zA-Z0-9_]+\\)[ \t]*=")
-	(setq scopes (buffer-substring (match-beginning 1) (match-end 1)))
-	(setq assignment t)
-	(setq sep "."))
-
-      ;; Prepend the name of each outer socpe (def or class).
-
-      (while (not dead)
-	(if (and (py-go-up-tree-to-keyword "\\(class\\|def\\)")
-		 (looking-at
-		  "[ \t]*\\(class\\|def\\)[ \t]*\\([a-zA-Z0-9_]+\\)[ \t]*"))
-	    (let ((name (buffer-substring (match-beginning 2) (match-end 2))))
-	      (if (and assignment (looking-at "[ \t]*def"))
-		  (setq scopes name)
-		(setq scopes (concat name sep scopes))
-		(setq sep "."))))
-	(setq assignment nil)
-	(condition-case nil		; Terminate nicely at top level.
-	    (py-goto-block-up 'no-mark)
-	  (error (setq dead t))))
-      (if (string= scopes "")
-	  nil
-	scopes))))
-
+    (if (re-search-backward py-defun-start-re nil t)
+	(or (match-string 3)
+	    (let ((method (match-string 2)))
+	      (if (and (not (zerop (length (match-string 1))))
+		       (re-search-backward py-class-start-re nil t))
+		  (concat (match-string 1) "." method)
+		method)))
+      nil)))
 
 
 (defconst py-help-address "python-mode@python.org"
@@ -3660,168 +3490,6 @@ These are Python temporary files awaiting execution."
 (or (assq 'py-pdbtrack-minor-mode-string minor-mode-alist)
     (push '(py-pdbtrack-is-tracking-p py-pdbtrack-minor-mode-string)
 	  minor-mode-alist))
-
-
-
-;;; paragraph and string filling code from Bernhard Herzog
-;;; see http://mail.python.org/pipermail/python-list/2002-May/103189.html
-
-(defun py-fill-comment (&optional justify)
-  "Fill the comment paragraph around point"
-  (let (;; Non-nil if the current line contains a comment.
-	has-comment
-
-	;; If has-comment, the appropriate fill-prefix for the comment.
-	comment-fill-prefix)
-
-    ;; Figure out what kind of comment we are looking at.
-    (save-excursion
-      (beginning-of-line)
-      (cond
-       ;; A line with nothing but a comment on it?
-       ((looking-at "[ \t]*#[# \t]*")
-	(setq has-comment t
-	      comment-fill-prefix (buffer-substring (match-beginning 0)
-						    (match-end 0))))
-
-       ;; A line with some code, followed by a comment? Remember that the hash
-       ;; which starts the comment shouldn't be part of a string or character.
-       ((progn
-	  (while (not (looking-at "#\\|$"))
-	    (skip-chars-forward "^#\n\"'\\")
-	    (cond
-	     ((eq (char-after (point)) ?\\) (forward-char 2))
-	     ((memq (char-after (point)) '(?\" ?')) (forward-sexp 1))))
-	  (looking-at "#+[\t ]*"))
-	(setq has-comment t)
-	(setq comment-fill-prefix
-	      (concat (make-string (current-column) ? )
-		      (buffer-substring (match-beginning 0) (match-end 0)))))))
-
-    (if (not has-comment)
-	(fill-paragraph justify)
-
-      ;; Narrow to include only the comment, and then fill the region.
-      (save-restriction
-	(narrow-to-region
-
-	 ;; Find the first line we should include in the region to fill.
-	 (save-excursion
-	   (while (and (zerop (forward-line -1))
-		       (looking-at "^[ \t]*#")))
-
-	   ;; We may have gone to far.  Go forward again.
-	   (or (looking-at "^[ \t]*#")
-	       (forward-line 1))
-	   (point))
-
-	 ;; Find the beginning of the first line past the region to fill.
-	 (save-excursion
-	   (while (progn (forward-line 1)
-			 (looking-at "^[ \t]*#")))
-	   (point)))
-
-	;; Lines with only hashes on them can be paragraph boundaries.
-	(let ((paragraph-start (concat paragraph-start "\\|[ \t#]*$"))
-	      (paragraph-separate (concat paragraph-separate "\\|[ \t#]*$"))
-	      (fill-prefix comment-fill-prefix))
-	  ;;(message "paragraph-start %S paragraph-separate %S"
-	  ;;paragraph-start paragraph-separate)
-	  (fill-paragraph justify))))
-    t))
-
-
-(defun py-fill-string (start &optional justify)
-  "Fill the paragraph around (point) in the string starting at start"
-  ;; basic strategy: narrow to the string and call the default
-  ;; implementation
-  (let (;; the start of the string's contents
-	string-start
-	;; the end of the string's contents
-	string-end
-	;; length of the string's delimiter
-	delim-length
-	;; The string delimiter
-	delim
-	)
-
-    (save-excursion
-      (goto-char start)
-      (if (looking-at "\\('''\\|\"\"\"\\|'\\|\"\\)\\\\?\n?")
-	  (setq string-start (match-end 0)
-		delim-length (- (match-end 1) (match-beginning 1))
-		delim (buffer-substring-no-properties (match-beginning 1)
-						      (match-end 1)))
-	(error "The parameter start is not the beginning of a python string"))
-
-      ;; if the string is the first token on a line and doesn't start with
-      ;; a newline, fill as if the string starts at the beginning of the
-      ;; line. this helps with one line docstrings
-      (save-excursion
-	(beginning-of-line)
-	(and (/= (char-before string-start) ?\n)
-	     (looking-at (concat "[ \t]*" delim))
-	     (setq string-start (point))))
-
-      (forward-sexp (if (= delim-length 3) 2 1))
-
-      ;; with both triple quoted strings and single/double quoted strings
-      ;; we're now directly behind the first char of the end delimiter
-      ;; (this doesn't work correctly when the triple quoted string
-      ;; contains the quote mark itself). The end of the string's contents
-      ;; is one less than point
-      (setq string-end (1- (point))))
-
-    ;; Narrow to the string's contents and fill the current paragraph
-    (save-restriction
-      (narrow-to-region string-start string-end)
-      (let ((ends-with-newline (= (char-before (point-max)) ?\n)))
-	(fill-paragraph justify)
-	(if (and (not ends-with-newline)
-		 (= (char-before (point-max)) ?\n))
-	    ;; the default fill-paragraph implementation has inserted a
-	    ;; newline at the end. Remove it again.
-	    (save-excursion
-	      (goto-char (point-max))
-	      (delete-char -1)))))
-
-    ;; return t to indicate that we've done our work
-    t))
-
-(defun py-fill-paragraph (&optional justify)
-  "Like \\[fill-paragraph], but handle Python comments and strings.
-If any of the current line is a comment, fill the comment or the
-paragraph of it that point is in, preserving the comment's indentation
-and initial `#'s.
-If point is inside a string, narrow to that string and fill.
-"
-  (interactive "P")
-  (let* ((bod (py-point 'bod))
-	 (pps (parse-partial-sexp bod (point))))
-    (cond
-     ;; are we inside a comment or on a line with only whitespace before
-     ;; the comment start?
-     ((or (nth 4 pps)
-	  (save-excursion (beginning-of-line) (looking-at "[ \t]*#")))
-      (py-fill-comment justify))
-     ;; are we inside a string?
-     ((nth 3 pps)
-      (py-fill-string (nth 8 pps)))
-     ;; are we at the opening quote of a string, or in the indentation?
-     ((save-excursion
-	(forward-word 1)
-	(eq (py-in-literal) 'string))
-      (save-excursion
-	(py-fill-string (py-point 'boi))))
-     ;; are we at or after the closing quote of a string?
-     ((save-excursion
-	(backward-word 1)
-	(eq (py-in-literal) 'string))
-      (save-excursion
-	(py-fill-string (py-point 'boi))))
-     ;; otherwise use the default
-     (t
-      (fill-paragraph justify)))))
 
 
 
