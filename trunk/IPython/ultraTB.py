@@ -258,18 +258,17 @@ class ListTB(TBTools):
         """Return a color formatted string with the traceback info."""
 
         Colors = self.Colors
-        out_string = Colors.topline + '-'*60 + Colors.Normal +'\n'
+        out_string = [Colors.topline + '-'*60 + Colors.Normal +'\n']
         if elist:
-            out_string += 'Traceback %s(most recent call last)%s:' % \
-                                (Colors.normalEm, Colors.Normal) + '\n'
-            slist = self._format_list( elist )
-            for line in slist:
-                out_string += line
+            out_string.append('Traceback %s(most recent call last)%s:' % \
+                                (Colors.normalEm, Colors.Normal) + '\n')
+            slist = self._format_list(elist)
+            out_string.extend(slist)
         lines = self._format_exception_only(etype, value)
         for line in lines[:-1]:
-            out_string +=  " "+line
-        out_string +=  lines[-1]
-        return out_string
+            out_string.append(" "+line)
+        out_string.append(lines[-1])
+        return ''.join(out_string)
 
     def _format_list(self, extracted_list):
         """Format a list of traceback entry tuples for printing.
@@ -653,13 +652,19 @@ class FormattedTB(VerboseTB,ListTB):
     def text(self, etype, value, tb,context=5,mode=None):
         """Return formatted traceback.
 
-        If the optional mode parameter is given, it overrides the current mode."""
+        If the optional mode parameter is given, it overrides the current
+        mode."""
+
         if mode is None:
             mode = self.mode
         if mode in self.verbose_modes:
             # verbose modes need a full traceback
             return VerboseTB.text(self,etype, value, tb,context=5)
         else:
+            # We must check the source cache because otherwise we can print
+            # out-of-date source code.
+            linecache.checkcache()
+            # Now we can extract and format the exception
             elist = self._extract_tb(tb)
             if len(elist) > self.tb_offset:
                 del elist[:self.tb_offset]
