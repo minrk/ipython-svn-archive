@@ -62,13 +62,32 @@ InspectColors = ColorSchemeTable([NoColor,LinuxColors,LightBGColors],
 #****************************************************************************
 # Auxiliary functions
 def getdoc(obj):
-    "Wrapper around inspect.getdoc which can't crash because of attribute problems"
+    """Stable wrapper around inspect.getdoc.
+
+    This can't crash because of attribute problems.
+
+    It also attempts to call a getdoc() method on the given object.  This
+    allows objects which provide their docstrings via non-standard mechanisms
+    (like Pyro proxies) to still be inspected by ipython's ? system."""
+
+    ds = None  # default return value
     try:
         ds = inspect.getdoc(obj)
     except:
         # Harden against an inspect failure, which can occur with
         # SWIG-wrapped extensions.
-        ds = None
+        pass
+    # Allow objects to offer customized documentation via a getdoc method:
+    try:
+        ds2 = obj.getdoc()
+    except:
+        pass
+    else:
+        # if we get extra info, we add it to the normal docstring.
+        if ds is None:
+            ds = ds2
+        else:
+            ds = '%s\n%s' % (ds,ds2)
     return ds
 
 #****************************************************************************
