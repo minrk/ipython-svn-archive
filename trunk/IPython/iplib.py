@@ -1520,6 +1520,10 @@ There seemed to be a problem with your sys.stderr.
 
         Also log them with a prepended # so the log is clean Python."""
 
+        # This should only be active for single-line input!
+        if continue_prompt:
+            return line
+
         pre,iFun,theRest = self.split_user_input(line)
         #print '*** Auto: pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest) # dbg
 

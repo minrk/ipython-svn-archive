@@ -1,3 +1,9 @@
+2004-11-18  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.handle_auto): do NOT trigger
+	autoquote/parens in continuation prompts, which can cause lots of
+	problems.  Closes roundup issue 20.
+
 2004-11-17  Fernando Perez  <fperez@colorado.edu>
 
 	* debian/control (Build-Depends-Indep): Fix dpatch dependency,
