@@ -286,13 +286,13 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
 
         self.usage_min =  """\
         An enhanced console for Python.
-        Features are:
-        - Readline support if present
-        - Completion in the local namespace, eg. type TAB twice at the prompt.
+        Some of its features are:
+        - Readline support if the readline library is present.
+        - Tab completion in the local namespace.
         - Logging of input, see command-line options.
-        - Systemshell escape by the ! , eg !ls
+        - System shell escape via ! , eg !ls.
         - Magic commands, starting with a @ (like @ls, @pwd, @cd, etc.)
-        - Keeps track of locally defined variables @who, @whos
+        - Keeps track of locally defined variables via @who, @whos.
         - Show object information with a ? eg ?x or x? (use ?? for more info).
         """
         if usage: self.usage = usage
@@ -1003,7 +1003,7 @@ There seemed to be a problem with your sys.stderr.
                 # Be careful not to call magics when a variable assignment is
                 # being made (ls='hi', for example)
                 if self.rc.automagic and \
-                       (len(theRest)==0 or theRest[0] not in '!=()<>'):
+                       (len(theRest)==0 or theRest[0] not in '!=()<>,'):
                     return self.handle_magic('@'+line.lstrip(),continue_prompt)
                 else:
                     return self.handle_normal(line,continue_prompt)
