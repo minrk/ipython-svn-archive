@@ -122,26 +122,6 @@ except AttributeError:
 
 #****************************************************************************
 # Utility classes
-class Profile(profile.Profile):
-    """Add a string_stats method to the profile.Profile class.
-
-    This allows the IPython profiler interaction functions to properly format
-    profile results."""
-
-    def string_stats(self):
-        """Return the result of print_stats as a string."""
-        sys.stdout.flush()
-        sys_stdout = sys.stdout
-        output = StringIO()
-        try:
-            sys.stdout = output
-            self.print_stats()
-        finally:
-            sys.stdout = sys_stdout
-            sys.stdout.flush()
-        return output.getvalue()
-
-
 class Macro:
     """Simple class to store the value of macros as strings.
 
@@ -158,7 +138,6 @@ class Macro:
 
     def __str__(self):
         return self.value
-
 
 #***************************************************************************
 # Main class implementing Magic functionality
@@ -1050,7 +1029,7 @@ Currently the magic system has the following functions:\n"""
 
         opts.merge(opts_def)
         
-        prof = Profile()
+        prof = profile.Profile()
         try:
             prof = prof.runctx(arg_str,namespace,namespace)
             sys_exit = ''
