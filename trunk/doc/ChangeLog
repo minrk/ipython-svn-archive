@@ -1,3 +1,10 @@
+2003-09-09  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell._prefilter): fix bug where
+	unpacking a list whith a callable as first element would
+	mistakenly trigger autocalling.  Thanks to a bug report by Jeffery
+	Collins.
+
 2003-08-25  *** Released version 0.5.0
 
 2003-08-22  Fernando Perez  <fperez@colorado.edu>

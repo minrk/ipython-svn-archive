@@ -154,19 +154,14 @@ Dynamic object introspection.
  with a single keystroke ('?').
 \layout Itemize
 
+Completion in the local namespace, by typing TAB at the prompt.
+ This works for keywords, methods, variables and files in the current directory.
+ This is supported via the readline library, and full access to configuring
+ readline's behavior is provided.
+\layout Itemize
+
 Numbered input/output prompts with command history (persistent across sessions),
  full searching in this history and caching of all input and output.
-\layout Itemize
-
-Macro system for quickly re-executing multiple lines of previous input with
- a single name.
-\layout Itemize
-
-Session logging (you can then later use these logs as code in your programs).
-\layout Itemize
-
-Session restoring: logs can be replayed to restore a previous session to
- the state where you left it.
 \layout Itemize
 
 User-extensible 'magic' commands.
@@ -185,14 +180,19 @@ Complete system shell access.
  Lines starting with ! are passed directly to the system shell.
 \layout Itemize
 
-Completion in the local namespace, by typing TAB at the prompt.
- This works for keywords, methods, variables and files in the current directory.
- This is supported via the readline library, and full access to configuring
- readline's behavior is provided.
+Automatic indentation (optional) of code as you type (through the readline
+ library).
 \layout Itemize
 
-Automatic indentation (optional) of code as you type (trhough the readline
- library).
+Macro system for quickly re-executing multiple lines of previous input with
+ a single name.
+\layout Itemize
+
+Session logging (you can then later use these logs as code in your programs).
+\layout Itemize
+
+Session restoring: logs can be replayed to restore a previous session to
+ the state where you left it.
 \layout Itemize
 
 Verbose and colored exception traceback printouts.
