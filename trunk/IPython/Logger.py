@@ -1,6 +1,8 @@
 # -*- coding: iso-8859-1 -*-
 """
 Logger class for IPython's logging facilities.
+
+$Id$
 """
 
 from __future__ import nested_scopes

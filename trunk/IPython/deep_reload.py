@@ -11,7 +11,8 @@ Alternatively, you can add a dreload builtin alongside normal reload with:
     >>> __builtin__.dreload = deep_reload.reload
     
 This code is almost entirely based on knee.py from the standard library.
-"""
+
+$Id$"""
 
 #*****************************************************************************
 #       Copyright (C) 2001 Nathaniel Gray <n8gray@caltech.edu>

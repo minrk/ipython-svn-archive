@@ -4,7 +4,8 @@ General purpose utilities.
 
 This is a grab-bag of stuff I find useful in most programs I write. Some of
 these things are also convenient when working at the command line.
-"""
+
+$Id$"""
 
 from __future__ import nested_scopes
 

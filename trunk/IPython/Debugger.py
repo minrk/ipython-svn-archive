@@ -10,8 +10,9 @@ In the future, this class will be expanded with improvements over the standard
 pdb.
 
 The code in this file is mainly lifted out of cmd.py in Python 2.2, with minor
-changes. Licensing should therefore be under the standard Python terms."""
+changes. Licensing should therefore be under the standard Python terms.
 
+$Id$"""
 
 import Release
 __version__ = Release.version

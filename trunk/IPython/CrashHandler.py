@@ -1,5 +1,7 @@
 # -*- coding: iso-8859-1 -*-
-"""sys.excepthook for IPython itself, leaves a detailed report on disk."""
+"""sys.excepthook for IPython itself, leaves a detailed report on disk.
+
+$Id$"""
 
 #*****************************************************************************
 #       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>

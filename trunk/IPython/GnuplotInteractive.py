@@ -8,7 +8,9 @@ http://gnuplot-py.sourceforge.net/
 
 See gphelp() below for details on the services offered by this module.
 
-Inspired by a suggestion/request from Arnd Baecker."""
+Inspired by a suggestion/request from Arnd Baecker.
+
+$Id$"""
 
 __all__ = ('Gnuplot gp gp_new plot splot replot hardcopy '
            'gpdata gpfile gpstring gpfunc gpgrid gphelp'.split())

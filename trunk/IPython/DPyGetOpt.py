@@ -32,7 +32,8 @@ characters;  ie-- 'foo|bar|baz=f@' specifies that all -foo, -bar,
 and -baz options that appear on within the parsed argument list
 must have a real number argument and that the accumulated list
 of values will be available under the name 'foo'
-"""
+
+$Id$"""
 
 #*****************************************************************************
 #
