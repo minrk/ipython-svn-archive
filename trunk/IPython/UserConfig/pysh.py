@@ -3,7 +3,7 @@
 """
 
 #*****************************************************************************
-#       Copyright (C) 2004 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2004 Fernando PÃ©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -17,7 +17,7 @@
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
+__author__ = 'Fernando PÃ©rez. <fperez@colorado.edu>'
 __license__= 'LGPL'
 
 import os,sys,shutil
@@ -33,14 +33,16 @@ def shell():
     as shell commands instead of as Python code.
 
     The os, sys and shutil modules from the Python standard library are
-    automatically loaded.
+    automatically loaded.  Some additional IPython features, useful for shell
+    usage, are listed below.  You can request more help about them with '?'.
 
-    The following functions are also loaded from IPython.genutils.  You can
-    request more help about each one of them:
-
-    system         - execute a command in the underlying system shell.
-    getoutput      - capture the output of a system command.
-    getoutputerror - capture (output,error) of a system command.
+    !cmd           - passes 'cmd' directly to the shell
+    !!cmd          - executes 'cmd' and returns output as python list
+    @sc var=cmd    - store output of 'cmd' in 'var'
+    @sx cmd        - alias for !!cmd
+    system         - execute a command in the underlying system shell
+    getoutput      - capture the output of a system command
+    getoutputerror - capture (output,error) of a system command
     """
     pass
 
