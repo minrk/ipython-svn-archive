@@ -717,5 +717,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     # add message log (possibly empty)
     IP.BANNER += msg.summary
 
+    IP.post_config_initialization()
+
     return IP
 #************************ end of file <ipmaker.py> **************************
