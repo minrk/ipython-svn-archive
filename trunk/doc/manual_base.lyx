@@ -47,7 +47,7 @@ User Manual, v.
  __version__
 \layout Author
 
-Fernando Pérez
+Fernando PÃ©rez
 \layout Standard
 
 
@@ -1296,7 +1296,7 @@ environment variable to
 \family typewriter 
  
 \family default 
-The code below, supplied by François Pinard, can then be used in your 
+The code below, supplied by FranÃ§ois Pinard, can then be used in your 
 \family typewriter 
 .emacs
 \family default 
@@ -2339,12 +2339,12 @@ The
 \family typewriter 
 @run
 \family default 
- command to correctly execute any matplotlib-based script, whether or not
- it calls 
+ command to correctly execute (without blocking) any matplotlib-based script
+ which calls 
 \family typewriter 
 show()
 \family default 
- at the end, without blocking.
+ at the end.
 \layout List
 \labelwidthstring 00.00.0000
 
@@ -7486,7 +7486,7 @@ The current IPython system grew out of the following three projects:
 \layout List
 \labelwidthstring 00.00.0000
 
-ipython by Fernando Pérez.
+ipython by Fernando PÃ©rez.
  I was working on adding Mathematica-type prompts and a flexible configuration
  system (something better than 
 \family typewriter 
@@ -7606,7 +7606,7 @@ Credits
 The main authors of the code are:
 \layout Standard
 
-Fernando Pérez 
+Fernando PÃ©rez 
 \family typewriter 
 <fperez@colorado.edu>
 \family default 
@@ -7645,7 +7645,7 @@ Ka-Ping Yee
  with a much nicer syntax than formatting through the '%' operator.
 \layout Standard
 
-Arnd Bäcker 
+Arnd BÃ¤cker 
 \family typewriter 
 <baecker@physik.tu-dresden.de>
 \family default 
@@ -7881,7 +7881,7 @@ Armstrong
 \layout List
 \labelwidthstring 00.00.0000
 
-François\SpecialChar ~
+FranÃ§ois\SpecialChar ~
 Pinard 
 \family typewriter 
 <pinard@iro.umontreal.ca>
@@ -7929,7 +7929,7 @@ Drexler
 \labelwidthstring 00.00.0000
 
 Gustavo\SpecialChar ~
-Córdova\SpecialChar ~
+CÃ³rdova\SpecialChar ~
 Avila 
 \family typewriter 
 <gcordova@sismex.com>

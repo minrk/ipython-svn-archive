@@ -1,6 +1,6 @@
 # -*- coding: iso-8859-1 -*-
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando PÃ©rez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando PÃ��©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -76,8 +76,7 @@ instead of -option) to turn the feature off.
  The -mpthread option adds special support for the matplotlib library
  (http://matplotlib.sourceforge.net), allowing interactive usage of the GTK
  and WX backends.  This also modifies the @run command to correctly execute
- any matplotlib-based script, whether or not it calls show() at the end,
- without blocking.
+ (without blocking) any matplotlib-based script which calls show() at the end.
   
  -no|autocall: make IPython automatically call any callable object even if
  you didn't type explicit parentheses. For example, 'str 43' becomes 'str(43)'

@@ -1,7 +1,3 @@
-2004-08-23  Fernando Perez  <fperez@colorado.edu>
-
-	* IPython/usage.py (__doc__): small usage change for -mpthread.
-
 2004-08-22  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.interact): tab cleanups, also

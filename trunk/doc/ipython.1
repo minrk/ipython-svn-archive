@@ -55,9 +55,8 @@ IPython.
 .sp 1
 The -mpthread option adds special support for the matplotlib library
 (http://matplotlib.sourceforge.net), allowing interactive usage of the GTK and
-WX backends.  This also modifies the @run command to correctly execute any
-matplotlib-based script, whether or not it calls show() at the end, without
-blocking.
+WX backends.  This also modifies the @run command to correctly execute
+(without blocking) any matplotlib-based script which calls show() at the end.
 .TP
 .B \-no|automagic
 Make magic commands automatic (without needing their first character
