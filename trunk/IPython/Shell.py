@@ -1,6 +1,9 @@
 # -*- coding: iso-8859-1 -*-
 """IPython Shell classes.
 
+All the matplotlib support code was co-developed with John Hunter,
+matplotlib's author.
+
 $Id$"""
 
 #*****************************************************************************
@@ -32,6 +35,7 @@ import code
 import threading
 
 import IPython
+from IPython.iplib import InteractiveShell
 from ipmaker import make_IPython
 from genutils import Term,warn,error
 from Struct import Struct
@@ -46,8 +50,10 @@ import ultraTB
 class IPShell:
     """Create an IPython instance."""
     
-    def __init__(self,argv=None,user_ns=None,debug=0):
-        self.IP = make_IPython(argv,user_ns=user_ns,debug=debug)
+    def __init__(self,argv=None,user_ns=None,debug=0,
+                 shell_class=InteractiveShell):
+        self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
+                               shell_class=shell_class)
 
     def mainloop(self,sys_exit=0):
         self.IP.mainloop()
@@ -245,7 +251,7 @@ class IPShellEmbed:
 IPythonShellEmbed = IPShellEmbed
 
 #-----------------------------------------------------------------------------
-class MTInteractiveShell(IPython.iplib.InteractiveShell):
+class MTInteractiveShell(InteractiveShell):
     """Simple multi-threaded shell."""
 
     # Threading strategy taken from:
@@ -262,8 +268,7 @@ class MTInteractiveShell(IPython.iplib.InteractiveShell):
         # Object variable to store code object waiting execution.  No need to
         # use a Queue here, since it's a single item which gets cleared once run.
         self.code_to_run = None
-        self.parent_runcode = lambda obj: \
-                              IPython.iplib.InteractiveShell.runcode(self,obj)
+        self.parent_runcode = lambda obj: InteractiveShell.runcode(self,obj)
 
         # Locking control variable
         self.ready = threading.Condition()
@@ -337,18 +342,23 @@ class MTInteractiveShell(IPython.iplib.InteractiveShell):
         self._kill = True
         self.ready.release()
 
-class MatplotlibShell(MTInteractiveShell):
-    """Multithreaded shell, modified to handle matplotlib scripts."""
+class MatplotlibShellBase:
 
-    # This code was co-developed with John Hunter, matplotlib's author.
+    """Mixin class to provide the necessary modifications to regular IPython
+    shell classes for matplotlib support.
 
-    def __init__(self,name,usage=None,rc=Struct(opts=None,args=None),
-                 user_ns = None, **kw):
-        
+    Given Python's MRO, this should be used as the FIRST class in the
+    inheritance hierarchy, so that it overrides the relevant methods."""
+    
+    def _matplotlib_config(self,name):
+        """Return various items needed to setup the user's shell with matplotlib"""
+
         # Initialize matplotlib to interactive mode always
         import matplotlib
         matplotlib.interactive(True)
 
+        self.matplotlib = matplotlib
+        
         # we'll handle the mainloop, tell show not to
         from matplotlib.backends import show 
         show._needmain = False
@@ -356,23 +366,21 @@ class MatplotlibShell(MTInteractiveShell):
         # This must be imported last in the matplotlib series, after
         # backend/interactivity choices have been made
         import matplotlib.matlab as matlab
-        self.matplotlib = matplotlib
 
         # Build a user namespace initialized with matplotlib/matlab features.
         user_ns = {'__name__':'__main__',
                    '__builtins__' : __builtin__,
-                   name:self,
-                   }
-        exec "import matplotlib.matlab as matlab" in user_ns
-        exec "from matplotlib.matlab import *" in user_ns
+                   name:self }
+        exec 'import matplotlib' in user_ns
+        exec 'import matplotlib.matlab as matlab' in user_ns
+        exec 'from matplotlib.matlab import *' in user_ns
 
-        # Add matplotlib info to banner
-        b2= """\nWelcome to pylab, a matplotlib-based Python environment.
-help(matlab)   -> help on matlab compatible commands from matplotlib.
-help(plotting) -> help on plotting commands.
-"""
-        # Initialize parent class
-        MTInteractiveShell.__init__(self,name,usage,rc,user_ns,banner2=b2,**kw)
+        # Build matplotlib info banner
+        b=('\nWelcome to pylab, a matplotlib-based Python environment.\n'
+           'help(matlab)   -> help on matlab compatible commands from matplotlib.\n'
+           'help(plotting) -> help on plotting commands.\n')
+
+        return user_ns,b
 
     def mplot_exec(self,fname,*where):
         """Execute a matplotlib script."""
@@ -388,6 +396,30 @@ help(plotting) -> help on plotting commands.
     def magic_run(self,parameter_s=''):
         """Modified @run for Matplotlib"""
         Magic.magic_run(self,parameter_s,runner=self.mplot_exec)
+
+# Now we provide 2 versions of a matplotlib-aware IPython base shells, single
+# and multithreaded.  Note that these are meant for internal use, the IPShell*
+# classes below are the ones meant for public consumption.
+
+class MatplotlibShell(MatplotlibShellBase,InteractiveShell):
+    """Single-threaded shell, modified to handle matplotlib scripts."""
+
+    def __init__(self,name,usage=None,rc=Struct(opts=None,args=None),
+                 user_ns = None, **kw):
+
+        user_ns,b2 = self._matplotlib_config(name)
+        # Initialize parent class
+        InteractiveShell.__init__(self,name,usage,rc,user_ns,banner2=b2,**kw)
+
+class MatplotlibMTShell(MatplotlibShellBase,MTInteractiveShell):
+    """Multithreaded shell, modified to handle matplotlib scripts."""
+
+    def __init__(self,name,usage=None,rc=Struct(opts=None,args=None),
+                 user_ns = None, **kw):
+
+        user_ns,b2 = self._matplotlib_config(name)
+        # Initialize parent class
+        MTInteractiveShell.__init__(self,name,usage,rc,user_ns,banner2=b2,**kw)
 
 #-----------------------------------------------------------------------------
 # The IPShell* classes below are the ones meant to be run by external code as
@@ -499,21 +531,33 @@ class IPShellWX(threading.Thread):
         self.app.MainLoop()
         self.join()
 
-class IPShellMatplotlibGTK(IPShellGTK):
-    """Subclass IPShellGTK with MatplotlibShell as the internal shell.
+# A set of matplotlib public IPython shell classes, for single-threaded
+# (Tk* and FLTK* backends) and multithreaded (GTK* and WX* backends) use.
+class IPShellMatplotlib(IPShell):
+    """Subclass IPShell with MatplotlibShell as the internal shell.
+
+    Single-threaded class, meant for the Tk* and FLTK* backends.
 
     Having this on a separate class simplifies the external driver code."""
     
     def __init__(self,argv=None,user_ns=None,debug=0):
-        IPShellGTK.__init__(self,argv,user_ns,debug,shell_class=MatplotlibShell)
+        IPShell.__init__(self,argv,user_ns,debug,shell_class=MatplotlibShell)
+
+class IPShellMatplotlibGTK(IPShellGTK):
+    """Subclass IPShellGTK with MatplotlibMTShell as the internal shell.
+
+    Multi-threaded class, meant for the GTK* backends."""
+    
+    def __init__(self,argv=None,user_ns=None,debug=0):
+        IPShellGTK.__init__(self,argv,user_ns,debug,shell_class=MatplotlibMTShell)
 
 class IPShellMatplotlibWX(IPShellWX):
-    """Subclass IPShellWX with MatplotlibShell as the internal shell.
+    """Subclass IPShellWX with MatplotlibMTShell as the internal shell.
 
-    Having this on a separate class simplifies the external driver code."""
+    Multi-threaded class, meant for the WX* backends."""
     
     def __init__(self,argv=None,user_ns=None,debug=0):
-        IPShellWX.__init__(self,argv,user_ns,debug,shell_class=MatplotlibShell)
+        IPShellWX.__init__(self,argv,user_ns,debug,shell_class=MatplotlibMTShell)
 
 #-----------------------------------------------------------------------------
 # Factory functions to actually start the proper thread-aware shell
@@ -527,17 +571,17 @@ def _matplotlib_shell_class():
         import matplotlib
     except ImportError:
         error('matplotlib could NOT be imported!  Starting normal IPython.')
-        shell = IPShell
+        sh_class = IPShell
     else:
         backend = matplotlib.rcParams['backend']
         if backend.startswith('GTK'):
-            shell = IPShellMatplotlibGTK
+            sh_class = IPShellMatplotlibGTK
         elif backend.startswith('WX'):
-            shell = IPShellMatplotlibWX
+            sh_class = IPShellMatplotlibWX
         else:
-            shell = IPShell
-    print 'Using %s with the %s backend.' % (shell,backend) # dbg
-    return shell
+            sh_class = IPShellMatplotlib
+    #print 'Using %s with the %s backend.' % (sh_class,backend) # dbg
+    return sh_class
 
 # This is the one which should be called by external code.
 def start():

@@ -1,5 +1,11 @@
 2004-08-27  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/Shell.py: Significant refactoring of all classes, so
+	that we can really support ALL matplotlib backends and threading
+	models (John spotted a bug with Tk which required this).  Now we
+	should support single-threaded, WX-threads and GTK-threads, both
+	for generic code and for matplotlib.
+
 	* IPython/ipmaker.py (__call__): Changed -mpthread option to
 	-pylab, to simplify things for users.  Will also remove the pylab
 	profile, since now all of matplotlib configuration is directly
