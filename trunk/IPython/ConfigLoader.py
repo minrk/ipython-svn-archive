@@ -59,7 +59,8 @@ class ConfigLoader:
 
          - fname: file to load from.
          - convert: dictionary of type conversions (see read_dict())
-         - recurse_key: keyword in dictionary to trigger recursive file inclusions.
+         - recurse_key: keyword in dictionary to trigger recursive file
+         inclusions.
          """
 
         if self.recdepth > self.reclimit:
@@ -76,7 +77,7 @@ class ConfigLoader:
         if convert==None and recurse_key : convert = {qwflat:recurse_key}
         # for production, change warn to 0:
         data.merge(read_dict(fname,convert,fs=self.field_sep,strip=1,
-                             warn=0,no_empty=1,**kw))
+                             warn=0,no_empty=0,**kw))
         # keep track of successfully loaded files
         self.included.append(fname)
         if recurse_key in data.keys():
@@ -100,7 +101,8 @@ class ConfigLoader:
                     found = 1
                 if found:
                     try:
-                        data.merge(self.load(incfile,convert,recurse_key,incpath,**kw),
+                        data.merge(self.load(incfile,convert,recurse_key,
+                                             incpath,**kw),
                                    self.conflict)
                     except:
                         Xinfo()

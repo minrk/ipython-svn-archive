@@ -471,7 +471,9 @@ def target_update(target,deps,cmd):
 #----------------------------------------------------------------------------
 def unquote_ends(istr):
     """Remove a single pair of quotes from the endpoints of a string."""
-    
+
+    if not istr:
+        return istr
     if (istr[0]=="'" and istr[-1]=="'") or \
        (istr[0]=='"' and istr[-1]=='"'):
         return istr[1:-1]
@@ -518,7 +520,7 @@ def optstr2types(ostr):
 
     This is used to get the types of all the options in a string formatted
     with the conventions of DPyGetOpt. The 'type' None is used for options
-    which are strings (they need no further conversion). Thi function's main
+    which are strings (they need no further conversion). This function's main
     use is to get a typemap for use with read_dict().
     """
 
