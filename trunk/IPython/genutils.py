@@ -168,8 +168,7 @@ def fatal(msg,exit_val=1):
 
     warn(msg,exit_val=exit_val,level=4)
 
-#----------------------------------------------------------------------------    
-
+#----------------------------------------------------------------------------
 StringTypes = types.StringTypes
 
 # Basic timing functionality
@@ -405,7 +404,6 @@ def mutex_opts(dict,ex_op):
             raise ValueError,'\n*** ERROR in Arguments *** '\
                   'Options '+op1+' and '+op2+' are mutually exclusive.'
 
-
 #-----------------------------------------------------------------------------
 def filefind(fname,alt_dirs = None):
     """Return the given filename either in the current directory, if it
@@ -470,18 +468,15 @@ def target_update(target,deps,cmd):
     if target_outdated(target,deps):
         xsys(cmd)
 
-
 #----------------------------------------------------------------------------
 def unquote_ends(istr):
-    """Remove a single pair of quotes from the endpoints of a string.
-    """
+    """Remove a single pair of quotes from the endpoints of a string."""
     
     if (istr[0]=="'" and istr[-1]=="'") or \
        (istr[0]=='"' and istr[-1]=='"'):
         return istr[1:-1]
     else:
         return istr
-
 
 #----------------------------------------------------------------------------
 def process_cmdline(argv,names=[],defaults={},usage=''):
@@ -673,7 +668,30 @@ def read_dict(filename,type_conv=None,**opt):
                     raise ValueError,'Warning level must be 0,1 or 2'
 
     return dict
-# end read_dict()
+
+#----------------------------------------------------------------------------
+def flag_calls(func):
+    """Wrap a function to detect and flag when it gets called.
+
+    This is a decorator which takes a function and wraps it in a function with
+    a 'called' attribute. wrapper.called is initialized to False.
+
+    The wrapper.called attribute is set to False right before each call to the
+    wrapped function, so if the call fails it remains False.  After the call
+    completes, wrapper.called is set to True and the output is returned.
+
+    Testing for truth in wrapper.called allows you to determine if a call to
+    func() was attempted and succeeded."""
+    
+    def wrapper(*args,**kw):
+        wrapper.called = False
+        out = func(*args,**kw)
+        wrapper.called = True
+        return out
+
+    wrapper.called = False
+    wrapper.__doc__ = func.__doc__
+    return wrapper
 
 #----------------------------------------------------------------------------
 class HomeDirError(Error):
@@ -1413,21 +1431,4 @@ def popkey(dct,key,default=NotGiven):
     else:
         del dct[key]
         return val
-
-#****************************************************************************
-# DEPRECATED CODE
-
-def time_test(reps,func,*args,**kw):
-    """Execute a function many times, return the elapsed total CPU time.
-
-    time_test(reps,func,*args,**kw) -> Execute func reps times.
-
-    Deprecated: this function has been superceded by timing() which has better
-    fucntionality."""
-
-    rng = range(reps)
-    start = time.clock()
-    for dummy in rng: func(*args,**kw)
-    return time.clock()-start
-
 #*************************** end of file <genutils.py> **********************
