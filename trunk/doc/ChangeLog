@@ -1,3 +1,42 @@
+2004-03-31  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/FakeModule.py (FakeModule.__init__): added __nonzero__
+	method to dictionaries used as FakeModule instances if they lack
+	it.  At least pydoc in python2.3 breaks for runtime-defined
+	functions without this hack.  At some point I need to _really_
+	understand what FakeModule is doing, because it's a gross hack.
+	But it solves Arnd's problem for now...
+
+2004-02-27  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Logger.py (Logger.create_log): Fix bug where 'rotate'
+	mode would behave erratically.  Also increased the number of
+	possible logs in rotate mod to 999.  Thanks to Rod Holland
+	<rhh@StructureLABS.com> for the report and fixes.
+	
+2004-02-26  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (page): Check that the curses module really
+	has the initscr attribute before trying to use it.  For some
+	reason, the Solaris curses module is missing this.  I think this
+	should be considered a Solaris python bug, but I'm not sure.
+
+2004-01-17  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (Stream.__init__): Changes to try to make
+	ipython robust against stdin/out/err being closed by the user.
+	This is 'user error' (and blocks a normal python session, at least
+	the stdout case).  However, Ipython should be able to survive such
+	instances of abuse as gracefully as possible.  To simplify the
+	coding and maintain compatibility with Gary Bishop's Term
+	contributions, I've made use of classmethods for this.  I think
+	this introduces a dependency on python 2.2.
+
+2004-01-13  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/numutils.py (exp_safe): simplified the code a bit and
+	removed the need for importing the kinds module altogether.
+
 2004-01-06  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py (Magic.magic_sc): Made the shell capture system

@@ -5827,4 +5827,13 @@ Liu
 <dryice@liu.com.cn>
 \family default 
  FreeBSD port.
+\layout List
+\labelwidthstring 00.00.0000
+
+Rod\SpecialChar ~
+Holland 
+\family typewriter 
+<rhh@structurelabs.com>
+\family default 
+ Bug reports and fixes to logging module.
 \the_end
