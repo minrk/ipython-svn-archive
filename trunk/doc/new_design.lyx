@@ -106,6 +106,28 @@ Things that should be done for the current series, before starting major
 Fix any bugs reported at the online bug tracker.
 \layout Itemize
 
+
+\series bold 
+Redesign the output traps.
+
+\series default 
+ They cause problems when users try to execute code which relies on sys.stdout
+ being the 'true' sys.stdout.
+ They also prevent scripts which use raw_input() to work as command-line
+ arguments.
+\newline 
+The best solution is probably to print the banner first, and then just execute
+ all the user code straight with no output traps at all.
+ Whatever comes out comes out.
+ This makes the ipython code actually simpler, and eliminates the problem
+ altogether.
+\newline 
+These things need to be ripped out, they cause no end of problems.
+ For example, if user code requires acces to stdin during startup, the process
+ just hangs indefinitely.
+ For now I've just disabled them, and I'll live with the ugly error messages.
+\layout Itemize
+
 Clean up FakeModule issues.
  Currently, unittesting with embedded ipython breaks because a FakeModule
  instance overwrites __main__.
@@ -117,29 +139,9 @@ very
  tricky in all corner cases.
 \layout Itemize
 
-Redesign the output traps.
- They cause problems when users try to execute code which relies on sys.stdout
- being the 'true' sys.stdout.
- They also prevent scripts which use raw_input() to work as command-line
- arguments.
-\newline 
-The best solution is probably to print the banner first, and then just execute
- all the user code straight with no output traps at all.
- Whatever comes out comes out.
- This makes the ipython code actually simpler, and eliminates the problem
- altogether.
-\layout Itemize
-
 Make the output cache depth independent of the input one.
  This way one can have say only the last 10 results stored and still have
  a long input history/cache.
-\layout Itemize
-
-Refactor all functions which print color so that they use an optional file-like
- object for printing.
- This will enable Gary Bishop to trap things and get color working under
- Windows.
- Besides, it makes the architecture more flexible in general.
 \layout Itemize
 
 Fix the fact that importing a shell for embedding screws up the command-line
@@ -148,51 +150,10 @@ Fix the fact that importing a shell for embedding screws up the command-line
  inside ipython.
 \layout Itemize
 
-Fix Windows bug reported by Tony Cappellini.
-\layout Itemize
-
-Improve Windows installer.
- Suggestion by Cory Dodt:
-\newline 
-
-\newline 
-And the suggestion: I noticed that you do some tricks with setup.py so that
- you can double-click it.
- I _suspect_ you did this because bdist_wininst doesn't do post-installation
- stuff, meaning you can't install your data files and documentation to a
- sensible place, all you can do is drop code into c:
-\backslash 
-pythonxx.
-\newline 
-
-\newline 
-I hit this problem on my own project.
- The solution, if you're interested in it, is to get cvs distutils (version
- 1.0.3 currently).
-\newline 
-
-\newline 
-c:
-\backslash 
->python setup.py bdist_wininst --install-script your_post_install_stuff.py
-\newline 
-
-\newline 
-your_post_install_stuff.py can do anything you want.
- It sends stdout to a frame that's displayed directly in the installer,
- which is very nice and Windows-y.
- And you can distribute an executable, instead of a zip file.
- 
-\layout Itemize
-
 Get Holger's completer in, once he adds filename completion.
 \layout Standard
 
 Lower priority stuff:
-\layout Itemize
-
-Make a nice Gnuplot example of making eps plots using the various types
- of PlotItem, and include it in the examples directory.
 \layout Itemize
 
 Add @showopt/@setopt (decide name) for viewing/setting all options.
@@ -219,77 +180,6 @@ Logging: @logstart and -log should start logfiles in ~.ipython, but with
 In general the logging system needs a serious cleanup.
  Many functions now in Magic should be moved to Logger, and the magic @s
  should be very simple wrappers to the Logger methods.
-\layout Itemize
-
-Fix exception reporting.
- It seems that inspect is getting the build paths for sources instead of
- the current paths, and that's confusing ultraTB.
-\newline 
-
-\series bold 
-STATUS:
-\series default 
- The problem is actually with the way RedHat built python:
-\newline 
-
-\family typewriter 
-In [3]: pickle.dump.func_code.co_filename 
-\newline 
-Out[3]: '/usr/src/build/143041-i386/install/usr/lib/python2.2/pickle.py'
-\newline 
-In [4]: pickle.__file__ 
-\newline 
-Out[4]: '/usr/lib/python2.2/pickle.pyc'
-\newline 
-
-\family default 
-Since those build files can't be found, we get None as filenames for all
- functions which are part of the standard distribution.
- Who knows how they built python, because this problem does _not_ occur
- with normal distutils-based builds:
-\newline 
-
-\family typewriter 
-In [2]: Numeric.array_str.func_code.co_filename
-\newline 
-Out[2]: '/usr/lib/python2.2/site-packages/Numeric/Numeric.py'
-\newline 
-
-\family default 
-Even though Numeric was first built in some separate directory and only
- later installed there.
-\layout Itemize
-
-Allow ipython to handle input from stdin.
- Typical test case:
-\newline 
-
-\family typewriter 
-[~]> [~]> echo "print 2+4" | python 
-\newline 
-6 
-\newline 
-[~]> echo "print 2+4" | ipython 
-\newline 
-python: Objects/stringobject.c:111: PyString_FromString: Assertion `str !=
- ((void *)0)' failed.
- 
-\newline 
-Abort 
-\family default 
-
-\newline 
-This matters also for emacs integration, since a C-c-| will crash if ipython
- hasn't been opened yet.
- This should include supporting option '-c' just like the regular python.
-\newline 
-
-\series bold 
-STATUS
-\series default 
-: this is actually a Python bug.
- I reported it at SF, it is fixed for 2.3 (and possibly in 2.2.3, if it is
- ever released).
 \layout Section
 
 Lighten the code
@@ -300,7 +190,14 @@ If we decide to base future versions of IPython on Python 2.3, which has
  We should also remove the need for Itpl.
  Another area for trimming is the Gnuplot stuff: much of that could be merged
  into the mainline project.
- With these changes we could shed a fair bit of code from the main trunk.
+\layout Standard
+
+Double check whether we really need FlexCompleter.
+ This was written as an enhanced rlcompleter, but my patches went in for
+ python 2.2 (or 2.3, can't remember).
+\layout Standard
+
+With these changes we could shed a fair bit of code from the main trunk.
 \layout Section
 
 Unit testing
