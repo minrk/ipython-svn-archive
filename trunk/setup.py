@@ -101,7 +101,7 @@ manpagebase = 'share/man/man1'
 
 # We only need to exclude from this things NOT already excluded in the
 # MANIFEST.in file.
-exclude     = '.sh .1.gz'.split()
+exclude     = ('.sh','.1.gz')
 docfiles    = filter(lambda f:file_doesnt_endwith(f,exclude),glob('doc/*'))
 
 examfiles   = filter(isfile, glob('doc/examples/*.py'))
@@ -117,7 +117,7 @@ scriptfiles = filter(isfile, ['scripts/ipython','scripts/pycolor'])
 # post-install scripts MUST reside in the scripts/ dir, otherwise distutils
 # doesn't find them.
 if 'bdist_wininst' in sys.argv:
-    if len(sys.argv) > 2:
+    if len(sys.argv) > 2 and ('sdist' in sys.argv or 'bdist_rpm' in sys.argv):
         print >> sys.stderr,"ERROR: bdist_wininst must be run alone. Exiting."
         sys.exit(1)
     scriptfiles.append('scripts/ipython_win_post_install.py')
