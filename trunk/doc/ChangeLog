@@ -1,3 +1,11 @@
+2004-09-29  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (MatplotlibShellBase.use): Added a wrapper to
+	matplotlib.use to prevent running scripts which try to switch
+	interactive backends from within ipython.  This will just crash
+	the python interpreter, so we can't allow it (but a detailed error
+	is given to the user).
+	
 2004-09-28  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Shell.py (MatplotlibShellBase.mplot_exec):

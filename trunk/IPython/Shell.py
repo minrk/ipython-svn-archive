@@ -346,7 +346,6 @@ class MatplotlibShellBase:
     def _matplotlib_config(self,name):
         """Return various items needed to setup the user's shell with matplotlib"""
 
-
         # Initialize matplotlib to interactive mode always
         import matplotlib
         from matplotlib import backends
@@ -478,7 +477,6 @@ class IPShellGTK(threading.Thread):
         import pygtk
         pygtk.require("2.0")
         import gtk
-
         self.gtk = gtk
         self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
                                shell_class=shell_class,
@@ -563,7 +561,6 @@ class IPShellWX(threading.Thread):
                 self.agent = TimerAgent(None, self.TIMEOUT)
                 self.agent.Show(self.wx.false)
                 self.agent.StartWork()
-
                 return self.wx.true
         
         self.app = App(redirect=False)
@@ -638,12 +635,10 @@ def start():
             warn('\nGTK threading is not enabled yet for IPython, pending testing.\n'
                  'A normal (non-threaded) IPython will start.\n')
             shell = IPShell
-            #shell = IPShellGTK
         elif arg1.endswith('-wthread'):
             warn('\nWX threading is not enabled yet for IPython, pending testing.\n'
                  'A normal (non-threaded) IPython will start.\n')
             shell = IPShell
-            #shell = IPShellWX
         elif arg1.endswith('-pylab'):
             shell = _matplotlib_shell_class()
         else:
