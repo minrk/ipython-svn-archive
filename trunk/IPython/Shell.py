@@ -339,9 +339,9 @@ class MTInteractiveShell(InteractiveShell):
         if self.code_to_run is not None:
             self.ready.notify()
             self.parent_runcode(self.code_to_run)
-
-        # Flush out code object which has been run
-        self.code_to_run = None
+            # Flush out code object which has been run
+            self.code_to_run = None
+            
         # We're done with thread-protected variables
         self.ready.release()
         # This MUST return true for gtk threading to work
