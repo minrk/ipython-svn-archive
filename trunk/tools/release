@@ -51,6 +51,10 @@ cd $ipdir
 # bdist_wininst)
 #./setup.py bdist_wininst --install-script=ipython_win_post_install.py
 
+# Register with the Python Package Index (PyPI)
+echo "Registering with PyPI..."
+./setup.py register
+
 # Upload all files
 cd $ipdir/dist
 echo "Uploading distribution files..."
