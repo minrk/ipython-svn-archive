@@ -869,6 +869,13 @@ want to merge them back into the new files.""" % locals()
         else:
             import atexit
 
+            if os.name == 'nt':
+                # readline under Windows modifies the default exit behavior
+                # from being Ctrl-Z/Return to the Unix Ctrl-D one.
+                __builtin__.exit = __builtin__.quit = \
+                     ('Use Ctrl-D (i.e. EOF) to exit. '
+                      'Use %Exit or %Quit to exit without confirmation.')
+
             # Load user's initrc file (readline config)
             inputrc_name = os.environ.get('INPUTRC')
             if inputrc_name is None:

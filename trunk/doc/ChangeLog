@@ -1,3 +1,9 @@
+2004-11-08  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (init_readline): Fix exit message for Windows
+	when readline is active.  Thanks to a report by Eric Jones
+	<eric@enthought.com>.
+
 2004-11-07  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/genutils.py (page): Add a trap for OSError exceptions,
