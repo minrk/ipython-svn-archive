@@ -2441,17 +2441,24 @@ IPYTHONDIR/ipythonrc
  Specify the string used for input prompts.
  Note that if you are using numbered prompts, the number is represented
  with a '
-\family typewriter 
-%n
-\family default 
-' in the string.
+\backslash 
+#' in the string.
  Don't forget to quote strings with spaces embedded in them.
  Default: '
 \family typewriter 
 In\SpecialChar ~
-[%n]:
+[
+\backslash 
+#]:
 \family default 
-'
+'.
+ Sec.\SpecialChar ~
+
+\begin_inset LatexCommand \ref{sec:prompts}
+
+\end_inset 
+
+ discusses in detail all the available escapes to customize your prompts.
 \layout List
 \labelwidthstring 00.00.0000
 
@@ -2463,25 +2470,37 @@ In\SpecialChar ~
 \family default 
 \series default 
  Similar to the previous option, but used for the continuation prompts.
- In this case, the number (
+ The special sequence '
 \family typewriter 
-%n
+
+\backslash 
+D
 \family default 
-) is replaced by as many dots as there are digits in the number (so you
- can have your continuation prompt aligned with your input prompt).
+' is similar to '
+\family typewriter 
+
+\backslash 
+#
+\family default 
+', but with all digits replaced dots (so you can have your continuation
+ prompt aligned with your input prompt).
  Default: '
 \family typewriter 
 \SpecialChar ~
 \SpecialChar ~
 \SpecialChar ~
-.%n.:
+.
+\backslash 
+D.:
 \family default 
 ' (note three spaces at the start for alignment with '
 \family typewriter 
 In\SpecialChar ~
-[%n]
+[
+\backslash 
+#]
 \family default 
-')
+').
 \layout List
 \labelwidthstring 00.00.0000
 
@@ -2499,7 +2518,9 @@ prompt_in1
 .
  Default: '
 \family typewriter 
-Out[%n]:
+Out[
+\backslash 
+#]:
 \family default 
 '
 \layout List
@@ -4327,6 +4348,13 @@ First, an rcfile can contain permanent default values for almost all command
 -Version
 \family default 
 ).
+ Sec\SpecialChar ~
+
+\begin_inset LatexCommand \ref{sec:cmd-line-opts}
+
+\end_inset 
+
+ contains a description of all command-line options.
  However, values you explicitly specify at the command line override the
  values defined in the rcfile.
 \layout Standard
@@ -4530,6 +4558,341 @@ preview false
 \end_inset 
 
 
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:prompts}
+
+\end_inset 
+
+Fine-tuning your prompt
+\layout Standard
+
+IPython's prompts can be customized using a syntax similar to that of the
+ 
+\family typewriter 
+bash
+\family default 
+ shell.
+ Many of 
+\family typewriter 
+bash
+\family default 
+'s escapes are supported, as well as a few additional ones.
+ We list them below:
+\layout Description
+
+
+\backslash 
+# the prompt/history count number
+\layout Description
+
+
+\backslash 
+D the prompt/history count, with the actual digits replaced by dots.
+ Used mainly in continuation prompts (prompt_in2)
+\layout Description
+
+
+\backslash 
+w the current working directory
+\layout Description
+
+
+\backslash 
+W the basename of current working directory
+\layout Description
+
+
+\backslash 
+X
+\emph on 
+n
+\emph default 
+ where 
+\begin_inset Formula $n=0\ldots5.$
+\end_inset 
+
+ The current working directory, with 
+\family typewriter 
+$HOME
+\family default 
+ replaced by 
+\family typewriter 
+~
+\family default 
+, and filtered out to contain only 
+\begin_inset Formula $n$
+\end_inset 
+
+ path elements
+\layout Description
+
+
+\backslash 
+Y
+\emph on 
+n
+\emph default 
+ Similar to 
+\backslash 
+X
+\emph on 
+n
+\emph default 
+, but with the 
+\begin_inset Formula $n+1$
+\end_inset 
+
+ element included if it is 
+\family typewriter 
+~
+\family default 
+ (this is similar to the behavior of the %c
+\emph on 
+n
+\emph default 
+ escapes in 
+\family typewriter 
+tcsh
+\family default 
+)
+\layout Description
+
+
+\backslash 
+u the username of the current user
+\layout Description
+
+
+\backslash 
+$ if the effective UID is 0, a #, otherwise a $
+\layout Description
+
+
+\backslash 
+h the hostname up to the first `.'
+\layout Description
+
+
+\backslash 
+H the hostname
+\layout Description
+
+
+\backslash 
+n a newline
+\layout Description
+
+
+\backslash 
+r a carriage return
+\layout Description
+
+
+\backslash 
+v IPython version string
+\layout Standard
+
+In addition to these, ANSI color escapes can be insterted into the prompts,
+ as 
+\family typewriter 
+
+\backslash 
+C_
+\emph on 
+ColorName
+\family default 
+\emph default 
+.
+ The list of valid color names is: Black, Blue, Brown, Cyan, DarkGray, Green,
+ LightBlue, LightCyan, LightGray, LightGreen, LightPurple, LightRed, NoColor,
+ Normal, Purple, Red, White, Yellow.
+\layout Subsubsection
+
+Prompt examples
+\layout Standard
+
+The following options in an ipythonrc file will give you IPython's default
+ prompts:
+\layout Standard
+
+
+\family typewriter 
+prompt_in1 'In [
+\backslash 
+#]:'
+\newline 
+prompt_in2 '\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+.
+\backslash 
+D.:'
+\newline 
+prompt_out 'Out[%n]:'
+\layout Standard
+
+which look like this:
+\layout Standard
+
+
+\family typewriter 
+In [1]: 1+2
+\newline 
+Out[1]: 3
+\layout Standard
+
+
+\family typewriter 
+In [2]: for i in (1,2,3):
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+...: \SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+print i,
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+...:
+\newline 
+1 2 3
+\layout Standard
+
+These will give you a very colorful prompt with path information:
+\layout Standard
+
+
+\family typewriter 
+#prompt_in1 '
+\backslash 
+C_Red
+\backslash 
+u
+\backslash 
+C_Blue[
+\backslash 
+C_Cyan
+\backslash 
+Y1
+\backslash 
+C_Blue]
+\backslash 
+C_LightGreen
+\backslash 
+#>'
+\newline 
+prompt_in2 ' ..
+\backslash 
+D>'
+\newline 
+prompt_out '<
+\backslash 
+#>' 
+\layout Standard
+
+which look like this:
+\layout Standard
+
+
+\family typewriter 
+\color red
+fperez
+\color blue
+[
+\color cyan
+~/ipython
+\color blue
+]
+\color green
+1>
+\color default
+ 1+2
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+
+\color red
+<1>
+\color default
+ 3
+\newline 
+
+\color red
+fperez
+\color blue
+[
+\color cyan
+~/ipython
+\color blue
+]
+\color green
+2>
+\color default
+ for i in (1,2,3):
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+
+\color green
+...>
+\color default
+ print i,
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+
+\color green
+...>
+\color default
+
+\newline 
+1 2 3
 \layout Subsection
 
 
@@ -4977,6 +5340,147 @@ IPython/Extensions
  now.
  These can be used 'as is' (and both provide very useful functionality),
  or you can use them as a starting point for writing your own extensions.
+\layout Subsection
+
+Direct execution of 
+\family typewriter 
+~/
+\family default 
+, 
+\family typewriter 
+./
+\family default 
+ and 
+\family typewriter 
+/.
+\family default 
+: the `shell' profile.
+\layout Standard
+
+With the 
+\family typewriter 
+InterpreterExec
+\family default 
+ extension, any lines which begin with 
+\family typewriter 
+~/
+\family default 
+, 
+\family typewriter 
+./
+\family default 
+ and 
+\family typewriter 
+/.
+
+\family default 
+ will be executed as shell commands instead of as Python code.
+ This makes IPython behave a bit more like a system shell.
+ 
+\layout Standard
+
+IPython ships with a special `shell' profile, which you can activate at
+ the command line as 
+\family typewriter 
+`ipython -p shell'
+\family default 
+.
+ This loads 
+\family typewriter 
+InterpreterExec
+\family default 
+, along with some additional facilities and a prompt customized for filesystem
+ navigation.
+\layout Standard
+
+Note that this does 
+\emph on 
+note
+\emph default 
+ make IPython a full-fledged system shell.
+ This would be a very ambitious project, and those interested in a discussion
+ of what it entails can find it in the accompanying 
+\family typewriter 
+new_design.pdf
+\family default 
+ IPython document.
+\layout Standard
+
+What the shell profile allows you to do is to use the convenient and powerful
+ syntax of Python to do quick scripting at the command line.
+ Here's a simple example:
+\layout Standard
+
+
+\family typewriter 
+fperez[~]10> cd test
+\newline 
+fperez[~/test]11> !!ls div*
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+<11> ['div.c', 'div.f', 'div.py']
+\newline 
+fperez[~/test]12> for f in _11:
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+....> lines = getoutput('wc -l %s' % f)
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+....> print 'line count:',lines
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+....>
+\newline 
+line count: 14 div.c
+\newline 
+line count: 14 div.f
+\newline 
+line count: 3 div.py
 \layout Subsection
 
 Pasting of code fragments starting with '
@@ -6010,6 +6514,7 @@ Dodt
 <cdodt@fcoe.k12.ca.us>
 \family default 
  Bug reports and Windows ideas.
+ Patches for Windows installer.
 \layout List
 \labelwidthstring 00.00.0000
 
@@ -6121,4 +6626,15 @@ Salib
 <msalib@mit.edu>
 \family default 
  Help fixing a subtle bug related to traceback printing.
+\layout List
+\labelwidthstring 00.00.0000
+
+W.J.\SpecialChar ~
+van\SpecialChar ~
+der\SpecialChar ~
+Laan 
+\family typewriter 
+<gnufnork@hetdigitalegat.nl>
+\family default 
+ Bash-like prompt specials.
 \the_end
