@@ -104,8 +104,8 @@ try:
 
         # Code contributed by Alex Schmolck, for ipython/emacs integration
         def all_completions(self, text):
-            """Return all possible completions for the benefit of
-            emacs."""
+            """Return all possible completions for the benefit of emacs."""
+            
             completions = []
             try:
                 for i in xrange(sys.maxint):
@@ -371,6 +371,8 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
             auto_shell = {}
         for name,cmd in auto_shell.items():
             self.magic_alias(name+' '+cmd)
+
+        self.autoindent = 0
     # end __init__
 
     def set_autoindent(self,value=None):
@@ -656,8 +658,18 @@ want to merge them back into the new files.""" % locals()
     def mainloop(self):
         """Creates the local namespace and starts the mainloop"""
         self.name_space_init()
+        if self.rc.c:  # Emulate Python's -c option
+            self.exec_init_cmd()
         self.interact(self.BANNER)
         self.exit_cleanup()
+
+    def exec_init_cmd(self):
+        """Execute a command given at the command line.
+
+        This emulates Python's -c option."""
+
+        sys.argv = ['-c']
+        self.push(self.rc.c)
 
     def exit_cleanup(self):
         """Cleanup actions to execute at exit time."""
@@ -874,6 +886,9 @@ There seemed to be a problem with your sys.stderr.
         # record it
         self._last_input_line = line
 
+        if line.endswith('# PYTHON-MODE'):
+            return self.handle_emacs(line,continue_prompt)
+
         # the input history needs to track even empty lines
         if not line.strip():
             return self.handle_normal('',continue_prompt)
@@ -940,6 +955,7 @@ There seemed to be a problem with your sys.stderr.
 
     def handle_normal(self,line,continue_prompt):
         """Handle normal input lines. Use as a template for handlers."""
+
         self.log(line,continue_prompt)
         self.update_cache(line)
         return line
@@ -960,6 +976,16 @@ There seemed to be a problem with your sys.stderr.
         line = line.strip()[1:]
         os.system(line)
         return ''               # MUST return something, at least an empty string
+
+    def handle_emacs(self,line,continue_prompt):
+        """Handle input lines marked by python-mode."""
+
+        # Currently, nothing is done.  Later more functionality can be added
+        # here if needed.
+
+        # The input cache shouldn't be updated
+
+        return line
 
     def handle_help(self, line, continue_prompt):
         """Try to get some help for the object.
@@ -1041,11 +1067,9 @@ There seemed to be a problem with your sys.stderr.
         fname = os.path.expanduser(fname)
 
         # find things also in current directory
-        # patch by RA <ralf_ahlbrink@web.de>
         dname = os.path.dirname(fname)
         if not sys.path.count(dname):
             sys.path.append(dname)
-        # end patch by RA <ralf_ahlbrink@web.de>
 
         try:
             xfile = open(fname)
