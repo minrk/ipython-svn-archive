@@ -11,11 +11,16 @@ graft doc
 exclude doc/*.1
 exclude doc/*.lyx
 exclude doc/ChangeLog.*
+exclude doc/#*
 exclude doc/magic.tex
 exclude doc/update_magic.sh
 exclude doc/update_version.sh
 exclude doc/manual/WARNINGS
-exclude doc/manual/internals.pl
+exclude doc/manual/*.aux
+exclude doc/manual/*.log
+exclude doc/manual/*.out
+exclude doc/manual/*.pl
+exclude doc/manual/*.tex
 
 global-exclude *~
 global-exclude *.flc
