@@ -1,5 +1,21 @@
 2003-04-16  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/Magic.py: various replacements of self.rc for
+	self.shell.rc.  A lot more remains to be done to fully disentangle
+	this class from the main Shell class.
+
+	* IPython/GnuplotRuntime.py: added checks for mouse support so
+	that we don't try to enable it if the current gnuplot doesn't
+	really support it.  Also added checks so that we don't try to
+	enable persist under Windows (where Gnuplot doesn't recognize the
+	option).
+
+	* IPython/iplib.py (InteractiveShell.interact): Added optional
+	auto-indenting code, after a patch by King C. Shu
+	<kingshu@myrealbox.com>. It's off by default because it doesn't
+	get along well with pasting indented code.  If I ever figure out
+	how to make that part go well, it will become on by default.
+
 	* IPython/Prompts.py (Prompt1.auto_rewrite): Fixed bug which would
 	crash ipython if there was an unmatched '%' in the user's prompt
 	string.  Reported by Thorsten Kampe <thorsten@thorstenkampe.de>.

@@ -748,41 +748,6 @@ very
  tricky in all corner cases.
 \layout Itemize
 
-Fix exception reporting.
- It seems that inspect is getting the build paths for sources instead of
- the current paths, and that's confusing ultraTB.
-\newline 
-The problem is actually with the way redhat built python:
-\newline 
-
-\family typewriter 
-In [3]: pickle.dump.func_code.co_filename 
-\newline 
-Out[3]: '/usr/src/build/143041-i386/install/usr/lib/python2.2/pickle.py'
-\newline 
-In [4]: pickle.__file__ 
-\newline 
-Out[4]: '/usr/lib/python2.2/pickle.pyc'
-\newline 
-
-\family default 
-Since those build files can't be found, we get None as filenames for all
- functions which are part of the standard distribution.
- Who knows how they built python, because this problem does _not_ occur
- with normal distutils-based builds:
-\newline 
-
-\family typewriter 
-In [2]: Numeric.array_str.func_code.co_filename
-\newline 
-Out[2]: '/usr/lib/python2.2/site-packages/Numeric/Numeric.py'
-\newline 
-
-\family default 
-Even though Numeric was first built in some separate directory and only
- later installed there.
-\layout Itemize
-
 When ';' is appended to the end of the line, the output cache is still being
  set (along with _).
 \layout Itemize
@@ -879,9 +844,6 @@ This matters also for emacs integration, since a C-c-| will crash if ipython
 Get Holger's completer in, once he adds filename completion.
 \layout Itemize
 
-Add an error() function which is basically warn(level=4), or similar.
-\layout Itemize
-
 Add @showopt/@setopt (decide name) for viewing/setting all options.
  The existing option-setting magics should become aliases for setopt calls.
 \layout Itemize
@@ -948,6 +910,41 @@ Logging: @logstart and -log should start logfiles in ~.ipython, but with
 In general the logging system needs a serious cleanup.
  Many functions now in Magic should be moved to Logger, and the magic @s
  should be very simple wrappers to the Logger methods.
+\layout Itemize
+
+Fix exception reporting.
+ It seems that inspect is getting the build paths for sources instead of
+ the current paths, and that's confusing ultraTB.
+\newline 
+The problem is actually with the way RedHat built python:
+\newline 
+
+\family typewriter 
+In [3]: pickle.dump.func_code.co_filename 
+\newline 
+Out[3]: '/usr/src/build/143041-i386/install/usr/lib/python2.2/pickle.py'
+\newline 
+In [4]: pickle.__file__ 
+\newline 
+Out[4]: '/usr/lib/python2.2/pickle.pyc'
+\newline 
+
+\family default 
+Since those build files can't be found, we get None as filenames for all
+ functions which are part of the standard distribution.
+ Who knows how they built python, because this problem does _not_ occur
+ with normal distutils-based builds:
+\newline 
+
+\family typewriter 
+In [2]: Numeric.array_str.func_code.co_filename
+\newline 
+Out[2]: '/usr/lib/python2.2/site-packages/Numeric/Numeric.py'
+\newline 
+
+\family default 
+Even though Numeric was first built in some separate directory and only
+ later installed there.
 \layout Section
 
 Outline of steps
