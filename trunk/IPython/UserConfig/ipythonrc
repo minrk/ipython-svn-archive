@@ -337,7 +337,7 @@ readline_parse_and_bind "\C-n": history-search-forward
 # default word-delimiters list used by readline, so that completions may be
 # performed on strings which contain them.
 
-readline_remove_delims '"[]{}-/~
+readline_remove_delims '"-/~
 
 #"' -- just to fix emacs coloring which gets confused by unmatched quotes.
 
@@ -428,7 +428,7 @@ execute
 # Note for the adventurous: you can use this to define your own names for the
 # magic functions, by playing some namespace tricks:
 
-# execute __IP.magic_pf = __IP.magic_profile
+# execute __IPYTHON__.magic_pf = __IPYTHON__.magic_profile
 
 # defines @pf as a new name for @profile.
 
