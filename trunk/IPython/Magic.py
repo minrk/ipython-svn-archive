@@ -34,8 +34,8 @@ from cStringIO import StringIO
 from IPython.Struct import Struct
 from IPython.Itpl import Itpl, itpl, printpl,itplns
 from IPython.FakeModule import FakeModule
-from IPython.genutils import *
 from IPython import OInspect
+from IPython.genutils import *
 
 # Globals to be set later by Magic constructor
 MAGIC_PREFIX = ''
@@ -1390,7 +1390,49 @@ Currently the magic system has the following functions:\n"""
         force any file to be treated as a log file."""
 
         for f in parameter_s.split():
-            self.shell.safe_execfile(f,self.shell.user_ns,self.shell.user_ns,islog=1)
+            self.shell.safe_execfile(f,self.shell.user_ns,
+                                     self.shell.user_ns,islog=1)
+
+    def magic_time(self,parameter_s = ''):
+        """Time execution of an expression which can be passed to eval().
+
+        The value of the expression is returned.
+
+        Expressions are things which return a value, such as function calls or
+        arithmetic calculations:
+
+         In [1]: time 2**128
+         Call time: 0.00 s.
+         Out[1]: 340282366920938463463374607431768211456L
+
+         In [2]: n = 1000000
+
+         In [2]: time sum(range(n))
+         Call time: 1.19 s.
+         Out[2]: 499999500000L
+
+        Note that since Python makes a distinction between statements and
+        expressions, the following gives an error:
+
+         In [3]: time print 'hello world'
+         ------------------------------------------------------------
+         File "<timed evaluation>", line 1
+         print 'hello world'
+             ^
+         SyntaxError: invalid syntax
+          %time print 'hello world'  """
+        
+        # fail immediately if the given expression can't be compiled
+        code = compile(parameter_s,'<timed evaluation>','eval')
+        # skew measurement as little as possible
+        glob = self.shell.user_ns
+        clk = clock
+        # time execution
+        s = clk()
+        out = eval(code,glob)
+        tot = clk()-s
+        print "Call time: %.2f s." % tot
+        return out
 
     def magic_macro(self,parameter_s = ''):
         """Define a set of input lines as a macro for future re-execution.
@@ -1492,9 +1534,11 @@ Currently the magic system has the following functions:\n"""
         Usage:
           %edit [options] [args]
 
-        %edit will use the editor you have configured in your environment as
-        the EDITOR variable. If this isn't found, it will default to vi under
-        Linux/Unix and to notepad under Windows.
+        %edit runs IPython's editor hook.  The default version of this hook is
+        set to call the __IPYTHON__.rc.editor command.  This variable is read
+        from your environment as $EDITOR.  If this isn't found, it will
+        default to vi under Linux/Unix and to notepad under Windows.  See the
+        end of this docstring for how to change the editor hook.
 
         You can also set the value of this editor via the commmand-line option
         '-editor' or in your ipythonrc file. This is useful if you wish to use
@@ -1538,9 +1582,9 @@ Currently the magic system has the following functions:\n"""
         edit it and have the file be executed automatically.
 
         Note: opening at an exact line is only supported under Unix, and some
-        editors (like kedit and gedit) do not understand the '+NUMBER'
-        parameter necessary for this feature. Good editors like (X)Emacs, vi,
-        jed, pico and joe all do.
+        editors (like kedit and gedit up to Gnome 2.8) do not understand the
+        '+NUMBER' parameter necessary for this feature. Good editors like
+        (X)Emacs, vi, jed, pico and joe all do.
 
         - If the argument is not found as a variable, IPython will look for a
         file with that name (adding .py if necessary) and load it into the
@@ -1599,7 +1643,17 @@ Currently the magic system has the following functions:\n"""
         Editing... done. Executing edited code...\\
         hello again\\
         Out[10]: "print 'hello again'\\n"
-        """
+
+
+        Changing the default editor hook:
+
+        If you wish to write your own editor hook, you can put it in a
+        configuration file which you load at startup time.  The default hook
+        is defined in the IPython.hooks module, and you can use that as a
+        starting example for further modifications.  That file also has
+        general instructions on how to set a new hook for use once you've
+        defined it."""
+        
         # FIXME: This function has become a convoluted mess.  It needs a
         # ground-up rewrite with clean, simple logic.
 
@@ -1619,6 +1673,8 @@ Currently the magic system has the following functions:\n"""
 
         opts,args = self.parse_options(parameter_s,'px')
 
+        # Default line number value
+        lineno = None
         if opts.has_key('p'):
             args = '_%s' % last_call[0]
             if not self.shell.user_ns.has_key(args):
@@ -1636,8 +1692,6 @@ Currently the magic system has the following functions:\n"""
         # by default this is done with temp files, except when the given
         # arg is a filename
         use_temp = 1
-        # marker for at which line to open the file (for existing objects)
-        linemark = ''
 
         if re.match(r'\d',args):
             # Mode where user specifies ranges of lines, like in %macro.
@@ -1683,15 +1737,11 @@ Currently the magic system has the following functions:\n"""
                     try:
                         lineno = inspect.getsourcelines(data)[1]
                     except IOError:
-                        lineno = None
                         filename = make_filename(args)
                         if filename is None:
-                            warn('The file `%s` where `%s` was defined cannot be read.'
-                                 % (filename,data))
+                            warn('The file `%s` where `%s` was defined cannot '
+                                 'be read.' % (filename,data))
                             return
-                    # Decent Unix editors know how to start at a given line
-                    if os.name == 'posix' and lineno is not None:
-                        linemark = '+%s' % lineno
                 use_temp = 0
         else:
             data = ''
@@ -1708,7 +1758,7 @@ Currently the magic system has the following functions:\n"""
         # do actual editing here
         print 'Editing...',
         sys.stdout.flush()
-        xsys('%s %s %s' % (self.shell.rc.editor,linemark,filename))
+        self.shell.hooks.editor(filename,lineno)
         if opts.has_key('x'):  # -x prevents actual execution
             print
         else:
