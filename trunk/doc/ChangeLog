@@ -1,5 +1,10 @@
 2004-11-04  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/iplib.py (raw_input_original): store a pointer to the
+	true raw_input to harden against code which can modify it
+	(wx.py.PyShell does this and would otherwise crash ipython).
+	Thanks to a bug report by Jim Flowers <james.flowers@lgx.com>.
+
 	* IPython/Shell.py (MTInteractiveShell.runsource): Cleaner fix for
 	Ctrl-C problem, which does not mess up the input line.
 

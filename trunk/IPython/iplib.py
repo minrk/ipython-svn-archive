@@ -58,6 +58,10 @@ from IPython.Itpl import Itpl,itpl,printpl,ItplNS,itplns
 from IPython.FakeModule import FakeModule
 from IPython.genutils import *
 
+# store the builtin raw_input globally, and use this always, in case user code
+# overwrites it (like wx.py.PyShell does)
+raw_input_original = raw_input
+
 #****************************************************************************
 # Some utility function definitions
 def import_fail_info(mod_name,fns=None):
@@ -1302,7 +1306,7 @@ There seemed to be a problem with your sys.stderr.
         raw_input(); a subclass may replace this with a different
         implementation.
         """
-        return self.prefilter(raw_input(prompt),
+        return self.prefilter(raw_input_original(prompt),
                               prompt==self.outputcache.prompt2)
         
     def split_user_input(self,line):
