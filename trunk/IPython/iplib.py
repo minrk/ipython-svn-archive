@@ -128,6 +128,11 @@ try:
             self.space_name_re = re.compile(r'([^\\] )')
             # Hold a local ref. to glob.glob for speed
             self.glob = glob.glob
+            # Special handling of backslashes needed in win32 platforms
+            if sys.platform == "win32":
+                self.clean_glob = self._clean_glob_win32
+            else:
+                self.clean_glob = self._clean_glob
             self.matchers = ['python_matches','file_matches','alias_matches']
 
         # Code contributed by Alex Schmolck, for ipython/emacs integration
@@ -147,6 +152,13 @@ try:
                 pass
             return completions
         # /end Alex Schmolck code.
+
+        def _clean_glob(self,text):
+            return self.glob("%s*" % text.replace(r'\ ',' '))
+            
+        def _clean_glob_win32(self,text):
+            return [f.replace("\\","/")
+                    for f in self.glob("%s*" % text.replace(r'\ ',' '))]            
 
         def file_matches(self, text, state):
             """Match filneames, expanding ~USER type strings.
@@ -176,7 +188,7 @@ try:
             if text == "":
                 return [f.replace(' ',r'\ ') for f in self.glob("*")]
 
-            m0 = self.glob("%s*"%text.replace(r'\ ',' '))
+            m0 = self.clean_glob(text)
             if has_spaces:
                 # If we had spaces, we need to revert our changes so that
                 # we don't double-write the part of the filename we have so far
@@ -443,13 +455,14 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.line_split = re.compile(r'(^[\s*!\?@,/]?)([\?\w\.]+\w*\s*)(\(?.*$)')
 
         # RegExp to identify potential function names
-        self.fun_name = re.compile (r'[a-zA-Z_]([a-zA-Z0-9_.]*) *$')
-
+        self.re_fun_name = re.compile (r'[a-zA-Z_]([a-zA-Z0-9_.]*) *$')
+        # RegExp to identify potential function names
+        self.re_exclude_auto = re.compile ('^[!=()<>,]|^is ')
         # try to catch also methods for stuff in lists/tuples/dicts: off
         # (experimental). For this to work, the line_split regexp would need
         # to be modified so it wouldn't break things at '['. That line is
         # nasty enough that I shouldn't change it until I can test it _well_.
-        #self.fun_name = re.compile (r'[a-zA-Z_]([a-zA-Z0-9_.\[\]]*) ?$')
+        #self.re_fun_name = re.compile (r'[a-zA-Z_]([a-zA-Z0-9_.\[\]]*) ?$')
 
         # keep track of where we started running (mainly for crash post-mortem)
         self.starting_dir = os.getcwd()
@@ -1295,17 +1308,15 @@ There seemed to be a problem with your sys.stderr.
                                              pre,iFun,theRest)
                 else:
                     return self.handle_normal(line,continue_prompt)
-                
+
             if self.rc.autocall and \
-                   (len(theRest)==0 or theRest[0] not in '!=()<>[,') and \
-                   self.fun_name.match(iFun) and \
+                   not self.re_exclude_auto.match(theRest) and \
+                   self.re_fun_name.match(iFun) and \
                    callable(oinfo['obj']) :
                 #print 'going auto'  # dbg
-                #print 'fun match', self.fun_name.match(iFun)  # dbg
                 return self.handle_auto(line,continue_prompt)
             else:
                 #print 'was callable?', callable(oinfo['obj'])  # dbg
-                #print 'fun match', self.fun_name.match(iFun)  # dbg
                 return self.handle_normal(line,continue_prompt)
 
         # If we get here, we have a normal Python line. Log and return.
