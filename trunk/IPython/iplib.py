@@ -579,14 +579,18 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
                                              header='IPython system call: ',
                                              verbose=self.rc.system_verbose)
     
-        # RegExp for splitting line contents into pre-char//first word-method//rest
-        # update the regexp if the above escapes are changed
+        # RegExp for splitting line contents into pre-char//first
+        # word-method//rest.  For clarity, each group in on one line.
+
+        # WARNING: update the regexp if the above escapes are changed, as they
+        # are hardwired in.
 
         # Don't get carried away with trying to make the autocalling catch too
         # much:  it's better to be conservative rather than to trigger hidden
         # evals() somewhere and end up causing side effects.
-
-        self.line_split = re.compile(r'(^[\s*!\?%,/]?)( [\?\w\.]+\w*\s*)(\(?.*$)')
+        self.line_split = re.compile(r'(^[\s*!\?%,/]?)'
+                                     r'(\s*[\?\w\.]+\w*\s*)'
+                                     r'(\(?.*$)')
 
         # RegExp to identify potential function names
         self.re_fun_name = re.compile(r'[a-zA-Z_]([a-zA-Z0-9_.]*) *$')
@@ -1377,6 +1381,7 @@ There seemed to be a problem with your sys.stderr.
                 iFun,theRest = line,''
         else:
             pre,iFun,theRest = lsplit.groups()
+        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest) # dbg
         return pre,iFun.strip(),theRest
 
     def _prefilter(self, line, continue_prompt):
@@ -1580,7 +1585,11 @@ There seemed to be a problem with your sys.stderr.
             newcmd = iFun + '("' + '", "'.join(theRest.split()) + '")\n'
         else:
             # Auto-paren
-            if theRest.startswith('='):
+            if theRest[0:1] in '=[':
+                # Don't autocall in these cases.  They can be either
+                # rebindings of an existing callable's name, or item access
+                # for an object which is BOTH callable and implements
+                # __getitem__.
                 return iFun + ' '+theRest+'\n'
             newcmd = iFun.rstrip() + '(' + theRest + ')\n'
 
