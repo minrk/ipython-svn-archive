@@ -491,6 +491,31 @@ $ python setup.py --help
 
 \newline 
 for more details.
+\newline 
+Note that if you change the default location for 
+\family typewriter 
+--home
+\family default 
+ at installation, IPython may end up installed at a location which is not
+ part of your 
+\family typewriter 
+$PYTHONPATH
+\family default 
+ environment variable.
+ In this case, you'll need to configure this variable to include the actual
+ directory where the 
+\family typewriter 
+IPython/
+\family default 
+ directory ended (typically the value you give to 
+\family typewriter 
+--home
+\family default 
+ plus 
+\family typewriter 
+/lib/python
+\family default 
+).
 \layout Subsubsection
 
 RedHat 7.x notes
