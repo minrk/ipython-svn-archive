@@ -27,10 +27,11 @@
 include ipythonrc
 
 # import ...
-import_mod 
+# Load SciPy by itself so that 'help scipy' works
+import_mod scipy
 
 # from ... import ...
-import_some  
+import_some
 
 # Now we load all of SciPy
 # from ... import *
