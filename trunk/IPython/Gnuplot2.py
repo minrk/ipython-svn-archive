@@ -511,7 +511,9 @@ class Gnuplot(Gnuplot_ori.Gnuplot):
 
           'filename=<string>' -- if a filename is specified, save the
               output in that file; otherwise print it immediately
-              using the 'default_lpr' configuration option.
+              using the 'default_lpr' configuration option.  If the
+              filename ends in '.eps', EPS mode is automatically
+              selected (like manually specifying eps=1 or mode='eps').
 
           'mode=<string>' -- set the postscript submode ('landscape',
               'portrait', 'eps', or 'default').  The default is
@@ -557,6 +559,8 @@ class Gnuplot(Gnuplot_ori.Gnuplot):
             filename = gp.GnuplotOpts.default_lpr
             lpr_output = 1
         else:
+            if filename.endswith('.eps'):
+                eps = 1
             lpr_output = 0
 
         # Be careful processing the options.  If the user didn't
