@@ -27,3 +27,5 @@ class FakeModule:
     def __str__(self):
         return "<IPython.FakeModule instance>"
 
+    def __repr__(self):
+        return str(self)
