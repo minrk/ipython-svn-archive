@@ -1453,15 +1453,14 @@ There seemed to be a problem with your sys.stderr.
         lines = lines.split('\n')
         more = 0
         for line in lines:
-            if not line:
-                # skip blank lines so we don't mess up the prompt counter
-                continue
-            more = self.push((self.prefilter(line,more)))
-            if more is None:
+            # skip blank lines so we don't mess up the prompt counter
+            if line:
+                more = self.push((self.prefilter(line,more)))
                 # IPython's runsource returns None if there was an error
                 # compiling the code.  This allows us to stop processing right
                 # away, so the user gets the error message at the right place.
-                break
+                if more is None:
+                    break
         # final newline in case the input didn't have it, so that the code
         # actually does get executed
         if more:
