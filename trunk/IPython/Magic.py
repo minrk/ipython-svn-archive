@@ -92,7 +92,7 @@ try:
 except AttributeError:
     _quotesre = re.compile(r'[\'"](.*)[\'"]')
     _wordchars = ('abcdfeghijklmnopqrstuvwxyz'
-                  'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.~'
+                  'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.~*?'
                   '‗אבגדהוזחטיךכלםמןנסעףפץצרשתûü‎‏ÿ'
                   'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞ%s' % os.sep)
     def shlex_split(s):
