@@ -1,3 +1,39 @@
+2004-09-28  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (MatplotlibShellBase.mplot_exec):
+	matplotlib-related fixes so that using @run with non-matplotlib
+	scripts doesn't pop up spurious plot windows.  This requires
+	matplotlib >= 0.63, where I had to make some changes as well.
+
+	* IPython/ipmaker.py (make_IPython): update version requirement to
+	python 2.2.
+
+	* IPython/iplib.py (InteractiveShell.mainloop): Add an optional
+	banner arg for embedded customization.
+
+	* IPython/Magic.py (Magic.__init__): big cleanup to remove all
+	explicit uses of __IP as the IPython's instance name.  Now things
+	are properly handled via the shell.name value.  The actual code
+	is a bit ugly b/c I'm doing it via a global in Magic.py, but this
+	is much better than before.  I'll clean things completely when the
+	magic stuff gets a real overhaul.
+
+	* ipython.1: small fixes, sent in by Jack Moffit.  He also sent in
+	minor changes to debian dir.
+
+	* IPython/iplib.py (InteractiveShell.__init__): Fix adding a
+	pointer to the shell itself in the interactive namespace even when
+	a user-supplied dict is provided.  This is needed for embedding
+	purposes (found by tests with Michel Sanner).
+
+2004-09-27  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/UserConfig/ipythonrc: remove []{} from
+	readline_remove_delims, so that things like [modname.<TAB> do
+	proper completion.  This disables [].TAB, but that's a less common
+	case than module names in list comprehensions, for example.
+	Thanks to a report by Andrea Riciputi.
+
 2004-09-09  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Shell.py (IPShellGTK.mainloop): reorder to avoid
