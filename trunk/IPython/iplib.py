@@ -1446,7 +1446,10 @@ There seemed to be a problem with your sys.stderr.
         lines, as if they had been entered at the IPython prompt.  Since it
         exposes IPython's processing machinery, the given strings can contain
         magic calls (%magic), special shell access (!cmd), etc."""
-        
+
+        # We must start with a clean buffer, in case this is run from an
+        # interactive IPython session (via a magic, for example).
+        self.resetbuffer()
         lines = lines.split('\n')
         for lnum,line in enumerate(lines):
             more = self.push((self.prefilter(line,lnum)))
