@@ -1,22 +1,22 @@
 ;;; ipython.el --- Adds support for IPython to python-mode.el
 
-;; Copyright (C) 2002, 2003 Alexander Schmolck
-;; Author:        Alexander Schmolck <a.schmolck@gmx.net>
+;; Copyright (C) 2002, 2003, 2004 Alexander Schmolck
+;; Author:        Alexander Schmolck
 ;; Keywords:      ipython python languages oop
 ;; URL:           http://www-hep.colorado.edu/~fperez/ipython/dist/
 ;; Compatibility: Emacs21, XEmacs21
-
+;; FIXME: #$@! INPUT RING
 (defconst ipython-version "$Revision$"
   "VC version number.")
 
 ;; Commentary This library makes all the functionality python-mode has when
 ;; running with the normal python-interpreter available for ipython, too. It
-;; also enables a persistent py-shell command history accross sessions (if
-;; you exit python with C-d in py-shell) and defines the command
+;; also enables a persistent py-shell command history accross sessions (if you
+;; exit python with C-d in py-shell) and defines the command
 ;; `ipython-to-doctest', which can be used to convert bits of a ipython
 ;; session into something that can be used for doctests. To install, put this
-;; file somewhere in your emacs-lisp part and add the following line to your
-;; ~/.emacs file:
+;; file somewhere in your emacs `load-path' [1] and add the following line to
+;; your ~/.emacs file:
 ;;
 ;;   (require 'ipython)
 ;;
@@ -40,6 +40,16 @@
 ;; Comments and feedback welcome (note that Fernando Perez, the author of
 ;; ipython is *not* the maintainer of this code).
 ;;
+;; Footnotes:
+;;
+;;     [1] If you don't know what `load-path' is, C-h v load-path will tell
+;;     you; if required you can also add a new directory. So assuming that
+;;     ipython.el resides in ~/el/, put this in your emacs:
+;;
+;;           (add-to-list 'load-path "~/el")
+;;           (require 'ipython)
+;;
+;;
 ;; TODO:
 ;;      - do autocompletion properly
 ;;      - implement a proper switching between python interpreters
@@ -47,6 +57,7 @@
 
 ;;; Code
 (require 'cl)
+(require 'shell)
 (require 'executable)
 (require 'ansi-color)
 
@@ -78,6 +89,15 @@ the second for a 'normal' command, and the third for a multiline command.")
   (require 'python-mode)
   ;; turn on ansi colors for ipython and activate completion
   (defun ipython-shell-hook ()
+    ;; the following is to synchronize dir-changes
+    (make-local-variable 'shell-dirstack)
+    (setq shell-dirstack nil)
+    (make-local-variable 'shell-last-dir)
+    (setq shell-last-dir nil)
+    (make-local-variable 'shell-dirtrackp)
+    (setq shell-dirtrackp t)
+    (add-hook 'comint-input-filter-functions 'shell-directory-tracker nil t)
+
     (ansi-color-for-comint-mode-on)
     (define-key py-shell-map [tab] 'ipython-complete)
     ;XXX this is really just a cheap hack, it only completes symbols in the
@@ -89,8 +109,15 @@ the second for a 'normal' command, and the third for a multiline command.")
   
   ;;Adapt python-mode settings for ipython.
   ;; (this works for @xmode 'verbose' or 'context')
+
+  ;; XXX putative regexps for syntax errors; unfortunately the 
+  ;;     current python-mode traceback-line-re scheme is too primitive,
+  ;;     so it's either matching syntax errors, *or* everything else
+  ;;     (XXX: should ask Fernando for a change)
+  ;;"^   File \"\\(.*?\\)\", line \\([0-9]+\\).*\n.*\n.*\nSyntaxError:"
+  ;;^   File \"\\(.*?\\)\", line \\([0-9]+\\)"
   (setq py-traceback-line-re
-        "\\(^[^\t ].+?\\.py\\).*\n    [0-9]+[^\00]*?\n--> \\([0-9]+\\) +")
+        "\\(^[^\t ].+?\\.py\\).*\n   +[0-9]+[^\00]*?\n-+> \\([0-9]+\\) +")
 
   (setq py-shell-input-prompt-1-regexp "^In \\[[0-9]+\\]: "
         py-shell-input-prompt-2-regexp "^   [.][.][.]+: " )
@@ -270,7 +297,7 @@ in the current *Python* session."
              (insert completion))
             (t
              (message "Making completion list...")
-             (with-output-to-temp-buffer "*Python Completions*"
+             (with-output-to-temp-buffer "*IPython Completions*"
                (display-completion-list (all-completions pattern completion-table)))
              (message "Making completion list...%s" "done")))))
 )
