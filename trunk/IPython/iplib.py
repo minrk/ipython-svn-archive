@@ -304,15 +304,20 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
 
         # RegExp for splitting line contents into pre-char//first word-method//rest
         # update the regexp if the above escapes are changed
-        self.line_split = re.compile(r'(^[\s*!\?@,/]?)([\?\w\.]+\w*\s*)(\(?.*$)')
-        # RegExp to identify potential function names
 
+        # Don't get carried away with trying to make the autocalling catch too
+        # much:  it's better to be conservative rather than to trigger hidden
+        # evals() somewhere and end up causing side effects.
+        
+        self.line_split = re.compile(r'(^[\s*!\?@,/]?)([\?\w\.]+\w*\s*)(\(?.*$)')
+
+        # RegExp to identify potential function names
         self.fun_name = re.compile (r'[a-zA-Z_]([a-zA-Z0-9_.]*) *$')
 
-        # try to catch also methods for stuff in lists/tuples/dicts:
-        # off (experimental). For this to work, the line_split regexp would
-        # need to be modified so it wouldn't break things at '['. That line
-        # is nasty enough that I shouldn't change it until I can test it _well_.
+        # try to catch also methods for stuff in lists/tuples/dicts: off
+        # (experimental). For this to work, the line_split regexp would need
+        # to be modified so it wouldn't break things at '['. That line is
+        # nasty enough that I shouldn't change it until I can test it _well_.
         #self.fun_name = re.compile (r'[a-zA-Z_]([a-zA-Z0-9_.\[\]]*) ?$')
 
         # keep track of where we started running (mainly for crash post-mortem)
@@ -830,16 +835,6 @@ choose to continue, there may be unexpected behavior.
             pre,iFun,theRest = lsplit.groups()
             #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest)  # dbg
 
-
-##        print '*** EXPERIMENTAL' # dbg
-##        if ' ' in line:
-##            iFun,theRest = line.split(' ',1)
-##            theRest = theRest.lstrip()
-##        else:
-##            iFun,theRest = line,''
-
-
-
         # First check for explicit escapes in the first character
         line0 = line[0]
         if line0 == self.ESC_SHELL:
@@ -856,6 +851,7 @@ choose to continue, there may be unexpected behavior.
 
         # Next, check if we can automatically execute this thing
         oinfo = self._ofind(iFun.strip()) # FIXME - _ofind is part of Magic
+
         if not oinfo['found']:
             #print 'not found'  # dbg
             return self.handle_normal(line,continue_prompt)
