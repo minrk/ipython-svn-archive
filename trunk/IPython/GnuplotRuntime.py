@@ -51,7 +51,7 @@ Inspired by a suggestion/request from Arnd Baecker."""
 __all__ = ('Gnuplot gp gp_new Data File Func GridData pm3d_config '
            'eps_fix_bbox'.split())
 
-import os,tempfile
+import os,tempfile,sys
 from genutils import getoutput
 
 #---------------------------------------------------------------------------
@@ -88,7 +88,7 @@ else:
 del tmpname,gnu_out
 
 # Default state for persistence of new gnuplot instances
-if os.name in ['nt','dos']:
+if os.name in ['nt','dos'] or sys.platform == 'cygwin':
     gnuplot_persist = 0
 else:
     gnuplot_persist = 1
