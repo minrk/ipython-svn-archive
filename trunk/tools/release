@@ -10,16 +10,20 @@ echo "=================================="
 
 echo "Marking ChangeLog with release information and making NEWS file..."
 
-# stamp changelog
+# Stamp changelog and save a copy of the status at each version, in case later
+# we want the NEWS file to start from a point before the very last release (if
+# very small interim releases have no significant changes).
+
 cd $ipdir/doc
 cp ChangeLog ChangeLog.old
+cp ChangeLog ChangeLog.$version
 daystamp=`date +%Y-%m-%d`
 echo $daystamp " ***" Released version $version > ChangeLog
 echo >> ChangeLog
 cat ChangeLog.old >> ChangeLog
 rm ChangeLog.old
 
-# build NEWS file
+# Build NEWS file
 echo "Changes between the last two releases (major or minor)" > NEWS
 echo "Note that this is an auto-generated diff of the ChangeLogs" >> NEWS
 echo >> NEWS
@@ -30,15 +34,15 @@ cp ChangeLog ChangeLog.previous
 gzip -c ipython.1 > ipython.1.gz
 gzip -c pycolor.1 > pycolor.1.gz
 
-# clean up dist directory
+# Clean up dist directory
 cd $ipdir/dist
 rm -f *
 
-# do backup
+# Do backup
 cd $ipdir/tools
 ./bkp.py
 
-# build source and binary distros
+# Build source and binary distros
 cd $ipdir
 #./setup.py sdist --formats=gztar,zip bdist --formats=rpm,wininst
 ./setup.py sdist --formats=gztar,zip bdist --formats=rpm
@@ -48,7 +52,7 @@ cd $ipdir/dist
 echo "Copying to Windows directory..."
 cp *.zip *.exe ~/win/IPython
 
-# upload
+# Upload
 cd $ipdir/dist
 echo "Uploading distribution files..."
 scp * fperez@scipy.org:www/dist/
