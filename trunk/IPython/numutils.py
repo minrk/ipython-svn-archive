@@ -7,7 +7,7 @@ See http://www.pfdubois.com/numpy for details.
 """
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2004 Fernando PÃ©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -21,7 +21,7 @@ See http://www.pfdubois.com/numpy for details.
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
+__author__ = 'Fernando PÃ©rez. <fperez@colorado.edu>'
 __version__= '0.1.1'
 __license__ = 'LGPL'
 __date__   = 'Tue Dec 11 00:27:58 MST 2001'
@@ -34,12 +34,12 @@ inf infty Infinity exp_safe spike spike_odd norm l1norm l2norm
 
 #****************************************************************************
 # required modules
-import math
-import Numeric
-from Numeric import *
-import sys, ultraTB,operator
 import __main__
+import sys,operator
+import math
+from Numeric import *
 
+import ultraTB
 AutoTB = ultraTB.AutoFormattedTB(mode='Verbose',color_scheme='Linux')
 
 #*****************************************************************************
@@ -66,31 +66,6 @@ def exp_safe(x):
         return exp(clip(x,exp_safe_MIN,exp_safe_MAX))
     else:
         return math.exp(x)
-
-def spike(x,x0=0,delta=1):
-    """Return exp(-((x-x0)/delta)**2), a simple spike. """
-
-    # for large arrays, the extra ifs are cheaper than the needless arithmetic
-    if x0==0 and delta == 1:
-        return exp_safe(-(x**2))
-    elif x0==0:
-        return exp_safe(-((x/delta)**2))
-    elif delta == 1:
-        return exp_safe(-(x-x0)**2)
-    else:
-        return exp_safe(-((x-x0)/delta)**2)
-
-def spike_odd(x,x0=0,delta=1,norm = math.sqrt(2.0*math.e)):
-    """Return (sqrt(2*E)/delta)*(x0-x)*exp(-((x-x0)/delta)**2).
-
-    This is a simple odd spike normalized to amplitude 1 which starts
-    positive."""
-
-    if x0==0:
-        return -(norm/delta)*x*spike(x,delta=delta)
-    else:
-        xnew = x0-x
-        return (norm/delta)*xnew*spike(xnew,delta=delta)
 
 def amap(fn,*args):
     """amap(function, sequence[, sequence, ...]) -> array.
@@ -305,6 +280,30 @@ def fromfunction_kw(function, dimensions, **kwargs):
 
     return function(tuple(indices(dimensions)),**kwargs)
 
+def spike(x,x0=0,delta=1):
+    """Return exp(-((x-x0)/delta)**2), a simple spike. """
+
+    # for large arrays, the extra ifs are cheaper than the needless arithmetic
+    if x0==0 and delta == 1:
+        return exp_safe(-(x**2))
+    elif x0==0:
+        return exp_safe(-((x/delta)**2))
+    elif delta == 1:
+        return exp_safe(-(x-x0)**2)
+    else:
+        return exp_safe(-((x-x0)/delta)**2)
+
+def spike_odd(x,x0=0,delta=1,norm = math.sqrt(2.0*math.e)):
+    """Return (sqrt(2*E)/delta)*(x0-x)*exp(-((x-x0)/delta)**2).
+
+    This is a simple odd spike normalized to amplitude 1 which starts
+    positive."""
+
+    if x0==0:
+        return -(norm/delta)*x*spike(x,delta=delta)
+    else:
+        xnew = x0-x
+        return (norm/delta)*xnew*spike(xnew,delta=delta)
 
 #-----------------------------------------------------------------------------
 # DEPRECATED CODE
