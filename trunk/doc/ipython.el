@@ -1,26 +1,25 @@
 ;;; ipython.el --- Adds support for IPython to python-mode.el
 
-;; Copyright (C) 2002, 2003, 2004 Alexander Schmolck
-;; Author:        Alexander Schmolck <a.schmolck@gmx.net>
+;; Copyright (C) 2002, 2003, 2004, 2005 Alexander Schmolck
+;; Author:        Alexander Schmolck
 ;; Keywords:      ipython python languages oop
 ;; URL:           http://ipython.scipy.org
 ;; Compatibility: Emacs21, XEmacs21
 ;; FIXME: #$@! INPUT RING
-
-;; Note that this is really Alex Schmolck's Revision 1.8, but my CVS has
-;; its own idea ov revision numbers.
 (defconst ipython-version "$Revision$"
   "VC version number.")
 
-;; Commentary This library makes all the functionality python-mode has when
-;; running with the normal python-interpreter available for ipython, too. It
-;; also enables a persistent py-shell command history accross sessions (if you
-;; exit python with C-d in py-shell) and defines the command
-;; `ipython-to-doctest', which can be used to convert bits of a ipython
-;; session into something that can be used for doctests. To install, put this
-;; file somewhere in your emacs `load-path' [1] and add the following line to
-;; your ~/.emacs file:
+;;; Commentary 
+;; This library makes all the functionality python-mode has when running with
+;; the normal python-interpreter available for ipython, too. It also enables a
+;; persistent py-shell command history accross sessions (if you exit python
+;; with C-d in py-shell) and defines the command `ipython-to-doctest', which
+;; can be used to convert bits of a ipython session into something that can be
+;; used for doctests. To install, put this file somewhere in your emacs
+;; `load-path' [1] and add the following line to your ~/.emacs file (the first
+;; line only needed if the default (``"ipython"``) is wrong)::
 ;;
+;;   (setq ipython-command "/SOME-PATH/ipython")
 ;;   (require 'ipython)
 ;;
 ;; Ipython will be set as the default python shell, but only if the ipython
@@ -35,13 +34,16 @@
 ;; properly will also require changes to ipython that will likely have to wait
 ;; for a larger rewrite scheduled some time in the future.
 ;; 
-;; Also note that you currently NEED A MODIFIED VERSION OF PYTHON.EL. I have
-;; submitted the necessary patch some months ago to sourceforge, but I think
-;; it hasn't been incorporated yet. You can get a patched python.el from the
-;; same URL as ipython.el.
+;; Also note that you currently NEED THE CVS VERSION OF PYTHON.EL.
 ;;
-;; Comments and feedback welcome (note that Fernando Perez, the author of
-;; ipython is *not* the maintainer of this code).
+;; Further note that I don't know whether this runs under windows or not and
+;; that if it doesn't I can't really help much, not being a fellow sufferer.
+;;
+;; Please send comments and feedback to the ipython-list
+;; (<ipython-user@scipy.net>) where I (a.s.) or someone else will try to
+;; answer them (it helps if you specify your emacs version, OS etc; 
+;; familiarity with <http://www.catb.org/~esr/faqs/smart-questions.html> might
+;; speed up things further).
 ;;
 ;; Footnotes:
 ;;
@@ -49,14 +51,30 @@
 ;;     you; if required you can also add a new directory. So assuming that
 ;;     ipython.el resides in ~/el/, put this in your emacs:
 ;;
+;;
 ;;           (add-to-list 'load-path "~/el")
+;;           (setq ipython-command "/some-path/ipython")
 ;;           (require 'ipython)
+;;
+;;
 ;;
 ;;
 ;; TODO:
 ;;      - do autocompletion properly
 ;;      - implement a proper switching between python interpreters
 ;;
+;; BUGS:
+;;      - neither::
+;;
+;;         (py-shell "-c print 'FOOBAR'")
+;;       
+;;        nor::
+;;       
+;;         (let ((py-python-command-args (append py-python-command-args 
+;;                                              '("-c" "print 'FOOBAR'"))))
+;;           (py-shell))
+;;
+;;        seem to print anything as they should
 
 ;;; Code
 (require 'cl)
@@ -64,10 +82,18 @@
 (require 'executable)
 (require 'ansi-color)
 
+(defcustom ipython-command "ipython"
+  "*Shell command used to start ipython."
+  :type 'string 
+  :group 'python)
+
 ;; Users can set this to nil
 (defvar py-shell-initial-switch-buffers t
   "If nil, don't switch to the *Python* buffer on the first call to
   `py-shell'.")
+
+(defvar ipython-backup-of-py-python-command nil
+  "HACK")
 
   
 (defvar ipython-de-input-prompt-regexp "\\(?:
@@ -83,63 +109,67 @@ the second for a 'normal' command, and the third for a multiline command.")
 (defvar ipython-de-output-prompt-regexp "^Out\\[[0-9]+\\]: "
   "A regular expression to match the output prompt of IPython.")
 
-(when (executable-find "ipython")
-  ;; XXX load python-mode, so that we can screw around with its variables this
-  ;; has the disadvantage that python-mode is loaded even if no python-file is
-  ;; ever edited etc. but it means that `py-shell' works without loading a
-  ;; python-file first. Obviously screwing around with python-mode's variables
-  ;; like this is a mess, but well.
-  (require 'python-mode)
-  ;; turn on ansi colors for ipython and activate completion
-  (defun ipython-shell-hook ()
-    ;; the following is to synchronize dir-changes
-    (make-local-variable 'shell-dirstack)
-    (setq shell-dirstack nil)
-    (make-local-variable 'shell-last-dir)
-    (setq shell-last-dir nil)
-    (make-local-variable 'shell-dirtrackp)
-    (setq shell-dirtrackp t)
-    (add-hook 'comint-input-filter-functions 'shell-directory-tracker nil t)
 
-    (ansi-color-for-comint-mode-on)
-    (define-key py-shell-map [tab] 'ipython-complete)
-    ;XXX this is really just a cheap hack, it only completes symbols in the
-    ;interactive session -- useful nonetheless.
-    (define-key py-mode-map [(meta tab)] 'ipython-complete))
-  (add-hook 'py-shell-hook 'ipython-shell-hook)
-  ;; Regular expression that describes tracebacks for IPython in context and
-  ;; verbose mode. 
+(if (not (executable-find ipython-command))
+    (message (format "Can't find executable %s - ipython.el *NOT* activated!!!"
+                     ipython-command))
+    ;; XXX load python-mode, so that we can screw around with its variables
+    ;; this has the disadvantage that python-mode is loaded even if no
+    ;; python-file is ever edited etc. but it means that `py-shell' works
+    ;; without loading a python-file first. Obviously screwing around with
+    ;; python-mode's variables like this is a mess, but well.
+    (require 'python-mode)
+    ;; turn on ansi colors for ipython and activate completion
+    (defun ipython-shell-hook ()
+      ;; the following is to synchronize dir-changes
+      (make-local-variable 'shell-dirstack)
+      (setq shell-dirstack nil)
+      (make-local-variable 'shell-last-dir)
+      (setq shell-last-dir nil)
+      (make-local-variable 'shell-dirtrackp)
+      (setq shell-dirtrackp t)
+      (add-hook 'comint-input-filter-functions 'shell-directory-tracker nil t)
+
+      (ansi-color-for-comint-mode-on)
+      (define-key py-shell-map [tab] 'ipython-complete)
+      ;;XXX this is really just a cheap hack, it only completes symbols in the
+      ;;interactive session -- useful nonetheless.
+      (define-key py-mode-map [(meta tab)] 'ipython-complete))
+    (add-hook 'py-shell-hook 'ipython-shell-hook)
+    ;; Regular expression that describes tracebacks for IPython in context and
+    ;; verbose mode. 
   
-  ;;Adapt python-mode settings for ipython.
-  ;; (this works for @xmode 'verbose' or 'context')
+    ;;Adapt python-mode settings for ipython.
+    ;; (this works for @xmode 'verbose' or 'context')
 
-  ;; XXX putative regexps for syntax errors; unfortunately the 
-  ;;     current python-mode traceback-line-re scheme is too primitive,
-  ;;     so it's either matching syntax errors, *or* everything else
-  ;;     (XXX: should ask Fernando for a change)
-  ;;"^   File \"\\(.*?\\)\", line \\([0-9]+\\).*\n.*\n.*\nSyntaxError:"
-  ;;^   File \"\\(.*?\\)\", line \\([0-9]+\\)"
-  (setq py-traceback-line-re
-        "\\(^[^\t ].+?\\.py\\).*\n   +[0-9]+[^\00]*?\n-+> \\([0-9]+\\) +")
+    ;; XXX putative regexps for syntax errors; unfortunately the 
+    ;;     current python-mode traceback-line-re scheme is too primitive,
+    ;;     so it's either matching syntax errors, *or* everything else
+    ;;     (XXX: should ask Fernando for a change)
+    ;;"^   File \"\\(.*?\\)\", line \\([0-9]+\\).*\n.*\n.*\nSyntaxError:"
+    ;;^   File \"\\(.*?\\)\", line \\([0-9]+\\)"
+    (setq py-traceback-line-re
+          "\\(^[^\t ].+?\\.py\\).*\n   +[0-9]+[^\00]*?\n-+> \\([0-9]+\\) +")
 
-  (setq py-shell-input-prompt-1-regexp "^In \\[[0-9]+\\]: "
-        py-shell-input-prompt-2-regexp "^   [.][.][.]+: " )
-  ;; select a suitable color-scheme
-  (unless (member "-colors" py-python-command-args)
-    (setq py-python-command-args 
-          (nconc py-python-command-args 
-                 (list "-colors"
-                       (cond  
-                        ((eq frame-background-mode 'dark)
-                         "DarkBG")
-                        ((eq frame-background-mode 'light)
-                         "LightBG")
-                        (t   ; default (backg-mode isn't always set by XEmacs)
-                         "LightBG"))))))
-  (setq py-python-command "ipython"))
+    (setq py-shell-input-prompt-1-regexp "^In \\[[0-9]+\\]: "
+          py-shell-input-prompt-2-regexp "^   [.][.][.]+: " )
+    ;; select a suitable color-scheme
+    (unless (member "-colors" py-python-command-args)
+      (setq py-python-command-args 
+            (nconc py-python-command-args 
+                   (list "-colors"
+                         (cond  
+                           ((eq frame-background-mode 'dark)
+                            "DarkBG")
+                           ((eq frame-background-mode 'light)
+                            "LightBG")
+                           (t ; default (backg-mode isn't always set by XEmacs)
+                            "LightBG"))))))
+    (setq ipython-backup-of-py-python-command py-python-command)
+    (setq py-python-command "ipython"))
 
 
-;; modify py-shell so that it loads the editing history
+;; MODIFY py-shell so that it loads the editing history
 (defadvice py-shell (around py-shell-with-history)
   "Add persistent command-history support (in
 $PYTHONHISTORY (or \"~/.ipython/history\", if we use IPython)). Also, if
@@ -157,6 +187,22 @@ buffer already exists."
       (unless py-shell-initial-switch-buffers
         (switch-to-buffer-other-window buf)))))
 (ad-activate 'py-shell)
+;; (defadvice py-execute-region (before py-execute-buffer-ensure-process)
+;;   "HACK: test that ipython is already running before executing something.
+;;   Doing this properly seems not worth the bother (unless people actually
+;;   request it)."
+;; (unless (comint-check-proc "*Python*")
+;;     (error "Sorry you have to first do M-x py-shell to send something to ipython.")))
+;; (ad-activate 'py-execute-region)
+
+(defadvice py-execute-region (around py-execute-buffer-ensure-process)
+  "HACK: if `py-shell' is not active or ASYNC is explicitly desired, fall back
+  to python instead of ipython." 
+  (let ((py-python-command (if (or (comint-check-proc "*Python*") async)
+                               py-python-command
+                               ipython-backup-of-py-python-command)))
+    ad-do-it))
+(ad-activate 'py-execute-region)
 
 (defun ipython-to-doctest (start end)
   "Transform a cut-and-pasted bit from an IPython session into something that
