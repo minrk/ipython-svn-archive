@@ -1,11 +1,19 @@
 #!/bin/sh
 
-# release test, only builds the tgz file
+# release test
 
 # clean up dist directory
 #rm -rf ~/ipython/dist/*
 
 # build source distros
 cd ~/ipython/ipython
-#./setup.py sdist --formats=gztar
-./setup.py sdist --formats=gztar bdist --formats=rpm
+
+PYVER=`python -V 2>&1 | awk '{print $2}' | awk -F '.' '{print $1$2}' `
+
+./setup.py sdist --formats=gztar
+./setup.py bdist_rpm --release=py$PYVER --requires=python --provides=ipython
+
+# Call the windows build separately, so that the extra Windows scripts don't
+# get pulled into Unix builds (setup.py has code which checks for
+# bdist_wininst)
+./setup.py bdist_wininst --install-script=ipython_win_post_install.py
