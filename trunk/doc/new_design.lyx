@@ -1194,4 +1194,112 @@ is
 maybe
 \emph default 
  keep the old one around for the sake of backwards compatibility).
+\layout Section
+
+Ville Vainio's suggestions
+\layout Standard
+
+Some notes sent in by Ville Vainio 
+\family typewriter 
+<vivainio@kolumbus.fi>
+\family default 
+ on Tue, 29 Jun 2004.
+ Keep here for reference, some of it replicates things already said above.
+\layout Standard
+
+Current ipython seems to "special case" lots of stuff - aliases, magics
+ etc.
+ It would seem to yield itself to a simpler and more extensible architecture,
+ consisting of multple dictionaries, where just the order of search is determine
+d by profile/prefix.
+ All the functionality would just be "pushed" to ipython core, i.e.
+ the objects that represent the functionality are instantiated on "plugins"
+ and they are registered with ipython core.
+ i.e.
+\layout Standard
+
+def magic_f(options, args): pass
+\layout Standard
+
+m = MyMagic(magic_f) m.arghandler = stockhandlers.OptParseArgHandler m.options
+ = ....
+ # optparse options, for easy passing to magic_f and help display
+\layout Standard
+
+# note that arghandler takes a peek at the instance, sees options, and proceeds
+ # accordingly.
+ Various arg handlers can ask for arbitrary options.
+ # some handler might optionally glob the filenames, search data folders
+ for filenames etc.
+\layout Standard
+
+ipythonregistry.register(category = "magic", name = "mymagic", obj = m)
+\layout Standard
+
+I bet most of the current functionality could easily be added to such a
+ registry by just instantiating e.g.
+ "Magic" class and registering all the functions with some sensible default
+ args.
+ Supporting legacy stuff in general would be easy - just implement new handlers
+ (arg and otherwise) for new stuff, and have the old handlers around forever
+ / as long as is deemed appropriate.
+ The 'python' namespace (locals() + globals()) should be special, of course.
+\layout Standard
+
+It should be easy to have arbitrary number of "categories" (like 'magic',
+ 'shellcommand','projectspecific_myproject', 'projectspecific_otherproject').
+ It would only influence the order in which the completions are suggested,
+ and in case of name collision which one is selected.
+ Also, I think all completions should be shown, even the ones in "later"
+ categories in the case of a match in an "earlier" category.
+\layout Standard
+
+The "functionality object" might also have a callable object 'expandarg',
+ and ipython would run it (with the arg index) when tab completion is attempted
+ after typing the function name.
+ It would return the possible completions for that particular command...
+ or None to "revert to default file completions".
+ Such functionality could be useful in making ipython an "operating console"
+ of a sort.
+ I'm talking about:
+\layout Standard
+
+>> lscat reactor # list commands in category - reactor is "project specific"
+ category
+\layout Standard
+
+r_operate
+\layout Standard
+
+>> r_operate <tab> start shutdown notify_meltdown evacuate
+\layout Standard
+
+>> r_operate shutdown <tab>
+\layout Standard
+
+1 2 5 6 # note that 3 and 4 are already shut down
+\layout Standard
+
+>> r_operate shutdown 2
+\layout Standard
+
+Shutting down..
+ ok.
+\layout Standard
+
+>> r_operate start <tab>
+\layout Standard
+
+2 3 4 # 2 was shut down, can be started now
+\layout Standard
+
+>> r_operate start 2
+\layout Standard
+
+Starting....
+ ok.
+\layout Standard
+
+I'm talking about having a super-configurable man-machine language here!
+ Like cmd.Cmd on steroids, as a free addition to ipython!
 \the_end
