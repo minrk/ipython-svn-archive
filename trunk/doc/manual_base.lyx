@@ -47,7 +47,7 @@ User Manual, v.
  __version__
 \layout Author
 
-Fernando P√©rez
+Fernando PÈrez
 \layout Standard
 
 
@@ -7675,7 +7675,7 @@ The current IPython system grew out of the following three projects:
 \layout List
 \labelwidthstring 00.00.0000
 
-ipython by Fernando P√©rez.
+ipython by Fernando PÈrez.
  I was working on adding Mathematica-type prompts and a flexible configuration
  system (something better than 
 \family typewriter 
@@ -7795,7 +7795,7 @@ Credits
 The main authors of the code are:
 \layout Standard
 
-Fernando P√©rez 
+Fernando PÈrez 
 \family typewriter 
 <fperez@colorado.edu>
 \family default 
@@ -7834,7 +7834,7 @@ Ka-Ping Yee
  with a much nicer syntax than formatting through the '%' operator.
 \layout Standard
 
-Arnd B√§cker 
+Arnd B‰cker 
 \family typewriter 
 <baecker@physik.tu-dresden.de>
 \family default 
@@ -8070,7 +8070,7 @@ Armstrong
 \layout List
 \labelwidthstring 00.00.0000
 
-Fran√ßois\SpecialChar ~
+Francois\SpecialChar ~
 Pinard 
 \family typewriter 
 <pinard@iro.umontreal.ca>
@@ -8118,7 +8118,7 @@ Drexler
 \labelwidthstring 00.00.0000
 
 Gustavo\SpecialChar ~
-C√≥rdova\SpecialChar ~
+CÛrdova\SpecialChar ~
 Avila 
 \family typewriter 
 <gcordova@sismex.com>
