@@ -17,7 +17,7 @@ $Id$"""
 # the tarballs and RPMs made by distutils, so it's best to lowercase it.
 name = 'ipython'
 
-version = '0.6.4.rc3'
+version = '0.6.4.rc4'
 
 description = "An enhanced interactive Python shell."
 
