@@ -77,7 +77,16 @@ if len(sys.argv) >= 2 and sys.argv[1] in ('sdist','bdist_rpm'):
                  
                  ('doc/new_design.pdf',
                   ['doc/new_design.lyx'],
-                  "cd doc && lyxport -tt --pdf new_design.lyx")
+                  "cd doc && lyxport -tt --pdf new_design.lyx"),
+
+                 ('doc/ipython.1.gz',
+                  ['doc/ipython.1'],
+                  "cd doc && gzip -9c ipython.1 > ipython.1.gz"),
+
+                 ('doc/pycolor.1.gz',
+                  ['doc/pycolor.1'],
+                  "cd doc && gzip -9c pycolor.1 > pycolor.1.gz"),
+                 
                  ]
     for target in to_update:
         target_update(*target)
