@@ -394,13 +394,14 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # List of shell commands to auto-define
         if os.name == 'posix':
             auto_shell = {'ls': 'ls -F', 'mkdir': 'mkdir', 'rmdir':'rmdir',
-                          'mv':'mv','rm':'rm -i','rmf':'rm -f','less':'less',
-                          'cat':'cat','clear':'clear','lc':'ls -F -o --color'}
+                          'mv':'mv -i','rm':'rm -i','rmf':'rm -f','less':'less',
+                          'cat':'cat','clear':'clear','lc':'ls -F -o --color',
+                          'cp':'cp -i','ll':'ls -l'}
         elif os.name =='nt':
             auto_shell = {'dir':'dir /on', 'ls':'dir /on',
                           'ddir':'dir /ad /on', 'ld':'dir /ad /on',
                           'mkdir': 'mkdir','rmdir':'rmdir',
-                          'ren':'ren','cls':'cls',
+                          'ren':'ren','cls':'cls','cp':'copy','copy':'copy',
                           'more':'type','type':'type' }
         else:
             auto_shell = {}
