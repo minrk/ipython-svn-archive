@@ -1247,7 +1247,6 @@ There seemed to be a problem with your sys.stderr.
 
         lsplit = self.line_split.match(line)
         if lsplit is None:  # no regexp match returns None
-            print 'no match!' # dbg
             line = line.rstrip()
             ini_spaces = re.match('^(\s+)',line)
             if ini_spaces:
@@ -1261,7 +1260,6 @@ There seemed to be a problem with your sys.stderr.
             except ValueError:
                 iFun,theRest = line,''
         else:
-            print 'match!' # dbg
             pre,iFun,theRest = lsplit.groups()
         #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest)  # dbg
         return pre,iFun.strip(),theRest
@@ -1321,7 +1319,7 @@ There seemed to be a problem with your sys.stderr.
 
         # Next, check if we can automatically execute this thing
         pre,iFun,theRest = self.split_user_input(line)
-        print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest)  # dbg
+        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest)  # dbg
 
         # Allow ! in multi-line statements if multi_line_specials is on:
         if continue_prompt and self.rc.multi_line_specials and \

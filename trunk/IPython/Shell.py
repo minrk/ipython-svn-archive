@@ -60,9 +60,6 @@ class IPShell:
         if sys_exit:
             sys.exit()
 
-# alias for backwards compatibility
-IPythonShell = IPShell
-
 #-----------------------------------------------------------------------------
 class IPShellEmbed:
     """Allow embedding an IPython shell into a running program.
@@ -247,9 +244,6 @@ class IPShellEmbed:
 
         self.exit_msg = exit_msg
 
-# alias for backwards compatibility
-IPythonShellEmbed = IPShellEmbed
-
 #-----------------------------------------------------------------------------
 class MTInteractiveShell(InteractiveShell):
     """Simple multi-threaded shell."""
@@ -343,7 +337,6 @@ class MTInteractiveShell(InteractiveShell):
         self.ready.release()
 
 class MatplotlibShellBase:
-
     """Mixin class to provide the necessary modifications to regular IPython
     shell classes for matplotlib support.
 
@@ -396,6 +389,7 @@ class MatplotlibShellBase:
         
     def magic_run(self,parameter_s=''):
         """Modified @run for Matplotlib"""
+
         Magic.magic_run(self,parameter_s,runner=self.mplot_exec)
 
 # Now we provide 2 versions of a matplotlib-aware IPython base shells, single
@@ -403,23 +397,19 @@ class MatplotlibShellBase:
 # classes below are the ones meant for public consumption.
 
 class MatplotlibShell(MatplotlibShellBase,InteractiveShell):
-    """Single-threaded shell, modified to handle matplotlib scripts."""
+    """Single-threaded shell with matplotlib support."""
 
     def __init__(self,name,usage=None,rc=Struct(opts=None,args=None),
                  user_ns = None, **kw):
-
         user_ns,b2 = self._matplotlib_config(name)
-        # Initialize parent class
         InteractiveShell.__init__(self,name,usage,rc,user_ns,banner2=b2,**kw)
 
 class MatplotlibMTShell(MatplotlibShellBase,MTInteractiveShell):
-    """Multithreaded shell, modified to handle matplotlib scripts."""
+    """Multi-threaded shell with matplotlib support."""
 
     def __init__(self,name,usage=None,rc=Struct(opts=None,args=None),
                  user_ns = None, **kw):
-
         user_ns,b2 = self._matplotlib_config(name)
-        # Initialize parent class
         MTInteractiveShell.__init__(self,name,usage,rc,user_ns,banner2=b2,**kw)
 
 #-----------------------------------------------------------------------------
@@ -562,6 +552,7 @@ class IPShellMatplotlibWX(IPShellWX):
 
 #-----------------------------------------------------------------------------
 # Factory functions to actually start the proper thread-aware shell
+
 def _matplotlib_shell_class():
     """Factory function to handle shell class selection for matplotlib.
 
@@ -607,4 +598,7 @@ def start():
         shell = IPShell
     return shell()
 
+# Some aliases for backwards compatibility
+IPythonShell = IPShell
+IPythonShellEmbed = IPShellEmbed
 #************************ End of file <Shell.py> ***************************

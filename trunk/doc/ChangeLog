@@ -1,5 +1,11 @@
 2004-08-27  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/iplib.py (InteractiveShell.__init__): Fix accidental
+	autocalling of expressions like r'foo', by modifying the line
+	split regexp.  Closes
+	http://www.scipy.net/roundup/ipython/issue18, reported by Nicholas
+	Riley <ipythonbugs@sabi.net>.
+
 	* IPython/Shell.py: Significant refactoring of all classes, so
 	that we can really support ALL matplotlib backends and threading
 	models (John spotted a bug with Tk which required this).  Now we
