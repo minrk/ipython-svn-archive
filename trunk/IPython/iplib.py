@@ -38,24 +38,28 @@ __author__  = '%s <%s>\n%s <%s>' % \
 __license__ = Release.license
 
 # Python standard modules
-import os, sys, __main__,__builtin__
-import UserList # don't subclass list so this works with Python2.1
+import __main__
+import __builtin__
 import exceptions
-import code, glob, types, re, inspect,pydoc,StringIO,shutil,pdb,string
-from pprint import pprint,pformat
-
+import os, sys, shutil
+import code, glob, types, re
+import string, StringIO
+import inspect, pydoc
+import bdb, pdb
+import UserList # don't subclass list so this works with Python2.1
+from pprint import pprint, pformat
 
 # Homebrewed modules
-from Logger import Logger
-from Magic import Magic,magic2python
 import OInspect,PyColorize
 import ultraTB
 from ultraTB import ColorScheme,ColorSchemeTable  # too long names
+from Logger import Logger
+from Magic import Magic,magic2python
 from usage import cmd_line_usage,interactive_usage
 from Struct import Struct
-from genutils import *
 from Itpl import Itpl,itpl,printpl
 from FakeModule import FakeModule
+from genutils import *
 
 #****************************************************************************
 # Some utility function definitions
@@ -809,9 +813,6 @@ want to merge them back into the new files.""" % locals()
                     else:
                         break
                 else:
-                    # don't increment the prompt if there's no user input.
-                    if not (more or line): 
-                        self.outputcache.prompt_count -= 1
                     more = self.push(line)
                     # Auto-indent management
                     if self.autoindent:
@@ -843,6 +844,12 @@ want to merge them back into the new files.""" % locals()
             except SystemExit:
                 # If a SystemExit gets here, it's from an IPython @Exit call
                 break
+
+            except bdb.BdbQuit:
+                warn("The Python debugger has exited with a BdbQuit exception.\n"
+                     "Because of how pdb handles the stack, it is impossible\n"
+                     "for IPython to properly format this particular exception.\n"
+                     "IPython will resume normal operation.")
             except:
                 # We should never get here except in fairly bizarre situations
                 # (or b/c of an IPython bug). One reasonable exception is if
@@ -974,7 +981,6 @@ There seemed to be a problem with your sys.stderr.
                 warn( __builtins__['exit']+
                      "\nUse @Exit or @Quit to exit without confirmation.",
                       level=1)
-
         except:
             self.showtraceback()
         else:
