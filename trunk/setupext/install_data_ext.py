@@ -73,7 +73,7 @@ class install_data_ext(install_data):
                 for f in files:
                     f = convert_path(f)
                     (out, _) = self.copy_file(f, dir)
-                    print "DEBUG: ", out
+                    #print "DEBUG: ", out  # dbg
                     self.outfiles.append(out)
                     
 
