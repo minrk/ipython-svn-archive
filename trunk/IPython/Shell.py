@@ -430,26 +430,59 @@ class IPShellWX(threading.Thread):
     def __init__(self,argv=None,user_ns=None,debug=0,
                  shell_class=MTInteractiveShell):
         threading.Thread.__init__(self)
-
-        def wxquit(*args): pass # how to quit wx?
+        import wxPython.wx as wx
+        self.wx = wx
+        def wxquit(*args): pass # mainquit for wx
         self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
                                shell_class=shell_class,
-                               on_kill=[wxquit])
+                               on_kill=[self.wxexit])
+        self.app = None
 
+    def wxexit(self, *args):
+        if self.app is not None:
+            self.app.agent.timer.Stop()
+            # kill wx?
+            
     def run(self):
         self.IP.interact()
         self.IP.kill()
 
     def mainloop(self):
+        
         self.start()
 
-        def runcode(*args):
-            self.IP.runcode()
-            t = threading.Timer(self.TIMEOUT/1000.0, runcode)
-            t.start()
+        class TimerAgent(self.wx.wxMiniFrame):
+            wx = self.wx
+            IP = self.IP
+            def __init__(self, parent, interval):
+                self.wx.wxMiniFrame.__init__(self, parent, -1, ' ', pos=(200, 200),
+                                             size=(100, 100),
+                                             style=self.wx.wxDEFAULT_FRAME_STYLE | self.wx.wxTINY_CAPTION_HORIZ)
+                self.Show(False)
+                self.interval = interval
+                self.timerId = self.wx.wxNewId()                                
 
-        t = threading.Timer(self.TIMEOUT/1000.0, runcode)
-        t.start()
+            def StartWork(self):
+                self.timer = self.wx.wxTimer(self, self.timerId)
+                self.wx.EVT_TIMER(self,  self.timerId, self.OnTimer)
+                self.timer.Start(self.interval)
+
+            def OnTimer(self, event):
+                self.IP.runcode()
+
+        class App(self.wx.wxApp):
+            wx = self.wx
+            def OnInit(self):
+                'Create the main window and insert the custom frame'
+                print 'OnInit'
+                self.agent = TimerAgent(None, 100)
+                self.agent.Show(self.wx.false)
+                self.agent.StartWork()
+
+                return self.wx.true
+        
+        self.app = App()
+        self.app.MainLoop()
         self.join()
 
 class IPShellMatplotlibGTK(IPShellGTK):
@@ -473,26 +506,22 @@ class IPShellMatplotlibWX(IPShellWX):
                             shell_class=MatplotlibShell)
 
 def matplotlib_shell():
-    """Factory function to handle backend selection for matplotlib."""
+    """Factory function to handle shell class selection for matplotlib.
+
+    The proper shell class to use depends on the matplotlib backend, since
+    each backend requires a different threading strategy."""
+
     import matplotlib
+
     backend = matplotlib.rcParams['backend']
     if backend.startswith('WX'):
-        
-        # FIXME: temporarily disable the real WX shell until we get it to work
-        # cleanly
-
-        #print 'Using WX shell with the %s backend'%backend  # dbg
-        #return IPShellMatplotlibWX
-        
-        matplotlib.rcParams['backend'] = 'TkAgg'
-        warn('WX backend support is currently broken, reverting to TkAgg.')
-        return IPShell
-        
+        name,shell = 'WX shell',IPShellMatplotlibWX
     elif backend.startswith('GTK'):
-        #print 'Using GTK shell with the %s backend'%backend # dbg
-        return IPShellMatplotlibGTK
+        name,shell = 'WX shell',IPShellMatplotlibGTK
     else:
-        #print 'Using IPShell with the %s backend'%backend # dbg
-        return IPShell
+        name,shell = 'IPShell',IPShell
+
+    print 'Using %s with the %s backend.' % (shell,backend) # dbg
+    return shell
 
 #************************ end of file <Shell.py> ***************************
