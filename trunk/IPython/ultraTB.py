@@ -431,7 +431,7 @@ class VerboseTB(TBTools):
         # Drop topmost frames if requested
         try:
             records = inspect.getinnerframes(etb, context)[self.tb_offset:]
-        except:  # dbg
+        except:
 
             # FIXME: I've been getting many crash reports from python 2.3
             # users, traceable to inspect.py.  If I can find a small test-case

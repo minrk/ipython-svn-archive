@@ -45,13 +45,13 @@ cd $ipdir/tools
 
 # Build source and binary distros
 cd $ipdir
-./setup.py sdist --formats=gztar
+./setup.py sdist --formats=gztar,zip
 ./setup.py bdist_rpm --release=py$PYVER --requires=python --provides=ipython
 
 # Call the windows build separately, so that the extra Windows scripts don't
 # get pulled into Unix builds (setup.py has code which checks for
 # bdist_wininst)
-./setup.py bdist_wininst --install-script=ipython_win_post_install.py
+#./setup.py bdist_wininst --install-script=ipython_win_post_install.py
 
 # Upload all files
 cd $ipdir/dist
@@ -73,8 +73,8 @@ cd $www
 
 # Alert package maintainers
 echo "Alerting package maintainers..."
-maintainers='fperez@colorado.edu ariciputi@users.sourceforge.net jack@xiph.org \
-dryice@hotpop.com'
+maintainers='fperez@colorado.edu ariciputi@users.sourceforge.net jack@xiph.org dryice@hotpop.com'
+#maintainers='fperez@colorado.edu'
 
 for email in $maintainers
     do
