@@ -65,13 +65,12 @@ instead of -option) to turn the feature off.
 
  -help: print this help and exit.
 
- -gthread, -wthread, -mpthread: These are special options, only one of which
- can be given, and which can ONLY be given as the FIRST option passed to
- IPython (they will have no effect in any other position).  They provide
- threading support for the GTK and WXPython toolkits, and for the matplotlib
- library.  The threading option must be given first because it will determine
- internally how IPython itself is initialized, before any of the other regular
- options are processed.
+ -gthread, -wthread, -pylab: These are special options, only ONE of which can
+ be given, and which can ONLY be given as the FIRST option passed to IPython
+ (they will have no effect in any other position).  They provide threading
+ support for the GTK and WXPython toolkits, and for the matplotlib library.
+ The chosen option must be given first because it will determine how IPython
+ itself is initialized, before any of the other regular options are processed.
 
  If -gthread is given, IPython starts running a separate thread for GTK
  operation, so that pyGTK-based programs can open GUIs without blocking
