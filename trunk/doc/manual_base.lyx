@@ -1685,8 +1685,12 @@ Define your own macros with
 \layout Itemize
 
 Define your own system aliases.
- Even though IPython gives you access to your system shell via the ! prefix,
- it is convenient to have aliases to the system commands you use most often.
+ Even though IPython gives you access to your system shell via the 
+\family typewriter 
+!
+\family default 
+ prefix, it is convenient to have aliases to the system commands you use
+ most often.
  This allows you to work seamlessly from inside IPython with the same commands
  you are used to in your system shell.
 \newline 
@@ -1710,6 +1714,22 @@ IPython comes with some pre-defined aliases and a complete system for changing
 .
  The latter keeps a history of visited directories and allows you to go
  to any previously visited one.
+\layout Itemize
+
+Use Python to manipulate the results of system commands.
+ The `
+\family typewriter 
+!!
+\family default 
+' special syntax, and the 
+\family typewriter 
+@sc
+\family default 
+ and 
+\family typewriter 
+@sx
+\family default 
+ magic commands allow you to capture system output into Python variables.
 \layout Itemize
 
 Use profiles to maintain different configurations (modules to load, function
@@ -3495,6 +3515,66 @@ Any input line beginning with a
 'ls'
 \family default 
  in the current directory.
+\layout Standard
+
+If the input begins with 
+\emph on 
+two
+\emph default 
+ exclamation marks, 
+\family typewriter 
+!!
+\family default 
+, the command is executed but its output is captured and returned as a python
+ list, split on newlines.
+ Any output sent by the subprocess to standard error is printed separately,
+ so that the resulting list only captures standard output.
+ The 
+\family typewriter 
+!!
+\family default 
+ syntax is a shorthand for the 
+\family typewriter 
+@sx
+\family default 
+ magic command.
+\layout Standard
+
+Finally, the 
+\family typewriter 
+@sc
+\family default 
+ magic (short for `shell capture') is similar to 
+\family typewriter 
+@sx
+\family default 
+, but allowing more fine-grained control of the capture details, and storing
+ the result directly into a named variable.
+\layout Standard
+
+See Sec.\SpecialChar ~
+
+\begin_inset LatexCommand \ref{sec:magic}
+
+\end_inset 
+
+ for details on the magics 
+\family typewriter 
+@sc
+\family default 
+ and 
+\family typewriter 
+@sx
+\family default 
+, or use IPython's own help (
+\family typewriter 
+sc?
+\family default 
+ and 
+\family typewriter 
+sx?
+\family default 
+) for further details.
 \layout Subsection
 
 System command aliases
