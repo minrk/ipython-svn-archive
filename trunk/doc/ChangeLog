@@ -1,6 +1,11 @@
+2004-06-01  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Logger.py (Logger.create_log): fix bug for logging
+	with no filename (previous fix was incomplete).
+
 2004-05-25  Fernando Perez  <fperez@colorado.edu>
 
-	* IPython/Magic.py (Magic.parse_options): Fix bug where naked
+	* IPython/Magic.py (Magic.parse_options): fix bug where naked
 	parens would get passed to the shell.
 
 2004-05-20  Fernando Perez  <fperez@colorado.edu>
