@@ -1,3 +1,8 @@
+2003-12-09  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (page): patch for the pager to work across
+	various versions of Windows.  By Gary Bishop.
+
 2003-12-04  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Gnuplot2.py (PlotItems): Fixes for working with

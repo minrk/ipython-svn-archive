@@ -5781,6 +5781,7 @@ Bishop
 \family default 
  Bug reports, and patches to work around the exception handling idiosyncracies
  of WxPython.
+ Readline and color support for Windows.
 \layout List
 \labelwidthstring 00.00.0000
 
@@ -5817,4 +5818,13 @@ Sander
 <osander@gmx.de>
 \family default 
  Bug reports.
+\layout List
+\labelwidthstring 00.00.0000
+
+Dryice\SpecialChar ~
+Liu 
+\family typewriter 
+<dryice@liu.com.cn>
+\family default 
+ FreeBSD port.
 \the_end
