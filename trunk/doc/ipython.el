@@ -28,6 +28,9 @@
 ;; terminal functions in py-shell are handled by emacs's comint, **not** by
 ;; (i)python, so importing readline etc. will have 0 effect.
 ;;
+;; To start an interactive ipython session run `py-shell' with ``M-x py-shell``
+;; (or the default keybinding ``C-c C-!``).
+;;
 ;; NOTE: This mode is currently somewhat alpha and although I hope that it
 ;; will work fine for most cases, doing certain things (like the
 ;; autocompletion and a decent scheme to switch between python interpreters)
@@ -37,7 +40,43 @@
 ;; Also note that you currently NEED THE CVS VERSION OF PYTHON.EL.
 ;;
 ;; Further note that I don't know whether this runs under windows or not and
-;; that if it doesn't I can't really help much, not being a fellow sufferer.
+;; that if it doesn't I can't really help much, not being afflicted myself.
+;;
+;;
+;; Hints for effective usage
+;; -------------------------
+;;
+;; - IMO the best feature by far of the ipython/emacs combo is how much easier it
+;;   makes it to find and fix bugs thanks to the ``@pdb on``/ pdbtrack combo. Try
+;;   it: first in the ipython to shell do ``@pdb on`` then do something that will
+;;   raise an exception (FIXME nice example) -- and be amazed how easy it is to
+;;   inspect the live objects in each stack frames and to jump to the
+;;   corresponding sourcecode locations as you walk up and down the stack trace
+;;   (even without ``%pdb on`` you can always use ``C-c -`` (`py-up-exception')
+;;   to jump to the corresponding source code locations).
+;;
+;; - emacs gives you much more powerful commandline editing and output searching
+;;   capabilities than ipython-standalone -- isearch is your friend if you
+;;   quickly want to print 'DEBUG ...' to stdout out etc.
+;;
+;; - This is not really specific to ipython, but for more convenient history
+;;   access you might want to add something like the following to *the beggining*
+;;   of your ``.emacs`` (if you want behavior that's more similar to stand-alone
+;;   ipython, you can change ``meta p`` etc. for ``control p``)::
+;;
+;;         (require 'comint)
+;;         (define-key comint-mode-map [(meta p)] 
+;;           'comint-previous-matching-input-from-input)
+;;         (define-key comint-mode-map [(meta n)] 
+;;           'comint-next-matching-input-from-input)
+;;         (define-key comint-mode-map [(control meta n)]
+;;            'comint-next-input)
+;;         (define-key comint-mode-map [(control meta p)]
+;;            'comint-previous-input)
+;;
+;; - Be aware that if you customize py-python-command previously, this value
+;;   will override what ipython.el does (because loading the customization
+;;   variables comes later).
 ;;
 ;; Please send comments and feedback to the ipython-list
 ;; (<ipython-user@scipy.net>) where I (a.s.) or someone else will try to
@@ -75,6 +114,10 @@
 ;;           (py-shell))
 ;;
 ;;        seem to print anything as they should
+;;
+;;      - look into init priority issues with `py-python-command' (if it's set
+;;        via custom)
+
 
 ;;; Code
 (require 'cl)
@@ -97,11 +140,11 @@
 
   
 (defvar ipython-de-input-prompt-regexp "\\(?:
-In \\[[0-9]+\\]: .*
+In \\[[0-9]+\\]: *.*
 ----+> \\(.*
 \\)[\n]?\\)\\|\\(?:
-In \\[[0-9]+\\]: \\(.*
-\\)\\)\\|^[ ]\\{3\\}[.]\\{3,\\}: \\(.*
+In \\[[0-9]+\\]: *\\(.*
+\\)\\)\\|^[ ]\\{3\\}[.]\\{3,\\}: *\\(.*
 \\)"
   "A regular expression to match the IPython input prompt and the python
 command after it. The first match group is for a command that is rewritten,
@@ -140,7 +183,7 @@ the second for a 'normal' command, and the third for a multiline command.")
     ;; verbose mode. 
   
     ;;Adapt python-mode settings for ipython.
-    ;; (this works for @xmode 'verbose' or 'context')
+    ;; (this works for %xmode 'verbose' or 'context')
 
     ;; XXX putative regexps for syntax errors; unfortunately the 
     ;;     current python-mode traceback-line-re scheme is too primitive,
@@ -151,8 +194,8 @@ the second for a 'normal' command, and the third for a multiline command.")
     (setq py-traceback-line-re
           "\\(^[^\t ].+?\\.py\\).*\n   +[0-9]+[^\00]*?\n-+> \\([0-9]+\\) +")
 
-    (setq py-shell-input-prompt-1-regexp "^In \\[[0-9]+\\]: "
-          py-shell-input-prompt-2-regexp "^   [.][.][.]+: " )
+    (setq py-shell-input-prompt-1-regexp "^In \\[[0-9]+\\]: *"
+          py-shell-input-prompt-2-regexp "^   [.][.][.]+: *" )
     ;; select a suitable color-scheme
     (unless (member "-colors" py-python-command-args)
       (setq py-python-command-args 
@@ -165,8 +208,9 @@ the second for a 'normal' command, and the third for a multiline command.")
                             "LightBG")
                            (t ; default (backg-mode isn't always set by XEmacs)
                             "LightBG"))))))
-    (setq ipython-backup-of-py-python-command py-python-command)
-    (setq py-python-command "ipython"))
+    (unless (equal ipython-backup-of-py-python-command py-python-command)
+      (setq ipython-backup-of-py-python-command py-python-command))
+    (setq py-python-command ipython-command))
 
 
 ;; MODIFY py-shell so that it loads the editing history
@@ -178,7 +222,7 @@ buffer already exists."
   (if (comint-check-proc "*Python*")
       ad-do-it
     (setq comint-input-ring-file-name
-          (if (string-equal py-python-command "ipython")
+          (if (string-equal py-python-command ipython-command)
               (concat (or (getenv "IPYTHONDIR") "~/.ipython") "/history")
             (or (getenv "PYTHONHISTORY") "~/.python-history.py")))
     (comint-read-input-ring t)
@@ -198,7 +242,7 @@ buffer already exists."
 (defadvice py-execute-region (around py-execute-buffer-ensure-process)
   "HACK: if `py-shell' is not active or ASYNC is explicitly desired, fall back
   to python instead of ipython." 
-  (let ((py-python-command (if (or (comint-check-proc "*Python*") async)
+  (let ((py-python-command (if (and (comint-check-proc "*Python*") (not async))
                                py-python-command
                                ipython-backup-of-py-python-command)))
     ad-do-it))
