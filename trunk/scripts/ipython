@@ -33,7 +33,7 @@ if len(sys.argv) > 1:
     if arg1.endswith('-thread'):
         shell = Shell.IPShellGTK
     elif arg1.endswith('-mpthread'):
-        shell = Shell.IPShellMatplotlib
+        shell = Shell.matplotlib_shell()
     else:
         shell = Shell.IPShell
 else:
