@@ -425,10 +425,13 @@ class VerboseTB(TBTools):
                                                   75 - len(str(etype)) ) )
         indent = ' '*indent_size
         frames = []
+        # Flush cache before calling inspect.  This helps alleviate some of the
+        # problems with python 2.3's inspect.py.
+        linecache.checkcache()
         # Drop topmost frames if requested
         try:
             records = inspect.getinnerframes(etb, context)[self.tb_offset:]
-        except:
+        except:  # dbg
 
             # FIXME: I've been getting many crash reports from python 2.3
             # users, traceable to inspect.py.  If I can find a small test-case
