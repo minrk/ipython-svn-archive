@@ -289,7 +289,8 @@ def shell(cmd,verbose=0,debug=0,header=''):
     stat = 0
     if verbose or debug: print header+cmd
     sys.stdout.flush()
-    if not debug: stat = os.system(cmd)
+    if not debug:
+        os.system(cmd)
 
 def getoutput(cmd,verbose=0,debug=0,header='',split=0):
     """Dummy substitute for perl's backquotes.

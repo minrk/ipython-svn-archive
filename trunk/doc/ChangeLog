@@ -1,3 +1,9 @@
+2004-08-16  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.__init__): don't trigger
+	autocall for things like p*q,p/q,p+q,p-q, when p is callable.  Bug
+	reported by Stephen Walton <stephen.walton@csun.edu>.
+
 2004-08-11  Fernando Perez  <fperez@colorado.edu>
 
 	* setup.py (isfile): Fix build so documentation gets updated for
