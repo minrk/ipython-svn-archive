@@ -45,6 +45,9 @@ from Struct import Struct
 from Itpl import Itpl, itpl, printpl,itplns
 from FakeModule import FakeModule
 
+# Globals
+MAGIC_PREFIX = ''  # to be set later by Magic constructor
+
 #***************************************************************************
 # Utility functions
 def magic2python(cmd):
@@ -63,7 +66,7 @@ def magic2python(cmd):
         except:
             func,args = cmd[1:].rstrip(),''
         args = args.replace('"','\\"').replace("'","\\'").rstrip()
-        return '__IP.magic_%s ("%s")%s' % (func,args,endl)
+        return '%s%s ("%s")%s' % (MAGIC_PREFIX,func,args,endl)
     else:
         return cmd
 
@@ -159,8 +162,9 @@ class Magic:
     #......................................................................
     # some utility functions
 
-    def __init__(self):
+    def __init__(self,name):
         self.options_table = {}
+        MAGIC_PREFIX = name+'.magic_'
 
     def default_option(self,fn,optstr):
         """Make an entry in the options_table for fn, with value optstr"""
@@ -456,7 +460,7 @@ configuration directory, typically $HOME/.ipython/).
 You can also define your own aliased names for magic functions. In your
 ipythonrc file, placing a line like:
 
-  execute __IP.magic_pf = __IP.magic_profile
+  execute __IPYTHON__.magic_pf = __IPYTHON__.magic_profile
 
 will define @pf as a new name for @profile.
 
@@ -957,7 +961,7 @@ Currently the magic system has the following functions:\n"""
         If you really need to assign this value via an explicit function call,
         you can always tap directly into the true name of the magic function
         with:\\
-          In [3]: stats = __IP.magic_prun('-r print 4')
+          In [3]: stats = __IPYTHON__.magic_prun('-r print 4')
 
        -s <key>: sort profile by given key. You can provide more than one key
         by using the option several times: '-s key1 -s key2 -s key3...'. The
