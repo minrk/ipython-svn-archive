@@ -3,6 +3,11 @@
 	* IPython/iplib.py (runlines): Add a public method to expose
 	IPython's code execution machinery, so that users can run strings
 	as if they had been typed at the prompt interactively.
+	(InteractiveShell.__init__): Added getoutput() to the __IPYTHON__
+	methods which can call the system shell, but with python variable
+	expansion.  The three such methods are: __IPYTHON__.system,
+	.getoutput and .getoutputerror.  These need to be documented in a
+	'public API' section (to be written) of the manual.
 
 2005-03-20  Fernando Perez  <fperez@colorado.edu>
 
