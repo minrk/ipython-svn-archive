@@ -1110,10 +1110,16 @@ There seemed to be a problem with your sys.stderr.
         Also log them with a prepended # so the log is clean Python."""
 
         pre,iFun,theRest = self.split_user_input(line)
-        # print 'auto: '+line0+'|'+iFun+'|'+theRest  # dbg
-        if line[0] == self.ESC_QUOTE:
+        print '*** Auto: pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest) # dbg
+
+        if pre == self.ESC_QUOTE:
             # Auto-quote
             newcmd = iFun + '("' + '", "'.join(theRest.split()) + '")\n'
+        elif theRest.startswith('['):
+            # Make sure that autocall doesn't override data access for objects
+            # which implement both [] and ().  In this case, defer to normal
+            # handler.
+            return self.handle_normal(line,continue_prompt)
         else:
             # Auto-paren
             if theRest.startswith('='):
