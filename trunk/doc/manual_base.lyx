@@ -5826,4 +5826,22 @@ Moffit
 \newline 
 Jack is also contributing with Debian packaging and other things.
  
+\layout List
+\labelwidthstring 00.00.0000
+
+Olivier\SpecialChar ~
+Aubert 
+\family typewriter 
+<oaubert@bat710.univ-lyon1.fr>
+\family default 
+ New magics.
+\layout List
+\labelwidthstring 00.00.0000
+
+Jeffrey\SpecialChar ~
+Collins 
+\family typewriter 
+<Jeff.Collins@vexcel.com>
+\family default 
+ Bug reports.
 \the_end
