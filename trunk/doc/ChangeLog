@@ -1,3 +1,20 @@
+2004-12-17  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.magic_sc): Fix quote stripping problem
+	reported by Prabhu.
+
+	* IPython/genutils.py (info): added new utility for sys.stderr
+	unified info message handling (thin wrapper around warn()).
+
+	* IPython/ultraTB.py (VerboseTB.text): Fix misreported global
+	composite (dotted) names on verbose exceptions.
+	(VerboseTB.nullrepr): harden against another kind of errors which
+	Python's inspect module can trigger, and which were crashing
+	IPython.  Thanks to a report by Marco Lombardi
+	<mlombard@ma010192.hq.eso.org>.
+
+2004-12-13  *** Released version 0.6.6
+
 2004-12-12  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Shell.py (IPShellGTK.mainloop): catch RuntimeErrors
