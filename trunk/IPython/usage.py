@@ -65,13 +65,13 @@ instead of -option) to turn the feature off.
 
  -help: print this help and exit.
 
- -thread, -mpthread: these are special options, only one of which can be
+ -gthread, -mpthread: these are special options, only one of which can be
  given, and which can ONLY be given as the FIRST option passed to IPython
  (they will have no effect in any other position).
 
- If -thread is given, IPython starts running a separate thread for GTK
- operation, so that GTK-based programs can open GUIs without blocking
- ipython's operation.
+ If -gthread is given, IPython starts running a separate thread for GTK
+ operation, so that pyGTK-based programs can open GUIs without blocking
+ IPython.
 
  The -mpthread option adds special support for the matplotlib library
  (http://matplotlib.sourceforge.net), allowing interactive usage of the GTK

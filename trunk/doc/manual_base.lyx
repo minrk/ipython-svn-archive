@@ -2303,7 +2303,7 @@ no|
 
 \family typewriter 
 \series bold 
--thread,\SpecialChar ~
+-gthread,\SpecialChar ~
 -mpthread:
 \family default 
 \series default 
@@ -2320,12 +2320,16 @@ first
 \newline 
 If 
 \family typewriter 
--thread
+-gthread
 \family default 
  is given, IPython starts running a separate thread for GTK operation, so
- that GTK-based programs can open GUIs without blocking ipython's operation.
+ that pyGTK-based programs can open GUIs without blocking IPython's operation.
 \newline 
-The -mpthread option adds special support for the matplotlib library (
+The 
+\family typewriter 
+-mpthread
+\family default 
+ option adds special support for the matplotlib library (
 \begin_inset LatexCommand \htmlurl[http://matplotlib.sourceforge.net]{http://matplotlib.sourceforge.net}
 
 \end_inset 

@@ -30,7 +30,7 @@ import IPython.Shell as Shell
 # actual class which we instantiate for IPython.
 if len(sys.argv) > 1:
     arg1 = sys.argv[1]
-    if arg1.endswith('-thread'):
+    if arg1.endswith('-gthread'):
         shell = Shell.IPShellGTK
     elif arg1.endswith('-mpthread'):
         shell = Shell.matplotlib_shell()

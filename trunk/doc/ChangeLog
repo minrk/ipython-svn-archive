@@ -1,3 +1,17 @@
+2004-08-22  Fernando Perez  <fperez@colorado.edu>
+
+	* scripts/ipython: Changed name of -thread option to -gthread,
+	since this is GTK specific.  I want to leave the door open for a
+	-wthread option for WX, which will most likely be necessary.  This
+	change affects usage and ipmaker as well.
+
+	* IPython/Shell.py (matplotlib_shell): Add a factory function to
+	handle the matplotlib shell issues.  Code by John Hunter
+	<jdhunter@nitace.bsd.uchicago.edu>.
+	(IPShellMatplotlibWX.__init__): Rudimentary WX support.  It's
+	broken (and disabled for end users) for now, but it puts the
+	infrastructure in place.
+
 2004-08-21  Fernando Perez  <fperez@colorado.edu>
 
 	* ipythonrc-pylab: Add matplotlib support.

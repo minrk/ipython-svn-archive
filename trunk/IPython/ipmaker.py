@@ -172,7 +172,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                     'logfile|lf=s logplay|lp=s profile|p=s '
                     'readline! readline_omit__names! '
                     'rcfile=s separate_in|si=s separate_out|so=s '
-                    'separate_out2|so2=s thread! mpthread! xmode=s '
+                    'separate_out2|so2=s gthread! mpthread! xmode=s '
                     'magic_docstrings system_verbose! '
                     'multi_line_specials!')
 
@@ -224,7 +224,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       separate_out = '\n',
                       separate_out2 = '',
                       system_verbose = 0,
-                      thread = 0,
+                      gthread = 0,
                       mpthread = 0,
                       upgrade = 0,
                       Version = 0,
