@@ -2162,10 +2162,16 @@ Defaulting color scheme to 'NoColor'"""
         opts,args = self.parse_options(parameter_s,'lv')
         # Try to get a variable name and command to run
         try:
-            var,cmd = args.split('=',1)
+            # the variable name must be obtained from the parse_options
+            # output, which uses shlex.split to strip options out.
+            var,_ = args.split('=',1)
             var = var.strip()
+            # But the the command has to be extracted from the original input
+            # parameter_s, not on what parse_options returns, to avoid the
+            # quote stripping which shlex.split performs on it.
+            _,cmd = parameter_s.split('=',1)
         except ValueError:
-            var = ''
+            var,cmd = '',''
         if not var:
             error('you must specify a variable to assign the command to.')
             return
