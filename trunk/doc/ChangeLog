@@ -1,3 +1,15 @@
+2003-12-20  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.handle_shell_assign): Added
+	new functionality, to automagically assign the result of a shell
+	command to a variable.  I'll solicit some community feedback on
+	this before making it permanent.
+
+	* IPython/OInspect.py (Inspector.pinfo): Fix crash when info was
+	requested about callables for which inspect couldn't obtain a
+	proper argspec.  Thanks to a crash report sent by Etienne
+	Posthumus <etienne@apple01.cs.vu.nl>.
+
 2003-12-09  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/genutils.py (page): patch for the pager to work across
