@@ -226,29 +226,37 @@ class BasePrompt:
         # by all prompt classes through the cache.  Nice OO spaghetti code!
         self.cache = cache
         self.sep = sep
-        # Set template to create each actual prompt (where numbers change)
-        self.p_template = prompt
-        self.set_p_str()
+        
+        # The namespace where the prompts get resolved is the global one for
+        # now, where we actually defined all the specials.  By having this as
+        # a controlled dict, we can later move it into a cleaner place.  Note
+        # that set_p_str() below will need these to have been set.
+        self.prompt_ns = globals()
+        self.prompt_ns['self'] = self
+
         # regexp to count the number of spaces at the end of a prompt
         # expression, useful for prompt auto-rewriting
         self.rspace = re.compile(r'(\s*)$')
         # Flag to left-pad prompt strings to match the length of the primary
         # prompt
         self.pad_left = pad_left
+        # Set template to create each actual prompt (where numbers change)
+        self.p_template = prompt
+        self.set_p_str()
 
     def set_p_str(self):
         """ Set the interpolating prompt strings.
 
         This must be called every time the color settings change, because the
         prompt_specials global may have changed."""
-        
+
         self.p_str = ItplNS('%s%s%s' %
                             ('$self.sep${self.col_p}',
                              multiple_replace(prompt_specials, self.p_template),
-                             '$self.col_norm'),self.cache.user_ns,locals())
+                             '$self.col_norm'),self.cache.user_ns,self.prompt_ns)
         self.p_str_nocolor = ItplNS(multiple_replace(prompt_specials_nocolor,
                                                      self.p_template),
-                                    self.cache.user_ns,locals())
+                                    self.cache.user_ns,self.prompt_ns)
 
     def __str__(self):
         """Return a string form of the prompt.
@@ -321,18 +329,23 @@ class Prompt2(BasePrompt):
     def __init__(self,cache,prompt='   .\\D.: ',pad_left=True):
         self.cache = cache
         self.p_template = prompt
-        self.set_p_str()
+
+        # The namespace where the prompts get resolved.
+        self.prompt_ns = globals()
+        self.prompt_ns['self'] = self
+
         self.pad_left = pad_left
+        self.set_p_str()
 
     def set_p_str(self):
         self.p_str = ItplNS('%s%s%s ' %
                             ('${self.col_p2}',
                              multiple_replace(prompt_specials, self.p_template),
                              '$self.col_norm'),
-                            self.cache.user_ns,locals())
+                            self.cache.user_ns,self.prompt_ns)
         self.p_str_nocolor = ItplNS(multiple_replace(prompt_specials_nocolor,
                                                      self.p_template),
-                                    self.cache.user_ns,locals())
+                                    self.cache.user_ns,self.prompt_ns)
 
     def set_colors(self):
         self.set_p_str()
