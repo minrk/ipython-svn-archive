@@ -37,21 +37,64 @@ import tempfile
 from Itpl import Itpl,itpl,printpl
 import DPyGetOpt
 
+class Stream:
+    """Simple class to hold the various I/O streams in Term"""
+
+    def __init__(self,stream,name):
+	self.stream = stream
+	self.name = name
+	self.fileno = stream.fileno()
+	self.mode = stream.mode
+
 class Term:
 
-    """ Term holds the file or file-like objects for writing strings to the
-    terminal.
+    """ Term holds the file or file-like objects for handling I/O operations.
 
-    These are normally just sys.stdout and sys.stderr but for Windows they can
-    can replaced to allow editing the strings before they are displayed.
-    """
+    These are normally just sys.stdin, sys.stdout and sys.stderr but for
+    Windows they can can replaced to allow editing the strings before they are
+    displayed."""
 
     # In the future, having IPython channel all its I/O operations through
     # this class will make it easier to embed it into other environments which
     # are not a normal terminal (such as a GUI-based shell)
+    in_s  = Stream(sys.stdin,'in')
+    out_s = Stream(sys.stdout,'out')
+    err_s = Stream(sys.stderr,'err')
+
+    # Store the three streams in err,out,in order so that if we need to reopen
+    # them, the error channel is reopened first to provide info.
+    streams = [err_s,out_s,in_s]
+
+    # The class globals should be the actual 'bare' streams for normal I/O to work
+    in_ = streams[2].stream
+    out = streams[1].stream
+    err = streams[0].stream
     
-    out = sys.stdout
-    err = sys.stderr
+    def reopen_all(cls):
+	"""Reopen all streams if necessary.
+
+	This should only be called if it is suspected that someting closed
+	accidentally one of the I/O streams."""
+
+	any_closed = 0
+	
+	for sn in range(len(cls.streams)):
+	    st = cls.streams[sn]
+	    if st.stream.closed:
+		any_closed = 1
+		new_stream = os.fdopen(os.dup(st.fileno), st.mode,0)
+		cls.streams[sn] = Stream(new_stream,st.name)
+		print >> cls.streams[0].stream, \
+		'\nWARNING:\nStream Term.%s had to be reopened!' % st.name
+
+	# Rebuild the class globals
+	cls.in_ = cls.streams[2].stream
+	cls.out = cls.streams[1].stream
+	cls.err = cls.streams[0].stream
+
+    # Make reopen_all a class method
+    reopen_all = classmethod(reopen_all)
+    
 
 # the types module in Python 2.1 doesn't know about unicode, so let's kludge
 # around the problem a bit:
@@ -233,18 +276,14 @@ def warn(msg,level=2,exit_val=1):
       4 -> Print 'FATAL ERROR:' + message and trigger a sys.exit().
 
     -exit_val (1): exit value returned by sys.exit() for a level 4
-    warning. Ignored for all other levels.
-    
-    """
+    warning. Ignored for all other levels."""
     
     if level>0:
         header = ['','','WARNING: ','ERROR: ','FATAL ERROR: ']
-        sys.stderr.write('%s%s\n' % (header[level],msg))
+        print >> sys.stderr, '%s%s' % (header[level],msg)
         if level == 4:
             print >> sys.stderr,'Exiting.\n'
-            sys.stderr.flush()
             sys.exit(exit_val)
-        sys.stderr.flush()
 
 def error(msg):
     """Equivalent to warn(msg,level=3). """
@@ -886,7 +925,10 @@ def page(strng,start=0,screen_lines=0,pager_cmd = None):
         if TERM=='xterm':
             try:
                 import curses
-                use_curses = 1
+                if hasattr(curses,'initscr'):
+                    use_curses = 1
+                else:
+                    use_curses = 0
             except ImportError:
                 use_curses = 0
         else:
