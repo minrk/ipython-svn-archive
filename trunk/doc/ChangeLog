@@ -6,6 +6,8 @@
 	occur if arr is large, and appear to the user as a system lockup
 	with 100% cpu activity.  After a suggestion by Kristian Sandberg
 	<Kristian.Sandberg@colorado.edu>.
+	(Magic.__init__): fix bug in global magic escapes not being
+	correctly set.
 
 2004-10-08  Fernando Perez  <fperez@colorado.edu>
 

@@ -94,8 +94,9 @@ except AttributeError:
     _quotesre = re.compile(r'[\'"](.*)[\'"]')
     _wordchars = ('abcdfeghijklmnopqrstuvwxyz'
                   'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.~*?'
-                  'ίΰαβγδεζηθικλμνξοπρςστυφψωϊϋόύώÿ'
-                  'ΐΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡÒΣΤΥΦΨΩΪΫάέή%s' % os.sep)
+                  'ΓΓ Γ΅ΓΆΓ£Γ¤Γ¥Γ¦Γ§Γ¨Γ©ΓªΓ«Γ¬Γ­Γ®Γ―Γ°Γ±Γ²Γ³Γ΄ΓµΓ¶ΓΈΓΉΓΊΓ»ΓΌΓ½ΓΎΓΏ'
+                  'Γ€ΓΓ‚ΓƒΓ„Γ…Γ†Γ‡ΓΓ‰ΓΓ‹ΓΓΓΓΓΓ‘Γ’Γ“Γ”Γ•Γ–ΓΓ™ΓΓ›ΓΓΓ%s'
+                  % os.sep)
     
     def shlex_split(s):
         """Simplified backport to Python 2.2 of shlex.split().
@@ -162,6 +163,9 @@ class Magic:
     # some utility functions
 
     def __init__(self,shell):
+        # XXX This is hackish, clean up later to avoid these messy globals
+        global MAGIC_PREFIX, MAGIC_ESCAPE
+        
         self.options_table = {}
         MAGIC_PREFIX = shell.name+'.magic_'
         MAGIC_ESCAPE = shell.ESC_MAGIC

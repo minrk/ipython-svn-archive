@@ -27,7 +27,7 @@ class Pdb(pdb.Pdb, bdb.Bdb, cmd.Cmd):
     """Modified Pdb class, does not load readline."""
     def __init__(self):
         bdb.Bdb.__init__(self)
-        Command.__init__(self,completekey=None) # don't load readline
+        cmd.Cmd.__init__(self,completekey=None) # don't load readline
         self.prompt = '(Pdb) '
         self.aliases = {}
 
