@@ -1,0 +1,34 @@
+# -*- Mode: Shell-Script -*-  Not really, but shows comments correctly
+#***************************************************************************
+# Configuration file for ipython -- ipythonrc format
+#
+# The format of this file is one of 'key value' lines.
+# Lines containing only whitespace at the beginning and then a # are ignored
+# as comments.  But comments can NOT be put on lines with data.
+#***************************************************************************
+
+# If this file is found in the executing directory or in the user's home
+# directory as .ipythonrc-shell, it can be loaded by calling
+#  ipython -profile shell
+# or just
+#  ipython -p shell
+
+# This profile loads a special input line filter to allow executing as shell
+# commands any lines which begin with ~/, ./ and /
+
+# First load basic user configuration
+include ipythonrc
+
+# Configure prompt for more shell-like usage
+prompt_in1 '\C_LightRed\u\C_Blue@\C_Red\h\C_LightBlue[\C_LightCyan\Y1\C_LightBlue]\C_LightGreen>'
+prompt_out '<\#>'
+
+separate_in 0
+separate_out 0
+separate_out2 0
+
+#  Set the 'cd' command to quiet mode, a more shell-like behavior
+execute __IP.default_option('cd','-q')
+
+# pysh.py loads the rest of the necessary modules
+execfile pysh.py
