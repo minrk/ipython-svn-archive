@@ -50,12 +50,13 @@ try:
     def clock():
         """clock() -> floating point number
 
-        Return the CPU time in seconds (user + system) since the start of the
-        process.  This is done via a call to resource.getrusage, so it avoids
-        the wraparound problems in time.clock()."""
+        Return the CPU time in seconds (user time only, system time is
+        ignored) since the start of the process.  This is done via a call to
+        resource.getrusage, so it avoids the wraparound problems in
+        time.clock()."""
         
-        res = resource.getrusage(resource.RUSAGE_SELF)
-        return res[0]+res[1]
+        return resource.getrusage(resource.RUSAGE_SELF)[0]
+
 except ImportError:
     clock = time.clock
 
@@ -843,6 +844,12 @@ def page(strng,start=0,screen_lines=0,pager_cmd = None):
     written in python, very simplistic.
     """
     
+    # Ugly kludge, but calling curses.initscr() flat out crashes in emacs
+    TERM = os.environ.get('TERM','dumb')
+    if TERM in ['dumb','emacs']:
+        print strng
+        return
+    
     # chop off the topmost part of the string we don't want to see
     str_lines = strng.split(os.linesep)[start:]
     str_toprint = os.linesep.join(str_lines)
@@ -856,36 +863,26 @@ def page(strng,start=0,screen_lines=0,pager_cmd = None):
 
     screen_lines_def = 25 # default value if we can't auto-determine
 
-    # Ugly kludge, but calling curses.initscr() flat out crashes in emacs
-    try:
-        if os.environ['TERM'] in ['emacs','dumb']:
-            print strng
-            return
-    except KeyError:  # typically under Windows
-        pass
-
     # auto-determine screen size
     if screen_lines <= 0:
-        try:
-            import curses
-            scr = curses.initscr()
-            screen_lines_real,screen_cols = scr.getmaxyx()
-            curses.endwin()
-            screen_lines += screen_lines_real
-
-            # if we know the screen width, our heuristics can be refined
-            #numlines = max(num_newlines,int(len_str/screen_cols)+1)
-
-            # Turn off the above fancy form b/c it fails with embedded control
-            # characters (such as color escapes). If people have absurdly
-            # narrow terminals, too bad.
-            numlines = num_newlines
-
-            #print 'num_newlines',num_newlines,'len_str',len_str  # dbg
-            #print '***Screen size:',screen_lines_real,'lines x',\
-            #screen_cols,'columns.' # dbg
-        except ImportError:
-            screen_lines += screen_lines_def
+        if TERM=='xterm':
+            try:
+                import curses
+                use_curses = 1
+            except ImportError:
+                use_curses = 0
+        else:
+            # curses causes problems on many terminals other than xterm.
+            use_curses = 0
+        if use_curses:
+                scr = curses.initscr()
+                screen_lines_real,screen_cols = scr.getmaxyx()
+                curses.endwin()
+                screen_lines += screen_lines_real
+                #print '***Screen size:',screen_lines_real,'lines x',\
+                #screen_cols,'columns.' # dbg
+        else:
+                screen_lines += screen_lines_def
 
     #print 'numlines',numlines,'screenlines',screen_lines  # dbg
     if numlines <= screen_lines :
