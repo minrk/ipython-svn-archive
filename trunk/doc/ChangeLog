@@ -1,3 +1,76 @@
+2005-01-27  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/numutils.py (norm): Added 'inf' as optional name for
+	L-infinity norm, included references to mathworld.com for vector
+	norm definitions.
+	(amin/amax): added amin/amax for array min/max.  Similar to what
+	pylab ships with after the recent reorganization of names.
+	(spike/spike_odd): removed deprecated spike/spike_odd functions.
+
+	* ipython.el: committed Alex's recent fixes and improvements.
+	Tested with python-mode from CVS, and it looks excellent.  Since
+	python-mode hasn't released anything in a while, I'm temporarily
+	putting a copy of today's CVS (v 4.70) of python-mode in:
+	  http://ipython.scipy.org/tmp/python-mode.el
+
+	* IPython/PyColorize.py (Parser.__call__): change explicit '\n'
+	references to os.linesep, to make the code more
+	platform-independent.  This is also part of the win32 coloring
+	fixes.
+
+	* IPython/genutils.py (page_dumb): Remove attempts to chop long
+	lines, which actually cause coloring bugs because the length of
+	the line is very difficult to correctly compute with embedded
+	escapes.  This was the source of all the coloring problems under
+	Win32.  Finally tracked down thanks to Gary Bishop's excellent
+	help.
+
+2005-01-26  *** Released version 0.6.9
+
+2005-01-25  Fernando Perez  <fperez@colorado.edu>
+
+	* setup.py: finally, we have a true Windows installer, thanks to
+	the excellent work of Viktor Ransmayr
+	<viktor.ransmayr@t-online.de>.  The docs have been updated for
+	Windows users.  The setup routine is quite a bit cleaner thanks to
+	this, and the post-install script uses the proper functions to
+	allow a clean de-installation using the standard Windows Control
+	Panel.
+	
+	* IPython/genutils.py (get_home_dir): changed to use the $HOME
+	environment variable under all OSes (including win32) if
+	available.  This will give consistency to win32 users who have set
+	this variable for any reason.  If os.environ['HOME'] fails, the
+	previous policy of using HOMEDRIVE\HOMEPATH kicks in.
+
+2005-01-24  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/numutils.py (empty_like): add empty_like(), similar to
+	zeros_like() but taking advantage of the new empty() Numeric routine.
+
+2005-01-23  *** Released version 0.6.8
+
+2005-01-22  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (MatplotlibShellBase.mplot_exec): I removed the
+	automatic show() calls.  After discussing things with JDH, it
+	turns out there are too many corner cases where this can go wrong.
+	It's best not to try to be 'too smart', and simply have ipython
+	reproduce as much as possible the default behavior of a normal
+	python shell.
+
+	* IPython/iplib.py (InteractiveShell.__init__): Modified the
+	line-splitting regexp and _prefilter() to avoid calling getattr()
+	on assignments.  This closes
+	http://www.scipy.net/roundup/ipython/issue24.  Note that Python's
+	readline uses getattr(), so a simple <TAB> keypress is still
+	enough to trigger getattr() calls on an object.
+
+2005-01-21  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (MatplotlibShellBase.magic_run): Fix the %run
+	docstring under pylab so it doesn't mask the original.
+
 2005-01-21  *** Released version 0.6.7
 
 2005-01-21  Fernando Perez  <fperez@colorado.edu>

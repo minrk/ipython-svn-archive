@@ -543,13 +543,9 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # for pushd/popd management
         try:
             self.home_dir = get_home_dir()
-        except HomeDirError:
-            if os.name == 'dos':  # final, desperate hack for Win9x
-                self.home_dir = os.path.join('C:','Program Files','IPython')
-            else:
-                print 'Unsupported operating system:',os.name
-                print 'Exiting...'
-                sys.exit()
+        except HomeDirError,msg:
+            fatal(msg)
+
         self.dir_stack = [os.getcwd().replace(self.home_dir,'~')]
 
         # Function to call the underlying shell.  Similar to os.system, but it
