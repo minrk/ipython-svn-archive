@@ -865,7 +865,7 @@ There seemed to be a problem with your sys.stderr.
       to be true IPython errors.
       """
       
-      self.InteractiveTB(type, value, tb, offset=0)
+      self.InteractiveTB(type, value, tb, tb_offset=0)
       if self.InteractiveTB.call_pdb and self.has_readline:
           self.readline.set_completer(self.Completer.complete)
       
