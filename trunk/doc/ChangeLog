@@ -1,3 +1,9 @@
+2004-07-02  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Prompts.py (CachedOutput.update): Fix problem with
+	gettext not working because we were clobbering '_'.  Fixes
+	http://www.scipy.net/roundup/ipython/issue6.
+
 2004-07-01  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py (Magic.magic_cd): integrated bookmark handling
