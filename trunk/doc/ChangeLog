@@ -1,3 +1,8 @@
+2003-09-24  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/FakeModule.py (FakeModule.__repr__): this method was
+	missing.  Thanks to bug report by Ralf Schmitt <ralf@brainbot.com>.
+
 2003-09-09  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell._prefilter): fix bug where
