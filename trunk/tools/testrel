@@ -6,5 +6,5 @@
 #rm -rf ~/ipython/dist/*
 
 # build source distros
-cd ~/ipython/
+cd ~/ipython/ipython
 ./setup.py sdist --formats=gztar
