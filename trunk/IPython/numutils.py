@@ -7,7 +7,7 @@ See http://www.pfdubois.com/numpy for details.
 """
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando PÃ©rez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2004 Fernando Pérez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -21,14 +21,14 @@ See http://www.pfdubois.com/numpy for details.
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando PÃ©rez. <fperez@colorado.edu>'
+__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
 __version__= '0.1.1'
 __license__ = 'LGPL'
 __date__   = 'Tue Dec 11 00:27:58 MST 2001'
 
 __all__ = """
 gnuplot_exec sum_flat mean_flat binary_repr zeros_like amap 
-rms_flat frange diagonal_matrix fromfunction identity 
+rms_flat frange diagonal_matrix fromfunction identity  
 inf infty Infinity exp_safe spike spike_odd norm l1norm l2norm
 """.split()
 
