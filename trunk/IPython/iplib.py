@@ -84,33 +84,64 @@ def qw_lol(indata):
     else:
         return qw(indata)
 
-def ipmagic(magic_name,arg=''):
+def ipmagic(arg_s):
     """Call a magic function by name.
 
-    Inputs:
+    Input: a string containing the name of the magic function to call and any
+    additional arguments to be passed to the magic.
 
-      - magic_name: string containing the name of the magic function to call.
-
-      - arg: optional string with the arguments to pass to the magic.
-
-    ipmagic('name','-opt foo bar') is equivalent to typing at the ipython
+    ipmagic('name -opt foo bar') is equivalent to typing at the ipython
     prompt:
 
     In[1]: %name -opt foo bar
 
-    The second (string) argument is optional, so you can use ipmagic('name')
-    to call a magic without arguments.
+    To call a magic without arguments, simply use ipmagic('name').
 
     This provides a proper Python function to call IPython's magics in any
     valid Python code you can type at the interpreter, including loops and
     compound statements.  It is added by IPython to the Python builtin
     namespace upon initialization."""
 
+    args = arg_s.split(' ',1)
+    magic_name = args[0]
+    try:
+        magic_args = args[1]
+    except IndexError:
+        magic_args = ''
     fn = getattr(__IPYTHON__,'magic_'+magic_name,None)
     if fn is None:
-        print "Magic function `%s` not found." % magic_name
+        error("Magic function `%s` not found." % magic_name)
     else:
-        fn(arg)
+        fn(magic_args)
+
+def ipalias(arg_s):
+    """Call an alias by name.
+
+    Input: a string containing the name of the alias to call and any
+    additional arguments to be passed to the magic.
+
+    ipmagic('name -opt foo bar') is equivalent to typing at the ipython
+    prompt:
+
+    In[1]: name -opt foo bar
+
+    To call an magic without arguments, simply use ipalias('name').
+
+    This provides a proper Python function to call IPython's magics in any
+    valid Python code you can type at the interpreter, including loops and
+    compound statements.  It is added by IPython to the Python builtin
+    namespace upon initialization."""
+
+    args = arg_s.split(' ',1)
+    alias_name = args[0]
+    try:
+        alias_args = args[1]
+    except IndexError:
+        alias_args = ''
+    if alias_name in __IPYTHON__.alias_table:
+        __IPYTHON__.call_alias(alias_name,alias_args)
+    else:
+        error("Alias `%s` not found." % alias_name)
 
 #-----------------------------------------------------------------------------
 # Local use classes
@@ -309,14 +340,10 @@ try:
                                                        self.magic_escape)
                 except IndexError:
                     return None
-            except SyntaxError:
-                pass
             except:
-                # needed because readline doesn't deal with exceptions
-                # properly (just beeps and ignores)
-                print "\nCompletion attempt raised an exception!"
-                traceback.print_exc()
-                
+                # If completion doesn't work, just beep and don't annoy
+                # the user.
+                pass
 
 except ImportError:
     pass  # no readline support
@@ -358,8 +385,9 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # imported code can test for being inside IPython.
         __builtin__.__IPYTHON__ = self
 
-        # And load into builtins ipmagic as well
+        # And load into builtins ipmagic/ipalias as well
         __builtin__.ipmagic = ipmagic
+        __builtin__.ipalias = ipalias
 
         # Keep in the builtins a flag for when IPython is active.  We set it
         # with setdefault so that multiple nested IPythons don't clobber one
