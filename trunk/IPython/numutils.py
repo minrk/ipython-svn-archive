@@ -27,7 +27,7 @@ __license__ = 'LGPL'
 __date__   = 'Tue Dec 11 00:27:58 MST 2001'
 
 __all__ = """
-gnuplot_exec sum_flat mean_flat binary_repr zeros_like 
+gnuplot_exec sum_flat mean_flat binary_repr zeros_like amap 
 rms_flat frange diagonal_matrix fromfunction identity 
 inf infty Infinity exp_safe spike spike_odd norm l1norm l2norm Numeric
 """.split()
@@ -106,6 +106,14 @@ def spike_odd(x,x0=0,delta=1,norm = math.sqrt(2.0*math.e)):
         xnew = x0-x
         return (norm/delta)*xnew*spike(xnew,delta=delta)
 
+def amap(fn,*args):
+    """amap(function, sequence[, sequence, ...]) -> array.
+
+    Works like map(), but it returns an array.  This is just a convenient
+    shorthand for Numeric.array(map(...))"""
+    return array(map(fn,*args))
+
+
 def zeros_like(a):
     """Return an array of zeros of the shape and typecode of a."""
 
@@ -159,7 +167,7 @@ def norm(a,p=2):
         return (sum_flat(absolute(a)**p))**(1.0/p)    
     
 def frange(xini,xfin=None,delta=None,**kw):
-    """frange([start,] stop[, step, keywords]) -> list of floats
+    """frange([start,] stop[, step, keywords]) -> array of floats
 
     Return a Numeric array() containing a progression of floats. Similar to
     arange(), but defaults to a closed interval.
@@ -211,7 +219,8 @@ def frange(xini,xfin=None,delta=None,**kw):
         npts=kw['npts']
         delta=(xfin-xini)/float(npts-endpoint)
     except KeyError:
-        npts=int((xfin-xini)/delta+endpoint)
+        # round() gets npts right even with the vagaries of floating point.
+        npts=int(round((xfin-xini)/delta+endpoint))
 
     return arange(npts)*delta+xini
 # end frange()
