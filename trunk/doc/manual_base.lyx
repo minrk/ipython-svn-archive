@@ -5336,7 +5336,7 @@ In the
 \family typewriter 
 IPython/Extensions
 \family default 
- directory you will find two examples supplied, which we will briefly describe
+ directory you will find some examples supplied, which we will briefly describe
  now.
  These can be used 'as is' (and both provide very useful functionality),
  or you can use them as a starting point for writing your own extensions.
