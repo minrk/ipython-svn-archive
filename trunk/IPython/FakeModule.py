@@ -19,10 +19,18 @@ class FakeModule:
     Do NOT use this code for anything other than this IPython private hack."""
 
     def __init__(self,adict):
+
+	# It seems pydoc (and perhaps others) needs any module instance to
+	# implement a __nonzero__ method, so we add it if missing:
+	if '__nonzero__' not in adict:
+	    def __nonzero__():
+		return 1
+	    adict['__nonzero__'] = __nonzero__
+
         self.__dict__ = adict
 
     def __getattr__(self,key):
-        return self.__dict__[key]
+	return self.__dict__[key]
 
     def __str__(self):
         return "<IPython.FakeModule instance>"
