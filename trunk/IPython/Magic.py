@@ -1751,7 +1751,7 @@ Defaulting color scheme to 'NoColor'"""
         # typical Linux box involves several thousand entries, so efficiency
         # here is a top concern.
         
-        path = os.environ['PATH'].split(os.pathsep)
+        path = filter(os.path.isdir,os.environ['PATH'].split(os.pathsep))
         alias_table = self.shell.alias_table
         for pdir in path:
             for ff in os.listdir(pdir):
@@ -1765,7 +1765,7 @@ Defaulting color scheme to 'NoColor'"""
         This version explicitly checks that every entry in $PATH is a file
         with execute access (os.X_OK), so it is much slower than @rehash."""
         
-        path = os.environ['PATH'].split(os.pathsep)
+        path = filter(os.path.isdir,os.environ['PATH'].split(os.pathsep))
         alias_table = self.shell.alias_table
         isexec = lambda fname:os.path.isfile(fname) and os.access(fname,os.X_OK)
         savedir = os.getcwd()
