@@ -341,7 +341,10 @@ class Inspector:
                                 indent(class_ds))
 
             # Next, try to show constructor docstrings
-            init_ds = getdoc(obj.__init__)
+            try:
+                init_ds = getdoc(obj.__init__)
+            except AttributeError:
+                init_ds = None
             if init_ds:
                 out.writeln(header('Constructor Docstring:\n') +
                             indent(init_ds))
