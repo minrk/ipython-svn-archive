@@ -299,7 +299,6 @@ class Magic:
         str = cmd_re.sub(r'\\texttt{\g<cmd>}',str)
         str = par_re.sub(r'\\\\',str)
         str = escape_re.sub(r'\\\1',str)
-        #file('/home/fperez/ipython/doc/magic.tex','w').write(str)  # dbg
         return str
 
     def format_screen(self,str):
@@ -318,6 +317,11 @@ class Magic:
         Struct with the options as keys and the stripped argument string still
         as a string.
 
+        arg_str is quoted as a true sys.argv vector by calling on the fly a
+        python process in a subshell.  This allows us to easily expand
+        variables, glob files, quote arguments, etc, with all the power and
+        correctness of the underlying system shell.
+
         Options:
           -mode: default 'string'. If given as 'list', the argument string is
           returned as a list (split on whitespace) instead of a string.
@@ -326,9 +330,38 @@ class Magic:
           appearing more than once are put in a list."""
 
         mode = kw.get('mode','string')
+        if mode not in ['string','list']:
+            raise ValueError,'incorrect mode given:'+`mode`
+        
         list_all = kw.get('list_all',0)
 
-        opts,args = getopt(arg_str.split(),opt_str,*long_opts)
+        # Try to have the underlying shell do all quoting for us
+        # This has one eval in it, which I don't see how to avoid, since we
+        # need to rebuild argv from the _string_ which comes from the shell
+
+        # Note that I print argv[1:] because the -c option is left in there as
+        # the first entry, even though the python man page says it shouldn't
+        # be there.
+        out,err = getoutputerror('%s -SEc "import sys;print sys.argv[1:]" %s' %
+                                 (sys.executable,arg_str))
+        # If there is any problem with the shell-based expansions, we punt and
+        # do a simple arg_str.split()
+        if err:
+            warn(err)
+            argv = arg_str.split()
+        # Also don't call eval() unless what we get looks like a list's repr()
+        elif not out.startswith('[') or not out.endswith(']'):
+            argv = arg_str.split()
+        else:
+            # Try to make the eval as safe as possible by doing it in empty
+            # namespaces, and punt if anything fails
+            try:
+                argv = eval(out,{})
+            except:
+                argv = arg_str.split()
+
+        # Do regular option processing
+        opts,args = getopt(argv,opt_str,*long_opts)
         odict = {}
         for o,a in opts:
             if o.startswith('--'):
@@ -348,10 +381,7 @@ class Magic:
 
         if mode == 'string':
             args = ' '.join(args)
-        elif mode == 'list':
-            pass
-        else:
-            raise ValueError,'incorrect mode given:'+`mode`
+            
         return opts,args
     
     #......................................................................
@@ -1098,13 +1128,10 @@ Currently the magic system has the following functions:\n"""
             warn(msg)
             return
 
+        # Make sure that the running script gets a proper sys.argv as if it
+        # were run from a system shell.
         save_argv = sys.argv # save it for later restoring
-        # perform shell-like expansions on the argument list before passing it
-        # to programs
-        xvars = os.path.expandvars
-        xuser = os.path.expanduser
-        xpand = lambda s: xvars(xuser(s))
-        sys.argv = [xpand(arg) for arg in arg_lst] 
+        sys.argv = [filename]+ arg_lst[1:]  # put in the proper filename
 
         if opts.has_key('i'):
             prog_ns = self.shell.user_ns
