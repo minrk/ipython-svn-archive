@@ -13,7 +13,7 @@ class FakeModule:
     This is not meant to replace a module, but to allow inserting a fake
     module in sys.modules so that systems which rely on run-time module
     importing (like shelve and pickle) work correctly in interactive IPython
-    sections.
+    sessions.
 
     Do NOT use this code for anything other than this IPython private hack."""
 
@@ -22,4 +22,7 @@ class FakeModule:
 
     def __getattr__(self,key):
         return self.__dict__[key]
+
+    def __str__(self):
+        return "<IPython.FakeModule instance>"
 
