@@ -4730,7 +4730,9 @@ prompt_in2 '\SpecialChar ~
 \backslash 
 D.:'
 \newline 
-prompt_out 'Out[%n]:'
+prompt_out 'Out[
+\backslash 
+#]:'
 \layout Standard
 
 which look like this:
