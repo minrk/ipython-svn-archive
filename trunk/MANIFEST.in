@@ -1,5 +1,10 @@
-include IPython/ipython
 include README_Windows.txt
+
+graft scripts
+
+graft setupext
+
+graft IPython/UserConfig
 
 graft doc
 exclude doc/*.lyx
@@ -12,4 +17,5 @@ exclude doc/manual/internals.pl
 
 global-exclude *~
 global-exclude *.flc
+global-exclude *.pyc
 global-exclude .dircopy.log

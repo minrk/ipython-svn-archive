@@ -1,3 +1,25 @@
+2003-03-18  Fernando Perez  <fperez@colorado.edu>
+
+	* setupext/install_data_ext.py
+	(install_data_ext.initialize_options): Class contributed by Jack
+	Moffit for fixing the old distutils hack.  He is sending this to
+	the distutils folks so in the future we may not need it as a
+	private fix.
+
+	* MANIFEST.in: Extensive reorganization, based on Jack Moffit's
+	changes for Debian packaging.  See his patch for full details.
+	The old distutils hack of making the ipythonrc* files carry a
+	bogus .py extension is gone, at last.  Examples were moved to a
+	separate subdir under doc/, and the separate executable scripts
+	now live in their own directory.  Overall a great cleanup.  The
+	manual was updated to use the new files, and setup.py has been
+	fixed for this setup.
+
+	* IPython/PyColorize.py (Parser.usage): made non-executable and
+	created a pycolor wrapper around it to be included as a script.
+
+2003-03-12  *** Released version 0.2.15pre2
+
 2003-03-12  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/ColorANSI.py (make_color_table): Finally fixed the

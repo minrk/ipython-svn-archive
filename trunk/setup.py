@@ -23,6 +23,7 @@ Windows."""
 
 import sys,os
 from glob import glob
+from setupext import install_data_ext
 
 # BEFORE importing distutils, remove MANIFEST. distutils doesn't properly
 # update it when the contents of directories change.
@@ -45,7 +46,7 @@ if os_name == 'windows':
 from distutils.core import setup
 
 # update the manuals when building a source dist
-if len(sys.argv) >= 2 and sys.argv[1]=='sdist':
+if len(sys.argv) >= 2 and sys.argv[1] == 'sdist':
     from IPython.genutils import target_update
     # list of things to be updated. Each entry is a triplet of args for
     # target_update()
@@ -60,11 +61,11 @@ if len(sys.argv) >= 2 and sys.argv[1]=='sdist':
                  ('doc/manual/manual.html',
                   ['doc/manual.lyx',
                    'doc/magic.tex',
-                   'IPython/UserConfig/ipythonrc.py',
-                   'IPython/UserConfig/example-gnuplot.py',
-                   'IPython/UserConfig/example-magic.py',
-                   'IPython/UserConfig/example-embed.py',
-                   'IPython/UserConfig/example-embed-short.py'
+                   'doc/examples/example-gnuplot.py',
+                   'doc/examples/example-magic.py',
+                   'doc/examples/example-embed.py',
+                   'doc/examples/example-embed-short.py',
+                   'IPython/UserConfig/ipythonrc',
                    ],
                   "cd doc && "
                   "lyxport -tt --leave --pdf --html -o '-noinfo -split +1' "
@@ -82,33 +83,13 @@ execfile(os.path.join('IPython','Release.py'))
 
 # I can't find how to make distutils create a nested dir. structure, so
 # in the meantime do it manually. Butt ugly.
-docdirbase = 'doc/IPython'
-docfiles = filter(os.path.isfile,glob('doc/*[!~|.lyx|.sh]'))
-manfiles = filter(os.path.isfile,glob('doc/manual/*.html')) + \
-           filter(os.path.isfile,glob('doc/manual/*.css'))
-
-# fix for building rpms and working around the ipythonrc kludge.
-# patch submitted by  RA <ralf_ahlbrink@web.de>
-recfname = 'INSTALLED_FILES'
-# if record file is used, clean it up
-if os.path.isfile(recfname):
-    import re
-    patt = re.compile('.*ipythonrc.*pyc$')
-
-    try:
-        recfile = open(recfname, 'r')
-        lines = recfile.readlines()
-        recfile.close()
-
-        recfile = open(recfname, 'w')
-        for  line in lines:
-            if not patt.match(line):
-                recfile.write(line)
-        recfile.close()
-
-    except IOError:
-        print "Error opening " + recfname
-# end of rpm patch by RA <ralf_ahlbrink@web.de>
+docdirbase  = 'share/doc/IPython'
+docfiles    = filter(os.path.isfile, glob('doc/*[!~|.lyx|.sh]'))
+examfiles   = filter(os.path.isfile, glob('doc/examples/*.py'))
+manfiles    = filter(os.path.isfile, glob('doc/manual/*.html')) + \
+              filter(os.path.isfile, glob('doc/manual/*.css'))
+cfgfiles    = filter(os.path.isfile, glob('IPython/UserConfig/*'))
+scriptfiles = filter(os.path.isfile, glob('scripts/*'))
 
 # Call the setup() routine which does most of the work
 setup(name             = name,
@@ -119,39 +100,22 @@ setup(name             = name,
       author_email     = authors['Fernando'][1],
       url              = url,
       license          = license,
-      licence          = license, # Spelling error in distutils
       platforms        = platforms,
       keywords         = keywords,
-      packages         = ['IPython','IPython.Extensions','IPython.UserConfig'],
-      scripts          = ['IPython/ipython'],
-      data_files       = [(docdirbase,docfiles),
-                          (docdirbase + '/manual',manfiles),
-                          ],
+      packages         = ['IPython', 'IPython.Extensions'],
+      scripts          = scriptfiles,
+      cmdclass         = {'install_data': install_data_ext},
+      data_files       = [('base', docdirbase, docfiles),
+                          ('base', os.path.join(docdirbase, 'examples'),
+                           examfiles),
+                          ('base', os.path.join(docdirbase, 'manual'),
+                           manfiles),
+                          ('lib', 'IPython/UserConfig', cfgfiles)]
       )
 
-if len(sys.argv) >= 2 and sys.argv[1]=='install':
-    print """
-
-**************************************************************************
-*** NOTE *** If you saw one or more error messages similar to:           *
-*                                                                        *
-* byte-compiling .../UserConfig/ipythonrc-math.py to ipythonrc-math.pyc  *
-*   File ".../IPython/UserConfig/ipythonrc-calc.py", line 24             *
-*     include ipythonrc                                                  *
-*                    ^                                                   *
-* SyntaxError: invalid syntax                                            *
-*                                                                        *
-**************************************************************************
-
-please disregard them (the actual error or file may be different, they are all
-inocuous). They are the result of an ugly hack around some limitations of
-distutils, your IPython installation is fine.  """
-    
 # For Unix users, things end here.
-
 # Under Windows, do some extra stuff.
 if os_name == 'windows':
-
     try:
         import shutil,pythoncom
         from win32com.shell import shell

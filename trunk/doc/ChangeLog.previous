@@ -1,3 +1,21 @@
+2003-03-12  *** Released version 0.2.15pre2
+
+2003-03-12  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/ColorANSI.py (make_color_table): Finally fixed the
+	long-standing problem with garbage characters in some terminals.
+	The issue was really that the \001 and \002 escapes must _only_ be
+	passed to input prompts (which call readline), but _never_ to
+	normal text to be printed on screen.  I changed ColorANSI to have
+	two classes: TermColors and InputTermColors, each with the
+	appropriate escapes for input prompts or normal text.  The code in
+	Prompts.py got slightly more complicated, but this very old and
+	annoying bug is finally fixed.  
+
+	All the credit for nailing down the real origin of this problem
+	and the correct solution goes to Jack Moffit <jack@xiph.org>.
+	*Many* thanks to him for spending quite a bit of effort on this.
+
 2003-03-05  *** Released version 0.2.15pre1
 
 2003-03-03  Fernando Perez  <fperez@colorado.edu>

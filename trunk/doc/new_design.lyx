@@ -737,6 +737,17 @@ Things that should be done for the current series, before starting major
  changes.
 \layout Itemize
 
+Clean up FakeModule issues.
+ Currently, unittesting with embedded ipython breaks because a FakeModule
+ instance overwrites __main__.
+ Maybe ipython should revert back to using __main__ directly as the user
+ namespace? Handling a separate namespace is proving 
+\emph on 
+very
+\emph default 
+ tricky in all corner cases.
+\layout Itemize
+
 Fix exception reporting.
  It seems that inspect is getting the build paths for sources instead of
  the current paths, and that's confusing ultraTB.

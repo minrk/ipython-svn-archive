@@ -2954,7 +2954,7 @@ $HOME/.ipython/:
 \layout Standard
 
 
-\begin_inset Include \verbatiminput{../IPython/UserConfig/example-magic.py}
+\begin_inset Include \verbatiminput{examples/example-magic.py}
 preview false
 
 \end_inset 
@@ -4431,7 +4431,7 @@ directory contains lots of comments on all of these options.
 \layout Standard
 
 
-\begin_inset Include \verbatiminput{../IPython/UserConfig/ipythonrc.py}
+\begin_inset Include \verbatiminput{../IPython/UserConfig/ipythonrc}
 preview false
 
 \end_inset 
@@ -4682,7 +4682,7 @@ example-embed.py
 \layout Standard
 
 
-\begin_inset Include \verbatiminput{../IPython/UserConfig/example-embed.py}
+\begin_inset Include \verbatiminput{examples/example-embed.py}
 preview false
 
 \end_inset 
@@ -4704,7 +4704,7 @@ example-embed-short.py
 \layout Standard
 
 
-\begin_inset Include \verbatiminput{../IPython/UserConfig/example-embed-short.py}
+\begin_inset Include \verbatiminput{examples/example-embed-short.py}
 preview false
 
 \end_inset 
@@ -5367,7 +5367,7 @@ example-gnuplot.py
 \layout Standard
 
 
-\begin_inset Include \verbatiminput{../IPython/UserConfig/example-gnuplot.py}
+\begin_inset Include \verbatiminput{examples/example-gnuplot.py}
 preview false
 
 \end_inset 
