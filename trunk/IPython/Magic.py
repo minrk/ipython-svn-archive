@@ -8,7 +8,7 @@ from __future__ import nested_scopes
 
 #*****************************************************************************
 #       Copyright (C) 2001 Janko Hauser <jh@comunit.de> and
-#                          Fernando Pérez <fperez@colorado.edu>
+#                          Fernando PÃ©rez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -350,9 +350,13 @@ class Magic:
             # Note that I print argv[1:] because the -c option is left in
             # there as the first entry, even though the python man page says
             # it shouldn't be there.
+
+            # We still need to do a bit of quoting, so the shell doesn't get
+            # things like naked parens.
+            qarg = arg_str.replace('(',r'\(').replace(')',r'\)')
             
             out,err = getoutputerror('%s -SEc "import sys;print sys.argv[1:]" %s' %
-                                     (sys.executable,arg_str))
+                                     (sys.executable,qarg))
 
             # If there is any problem with the shell-based expansions, we punt
             # and do a simple arg_str.split()
