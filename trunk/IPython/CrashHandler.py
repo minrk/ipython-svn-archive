@@ -98,6 +98,8 @@ mail -s 'IPython Crash Report' $self.mailto < $self.report_name
         sec_sep = '\n\n'+'*'*75+'\n\n'
         report.write('*'*75+'\n\n'+'IPython post-mortem report\n\n')
         report.write('IPython version: ' + __version__)
+        report.write('Platform info: os.name -> %s, sys.platform -> %s' %
+                     (os.name,sys.platform) )
         report.write(sec_sep+'Current user configuration structure:\n\n')
         report.write(pformat(self.IP.rc.dict()))
         report.write(sec_sep+'Crash traceback:\n\n' + traceback)
