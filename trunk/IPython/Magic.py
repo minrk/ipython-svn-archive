@@ -1780,9 +1780,9 @@ self.magic_$alias = magic_$alias
 
         @sc [options] varname=command
 
-	IPython will run the given command using commands.getoutput(), and
-	will then update the user's interactive namespace with a variable
-	called varname, containing the value of the call.  Your command can
+        IPython will run the given command using commands.getoutput(), and
+        will then update the user's interactive namespace with a variable
+        called varname, containing the value of the call.  Your command can
         contain shell wildcards, pipes, etc.
 
         The '=' sign in the syntax is mandatory, and the variable name you
@@ -1797,21 +1797,21 @@ self.magic_$alias = magic_$alias
           -v: verbose.  Print the contents of the variable."""
 
         opts,args = self.parse_options(parameter_s,'lv')
-	# Try to get a variable name and command to run
-	try:
-	    var,cmd = args.split('=',1)
+        # Try to get a variable name and command to run
+        try:
+            var,cmd = args.split('=',1)
             var = var.strip()
-	except ValueError:
-	    var = ''
-	if not var:
-	    error('you must specify a variable to assign the command to.')
+        except ValueError:
+            var = ''
+        if not var:
+            error('you must specify a variable to assign the command to.')
             return
         # If all looks ok, proceed
         out,err = getoutputerror(cmd)
-	if err:
-	    print >> sys.stderr,err
+        if err:
+            print >> sys.stderr,err
         if opts.has_key('l'):
-	    out = out.split('\n')
+            out = out.split('\n')
         if opts.has_key('v'):
             print '%s ==\n%s' % (var,pformat(out))
         self.shell.user_ns.update({var:out})
@@ -1842,9 +1842,9 @@ self.magic_$alias = magic_$alias
 	@sc is meant to provide much finer control, but requires more
 	typing."""
 
-	if parameter_s:
-	    out,err = getoutputerror(parameter_s)
-	    if err:
-		print >> sys.stderr,err
-	    return out.split('\n')
+        if parameter_s:
+            out,err = getoutputerror(parameter_s)
+            if err:
+                print >> sys.stderr,err
+            return out.split('\n')
 # end Magic
