@@ -1,3 +1,8 @@
+2004-07-13  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Gnuplot2.py (Gnuplot.hardcopy): add automatic generation
+	of EPS if the requested filename ends in '.eps'.
+
 2004-07-04  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.handle_shell_escape): Fix
