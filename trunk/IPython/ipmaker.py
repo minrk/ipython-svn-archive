@@ -169,7 +169,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                     'readline! readline_omit__names! '
                     'rcfile=s separate_in|si=s separate_out|so=s '
                     'separate_out2|so2=s xmode=s '
-                    'magic_docstrings ')
+                    'magic_docstrings '
+                    'multi_line_specials!')
 
     # Options that can *only* appear at the cmd line (not in rcfiles).
     
@@ -201,6 +202,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       log = 0,
                       logfile = '',
                       logplay = '',
+                      multi_line_specials = 0,
                       messages = 1,
                       nosep = 0,
                       pdb = 0,
