@@ -314,12 +314,19 @@ class Inspector:
 
         # Call form docstring for callable instances
         if type(obj) is types.InstanceType and hasattr(obj,'__call__'):
-            call_ds = inspect.getdoc(obj.__call__)
-            call_def = self.__getdef(obj.__call__,oname)
-            out.writeln(header('Callable:\t')+'Yes')
-            out.write(header('Call def:\t')+self.format(call_def))
-            if call_ds:
-                out.writeln(header('Call docstring:\n') + indent(call_ds))
+	    out.writeln(header('Callable:\t')+'Yes')
+	    try:
+		call_def = self.__getdef(obj.__call__,oname)
+	    except TypeError:
+		# Some callables may raise a TypeError if inspect's
+		# isfunction and ismethod can't identify them.
+		out.write(header('Call def:\t')+
+			  'Calling definition not available.')
+	    else:
+		out.write(header('Call def:\t')+self.format(call_def))
+	    call_ds = inspect.getdoc(obj.__call__)
+	    if call_ds:
+		out.writeln(header('Call docstring:\n') + indent(call_ds))
 
         # Finally send to printer/pager
         output = out.getvalue()
