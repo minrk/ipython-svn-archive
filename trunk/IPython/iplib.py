@@ -215,13 +215,18 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
 
         # Put a reference to self in builtins so that any form of embedded or
         # imported code can test for being inside IPython.
-        __builtin__.__dict__['__IPYTHON__'] = self
+        __builtin__.__IPYTHON__ = self
 
         # Keep in the builtins a flag for when IPython is active.  We set it
         # with setdefault so that multiple nested IPythons don't clobber one
         # another.  Each will increase its value by one upon being activated,
         # which also gives us a way to determine the nesting level.
         __builtin__.__dict__.setdefault('__IPYTHON__active',0)
+
+        # Inform the user of ipython's fast exit magics.
+        _exit = ' Use @Exit or @Quit to exit without confirmation.'
+        __builtin__.exit += _exit
+        __builtin__.quit += _exit
 
         # Create the namespace where the user will operate:
 
@@ -242,7 +247,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
 
         # We need to insert into sys.modules something that looks like a
         # module but which accesses the IPython namespace, for shelve and
-        # pickle to work interatctively. Normally they rely on getting
+        # pickle to work interactively. Normally they rely on getting
         # everything out of __main__, but for embedding purposes each IPython
         # instance has its own private namespace, so we can't go shoving
         # everything into __main__.
@@ -528,27 +533,6 @@ cause any problems during execution.  """ % (ipythondir,sys.exc_info()[1])
                     native_line_ends(fname,backup=0)
                 except IOError:
                     pass
-
-        # Colors just don't work in Windows, disable them.
-        # FIXME. This would be better done by loading separate files with the
-        # os-specific preferences. Later.
-        if os.name in ('nt','dos'):
-            iprc_name = 'ipythonrc'+rc_suffix
-            if rc_suffix:
-                iprc_bak_name = iprc_name.replace(rc_suffix,'.bak')
-            else:
-                iprc_bak_name = iprc_name + '.bak'
-            os.rename(iprc_name,iprc_bak_name)
-            iprc_bak = open(iprc_bak_name,'r')
-            iprc = open(iprc_name,'w')
-            while 1:
-                line = iprc_bak.readline()
-                if line =='': break
-                if line.find('colors Linux') >= 0:
-                    line = '#colors Linux\r\n'
-                if line.find('colors NoColor') >= 0:
-                    line = 'colors NoColor\r\n'
-                iprc.write(line)
 
         if mode == 'install':
             print """
@@ -980,9 +964,7 @@ There seemed to be a problem with your sys.stderr.
             else:
                 self.resetbuffer()
                 self.showtraceback()
-                warn( __builtins__['exit']+
-                     "\nUse @Exit or @Quit to exit without confirmation.",
-                      level=1)
+                warn( __builtin__.exit,level=1)
         except:
             self.showtraceback()
         else:
