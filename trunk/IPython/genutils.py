@@ -82,7 +82,7 @@ class Term:
     streams = [err_s,out_s,in_s]
 
     # The class globals should be the actual 'bare' streams for normal I/O to work
-    sin = streams[2].stream
+    cin  = streams[2].stream
     cout = streams[1].stream
     cerr = streams[0].stream
     
