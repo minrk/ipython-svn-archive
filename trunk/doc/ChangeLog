@@ -1,3 +1,10 @@
+2004-01-06  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.magic_sc): Made the shell capture system
+	a magic function instead, after some community feedback.  No
+	special syntax will exist for it, but its name is deliberately
+	very short.
+
 2003-12-20  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.handle_shell_assign): Added
