@@ -73,9 +73,8 @@ each time the instance is evaluated with str(instance).  For example:
 #
 #*****************************************************************************
 
-__author__ = 'Ka-Ping Yee <ping@lfw.org>'
+__author__  = 'Ka-Ping Yee <ping@lfw.org>'
 __license__ = 'MIT'
-
 
 import sys, string
 from types import StringType
@@ -184,13 +183,50 @@ class Itpl:
 
         result = []
         for live, chunk in self.chunks:
-            if live: result.append(str(eval(chunk, loc, glob)))
+            if live: result.append(str(eval(chunk,glob,loc)))
             else: result.append(chunk)
 
         return string.join(result, "")
 
+class ItplNS(Itpl):
+    """Class representing a string with interpolation abilities.
+
+    This inherits from Itpl, but at creation time a namespace is provided
+    where the evaluation will occur.  The interpolation becomes a bit more
+    efficient, as no traceback needs to be extracte.  It also allows the
+    caller to supply a different namespace for the interpolation to occur than
+    its own."""
+    
+    def __init__(self, format,globals,locals=None):
+        """ItplNS(format,globals[,locals]) -> interpolating string instance.
+
+        This constructor, besides a format string, takes a globals dictionary
+        and optionally a locals (which defaults to globals if not provided).
+
+        For further details, see the Itpl constructor."""
+
+        if locals is None:
+            locals = globals
+        self.globals = globals
+        self.locals = locals
+        Itpl.__init__(self,format)
+        
+    def __str__(self):
+        """Evaluate and substitute the appropriate parts of the string."""
+        glob = self.globals
+        loc = self.locals
+        result = []
+        for live, chunk in self.chunks:
+            if live: result.append(str(eval(chunk,glob,loc)))
+            else: result.append(chunk)
+        return string.join(result, "")
+
+# utilities for fast printing
 def itpl(text): return str(Itpl(text))
 def printpl(text): print itpl(text)
+# versions with namespace
+def itplns(text,globals,locals=None): return str(ItplNS(text,globals,locals))
+def printplns(text,globals,locals=None): print itplns(text,globals,locals)
 
 class ItplFile:
     """A file object that filters each write() through an interpolator."""
