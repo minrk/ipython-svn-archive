@@ -1,3 +1,10 @@
+2004-05-06  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.parse_options): Improved to process the
+	argument list as a true shell would (by actually using the
+	underlying system shell).  This way, all @magics automatically get
+	shell expansion for variables.
+
 2004-04-04  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.interact): Had to back off

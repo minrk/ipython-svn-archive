@@ -208,10 +208,6 @@ Add @showopt/@setopt (decide name) for viewing/setting all options.
  The existing option-setting magics should become aliases for setopt calls.
 \layout Itemize
 
-'cd' under windows doesn't know how to change drive letters.
- 
-\layout Itemize
-
 Suggestion by Francois Pinard: When I enter many empty lines in a row to
  IPython, the `N' in the successive `In [N]' prompts gets incremented.
  Would it not be more meaningful if it was only incremented when there is
