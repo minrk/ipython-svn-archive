@@ -1021,7 +1021,7 @@ Currently the magic system has the following functions:\n"""
             try:
                 filename = get_py_filename(arg_lst[0])
             except IOError,msg:
-                warn(msg)
+                error(msg)
                 return
 
             arg_str = 'execfile(filename,prog_ns)'
@@ -1139,7 +1139,7 @@ Currently the magic system has the following functions:\n"""
             print '\n@run:\n',inspect.getdoc(self.magic_run)
             return
         except IOError,msg:
-            warn(msg)
+            error(msg)
             return
 
         # Make sure that the running script gets a proper sys.argv as if it
