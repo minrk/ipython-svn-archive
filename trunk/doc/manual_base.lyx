@@ -5522,7 +5522,11 @@ hspace*{0mm}
 \color green
 ...>
 \color default
- print i,
+ \SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+print i,
 \newline 
 
 \begin_inset ERT

@@ -31,10 +31,6 @@ echo >> NEWS
 diff ChangeLog.previous ChangeLog | grep -v '^0a' | sed 's/^> //g' >> NEWS
 cp ChangeLog ChangeLog.previous
 
-# Update gzipped copies of the manpages
-gzip -9c ipython.1 > ipython.1.gz
-gzip -9c pycolor.1 > pycolor.1.gz
-
 # Clean up dist directory
 cd $ipdir/dist
 rm -f *
