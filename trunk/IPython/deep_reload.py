@@ -36,10 +36,11 @@ import sys, imp, __builtin__
 
 # Replacement for __import__()
 def deep_import_hook(name, globals=None, locals=None, fromlist=None):
-#    if fromlist:
-#        print 'Importing', fromlist, 'from module', name
-#    else:
-#        print 'Importing module', name
+
+##    if fromlist:
+##        print 'Importing', fromlist, 'from module', name
+##    else:
+##        print 'Importing module', name
 
     parent = determine_parent(globals)
     q, tail = find_head_package(parent, name)
