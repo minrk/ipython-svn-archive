@@ -2,7 +2,7 @@
 
 	* setup.py: added support for manpages.  It's a bit hackish b/c of
 	a bug in the way the bdist_rpm distutils target handles gzipped
-	manpages, but it works.
+	manpages, but it works.  After a patch by Jack.
 
 2003-05-19  Fernando Perez  <fperez@colorado.edu>
 
