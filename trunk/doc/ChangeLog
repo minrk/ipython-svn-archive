@@ -1,3 +1,10 @@
+2003-12-04  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Gnuplot2.py (PlotItems): Fixes for working with
+	Gnuplot.py version 1.7, whose internal names changed quite a bit.
+	While I tested this and it looks ok, there may still be corner
+	cases I've missed.
+
 2003-12-01  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell._prefilter): Fixed a bug
