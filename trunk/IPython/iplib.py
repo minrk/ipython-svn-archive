@@ -1344,13 +1344,16 @@ There seemed to be a problem with your sys.stderr.
                 print 'SyntaxError: !! is not allowed in multiline statements'
                 return ''
             else:
-                line_out = '%s%s.system("%s %s")' % (pre,self.name,
-                                                     iFun[1:],theRest)
+                cmd = "%s %s" % (iFun[1:],theRest)
+                cmd = cmd.replace('"','\\"')
+                line_out = '%s%s.system("%s")' % (pre,self.name,cmd)
+                                                     
         else: # single-line input
             if line.startswith('!!'):
                 return self.handle_magic('@sx %s' % line[2:],continue_prompt)
             else:
-                line_out = '%s.system("%s")' % (self.name,line[1:])
+                cmd = line[1:].replace('"','\\"')
+                line_out = '%s.system("%s")' % (self.name,cmd)
         # update cache/log and return
         self.log(line_out,continue_prompt)
         self.update_cache(line_out)   # readline cache gets normal line
