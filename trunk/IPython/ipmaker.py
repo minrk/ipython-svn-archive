@@ -169,7 +169,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                     'readline! readline_omit__names! '
                     'rcfile=s separate_in|si=s separate_out|so=s '
                     'separate_out2|so2=s xmode=s '
-                    'magic_docstrings '
+                    'magic_docstrings system_verbose! '
                     'multi_line_specials!')
 
     # Options that can *only* appear at the cmd line (not in rcfiles).
@@ -219,6 +219,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       separate_in = '\n',
                       separate_out = '\n',
                       separate_out2 = '',
+                      system_verbose = 0,
                       upgrade = 0,
                       Version = 0,
                       xmode = 'Verbose',
@@ -323,9 +324,6 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
 
     # default logfilename used when -log is called.
     IP.LOGDEF = 'ipython.log'
-
-    # history file for saving commands in between sessions
-    IP.histfile = os.path.join(opts_all.ipythondir,'history')
 
     #---------------------------------------------------------------------------
     # Log replay
@@ -494,6 +492,13 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         IP.rc.xmode = 'Plain'
 
     # configure readline
+    # Define the history file for saving commands in between sessions
+    if IP.rc.profile:
+        histfname = 'history-%s' % IP.rc.profile
+    else:
+        histfname = 'history'
+    IP.histfile = os.path.join(opts_all.ipythondir,histfname)
+    # Load readline proper
     if IP.rc.readline:
         IP.init_readline()
 
