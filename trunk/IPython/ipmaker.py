@@ -85,8 +85,19 @@ def make_IPython(argv=[''],user_ns=None,debug=0,rc_override=None):
     IP = InteractiveShell('__IP',user_ns=user_ns)
 
     # Put 'help' in the user namespace
-    from pydoc import help
-    IP.user_ns['help'] = help
+    try:
+        from site import _Helper
+    except ImportError:
+        # Use the _Helper class from Python 2.2 for older Python versions
+        class _Helper:
+            def __repr__(self):
+                return "Type help() for interactive help, " \
+                       "or help(object) for help about object."
+            def __call__(self, *args, **kwds):
+                import pydoc
+                return pydoc.help(*args, **kwds)
+    else:
+        IP.user_ns['help'] = _Helper()
 
     if debug:
         # For developer debugging only
@@ -350,7 +361,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                 cmd = logplay.readline()[6:] 
                 exec cmd
                 logplay.close()
-            except 'ha':
+            except:
                 logplay.close()
                 if opts_all.debug: IP.InteractiveTB()
                 warn("Logplay file lacking full configuration information.\n"
