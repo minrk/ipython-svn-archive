@@ -1,3 +1,22 @@
+2003-08-22  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/ultraTB.py (VerboseTB.linereader): Improved handling of
+	improperly defined user exceptions.  Thanks to feedback from Mark
+	Russell <mrussell@verio.net>.
+	
+2003-08-20  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/OInspect.py (Inspector.pinfo): changed String Form
+	printing so that it would print multi-line string forms starting
+	with a new line.  This way the formatting is better respected for
+	objects which work hard to make nice string forms.
+
+	* IPython/iplib.py (InteractiveShell.handle_auto): Fix bug where
+	autocall would overtake data access for objects with both
+	__getitem__ and __call__.
+
+2003-08-19  *** Released version 0.5.0-rc1
+
 2003-08-19  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/deep_reload.py (load_tail): single tiny change here
