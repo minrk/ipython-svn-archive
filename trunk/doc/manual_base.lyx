@@ -672,11 +672,33 @@ Windows instructions
 \layout Standard
 
 While you can use IPython under Windows with only a stock Python installation,
- there are two extensions which will make the whole experience a lot more
- pleasant.
- They are almost a requirement, since IPython will complain in their absence
+ there is one extension, 
+\family typewriter 
+readline
+\family default 
+, which will make the whole experience a lot more pleasant.
+ It is almost a requirement, since IPython will complain in its absence
  (though it will function).
- They are:
+ 
+\layout Standard
+
+The
+\family typewriter 
+ readline
+\family default 
+ extension needs two other libraries to work, so in all you need:
+\layout Enumerate
+
+
+\family typewriter 
+PyWin32
+\family default 
+ from 
+\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mhammond}
+
+\end_inset 
+
+.
 \layout Enumerate
 
 
@@ -765,7 +787,21 @@ ctypes
 
 \end_inset 
 
-.
+, and Mark Hammond's 
+\family typewriter 
+PyWin32
+\family default 
+ from 
+\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mhammond}
+
+\end_inset 
+
+ (
+\family typewriter 
+PyWin32
+\family default 
+ is great for anything Windows-related anyway, so you might as well get
+ it).
 \layout Standard
 
 Under MS\SpecialChar ~
@@ -780,7 +816,7 @@ readline
  command is issued, so you can consider it to be a quasi-requirement.
 \layout Subsubsection
 
-Installation procedeure
+Installation procedure
 \layout Standard
 
 Once you have the above installed, from the IPython download directory grab

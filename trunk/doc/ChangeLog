@@ -1,3 +1,12 @@
+2005-01-28  Fernando Perez  <fperez@colorado.edu>
+
+	* scripts/ipython_win_post_install.py (install): hardcode
+	sys.prefix+'python.exe' as the executable path.  It turns out that
+	during the post-installation run, sys.executable resolves to the
+	name of the binary installer!  I should report this as a distutils
+	bug, I think.  I updated the .10 release with this tiny fix, to
+	avoid annoying the lists further.
+
 2005-01-27  *** Released version 0.6.10
 
 2005-01-27  Fernando Perez  <fperez@colorado.edu>
