@@ -1,3 +1,8 @@
+2005-01-05  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (IPShellGTK.__init__): Patch by Andrew Straw
+	<astraw@caltech.edu>, to fix gtk deprecation warnings.
+
 2004-12-19  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Shell.py (MTInteractiveShell.runcode): Get rid of
