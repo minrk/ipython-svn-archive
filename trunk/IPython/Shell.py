@@ -644,7 +644,9 @@ class IPShellGTK(threading.Thread):
                       'current state!')
                 self.IP.InteractiveTB()
         self.start()
+        self.gtk.threads_enter()
         self.gtk_mainloop()
+        self.gtk.threads_leave()
         self.join()
 
     def on_timer(self):

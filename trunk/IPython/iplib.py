@@ -26,6 +26,8 @@ $Id$
 #****************************************************************************
 # Modules and globals
 
+from __future__ import generators  # for 2.2 backwards-compatibility
+
 from IPython import Release
 __author__  = '%s <%s>\n%s <%s>' % \
               ( Release.authors['Janko'] + Release.authors['Fernando'] )
@@ -65,6 +67,15 @@ from IPython.genutils import *
 # overwrites it (like wx.py.PyShell does)
 raw_input_original = raw_input
 
+# declares Python 2.2 compatibility symbols:
+try:
+    enumerate
+except NameError:
+    def enumerate(obj):
+        i = -1
+        for item in obj:
+            i += 1
+            yield i, item
 #****************************************************************************
 # Some utility function definitions
 
@@ -1422,6 +1433,27 @@ There seemed to be a problem with your sys.stderr.
         except:
             self.showtraceback()
 
+    def runlines(self,lines):
+        """Run a string of one or more lines of source.
+
+        This method is capable of running a string containing multiple source
+        lines, as if they had been entered at the IPython prompt.  Since it
+        exposes IPython's processing machinery, the given strings can contain
+        magic calls (%magic), special shell access (!cmd), etc."""
+        
+        lines = lines.split('\n')
+        for lnum,line in enumerate(lines):
+            more = self.push((self.prefilter(line,lnum)))
+            if more is None:
+                # IPython's runsource returns None if there was an error
+                # compiling the code.  This allows us to stop processing right
+                # away, so the user gets the error message at the right place.
+                break
+        # final newline in case the input didn't have it, so that the code
+        # actually does get executed
+        if more:
+            self.push('\n')
+
     def runsource(self, source, filename="<input>", symbol="single"):
         """Compile and run some source in the interpreter.
 
@@ -1440,18 +1472,22 @@ There seemed to be a problem with your sys.stderr.
         object.  The code is executed by calling self.runcode() (which
         also handles run-time exceptions, except for SystemExit).
 
-        The return value is True in case 2, False in the other cases (unless
-        an exception is raised).  The return value can be used to
-        decide whether to use sys.ps1 or sys.ps2 to prompt the next
-        line.
+        The return value is:
 
-        """
+          - True in case 2
+
+          - False in the other cases, unless an exception is raised, where
+          None is returned instead.  This can be used by external callers to
+          know whether to continue feeding input or not.
+
+        The return value can be used to decide whether to use sys.ps1 or
+        sys.ps2 to prompt the next line."""
         try:
             code = self.compile(source, filename, symbol)
         except (OverflowError, SyntaxError, ValueError):
             # Case 1
             self.showsyntaxerror(filename)
-            return False
+            return None
 
         if code is None:
             # Case 2
