@@ -43,7 +43,9 @@ each time the instance is evaluated with str(instance).  For example:
     print str(s)
     foo = "bar"
     print str(s)
-"""                          # ' -> close an open quote for stupid emacs
+
+$Id$
+"""                   # ' -> close an open quote for stupid emacs
 
 
 #*****************************************************************************

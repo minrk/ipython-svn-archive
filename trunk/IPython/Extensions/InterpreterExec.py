@@ -3,7 +3,9 @@
 
 We define a special input line filter to allow typing lines which begin with
 '~', '/' or '.'. If one of those strings is encountered, it is automatically
-executed."""
+executed.
+
+$Id$"""
 
 #*****************************************************************************
 #       Copyright (C) 2001 Fernando Perez. <fperez@colorado.edu>

@@ -46,7 +46,9 @@ can be downloaded from:
 
 http://gnuplot-py.sourceforge.net/
 
-Inspired by a suggestion/request from Arnd Baecker."""
+Inspired by a suggestion/request from Arnd Baecker.
+
+$Id$"""
 
 __all__ = ('Gnuplot gp gp_new Data File Func GridData pm3d_config '
            'eps_fix_bbox'.split())

@@ -26,7 +26,9 @@
 
     It shows how to use the built-in keyword, token and tokenize modules to
     scan Python source code and re-emit it with no changes to its original
-    formatting (which is the hard part)."""
+    formatting (which is the hard part).
+
+    $Id$"""
 
 from __future__ import nested_scopes
 

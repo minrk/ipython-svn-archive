@@ -1,5 +1,7 @@
 # -*- coding: iso-8859-1 -*-
-"""Mimic C structs with lots of extra functionality."""
+"""Mimic C structs with lots of extra functionality.
+
+$Id$"""
 
 #*****************************************************************************
 #       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>

@@ -14,6 +14,8 @@
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
+# $Id$
+
 import Release
 __version__ = Release.version
 __date__    = Release.date

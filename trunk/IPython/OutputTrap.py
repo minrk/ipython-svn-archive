@@ -1,5 +1,7 @@
 # -*- coding: iso-8859-1 -*-
-"""Class to trap stdout and stderr and log them separately."""
+"""Class to trap stdout and stderr and log them separately.
+
+$Id$"""
 
 #*****************************************************************************
 #       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>

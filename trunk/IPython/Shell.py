@@ -1,5 +1,7 @@
 # -*- coding: iso-8859-1 -*-
-"""IPython Shell classes."""
+"""IPython Shell classes.
+
+$Id$"""
 
 #*****************************************************************************
 #       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>

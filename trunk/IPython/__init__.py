@@ -24,7 +24,9 @@ IPython tries to:
 
   iii - serve as an embeddable, ready to go interpreter for your own programs.
 
-IPython requires Python 2.1 or newer."""
+IPython requires Python 2.2 or newer.
+
+$Id$"""
 
 # Define what gets imported with a 'from IPython import *'
 

@@ -4,7 +4,8 @@ A set of convenient utilities for numerical work.
 
 Most of this module requires Numerical Python or is meant to be used with it.
 See http://www.pfdubois.com/numpy for details.
-"""
+
+$Id$"""
 
 #*****************************************************************************
 #       Copyright (C) 2001-2004 Fernando Pérez. <fperez@colorado.edu>
