@@ -954,7 +954,7 @@ Currently the magic system has the following functions:\n"""
 
        -s <key>: sort profile by given key. You can provide more than one key
         by using the option several times: '-s key1 -s key2 -s key3...'. The
-        default sorting key is 'stdname'.
+        default sorting key is 'time'.
 
         The following is copied verbatim from the profile documentation
         referenced below:
@@ -1005,7 +1005,7 @@ Currently the magic system has the following functions:\n"""
         You can read the complete documentation for the profile module with:
           In [1]: import profile; profile.help() """
 
-        opts_def = Struct(d=[''],l=[],s=['stdname'],t=[''])
+        opts_def = Struct(d=[''],l=[],s=['time'],t=[''])
         if user_mode:  # regular user call
             opts,arg_str = self.parse_options(parameter_s,'d:l:rs:t:',
                                               list_all=1)
