@@ -92,6 +92,8 @@ with the subject 'IPython Crash Report'.
 If you want to do it now, the following command will work (under Unix):
 mail -s 'IPython Crash Report' $self.mailto < $self.report_name
 
+To ensure accurate tracking of this issue, please file a report about it at:
+http://www.scipy.net/roundup/ipython  (IPython's online bug tracker).
 """)
         print >> sys.stderr, msg
 
