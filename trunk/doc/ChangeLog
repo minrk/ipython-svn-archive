@@ -1,3 +1,10 @@
+2004-07-26  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/ultraTB.py (VerboseTB.text): Add another
+	linecache.checkcache() call to try to prevent inspect.py from
+	crashing under python 2.3.  I think this fixes
+	http://www.scipy.net/roundup/ipython/issue17.
+
 2004-07-26  *** Released version 0.6.2
 
 2004-07-26  Fernando Perez  <fperez@colorado.edu>
