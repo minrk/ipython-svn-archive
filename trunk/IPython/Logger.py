@@ -151,12 +151,13 @@ State:\t%s """ % (logfile,self.LOGMODE,state)
         #print '***logging line',line # dbg
         #print '***cache_count', self.outputcache.prompt_count # dbg
         input_hist = self.log_ns['_ih']
-        if not continuation:
+        if not continuation and line:
             self._iii = self._ii
             self._ii = self._i
             self._i = self._i00
             # put back the final \n of every input line
             self._i00 = line+'\n'
+            #print 'Logging input:<%s>' % line  # dbg
             input_hist.append(self._i00)
 
         # hackish access to top-level namespace to create _i1,_i2... dynamically
