@@ -1547,7 +1547,7 @@ Currently the magic system has the following functions:\n"""
             warn('Error changing exception modes.\n' + str(sys.exc_info()[1]))
             
     def magic_colors(self,parameter_s = ''):
-        """Switch color scheme for the prompts and exception handlers.
+        """Switch color scheme for prompts, info system and exception handlers.
 
         Currently implemented schemes: NoColor, Linux, LightBG.
 
@@ -1557,6 +1557,33 @@ Currently the magic system has the following functions:\n"""
         if not new_scheme:
             print 'You must specify a color scheme.'
             return
+        # Under Windows, check for Gary Bishop's readline, which is necessary
+        # for ANSI coloring
+        if os.name in ['nt','dos']:
+            try:
+                import readline
+            except ImportError:
+                has_readline = 0
+            else:
+                try:
+                    readline.GetOutputFile()
+                except AttributeError:
+                    has_readline = 0
+                else:
+                    has_readline = 1
+            if not has_readline:
+                msg = """\
+Proper color support under MS Windows requires Gary Bishop's readline library.
+You can find it at:
+http://sourceforge.net/projects/uncpythontools
+Gary's readline needs the ctypes module, from:
+http://starship.python.net/crew/theller/ctypes
+
+Defaulting color scheme to 'NoColor'"""
+                new_scheme = 'NoColor'
+                warn(msg)
+        
+        # Set prompt colors
         try:
             self.shell.outputcache.set_colors(new_scheme)
         except:
@@ -1565,12 +1592,14 @@ Currently the magic system has the following functions:\n"""
         else:
             self.shell.rc.colors = \
                        self.shell.outputcache.color_table.active_scheme_name
+        # Set exception colors
         try:
             self.shell.InteractiveTB.set_colors(scheme = new_scheme)
             self.shell.SyntaxTB.set_colors(scheme = new_scheme)
         except:
             warn('Error changing exception color schemes.\n'
                  + str(sys.exc_info()[1]))
+        # Set info (for 'object?') colors
         if self.shell.rc.color_info:
             try:
                 self.shell.inspector.set_active_scheme(new_scheme)
