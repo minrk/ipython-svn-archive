@@ -51,7 +51,7 @@ from IPython.Prompts import CachedOutput
 from IPython.genutils import *
 
 #-----------------------------------------------------------------------------
-def make_IPython(argv=None,user_ns=None,debug=0,rc_override=None,
+def make_IPython(argv=None,user_ns=None,debug=1,rc_override=None,
                  shell_class=InteractiveShell,embedded=False,**kw):
     """This is a dump of IPython into a single function.
 

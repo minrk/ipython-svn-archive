@@ -48,7 +48,7 @@ USE_TK = False
 class IPShell:
     """Create an IPython instance."""
     
-    def __init__(self,argv=None,user_ns=None,debug=0,
+    def __init__(self,argv=None,user_ns=None,debug=1,
                  shell_class=InteractiveShell):
         self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
                                shell_class=shell_class)
@@ -608,7 +608,7 @@ class IPShellGTK(threading.Thread):
     
     TIMEOUT = 100 # Millisecond interval between timeouts.
 
-    def __init__(self,argv=None,user_ns=None,debug=0,
+    def __init__(self,argv=None,user_ns=None,debug=1,
                  shell_class=MTInteractiveShell):
 
         import pygtk
@@ -670,7 +670,7 @@ class IPShellWX(threading.Thread):
     
     TIMEOUT = 100 # Millisecond interval between timeouts.
 
-    def __init__(self,argv=None,user_ns=None,debug=0,
+    def __init__(self,argv=None,user_ns=None,debug=1,
                  shell_class=MTInteractiveShell):
 
         import wxPython.wx as wx
@@ -744,7 +744,7 @@ class IPShellMatplotlib(IPShell):
 
     Having this on a separate class simplifies the external driver code."""
     
-    def __init__(self,argv=None,user_ns=None,debug=0):
+    def __init__(self,argv=None,user_ns=None,debug=1):
         IPShell.__init__(self,argv,user_ns,debug,shell_class=MatplotlibShell)
 
 class IPShellMatplotlibGTK(IPShellGTK):
@@ -752,7 +752,7 @@ class IPShellMatplotlibGTK(IPShellGTK):
 
     Multi-threaded class, meant for the GTK* backends."""
     
-    def __init__(self,argv=None,user_ns=None,debug=0):
+    def __init__(self,argv=None,user_ns=None,debug=1):
         IPShellGTK.__init__(self,argv,user_ns,debug,shell_class=MatplotlibMTShell)
 
 class IPShellMatplotlibWX(IPShellWX):
@@ -760,7 +760,7 @@ class IPShellMatplotlibWX(IPShellWX):
 
     Multi-threaded class, meant for the WX* backends."""
     
-    def __init__(self,argv=None,user_ns=None,debug=0):
+    def __init__(self,argv=None,user_ns=None,debug=1):
         IPShellWX.__init__(self,argv,user_ns,debug,shell_class=MatplotlibMTShell)
 
 #-----------------------------------------------------------------------------
