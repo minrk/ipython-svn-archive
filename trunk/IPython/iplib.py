@@ -477,7 +477,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
                              self.ESC_MAGIC:self.handle_magic,
                              self.ESC_HELP:self.handle_help,
                              self.ESC_SHELL:self.handle_shell_escape,
-			     }
+                             }
 
         # RegExp for splitting line contents into pre-char//first word-method//rest
         # update the regexp if the above escapes are changed
@@ -1066,15 +1066,15 @@ want to merge them back into the new files.""" % locals()
                 # (or b/c of an IPython bug). One reasonable exception is if
                 # the user sets stdin/out/err to a broken object (or closes
                 # any of them!)
-		
+
                 fixed_in_out_err = 0
 
                 # Call the Term I/O class and have it reopen any stream which
                 # the user might have closed.
                 Term.reopen_all()
-		
+
                 # Do the same manually for sys.stderr/out/in
-		
+                
                 # err first, so we can print at least warnings
                 if sys.__stderr__.closed:
                     sys.__stderr__ = os.fdopen(os.dup(2),'w',0)
@@ -1094,7 +1094,7 @@ WARNING:
 sys.__stdin__ was closed!
 I've tried to reopen it, but bear in mind that things may not work normally
 from now.  In particular, readline support may have broken.
-"""		    
+"""
                 if sys.__stdout__.closed:
                     sys.__stdout__ = os.fdopen(os.dup(1),'w',0)
                     fixed_in_out_err = 1
@@ -1103,7 +1103,7 @@ WARNING:
 sys.__stdout__ was closed!
 I've tried to reopen it, but bear in mind that things may not work normally
 from now.  In particular, readline support may have broken.
-"""		    
+"""
 
                 # Now, check mismatch of objects
                 if sys.stdin is not sys.__stdin__:

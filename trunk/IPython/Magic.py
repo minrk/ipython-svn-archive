@@ -2039,7 +2039,7 @@ Defaulting color scheme to 'NoColor'"""
           !!ls
         is a shorthand equivalent to:
           @sx ls
-	
+        
         2) @sx differs from @sc in that @sx automatically splits into a list,
         like '@sc -l'.  The reason for this is to make it as easy as possible
         to process line-oriented shell output via further python commands.

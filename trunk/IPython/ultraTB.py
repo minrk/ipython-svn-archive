@@ -479,7 +479,7 @@ class VerboseTB(TBTools):
 
             def tokeneater(type, token, start, end, line,
                            names=names, kwlist=keyword.kwlist,
-		           NAME=tokenize.NAME, NEWLINE=tokenize.NEWLINE):
+                           NAME=tokenize.NAME, NEWLINE=tokenize.NEWLINE):
                 if type == NAME and token not in kwlist:
                     if token not in names: names.append(token)
                 if type == NEWLINE: raise IndexError
