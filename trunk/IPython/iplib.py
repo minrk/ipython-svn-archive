@@ -436,12 +436,18 @@ IPython will proceed with builtin defaults.
         if mode == 'install':
             try:
                 shutil.copytree(rcdir,ipythondir)
+                os.chdir(ipythondir)
+                rc_files = glb("ipythonrc*")
+                for rc_file in rc_files:
+                    os.rename(rc_file,rc_file+rc_suffix)
             except:
-                print """
+                warning = """
+
 There was a problem with the installation:
 %s
 Try to correct it or contact the developers if you think it's a bug.
 IPython will proceed with builtin defaults.""" % sys.exc_info()[1]
+                warn(warning)
                 wait()
                 return
 
@@ -491,8 +497,11 @@ cause any problems during execution.  """ % (ipythondir,sys.exc_info()[1])
         # FIXME. This would be better done by loading separate files with the
         # os-specific preferences. Later.
         if os.name in ('nt','dos'):
-            iprc_name = 'ipythonrc.ini'
-            iprc_bak_name = iprc_name + '.bak'
+            iprc_name = 'ipythonrc'+rc_suffix
+            if rc_suffix:
+                iprc_bak_name = iprc_name.replace(rc_suffix,'.bak')
+            else:
+                iprc_bak_name = iprc_name + '.bak'
             os.rename(iprc_name,iprc_bak_name)
             iprc_bak = open(iprc_bak_name,'r')
             iprc = open(iprc_name,'w')
