@@ -4,7 +4,7 @@
 
 name = 'IPython'
 
-version = '0.4.1-cvs'
+version = '0.5.0-rc1'
 
 description = "An enhanced interactive Python shell."
 
