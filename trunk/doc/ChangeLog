@@ -1,8 +1,29 @@
+2004-06-18  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.runcode): modify to print a
+	better message when 'exit' or 'quit' are typed (a common newbie
+	confusion).
+
+	* IPython/Magic.py (Magic.magic_colors): Added the runtime color
+	check for Windows users.
+
+	* IPython/iplib.py (InteractiveShell.user_setup): removed
+	disabling of colors for Windows.  I'll test at runtime and issue a
+	warning if Gary's readline isn't found, as to nudge users to
+	download it.
+
 2004-06-16  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (Stream.__init__): changed to print errors
+	to sys.stderr.  I had a circular dependency here.  Now it's
+	possible to run ipython as IDLE's shell (consider this pre-alpha,
+	since true stdout things end up in the starting terminal instead
+	of IDLE's out).
 
 	* IPython/Prompts.py (Prompt2.set_colors): prevent crashes for
 	users who haven't # updated their prompt_in2 definitions.  Remove
 	eventually.
+	(multiple_replace): added credit to original ASPN recipe.
 
 2004-06-15  Fernando Perez  <fperez@colorado.edu>
 

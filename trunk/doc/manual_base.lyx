@@ -699,7 +699,9 @@ Under Windows
 
 While you can use IPython under Windows with only a stock Python installation,
  there are two sets of extensions which will make the whole experience a
- lot more pleasant:
+ lot more pleasant.
+ One of them (readline) is almost a requirement, since IPython will complain
+ in its absence (though it will function).
 \layout Subsubsection
 
 Mark Hammond's PythonWin
@@ -732,8 +734,7 @@ Integrated readline support (Tab-based file, object and attribute completion,
 Coloring of prompts, code and tracebacks
 \layout Standard
 
-These, by default, are only available by default under Unix-like operating
- systems.
+These, by default, are only available under Unix-like operating systems.
  However, thanks to Gary Bishop's work, Windows XP/2k users can also benefit
  from them.
  His readline library implements both GNU readline functionality and color
@@ -756,6 +757,15 @@ ctypes
 \end_inset 
 
 .
+\layout Standard
+
+Under MS\SpecialChar ~
+Windows, IPython will complain if it can not find this readline
+ library at startup and any time the 
+\family typewriter 
+@colors
+\family default 
+ command is issued, so you can consider it to be a quasi-requirement.
 \layout Subsubsection
 
 Installation procedeure
