@@ -27,6 +27,9 @@ functions with improved versions (Gnuplot2 comes with IPython).
 
 - File: alias to Gnuplot.File, makes a PlotItem from a file.
 
+- String: alias to Gnuplot.String, makes a PlotItem from a string formatted
+exactly like a file for Gnuplot.File would be.
+
 - Func: alias to Gnuplot.Func, makes a PlotItem from a function string.
 
 - GridData: alias to Gnuplot.GridData, makes a PlotItem from grid data.
@@ -68,7 +71,7 @@ open(tmpname,'w').write('set mouse')
 gnu_out = getoutput('gnuplot '+ tmpname)
 os.unlink(tmpname)
 if gnu_out:  # Gnuplot won't print anything if it has mouse support
-    print "*** Your version of Gnuplot does not have mouse support."
+    print "*** Your version of Gnuplot appears not to have mouse support."
     gnuplot_mouse = 0
 else:
     gnuplot_mouse = 1

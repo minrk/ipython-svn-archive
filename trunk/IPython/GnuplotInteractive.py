@@ -62,10 +62,10 @@ plots, each in a separate window.
 the original Gnuplot.py. Gnuplot2 needs Gnuplot but redefines several of its
 functions with improved versions (Gnuplot2 comes with IPython).
 
-- gpdata, gpfile, gpfunc, gpgrid: aliases to Gnuplot.Data, Gnuplot.File,
-Gnuplot.Func and Gnuplot.GridData respectively. These functions create objects
-which can then be passed to the plotting commands. See the Gnuplot.py
-documentations for details.
+- gpdata, gpfile, gpstring, gpfunc, gpgrid: aliases to Gnuplot.Data,
+Gnuplot.File, Gnuplot.String, Gnuplot.Func and Gnuplot.GridData
+respectively. These functions create objects which can then be passed to the
+plotting commands. See the Gnuplot.py documentation for details.
 
 Keep in mind that all commands passed to a Gnuplot instance are executed in
 the Gnuplot namespace, where no Python variables exist. For example, for
