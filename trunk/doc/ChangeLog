@@ -1,3 +1,14 @@
+2004-04-04  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.interact): Had to back off
+	the patch below from Dan Griffith.  It messes up the prompt counts
+	for the In/Out caches when the input line is 'non standard', such
+	as foo?, or !foo.
+	(InteractiveShell.interact): Added a special trap for a debugger
+	quit exception, which is basically impossible to handle by normal
+	mechanisms, given what pdb does to the stack.  This fixes a crash
+	reported by <fgibbons@llama.med.harvard.edu>.
+
 2004-04-03  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/genutils.py (Term): Standardized the names of
