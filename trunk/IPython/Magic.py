@@ -1822,7 +1822,7 @@ self.magic_$alias = magic_$alias
 	IPython will run the given command using commands.getoutput(), and
 	return the result formatted as a list (split on '\\n').  Since the
 	output is _returned_, it will be stored in ipython's regular output
-	cache Out[N] and in the '_' automatic variables.
+	cache Out[N] and in the '_N' automatic variables.
 
 	Notes:
 
