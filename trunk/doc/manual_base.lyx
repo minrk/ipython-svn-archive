@@ -802,6 +802,25 @@ Readline
 \end_inset 
 
 
+\layout Standard
+
+
+\series bold 
+Warning about a broken readline-like library:
+\series default 
+ several users have reported problems stemming from using the pseudo-readline
+ library at 
+\begin_inset LatexCommand \htmlurl{http://newcenturycomputers.net/projects/readline.html}
+
+\end_inset 
+
+.
+ This is an incomplete library which, while called readline, only implements
+ an incomplete subset of the readline API.
+ Since it is still called readline, it fools IPython's detection mechanisms
+ and causes unpredictable crashes later.
+ If you wish to use IPython under Windows, you must NOT use this library,
+ which for all purposes is (at least as of version 1.6) terminally broken.
 \layout Subsubsection
 
 Mark Hammond's 

@@ -1,3 +1,32 @@
+2004-08-11  Fernando Perez  <fperez@colorado.edu>
+
+	* setup.py (isfile): Fix build so documentation gets updated for
+	rpms (it was only done for .tgz builds).
+
+2004-08-05  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Prompts.py (Prompt2.set_colors): Fix incorrectly set
+	'color off' mark for continuation prompts.  This was causing long
+	continuation lines to mis-wrap.
+
+2004-08-01  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/ipmaker.py (make_IPython): Allow the shell class used
+	for building ipython to be a parameter.  All this is necessary
+	right now to have a multithreaded version, but this insane
+	non-design will be cleaned up soon.  For now, it's a hack that
+	works.
+
+	* IPython/Shell.py (IPShell.__init__): Stop using mutable default
+	args in various places.  No bugs so far, but it's a dangerous
+	practice.
+
+2004-07-31  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (complete): ignore SyntaxError exceptions to
+	fix completion of files with dots in their names under most
+	profiles (pysh was OK because the completion order is different).
+
 2004-07-27  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.__init__): build dict of

@@ -15,6 +15,9 @@ a constructor with the optional 'namespace' parameter.
 
 A patch has been submitted to Python@sourceforge for these changes to go in
 the standard Python distribution.
+
+The patch went in for Python 2.3.  Once IPython drops support for Python 2.2,
+this file can be significantly reduced.
 ---------------------------------------------------------------------------
 
 Original rlcompleter documentation:
@@ -160,12 +163,6 @@ class Completer:
 
         """
         import re
-
-	# Testing. This is the original code:
-	#m = re.match(r"(\w+(\.\w+)*)\.(\w*)", text)
-
-	# Modified to catch [] in expressions:
-	#m = re.match(r"([\w\[\]]+(\.[\w\[\]]+)*)\.(\w*)", text)
 
         # Another option, seems to work great. Catches things like ''.<tab>
         m = re.match(r"(\S+(\.\w+)*)\.(\w*)$", text)
