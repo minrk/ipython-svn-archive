@@ -1,3 +1,8 @@
+2004-07-04  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.handle_shell_escape): Fix
+	escaping of quotes when calling the shell.
+
 2004-07-02  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Prompts.py (CachedOutput.update): Fix problem with
