@@ -269,12 +269,35 @@ def system(cmd,verbose=0,debug=0,header=''):
     if not debug: stat = os.system(cmd)
     return stat
 
-def getoutput(cmd,verbose=0,debug=0,header=''):
+def shell(cmd,verbose=0,debug=0,header=''):
+    """Execute a command in the system shell, always return None.
+
+    Options:
+
+    - verbose (0): print the command to be executed.
+    
+    - debug (0): only print, do not actually execute.
+
+    - header (''): Header to print on screen prior to the executed command (it
+    is only prepended to the command, no newlines are added).
+
+    Note: this is similar to genutils.system(), but it returns None so it can
+    be conveniently used in interactive loops without getting the return value
+    (typically 0) printed many times."""
+
+    stat = 0
+    if verbose or debug: print header+cmd
+    sys.stdout.flush()
+    if not debug: stat = os.system(cmd)
+
+def getoutput(cmd,verbose=0,debug=0,header='',split=0):
     """Dummy substitute for perl's backquotes.
 
     Executes a command and returns the output.
 
-    Accepts the same arguments as system().
+    Accepts the same arguments as system(), plus:
+
+    - split(0): if true, the output is returned as a list split on newlines.
 
     Note: a stateful version of this function is available through the
     SystemExec class."""
@@ -282,12 +305,18 @@ def getoutput(cmd,verbose=0,debug=0,header=''):
     if verbose or debug: print header+cmd
     if not debug:
         output = commands.getoutput(cmd)
-        return output
+        if split:
+            return output.split('\n')
+        else:
+            return output
 
-def getoutputerror(cmd,verbose=0,debug=0,header=''):
+def getoutputerror(cmd,verbose=0,debug=0,header='',split=0):
     """Return (standard output,standard error) of executing cmd in a shell.
 
-    Accepts the same arguments as system().
+    Accepts the same arguments as system(), plus:
+
+    - split(0): if true, each of stdout/err is returned as a list split on
+    newlines.
 
     Note: a stateful version of this function is available through the
     SystemExec class."""
@@ -300,7 +329,10 @@ def getoutputerror(cmd,verbose=0,debug=0,header=''):
         pin.close()
         pout.close()
         perr.close()
-        return tout,terr
+        if split:
+            return tout.split('\n'),terr.split('\n')
+        else:
+            return tout,terr
 
 # for compatibility with older naming conventions
 xsys = system
@@ -333,26 +365,31 @@ class SystemExec:
      >>> dirlist = sysexec.bq('ls -l')
     """
     
-    def __init__(self,verbose=0,debug=0,header=''):
+    def __init__(self,verbose=0,debug=0,header='',split=0):
         """Specify the instance's values for verbose, debug and header."""
-        setattr_list(self,'verbose debug header')
+        setattr_list(self,'verbose debug header split')
 
     def system(self,cmd):
         """Stateful interface to system(), with the same keyword parameters."""
 
         system(cmd,self.verbose,self.debug,self.header)
 
+    def shell(self,cmd):
+        """Stateful interface to shell(), with the same keyword parameters."""
+
+        shell(cmd,self.verbose,self.debug,self.header)
+
     xsys = system  # alias
 
     def getoutput(self,cmd):
         """Stateful interface to getoutput()."""
 
-        return getoutput(cmd,self.verbose,self.debug,self.header)
+        return getoutput(cmd,self.verbose,self.debug,self.header,self.split)
 
     def getoutputerror(self,cmd):
         """Stateful interface to getoutputerror()."""
 
-        return getoutputerror(cmd,self.verbose,self.debug,self.header)
+        return getoutputerror(cmd,self.verbose,self.debug,self.header,self.split)
 
     bq = getoutput  # alias
 
