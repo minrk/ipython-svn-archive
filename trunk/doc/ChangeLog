@@ -1,3 +1,5 @@
+2004-11-08  *** Released version 0.6.4
+
 2004-11-08  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (init_readline): Fix exit message for Windows
