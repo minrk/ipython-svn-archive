@@ -1,5 +1,5 @@
-# -*- coding: iso-8859-1 -*-
 #!/usr/bin/env python
+# -*- coding: iso-8859-1 -*-
 """Setup script for IPython.
 
 Under Posix environments it works like a typical setup.py script. Under
@@ -39,15 +39,14 @@ else:
     print 'Unsupported operating system:',os.name
     sys.exit()
 
-# Under Windows only 'install' is supported anyway, since 'sdist' requires
-# lyxport (hence lyx,perl,latex,pdflatex,latex2html,sh,...)
+# Under Windows, 'sdist' is not supported, since it requires lyxport (and
+# hence lyx,perl,latex,pdflatex,latex2html,sh,...)
 if os_name == 'windows':
     setup = os.path.join(os.getcwd(),'setup.py')
-    if len(sys.argv)==1 or sys.argv[1] not in ['install', 
-                                               'bdist', 
-                                               'bdist_wininst']:
+    if len(sys.argv)==1 or \
+           sys.argv[1] not in ['install','bdist','bdist_wininst']:
         sys.argv = [setup,'install']
- 
+
 from distutils.core import setup
 
 # update the manuals when building a source dist
@@ -126,6 +125,6 @@ setup(name             = name,
 
 # For Unix users, things end here.
 # Under Windows, do some extra stuff.
-if os_name=='windows':
+if os_name=='windows' and 'install' in sys.argv:
     import ipython_win_post_install
     ipython_win_post_install.run(wait=1)
