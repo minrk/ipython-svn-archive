@@ -21,7 +21,7 @@ __license__ = Release.license
 
 # Python standard modules
 import __builtin__
-import os, sys, inspect, pydoc, re, tempfile, profile, pstats,shlex
+import os,sys,inspect,pydoc,re,tempfile,profile,pstats,shlex,pdb,bdb
 from getopt import getopt
 from pprint import pprint, pformat
 from cStringIO import StringIO
@@ -443,11 +443,12 @@ control the behavior of IPython itself, plus a lot of system-type
 features. All these functions are prefixed with a % character, but parameters
 are given without parentheses or quotes.
 
+NOTE: If you have 'automagic' enabled (via the command line option or with the
+%automagic function), you don't need to type in the % explicitly.  By default,
+IPython ships with automagic on, so you should only rarely need the % escape.
+
 Example: typing '%cd mydir' (without the quotes) changes you working directory
 to 'mydir', if it exists.
-
-If you have 'automagic' enabled (via the command line option or with the
-%automagic function), you don't need to type in the % explicitly.
 
 You can define your own magic functions to extend the system. See the supplied
 ipythonrc and example-magic.py files for details (in your ipython
@@ -695,31 +696,50 @@ Currently the magic system has the following functions:\n"""
         self._inspect('pinfo',oname,detail_level=detail_level)
 
     def magic_who_ls(self, parameter_s=''):
-        """Return a list of all interactive variables."""
+        """Return a sorted list of all interactive variables.
+
+        If arguments are given, only variables of types matching these
+        arguments are returned."""
+
+        user_ns = self.shell.user_ns
         out = []
+        typelist = parameter_s.split()
         for i in self.shell.user_ns.keys():
             if not (i.startswith('_') or i.startswith('_i')) \
                    and not (self.internal_ns.has_key(i) or
                             self.user_config_ns.has_key(i)):
-                out.append(i)
-        # FIXME. The namespaces should be setup so that this kind of manual
-        # kludges is unnecessary:
-        if 'help' in out and \
-           isinstance(self.shell.user_ns['help'],pydoc.Helper):
-            out.remove('help')
+                if typelist:
+                    if type(user_ns[i]).__name__ in typelist:
+                        out.append(i)
+                else:
+                    out.append(i)
         out.sort()
         return out
         
     def magic_who(self, parameter_s=''):
         """Print all interactive variables, with some minimal formatting.
 
-        This excludes executed names loaded through your configuration
+        If any arguments are given, only variables whose type matches one of
+        these are printed.  For example:
+
+          %who function str
+
+        will only list functions and strings, excluding all other types of
+        variables.  To find the proper type names, simply use type(var) at a
+        command line to see how python prints type names.  For example:
+
+          In [1]: type('hello')\\
+          Out[1]: <type 'str'>
+
+        indicates that the type name for strings is 'str'.
+
+        %who always excludes executed names loaded through your configuration
         file and things which are internal to IPython.
 
         This is deliberate, as typically you may load many modules and the
         purpose of %who is to show you only what you've manually defined."""
 
-        varlist = self.magic_who_ls()
+        varlist = self.magic_who_ls(parameter_s)
         if not varlist:
             print 'Interactive namespace is empty.'
             return
@@ -730,21 +750,34 @@ Currently the magic system has the following functions:\n"""
         # getting lost. I'm starting to think this is a python bug. I'm having
         # to force a flush with a print because even a sys.stdout.flush
         # doesn't seem to do anything!
-        
+
+        count = 0
         for i in varlist:
             print i+'\t',
+            count += 1
+            if count > 8:
+                count = 0
+                print
             sys.stdout.flush()  # FIXME. Why the hell isn't this flushing???
+            
         print # well, this does force a flush at the expense of an extra \n
 
     def magic_whos(self, parameter_s=''):
         """Like %who, but gives some extra information about each variable.
 
-        For all variables, the type is printed. Additionally it prints:\\
-          - For {},[],(): their length.\\
+        The same type filtering of %who can be applied here.
+
+        For all variables, the type is printed. Additionally it prints:
+        
+          - For {},[],(): their length.
+
+          - For Numeric arrays, a summary with shape, number of elements,
+          typecode and size in memory.
+
           - Everything else: a string representation, snipping their middle if
           too long."""
         
-        varnames = self.magic_who_ls()
+        varnames = self.magic_who_ls(parameter_s)
         if not varnames:
             print 'Interactive namespace is empty.'
             return
@@ -783,15 +816,24 @@ Currently the magic system has the following functions:\n"""
         print varlabel.ljust(varwidth) + typelabel.ljust(typewidth) + \
               ' '+datalabel+'\n' + '-'*(varwidth+typewidth+len(datalabel)+1)
         # and the table itself
+        kb = 1024
+        Mb = 1048576  # kb**2
         for vname,var,vtype in zip(varnames,varlist,typelist):
             print itpl(vformat),
             if vtype in seq_types:
                 print len(var)
             elif vtype==array_type:
-                vshape = str(var.shape).replace(', ','x')[1:-1]
+                vshape = str(var.shape).replace(',','').replace(' ','x')[1:-1]
                 vsize  = Numeric.size(var)
                 vbytes = vsize*var.itemsize()
-                print aformat % (vshape,vsize,var.typecode(),vbytes)
+                if vbytes < 100000:
+                    print aformat % (vshape,vsize,var.typecode(),vbytes)
+                else:
+                    print aformat % (vshape,vsize,var.typecode(),vbytes),
+                    if vbytes < Mb:
+                        print '(%s kb)' % (vbytes/kb,)
+                    else:
+                        print '(%s Mb)' % (vbytes/Mb,)
             else:
                 vstr = str(var)
                 if len(vstr) < 50:
@@ -1025,7 +1067,7 @@ Currently the magic system has the following functions:\n"""
         -t <filename>: save profile results as shown on screen to a text
         file. The profile is still shown on screen.
 
-        -d <filename>: save (via dump_stats) profile statistics to given
+        -D <filename>: save (via dump_stats) profile statistics to given
         filename. This data is in a format understod by the pstats module, and
         is generated by a call to the dump_stats() method of profile
         objects. The profile is still shown on screen.
@@ -1034,12 +1076,12 @@ Currently the magic system has the following functions:\n"""
         '%run -p [prof_opts] filename.py [args to program]' where prof_opts
         contains profiler specific options as described here.
         
-        You can read the complete documentation for the profile module with:
+        You can read the complete documentation for the profile module with:\\
           In [1]: import profile; profile.help() """
 
         opts_def = Struct(d=[''],l=[],s=['time'],t=[''])
         if user_mode:  # regular user call
-            opts,arg_str = self.parse_options(parameter_s,'d:l:rs:t:',
+            opts,arg_str = self.parse_options(parameter_s,'D:l:rs:t:',
                                               list_all=1)
             namespace = self.shell.user_ns
         else:  # called to run a program by %run -p
@@ -1089,7 +1131,7 @@ Currently the magic system has the following functions:\n"""
         page(output,screen_lines=self.shell.rc.screen_length)
         print sys_exit,
 
-        dump_file = opts.d[0]
+        dump_file = opts.D[0]
         text_file = opts.t[0]
         if dump_file:
             prof.dump_stats(dump_file)
@@ -1109,7 +1151,7 @@ Currently the magic system has the following functions:\n"""
         """Run the named file inside IPython as a program.
 
         Usage:\\
-          %run [-n -i -p [profile options]] file [args]
+          %run [-n -i -d [-bN] -p [profile options]] file [args]
 
         Parameters after the filename are passed as command-line arguments to
         the program (put in sys.argv). Then, control returns to IPython's
@@ -1140,6 +1182,25 @@ Currently the magic system has the following functions:\n"""
         is useful if you are experimenting with code written in a text editor
         which depends on variables defined interactively.
 
+        -d: run your program under the control of pdb, the Python debugger.
+        This allows you to execute your program step by step, watch variables,
+        etc.  Internally, what IPython does is similar to calling:
+        
+          pdb.run('execfile("YOURFILENAME")')
+
+        with a breakpoint set on line 1 of your file.  You can change the line
+        number for this automatic breakpoint to be <N> by using the -bN option
+        (where N must be an integer).  For example:
+
+          %run -d -b40 myscript
+
+        will set the first breakpoint at line 40 in myscript.py.
+
+        When the pdb debugger starts, you will see a (Pdb) prompt.  You must
+        first enter 'c' (without qoutes) to start execution up to the first
+        breakpoint.  Entering 'help' gives information about the use of the
+        debugger; the pdb module's documentation has further details.
+
         -p: run program under the control of the Python profiler module (which
         prints a detailed report of execution times, function calls, etc).
 
@@ -1154,7 +1215,7 @@ Currently the magic system has the following functions:\n"""
         details on the options available specifically for profiling."""
 
         # get arguments and set sys.argv for program to be run.
-        opts,arg_lst = self.parse_options(parameter_s,'nipd:l:rs:t:',
+        opts,arg_lst = self.parse_options(parameter_s,'nidb:pD:l:rs:t:',
                                           mode='list',list_all=1)
 
         try:
@@ -1187,14 +1248,28 @@ Currently the magic system has the following functions:\n"""
         sys.modules[prog_ns['__name__']] = FakeModule(prog_ns)
         
         stats = None
-        if runner is None:
-            runner = self.shell.safe_execfile
         try:
             if opts.has_key('p'):
-                #cmd = parameter_s.split()[:-1] # FIXME: dead code?
                 stats = self.magic_prun('',0,opts,arg_lst,prog_ns)
             else:
-                runner(filename,prog_ns,prog_ns)
+                if opts.has_key('d'):
+                    deb = pdb.Pdb()
+                    # reset Breakpoint state, which is moronically kept
+                    # in a class
+                    bdb.Breakpoint.next = 1
+                    bdb.Breakpoint.bplist = {}
+                    bdb.Breakpoint.bpbynumber = [None]
+                    # Set an initial breakpoint to stop execution
+                    bp = int(opts.get('b',[1])[0])
+                    deb.do_break('%s:%s' % (filename,bp))
+                    # Start file run
+                    print "NOTE: Enter 'c' at the",
+                    print "(Pdb) prompt to start your script."
+                    deb.run('execfile("%s")' % filename,prog_ns)
+                else:
+                    if runner is None:
+                        runner = self.shell.safe_execfile
+                    runner(filename,prog_ns,prog_ns)
                 if opts.has_key('i'):
                     self.shell.user_ns['__name__'] = __name__save
                 else:
@@ -1391,19 +1466,22 @@ Currently the magic system has the following functions:\n"""
 
         In [1]: ed\\
         Editing... done. Executing edited code...\\
-        Out[1]: 'def foo():\n    print "foo() was defined in an editing session"\n'\\
+        Out[1]: 'def foo():\n    print "foo() was defined in an editing session"\n'
 
         We can then call the function foo():
-        In [2]: foo()
+        
+        In [2]: foo()\\
         foo() was defined in an editing session
 
         Now we edit foo.  IPython automatically loads the editor with the
-        (temporary) file where foo() was previously defined.
-        In [3]: ed foo
+        (temporary) file where foo() was previously defined:
+        
+        In [3]: ed foo\\
         Editing... done. Executing edited code...
 
         And if we call foo() again we get the modified version:
-        In [4]: foo()
+        
+        In [4]: foo()\\
         foo() has now been changed!
 
         Here is an example of how to edit a code snippet successive
@@ -1412,14 +1490,14 @@ Currently the magic system has the following functions:\n"""
         In [8]: ed\\
         Editing... done. Executing edited code...\\
         hello\\
-        Out[8]: "print 'hello'\\n"\\
+        Out[8]: "print 'hello'\\n"
 
         Now we call it again with the previous output (stored in _):
 
         In [9]: ed _\\
         Editing... done. Executing edited code...\\
         hello world\\
-        Out[9]: "print 'hello world'\\n"\\
+        Out[9]: "print 'hello world'\\n"
 
         Now we call it with the output #8 (stored in _8, also as Out[8]):
 
@@ -1679,7 +1757,7 @@ Defaulting color scheme to 'NoColor'"""
 
           In [2]: alias all echo "Input in brackets: <%l>"\\
           In [3]: all hello world\\
-          Input in brackets: <hello world>\\
+          Input in brackets: <hello world>
 
         You can also define aliases with parameters using %s specifiers (one
         per parameter):
@@ -1689,7 +1767,7 @@ Defaulting color scheme to 'NoColor'"""
           first A second B\\
           In [3]: %parts A\\
           Incorrect number of arguments: 2 expected.\\
-          parts is an alias to: 'echo first %s second %s'\\
+          parts is an alias to: 'echo first %s second %s'
 
         Note that %l and %s are mutually exclusive.  You can only use one or
         the other in your aliases.
@@ -1699,14 +1777,13 @@ Defaulting color scheme to 'NoColor'"""
         the semantic rules, see PEP-215:
         http://www.python.org/peps/pep-0215.html.  This is the library used by
         IPython for variable expansion.  If you want to access a true shell
-        variable, an extra $ is necessary to prevent its expansion by IPython.
+        variable, an extra $ is necessary to prevent its expansion by IPython:
 
-        For example:
-        In [6]: alias show echo
-        In [7]: PATH='A Python string'
-        In [8]: show $PATH
-        A Python string
-        In [9]: show $$PATH
+        In [6]: alias show echo\\
+        In [7]: PATH='A Python string'\\
+        In [8]: show $PATH\\
+        A Python string\\
+        In [9]: show $$PATH\\
         /usr/local/lf9560/bin:/usr/local/intel/compiler70/ia32/bin:...
 
         You can use the alias facility to acess all of $PATH.  See the %rehash
