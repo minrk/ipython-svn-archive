@@ -485,8 +485,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         IP.rc.quick = 1
         IP.rc.cache_size = 0
         IP.rc.pprint = 0
-        IP.rc.prompt_in1 = '>>>'
-        IP.rc.prompt_in2 = '...'
+        IP.rc.prompt_in1 = '>>> '
+        IP.rc.prompt_in2 = '... '
         IP.rc.prompt_out = ''
         IP.rc.separate_in = IP.rc.separate_out = IP.rc.separate_out2 = '0'
         IP.rc.colors = 'NoColor'

@@ -27,7 +27,7 @@ from pprint import pprint,pformat
 from IPython.genutils import *
 from IPython.Struct import Struct
 from IPython.Magic import Macro
-from IPython.Itpl import Itpl
+from IPython.Itpl import ItplNS
 from IPython import ColorANSI
 
 #****************************************************************************
@@ -203,7 +203,19 @@ for _color in dir(ColorANSI.InputTermColors):
 # we default to no color for safety.  Note that prompt_specials is a global
 # variable used by all prompt objects.
 prompt_specials = prompt_specials_nocolor
+
 #-----------------------------------------------------------------------------
+def str_safe(arg):
+    """Convert to a string, without ever raising an exception.
+
+    If str(arg) fails, <ERROR: ... > is returned, where ... is the exception
+    error message."""
+    
+    try:
+        return str(arg)
+    except Exception,msg:
+        return '<ERROR: %s>' % msg
+
 class BasePrompt:
     """Interactive prompt similar to Mathematica's."""
     def __init__(self,cache,sep,prompt,pad_left=False):
@@ -230,12 +242,13 @@ class BasePrompt:
         This must be called every time the color settings change, because the
         prompt_specials global may have changed."""
         
-        self.p_str = Itpl('%s%s%s' %
-                          ('$self.sep${self.col_p}',
-                           multiple_replace(prompt_specials, self.p_template),
-                          '$self.col_norm'))
-        self.p_str_nocolor = Itpl(multiple_replace(prompt_specials_nocolor,
-                                                   self.p_template))
+        self.p_str = ItplNS('%s%s%s' %
+                            ('$self.sep${self.col_p}',
+                             multiple_replace(prompt_specials, self.p_template),
+                             '$self.col_norm'),self.cache.user_ns,locals())
+        self.p_str_nocolor = ItplNS(multiple_replace(prompt_specials_nocolor,
+                                                     self.p_template),
+                                    self.cache.user_ns,locals())
 
     def __str__(self):
         """Return a string form of the prompt.
@@ -244,12 +257,12 @@ class BasePrompt:
         left-padded to match lengths with the primary one (if the
         self.pad_left attribute is set)."""
 
-        out_str = str(self.p_str)
+        out_str = str_safe(self.p_str)
         if self.pad_left:
             # We must find the amount of padding required to match lengths,
             # taking the color escapes (which are invisible on-screen) into
             # account.
-            esc_pad = len(out_str) - len(str(self.p_str_nocolor))
+            esc_pad = len(out_str) - len(str_safe(self.p_str_nocolor))
             format = '%%%ss' % (len(str(self.cache.last_prompt))+esc_pad)
             return format % out_str
         else:
@@ -258,7 +271,7 @@ class BasePrompt:
 class Prompt1(BasePrompt):
     """Input interactive prompt similar to Mathematica's."""
 
-    def __init__(self,cache,sep='\n',prompt='In [\\#]:',pad_left=True):
+    def __init__(self,cache,sep='\n',prompt='In [\\#]: ',pad_left=True):
         BasePrompt.__init__(self,cache,sep,prompt,pad_left)
 
     def set_colors(self):
@@ -274,8 +287,8 @@ class Prompt1(BasePrompt):
         
     def __str__(self):
         self.cache.prompt_count += 1
-        self.cache.last_prompt = str(self.p_str_nocolor)
-        return str(self.p_str)
+        self.cache.last_prompt = str_safe(self.p_str_nocolor)
+        return str_safe(self.p_str)
 
     def auto_rewrite(self):
         """Print a string of the form '--->' which lines up with the previous
@@ -290,7 +303,7 @@ class Prompt1(BasePrompt):
 class PromptOut(BasePrompt):
     """Output interactive prompt similar to Mathematica's."""
 
-    def __init__(self,cache,sep='',prompt='Out[\\#]:',pad_left=True):
+    def __init__(self,cache,sep='',prompt='Out[\\#]: ',pad_left=True):
         BasePrompt.__init__(self,cache,sep,prompt,pad_left)
         if not self.p_template:
             self.__str__ = lambda: ''
@@ -305,19 +318,21 @@ class PromptOut(BasePrompt):
 class Prompt2(BasePrompt):
     """Interactive continuation prompt."""
     
-    def __init__(self,cache,prompt='   .\\D.:',pad_left=True):
+    def __init__(self,cache,prompt='   .\\D.: ',pad_left=True):
         self.cache = cache
         self.p_template = prompt
         self.set_p_str()
         self.pad_left = pad_left
 
     def set_p_str(self):
-        self.p_str = Itpl('%s%s%s ' %
-                          ('${self.col_p2}',
-                           multiple_replace(prompt_specials, self.p_template),
-                          '$self.col_norm'))
-        self.p_str_nocolor = Itpl(multiple_replace(prompt_specials_nocolor,
-                                                   self.p_template))
+        self.p_str = ItplNS('%s%s%s ' %
+                            ('${self.col_p2}',
+                             multiple_replace(prompt_specials, self.p_template),
+                             '$self.col_norm'),
+                            self.cache.user_ns,locals())
+        self.p_str_nocolor = ItplNS(multiple_replace(prompt_specials_nocolor,
+                                                     self.p_template),
+                                    self.cache.user_ns,locals())
 
     def set_colors(self):
         self.set_p_str()
@@ -361,13 +376,18 @@ class CachedOutput:
         self.cache_size = cache_size
         self.input_sep = input_sep
 
+        # we need a reference to the user-level namespace
+        self.user_ns = user_ns
+        # and to the user's input
+        self.input_hist = input_hist
+
         # Set input prompt strings and colors
         if cache_size == 0:
-            if ps1.find('%n') > -1 or ps1.find('\\#') > -1: ps1 = '>>>'
-            if ps2.find('%n') > -1 or ps2.find('\\#') > -1: ps2 = '...'
-        self.ps1_str = self._set_prompt_str(ps1,'In [\\#]:','>>>')
-        self.ps2_str = self._set_prompt_str(ps2,'   .\\D.:','...')
-        self.ps_out_str = self._set_prompt_str(ps_out,'Out[\\#]:','')
+            if ps1.find('%n') > -1 or ps1.find('\\#') > -1: ps1 = '>>> '
+            if ps2.find('%n') > -1 or ps2.find('\\#') > -1: ps2 = '... '
+        self.ps1_str = self._set_prompt_str(ps1,'In [\\#]: ','>>> ')
+        self.ps2_str = self._set_prompt_str(ps2,'   .\\D.: ','... ')
+        self.ps_out_str = self._set_prompt_str(ps_out,'Out[\\#]: ','')
 
         self.prompt1 = Prompt1(self,sep=input_sep,prompt=self.ps1_str,
                                pad_left=pad_left)
@@ -391,10 +411,6 @@ class CachedOutput:
         self._,self.__,self.___ = '','',''
         self.pprint_types = map(type,[(),[],{}])
         
-        # we need a reference to the user-level namespace
-        self.user_ns = user_ns
-        # and to the user's input
-        self.input_hist = input_hist
         # these are deliberately global:
         to_user_ns = {'_':self._,'__':self.__,'___':self.___}
         self.user_ns.update(to_user_ns)

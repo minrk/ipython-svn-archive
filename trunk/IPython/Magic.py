@@ -526,12 +526,12 @@ Currently the magic system has the following functions:\n"""
         print "System verbose printing is:",\
               ['OFF','ON'][self.shell.rc.system_verbose]
 
-    def magic_hist(self, parameter_s = ''):
+    def magic_history(self, parameter_s = ''):
         """Print input history (_i<n> variables), with most recent last.
         
-        %hist [-n]       -> print at most 40 inputs (some may be multi-line)\\
-        %hist [-n] n     -> print at most n inputs\\
-        %hist [-n] n1 n2 -> print inputs between n1 and n2 (n2 not included)\\
+        %history [-n]       -> print at most 40 inputs (some may be multi-line)\\
+        %history [-n] n     -> print at most n inputs\\
+        %history [-n] n1 n2 -> print inputs between n1 and n2 (n2 not included)\\
 
         Each input's number <n> is shown, and is accessible as the
         automatically generated variable _i<n>.  Multi-line statements are
@@ -575,6 +575,10 @@ Currently the magic system has the following functions:\n"""
                 print inline[1:],
             else:
                 print inline,
+
+    def magic_hist(self, parameter_s=''):
+        """Alternate name for %history."""
+        return self.magic_history(parameter_s)
 
     def magic_p(self, parameter_s=''):
         """Just a short alias for Python's 'print'."""
@@ -1559,12 +1563,12 @@ Currently the magic system has the following functions:\n"""
           %edit [options] [args]
 
         %edit runs IPython's editor hook.  The default version of this hook is
-        set to call the __IPYTHON__.rc.editor command.  This variable is read
-        from your environment as $EDITOR.  If this isn't found, it will
-        default to vi under Linux/Unix and to notepad under Windows.  See the
-        end of this docstring for how to change the editor hook.
+        set to call the __IPYTHON__.rc.editor command.  This is read from your
+        environment variable $EDITOR.  If this isn't found, it will default to
+        vi under Linux/Unix and to notepad under Windows.  See the end of this
+        docstring for how to change the editor hook.
 
-        You can also set the value of this editor via the commmand-line option
+        You can also set the value of this editor via the command line option
         '-editor' or in your ipythonrc file. This is useful if you wish to use
         specifically for IPython an editor different from your typical default
         (and for Windows users who typically don't set environment variables).

@@ -901,7 +901,10 @@ want to merge them back into the new files.""" % locals()
                 pass
 
         # save the "persistent data" catch-all dictionary
-        pickle.dump(self.persist, open(self.persist_fname,"w"))
+        try:
+            pickle.dump(self.persist, open(self.persist_fname,"w"))
+        except:
+            print "*** ERROR *** persistent data saving failed."
         
     def savehist(self):
         """Save input history to a file (via readline library)."""
