@@ -34,7 +34,7 @@ __license__ = Release.license
 
 # Python standard modules
 import __builtin__
-import os, sys, inspect, pydoc, re, tempfile, profile, pstats
+import os, sys, inspect, pydoc, re, tempfile, profile, pstats,shlex
 from getopt import getopt
 from pprint import pprint, pformat
 from cStringIO import StringIO
@@ -67,11 +67,9 @@ def magic2python(cmd):
     else:
         return cmd
 
-
 def on_off(tag):
     """Return an ON/OFF string for a 1/0 input. Simple utility function."""
     return ['OFF','ON'][tag]
-
 
 def get_py_filename(name):
     """Return a valid python filename in the current directory.
@@ -87,6 +85,40 @@ def get_py_filename(name):
     else:
         raise IOError,'File `%s` not found.' % name
 
+# Try to use shlex.split for converting an input string into a sys.argv-type
+# list.  This appeared in Python 2.3, so here's a quick backport for 2.2.
+try:
+    shlex_split = shlex.split
+except AttributeError:
+    _quotesre = re.compile(r'[\'"](.*)[\'"]')
+    _wordchars = ('abcdfeghijklmnopqrstuvwxyz'
+                  'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.'
+                  'ﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔÒÚÛÙıˆ¯˘˙˚¸˝˛ˇ'
+                  '¿¡¬√ƒ≈∆«»… ÀÃÕŒœ–—“”‘’÷ÿŸ⁄€‹›ﬁ%s' % os.sep)
+    def shlex_split(s):
+        """Simplified backport to Python 2.2 of shlex.split().
+
+        This is a quick and dirty hack, since the shlex module under 2.2 lacks
+        several of the features needed to really match the functionality of
+        shlex.split() in 2.3."""
+
+        lex = shlex.shlex(StringIO(s))
+        # Try to get options, extensions and path separators as characters
+        lex.wordchars = _wordchars
+        lex.commenters = ''
+        # Make a list out of the lexer by hand, since in 2.2 it's not an
+        # iterator.
+        lout = []
+        while 1:
+            token = lex.get_token()
+            if token == '':
+                break
+            # Try to handle quoted tokens correctly
+            quotes = _quotesre.match(token)
+            if quotes:
+                token = quotes.group(1)
+            lout.append(token)
+        return lout
 
 #****************************************************************************
 # Utility classes
@@ -342,65 +374,26 @@ class Magic:
 
           -list_all: put all option values in lists. Normally only options
           appearing more than once are put in a list.
-
-          -use_shell (True): don't make a call to the shell to construct the
-          argument vector.  In this mode, no proper quoting is obtained, but
-          the danger of shell expansions is also avoided."""
+          """
 
 
+        # inject default options at the beginning of the input line
         caller = sys._getframe(1).f_code.co_name.replace('magic_','')
-        #print 'CALLER: <%s>' % caller # dbg
-        arg_str = self.options_table.get(caller,'') + ' ' + arg_str
+        arg_str = '%s %s' % (self.options_table.get(caller,''),arg_str)
         
         mode = kw.get('mode','string')
         if mode not in ['string','list']:
-            raise ValueError,'incorrect mode given:'+`mode`
-        
+            raise ValueError,'incorrect mode given: %s' % mode
+        # Get options
         list_all = kw.get('list_all',0)
-        use_shell = kw.get('use_shell',1)
 
         # Check if we have more than one argument to warrant extra processing:
-        args = arg_str.split()
         odict = {}  # Dictionary with options
-        
+        args = arg_str.split()
         if len(args) >= 1:
             # If the list of inputs only has 0 or 1 thing in it, there's no
             # need to look for options
-
-            # Try to have the underlying shell do all quoting for us This has
-            # one eval in it, which I don't see how to avoid, since we need to
-            # rebuild argv from the _string_ which comes from the shell
-
-            # Note that I print argv[1:] because the -c option is left in
-            # there as the first entry, even though the python man page says
-            # it shouldn't be there.
-
-            # We still need to do a bit of quoting, so the shell doesn't get
-            # things like naked parens.
-            if use_shell:
-                qarg = arg_str.replace('(',r'\(').replace(')',r'\)').replace('$',r'\$')
-                out,err = getoutputerror('%s -SEc "import sys;print sys.argv[1:]" %s'
-                                         % (sys.executable,qarg))
-                #print 'out:',out # dbg
-                # If there is any problem with the shell-based expansions, we punt
-                # and do a simple arg_str.split()
-                if err:
-                    warn(err)
-                    argv = args
-                # Also don't call eval() unless what we get looks like a list's
-                # repr()
-                elif not out.startswith('[') or not out.endswith(']'):
-                    argv = args
-                else:
-                    # Try to make the eval as safe as possible by doing it in
-                    # empty namespaces, and punt if anything fails
-                    try:
-                        argv = eval(out,{})
-                    except:
-                        argv = args
-            else:  # no use of the shell
-                argv = args
-
+            argv = shlex_split(arg_str)
             # Do regular option processing
             opts,args = getopt(argv,opt_str,*long_opts)
             for o,a in opts:
@@ -531,6 +524,13 @@ Currently the magic system has the following functions:\n"""
 
         self.shell.set_autoindent()
         print "Automatic indentation is:",['OFF','ON'][self.shell.autoindent]
+
+    def magic_system_verbose(self, parameter_s = ''):
+        """Toggle verbose printing of system calls on/off."""
+
+        self.shell.rc_set_toggle('system_verbose')
+        print "System verbose printing is:",\
+              ['OFF','ON'][self.shell.rc.system_verbose]
 
     def magic_hist(self, parameter_s = ''):
         """Print input history (_i<n> variables), with most recent last.
@@ -1976,7 +1976,7 @@ Defaulting color scheme to 'NoColor'"""
 
           -v: verbose.  Print the contents of the variable."""
 
-        opts,args = self.parse_options(parameter_s,'lv',use_shell=0)
+        opts,args = self.parse_options(parameter_s,'lv')
         # Try to get a variable name and command to run
         try:
             var,cmd = args.split('=',1)
@@ -1987,8 +1987,7 @@ Defaulting color scheme to 'NoColor'"""
             error('you must specify a variable to assign the command to.')
             return
         # If all looks ok, proceed
-        cmd = itplns(cmd,self.shell.user_ns)
-        out,err = getoutputerror(cmd)
+        out,err = self.shell.getoutputerror(cmd)
         if err:
             print >> sys.stderr,err
         if opts.has_key('l'):
@@ -2002,29 +2001,29 @@ Defaulting color scheme to 'NoColor'"""
 
         @sx command
 
-	IPython will run the given command using commands.getoutput(), and
-	return the result formatted as a list (split on '\\n').  Since the
-	output is _returned_, it will be stored in ipython's regular output
-	cache Out[N] and in the '_N' automatic variables.
+        IPython will run the given command using commands.getoutput(), and
+        return the result formatted as a list (split on '\\n').  Since the
+        output is _returned_, it will be stored in ipython's regular output
+        cache Out[N] and in the '_N' automatic variables.
 
-	Notes:
+        Notes:
 
-	1) If an input line begins with '!!', then @sx is automatically
-	invoked.  That is, while:
-	  !ls
-	causes ipython to simply issue system('ls'), typing
-	  !!ls
-	is a shorthand equivalent to:
-	  @sx ls
+        1) If an input line begins with '!!', then @sx is automatically
+        invoked.  That is, while:
+          !ls
+        causes ipython to simply issue system('ls'), typing
+          !!ls
+        is a shorthand equivalent to:
+          @sx ls
 	
-	2) @sx differs from @sc in that @sx automatically splits into a list,
-	like '@sc -l'.  The reason for this is to make it as easy as possible
-	to process line-oriented shell output via further python commands.
-	@sc is meant to provide much finer control, but requires more
-	typing."""
+        2) @sx differs from @sc in that @sx automatically splits into a list,
+        like '@sc -l'.  The reason for this is to make it as easy as possible
+        to process line-oriented shell output via further python commands.
+        @sc is meant to provide much finer control, but requires more
+        typing."""
 
         if parameter_s:
-            out,err = getoutputerror(itplns(parameter_s,self.shell.user_ns))
+            out,err = self.shell.getoutputerror(parameter_s)
             if err:
                 print >> sys.stderr,err
             return out.split('\n')
