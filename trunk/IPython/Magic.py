@@ -1194,12 +1194,17 @@ Currently the magic system has the following functions:\n"""
 
           %run -d -b40 myscript
 
-        will set the first breakpoint at line 40 in myscript.py.
+        will set the first breakpoint at line 40 in myscript.py.  Note that
+        the first breakpoint must be set on a line which actually does
+        something (not a comment or docstring) for it to stop execution.
 
         When the pdb debugger starts, you will see a (Pdb) prompt.  You must
         first enter 'c' (without qoutes) to start execution up to the first
-        breakpoint.  Entering 'help' gives information about the use of the
-        debugger; the pdb module's documentation has further details.
+        breakpoint.
+
+        Entering 'help' gives information about the use of the debugger.  You
+        can easily see pdb's full documentation with "import pdb;pdb.help()"
+        at a prompt.
 
         -p: run program under the control of the Python profiler module (which
         prints a detailed report of execution times, function calls, etc).
@@ -1260,7 +1265,22 @@ Currently the magic system has the following functions:\n"""
                     bdb.Breakpoint.bplist = {}
                     bdb.Breakpoint.bpbynumber = [None]
                     # Set an initial breakpoint to stop execution
+                    maxtries = 10
                     bp = int(opts.get('b',[1])[0])
+                    checkline = deb.checkline(filename,bp)
+                    if not checkline:
+                        for bp in range(bp+1,bp+maxtries+1):
+                            if deb.checkline(filename,bp):
+                                break
+                        else:
+                            msg = ("\nI failed to find a valid line to set "
+                                   "a breakpoint\n"
+                                   "after trying up to line: %s.\n"
+                                   "Please set a valid breakpoint manually "
+                                   "with the -b option." % bp)
+                            error(msg)
+                            return
+                    # if we find a good linenumber, set the breakpoint
                     deb.do_break('%s:%s' % (filename,bp))
                     # Start file run
                     print "NOTE: Enter 'c' at the",
