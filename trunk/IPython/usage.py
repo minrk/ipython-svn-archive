@@ -73,6 +73,9 @@ instead of -option) to turn the feature off.
 
  -no|banner: Print the initial information banner (default on).
 
+ -c <command>: execute the given command string, and set sys.argv to ['c'].
+ This is similar to the -c option in the normal Python interpreter.
+
  -cache_size|cs <n>: size of the output cache (maximum number of entries to
  hold in memory). The default is 1000, you can change it permanently in your
  config file. Setting it to 0 completely disables the caching system, and the
@@ -82,7 +85,7 @@ instead of -option) to turn the feature off.
 
  -classic|cl: Gives IPython a similar feel to the classic Python prompt.
 
- -colors|c <scheme>: Color scheme for prompts and exception reporting.
+ -colors <scheme>: Color scheme for prompts and exception reporting.
  Currently implemented: NoColor, Linux and LightBG.
 
  -no|color_info: IPython can display information about objects via a set of
