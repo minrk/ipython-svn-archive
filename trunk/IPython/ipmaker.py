@@ -12,7 +12,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando Perez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -35,13 +35,13 @@ __license__ = Release.license
 credits._Printer__data = """
 Python: %s
 
-IPython: Fernando Pérez, Janko Hauser, Nathan Gray, and many users.
+IPython: Fernando Perez, Janko Hauser, Nathan Gray, and many users.
 See http://ipython.scipy.org for more information.""" \
 % credits._Printer__data
 
 copyright._Printer__data += """
 
-Copyright (c) 2001-2003 Fernando Pérez, Janko Hauser, Nathan Gray.
+Copyright (c) 2001-2004 Fernando Perez, Janko Hauser, Nathan Gray.
 All Rights Reserved."""
 
 #****************************************************************************
@@ -67,10 +67,18 @@ def make_IPython(argv=None,user_ns=None,debug=0,rc_override=None,
                  shell_class=InteractiveShell,**kw):
     """This is a dump of IPython into a single function.
 
-    Later it will have to be broken up in a sensible manner."""
+    Later it will have to be broken up in a sensible manner.
 
-    if sys.version[0:3] < '2.1':
-        print 'IPython requires Python Version 2.1 or above. Sorry.'
+    Arguments:
+
+    - argv: a list similar to sys.argv[1:].  It should NOT contain the desired
+    script name, b/c DPyGetOpt strips the first argument only for the real
+    sys.argv.
+
+    - user_ns: a dict to be used as the user's namespace."""
+
+    if sys.version[0:3] < '2.2':
+        print 'IPython requires Python Version 2.2 or above. Sorry.'
         sys.exit()
 
     #----------------------------------------------------------------------
@@ -553,7 +561,6 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     IP.internal_ns = __main__.__dict__.copy()
 
     #IP.internal_ns.update(locals()) # so our stuff doesn't show up in @who
-
 
     # Now run through the different sections of the users's config
     if IP.rc.debug:
