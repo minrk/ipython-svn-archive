@@ -194,7 +194,9 @@ try:
                 self.clean_glob = self._clean_glob_win32
             else:
                 self.clean_glob = self._clean_glob
-            self.matchers = ['python_matches','file_matches','alias_matches']
+            self.matchers = [self.python_matches,
+                             self.file_matches,
+                             self.alias_matches]
 
         # Code contributed by Alex Schmolck, for ipython/emacs integration
         def all_completions(self, text):
@@ -245,7 +247,8 @@ try:
             protectables = ' ()[]{}'
 
             def protect_filename(s):
-                return "".join([(ch in protectables and '\\' + ch or ch) for ch in s])
+                return "".join([(ch in protectables and '\\' + ch or ch)
+                                for ch in s])
 
             lbuf = self.get_line_buffer()[:self.readline.get_endidx()]
             try:
@@ -324,25 +327,27 @@ try:
             returns None.  The completion should begin with 'text'.  """
             
             #print '\n*** COMPLETE: <%s>' % text  # dbg
+            magic_escape = self.magic_escape
+            magic_prefix = self.magic_prefix
             try:
-                if text.startswith(self.magic_escape):
-                    text = text.replace(self.magic_escape,self.magic_prefix)
-                if text.startswith('~'):
+                if text.startswith(magic_escape):
+                    text = text.replace(magic_escape,magic_prefix)
+                elif text.startswith('~'):
                     text = os.path.expanduser(text)
                 if state == 0:
+                    # Extend the list of completions with the results of each
+                    # matcher, so we return results to the user from all
+                    # namespaces.
+                    self.matches = []
                     for matcher in self.matchers:
-                        #print 'Calling matcher:',matcher # dbg
-                        self.matches = getattr(self,matcher)(text,state)
-                        if self.matches:
-                            break
+                        self.matches.extend(matcher(text,state))
+                    #print 'matches:',self.matches  # dbg
                 try:
-                    return self.matches[state].replace(self.magic_prefix,
-                                                       self.magic_escape)
+                    return self.matches[state].replace(magic_prefix,magic_escape)
                 except IndexError:
                     return None
             except:
-                # If completion doesn't work, just beep and don't annoy
-                # the user.
+                # If completion fails, don't annoy the user.
                 pass
 
 except ImportError:
@@ -599,8 +604,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
 """)
         # Various switches which can be set
         self.CACHELENGTH = 5000  # this is cheap, it's just text
-        self.BANNER = itpl("Python $sys.version on $sys.platform\n"
-        "$sys.copyright\nIPP\nType ? for more help\n")
+        self.BANNER = "Python %(version)s on %(platform)s\n" % sys.__dict__
         self.banner2 = banner2
         # TraceBack handlers:
         # Need two, one for syntax errors and one for other exceptions.
@@ -1064,12 +1068,13 @@ want to merge them back into the new files.""" % locals()
             self.user_ns.update(__main__.__dict__)
 
         # Get locals and globals from caller
-        call_frame = sys._getframe(stack_depth).f_back
+        if local_ns is None or global_ns is None:
+            call_frame = sys._getframe(stack_depth).f_back
 
-        if local_ns is None:
-            local_ns = call_frame.f_locals
-        if global_ns is None:
-            global_ns = call_frame.f_globals
+            if local_ns is None:
+                local_ns = call_frame.f_locals
+            if global_ns is None:
+                global_ns = call_frame.f_globals
 
         # Update namespaces and fire up interpreter
         self.user_ns.update(local_ns)
