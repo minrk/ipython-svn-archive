@@ -31,8 +31,7 @@ __date__   = 'Sat May 18 12:24:48 MDT 2002'
 
 __all__ = ['Inspector','InspectColors']
 
-
-import inspect,types,StringIO,string
+import inspect,linecache,types,StringIO,string
 from Itpl import itpl
 from genutils import page,indent,Term
 import PyColorize
@@ -184,6 +183,9 @@ class Inspector:
 
     def psource(self,obj,oname=''):
         """Print the source code for an object."""
+
+        # Flush the source cache because inspect can return out-of-date source
+        linecache.checkcache()
         try:
             src = inspect.getsource(obj) 
         except:
@@ -284,6 +286,8 @@ class Inspector:
 
         # Original source code for any callable
         if detail_level:
+            # Flush the source cache because inspect can return out-of-date source
+            linecache.checkcache()
             try:
                 source = self.format(inspect.getsource(obj))
                 out.write(header('Source:\n')+source.rstrip())
