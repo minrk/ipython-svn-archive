@@ -191,6 +191,10 @@ Completion in the local namespace, by typing TAB at the prompt.
  readline's behavior is provided.
 \layout Itemize
 
+Automatic indentation (optional) of code as you type (trhough the readline
+ library).
+\layout Itemize
+
 Verbose and colored exception traceback printouts.
  Easier to parse visually, and in verbose mode they produce a lot of useful
  debugging information (basically a terminal version of the cgitb module).
@@ -5844,4 +5848,14 @@ Collins
 <Jeff.Collins@vexcel.com>
 \family default 
  Bug reports.
+\layout List
+\labelwidthstring 00.00.0000
+
+King\SpecialChar ~
+C.\SpecialChar ~
+Shu 
+\family typewriter 
+<kingshu@myrealbox.com>
+\family default 
+ Autoindent patch.
 \the_end
