@@ -448,12 +448,26 @@ Can not upgrade: changing to directory %s failed. Details:
                     shutil.copy(new_full_path,new_filename)
         else:
             raise ValueError,'unrecognized mode for install:',`mode`
-        
-        for fname in glb('*'):
-            try:
-                native_line_ends(fname,backup=0)
-            except IOError:
-                pass
+
+        # Fix line-endings to those native to each platform in the config
+        # directory.
+        try:
+            os.chdir(ipythondir)
+        except:
+            print """
+Problem: changing to directory %s failed.
+Details:
+%s
+
+Some configuration files may have incorrect line endings.  This should not
+cause any problems during execution.  """ % (ipythondir,sys.exc_info()[1])
+            wait()
+        else:
+            for fname in glb('*'):
+                try:
+                    native_line_ends(fname,backup=0)
+                except IOError:
+                    pass
 
         # Colors just don't work in Windows, disable them.
         # FIXME. This would be better done by loading separate files with the
