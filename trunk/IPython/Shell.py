@@ -489,10 +489,10 @@ def matplotlib_shell():
         return IPShell
         
     elif backend.startswith('GTK'):
-        print 'Using GTK shell with the %s backend'%backend # dbg
+        #print 'Using GTK shell with the %s backend'%backend # dbg
         return IPShellMatplotlibGTK
     else:
-        print 'Using IPShell with the %s backend'%backend # dbg
+        #print 'Using IPShell with the %s backend'%backend # dbg
         return IPShell
 
 #************************ end of file <Shell.py> ***************************
