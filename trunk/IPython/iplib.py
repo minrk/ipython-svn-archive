@@ -63,6 +63,8 @@ from IPython.FakeModule import FakeModule
 from IPython.background_jobs import BackgroundJobManager
 from IPython.genutils import *
 
+# Global pointer to the running 
+
 # store the builtin raw_input globally, and use this always, in case user code
 # overwrites it (like wx.py.PyShell does)
 raw_input_original = raw_input
@@ -80,6 +82,11 @@ except NameError:
 # Some utility function definitions
 
 class Bunch: pass
+
+def esc_quotes(strng):
+    """Return the input string with single and double quotes escaped out"""
+
+    return strng.replace('"','\\"').replace("'","\\'")
 
 def import_fail_info(mod_name,fns=None):
     """Inform load failure for a module."""
@@ -121,6 +128,8 @@ def ipmagic(arg_s):
 
     args = arg_s.split(' ',1)
     magic_name = args[0]
+    if magic_name.startswith(__IPYTHON__.ESC_MAGIC):
+        magic_name = magic_name[1:]
     try:
         magic_args = args[1]
     except IndexError:
@@ -129,7 +138,8 @@ def ipmagic(arg_s):
     if fn is None:
         error("Magic function `%s` not found." % magic_name)
     else:
-        fn(magic_args)
+        magic_args = __IPYTHON__.var_expand(magic_args)
+        return fn(magic_args)
 
 def ipalias(arg_s):
     """Call an alias by name.
@@ -607,16 +617,17 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
 
         # Functions to call the underlying shell.
 
+        # utility to expand user variables via Itpl
+        self.var_expand = lambda cmd: str(ItplNS(cmd.replace('#','\#'),
+                                                 self.user_ns))
         # The first is similar to os.system, but it doesn't return a value,
         # and it allows interpolation of variables in the user's namespace.
-        self.system = lambda cmd: shell(str(ItplNS(cmd.replace('#','\#'),
-                                                   self.user_ns)),
+        self.system = lambda cmd: shell(self.var_expand(cmd),
                                         header='IPython system call: ',
                                         verbose=self.rc.system_verbose)
         # These are for getoutput and getoutputerror:
         self.getoutput = lambda cmd: \
-                         getoutput(str(ItplNS(cmd.replace('#','\#'),
-                                              self.user_ns)),
+                         getoutput(self.var_expand(cmd),
                                    header='IPython system call: ',
                                    verbose=self.rc.system_verbose)
         self.getoutputerror = lambda cmd: \
@@ -634,9 +645,15 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # Don't get carried away with trying to make the autocalling catch too
         # much:  it's better to be conservative rather than to trigger hidden
         # evals() somewhere and end up causing side effects.
-        self.line_split = re.compile(r'(^[\s*!\?%,/]?)'
-                                     r'(\s*[\?\w\.]+\w*\s*)'
+
+        self.line_split = re.compile(r'^(\s*)'
+                                     r'([\?\w\.]+\w*\s*)'
                                      r'(\(?.*$)')
+
+        # Original re, keep around for a while in case changes break something
+        #self.line_split = re.compile(r'(^[\s*!\?%,/]?)'
+        #                             r'(\s*[\?\w\.]+\w*\s*)'
+        #                             r'(\(?.*$)')
 
         # RegExp to identify potential function names
         self.re_fun_name = re.compile(r'[a-zA-Z_]([a-zA-Z0-9_.]*) *$')
@@ -1577,20 +1594,15 @@ There seemed to be a problem with your sys.stderr.
 
         lsplit = self.line_split.match(line)
         if lsplit is None:  # no regexp match returns None
-            line = line.rstrip()
-            ini_spaces = re.match('^(\s+)',line)
-            if ini_spaces:
-                nspaces = ini_spaces.end()
-            else:
-                nspaces = 0
-
-            pre = ' '*nspaces
             try:
                 iFun,theRest = line.split(None,1)
             except ValueError:
                 iFun,theRest = line,''
+            pre = re.match('^(\s*)(.*)',line).groups()[0]
         else:
             pre,iFun,theRest = lsplit.groups()
+
+        #print 'line:<%s>' % line # dbg
         #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest) # dbg
         return pre,iFun.strip(),theRest
 
@@ -1634,28 +1646,32 @@ There seemed to be a problem with your sys.stderr.
         if continue_prompt and not self.rc.multi_line_specials:
             return self.handle_normal(line,continue_prompt)
 
+        # For the rest, we need the structure of the input
+        pre,iFun,theRest = self.split_user_input(line)
+        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest)  # dbg
+
         # First check for explicit escapes in the last/first character
         handler = None
         if line[-1] == self.ESC_HELP:
             handler = self.esc_handlers.get(line[-1])  # the ? can be at the end
         if handler is None:
-            handler = self.esc_handlers.get(line[0])
+            # look at the first character of iFun, NOT of line, so we skip
+            # leading whitespace in multiline input
+            handler = self.esc_handlers.get(iFun[0:1])
         if handler is not None:
-            return handler(line,continue_prompt)
-
+            return handler(line,continue_prompt,pre,iFun,theRest)
         # Emacs ipython-mode tags certain input lines
         if line.endswith('# PYTHON-MODE'):
             return self.handle_emacs(line,continue_prompt)
 
         # Next, check if we can automatically execute this thing
-        pre,iFun,theRest = self.split_user_input(line)
-        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest)  # dbg
 
         # Allow ! in multi-line statements if multi_line_specials is on:
         if continue_prompt and self.rc.multi_line_specials and \
-               not pre.strip() and iFun.startswith(self.ESC_SHELL):
+               iFun.startswith(self.ESC_SHELL):
             return self.handle_shell_escape(line,continue_prompt,
-                                            pre=pre,iFun=iFun,theRest=theRest)
+                                            pre=pre,iFun=iFun,
+                                            theRest=theRest)
 
         # Let's try to find if the input line is a magic fn
         oinfo = None
@@ -1666,9 +1682,9 @@ There seemed to be a problem with your sys.stderr.
                 # being made (ls='hi', for example)
                 if self.rc.automagic and \
                        (len(theRest)==0 or theRest[0] not in '!=()<>,') and \
-                       not continue_prompt:
-                    return self.handle_magic(self.ESC_MAGIC+line.lstrip(),
-                                             continue_prompt)
+                       (self.rc.multi_line_specials or not continue_prompt):
+                    return self.handle_magic(line,continue_prompt,
+                                             pre,iFun,theRest)
                 else:
                     return self.handle_normal(line,continue_prompt)
 
@@ -1698,7 +1714,7 @@ There seemed to be a problem with your sys.stderr.
                    self.re_fun_name.match(iFun) and \
                    callable(oinfo['obj']) :
                 #print 'going auto'  # dbg
-                return self.handle_auto(line,continue_prompt)
+                return self.handle_auto(line,continue_prompt,pre,iFun,theRest)
             else:
                 #print 'was callable?', callable(oinfo['obj'])  # dbg
                 return self.handle_normal(line,continue_prompt)
@@ -1713,17 +1729,19 @@ There seemed to be a problem with your sys.stderr.
     # Set the default prefilter() function (this can be user-overridden)
     prefilter = _prefilter
 
-    def handle_normal(self,line,continue_prompt):
+    def handle_normal(self,line,continue_prompt=None,
+                      pre=None,iFun=None,theRest=None):
         """Handle normal input lines. Use as a template for handlers."""
 
         self.log(line,continue_prompt)
         self.update_cache(line)
         return line
 
-    def handle_alias(self,line,continue_prompt,pre,iFun,theRest):
+    def handle_alias(self,line,continue_prompt=None,
+                     pre=None,iFun=None,theRest=None):
         """Handle alias input lines. """
 
-        theRest = theRest.replace("'","\\'")
+        theRest = esc_quotes(theRest)
         line_out = "%s%s.call_alias('%s','%s')" % (pre,self.name,iFun,theRest)
         self.log(line_out,continue_prompt)
         self.update_cache(line_out)
@@ -1737,58 +1755,46 @@ There seemed to be a problem with your sys.stderr.
         if continue_prompt:  # multi-line statements
             if iFun.startswith('!!'):
                 print 'SyntaxError: !! is not allowed in multiline statements'
-                return ''
+                return pre
             else:
-                cmd = "%s %s" % (iFun[1:],theRest)
-                cmd = cmd.replace('"','\\"')
+                cmd = ("%s %s" % (iFun[1:],theRest)).replace('"','\\"')
                 line_out = '%s%s.system("%s")' % (pre,self.name,cmd)
-                                                     
         else: # single-line input
             if line.startswith('!!'):
-                return self.handle_magic('%ssx %s' % (self.ESC_MAGIC,
-                                                      line[2:]),continue_prompt)
+                # rewrite iFun/theRest to properly hold the call to %sx and
+                # the actual command to be executed, so handle_magic can work
+                # correctly
+                theRest = '%s %s' % (iFun[2:],theRest)
+                iFun = 'sx'
+                return self.handle_magic('%ssx %s' % (self.ESC_MAGIC,line[2:]),
+                                         continue_prompt,pre,iFun,theRest)
             else:
-                cmd = line[1:].replace('"','\\"')
+                cmd = esc_quotes(line[1:])
                 line_out = '%s.system("%s")' % (self.name,cmd)
         # update cache/log and return
         self.log(line_out,continue_prompt)
         self.update_cache(line_out)   # readline cache gets normal line
         return line_out
 
-    def handle_magic(self, line, continue_prompt=None):
+    def handle_magic(self, line, continue_prompt=None,
+                     pre=None,iFun=None,theRest=None):
         """Execute magic functions.
 
         Also log them with a prepended # so the log is clean Python."""
 
-        #print 'in handle_magic'  # dbg
-        line_text = line.strip()[1:]
-        self.log('ipmagic("%s")' % line_text.replace('"','\\"'),
-                 continue_prompt)
+        cmd = '%sipmagic("%s")' % (pre,esc_quotes('%s %s' % (iFun,theRest)))
+        self.log(cmd,continue_prompt)
         self.update_cache(line)
-        shell = self.name+'.'
-        # remove % and de-mangle magic name
-        line = 'magic_'+ line_text
-        try:
-            scommand, parameter_s = line.split(' ',1)
-        except ValueError: # there is only the command
-            parameter_s = ''
-            scommand = line
-        if hasattr(self, scommand):
-            parameter_s = ' %s ' % parameter_s # Protect quotes at the end
-            return '%s%s(parameter_s=r"""%s"""[1:-1])' % (shell,scommand,
-                                                          parameter_s)
-        else:
-            return '%s%s()' % (shell,line)
+        #print 'in handle_magic, cmd=<%s>' % cmd  # dbg
+        return cmd
 
-    def handle_auto(self, line, continue_prompt):
+    def handle_auto(self, line, continue_prompt=None,
+                    pre=None,iFun=None,theRest=None):
         """Hande lines which can be auto-executed, quoting if requested."""
 
         # This should only be active for single-line input!
         if continue_prompt:
             return line
-
-        pre,iFun,theRest = self.split_user_input(line)
-        #print '*** Auto: pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest) # dbg
 
         if pre == self.ESC_QUOTE:
             # Auto-quote
@@ -1812,7 +1818,8 @@ There seemed to be a problem with your sys.stderr.
         self.log(newcmd.strip(),continue_prompt)
         return newcmd
 
-    def handle_help(self, line, continue_prompt):
+    def handle_help(self, line, continue_prompt=None,
+                    pre=None,iFun=None,theRest=None):
         """Try to get some help for the object.
 
         obj? or ?obj   -> basic information.
@@ -1843,7 +1850,8 @@ There seemed to be a problem with your sys.stderr.
             # If the code compiles ok, we should handle it normally
             return self.handle_normal(line,continue_prompt)
 
-    def handle_emacs(self,line,continue_prompt):
+    def handle_emacs(self,line,continue_prompt=None,
+                    pre=None,iFun=None,theRest=None):
         """Handle input lines marked by python-mode."""
 
         # Currently, nothing is done.  Later more functionality can be added
