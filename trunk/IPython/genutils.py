@@ -10,7 +10,7 @@ $Id$"""
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2004 Fernando Perez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #

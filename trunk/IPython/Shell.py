@@ -72,7 +72,7 @@ class IPShellEmbed:
     ipshell = IPShellEmbed([argv,banner,exit_msg,rc_override])
 
     - argv: list containing valid command-line options for IPython, as they
-    would appear in sys.argv.
+    would appear in sys.argv[1:].
 
     For example, the following command-line options:
 
@@ -95,19 +95,16 @@ class IPShellEmbed:
     global files (thus keeping your interactive IPython configuration
     unchanged).
 
-    Then the IPShell instance can be called anywhere inside your code:
+    Then the ipshell instance can be called anywhere inside your code:
     
-    ipshell(local_ns=None,header='') -> Opens up an IPython shell.
-
-    - local_ns: local namespace. When IPShell is called inside a function, the
-    call MUST be IPShell(vars()) so that IPShell knows about local
-    variables. At the top-level of a program it may be omitted, it will
-    default to __main__.__dict__.
+    ipshell(header='') -> Opens up an IPython shell.
 
     - header: string printed by the IPython shell upon startup. This can let
     you know where in your code you are when dropping into the shell. Note
     that 'banner' gets prepended to all calls, so header is used for
     location-specific information.
+
+    For more details, see the __call__ method below.
 
     When the IPython shell is exited with Ctrl-D, normal program execution
     resumes.
