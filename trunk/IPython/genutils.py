@@ -84,8 +84,8 @@ class Stream:
     """Simple class to hold the various I/O streams in Term"""
 
     def __init__(self,stream,name):
-	self.stream = stream
-	self.name = name
+        self.stream = stream
+        self.name = name
         try:
             self.fileno = stream.fileno()
         except AttributeError:
@@ -108,40 +108,40 @@ class Term:
     # In the future, having IPython channel all its I/O operations through
     # this class will make it easier to embed it into other environments which
     # are not a normal terminal (such as a GUI-based shell)
-    in_s  = Stream(sys.stdin,'in')
-    out_s = Stream(sys.stdout,'out')
-    err_s = Stream(sys.stderr,'err')
+    in_s  = Stream(sys.stdin,'cin')
+    out_s = Stream(sys.stdout,'cout')
+    err_s = Stream(sys.stderr,'cerr')
 
-    # Store the three streams in err,out,in order so that if we need to reopen
+    # Store the three streams in (err,out,in) order so that if we need to reopen
     # them, the error channel is reopened first to provide info.
     streams = [err_s,out_s,in_s]
 
     # The class globals should be the actual 'bare' streams for normal I/O to work
-    in_ = streams[2].stream
-    out = streams[1].stream
-    err = streams[0].stream
+    sin = streams[2].stream
+    cout = streams[1].stream
+    cerr = streams[0].stream
     
     def reopen_all(cls):
-	"""Reopen all streams if necessary.
+        """Reopen all streams if necessary.
 
-	This should only be called if it is suspected that someting closed
-	accidentally one of the I/O streams."""
+        This should only be called if it is suspected that someting closed
+        accidentally one of the I/O streams."""
 
-	any_closed = 0
-	
-	for sn in range(len(cls.streams)):
-	    st = cls.streams[sn]
-	    if st.stream.closed:
-		any_closed = 1
-		new_stream = os.fdopen(os.dup(st.fileno), st.mode,0)
-		cls.streams[sn] = Stream(new_stream,st.name)
-		print >> cls.streams[0].stream, \
-		'\nWARNING:\nStream Term.%s had to be reopened!' % st.name
+        any_closed = 0
 
-	# Rebuild the class globals
-	cls.in_ = cls.streams[2].stream
-	cls.out = cls.streams[1].stream
-	cls.err = cls.streams[0].stream
+        for sn in range(len(cls.streams)):
+            st = cls.streams[sn]
+            if st.stream.closed:
+                any_closed = 1
+                new_stream = os.fdopen(os.dup(st.fileno), st.mode,0)
+                cls.streams[sn] = Stream(new_stream,st.name)
+                print >> cls.streams[0].stream, \
+                      '\nWARNING:\nStream Term.%s had to be reopened!' % st.name
+
+        # Rebuild the class globals
+        cls.cin = cls.streams[2].stream
+        cls.cout = cls.streams[1].stream
+        cls.cerr = cls.streams[0].stream
 
     # Make reopen_all a class method
     reopen_all = classmethod(reopen_all)
@@ -892,13 +892,13 @@ def page_dumb(strng,start=0,screen_lines=25):
     screens = chop(out,screen_lines-1)
     #print '\nscreens is:',screens,os.linesep  # dbg
     if len(screens) == 1:
-        print >>Term.out, os.linesep.join(screens[0])
+        print >>Term.cout, os.linesep.join(screens[0])
     else:
         for scr in screens[0:-1]:
-            print >>Term.out, os.linesep.join(scr)
+            print >>Term.cout, os.linesep.join(scr)
             ans = raw_input('---Return to continue, q to quit--- ')
             if ans.lower().startswith('q'): return
-        print >>Term.out, os.linesep.join(screens[-1])
+        print >>Term.cout, os.linesep.join(screens[-1])
     
         
 #----------------------------------------------------------------------------
@@ -969,7 +969,7 @@ def page(strng,start=0,screen_lines=0,pager_cmd = None):
     #print 'numlines',numlines,'screenlines',screen_lines  # dbg
     if numlines <= screen_lines :
         #print '*** normal print'  # dbg
-        print >>Term.out, str_toprint
+        print >>Term.cout, str_toprint
     else:  # try to open pager and default to internal one if that fails
         pager_cmd = get_pager_cmd(pager_cmd)
         pager_cmd += ' ' + get_pager_start(pager_cmd,start)
