@@ -92,7 +92,7 @@ try:
 except AttributeError:
     _quotesre = re.compile(r'[\'"](.*)[\'"]')
     _wordchars = ('abcdfeghijklmnopqrstuvwxyz'
-                  'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.'
+                  'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.~'
                   'ßàáâãäåæçèéêëìíîïğñòóôõöøùúûüışÿ'
                   'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏĞÑÒÓÔÕÖØÙÚÛÜİŞ%s' % os.sep)
     def shlex_split(s):
@@ -373,9 +373,7 @@ class Magic:
           returned as a list (split on whitespace) instead of a string.
 
           -list_all: put all option values in lists. Normally only options
-          appearing more than once are put in a list.
-          """
-
+          appearing more than once are put in a list."""
 
         # inject default options at the beginning of the input line
         caller = sys._getframe(1).f_code.co_name.replace('magic_','')
@@ -484,7 +482,7 @@ ipythonrc file, placing a line like:
 will define @pf as a new name for @profile.
 
 For a list of the available magic functions, use @lsmagic. For a description
-of any of them, type @magic_name?.
+of any of them, type @magic_name?, e.g. '@cd?'.
 
 Currently the magic system has the following functions:\n"""
 
@@ -1841,6 +1839,10 @@ Defaulting color scheme to 'NoColor'"""
 
           cd -<n>: changes to the n-th directory in the directory history.
 
+          cd -b <bookmark_name>: jump to a bookmark set by @bookmark
+             (note: cd <bookmark_name> is enough if there is no
+              directory <bookmark_name>, but a bookmark with the name exists.)
+
         Options:
 
         -q: quiet.  Do not print the working directory after the cd command is
@@ -1852,6 +1854,10 @@ Defaulting color scheme to 'NoColor'"""
 
         parameter_s = parameter_s.strip()
         numcd = re.match(r'(-)(\d+)$',parameter_s)
+        opts,ps = self.parse_options(parameter_s,'qb',mode='string')
+        bkms = self.shell.persist.get("bookmarks",{})
+
+        # jump in directory history by number
         if numcd:
             nn = int(numcd.group(2))
             try:
@@ -1861,14 +1867,28 @@ Defaulting color scheme to 'NoColor'"""
                 return
             else:
                 opts = {}
-        else:
-            opts,ps = self.parse_options(parameter_s,'q',mode='string')
-            if ps == '-':
-                try:
-                    ps = self.shell.user_ns['_dh'][-2]
-                except IndexError:
-                    print 'No previous directory to change to.'
-                    return
+        # jump to previous
+        elif ps == '-':
+            try:
+                ps = self.shell.user_ns['_dh'][-2]
+            except IndexError:
+                print 'No previous directory to change to.'
+                return
+        # jump to bookmark
+        elif opts.has_key('b') or (bkms.has_key(ps) and not os.path.isdir(ps)):
+            if bkms.has_key(ps):
+                target = bkms[ps]
+                print '(bookmark:%s) -> %s' % (ps,target)
+                ps = target
+            else:
+                if bkms:
+                    error("Bookmark '%s' not found.  "
+                          "Use '@bookmark -l' to see your bookmarks." % ps)
+                else:
+                    print "Bookmarks not set - use @bookmark <bookmarkname>"
+                return
+            
+        # at this point ps should point to the target dir
         if ps:
             try:
                 os.chdir(os.path.expanduser(ps))
@@ -2027,4 +2047,57 @@ Defaulting color scheme to 'NoColor'"""
             if err:
                 print >> sys.stderr,err
             return out.split('\n')
+
+    def magic_bookmark(self, parameter_s=''):
+        """Manage IPython's bookmark system.
+
+        @bookmark <name>       - set bookmark to current dir
+        @bookmark <name> <dir> - set bookmark to <dir>
+        @bookmark -l           - list all bookmarks
+        @bookmark -d <name>    - remove bookmark
+        @bookmark -r           - remove all bookmarks
+
+        You can later on access a bookmarked folder with:
+          @cd -b <name>
+        or simply '@cd <name>' if there is no directory called <name> AND
+        there is such a bookmark defined.
+
+        Your bookmarks persist through IPython sessions, but they are
+        associated with each profile."""
+
+        opts,args = self.parse_options(parameter_s,'drl',mode='list')
+        if len(args) > 2:
+            error('You can only give at most two arguments')
+            return
+
+        bkms = self.shell.persist.get('bookmarks',{})
+            
+        if opts.has_key('d'):
+            try:
+                todel = args[0]
+            except IndexError:
+                error('You must provide a bookmark to delete')
+            else:
+                try:
+                    del bkms[todel]
+                except:
+                    error("Can't delete bookmark '%s'" % todel)
+        elif opts.has_key('r'):
+            bkms = {}
+        elif opts.has_key('l'):
+            bks = bkms.keys()
+            bks.sort()
+            size = max(map(len,bks))
+            fmt = '%-'+str(size)+'s -> %s'
+            print 'Current bookmarks:'
+            for bk in bks:
+                print fmt % (bk,bkms[bk])
+        else:
+            if not args:
+                error("You must specify the bookmark name")
+            elif len(args)==1:
+                bkms[args[0]] = os.getcwd()
+            elif len(args)==2:
+                bkms[args[0]] = args[1]
+        self.persist['bookmarks'] = bkms
 # end Magic
