@@ -13,7 +13,9 @@ $Id$"""
 #  the file LICENSE.txt, distributed as part of this software.
 #*****************************************************************************
 
-name = 'IPython'
+# Name of the package for release purposes.  This is the name which labels
+# the tarballs and RPMs made by distutils, so it's best to lowercase it.
+name = 'ipython'
 
 version = '0.6.4.rc2'
 

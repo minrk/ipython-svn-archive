@@ -1,6 +1,7 @@
 2004-11-03  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Release.py: Changed licensing to BSD, in all files.
+	(name): lowercase name for tarball/RPM release.
 
 	* IPython/OInspect.py (getdoc): wrap inspect.getdoc() safely for
 	use throughout ipython.
