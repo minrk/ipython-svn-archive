@@ -1069,38 +1069,23 @@ The code below, supplied by François Pinard, can then be used in your
 
 \family typewriter 
 (defvar server-buffer-clients)
-\layout Standard
-
-
-\family typewriter 
+\newline 
 (when (and (fboundp 'server-start) (string-equal (getenv "TERM") 'xterm))
-\layout Standard
-
-
-\family typewriter 
+\newline 
 \SpecialChar ~
 \SpecialChar ~
 (server-start)
-\layout Standard
-
-
-\family typewriter 
+\newline 
 \SpecialChar ~
 \SpecialChar ~
 (defun fp-kill-server-with-buffer-routine ()
-\layout Standard
-
-
-\family typewriter 
+\newline 
 \SpecialChar ~
 \SpecialChar ~
 \SpecialChar ~
 \SpecialChar ~
 (and server-buffer-clients (server-done)))
-\layout Standard
-
-
-\family typewriter 
+\newline 
 \SpecialChar ~
 \SpecialChar ~
 (add-hook 'kill-buffer-hook 'fp-kill-server-with-buffer-routine))
