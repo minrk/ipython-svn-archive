@@ -7,7 +7,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2004 Fernando PÃ©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -141,7 +141,7 @@ def cwd_filt2(depth):
 USER           = os.environ.get("USER")
 HOSTNAME       = socket.gethostname()
 HOSTNAME_SHORT = HOSTNAME.split(".")[0]
-ROOT_SYMBOL    = "$#"[os.getuid()==0]
+ROOT_SYMBOL    = "$#"[os.name=='nt' or os.getuid()==0]
 
 prompt_specials = {
     # Prompt/history count
