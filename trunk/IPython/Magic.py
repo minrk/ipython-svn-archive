@@ -1080,6 +1080,9 @@ Currently the magic system has the following functions:\n"""
           In [1]: import profile; profile.help() """
 
         opts_def = Struct(D=[''],l=[],s=['time'],T=[''])
+        # protect user quote marks
+        parameter_s = parameter_s.replace('"',r'\"').replace("'",r"\'")
+        
         if user_mode:  # regular user call
             opts,arg_str = self.parse_options(parameter_s,'D:l:rs:T:',
                                               list_all=1)
@@ -1607,6 +1610,7 @@ Currently the magic system has the following functions:\n"""
             args = '_%s' % last_call[0]
             if not self.shell.user_ns.has_key(args):
                 args = last_call[1]
+            
         # use last_call to remember the state of the previous call, but don't
         # let it be clobbered by successive '-p' calls.
         try:
@@ -1698,9 +1702,14 @@ Currently the magic system has the following functions:\n"""
             print 'done. Executing edited code...'
             try:
                 execfile(filename,self.shell.user_ns)
-            except IOError:
-                warn('File not found. Did you forget to save?')
-                return
+            except IOError,msg:
+                if msg.filename == filename:
+                    warn('File not found. Did you forget to save?')
+                    return
+                else:
+                    self.shell.showtraceback()
+            except:
+                self.shell.showtraceback()
         if use_temp:
             contents = open(filename).read()
             return contents
