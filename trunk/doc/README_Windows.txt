@@ -1,42 +1,39 @@
 Notes for Windows Users
 =======================
 
+These are just minimal notes.  The manual contains more detailed
+information.
+
 Requirements
 ------------
 
 IPython runs under (as far as the Windows family is concerned):
 
-- Windows XP (I think WinNT/2000 are ok): works, except for terminal coloring.
+- Windows XP (I think WinNT/2000 are ok): works well.  It needs:
+
+  * Gary Bishop's readline from 
+    http://sourceforge.net/projects/uncpythontools.
+    
+  * This in turn requires Tomas Heller's ctypes from
+    http://starship.python.net/crew/theller/ctypes.
 
 - Windows 95/98/ME: I have no idea. It should work, but I can't test.
 
-- CygWin environments may work, I just don't know.
+- CygWin environments should work, they are basically Posix.
 
-It needs Python 2.1 or newer.
-
-For the automatic installer to work you need Mark Hammond's PythonWin
-extensions (and they're great for anything Windows-related anyway, so you
-might as well get them). If you don't have them, get them at:
-
-http://starship.python.net/crew/mhammond/
-
-If you won't/can't get them, you'll have to make some shortcuts by hand, but
-IPython itself will still work. It's only the install routine that uses the
-PythonWin extensions.
+It needs Python 2.2 or newer.
 
 
 Installation
 ------------
 
-Double-click the setup.py file. A text console should open and proceed to
-install IPython in your system. If all goes well, that's all you need to do.
-You should now have an IPython entry in your Start Menu.
+Double-click the supplied .exe installer file.  If all goes well, that's all
+you need to do. You should now have an IPython entry in your Start Menu.
 
-If you don't have PythonWin, you can:
-
-  - Copy the doc/ directory wherever you want it (it contains the manuals in
-HTML and PDF).
-  - Create a shortcut to the main IPython script, located in the Scripts
-subdirectory of your Python installation directory.
-
-These steps are basically what the auto-installer does for you.
+In case the automatic installer does not work for some reason, you can
+download the ipython-XXX.tar.gz file, which contains the full IPython source
+distribution (the popular WinZip can read .tar.gz files). After
+uncompressing the archive, you can install it at a command terminal just
+like any other Python module, by using python setup.py install'. After the
+installation, you can create a shortcut to the main IPython script, located
+in the Scripts subdirectory of your Python installation directory.

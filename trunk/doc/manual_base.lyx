@@ -314,18 +314,30 @@ profile
 \family typewriter 
 `%run -p
 \family default 
-')convenient for rapid interactive work.
+') convenient for rapid interactive work.
 \layout Subsection
 
 Portability and Python requirements
 \layout Standard
 
-Developed under 
+
+\series bold 
+Python requirements: 
+\series default 
+IPython works with Python version 2.2 or newer.
+ It has been tested with Python 2.4 and no problems have been reported.
+ Support for Python 2.1 hasn't been recently tested, since I don't have access
+ to it on any of my systems.
+ But I suspect there may be some problems with Python 2.1, because some of
+ the newer code may use 2.2 features.
+\layout Standard
+
+IPython is developed under 
 \series bold 
 Linux
 \series default 
-, IPython should work under most unices (tested OK under Solaris and the
- *BSD family, for which a port exists thanks to Dryice Liu).
+, but it should work in any reasonable Unix-type system (tested OK under
+ Solaris and the *BSD family, for which a port exists thanks to Dryice Liu).
 \layout Standard
 
 
@@ -378,24 +390,6 @@ Please note, however, that I have very little access to and experience with
  would like, and often I just can't find a satisfactory solution.
  If any Windows user wants to join in with development help, all hands are
  always welcome.
-\layout Standard
-
-
-\series bold 
-MacOS Classic
-\series default 
-: it may work (I have no idea), and if not it should be reasonably easy
- to port it.
- But someone else will have to do that, since I have no access to a Macintosh.
-\layout Standard
-
-IPython requires Python version 2.2 or newer.
- As of version 0.6.0, it works correctly with Python 2.3 (earlier versions
- had some issues with Python 2.3).
- Support for Python 2.1 hasn't been recently tested, since I don't have access
- to it on any of my systems.
- But I suspect there may be some problems with Python 2.1, because some of
- the newer code may use 2.2 features.
 \layout Subsection
 
 Location
@@ -428,16 +422,20 @@ Installation
 Instant instructions
 \layout Standard
 
-If you are of the impatient kind, simply untar/unzip the download, install
- with 
+If you are of the impatient kind, under Linux/Unix simply untar/unzip the
+ download, then install with 
 \family typewriter 
 `python setup.py install'
 \family default 
- under Linux/Unix or by double-clicking the 
+.
+ Under Windows, double-click on the provided 
 \family typewriter 
-setup.py
+.exe
 \family default 
- file under Windows, and take a look at Sections 
+ binary installer.
+\layout Standard
+
+Then, take a look at Sections 
 \begin_inset LatexCommand \ref{sec:good_config}
 
 \end_inset 
@@ -460,7 +458,7 @@ See the notes in sec.
  for upgrading IPython versions.
 \layout Subsection
 
-Under Unix-type operating systems (Linux, Mac OS X, etc.)
+Detailed Unix instructions (Linux, Mac OS X, etc.)
 \layout Standard
 
 For RPM based systems, simply install the supplied package in the usual
@@ -470,12 +468,16 @@ For RPM based systems, simply install the supplied package in the usual
 
 Unzip/untar the 
 \family typewriter 
-IPython-XXX.tar.gz
+ipython-XXX.tar.gz
 \family default 
- file wherever you want (XXX is the version number).
+ file wherever you want (
+\family typewriter 
+XXX
+\family default 
+ is the version number).
  It will make a directory called 
 \family typewriter 
-IPython-XXX.
+ipython-XXX.
  
 \family default 
 Change into that directory where you will find the files 
@@ -509,7 +511,7 @@ $HOME/.ipython
  option and it will do this automatically for you.
 \layout Enumerate
 
-IPython uses distutils, so you can install it simply by typing at the system
+IPython uses distutils, so you can install it by simply typing at the system
  prompt (don't type the 
 \family typewriter 
 $
@@ -528,7 +530,11 @@ Note that this assumes you have root access to your machine.
 \family typewriter 
 --home
 \family default 
- option.
+ option (or 
+\family typewriter 
+--prefix
+\family default 
+).
  For example:
 \newline 
 
@@ -662,29 +668,15 @@ ipythonw
 
 \end_inset 
 
-Under Windows
+Windows instructions
 \layout Standard
 
 While you can use IPython under Windows with only a stock Python installation,
- there are two sets of extensions which will make the whole experience a
- lot more pleasant.
+ there are two extensions which will make the whole experience a lot more
+ pleasant.
  They are almost a requirement, since IPython will complain in their absence
  (though it will function).
-\layout Standard
-
-In short, for optimal performance under Windows you need:
-\layout Enumerate
-
-
-\family typewriter 
-PyWin32
-\family default 
- from 
-\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mhammond}
-
-\end_inset 
-
-
+ They are:
 \layout Enumerate
 
 
@@ -712,7 +704,7 @@ Readline
 
 \end_inset 
 
-
+.
 \layout Standard
 
 
@@ -726,7 +718,7 @@ Warning about a broken readline-like library:
 \end_inset 
 
 .
- This is an incomplete library which, while called readline, only implements
+ This is a broken library which, while called readline, only implements
  an incomplete subset of the readline API.
  Since it is still called readline, it fools IPython's detection mechanisms
  and causes unpredictable crashes later.
@@ -734,55 +726,17 @@ Warning about a broken readline-like library:
  which for all purposes is (at least as of version 1.6) terminally broken.
 \layout Subsubsection
 
-Mark Hammond's 
-\family typewriter 
-PyWin32
-\layout Standard
-
-For the automatic installer to work you need Mark Hammond's 
-\family typewriter 
-PyWin32
-\family default 
- (formerly 
-\family typewriter 
-PythonWin
-\family default 
-) extensions.
- They are great for anything Windows-related anyway, so you might as well
- get them.
- If you don't have them, they are located at:
-\layout Standard
-
-
-\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mhammond}
-
-\end_inset 
-
-
-\layout Subsubsection
-
 Gary Bishop's readline and color support for Windows
 \layout Standard
 
-
-\series bold 
-Note:
-\series default 
- this needs 
-\family typewriter 
-PyWin32
-\family default 
- to function correctly.
-\layout Standard
-
-Some of IPython's more powerful features are:
+Some of IPython's very useful features are:
 \layout Itemize
 
 Integrated readline support (Tab-based file, object and attribute completion,
  input history across sessions, editable command line, etc.)
 \layout Itemize
 
-Coloring of prompts, code and tracebacks
+Coloring of prompts, code and tracebacks.
 \layout Standard
 
 These, by default, are only available under Unix-like operating systems.
@@ -798,7 +752,11 @@ You can find Gary's tools at
 
 \end_inset 
 
-; note that his readline module requires in turn the 
+; Gary's 
+\family typewriter 
+readline
+\family default 
+ requires in turn the 
 \family typewriter 
 ctypes
 \family default 
@@ -825,51 +783,22 @@ readline
 Installation procedeure
 \layout Standard
 
-Once you have the above installed, from the download directory grab the
+Once you have the above installed, from the IPython download directory grab
+ the 
+\family typewriter 
+ipython-XXX.win32.exe
+\family default 
+ file, where 
+\family typewriter 
+XXX
+\family default 
+ represents the version number.
+ This is a regular windows executable installer, which you can simply double-cli
+ck to install.
+ It will add an entry for IPython to your Start Menu, as well as registering
+ IPython in the Windows list of applications, so you can later uninstall
+ it from the Control Panel.
  
-\family typewriter 
-IPython-XXX.zip
-\family default 
- file.
- The popular WinZip handles 
-\family typewriter 
-.tar.gz
-\family default 
- files perfectly, so use that if you have WinZip and want a smaller download.
- 
-\layout Standard
-
-Unzip it and double-click on the 
-\family typewriter 
-setup.py
-\family default 
- file.
- A text console should open and proceed to install IPython in your system.
- If all goes well, that's all you need to do.
- You should now have an IPython entry in your Start Menu with links to IPython
- and the manuals.
-\layout Standard
-
-If you don't have PythonWin, you can:
-\layout Itemize
-
-Copy the 
-\family typewriter 
-doc
-\backslash 
-
-\family default 
- directory wherever you want it (it contains the manuals in HTML and PDF).
-\layout Itemize
-
-Create a shortcut to the main IPython script, located in the 
-\family typewriter 
-Scripts
-\family default 
- subdirectory of your Python installation directory.
-\layout Standard
-
-These steps are basically what the auto-installer does for you.
 \layout Standard
 
 IPython tries to install the configuration information in a directory named
@@ -877,16 +806,18 @@ IPython tries to install the configuration information in a directory named
 \family typewriter 
 .ipython
 \family default 
- located in your 'home' directory, which it determines by joining the environmen
-t variables 
+ located in your `home' directory.
+ IPython sets this directory by looking for a 
+\family typewriter 
+HOME
+\family default 
+ environment variable; if such a variable does not exist, it uses 
 \family typewriter 
 HOMEDRIVE
+\backslash 
+HOMEPATH 
 \family default 
- and 
-\family typewriter 
-HOMEPATH
-\family default 
-.
+(these are always defined by Windows).
  This typically gives something like 
 \family typewriter 
 C:
@@ -907,6 +838,53 @@ sys.path
 import
 \family default 
  statements.
+\layout Standard
+
+The convention of naming the IPython configuration directory with an initial
+ dot (
+\family typewriter 
+.ipython
+\family default 
+) means that under Unix operating systems it is not normally listed or shown
+ in file browsers.
+ If you prefer not to see this directory, you can set its attributes to
+ be hidden using the Windows file manager.
+\layout Paragraph
+
+Upgrading
+\layout Standard
+
+For an IPython upgrade, you should first uninstall the previous version.
+ This will ensure that all files and directories (such as the documentation)
+ which carry embedded version strings in their names are properly removed.
+\layout Paragraph
+
+Manual installation under Win32
+\layout Standard
+
+In case the automatic installer does not work for some reason, you can download
+ the 
+\family typewriter 
+ipython-XXX.tar.gz
+\family default 
+ file, which contains the full IPython source distribution (the popular
+ WinZip can read 
+\family typewriter 
+.tar.gz
+\family default 
+ files).
+ After uncompressing the archive, you can install it at a command terminal
+ just like any other Python module, by using 
+\family typewriter 
+`python setup.py install'
+\family default 
+.
+ After the installation, you can create a shortcut to the main IPython script,
+ located in the 
+\family typewriter 
+Scripts
+\family default 
+ subdirectory of your Python installation directory.
 \layout Subsection
 
 
@@ -1043,15 +1021,15 @@ ipythonrc
 Access to the Python help system
 \layout Standard
 
-This is true for Python 2.1 in general (not just for IPython): you should
- have an environment variable called 
+This is true for Python in general (not just for IPython): you should have
+ an environment variable called 
 \family typewriter 
 PYTHONDOCS
 \family default 
  pointing to the directory where your HTML Python documentation lives.
  In my system it's 
 \family typewriter 
-/usr/share/doc/python-docs-2.2.3/html
+/usr/share/doc/python-docs-2.3.4/html
 \family default 
 , check your local details or ask your systems administrator.
  
@@ -8403,6 +8381,7 @@ Ransmayr
 <viktor.ransmayr@t-online.de>
 \family default 
  Tests and reports on Windows installation issues.
+ Contributed a true Windows binary installer.
 \layout List
 \labelwidthstring 00.00.0000
 
