@@ -100,6 +100,10 @@ def run(wait=0):
                   my_documents_dir,
                   'IPython - Enhanced python command line interpreter',
                   (pycon_icon,0))
+    make_shortcut('pysh.lnk',sys.executable, '"%s" -p pysh' % ip_filename,
+                  my_documents_dir,
+                  'pysh - a system shell with Python syntax (IPython based)',
+                  (pycon_icon,0))
     make_shortcut('Manual in HTML format.lnk',man_htm,'','',
                   'IPython Manual - HTML format')
     make_shortcut('Manual in PDF format.lnk',man_pdf,'','',
