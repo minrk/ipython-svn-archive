@@ -1169,6 +1169,11 @@ Magic should have a pointer back to the main instance (even if this creates
 \layout Itemize
 
 Logger can be a standalone object, simply with a nice, clean interface.
+\layout Itemize
+
+Logger currently handles part of the prompt caching, but other parts of
+ that are in the prompts class itself.
+ Clean up.
 \end_deeper 
 \layout Itemize
 

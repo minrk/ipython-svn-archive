@@ -1,3 +1,43 @@
+2004-11-29  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/usage.py (__doc__): cleaned up usage docstring, by using
+	the manpage as the source.  Better formatting & consistency.
+
+	* IPython/Magic.py (magic_run): Added new -d option, to run
+	scripts under the control of the python pdb debugger.  Note that
+	this required changing the %prun option -d to -D, to avoid a clash
+	(since %run must pass options to %prun, and getopt is too dumb to
+	handle options with string values with embedded spaces).  Thanks
+	to a suggestion by Matthew Arnison <maffew@cat.org.au>.
+	(magic_who_ls): added type matching to %who and %whos, so that one
+	can filter their output to only include variables of certain
+	types.  Another suggestion by Matthew.
+	(magic_whos): Added memory summaries in kb and Mb for arrays.
+	(magic_who): Improve formatting (break lines every 9 vars).
+
+2004-11-28  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Logger.py (Logger.log): Fix bug in syncing the input
+	cache when empty lines were present.
+
+2004-11-24  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/usage.py (__doc__): document the re-activated threading
+	options for WX and GTK.
+
+2004-11-23  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (start): Added Prabhu's big patch to reactivate
+	the -wthread and -gthread options, along with a new -tk one to try
+	and coordinate Tk threading with wx/gtk.  The tk support is very
+	platform dependent, since it seems to require Tcl and Tk to be
+	built with threads (Fedora1/2 appears NOT to have it, but in
+	Prabhu's Debian boxes it works OK).  But even with some Tk
+	limitations, this is a great improvement.
+
+	* IPython/Prompts.py (prompt_specials_color): Added \t for time
+	info in user prompts.  Patch by Prabhu.
+
 2004-11-18  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/genutils.py (ask_yes_no): Add check for a max of 20
