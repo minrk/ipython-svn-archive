@@ -20,40 +20,47 @@
 __author__ = 'Fernando Perez. <fperez@colorado.edu>'
 __license__= 'LGPL'
 
-import os,sys,shutil
-import IPython.Extensions.InterpreterExec
-from IPython.genutils import system,getoutput,getoutputerror
+# This module contains the bulk of the core changes.  By importing it we
+# benefit from python's bytecode compilation
+from IPython.Extensions.InterpreterExec import *
 
-def shell():
-    """
-    This profile loads a set of modules and facilities to make shell-like
-    usage with Python syntax more convenient.
-
-    In particular, any lines which begin with ~/, ./ and /. will be executed
-    as shell commands instead of as Python code.
-
-    The os, sys and shutil modules from the Python standard library are
-    automatically loaded.  Some additional IPython features, useful for shell
-    usage, are listed below.  You can request more help about them with '?'.
-
-    !cmd           - passes 'cmd' directly to the shell
-    !!cmd          - executes 'cmd' and returns output as python list
-    @sc var=cmd    - store output of 'cmd' in 'var'
-    @sx cmd        - alias for !!cmd
-    system         - execute a command in the underlying system shell
-    getoutput      - capture the output of a system command
-    getoutputerror - capture (output,error) of a system command
-    """
-    pass
+# Configure a few things.  Much of this is fairly hackish, since IPython
+# doesn't really expose a clean API for it.  Be careful if you start making
+# many modifications here.
 
 print """Welcome to pysh, a set of extensions to IPython for shell usage.
-    help(shell) -> help on the installed shell extensions.
+    help(pysh) -> help on the installed shell extensions and syntax.
     """
 
 #  Set the 'cd' command to quiet mode, a more shell-like behavior
 __IP.default_option('cd','-q')
-# load all of $PATH as aliases
-__IP.magic_rehash()
 
-# reorder the tab-completion priorities
+# Load all of $PATH as aliases
+if os.name == 'posix':
+    # @rehash is very fast, but it doesn't check for executability, it simply
+    # dumps everything in $PATH as an alias. Use rehashx if you want more
+    # checks.
+    __IP.magic_rehash()
+else:
+    # Windows users: the list of extensions considered executable is read from
+    # the environment variable 'pathext'.  If this is undefined, IPython
+    # defaults to EXE, COM and BAT.
+    # @rehashx is the one which does extension analysis, at the cost of
+    # being much slower than @rehash.
+    __IP.magic_rehashx()
+
+# Remove @sc,@sx if present as aliases
+__IP.magic_unalias('sc')
+__IP.magic_unalias('sx')
+
+# Reorder the tab-completion priorities
 __IP.Completer.matchers = ['file_matches','alias_matches','python_matches']
+
+# We need different criteria for line-splitting, so that aliases such as
+# 'gnome-terminal' are interpreted as a single alias instead of variable
+# 'gnome' minus variable 'terminal'.
+import re
+__IP.line_split = re.compile(r'(^[\s*!\?@,/]?)([\?\w\.\-\+]+\w*\s*)(\(?.*$)')
+
+# Namespace cleanup
+del re
