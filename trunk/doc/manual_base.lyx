@@ -646,7 +646,7 @@ My question is this - is there anyway to modify the ipython script to enable
 
 The solution suggested by Bob Ippolito 
 \family typewriter 
-<bob@redivi.com>
+<bob-AT-redivi.com>
 \family default 
  is to start IPython via 
 \family typewriter 
@@ -1917,7 +1917,7 @@ Put a '
 \family typewriter 
 _*
 \family default 
- variables ant the 
+ variables and the 
 \family typewriter 
 Out[]
 \family default 
@@ -3355,94 +3355,52 @@ mydir
 \layout Standard
 
 An example (with automagic on) should clarify all this:
-\layout Standard
+\layout LyX-Code
 
-
-\family typewriter 
 In [1]: cd ipython # %cd is called by automagic
-\newline 
-/usr/local/home/fperez/ipython
-\newline 
+\layout LyX-Code
+
+/home/fperez/ipython
+\layout LyX-Code
+
 In [2]: cd=1 # now cd is just a variable
-\newline 
+\layout LyX-Code
+
 In [3]: cd ..
- # and doesn't work as a function anymore 
-\newline 
+ # and doesn't work as a function anymore
+\layout LyX-Code
+
 ------------------------------------------------------------
-\newline 
+\layout LyX-Code
 
-\begin_inset ERT
-status Collapsed
+    File "<console>", line 1
+\layout LyX-Code
 
-\layout Standard
+      cd ..
+\layout LyX-Code
 
-\backslash 
-hspace*{0mm}
-\end_inset 
+          ^
+\layout LyX-Code
 
-\SpecialChar ~
-\SpecialChar ~
- File "<console>", line 1
-\newline 
-
-\begin_inset ERT
-status Collapsed
-
-\layout Standard
-
-\backslash 
-hspace*{0mm}
-\end_inset 
-
-\SpecialChar ~
-\SpecialChar ~
-\SpecialChar ~
-\SpecialChar ~
- cd ..
-\newline 
-
-\begin_inset ERT
-status Collapsed
-
-\layout Standard
-
-\backslash 
-hspace*{0mm}
-\end_inset 
-
-\SpecialChar ~
-\SpecialChar ~
-\SpecialChar ~
-\SpecialChar ~
-\SpecialChar ~
-\SpecialChar ~
-\SpecialChar ~
-\SpecialChar ~
- ^
-\newline 
 SyntaxError: invalid syntax
-\newline 
-\SpecialChar ~
+\layout LyX-Code
 
-\newline 
+\layout LyX-Code
+
 In [4]: %cd ..
+ # but %cd always works
+\layout LyX-Code
 
-\family default 
- 
-\family typewriter 
-# but %cd always works
-\family default 
+/home/fperez
+\layout LyX-Code
 
-\newline 
-
-\family typewriter 
-/usr/local/home/fperez
-\newline 
 In [5]: del cd # if you remove the cd variable
-\newline 
+\layout LyX-Code
+
 In [6]: cd ipython # automagic can work again
-\newline 
-/usr/local/home/fperez/ipython
+\layout LyX-Code
+
+/home/fperez/ipython
 \layout Standard
 
 You can define your own magic functions to extend the system.
@@ -5344,6 +5302,54 @@ ColorName
  The list of valid color names is: Black, Blue, Brown, Cyan, DarkGray, Green,
  LightBlue, LightCyan, LightGray, LightGreen, LightPurple, LightRed, NoColor,
  Normal, Purple, Red, White, Yellow.
+\layout Standard
+
+Finally, IPython supports the evaluation of arbitrary expressions in your
+ prompt string.
+ The prompt strings are evaluated through the syntax of PEP 215, but basically
+ you can use 
+\family typewriter 
+$x.y
+\family default 
+ to expand the value of 
+\family typewriter 
+x.y
+\family default 
+, and for more complicated expressions you can use braces: 
+\family typewriter 
+${foo()+x}
+\family default 
+ will call function 
+\family typewriter 
+foo
+\family default 
+ and add to it the value of 
+\family typewriter 
+x
+\family default 
+, before putting the result into your prompt.
+ For example, using 
+\newline 
+
+\family typewriter 
+prompt_in1 '${commands.getoutput("uptime")}
+\backslash 
+nIn [
+\backslash 
+#]: '
+\newline 
+
+\family default 
+will print the result of the uptime command on each prompt (assuming the
+ 
+\family typewriter 
+commands
+\family default 
+ module has been imported in your 
+\family typewriter 
+ipythonrc
+\family default 
+ file).
 \layout Subsubsection
 
 Prompt examples
@@ -5585,6 +5591,9 @@ hspace*{0mm}
 
 \newline 
 1 2 3
+\layout Standard
+
+The following shows the usage of dynamic expression evaluation:
 \layout Subsection
 
 
@@ -5763,7 +5772,7 @@ It can also be useful in scientific computing situations where it is common
  to need to do some automatic, computationally intensive part and then stop
  to look at data, plots, etc
 \begin_inset Foot
-collapsed false
+collapsed true
 
 \layout Standard
 
@@ -5776,7 +5785,7 @@ stop
 .continue
 \family default 
  executive command, which I have found very useful in the past, and by a
- posting on comp.lang.python by cmkl <cmkleffner@gmx.de> on Dec.
+ posting on comp.lang.python by cmkl <cmkleffner-AT-gmx.de> on Dec.
  06/01 concerning similar uses of pyrepl.
 \end_inset 
 
@@ -5788,14 +5797,14 @@ stop
 
 The following code snippet is the bare minimum you need to include in your
  Python programs for this to work (detailed examples follow later):
-\layout Standard
+\layout LyX-Code
 
-
-\family typewriter 
 from IPython.Shell import IPShellEmbed
-\newline 
+\layout LyX-Code
+
 ipshell = IPShellEmbed()
-\newline 
+\layout LyX-Code
+
 ipshell() # this call anywhere in your program will start IPython
 \layout Standard
 
@@ -7309,7 +7318,7 @@ IPython, with one of these options (you can only use one at a time), separates
  the graphical loop and IPython's code execution run into different threads.
  This allows you to test interactively (with 
 \family typewriter 
-@run
+%run
 \family default 
 , for example) your GUI code without blocking.
 \layout Subsection
@@ -8117,11 +8126,11 @@ IPython is mainly developed by Fernando Pérez
 , but the project was born from mixing in Fernando's code with the IPP project
  by Janko Hauser 
 \family typewriter 
-<jhauser@zscout.de>
+<jhauser-AT-zscout.de>
 \family default 
  and LazyPython by Nathan Gray 
 \family typewriter 
-<n8gray@caltech.edu>
+<n8gray-AT-caltech.edu>
 \family default 
 .
  For all IPython-related requests, please contact Fernando.
@@ -8146,12 +8155,22 @@ list:
 
 \layout Standard
 
-The IPython project is also very grateful to:
+The IPython project is also very grateful to
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+I've mangled email addresses to reduce spam, since the IPython manuals can
+ be accessed online.
+\end_inset 
+
+:
 \layout Standard
 
 Bill Bumgarner 
 \family typewriter 
-<bbum@friday.com>
+<bbum-AT-friday.com>
 \family default 
 : for providing the DPyGetOpt module which gives very powerful and convenient
  handling of command-line options (light years ahead of what Python 2.1.1's
@@ -8160,7 +8179,7 @@ Bill Bumgarner
 
 Ka-Ping Yee 
 \family typewriter 
-<ping@lfw.org>
+<ping-AT-lfw.org>
 \family default 
 : for providing the Itpl module for convenient and powerful string interpolation
  with a much nicer syntax than formatting through the '%' operator.
@@ -8168,7 +8187,7 @@ Ka-Ping Yee
 
 Arnd Bäcker 
 \family typewriter 
-<baecker@physik.tu-dresden.de>
+<baecker-AT-physik.tu-dresden.de>
 \family default 
 : for his many very useful suggestions and comments, and lots of help with
  testing and documentation checking.
@@ -8202,7 +8221,7 @@ IPython's website is generously hosted at
 
 Fernando would also like to thank Stephen Figgins 
 \family typewriter 
-<fig@monitor.net>
+<fig-AT-monitor.net>
 \family default 
 , an O'Reilly Python editor.
  His Oct/11/2001 article about IPP and LazyPython, was what got this project
@@ -8225,7 +8244,7 @@ And last but not least, all the kind IPython users who have emailed new
 Jack\SpecialChar ~
 Moffit 
 \family typewriter 
-<jack@xiph.org>
+<jack-AT-xiph.org>
 \family default 
  Bug fixes, including the infamous color problem.
  This bug alone caused many lost hours and frustration, many thanks to him
@@ -8240,7 +8259,7 @@ Jack is also contributing with Debian packaging and many other things.
 Alexander\SpecialChar ~
 Schmolck 
 \family typewriter 
-<a.schmolck@gmx.net> 
+<a.schmolck-AT-gmx.net> 
 \family default 
 Emacs work, bug reports, bug fixes, ideas, lots more.
  The ipython.el mode for (X)Emacs is Alex's code, providing full support
@@ -8251,7 +8270,7 @@ Emacs work, bug reports, bug fixes, ideas, lots more.
 Andrea\SpecialChar ~
 Riciputi 
 \family typewriter 
-<andrea.riciputi@libero.it>
+<andrea.riciputi-AT-libero.it>
 \family default 
  Mac OSX information, Fink package management.
 \layout List
@@ -8260,7 +8279,7 @@ Riciputi
 Gary\SpecialChar ~
 Bishop 
 \family typewriter 
-<gb@cs.unc.edu>
+<gb-AT-cs.unc.edu>
 \family default 
  Bug reports, and patches to work around the exception handling idiosyncracies
  of WxPython.
@@ -8271,7 +8290,7 @@ Bishop
 Jeffrey\SpecialChar ~
 Collins 
 \family typewriter 
-<Jeff.Collins@vexcel.com>
+<Jeff.Collins-AT-vexcel.com>
 \family default 
  Bug reports.
  Much improved readline support, including fixes for Python 2.3.
@@ -8281,7 +8300,7 @@ Collins
 Dryice\SpecialChar ~
 Liu 
 \family typewriter 
-<dryice@liu.com.cn>
+<dryice-AT-liu.com.cn>
 \family default 
  FreeBSD port.
 \layout List
@@ -8290,14 +8309,14 @@ Liu
 Mike\SpecialChar ~
 Heeter 
 \family typewriter 
-<korora@SDF.LONESTAR.ORG>
+<korora-AT-SDF.LONESTAR.ORG>
 \layout List
 \labelwidthstring 00.00.0000
 
 Christopher\SpecialChar ~
 Hart 
 \family typewriter 
-<hart@caltech.edu>
+<hart-AT-caltech.edu>
 \family default 
  PDB integration.
 \layout List
@@ -8306,7 +8325,7 @@ Hart
 Milan\SpecialChar ~
 Zamazal 
 \family typewriter 
-<pdm@zamazal.org>
+<pdm-AT-zamazal.org>
 \family default 
  Emacs info.
 \layout List
@@ -8315,14 +8334,14 @@ Zamazal
 Philip\SpecialChar ~
 Hisley 
 \family typewriter 
-<compsys@starpower.net>
+<compsys-AT-starpower.net>
 \layout List
 \labelwidthstring 00.00.0000
 
 Holger\SpecialChar ~
 Krekel 
 \family typewriter 
-<pyth@devel.trillke.net>
+<pyth-AT-devel.trillke.net>
 \family default 
  Tab completion, lots more.
 \layout List
@@ -8331,28 +8350,28 @@ Krekel
 Robin\SpecialChar ~
 Siebler 
 \family typewriter 
-<robinsiebler@starband.net>
+<robinsiebler-AT-starband.net>
 \layout List
 \labelwidthstring 00.00.0000
 
 Ralf\SpecialChar ~
 Ahlbrink
 \family typewriter 
- <ralf_ahlbrink@web.de>
+ <ralf_ahlbrink-AT-web.de>
 \layout List
 \labelwidthstring 00.00.0000
 
 Thorsten\SpecialChar ~
 Kampe 
 \family typewriter 
-<thorsten@thorstenkampe.de>
+<thorsten-AT-thorstenkampe.de>
 \layout List
 \labelwidthstring 00.00.0000
 
 Fredrik\SpecialChar ~
 Kant 
 \family typewriter 
-<fredrik.kant@front.com>
+<fredrik.kant-AT-front.com>
 \family default 
  Windows setup.
 \layout List
@@ -8361,7 +8380,7 @@ Kant
 Syver\SpecialChar ~
 Enstad 
 \family typewriter 
-<syver-en@online.no>
+<syver-en-AT-online.no>
 \family default 
  Windows setup.
 \layout List
@@ -8369,7 +8388,7 @@ Enstad
 
 Richard 
 \family typewriter 
-<rxe@renre-europe.com>
+<rxe-AT-renre-europe.com>
 \family default 
  Global embedding.
 \layout List
@@ -8378,7 +8397,7 @@ Richard
 Hayden\SpecialChar ~
 Callow 
 \family typewriter 
-<h.callow@elec.canterbury.ac.nz>
+<h.callow-AT-elec.canterbury.ac.nz>
 \family default 
  Gnuplot.py 1.6 compatibility.
 \layout List
@@ -8387,7 +8406,7 @@ Callow
 Leonardo\SpecialChar ~
 Santagada 
 \family typewriter 
-<retype@terra.com.br>
+<retype-AT-terra.com.br>
 \family default 
  Fixes for Windows installation.
 \layout List
@@ -8396,7 +8415,7 @@ Santagada
 Christopher\SpecialChar ~
 Armstrong 
 \family typewriter 
-<radix@twistedmatrix.com>
+<radix-AT-twistedmatrix.com>
 \family default 
  Bugfixes.
 \layout List
@@ -8405,7 +8424,7 @@ Armstrong
 Francois\SpecialChar ~
 Pinard 
 \family typewriter 
-<pinard@iro.umontreal.ca>
+<pinard-AT-iro.umontreal.ca>
 \family default 
  Code and documentation fixes.
 \layout List
@@ -8414,7 +8433,7 @@ Pinard
 Cory\SpecialChar ~
 Dodt 
 \family typewriter 
-<cdodt@fcoe.k12.ca.us>
+<cdodt-AT-fcoe.k12.ca.us>
 \family default 
  Bug reports and Windows ideas.
  Patches for Windows installer.
@@ -8424,7 +8443,7 @@ Dodt
 Olivier\SpecialChar ~
 Aubert 
 \family typewriter 
-<oaubert@bat710.univ-lyon1.fr>
+<oaubert-AT-bat710.univ-lyon1.fr>
 \family default 
  New magics.
 \layout List
@@ -8434,7 +8453,7 @@ King\SpecialChar ~
 C.\SpecialChar ~
 Shu 
 \family typewriter 
-<kingshu@myrealbox.com>
+<kingshu-AT-myrealbox.com>
 \family default 
  Autoindent patch.
 \layout List
@@ -8443,7 +8462,7 @@ Shu
 Chris\SpecialChar ~
 Drexler 
 \family typewriter 
-<chris@ac-drexler.de>
+<chris-AT-ac-drexler.de>
 \family default 
  Readline packages for Win32/CygWin.
 \layout List
@@ -8453,7 +8472,7 @@ Gustavo\SpecialChar ~
 Córdova\SpecialChar ~
 Avila 
 \family typewriter 
-<gcordova@sismex.com>
+<gcordova-AT-sismex.com>
 \family default 
  EvalDict code for nice, lightweight string interpolation.
 \layout List
@@ -8462,7 +8481,7 @@ Avila
 Kasper\SpecialChar ~
 Souren 
 \family typewriter 
-<Kasper.Souren@ircam.fr>
+<Kasper.Souren-AT-ircam.fr>
 \family default 
  Bug reports, ideas.
 \layout List
@@ -8471,7 +8490,7 @@ Souren
 Gever\SpecialChar ~
 Tulley 
 \family typewriter 
-<gever@helium.com>
+<gever-AT-helium.com>
 \family default 
  Code contributions.
 \layout List
@@ -8480,7 +8499,7 @@ Tulley
 Ralf\SpecialChar ~
 Schmitt 
 \family typewriter 
-<ralf@brainbot.com>
+<ralf-AT-brainbot.com>
 \family default 
  Bug reports & fixes.
 \layout List
@@ -8489,7 +8508,7 @@ Schmitt
 Oliver\SpecialChar ~
 Sander 
 \family typewriter 
-<osander@gmx.de>
+<osander-AT-gmx.de>
 \family default 
  Bug reports.
 \layout List
@@ -8498,7 +8517,7 @@ Sander
 Rod\SpecialChar ~
 Holland 
 \family typewriter 
-<rhh@structurelabs.com>
+<rhh-AT-structurelabs.com>
 \family default 
  Bug reports and fixes to logging module.
 \layout List
@@ -8508,7 +8527,7 @@ Daniel\SpecialChar ~
 'Dang'\SpecialChar ~
 Griffith 
 \family typewriter 
-<pythondev-dang@lazytwinacres.net>
+<pythondev-dang-AT-lazytwinacres.net>
 \family default 
  Fixes, enhancement suggestions for system shell use.
 \layout List
@@ -8517,7 +8536,7 @@ Griffith
 Viktor\SpecialChar ~
 Ransmayr 
 \family typewriter 
-<viktor.ransmayr@t-online.de>
+<viktor.ransmayr-AT-t-online.de>
 \family default 
  Tests and reports on Windows installation issues.
  Contributed a true Windows binary installer.
@@ -8527,7 +8546,7 @@ Ransmayr
 Mike\SpecialChar ~
 Salib 
 \family typewriter 
-<msalib@mit.edu>
+<msalib-AT-mit.edu>
 \family default 
  Help fixing a subtle bug related to traceback printing.
 \layout List
@@ -8538,7 +8557,7 @@ van\SpecialChar ~
 der\SpecialChar ~
 Laan 
 \family typewriter 
-<gnufnork@hetdigitalegat.nl>
+<gnufnork-AT-hetdigitalegat.nl>
 \family default 
  Bash-like prompt specials.
 \layout List
@@ -8547,7 +8566,7 @@ Laan
 Ville\SpecialChar ~
 Vainio 
 \family typewriter 
-<vivainio@kolumbus.fi>
+<vivainio-AT-kolumbus.fi>
 \family default 
  Bugfixes and suggestions.
  Excellent patches for many new features.
@@ -8557,7 +8576,7 @@ Vainio
 Antoon\SpecialChar ~
 Pardon 
 \family typewriter 
-<Antoon.Pardon@rece.vub.ac.be>
+<Antoon.Pardon-AT-rece.vub.ac.be>
 \family default 
  Critical fix for the multithreaded IPython.
 \layout List
@@ -8566,7 +8585,7 @@ Pardon
 John\SpecialChar ~
 Hunter 
 \family typewriter 
-<jdhunter@nitace.bsd.uchicago.edu>
+<jdhunter-AT-nitace.bsd.uchicago.edu>
 \family default 
  Matplotlib author, helped with all the development of support for matplotlib
  in IPyhton, including making necessary changes to matplotlib itself.
@@ -8576,7 +8595,7 @@ Hunter
 Matthew\SpecialChar ~
 Arnison 
 \family typewriter 
-<maffew@cat.org.au>
+<maffew-AT-cat.org.au>
 \family default 
  Bug reports, `
 \family typewriter 
@@ -8589,7 +8608,7 @@ Arnison
 Prabhu\SpecialChar ~
 Ramachandran 
 \family typewriter 
-<prabhu_r@users.sourceforge.net>
+<prabhu_r-AT-users.sourceforge.net>
 \family default 
  Help with (X)Emacs support, threading patches, ideas...
 \the_end
