@@ -10,8 +10,8 @@ Upstream Author: Fernando Perez <fperez@colorado.edu>,
 Copyright:
 
 Most IPython code is copyright (C) 2001-2004 by Fernando Perez, Janko Hauser,
-and Nathaniel Gray.  All code is licensed under the BSD License except as
-explicitly mentioned below.  The IPython license is reproduced below:
+and Nathaniel Gray.  All code is licensed under a BSD-type License except as
+explicitly mentioned below.  The full IPython license is:
 
 IPython is released under a BSD-type license.
 

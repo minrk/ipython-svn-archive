@@ -3,17 +3,24 @@
 # release test
 
 # clean up dist directory
-#rm -rf ~/ipython/dist/*
+rm -rf ~/ipython/ipython/dist/*
 
 # build source distros
 cd ~/ipython/ipython
 
 PYVER=`python -V 2>&1 | awk '{print $2}' | awk -F '.' '{print $1$2}' `
 
-./setup.py sdist --formats=gztar
-./setup.py bdist_rpm --release=py$PYVER --requires=python --provides=ipython
+#./setup.py sdist --formats=gztar
+#./setup.py bdist_rpm --release=py$PYVER --requires=python --provides=ipython
 
 # Call the windows build separately, so that the extra Windows scripts don't
 # get pulled into Unix builds (setup.py has code which checks for
 # bdist_wininst)
-./setup.py bdist_wininst --install-script=ipython_win_post_install.py
+#python2.3 ./setup.py bdist_wininst --install-script=ipython_win_post_install.py
+
+
+./setup.py sdist --formats=gztar,zip
+#python2.2 ./setup.py bdist_rpm --release=py22 --requires=python --provides=ipython
+
+# py2.3 still makes the rpms for /usr/lib/python2.2, don't know why
+#python2.3 ./setup.py bdist_rpm --release=py23 --requires=python --provides=ipython
