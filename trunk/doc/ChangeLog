@@ -13,6 +13,11 @@
 	putting a copy of today's CVS (v 4.70) of python-mode in:
 	  http://ipython.scipy.org/tmp/python-mode.el
 
+	* scripts/ipython_win_post_install.py (install): Win32 fix to use
+	sys.executable for the executable name, instead of assuming it's
+	called 'python.exe' (the post-installer would have produced broken
+	setups on systems with a differently named python binary).
+
 	* IPython/PyColorize.py (Parser.__call__): change explicit '\n'
 	references to os.linesep, to make the code more
 	platform-independent.  This is also part of the win32 coloring
@@ -22,8 +27,9 @@
 	lines, which actually cause coloring bugs because the length of
 	the line is very difficult to correctly compute with embedded
 	escapes.  This was the source of all the coloring problems under
-	Win32.  Finally tracked down thanks to Gary Bishop's excellent
-	help.
+	Win32.  I think that _finally_, Win32 users have a properly
+	working ipython in all respects.  This would never have happened
+	if not for Gary Bishop and Viktor Ransmayr's great help and work.
 
 2005-01-26  *** Released version 0.6.9
 
