@@ -7,4 +7,5 @@
 
 # build source distros
 cd ~/ipython/ipython
-./setup.py sdist --formats=gztar
+#./setup.py sdist --formats=gztar
+./setup.py sdist --formats=gztar bdist --formats=rpm
