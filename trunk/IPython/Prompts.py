@@ -251,21 +251,21 @@ class CachedOutput:
             if self.input_hist[self.prompt_count].endswith(';\n'):
                 return
 
-            sys.stdout.write(self.output_sep)  # don't use print, puts an extra space
+            Term.out.write(self.output_sep)  # don't use print, puts an extra space
             if self.do_full_cache:
-                sys.stdout.write(str(self.ps_out_str))
+                Term.out.write(str(self.ps_out_str))
 
             if isinstance(arg,Macro):
                 print 'Executing Macro...'
-                sys.stdout.flush()  # in case the macro takes a long time to execute
+                Term.out.flush()  # in case the macro takes a long time to execute
                 exec arg.value in self.user_ns
                 return None
 
             # and now call a possibly user-defined print mechanism
             self.display(arg)
             
-            sys.stdout.write(self.output_sep2)
-            sys.stdout.flush()
+            Term.out.write(self.output_sep2)
+            Term.out.flush()
 
 
     def _display(self,arg):
@@ -289,9 +289,9 @@ class CachedOutput:
                 out = pformat(arg)
             if '\n' in out:
                 print
-            print out
+            print >>Term.out, out
         else:
-            print arg
+            print >>Term.out, arg
 
     # Assign the default display method:
     display = _display

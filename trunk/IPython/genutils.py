@@ -33,8 +33,25 @@ __date__   = 'Tue Dec 11 00:27:58 MST 2001'
 # required modules
 import __main__
 import types,commands,time,sys,os,re,shutil
+import tempfile
 from Itpl import Itpl,itpl,printpl
 import DPyGetOpt
+
+class Term:
+
+    """ Term holds the file or file-like objects for writing strings to the
+    terminal.
+
+    These are normally just sys.stdout and sys.stderr but for Windows they can
+    can replaced to allow editing the strings before they are displayed.
+    """
+
+    # In the future, having IPython channel all its I/O operations through
+    # this class will make it easier to embed it into other environments which
+    # are not a normal terminal (such as a GUI-based shell)
+    
+    out = sys.stdout
+    err = sys.stderr
 
 # the types module in Python 2.1 doesn't know about unicode, so let's kludge
 # around the problem a bit:
@@ -814,13 +831,13 @@ def page_dumb(strng,start=0,screen_lines=25):
     screens = chop(out,screen_lines-1)
     #print '\nscreens is:',screens,os.linesep  # dbg
     if len(screens) == 1:
-        print os.linesep.join(screens[0])
+        print >>Term.out, os.linesep.join(screens[0])
     else:
         for scr in screens[0:-1]:
-            print os.linesep.join(scr)
+            print >>Term.out, os.linesep.join(scr)
             ans = raw_input('---Return to continue, q to quit--- ')
             if ans.lower().startswith('q'): return
-        print os.linesep.join(screens[-1])
+        print >>Term.out, os.linesep.join(screens[-1])
     
         
 #----------------------------------------------------------------------------
@@ -847,7 +864,7 @@ def page(strng,start=0,screen_lines=0,pager_cmd = None):
     
     # Ugly kludge, but calling curses.initscr() flat out crashes in emacs
     TERM = os.environ.get('TERM','dumb')
-    if TERM in ['dumb','emacs']:
+    if TERM in ['dumb','emacs'] and os.name != 'nt':
         print strng
         return
     
@@ -888,25 +905,40 @@ def page(strng,start=0,screen_lines=0,pager_cmd = None):
     #print 'numlines',numlines,'screenlines',screen_lines  # dbg
     if numlines <= screen_lines :
         #print '*** normal print'  # dbg
-        print str_toprint
+        print >>Term.out, str_toprint
     else:  # try to open pager and default to internal one if that fails
         pager_cmd = get_pager_cmd(pager_cmd)
         pager_cmd += ' ' + get_pager_start(pager_cmd,start)
-        try:
-            retval = None
-            # if I use popen4, things hang. No idea why.
-            #pager,shell_out = os.popen4(pager_cmd)
-            pager = os.popen(pager_cmd,'w')
-            pager.write(strng)
-            #shell_out.close()
-            pager.close()
-            #retval = None
-            retval = pager.close()  # success returns None
-        except IOError,msg:  # broken pipe when user quits
-            if msg.args == (32,'Broken pipe'):
-                retval = None
-            else:
+        if os.name == 'nt':
+            try:
+                try:
+                    tmpname = tempfile.mktemp('.txt')
+                    tmpfile = file(tmpname,'wt')
+                    tmpfile.write(strng)
+                    tmpfile.close()
+                    cmd = pager_cmd + ' < ' + tmpname
+                    os.system(cmd)
+                    retval = None
+                finally:
+                    os.remove(tmpname)
+            except:  # FIXME: trap only the reasonable exceptions
                 retval = 1
+        else:
+            try:
+                retval = None
+                # if I use popen4, things hang. No idea why.
+                #pager,shell_out = os.popen4(pager_cmd)
+                pager = os.popen(pager_cmd,'w')
+                pager.write(strng)
+                #shell_out.close()
+                pager.close()
+                #retval = None
+                retval = pager.close()  # success returns None
+            except IOError,msg:  # broken pipe when user quits
+                if msg.args == (32,'Broken pipe'):
+                    retval = None
+                else:
+                    retval = 1
         if retval is not None:
             page_dumb(strng,screen_lines=screen_lines)
 

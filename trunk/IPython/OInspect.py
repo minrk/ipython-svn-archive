@@ -34,7 +34,7 @@ __all__ = ['Inspector','InspectColors']
 
 import inspect,types,StringIO,string
 from Itpl import itpl
-from genutils import page,indent
+from genutils import page,indent,Term
 import PyColorize
 from IPython.ColorANSI import *
 
@@ -148,7 +148,7 @@ class Inspector:
         except:
             self.noinfo('definition header',oname)
         else:
-            print header,output,
+            print >>Term.out, header,output,
 
     def pdoc(self,obj,oname='',formatter = None):
         """Print the docstring for any object.
