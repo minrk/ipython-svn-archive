@@ -1,4 +1,6 @@
 # -*- Mode: Shell-Script -*-  Not really, but shows comments correctly
+# $Id$
+
 #***************************************************************************
 #
 # Configuration file for IPython -- ipythonrc format
@@ -27,7 +29,7 @@
 include 
 
 #---------------------------------------------------------------------------
-# Section: prompt control and startup setup
+# Section: startup setup
 
 # These are mostly things which parallel a command line option of the same
 # name.
@@ -35,7 +37,6 @@ include
 # Keys in this section should only appear once. If any key from this section
 # is encountered more than once, the last value remains, all earlier ones get
 # discarded.
-
 
 # Auto-magic. This gives you access to all the magic functions without having
 # to prepend them with an @ sign. If you define a variable with the same name
@@ -48,6 +49,29 @@ include
 # shell environment (and you can extend it further if you want).
 
 automagic 1
+
+# Automatic calling of callable objects.  If set to true, callable objects are
+# automatically called when invoked at the command line, even if you don't
+# type parentheses.  IPython adds the parentheses for you.  For example:
+
+#In [1]: str 45
+#------> str(45)
+#Out[1]: '45'
+
+# IPython reprints your line with '---->' indicating that it added
+# parentheses.  While this option is very convenient for interactive use, it
+# may occasionally cause problems with objects which have side-effects if
+# called unexpectedly.  Set it to 0 if you want to disable it.
+
+# Note that even with autocall off, you can still use '/' at the start of a
+# line to treat the first argument on the command line as a function and add
+# parentheses to it:
+
+#In [8]: /str 43
+#------> str(43)
+#Out[8]: '43'
+
+autocall 1
 
 
 # Size of the output cache. After this many entries are stored, the cache will

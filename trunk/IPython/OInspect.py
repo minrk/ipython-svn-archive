@@ -3,7 +3,10 @@
 Uses syntax highlighting for presenting the various information elements.
 
 Similar in spirit to the inspect module, but all calls take a name argument to
-reference the name under which an object is being read."""
+reference the name under which an object is being read.
+
+$Id$
+"""
 
 #*****************************************************************************
 #       Copyright (C) 2002 Fernando Pérez. <fperez@pizero.colorado.edu>

@@ -1,8 +1,9 @@
-"""Magic functions for InteractiveShell."""
+"""Magic functions for InteractiveShell.
+
+$Id$
+"""
 
 from __future__ import nested_scopes
-
-# $Id$
 
 #*****************************************************************************
 #       Copyright (C) 2001 Janko Hauser <jhauser@ifm.uni-kiel.de> and
@@ -31,16 +32,17 @@ __author__  = '%s <%s>\n%s <%s>' % \
 __license__ = Release.license
 
 # Python standard modules
-import os, sys,__builtin__,inspect,pydoc,re,tempfile
+import __builtin__
+import os, sys, inspect, pydoc, re, tempfile, profile, pstats
 from getopt import getopt
-from pprint import pprint,pformat
-import profile,pstats
+from pprint import pprint, pformat
 from cStringIO import StringIO
 
 # Homebrewed
 from genutils import *
 from Struct import Struct
-from Itpl import Itpl,itpl,printpl
+from Itpl import Itpl, itpl, printpl
+from FakeModule import FakeModule
 
 #***************************************************************************
 # Utility functions
@@ -228,7 +230,7 @@ class Magic:
     def _ofind(self,oname):
         """Find an object in the available namespaces.
 
-        self.ofind(oname) -> found,obj,ospace,docstring,ismagic
+        self._ofind(oname) -> dict with keys: found,obj,ospace,docstring,ismagic
 
         Has special code to detect magic functions.
         """
@@ -283,20 +285,25 @@ class Magic:
         # and for things like {}.get? or ''.remove? to work
         if not found:
             try:
-                self.tmp_obj = eval(oname,user_ns)
+                ns_test = namespaces[0]
+                self.tmp_obj = eval(oname,ns_test[1])
                 found = 1
             except:
                 try:
-                    self.tmp_obj = eval(oname,builtin_ns)
+                    ns_test = namespaces[3]
+                    self.tmp_obj = eval(oname,ns_test[1])
                     found = 1
                 except:
                     pass
             if found:
                 ds = inspect.getdoc(self.tmp_obj)
-                ospace = 'Currently not defined in user session.'
+                ospace = ns_test[0]
                 obj = self.tmp_obj
                 del self.tmp_obj
-        return found,obj,ospace,ds,ismagic
+
+        #return found,obj,ospace,ds,ismagic
+        return {'found':found, 'obj':obj, 'namespace':ospace,
+                'docstring':ds, 'ismagic':ismagic}
         
     def arg_err(self,func):
         """Print docstring if incorrect arguments were passed"""
@@ -463,8 +470,16 @@ Currently the magic system has the following functions:\n"""
         if you delete the variable (del var), the previously shadowed magic
         function becomes visible to automagic again."""
         
-        self.rc.automagic = 1 - self.rc.automagic
+        self.rc.automagic = not self.rc.automagic
         print '\n' + Magic.auto_status[self.rc.automagic]
+
+    def magic_autocall(self, parameter_s = ''):
+        """Make functions callable without having to type parentheses.
+
+        This toggles the autocall command line option on and off."""
+        
+        self.rc.autocall = not self.rc.autocall
+        print "Automatic calling is:",['OFF','ON'][self.rc.autocall]
 
     def magic_hist(self, parameter_s = ''):
         """Print input history (_i<n> variables), with most recent last.
@@ -504,8 +519,8 @@ Currently the magic system has the following functions:\n"""
         width = len(str(final))
         line_sep = ['','\n']
         for in_num in range(init,final):
-            #inline = eval('self.user_ns["_i'+str(in_num)+'"]')
-            inline = self.user_ns['_ih'][in_num]
+            #inline = eval('self.shell.user_ns["_i'+str(in_num)+'"]')
+            inline = self.shell.user_ns['_ih'][in_num]
             multiline = inline.count('\n') > 1
             if not opts.has_key('n'):
                 print str(in_num).ljust(width)+':'+ line_sep[multiline],
@@ -562,20 +577,23 @@ Currently the magic system has the following functions:\n"""
             print 'No profile active.'
         
     def _inspect(self,meth,oname,**kw):
-        """Generic interface to the inspector system."""
+        """Generic interface to the inspector system.
+
+        This function is meant to be called by pdef, pdoc & friends."""
         
         oname = oname.strip()
-        found,obj,ns,ds,ismagic = self._ofind(oname)
-        if found:
+        info = Struct(self._ofind(oname))
+        if info.found:
             pmethod = getattr(self.shell.inspector,meth)
             if meth == 'pdoc':
-                formatter = ismagic and self.format_screen or None
-                pmethod(obj,oname,formatter)
+                formatter = info.ismagic and self.format_screen or None
+                pmethod(info.obj,oname,formatter)
             elif meth == 'pinfo':
-                formatter = ismagic and self.format_screen or None
-                pmethod(obj,oname,ns,formatter,ismagic=ismagic,**kw)
+                formatter = info.ismagic and self.format_screen or None
+                pmethod(info.obj,oname,info.namespace,formatter,
+                        ismagic=info.ismagic,**kw)
             else:
-                pmethod(obj,oname)
+                pmethod(info.obj,oname)
         else:
             print 'Object `%s` not found.' % oname
             return 'not found'  # so callers can take other action
@@ -637,7 +655,7 @@ Currently the magic system has the following functions:\n"""
     def magic_who_ls(self, parameter_s=''):
         """Return a list of all interactive variables."""
         out = []
-        for i in self.user_ns.keys():
+        for i in self.shell.user_ns.keys():
             if not (i.startswith('_') or i.startswith('_i')) \
                    and not (self.internal_ns.has_key(i) or
                             self.user_config_ns.has_key(i)):
@@ -645,7 +663,7 @@ Currently the magic system has the following functions:\n"""
         # FIXME. The namespaces should be setup so that this kind of manual
         # kludges is unnecessary:
         if 'help' in out and \
-           isinstance(self.user_ns['help'],pydoc.Helper):
+           isinstance(self.shell.user_ns['help'],pydoc.Helper):
             out.remove('help')
         out.sort()
         return out
@@ -1050,10 +1068,10 @@ Currently the magic system has the following functions:\n"""
 
         Options:
         
-        -n: __name__ is NOT set to '__main__'. This allows running scripts and
-        reloading the definitions in them without triggering a call to testing
-        routines which are often wrapped in an 'if __name__=="__main__" '
-        clause.
+        -n: __name__ is NOT set to '__main__', but to the running file's name
+        without extension (as python does under import).  This allows running
+        scripts and reloading the definitions in them without calling code
+        protected by an ' if __name__ == "__main__" ' clause.
 
         -i: run the file in IPython's namespace instead of an empty one. This
         is useful if you are experimenting with code written in a text editor
@@ -1096,20 +1114,31 @@ Currently the magic system has the following functions:\n"""
 
         if opts.has_key('i'):
             prog_ns = self.shell.user_ns
+            __name__save = self.shell.user_ns['__name__']
+            prog_ns['__name__'] = '__main__'
         else:
-            name = opts.has_key('n') and __name__ or '__main__'
+            if opts.has_key('n'):
+                name = os.path.splitext(os.path.basename(filename))[0]
+            else:
+                name = '__main__'
             prog_ns = {'__name__':name}
 
+        # pickle fix.  See iplib for an explanation
+        sys.modules[prog_ns['__name__']] = FakeModule(prog_ns)
+        
         stats = None
         try:
             if opts.has_key('p'):
-                cmd = parameter_s.split()[:-1]
+                #cmd = parameter_s.split()[:-1] # FIXME: dead code?
                 stats = self.magic_prun('',0,opts,arg_lst,prog_ns)
             else:
                 self.shell.safe_execfile(filename,prog_ns,prog_ns)
-                if not opts.has_key('i'):
+                if opts.has_key('i'):
+                    self.shell.user_ns['__name__'] = __name__save
+                else:
                     # update IPython interactive namespace
-                    self.user_ns.update(prog_ns)
+                    del prog_ns['__name__']
+                    self.shell.user_ns.update(prog_ns)
         finally:
             sys.argv = save_argv
         return stats
@@ -1130,7 +1159,7 @@ Currently the magic system has the following functions:\n"""
         force any file to be treated as a log file."""
 
         for f in parameter_s.split():
-            self.safe_execfile(f,self.user_ns,self.user_ns,islog=1)
+            self.shell.safe_execfile(f,self.shell.user_ns,self.shell.user_ns,islog=1)
 
     def magic_macro(self,parameter_s = ''):
         """Define a set of input lines as a macro for future re-execution.
@@ -1188,7 +1217,7 @@ Currently the magic system has the following functions:\n"""
         #print 'rng',ranges  # dbg
         cmds = self.extract_input_slices(ranges)
         macro = Macro(cmds)
-        self.user_ns.update({name:macro})
+        self.shell.user_ns.update({name:macro})
         print 'Macro `%s` created. To execute, type its name (without quotes).' % name
         print 'Macro contents:'
         print str(macro).rstrip(),
@@ -1630,13 +1659,13 @@ self.magic_$alias = magic_$alias
         ps = parameter_s.strip()
         if ps == '-':
             try:
-                ps = self.user_ns['_dh'][-2]
+                ps = self.shell.user_ns['_dh'][-2]
             except:
                 print 'No previous directory to change to.'
                 return
         elif ps.startswith('-'):
             try:
-                ps = self.user_ns['_dh'][
+                ps = self.shell.user_ns['_dh'][
                     int(ps.replace('-','').strip())]
             except:
                 print 'Requested directory doesn not exist in history.'
@@ -1647,12 +1676,12 @@ self.magic_$alias = magic_$alias
             except OSError:
                 print sys.exc_info()[1]
             else:
-                self.user_ns['_dh'].append(os.getcwd())
+                self.shell.user_ns['_dh'].append(os.getcwd())
                 
         else:
             os.chdir(self.home_dir)
-            self.user_ns['_dh'].append(os.getcwd())
-        print self.user_ns['_dh'][-1]
+            self.shell.user_ns['_dh'].append(os.getcwd())
+        print self.shell.user_ns['_dh'][-1]
 
     def magic_dhist(self, parameter_s=''):
         """Print your history of visited directories.
@@ -1665,7 +1694,7 @@ self.magic_$alias = magic_$alias
         always available as the global list variable _dh. You can use @cd -<n>
         to go to directory number <n>."""
 
-        dh = self.user_ns['_dh']
+        dh = self.shell.user_ns['_dh']
         if parameter_s:
             try:
                 args = map(int,parameter_s.split())

@@ -740,7 +740,40 @@ Things that should be done for the current series, before starting major
 Fix exception reporting.
  It seems that inspect is getting the build paths for sources instead of
  the current paths, and that's confusing ultraTB.
- 
+\newline 
+The problem is actually with the way redhat built python:
+\newline 
+
+\family typewriter 
+In [3]: pickle.dump.func_code.co_filename 
+\newline 
+Out[3]: '/usr/src/build/143041-i386/install/usr/lib/python2.2/pickle.py'
+\newline 
+In [4]: pickle.__file__ 
+\newline 
+Out[4]: '/usr/lib/python2.2/pickle.pyc'
+\newline 
+
+\family default 
+Since those build files can't be found, we get None as filenames for all
+ functions which are part of the standard distribution.
+ Who knows how they built python, because this problem does _not_ occur
+ with normal distutils-based builds:
+\newline 
+
+\family typewriter 
+In [2]: Numeric.array_str.func_code.co_filename
+\newline 
+Out[2]: '/usr/lib/python2.2/site-packages/Numeric/Numeric.py'
+\newline 
+
+\family default 
+Even though Numeric was first built in some separate directory and only
+ later installed there.
+\layout Itemize
+
+When ';' is appended to the end of the line, the output cache is still being
+ set (along with _).
 \layout Itemize
 
 Make the output cache depth independent of the input one.

@@ -331,10 +331,12 @@ class ListTB(TBTools):
             list.append( str(stype) + '\n')
         else:
             if etype is SyntaxError:
-                try:                    msg, (filename, lineno, offset, line) = value
+                try:
+                    msg, (filename, lineno, offset, line) = value
                 except:
                     pass
                 else:
+                    #print 'filename is',filename  # dbg
                     if not filename: filename = "<string>"
                     list.append('%s  File %s"%s"%s, line %s%d%s\n' % \
                             (Colors.normalEm,
@@ -425,6 +427,7 @@ class VerboseTB(TBTools):
         # Drop topmost frames if requested
         records = inspect.getinnerframes(etb, context)[self.tb_offset:]
         for frame, file, lnum, func, lines, index in records:
+            #print '*** record:',file,lnum,func,lines,index  # dbg
             file = file and os.path.abspath(file) or '?'
             link = Colors.filenameEm + file + Colors.Normal
             args, varargs, varkw, locals = inspect.getargvalues(frame)

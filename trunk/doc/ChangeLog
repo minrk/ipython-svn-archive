@@ -1,4 +1,40 @@
+2003-03-03  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/FakeModule.py: Moved the former _FakeModule to a
+	separate file, because it's also needed by Magic (to fix a similar
+	pickle-related issue in @run).
+
+2003-03-02  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.magic_autocall): new magic to control
+	the autocall option at runtime.
+	(Magic.magic_dhist): changed self.user_ns to self.shell.user_ns
+	across Magic.py to start separating Magic from InteractiveShell.
+	(Magic._ofind): Fixed to return proper namespace for dotted
+	names. Before, a dotted name would always return 'not currently
+	defined', because it would find the 'parent'. s.x would be found,
+	but since 'x' isn't defined by itself, it would get confused.
+	(Magic.magic_run): Fixed pickling problems reported by Ralf
+	Ahlbrink <RAhlbrink@RosenInspection.net>.  The fix was similar to
+	that I'd used when Mike Heeter reported similar issues at the
+	top-level, but now for @run.  It boils down to injecting the
+	namespace where code is being executed with something that looks
+	enough like a module to fool pickle.dump().  Since a pickle stores
+	a named reference to the importing module, we need this for
+	pickles to save something sensible.
+
+	* IPython/ipmaker.py (make_IPython): added an autocall option.
+
+	* IPython/iplib.py (InteractiveShell._prefilter): reordered all of
+	the auto-eval code.  Now autocalling is an option, and the code is
+	also vastly safer.  There is no more eval() involved at all.
+
 2003-03-01  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic._ofind): Changed interface to return a
+	dict with named keys instead of a tuple.
+
+	* IPython: Started using CVS for IPython as of 0.2.15pre1.
 
 	* setup.py (make_shortcut): Fixed message about directories
 	created during Windows installation (the directories were ok, just

@@ -1,5 +1,7 @@
 """Release data for the IPython project."""
 
+# $Id$
+
 name = 'IPython'
 
 version = '0.2.15pre1'

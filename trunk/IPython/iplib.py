@@ -4,6 +4,8 @@ IPython -- An enhanced Interactive Python
 Requires Python 2.1 or newer.
 
 This file contains all the classes and helper functions specific to IPython.
+
+$Id$
 """
 
 from __future__ import nested_scopes
@@ -51,7 +53,7 @@ from usage import cmd_line_usage,interactive_usage
 from Struct import Struct
 from genutils import *
 from Itpl import Itpl,itpl,printpl
-
+from FakeModule import FakeModule
 
 #****************************************************************************
 # Some utility function definitions
@@ -169,23 +171,6 @@ class InputList(UserList.UserList):
         return ''.join(UserList.UserList.__getslice__(self,i,j))
 
 
-class _FakeModule:
-    """Simple class with attribute access to fake a module.
-
-    This is not meant to replace a module, but to allow inserting a fake
-    module in sys.modules so that systems which rely on run-time module
-    importing like shelve and pickle work correctly in initeractive IPython
-    sections.
-
-    Do NOT use this code for anything other than this IPython private hack."""
-
-    def __init__(self,adict):
-        self.__dict__ = adict
-
-    def __getattr__(self,key):
-        return self.__dict__[key]
-
-
 #****************************************************************************
 # Local use exceptions
 class SpaceInInput(exceptions.Exception):
@@ -217,7 +202,10 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # should really track down where the problem is coming from. Alex
         # Schmolck reported this problem first.
         if user_ns is None:
-            self.user_ns = {'__name__':'__IPYTHON__main__',
+
+            # Set __name__ to __main__ to better match the behavior of the
+            # normal interpreter.
+            self.user_ns = {'__name__':'__main__',
                             name:self,
                             '__builtins__' : __builtin__,
                             }
@@ -236,7 +224,8 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         except KeyError:
             raise KeyError,'user_ns dictionary MUST have a "__name__" key'
         else:
-            sys.modules[main_name] = _FakeModule(self.user_ns)
+            #print "pickle hack in place"  # dbg
+            sys.modules[main_name] = FakeModule(self.user_ns)
             
         # List of input with multi-line handling. 
         # Fill its zero entry, user counter starts at 1
@@ -271,6 +260,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.hooks = Struct()
 
         self.name = name
+
         self.usage_min =  """\
         An enhanced console for Python.
         Features are:
@@ -317,7 +307,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.line_split = re.compile(r'(^[\s*!\?@,/]?)([\?\w\.]+\w*\s*)(\(?.*$)')
         # RegExp to identify potential function names
 
-        self.fun_name = re.compile (r'[a-zA-Z_]([a-zA-Z0-9_.]*) ?$')
+        self.fun_name = re.compile (r'[a-zA-Z_]([a-zA-Z0-9_.]*) *$')
 
         # try to catch also methods for stuff in lists/tuples/dicts:
         # off (experimental). For this to work, the line_split regexp would
@@ -856,46 +846,40 @@ choose to continue, there may be unexpected behavior.
         if line0 == self.ESC_SHELL:
             return self.handle_shell_escape(line)
         # Both ?word and  word? go to help
-        if line0 == self.ESC_HELP:
+        elif line0 == self.ESC_HELP:
             return self.handle_help(line[1:])
-        if line[-1] == self.ESC_HELP:
+        elif line[-1] == self.ESC_HELP:
             return self.handle_help(line[:-1])
-        if line0 == self.ESC_MAGIC:
+        elif line0 == self.ESC_MAGIC:
             return self.handle_magic(line)
-        if line0 in self.ESC_QUOTE+self.ESC_PAREN:
+        elif line0 in self.ESC_QUOTE+self.ESC_PAREN:
             return self.handle_auto(line0,iFun,theRest,line)
 
         # Next, check if we can automatically execute this thing
-        try:
-            #print 'iFun <%s> theRest <%s>' % (iFun,theRest)  # dbg
-            if self.fun_name.match(iFun) and \
-               (len(theRest)==0 or theRest[0] not in '!=()<>') and \
-               callable( eval(iFun, self.user_ns) ):
+        oinfo = self._ofind(iFun.strip()) # FIXME - _ofind is part of Magic
+        if not oinfo['found']:
+            return self.handle_normal(line,continue_prompt)
+
+        if not oinfo['ismagic']:
+            if self.rc.autocall and \
+                   (len(theRest)==0 or theRest[0] not in '!=()<>') and \
+                   self.fun_name.match(iFun) and \
+                   callable(oinfo['obj']) :
                 #print 'going auto'  # dbg
+                #print 'fun match', self.fun_name.match(iFun)  # dbg
                 return self.handle_auto(self.ESC_PAREN,iFun,theRest,line)
-            elif ' ' in iFun:
-                #print 'space in input exception'  # dbg
-                raise SpaceInInput  # possible magic
             else:
-                #print 'going normal'  # dbg
+                #print 'fun match', self.fun_name.match(iFun)  # dbg
                 return self.handle_normal(line,continue_prompt)
-
-        # Last check for automatically executing magics (lowest priority)
-        except (SyntaxError,NameError,AttributeError,ValueError,SpaceInInput):
-            #print sys.exc_info()[0:2]  # dbg
-            if self.rc.automagic and not theRest.startswith('='):
-                try:
-                    #print 'checking magic |'+iFun+'|'  # dbg
-                    #print 'lsm',self.lsmagic()  # dbg
-                    self.lsmagic().index(iFun.strip())
-                    #print 'found magic |'+iFun+'|'  # dbg
-                    #print 'magic', '@'+line.lstrip()  # dbg
-                except ValueError:
-                    # Raised by index() when it doesn't find things
-                    pass
-                else:
-                    return self.handle_magic('@'+line.lstrip())
-
+        else:
+            # Be careful not to call magics when a variable assignment is
+            # being made (ls='hi', for example)
+            if self.rc.automagic and \
+                   (len(theRest)==0 or theRest[0] not in '!=()<>'):
+                return self.handle_magic('@'+line.lstrip())
+            else:
+                return self.handle_normal(line,continue_prompt)
+            
         # If we get here, we have a normal Python line. Log and return.
         return self.handle_normal(line,continue_prompt)
 
