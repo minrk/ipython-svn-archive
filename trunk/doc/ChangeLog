@@ -1,3 +1,9 @@
+2004-11-17  Fernando Perez  <fperez@colorado.edu>
+
+	* debian/control (Build-Depends-Indep): Fix dpatch dependency,
+	reported as debian bug #280505.  I'm not sure my local changelog
+	entry has the proper debian format (Jack?).
+
 2004-11-08  *** Released version 0.6.4
 
 2004-11-08  Fernando Perez  <fperez@colorado.edu>

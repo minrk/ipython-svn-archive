@@ -2,7 +2,7 @@ Source: ipython
 Section: devel
 Priority: optional
 Maintainer: Jack Moffitt <jack@xiph.org>
-Build-Depends-Indep: debhelper (>> 4.1.65), python, python-dev
+Build-Depends-Indep: debhelper (>> 4.1.65), dpatch, python-dev
 Standards-Version: 3.6.1
 
 Package: ipython

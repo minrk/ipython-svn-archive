@@ -1,3 +1,9 @@
+ipython (0.6.4-1) unstable; urgency=low
+
+  * Fix dpatch dependency (Closes: #280505)
+
+ -- Fernando Perez <fperez@colorado.edu> Wed Nov 17 22:54:23 MST 2004
+
 ipython (0.6.3-1) unstable; urgency=low
 
   * New upstream release (Closes: #262244, #252525)
