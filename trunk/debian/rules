@@ -57,7 +57,7 @@ install: build
 
 	# remove extra license docs that get installed
 	rm -f $(CURDIR)/debian/ipython/usr/share/doc/ipython/COPYING
-	rm -f $(CURDIR)/debian/ipython/usr/share/doc/ipython/GNU-LGPL
+	#rm -f $(CURDIR)/debian/ipython/usr/share/doc/ipython/GNU-LGPL
 
 	# change permission on scripts
 	chmod 755 $(CURDIR)/debian/ipython/usr/share/doc/ipython/examples/example-embed.py	

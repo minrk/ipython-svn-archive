@@ -101,26 +101,8 @@ One of Python's most useful features is its interactive interpreter.
  is somewhat limited for extended interactive use.
 \layout Standard
 
-IPython is a free software project (released under the GNU LGPL
-\begin_inset Foot
-collapsed true
-
-\layout Standard
-
-IPython is distributed in the hope that it will be useful, but WITHOUT ANY
- WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- FOR A PARTICULAR PURPOSE.
- See the GNU Lesser General Public License for more details.
- Its full text is included in the file GNU-LGPL or can be obtained directly
- from the Free Software Foundation at: 
-\begin_inset LatexCommand \htmlurl{http://www.gnu.org/copyleft/lesser.html}
-
-\end_inset 
-
-.
-\end_inset 
-
-) which tries to:
+IPython is a free software project (released under the BSD license) which
+ tries to:
 \layout Enumerate
 
 Provide an interactive shell superior to Python's default.
@@ -601,77 +583,7 @@ IPython/
 ).
 \layout Subsubsection
 
-RedHat 7.x notes
-\layout Standard
-
-The problems discussed in this section do 
-\emph on 
-not
-\emph default 
- apply to RedHat 8.0 and newer versions, only to the 7.x series.
-\layout Standard
-
-RedHat made the 'wise' choice of using Python 1.5.2 as the default standard
- even for users (not just for internal system stuff).
- Since they couldn't be bothered to make things right, now you need to manually
- play around to get things to work with Python 2.x (which IPython requires).
-\layout Standard
-
-First, your system administrator may have fixed things so that as a user
- you automagically see python 2.x.
- Test this by typing 
-\family typewriter 
-'python' 
-\family default 
-at the prompt.
- If you get a Python 2.x prompt, you're safe.
- Otherwise you'll need to explicitly call Python2.
-\layout Standard
-
-Start by making sure you did install Python 2.x.
- The rpm for it is named 
-\family typewriter 
-python2....rpm
-\family default 
-.
- You can check by typing 
-\family typewriter 
-'python2'
-\family default 
- at the command prompt and seeing if you get a python prompt with 2.x as
- the version.
- If you don't have it, install the Python 2.x rpm now.
-\layout Standard
-
-Once you have confirmed you have Python 2.x installed, call the IPython setup
- routine as 
-\newline 
-
-\family typewriter 
-$ python2 setup.py install
-\layout Standard
-
-Hopefully, things will work.
- If they don't, go yell at RedHat, not me.
- One possible manual fix you may try is to edit 
-\family typewriter 
-/usr/bin/ipython
-\family default 
- and rename the 
-\family typewriter 
-#!/usr/bin/python
-\family default 
- line at the top to 
-\family typewriter 
-#!/usr/bin/python2
-\family default 
-.
-\layout Subsubsection
-
-Mac OSX information
-\layout Paragraph
-
-Tk problems under OSX 10.3.5
+Mac OSX information - Tk problems under OSX 10.3.5
 \layout Standard
 
 Users have reported some problems with Tk under OSX (quoting James Boyle
@@ -731,88 +643,6 @@ After this, call
 ipythonw
 \family default 
  at the command line.
-\layout Paragraph
-
-Mac OSX 10.1 problems
-\layout Standard
-
-
-\series bold 
-Note
-\series default 
-: I think all of this information only applies to users of OSX 10.1.
- As far as I know, newer versions run IPython fine without further tweaking.
-\layout Standard
-
-Apparently the problems which Mac OSX users may encounter with in the terminal
- window are due to poor VT100 emulation on Apple's part.
- 
-\layout Standard
-
-I don't have access to a Mac, so I rely on the helpful users from the OSX
- community for feedback on this issue.
- The information below was graciously provided by Andrea Riciputti from
- the Fink project, and I reproduce it unaltered hoping that it will be useful
- to others.
- If you find a mistake/update to this information, please let me know so
- that I can include it in future releases.
-\layout Standard
-
-Many thanks to Andrea for taking the time to do this.
- His Mini-HOWTO follows.
-\layout Standard
-
-
-\series bold 
-Mac OSX Terminal Mini-HOWTO
-\layout Standard
-
-From: Andrea Riciputi <andrea.riciputi@libero.it>
-\layout Standard
-
-Date: Thu, 28 Nov 2002 19:07:20 +0100 
-\layout Standard
-
-1) In order to get IPython works smoothly on MacOSX you have to reset the
- TERM env variable as follow:
-\layout Standard
-
-
-\family typewriter 
-% setenv TERM xterm
-\layout Standard
-
-2) Done.
- Open a new terminal window and start ipython setting 
-\family typewriter 
-color
-\family default 
- and 
-\family typewriter 
-color_info
-\family default 
- to 1.
- Everything will go well!!
-\layout Standard
-
-3) If someone wants to know more about this topics please look at these
- links:
-\layout Standard
-
-
-\begin_inset LatexCommand \htmlurl{http://www.nyangau.fsnet.co.uk/terminfo/terminfo.htm}
-
-\end_inset 
-
- (not so easy)
-\layout Standard
-
-
-\begin_inset LatexCommand \htmlurl{http://www.cs.utk.edu/~shuford/terminal/vt100_colorized_termcap.tx}
-
-\end_inset 
-
- (not easy at all) 
 \layout Subsection
 
 
@@ -828,19 +658,6 @@ While you can use IPython under Windows with only a stock Python installation,
  lot more pleasant.
  They are almost a requirement, since IPython will complain in their absence
  (though it will function).
-\layout Standard
-
-
-\series bold 
-Warning: ctypes-readline conflict:
-\series default 
- as of 08/27/2004, there is an incompatibility between ctypes 0.9 and readline.
- You 
-\emph on 
-must
-\emph default 
- use ctypes 0.6 at this moment (the IPython webpage carries a note describing
- the current situation; check there for up to date information on this problem).
 \layout Standard
 
 In short, for optimal performance under Windows you need:
@@ -867,8 +684,11 @@ CTypes
 
 \end_inset 
 
-.
- 
+ (you 
+\emph on 
+must
+\emph default 
+ use version 0.9.1 or newer).
 \layout Enumerate
 
 
@@ -1443,27 +1263,6 @@ with Gary Bishop's support extensions
 \end_inset 
 
 .
- Note that IPython doesn't auto-detect these tools, so for safety reasons
- it defaults to 
-\emph on 
-not
-\emph default 
- using coloring and readline under Windows.
- If you have Gary's tools, you can turn these features on manually by editing
- the 
-\family typewriter 
-ipythonrc.ini
-\family default 
- file.
- You may test the color support by typing '
-\family typewriter 
-colors Linux
-\family default 
-' at the prompt: if you get garbage on screen, go back with '
-\family typewriter 
-colors NoColor
-\family default 
-'.
 \layout Itemize
 
 A Windows (XP/2k) CygWin shell.
@@ -7564,77 +7363,6 @@ ipythonrc-myprofile
  after configuring matplotlib.
 \layout Section
 
-
-\begin_inset LatexCommand \label{sec:Threading-support}
-
-\end_inset 
-
-Threading support [disabled]
-\layout Standard
-
-
-\series bold 
-WARNING: 
-\series default 
-this is temporarily disabled, until more testing and debugging can be done.
- The only thread-related features which are currently active are those specific
- to matplotlib, available via the 
-\family typewriter 
--pylab
-\family default 
- option.
-\layout Standard
-
-IPython, via the 
-\family typewriter 
--gthread
-\family default 
- and 
-\family typewriter 
--wthread
-\family default 
- options (described in Sec.\SpecialChar ~
-
-\begin_inset LatexCommand \ref{sec:cmd-line-opts}
-
-\end_inset 
-
-), can run in multithreaded mode to support pyGTK and WXPython applications
- respectively.
- Both of these GUI toolkits need to control the python main loop of execution,
- so under a normal Python interpreter, starting a pyGTK (or WXPython) applicatio
-n will immediately freeze the shell.
- 
-\layout Standard
-
-Using one of these options (you can only use one at a time), the graphical
- loop and IPython's code execution run in separate threads, allowing you
- to test interactively (with 
-\family typewriter 
-%run
-\family default 
-, for example) your code without blocking issues.
-\layout Subsection
-
-Platform issues
-\layout Standard
-
-The threading support is still somewhat experimental, and it has only seen
- reasonable testing under Linux.
- Threaded code is particularly tricky to debug, and it tends to show extremely
- platform-dependent behavior.
- Since I only have access to Linux machines, I will have to rely on user's
- experiences and assistance for this area of IPython to improve under other
- platforms.
-\layout Standard
-
-So far, it appears that under OSX things work somewhat (but only very preliminar
-y tests have been done).
- Under Windows\SpecialChar ~
-XP, early tests indicate that things break very badly.
- Any help on addressing these issues will be most welcome.
-\layout Section
-
 Reporting bugs
 \layout Subsection*
 
@@ -7772,21 +7500,47 @@ ions are welcome.
 License
 \layout Standard
 
-Unless indicated otherwise, files in this project are covered by the GNU
- Lesser General Public License (LGPL).
- Its full text is included in the file GNU-LGPL or can be obtained directly
- from the Free Software Foundation at: 
-\begin_inset LatexCommand \htmlurl{http://www.gnu.org/copyleft/lesser.html}
+IPython is released under the terms of the BSD license, whose general form
+ can be found at: 
+\begin_inset LatexCommand \htmlurl{http://www.opensource.org/licenses/bsd-license.php}
 
 \end_inset 
 
 .
+ The full text of the IPython license follows:
 \layout Standard
 
-IPython is distributed in the hope that it will be useful, but WITHOUT ANY
- WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
- FOR A PARTICULAR PURPOSE.
- See the GNU Lesser General Public License for more details.
+
+\begin_inset ERT
+status Open
+
+\layout Standard
+
+\backslash 
+begin{verbatim}
+\layout Standard
+Copyright (c) 2001, 2002, 2003, 2004 Fernando Perez.
+\layout Standard
+Copyright (c) 2001 Janko Hauser and Nathaniel Gray.
+\layout Standard
+All rights reserved.
+\layout Standard
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+\layout Standard
+  a. Redistributions of source code must retain the above copyright notice,      this list of conditions and the following disclaimer.
+\layout Standard
+  b. Redistributions in binary form must reproduce the above copyright      notice, this list of conditions and the following disclaimer in the      documentation and/or other materials provided with the distribution.
+\layout Standard
+  c. Neither the name of the copyright holders nor the names of any      contributors to this software may be used to endorse or promote products      derived from this software without specific prior written permission.
+\layout Standard
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+\layout Standard
+
+\backslash 
+end{verbatim}
+\end_inset 
+
+
 \layout Standard
 
 Individual authors are the holders of the copyright for their code and are
@@ -7800,6 +7554,15 @@ DPyGetOpt.py
 , for example) may be licensed under different conditions.
  Ultimately each file indicates clearly the conditions under which its author/au
 thors have decided to publish the code.
+\layout Standard
+
+Versions of IPython up to and including 0.6.3 were released under the GNU
+ Lesser General Public License (LGPL), available at 
+\begin_inset LatexCommand \htmlurl{http://www.gnu.org/copyleft/lesser.html}
+
+\end_inset 
+
+.
 \layout Section
 
 
