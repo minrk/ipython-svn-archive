@@ -1,5 +1,17 @@
 2005-02-19  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/ConfigLoader.py (ConfigLoader.load): Allow empty strings
+	into keys (for prompts, for example).
+
+	* IPython/Prompts.py (BasePrompt.set_p_str): Fix to allow empty
+	prompts in case users want them.  This introduces a small behavior
+	change: ipython does not automatically add a space to all prompts
+	anymore.  To get the old prompts with a space, users should add it
+	manually to their ipythonrc file, so for example prompt_in1 should
+	now read 'In [\#]: ' instead of 'In [\#]:'.
+	(BasePrompt.__init__): New option prompts_pad_left (only in rc
+	file) to control left-padding of secondary prompts.
+
 	* IPython/Magic.py (Magic.profile_missing_notice): Don't crash if
 	the profiler can't be imported.  Fix for Debian, which removed
 	profile.py because of License issues.  I applied a slightly
