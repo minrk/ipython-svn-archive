@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """Modified input prompt for entering quantities with units.
 
 Modify the behavior of the interactive interpreter to allow direct input of

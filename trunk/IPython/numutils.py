@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """
 A set of convenient utilities for numerical work.
 

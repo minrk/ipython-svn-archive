@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """Improved replacement for the Gnuplot.Gnuplot class.
 
 This module imports Gnuplot and replaces some of its functionality with

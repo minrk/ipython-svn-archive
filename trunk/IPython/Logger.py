@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """
 Logger class for IPython's logging facilities.
 """

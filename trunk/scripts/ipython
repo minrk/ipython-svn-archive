@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: iso-8859-1 -*-
 """IPython -- An enhanced Interactive Python
 
 This is just the startup wrapper script, kept deliberately to a minimum.

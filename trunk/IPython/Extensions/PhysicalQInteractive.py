@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """Modify the PhysicalQuantities class for more convenient interactive use.
 
 Also redefine some math functions to operate on PhysQties with no need for

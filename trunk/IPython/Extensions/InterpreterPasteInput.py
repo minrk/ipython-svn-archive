@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """Modified input prompt for entering text with >>> or ... at the start.
 
 We define a special input line filter to allow typing lines which begin with

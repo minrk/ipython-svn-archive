@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """
     Class and program to colorize python source code for ANSI terminals.
 

@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """Tools for coloring text in ANSI terminals.
 
 $Id$

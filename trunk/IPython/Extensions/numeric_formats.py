@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """
 Extension for printing Numeric Arrays in flexible ways.
 """

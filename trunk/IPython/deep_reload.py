@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """
 A module to change reload() so that it acts recursively.
 To enable it type:

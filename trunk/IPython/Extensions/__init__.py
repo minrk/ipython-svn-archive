@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """This directory is meant for special-purpose extensions to IPython.
 
 This can include things which alter the syntax processing stage (see

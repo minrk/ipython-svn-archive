@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """Basic Gnuplot functionality for inclusion in other code.
 
 This module creates a running Gnuplot instance called 'gp' and builds other

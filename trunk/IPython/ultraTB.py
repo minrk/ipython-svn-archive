@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """
 ultraTB.py -- Spice up your tracebacks!
 

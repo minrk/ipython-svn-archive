@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """Class to trap stdout and stderr and log them separately."""
 
 #*****************************************************************************

@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """Interactive functions and magic functions for Gnuplot usage.
 
 This requires the Gnuplot.py module for interfacing python with Gnuplot, which

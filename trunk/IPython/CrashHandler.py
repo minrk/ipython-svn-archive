@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """sys.excepthook for IPython itself, leaves a detailed report on disk."""
 
 #*****************************************************************************

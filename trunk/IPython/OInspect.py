@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """Tools for inspecting Python objects.
 
 Uses syntax highlighting for presenting the various information elements.

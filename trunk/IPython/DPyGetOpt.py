@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """DPyGetOpt -- Demiurge Python GetOptions Module
 
  $Id$

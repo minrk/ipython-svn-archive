@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """Mimic C structs with lots of extra functionality."""
 
 #*****************************************************************************

@@ -1,3 +1,4 @@
+# -*- coding: iso-8859-1 -*-
 """String interpolation for Python (by Ka-Ping Yee, 14 Feb 2000).
 
 This module lets you quickly and conveniently interpolate values into
