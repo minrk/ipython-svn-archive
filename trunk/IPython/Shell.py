@@ -346,9 +346,37 @@ class MatplotlibShellBase:
     def _matplotlib_config(self,name):
         """Return various items needed to setup the user's shell with matplotlib"""
 
+
         # Initialize matplotlib to interactive mode always
         import matplotlib
+        from matplotlib import backends
         matplotlib.interactive(True)
+
+        def use(arg):
+            """IPython wrapper for matplotlib's backend switcher.
+
+            In interactive use, we can not allow switching to a different
+            interactive backend, since thread conflicts will most likely crash
+            the python interpreter.  This routine does a safety check first,
+            and refuses to perform a dangerous switch.  It still allows
+            switching to non-interactive backends."""
+
+            if arg in backends.interactive_bk and arg != self.mpl_backend:
+                m=('invalid matplotlib backend switch.\n'
+                   'This script attempted to switch to the interactive '
+                   'backend: `%s`\n'
+                   'Your current choice of interactive backend is: `%s`\n\n'
+                   'Switching interactive matplotlib backends at runtime\n'
+                   'would crash the python interpreter, '
+                   'and IPython has blocked it.\n\n'
+                   'You need to either change your choice of matplotlib backend\n'
+                   'by editing your .matplotlibrc file, or run this script as a \n'
+                   'standalone file from the command line, not using IPython.\n' %
+                   (arg,self.mpl_backend) )
+                raise RuntimeError, m
+            else:
+                self.mpl_use(arg)
+                self.mpl_use._called = True
 
         self.matplotlib = matplotlib
         
@@ -357,6 +385,13 @@ class MatplotlibShellBase:
         self.mpl_idraw = draw_if_interactive
         self.mpl_show = show
         self.mpl_show._needmain = False
+        self.mpl_backend = matplotlib.rcParams['backend']
+
+        # we also need to block switching of interactive backends by use()
+        self.mpl_use = matplotlib.use
+        self.mpl_use._called = False
+        # overwrite the original matplotlib.use with our wrapper
+        matplotlib.use = use
 
         # This must be imported last in the matplotlib series, after
         # backend/interactivity choices have been made
@@ -364,8 +399,7 @@ class MatplotlibShellBase:
 
         # Build a user namespace initialized with matplotlib/matlab features.
         user_ns = {'__name__':'__main__',
-                   '__builtins__' : __builtin__,
-                   name:self }
+                   '__builtins__' : __builtin__ }
         exec 'import matplotlib' in user_ns
         exec 'import matplotlib.matlab as matlab' in user_ns
         exec 'from matplotlib.matlab import *' in user_ns
@@ -379,7 +413,10 @@ class MatplotlibShellBase:
         return user_ns,b
 
     def mplot_exec(self,fname,*where):
-        """Execute a matplotlib script."""
+        """Execute a matplotlib script.
+
+        This is a call to execfile(), but wrapped in safeties to properly
+        handle interactive rendering and backend switching."""
 
         #print '*** Matplotlib runner ***' # dbg
         # turn off rendering until end of script
@@ -387,9 +424,13 @@ class MatplotlibShellBase:
         self.matplotlib.interactive(False)
         self.safe_execfile(fname,*where)
         self.matplotlib.interactive(isInteractive)
+        # make rendering call now, if the user tried to do it
         if self.mpl_idraw._called:
             self.matplotlib.matlab.draw()
             self.mpl_idraw._called = False
+        # if a backend switch was performed, reverse it now
+        if self.mpl_use._called:
+            self.matplotlib.rcParams['backend'] = self.mpl_backend
         
     def magic_run(self,parameter_s=''):
         """Modified @run for Matplotlib"""
