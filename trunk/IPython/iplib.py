@@ -995,7 +995,7 @@ There seemed to be a problem with your sys.stderr.
         else:
             #print 'iFun <%s> rest <%s>' % (iFun,theRest) # dbg
             if self.rc.autocall and \
-                   (len(theRest)==0 or theRest[0] not in '!=()<>') and \
+                   (len(theRest)==0 or theRest[0] not in '!=()<>[') and \
                    self.fun_name.match(iFun) and \
                    callable(oinfo['obj']) :
                 #print 'going auto'  # dbg
@@ -1115,11 +1115,6 @@ There seemed to be a problem with your sys.stderr.
         if pre == self.ESC_QUOTE:
             # Auto-quote
             newcmd = iFun + '("' + '", "'.join(theRest.split()) + '")\n'
-        elif theRest.startswith('['):
-            # Make sure that autocall doesn't override data access for objects
-            # which implement both [] and ().  In this case, defer to normal
-            # handler.
-            return self.handle_normal(line,continue_prompt)
         else:
             # Auto-paren
             if theRest.startswith('='):
