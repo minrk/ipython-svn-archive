@@ -126,14 +126,14 @@ def ipalias(arg_s):
     Input: a string containing the name of the alias to call and any
     additional arguments to be passed to the magic.
 
-    ipmagic('name -opt foo bar') is equivalent to typing at the ipython
+    ipalias('name -opt foo bar') is equivalent to typing at the ipython
     prompt:
 
     In[1]: name -opt foo bar
 
-    To call an magic without arguments, simply use ipalias('name').
+    To call an alias without arguments, simply use ipalias('name').
 
-    This provides a proper Python function to call IPython's magics in any
+    This provides a proper Python function to call IPython's aliases in any
     valid Python code you can type at the interpreter, including loops and
     compound statements.  It is added by IPython to the Python builtin
     namespace upon initialization."""
@@ -187,6 +187,7 @@ try:
             self.readline.set_completer_delims(delims)
             self.get_line_buffer = self.readline.get_line_buffer
             self.omit__names = omit__names
+            self.merge_completions = shell.rc.readline_merge_completions
             
             if alias_table is None:
                 alias_table = {}
@@ -267,7 +268,8 @@ try:
                 lsplit = ""
                 
             if lsplit != protect_filename(lsplit):
-                # if protectables are found, do matching on the whole escaped name
+                # if protectables are found, do matching on the whole escaped
+                # name
                 has_protectables = 1
                 text0,text = text,lsplit
             else:
@@ -279,18 +281,17 @@ try:
 
             m0 = self.clean_glob(text.replace('\\',''))
             if has_protectables:
-                # If we had protectables, we need to revert our
-                # changes to the beginning of filename so that we
-                # don't double-write the part of the filename we have
-                # so far
+                # If we had protectables, we need to revert our changes to the
+                # beginning of filename so that we don't double-write the part
+                # of the filename we have so far
                 len_lsplit = len(lsplit)
                 matches = [text0 + protect_filename(f[len_lsplit:]) for f in m0]
             else:
                 matches = [protect_filename(f) for f in m0]
             if len(matches) == 1 and os.path.isdir(matches[0]):
-                # Takes care of links to directories also.  Use '/' explicitly,
-                # even under Windows, so that name completions don't end up
-                # escaped.
+                # Takes care of links to directories also.  Use '/'
+                # explicitly, even under Windows, so that name completions
+                # don't end up escaped.
                 matches[0] += '/'
 
             return matches
@@ -340,6 +341,7 @@ try:
             #print '\n*** COMPLETE: <%s>' % text  # dbg
             magic_escape = self.magic_escape
             magic_prefix = self.magic_prefix
+            
             try:
                 if text.startswith(magic_escape):
                     text = text.replace(magic_escape,magic_prefix)
@@ -349,9 +351,16 @@ try:
                     # Extend the list of completions with the results of each
                     # matcher, so we return results to the user from all
                     # namespaces.
-                    self.matches = []
-                    for matcher in self.matchers:
-                        self.matches.extend(matcher(text,state))
+                    if self.merge_completions:
+                        self.matches = []
+                        for matcher in self.matchers:
+                            self.matches.extend(matcher(text,state))
+                    else:
+                        for matcher in self.matchers:
+                            self.matches = matcher(text,state)
+                            if self.matches:
+                                break
+                        
                     #print 'matches:',self.matches  # dbg
                 try:
                     return self.matches[state].replace(magic_prefix,magic_escape)
@@ -395,7 +404,8 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
     """An enhanced console for Python."""
 
     def __init__(self,name,usage=None,rc=Struct(opts=None,args=None),
-                 user_ns = None,banner2=''):
+                 user_ns = None,banner2='',
+                 custom_exceptions=((),None)):
 
         # Put a reference to self in builtins so that any form of embedded or
         # imported code can test for being inside IPython.
@@ -504,8 +514,16 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.user_ns['In']  = self.input_hist
         self.user_ns['Out'] = self.output_hist
 
+        # Store the actual shell's name
         self.name = name
 
+        # Object variable to store code object waiting execution.  This is
+        # used mainly by the multithreaded shells, but it can come in handy in
+        # other situations.  No need to use a Queue here, since it's a single
+        # item which gets cleared once run.
+        self.code_to_run = None
+        self.code_to_run_src = ''  # corresponding source
+        
         # Job manager (for jobs run as background threads)
         self.jobs = BackgroundJobManager()
         # Put the job manager into builtins so it's always there.
@@ -633,16 +651,18 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.CACHELENGTH = 5000  # this is cheap, it's just text
         self.BANNER = "Python %(version)s on %(platform)s\n" % sys.__dict__
         self.banner2 = banner2
+
         # TraceBack handlers:
         # Need two, one for syntax errors and one for other exceptions.
-        # plain/color
         self.SyntaxTB = ultraTB.ListTB(color_scheme='NoColor')
         # This one is initialized with an offset, meaning we always want to
         # remove the topmost item in the traceback, which is our own internal
-        # code. Valid modes: plain/color/verbose
+        # code. Valid modes: ['Plain','Context','Verbose']
         self.InteractiveTB = ultraTB.AutoFormattedTB(mode = 'Plain',
                                                      color_scheme='NoColor',
                                                      tb_offset = 1)
+        # and add any custom exception handlers the user may have specified
+        self.set_custom_exc(*custom_exceptions)
 
         # Object inspector
         ins_colors = OInspect.InspectColors
@@ -694,6 +714,61 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # accepts it.  Probably at least check that the hook takes the number
         # of args it's supposed to.
         setattr(self.hooks,name,new.instancemethod(hook,self,self.__class__))
+
+    def set_custom_exc(self,exc_tuple,handler):
+        """set_custom_exc(exc_tuple,handler)
+
+        Set a custom exception handler, which will be called if any of the
+        exceptions in exc_tuple occur in the mainloop (specifically, in the
+        runcode() method.
+
+        Inputs:
+
+          - exc_tuple: a *tuple* of valid exceptions to call the defined
+          handler for.  It is very important that you use a tuple, and NOT A
+          LIST here, because of the way Python's except statement works.  If
+          you only want to trap a single exception, use a singleton tuple:
+
+            exc_tuple == (MyCustomException,)
+
+          - handler: this must be defined as a function with the following
+          basic interface: def my_handler(self,etype,value,tb).
+
+          This will be made into an instance method (via new.instancemethod)
+          of IPython itself, and it will be called if any of the exceptions
+          listed in the exc_tuple are caught.  If the handler is None, an
+          internal basic one is used, which just prints basic info.
+
+        WARNING: by putting in your own exception handler into IPython's main
+        execution loop, you run a very good chance of nasty crashes.  This
+        facility should only be used if you really know what you are doing."""
+
+        assert type(exc_tuple)==type(()) , \
+               "The custom exceptions must be given AS A TUPLE."
+
+        def dummy_handler(self,etype,value,tb):
+            print '*** Simple custom exception handler ***'
+            print 'Exception type :',etype
+            print 'Exception value:',value
+            print 'Traceback      :',tb
+            print 'Source code    :',self.code_to_run_src
+
+        if handler is None: handler = dummy_handler
+
+        self.CustomTB = new.instancemethod(handler,self,self.__class__)
+        self.custom_exceptions = exc_tuple
+
+    def set_custom_completer(self,completer,pos=0):
+        """set_custom_completer(completer,pos=0)
+
+        Adds a new custom completer function.
+
+        The position argument (defaults to 0) is the index in the completers
+        list where you want the completer to be inserted."""
+
+        newcomp = new.instancemethod(completer,self.Completer,
+                                     self.Completer.__class__)
+        self.Completer.matchers.insert(pos,newcomp)
 
     def post_config_initialization(self):
         """Post configuration init method
@@ -1347,6 +1422,50 @@ There seemed to be a problem with your sys.stderr.
         except:
             self.showtraceback()
 
+    def runsource(self, source, filename="<input>", symbol="single"):
+        """Compile and run some source in the interpreter.
+
+        Arguments are as for compile_command().
+
+        One several things can happen:
+
+        1) The input is incorrect; compile_command() raised an
+        exception (SyntaxError or OverflowError).  A syntax traceback
+        will be printed by calling the showsyntaxerror() method.
+
+        2) The input is incomplete, and more input is required;
+        compile_command() returned None.  Nothing happens.
+
+        3) The input is complete; compile_command() returned a code
+        object.  The code is executed by calling self.runcode() (which
+        also handles run-time exceptions, except for SystemExit).
+
+        The return value is True in case 2, False in the other cases (unless
+        an exception is raised).  The return value can be used to
+        decide whether to use sys.ps1 or sys.ps2 to prompt the next
+        line.
+
+        """
+        try:
+            code = self.compile(source, filename, symbol)
+        except (OverflowError, SyntaxError, ValueError):
+            # Case 1
+            self.showsyntaxerror(filename)
+            return False
+
+        if code is None:
+            # Case 2
+            return True
+
+        # Case 3
+        # We store the code source and object so that threaded shells and
+        # custom exception handlers can access all this info if needed.
+        self.code_to_run_src = source
+        self.code_to_run = code
+        # now actually execute the code object
+        self.runcode(code)
+        return False
+
     def runcode(self,code_obj):
         """Execute a code object.
 
@@ -1366,11 +1485,17 @@ There seemed to be a problem with your sys.stderr.
             self.resetbuffer()
             self.showtraceback()
             warn( __builtin__.exit,level=1)
+        except self.custom_exceptions:
+            etype,value,tb = sys.exc_info()
+            self.CustomTB(etype,value,tb)
         except:
             self.showtraceback()
         else:
             if code.softspace(sys.stdout, 0):
                 print
+        # Flush out code object which has been run (and source)
+        self.code_to_run = None
+        self.code_to_run_src = ''
 
     def raw_input(self, prompt=""):
         """Write a prompt and read a line.
