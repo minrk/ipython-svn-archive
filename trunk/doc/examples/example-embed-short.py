@@ -14,7 +14,7 @@ except NameError:
     banner = exit_msg = ''
 else:
     # Command-line options for IPython (a list like sys.argv)
-    argv = ['-pi1','In <%n>:','-po','Out<%n>:']
+    argv = ['-pi1','In <\\#>:','-pi2','   .\\D.:','-po','Out<\\#>:']
     banner = '*** Nested interpreter ***'
     exit_msg = '*** Back in main IPython ***'
 
