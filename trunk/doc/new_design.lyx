@@ -190,6 +190,10 @@ Get Holger's completer in, once he adds filename completion.
 Lower priority stuff:
 \layout Itemize
 
+Make a nice Gnuplot example of making eps plots using the various types
+ of PlotItem, and include it in the examples directory.
+\layout Itemize
+
 Add @showopt/@setopt (decide name) for viewing/setting all options.
  The existing option-setting magics should become aliases for setopt calls.
 \layout Itemize
