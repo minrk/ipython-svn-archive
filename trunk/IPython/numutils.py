@@ -29,8 +29,9 @@ __date__   = 'Tue Dec 11 00:27:58 MST 2001'
 
 __all__ = """
 gnuplot_exec sum_flat mean_flat binary_repr zeros_like amap 
-rms_flat frange diagonal_matrix fromfunction identity  
-inf infty Infinity exp_safe spike spike_odd norm l1norm l2norm
+rms_flat frange diagonal_matrix fromfunction identity 
+inf infty Infinity exp_safe spike spike_odd norm l1norm l2norm 
+Numeric
 """.split()
 
 #****************************************************************************
@@ -38,6 +39,7 @@ inf infty Infinity exp_safe spike spike_odd norm l1norm l2norm
 import __main__
 import sys,operator
 import math
+import Numeric
 from Numeric import *
 
 import ultraTB
