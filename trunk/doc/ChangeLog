@@ -1,3 +1,9 @@
+2004-08-23  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (IPShellWX.__init__): Improvements to the WX
+	threaded shell, by John Hunter.  It's not quite ready yet, but
+	close.
+
 2004-08-22  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.interact): tab cleanups, also
