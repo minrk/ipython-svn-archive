@@ -1,4 +1,15 @@
+2005-03-28  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (handle_auto): cleanup to use %s instead of
+	expensive string additions for building command.  Add support for
+	trailing ';' when autocall is used.
+
 2005-03-26  Fernando Perez  <fperez@colorado.edu>
+
+	* ipython.el: Fix http://www.scipy.net/roundup/ipython/issue31.
+	Bugfix by A. Schmolck, the ipython.el maintainer.  Also make
+	ipython.el robust against prompts with any number of spaces
+	(including 0) after the ':' character.
 
 	* IPython/Prompts.py (Prompt2.set_p_str): Fix spurious space in
 	continuation prompt, which misled users to think the line was

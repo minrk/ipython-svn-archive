@@ -1781,9 +1781,7 @@ There seemed to be a problem with your sys.stderr.
             return '%s%s()' % (shell,line)
 
     def handle_auto(self, line, continue_prompt):
-        """Hande lines which can be auto-executed, quoting if requested.
-
-        Also log them with a prepended # so the log is clean Python."""
+        """Hande lines which can be auto-executed, quoting if requested."""
 
         # This should only be active for single-line input!
         if continue_prompt:
@@ -1794,7 +1792,7 @@ There seemed to be a problem with your sys.stderr.
 
         if pre == self.ESC_QUOTE:
             # Auto-quote
-            newcmd = iFun + '("' + '", "'.join(theRest.split()) + '")\n'
+            newcmd = '%s("%s")\n' % (iFun,'", "'.join(theRest.split()) )
         else:
             # Auto-paren
             if theRest[0:1] in ('=','['):
@@ -1802,11 +1800,15 @@ There seemed to be a problem with your sys.stderr.
                 # rebindings of an existing callable's name, or item access
                 # for an object which is BOTH callable and implements
                 # __getitem__.
-                return iFun + ' '+theRest+'\n'
-            newcmd = iFun.rstrip() + '(' + theRest + ')\n'
+                return '%s %s\n' % (iFun,theRest)
+            if theRest.endswith(';'):
+                newcmd = '%s(%s);\n' % (iFun.rstrip(),theRest[:-1])
+            else:
+                newcmd = '%s(%s)\n' % (iFun.rstrip(),theRest)
 
         print >>Term.cout, self.outputcache.prompt1.auto_rewrite() + newcmd,
-        # log what is now valid Python, not the actual user input (without end \n)
+        # log what is now valid Python, not the actual user input (without the
+        # final newline)
         self.log(newcmd.strip(),continue_prompt)
         return newcmd
 

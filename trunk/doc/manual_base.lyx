@@ -1634,6 +1634,17 @@ ts should be directed to him through the IPython mailing lists.
 
 This code is still somewhat experimental so it's a bit rough around the
  edges (although in practice, it works quite well).
+\layout Itemize
+
+Be aware that if you customize 
+\family typewriter 
+py-python-command
+\family default 
+ previously, this value will override what 
+\family typewriter 
+ipython.el
+\family default 
+ does (because loading the customization variables comes later).
 \layout Section
 
 
@@ -8773,4 +8784,13 @@ Ramachandran
 <prabhu_r-AT-users.sourceforge.net>
 \family default 
  Help with (X)Emacs support, threading patches, ideas...
+\layout List
+\labelwidthstring 00.00.0000
+
+Norbert\SpecialChar ~
+Tretkowski 
+\family typewriter 
+<tretkowski-AT-inittab.de>
+\family default 
+ help with Debian packaging and distribution.
 \the_end
