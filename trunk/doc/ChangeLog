@@ -1,5 +1,9 @@
 2003-12-01  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/iplib.py (InteractiveShell._prefilter): Fixed a bug
+	where a line like 'p,q=1,2' would fail because the automagic
+	system would be triggered for @p.
+
 	* IPython/DPyGetOpt.py (DPyGetOpt.processArguments): Tab-related
 	cleanups, code unmodified.
 
