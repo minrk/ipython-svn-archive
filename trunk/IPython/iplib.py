@@ -586,9 +586,13 @@ want to merge them back into the new files.""" % locals()
 
         # Though this won't be called by syntax errors in the input line,
         # there may be SyntaxError cases whith imported code.
-        if sys.exc_info()[0] == SyntaxError:
+        type, value, tb = sys.exc_info()
+        if type is SyntaxError:
             self.showsyntaxerror()
         else:
+            sys.last_type = type
+            sys.last_value = value
+            sys.last_traceback = tb
             self.InteractiveTB()
             if self.InteractiveTB.call_pdb and self.has_readline:
                 # pdb mucks up readline, fix it back
