@@ -82,14 +82,15 @@ class Logger:
             self.LOG = self.logfname
         elif self.LOGMODE == 'rotate':
             if os.path.isfile(self.logfname):
-                if os.path.isfile(self.logfname+'.1~'): 
+                if os.path.isfile(self.logfname+'.001~'): 
                     old = glob.glob(self.logfname+'.*~')
+                    old.sort()
                     old.reverse()
                     for f in old:
                         root, ext = os.path.splitext(f)
                         num = int(ext[1:-1])+1
-                        os.rename(f, root+'.'+`num`+'~')
-                os.rename(self.logfname, self.logfname+'.1~')
+			os.rename(f, root+'.'+`num`.zfill(3)+'~')
+                os.rename(self.logfname, self.logfname+'.001~')
             self.logfile = open(self.logfname,'w')
         elif self.LOGMODE == 'append':
             self.logfile = open(self.logfname,'a')
