@@ -2,7 +2,7 @@
 """
     Class and program to colorize python source code for ANSI terminals.
 
-    Based on an HTML code highlighter by Jürgen Hermann found at:
+    Based on an HTML code highlighter by Jurgen Hermann found at:
     http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/52298
 
     Modifications by Fernando Perez (fperez@colorado.edu).
@@ -11,12 +11,12 @@
     
     MoinMoin - Python Source Parser
 
-    Title: Colorize Python source using the built-in tokenizer
+    Title:olorize Python source using the built-in tokenizer
            
-    Submitter: Jürgen Hermann
-    Last Updated: 2001/04/06
+    Submitter: Jurgen Hermann
+    Last Updated:2001/04/06
            
-    Version no: 1.2
+    Version no:1.2
 
     Description:
 

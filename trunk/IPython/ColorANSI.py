@@ -1,22 +1,13 @@
 # -*- coding: utf-8 -*-
 """Tools for coloring text in ANSI terminals.
 
-$Id$
-"""
+$Id$"""
 
 #*****************************************************************************
-#       Copyright (C) 2002 Fernando Perez. <fperez@colorado.edu>
+#       Copyright (C) 2002-2004 Fernando Perez. <fperez@colorado.edu>
 #
-#  Distributed under the terms of the GNU Lesser General Public License (LGPL)
-#
-#    This code is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#    Lesser General Public License for more details.
-#
-#  The full text of the LGPL is available at:
-#
-#                  http://www.gnu.org/copyleft/lesser.html
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file LICENSE.txt, distributed as part of this software.
 #*****************************************************************************
 
 from IPython import Release

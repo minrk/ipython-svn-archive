@@ -29,6 +29,13 @@ IPython requires Python 2.2 or newer.
 
 $Id$"""
 
+#*****************************************************************************
+#       Copyright (C) 2001-2004 Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file LICENSE.txt, distributed as part of this software.
+#*****************************************************************************
+
 # Enforce proper version requirements
 import sys
 if sys.version[0:3] < '2.2':
@@ -51,7 +58,6 @@ __author__  = '%s <%s>\n%s <%s>\n%s <%s>' % \
                 Release.authors['Nathan'] )
 __license__ = Release.license
 __version__ = Release.version
-__date__    = Release.date
 
 # Namespace cleanup
 del name,glob,loc

@@ -3,6 +3,16 @@
 
 $Id$"""
 
+#*****************************************************************************
+#       Copyright (C) 2002-2004 Fernando Perez <fperez@colorado.edu>
+#
+#       Copyright (c) 2001 Janko Hauser <jhauser@zscout.de> and Nathaniel Gray
+#       <n8gray@caltech.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file LICENSE.txt, distributed as part of this software.
+#*****************************************************************************
+
 name = 'IPython'
 
 version = '0.6.4.rc2'
@@ -41,7 +51,7 @@ Main features:
 
  * Integrated access to the pdb debugger and the Python profiler. """
 
-license = 'LGPL'
+license = 'BSD'
 
 authors = {'Fernando' : ('Fernando Perez','fperez@colorado.edu'),
            'Janko'    : ('Janko Hauser','jhauser@zscout.de'),
@@ -53,8 +63,3 @@ url = 'http://ipython.scipy.org'
 platforms = ['Linux','Mac OSX','Windows XP/2000/NT','Windows 95/98/ME']
 
 keywords = ['Interactive','Interpreter','Shell']
-
-# Get date dynamically
-import time
-date = time.asctime()
-del time
