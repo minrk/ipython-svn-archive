@@ -40,6 +40,7 @@ def deep_import_hook(name, globals=None, locals=None, fromlist=None):
 #        print 'Importing', fromlist, 'from module', name
 #    else:
 #        print 'Importing module', name
+
     parent = determine_parent(globals)
     q, tail = find_head_package(parent, name)
     m = load_tail(q, tail)
@@ -66,7 +67,7 @@ def determine_parent(globals):
     return None
 
 def find_head_package(parent, name):
-    # Import the first 
+    # Import the first
     if '.' in name:
         # 'some.nested.package' -> head = 'some', tail = 'nested.package'
         i = name.find('.')
@@ -96,7 +97,14 @@ def load_tail(q, tail):
         i = tail.find('.')
         if i < 0: i = len(tail)
         head, tail = tail[:i], tail[i+1:]
-        mname = "%s.%s" % (m.__name__, head)
+
+        # fperez: fix dotted.name reloading failures by changing:
+        #mname = "%s.%s" % (m.__name__, head)
+        # to:
+        mname = m.__name__
+        # This needs more testing!!! (I don't understand this module too well)
+        
+        #print '** head,tail=|%s|->|%s|, mname=|%s|' % (head,tail,mname)  # dbg
         m = import_module(head, mname, m)
         if not m:
             raise ImportError, "No module named " + mname
@@ -147,7 +155,7 @@ def import_module(partname, fqname, parent):
         
     if parent:
         setattr(parent, partname, m)
-        
+
     return m
 
 def deep_reload_hook(module):
@@ -183,4 +191,4 @@ def reload(module, exclude=['sys', '__builtin__', '__main__']):
 
 # Uncomment the following to automatically activate deep reloading whenever
 # this module is imported
-#__builtin__.reload = dreload
+#__builtin__.reload = reload
