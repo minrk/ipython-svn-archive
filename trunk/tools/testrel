@@ -1,6 +1,7 @@
 #!/bin/sh
 
 # release test
+PYVER=`python -V 2>&1 | awk '{print $2}' | awk -F '.' '{print $1$2}' `
 
 # clean up build/dist directories
 rm -rf ~/ipython/ipython/build/*
@@ -9,16 +10,24 @@ rm -rf ~/ipython/ipython/dist/*
 # build source distros
 cd ~/ipython/ipython
 
-PYVER=`python -V 2>&1 | awk '{print $2}' | awk -F '.' '{print $1$2}' `
-
 ./setup.py sdist --formats=gztar
 ./setup.py bdist_rpm --release=py$PYVER
-./setup.py bdist_wininst --install-script=ipython_win_post_install.py
 
-# Fix the name in the win32 installer to add the python version to it
-cd dist
-rename win32.exe win32-py${PYVER}.exe *win32.exe
-cd -
+# A 2.4-specific RPM, where we must use the --fix-python option to ensure that
+# the resulting RPM is really built with 2.4 (so things go to
+# lib/python2.4/...)
+python2.4 ./setup.py bdist_rpm --release=py24 --fix-python
+
+# Call the windows build separately, so that the extra Windows scripts don't
+# get pulled into Unix builds (setup.py has code which checks for
+# bdist_wininst)
+#./setup.py bdist_wininst --install-script=ipython_win_post_install.py
+
+# For now, make the win32 installer with a hand-built 2.3.5 python, which is
+# the only one that fixes a crash in the post-install phase.
+$HOME/tmp/local/bin/python2.3 setup.py bdist_wininst \
+  --install-script=ipython_win_post_install.py
+
 
 # To get a specific python in the spec file, we must fix it:
 #python2.3 ./setup.py bdist_rpm --release=py23 --fix-python
