@@ -9,7 +9,7 @@ these things are also convenient when working at the command line.
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2004 Fernando PÃ©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -23,11 +23,10 @@ from __future__ import nested_scopes
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
+__author__ = 'Fernando PÃ©rez. <fperez@colorado.edu>'
 __version__= '0.1.1'
-__license__ = 'LGPL'
+__license__= 'LGPL'
 __date__   = 'Tue Dec 11 00:27:58 MST 2001'
-
 
 #****************************************************************************
 # required modules
@@ -42,42 +41,6 @@ import DPyGetOpt
 class Error(Exception):
     """Base class for exceptions in this module."""
     pass
-
-#****************************************************************************
-# Generic warning/error printer, used by everything else
-def warn(msg,level=2,exit_val=1):
-    """Standard warning printer. Gives formatting consistency.
-
-    Output is sent to sys.stderr.
-    
-    Options:
-    
-    -level(2): allows finer control:
-      0 -> Do nothing, dummy function.
-      1 -> Print message.
-      2 -> Print 'WARNING:' + message. (Default level).
-      3 -> Print 'ERROR:' + message.
-      4 -> Print 'FATAL ERROR:' + message and trigger a sys.exit().
-
-    -exit_val (1): exit value returned by sys.exit() for a level 4
-    warning. Ignored for all other levels."""
-    
-    if level>0:
-        header = ['','','WARNING: ','ERROR: ','FATAL ERROR: ']
-        print >> sys.stderr, '%s%s' % (header[level],msg)
-        if level == 4:
-            print >> sys.stderr,'Exiting.\n'
-            sys.exit(exit_val)
-
-def error(msg):
-    """Equivalent to warn(msg,level=3). """
-
-    warn(msg,level=3)
-
-def fatal(msg,exit_val=1):
-    """Equivalent to warn(msg,exit_val=exit_val,level=4). """
-
-    warn(msg,exit_val=exit_val,level=4)
 
 #----------------------------------------------------------------------------
 class Stream:
@@ -143,9 +106,73 @@ class Term:
         cls.cout = cls.streams[1].stream
         cls.cerr = cls.streams[0].stream
 
-    # Make reopen_all a class method
     reopen_all = classmethod(reopen_all)
+
+    def set_stdout(cls,stream):
+        """Set the stream """
+        cls.cout = stream
+    set_stdout = classmethod(set_stdout)
+
+    def set_stderr(cls,stream):
+        cls.cerr = stream
+    set_stderr = classmethod(set_stderr)
+
+# Windows-specific code to load Gary Bishop's readline and configure it
+# automatically for the users
+# Note: os.name on cygwin returns posix, so this should only pick up 'native'
+# windows.  Cygwin returns 'cygwin' for sys.platform.
+if os.name == 'nt':
+    try:
+        import readline
+    except ImportError:
+        pass
+    else:
+        try:
+            _out = readline.GetOutputFile()
+        except AttributeError:
+            pass
+        else:
+            Term.set_stdout(_out)
+            Term.set_stderr(_out)
+            del _out
+
+#****************************************************************************
+# Generic warning/error printer, used by everything else
+def warn(msg,level=2,exit_val=1):
+    """Standard warning printer. Gives formatting consistency.
+
+    Output is sent to Term.cerr (sys.stderr by default).
     
+    Options:
+    
+    -level(2): allows finer control:
+      0 -> Do nothing, dummy function.
+      1 -> Print message.
+      2 -> Print 'WARNING:' + message. (Default level).
+      3 -> Print 'ERROR:' + message.
+      4 -> Print 'FATAL ERROR:' + message and trigger a sys.exit(exit_val).
+
+    -exit_val (1): exit value returned by sys.exit() for a level 4
+    warning. Ignored for all other levels."""
+    
+    if level>0:
+        header = ['','','WARNING: ','ERROR: ','FATAL ERROR: ']
+        print >> Term.cerr, '%s%s' % (header[level],msg)
+        if level == 4:
+            print >> Term.cerr,'Exiting.\n'
+            sys.exit(exit_val)
+
+def error(msg):
+    """Equivalent to warn(msg,level=3). """
+
+    warn(msg,level=3)
+
+def fatal(msg,exit_val=1):
+    """Equivalent to warn(msg,exit_val=exit_val,level=4). """
+
+    warn(msg,exit_val=exit_val,level=4)
+
+#----------------------------------------------------------------------------    
 
 # the types module in Python 2.1 doesn't know about unicode, so let's kludge
 # around the problem a bit:
@@ -220,6 +247,64 @@ def timing(reps,func,*args,**kw):
 #****************************************************************************
 # file and system
 
+def system(cmd,verbose=0,debug=0,header=''):
+    """Execute a system command, return its exit status.
+
+    Options:
+
+    - verbose (0): print the command to be executed.
+    
+    - debug (0): only print, do not actually execute.
+
+    - header (''): Header to print on screen prior to the executed command (it
+    is only prepended to the command, no newlines are added).
+
+    Note: a stateful version of this function is available through the
+    SystemExec class."""
+
+    stat = 0
+    if verbose or debug: print header+cmd
+    sys.stdout.flush()
+    if not debug: stat = os.system(cmd)
+    return stat
+
+def getoutput(cmd,verbose=0,debug=0,header=''):
+    """Dummy substitute for perl's backquotes.
+
+    Executes a command and returns the output.
+
+    Accepts the same arguments as system().
+
+    Note: a stateful version of this function is available through the
+    SystemExec class."""
+
+    if verbose or debug: print header+cmd
+    if not debug:
+        output = commands.getoutput(cmd)
+        return output
+
+def getoutputerror(cmd,verbose=0,debug=0,header=''):
+    """Return (standard output,standard error) of executing cmd in a shell.
+
+    Accepts the same arguments as system().
+
+    Note: a stateful version of this function is available through the
+    SystemExec class."""
+
+    if verbose or debug: print header+cmd
+    if not debug:
+        pin,pout,perr = os.popen3(cmd)
+        tout = pout.read().rstrip()
+        terr = perr.read().rstrip()
+        pin.close()
+        pout.close()
+        perr.close()
+        return tout,terr
+
+# for compatibility with older naming conventions
+xsys = system
+bq = getoutput
+
 class SystemExec:
     """Access the system and getoutput functions through a stateful interface.
 
@@ -263,59 +348,12 @@ class SystemExec:
 
         return getoutput(cmd,self.verbose,self.debug,self.header)
 
+    def getoutputerror(self,cmd):
+        """Stateful interface to getoutputerror()."""
+
+        return getoutputerror(cmd,self.verbose,self.debug,self.header)
+
     bq = getoutput  # alias
-
-
-def system(cmd,verbose=0,debug=0,header=''):
-    """Execute a system command, return its exit status.
-
-    Options:
-
-    - verbose (0): print the command to be executed.
-    
-    - debug (0): only print, do not actually execute.
-
-    - header (''): Header to print on screen prior to the executed command (it
-    is only prepended to the command, no newlines are added).
-
-    Note: a stateful version of this function is available through the
-    SystemExec class."""
-
-    stat = 0
-    if verbose or debug: print header+cmd
-    sys.stdout.flush()
-    if not debug: stat = os.system(cmd)
-    return stat
-
-def getoutput(cmd,verbose=0,debug=0,header=''):
-    """Dummy substitute for perl's backquotes.
-
-    Executes a command and returns the output.
-
-    Accepts the same arguments as system().
-
-    Note: a stateful version of this function is available through the
-    SystemExec class."""
-
-    if verbose or debug: print header+cmd
-    if not debug:
-        output = commands.getoutput(cmd)
-        return output
-
-# for compatibility with older naming conventions
-xsys = system
-bq = getoutput
-
-def getoutputerror(cmd):
-    """Return (standard output,standard error) of executing cmd in a shell."""
-
-    pin,pout,perr = os.popen3(cmd)
-    tout = pout.read().rstrip()
-    terr = perr.read().rstrip()
-    pin.close()
-    pout.close()
-    perr.close()
-    return tout,terr
 
 #-----------------------------------------------------------------------------
 def mutex_opts(dict,ex_op):
