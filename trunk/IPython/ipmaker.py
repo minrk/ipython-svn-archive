@@ -88,12 +88,13 @@ def make_IPython(argv=[''],user_ns=None,debug=0,rc_override=None):
     from pydoc import help
     IP.user_ns['help'] = help
 
-    # IPython itself shouldn't crash. This will produce a detailed post-mortem
-    # if it does
     if debug:
+        # For developer debugging only
         import ultraTB
         sys.excepthook = ultraTB.VerboseTB(call_pdb=1)
     else:
+        # IPython itself shouldn't crash. This will produce a detailed
+        # post-mortem if it does
         import CrashHandler
         sys.excepthook = CrashHandler.CrashHandler(IP)
 
