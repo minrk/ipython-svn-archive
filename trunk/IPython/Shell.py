@@ -570,7 +570,8 @@ def hijack_gtk():
     def dummy_mainloop(*args, **kw):
         pass
     import gtk
-    orig_mainloop = gtk.mainloop
+    if gtk.pygtk_version >= (2,4,0): orig_mainloop = gtk.main
+    else:                            orig_mainloop = gtk.mainloop
     gtk.mainloop = dummy_mainloop
     gtk.main = dummy_mainloop
     return orig_mainloop
@@ -603,9 +604,12 @@ class IPShellGTK(threading.Thread):
         # Allows us to use both Tk and GTK.
         self.tk = get_tk()
         
+        if gtk.pygtk_version >= (2,4,0): mainquit = self.gtk.main_quit
+        else:                            mainquit = self.gtk.mainquit
+
         self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
                                shell_class=shell_class,
-                               on_kill=[self.gtk.mainquit])
+                               on_kill=[mainquit])
         threading.Thread.__init__(self)
 
     def run(self):

@@ -1067,7 +1067,6 @@ want to merge them back into the new files.""" % locals()
         if local_ns is None and global_ns is None:
             self.user_ns.update(__main__.__dict__)
 
-
         # Get locals and globals from caller
         call_frame = sys._getframe(stack_depth).f_back
 
