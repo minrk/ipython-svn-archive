@@ -297,7 +297,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
             
         # escapes for automatic behavior on the command line
         self.ESC_SHELL = '!'
-        self.ESC_HELP = '?'
+        self.ESC_HELP  = '?'
         self.ESC_MAGIC = '@'
         self.ESC_QUOTE = ','
         self.ESC_PAREN = '/'
@@ -433,33 +433,22 @@ Can not upgrade: changing to directory %s failed. Details:
                 wait()
                 return
             else:
-                sources = glb(os.path.join(rcdir,'[A-Za-z]*.py'))
+                sources = glb(os.path.join(rcdir,'[A-Za-z]*'))
                 for new_full_path in sources:
                     new_filename = os.path.basename(new_full_path)
                     if new_filename.startswith('ipythonrc'):
-                        new_filename = new_filename.replace('.py',rc_suffix)
+                        new_filename = new_filename + rc_suffix
                     if os.path.exists(new_filename):
                         os.rename(new_filename,new_filename+'.old')
                     shutil.copy(new_full_path,new_filename)
         else:
             raise ValueError,'unrecognized mode for install:',`mode`
         
-        # Ugly. This is a hack b/c distutils will only copy files named .py and
-        # which seem to be part of a package (with a __init__.py)
-        os.chdir(ipythondir)
-        for fname in glb('__init__*') + glb('*.pyc') + glb('*py~'):
-            try:
-                os.remove(fname)
-            except:
-                pass
-        for fname in glb('ipythonrc*.py'):
-            os.rename(fname,fname.replace('.py',rc_suffix))
         for fname in glb('*'):
             try:
                 native_line_ends(fname,backup=0)
             except IOError:
                 pass
-        # End of ugly distutils hack
 
         # Colors just don't work in Windows, disable them.
         # FIXME. This would be better done by loading separate files with the
@@ -841,6 +830,16 @@ choose to continue, there may be unexpected behavior.
             pre,iFun,theRest = lsplit.groups()
             #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest)  # dbg
 
+
+##        print '*** EXPERIMENTAL' # dbg
+##        if ' ' in line:
+##            iFun,theRest = line.split(' ',1)
+##            theRest = theRest.lstrip()
+##        else:
+##            iFun,theRest = line,''
+
+
+
         # First check for explicit escapes in the first character
         line0 = line[0]
         if line0 == self.ESC_SHELL:
@@ -858,9 +857,11 @@ choose to continue, there may be unexpected behavior.
         # Next, check if we can automatically execute this thing
         oinfo = self._ofind(iFun.strip()) # FIXME - _ofind is part of Magic
         if not oinfo['found']:
+            #print 'not found'  # dbg
             return self.handle_normal(line,continue_prompt)
 
         if not oinfo['ismagic']:
+            #print 'iFun <%s> rest <%s>' % (iFun,theRest) # dbg
             if self.rc.autocall and \
                    (len(theRest)==0 or theRest[0] not in '!=()<>') and \
                    self.fun_name.match(iFun) and \
@@ -869,6 +870,7 @@ choose to continue, there may be unexpected behavior.
                 #print 'fun match', self.fun_name.match(iFun)  # dbg
                 return self.handle_auto(self.ESC_PAREN,iFun,theRest,line)
             else:
+                #print 'was callable?', callable(oinfo['obj'])  # dbg
                 #print 'fun match', self.fun_name.match(iFun)  # dbg
                 return self.handle_normal(line,continue_prompt)
         else:
