@@ -335,50 +335,61 @@ class Magic:
         
         list_all = kw.get('list_all',0)
 
-        # Try to have the underlying shell do all quoting for us
-        # This has one eval in it, which I don't see how to avoid, since we
-        # need to rebuild argv from the _string_ which comes from the shell
+        # Check if we have more than one argument to warrant extra processing:
+        args = arg_str.split()
+        odict = {}  # Dictionary with options
+        
+        if len(args) > 1:
+            # If the list of inputs only has 0 or 1 thing in it, there's no
+            # need to look for options
 
-        # Note that I print argv[1:] because the -c option is left in there as
-        # the first entry, even though the python man page says it shouldn't
-        # be there.
-        out,err = getoutputerror('%s -SEc "import sys;print sys.argv[1:]" %s' %
-                                 (sys.executable,arg_str))
-        # If there is any problem with the shell-based expansions, we punt and
-        # do a simple arg_str.split()
-        if err:
-            warn(err)
-            argv = arg_str.split()
-        # Also don't call eval() unless what we get looks like a list's repr()
-        elif not out.startswith('[') or not out.endswith(']'):
-            argv = arg_str.split()
-        else:
-            # Try to make the eval as safe as possible by doing it in empty
-            # namespaces, and punt if anything fails
-            try:
-                argv = eval(out,{})
-            except:
-                argv = arg_str.split()
+            # Try to have the underlying shell do all quoting for us This has
+            # one eval in it, which I don't see how to avoid, since we need to
+            # rebuild argv from the _string_ which comes from the shell
 
-        # Do regular option processing
-        opts,args = getopt(argv,opt_str,*long_opts)
-        odict = {}
-        for o,a in opts:
-            if o.startswith('--'):
-                o = o[2:]
+            # Note that I print argv[1:] because the -c option is left in
+            # there as the first entry, even though the python man page says
+            # it shouldn't be there.
+            
+            out,err = getoutputerror('%s -SEc "import sys;print sys.argv[1:]" %s' %
+                                     (sys.executable,arg_str))
+
+            # If there is any problem with the shell-based expansions, we punt
+            # and do a simple arg_str.split()
+            if err:
+                warn(err)
+                argv = args
+            # Also don't call eval() unless what we get looks like a list's
+            # repr()
+            elif not out.startswith('[') or not out.endswith(']'):
+                argv = args
             else:
-                o = o[1:]
-            try:
-                odict[o].append(a)
-            except AttributeError:
-                odict[o] = [odict[o],a]
-            except KeyError:
-                if list_all:
-                    odict[o] = [a]
-                else:
-                    odict[o] = a
-        opts = Struct(odict)
+                # Try to make the eval as safe as possible by doing it in
+                # empty namespaces, and punt if anything fails
+                try:
+                    argv = eval(out,{})
+                except:
+                    argv = args
 
+            # Do regular option processing
+            opts,args = getopt(argv,opt_str,*long_opts)
+            for o,a in opts:
+                if o.startswith('--'):
+                    o = o[2:]
+                else:
+                    o = o[1:]
+                try:
+                    odict[o].append(a)
+                except AttributeError:
+                    odict[o] = [odict[o],a]
+                except KeyError:
+                    if list_all:
+                        odict[o] = [a]
+                    else:
+                        odict[o] = a
+
+        # Prepare opts,args for return
+        opts = Struct(odict)
         if mode == 'string':
             args = ' '.join(args)
             
