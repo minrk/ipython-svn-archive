@@ -8,6 +8,8 @@
 ;; Created:    Feb 1992
 ;; Keywords:   python languages oop
 
+;; Note that this is really python-mode Revision 4.22, but my CVS has
+;; its own idea ov revision numbers.
 (defconst py-version "$Revision$"
   "`python-mode' version number.")
 

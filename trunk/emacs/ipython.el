@@ -6,6 +6,9 @@
 ;; URL:           http://www-hep.colorado.edu/~fperez/ipython/dist/
 ;; Compatibility: Emacs21, XEmacs21
 ;; FIXME: #$@! INPUT RING
+
+;; Note that this is really Alex Schmolck's Revision 1.8, but my CVS has
+;; its own idea ov revision numbers.
 (defconst ipython-version "$Revision$"
   "VC version number.")
 
