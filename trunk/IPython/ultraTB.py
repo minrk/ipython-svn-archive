@@ -71,7 +71,7 @@ $Id$"""
 
 #*****************************************************************************
 #       Copyright (C) 2001 Nathaniel Gray <n8gray@caltech.edu>
-#       Copyright (C) 2001 Fernando Pérez <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #

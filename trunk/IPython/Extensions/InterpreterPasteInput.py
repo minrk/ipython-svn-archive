@@ -33,7 +33,7 @@ only sees the real part of the code.
 All other input is processed normally.
 """
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando Perez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #

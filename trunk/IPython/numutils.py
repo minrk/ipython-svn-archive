@@ -8,7 +8,7 @@ See http://www.pfdubois.com/numpy for details.
 $Id$"""
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2004 Fernando Perez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #

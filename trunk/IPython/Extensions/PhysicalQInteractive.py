@@ -9,7 +9,7 @@ This module should always be loaded *after* math or Numeric, so it can
 overwrite math functions with the versions that handle units."""
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando Perez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #

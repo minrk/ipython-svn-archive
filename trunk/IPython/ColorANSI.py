@@ -5,7 +5,7 @@ $Id$
 """
 
 #*****************************************************************************
-#       Copyright (C) 2002 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2002 Fernando Perez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
