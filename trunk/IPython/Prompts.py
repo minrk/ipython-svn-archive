@@ -7,7 +7,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando PÃ��¿½ï¿½Â©rez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2004 Fernando PÃ��¿½ï¿½Â¿Â½Ã¯Â¿Â½Ã��©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -316,6 +316,10 @@ class Prompt2(BasePrompt):
         Colors = self.cache.color_table.active_colors
         self.col_p2 = Colors.in_prompt2
         self.col_norm = Colors.normal
+        # FIXME (2004-06-16) HACK: prevent crashes for users who haven't
+        # updated their prompt_in2 definitions.  Remove eventually.
+        self.col_p = Colors.out_prompt
+        self.col_num = Colors.out_number
 
 #-----------------------------------------------------------------------------
 class CachedOutput:
