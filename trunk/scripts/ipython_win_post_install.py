@@ -17,7 +17,7 @@ def install():
 
     # Get some system constants
     prefix = sys.prefix
-    python = sys.executable
+    python = prefix + r'\python.exe'
     # Lookup path to common startmenu ...
     ip_dir = get_special_folder_path('CSIDL_COMMON_PROGRAMS') + r'\IPython'
     
@@ -26,14 +26,19 @@ def install():
     try:
         import ctypes
     except ImportError:
-        print ('To use the complete range and power of IPython functionality you\n'
-               'should get ctypes from http://sourceforge.net/projects/ctypes')
+        print ('To take full advantage of IPython, you need ctypes from:\n'
+               'http://sourceforge.net/projects/ctypes')
+
+    try:
+        import win32con
+    except ImportError:
+        print ('To take full advantage of IPython, you need pywin32 from:\n'
+               'http://starship.python.net/crew/mhammond/win32/Downloads.html')
 
     try:
         import readline
     except ImportError:
-        print ('To use the complete range and power of IPython functionality you\n'
-               'should get ctypes from '
+        print ('To take full advantage of IPython, you need readline from:\n'
                'http://sourceforge.net/projects/uncpythontools')
 
     # Create IPython entry ...
