@@ -145,6 +145,8 @@ def zip_items(items,titles=None):
     """zip together neighboring 1-d arrays, and zip standalone ones
     with their index. Leave other plot items alone."""
 
+    class StandaloneItem(Exception): pass
+    
     def get_titles(titles):
         """Return the next title and the input titles array.
 
@@ -173,12 +175,12 @@ def zip_items(items,titles=None):
         try:
             if is_list1d(item):
                 if n==len(items)-1: # last in list
-                    raise 'standalone'
+                    raise StandaloneItem
                 else: # check the next item and zip together if needed
                     next_item = items[n+1]
                     if next_item is None:
                         n += 1
-                        raise 'standalone'
+                        raise StandaloneItem
                     elif is_list1d(next_item):
                         # this would be best done with an iterator
                         if titles:
@@ -189,10 +191,10 @@ def zip_items(items,titles=None):
                                               title=title))
                         n += 1  # avoid double-inclusion of next item
                     else: # can't zip with next, zip with own index list
-                        raise 'standalone'
+                        raise StandaloneItem
             else:  # not 1-d array
                 new_items.append(item)
-        except 'standalone':
+        except StandaloneItem:
             if titles:
                 title,titles = get_titles(titles)
             else:
