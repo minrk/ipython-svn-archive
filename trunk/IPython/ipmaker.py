@@ -63,7 +63,8 @@ from Prompts import CachedOutput
 from genutils import *
 
 #-----------------------------------------------------------------------------
-def make_IPython(argv=[''],user_ns=None,debug=0,rc_override=None):
+def make_IPython(argv=None,user_ns=None,debug=0,rc_override=None,
+                 shell_class=InteractiveShell,**kw):
     """This is a dump of IPython into a single function.
 
     Later it will have to be broken up in a sensible manner."""
@@ -75,6 +76,9 @@ def make_IPython(argv=[''],user_ns=None,debug=0,rc_override=None):
     #----------------------------------------------------------------------
     # Defaults and initialization
 
+    if argv is None:
+        argv = sys.argv
+
     # __IP is the main global that lives throughout and represents the whole
     # application. If the user redefines it, all bets are off as to what
     # happens.
@@ -82,8 +86,8 @@ def make_IPython(argv=[''],user_ns=None,debug=0,rc_override=None):
     # __IP is the name of he global which the caller will have accessible as
     # __IP.name. We set its name via the first parameter passed to
     # InteractiveShell:
-    
-    IP = InteractiveShell('__IP',user_ns=user_ns)
+
+    IP = shell_class('__IP',user_ns=user_ns,**kw)
 
     # Put 'help' in the user namespace
     try:
