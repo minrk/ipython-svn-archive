@@ -2,6 +2,9 @@
 
 	* IPython/Magic.py (Magic.magic_sc): Fix quote stripping problem
 	reported by Prabhu.
+	(Magic.magic_sx): direct all errors to Term.cerr (defaults to
+	sys.stderr) instead of explicitly calling sys.stderr.  This helps
+	maintain our I/O abstractions clean, for future GUI embeddings.
 
 	* IPython/genutils.py (info): added new utility for sys.stderr
 	unified info message handling (thin wrapper around warn()).
