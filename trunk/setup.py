@@ -42,8 +42,11 @@ else:
 # lyxport (hence lyx,perl,latex,pdflatex,latex2html,sh,...)
 if os_name == 'windows':
     setup = os.path.join(os.getcwd(),'setup.py')
-    sys.argv = [setup,'install']
-
+    if len(sys.argv)==1 or sys.argv[1] not in ['install', 
+                                               'bdist', 
+                                               'bdist_wininst']:
+        sys.argv = [setup,'install']
+ 
 from distutils.core import setup
 
 # update the manuals when building a source dist
@@ -89,10 +92,13 @@ manpagebase = 'share/man/man1'
 docfiles    = filter(isfile, glob('doc/*[!~|.lyx|.sh|.1|.1.gz]'))
 examfiles   = filter(isfile, glob('doc/examples/*.py'))
 manfiles    = filter(isfile, glob('doc/manual/*.html')) + \
-              filter(isfile, glob('doc/manual/*.css'))
+              filter(isfile, glob('doc/manual/*.css')) + \
+              filter(isfile, glob('doc/manual/*.png'))
 manpages    = filter(isfile, glob('doc/*.1.gz'))
 cfgfiles    = filter(isfile, glob('IPython/UserConfig/*'))
 scriptfiles = filter(isfile, glob('scripts/*'))
+if 'bdist_wininst' in sys.argv:
+    scriptfiles.append('ipython_win_post_install.py')
 
 # Call the setup() routine which does most of the work
 setup(name             = name,
