@@ -7,7 +7,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando PÃ��¿½ï¿½Â¿Â½Ã¯Â¿Â½Ã��©rez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2004 Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -90,7 +90,8 @@ def multiple_replace(dict, text):
     """ Replace in 'text' all occurences of any key in the given
     dictionary by its corresponding value.  Returns the new string."""
 
-    # Function by Xavier Defrang
+    # Function by Xavier Defrang, originally found at:
+    # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/81330
 
     # Create a regular expression  from the dictionary keys
     regex = re.compile("(%s)" % "|".join(map(re.escape, dict.keys())))
