@@ -3000,6 +3000,78 @@ Other than the above warning, IPython is meant to work as a drop-in replacement
  What follows is a list of these.
 \layout Subsection
 
+Caution for Windows users
+\layout Standard
+
+Windows, unfortunately, uses the `
+\family typewriter 
+
+\backslash 
+
+\family default 
+' character as a path separator.
+ This is a terrible choice, because `
+\family typewriter 
+
+\backslash 
+
+\family default 
+' also represents the escape character in most modern programming languages,
+ including Python.
+ For this reason, issuing many of the commands discussed below (especially
+ magics which affect the filesystem) with `
+\family typewriter 
+
+\backslash 
+
+\family default 
+' in them will cause strange errors.
+\layout Standard
+
+A partial solution is to use instead the `
+\family typewriter 
+/
+\family default 
+' character as a path separator, which Windows recognizes in 
+\emph on 
+most
+\emph default 
+ situations.
+ However, in Windows commands `
+\family typewriter 
+/
+\family default 
+' flags options, so you can not use it for the root directory.
+ This means that paths beginning at the root must be typed in a contrived
+ manner like:
+\newline 
+
+\family typewriter 
+@copy 
+\backslash 
+opt/foo/bar.txt 
+\backslash 
+tmp
+\layout Standard
+
+There is no sensible thing IPython can do to truly work around this flaw
+ in Windows
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+If anyone comes up with a 
+\emph on 
+clean
+\emph default 
+ solution which works consistently and does not negatively impact other
+ platforms at all, I'll gladly accept a patch.
+\end_inset 
+
+.
+\layout Subsection
+
 
 \begin_inset LatexCommand \label{sec:magic}
 

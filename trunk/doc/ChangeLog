@@ -1,3 +1,66 @@
+2004-07-16  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.magic_hist): small clenaups and
+	optimizations.
+
+	* IPython/iplib.py:Remove old Changelog info for cleanup.  This is
+	the information which was there from Janko's original IPP code:
+
+	03.05.99 20:53 porto.ifm.uni-kiel.de
+	--Started changelog.
+	--make clear do what it say it does
+	--added pretty output of lines from inputcache
+	--Made Logger a mixin class, simplifies handling of switches
+	--Added own completer class. .string<TAB> expands to last history
+	line which starts with string.  The new expansion is also present
+	with Ctrl-r from the readline library.  But this shows, who this
+	can be done for other cases.
+	--Added convention that all shell functions should accept a
+	parameter_string This opens the door for different behaviour for
+	each function. @cd is a good example of this.
+
+	04.05.99 12:12 porto.ifm.uni-kiel.de
+	--added logfile rotation
+	--added new mainloop method which freezes first the namespace
+
+	07.05.99 21:24 porto.ifm.uni-kiel.de
+	--added the docreader classes. Now there is a help system.
+	-This is only a first try. Currently it's not easy to put new
+	stuff in the indices. But this is the way to go. Info would be
+	better, but HTML is every where and not everybody has an info
+	system installed and it's not so easy to change html-docs to info.
+	--added global logfile option
+	--there is now a hook for object inspection method pinfo needs to
+	be provided for this. Can be reached by two '??'.
+
+	08.05.99 20:51 porto.ifm.uni-kiel.de
+	--added a README
+	--bug in rc file. Something has changed so functions in the rc
+	file need to reference the shell and not self. Not clear if it's a
+	bug or feature.
+	--changed rc file for new behavior
+
+2004-07-15  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Logger.py (Logger.log): fixed recent bug where the input
+	cache was falling out of sync in bizarre manners when multi-line
+	input was present.  Minor optimizations and cleanup.
+
+	(Logger): Remove old Changelog info for cleanup.  This is the
+	information which was there from Janko's original code:
+
+	Changes to Logger: - made the default log filename a parameter
+
+	- put a check for lines beginning with !@? in log(). Needed
+	(even if the handlers properly log their lines) for mid-session
+	logging activation to work properly. Without this, lines logged
+	in mid session, which get read from the cache, would end up
+	'bare' (with !@? in the open) in the log. Now they are caught
+	and prepended with a #.
+
+	* IPython/iplib.py (InteractiveShell.init_readline): added check
+	in case MagicCompleter fails to be defined, so we don't crash.
+
 2004-07-13  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Gnuplot2.py (Gnuplot.hardcopy): add automatic generation
