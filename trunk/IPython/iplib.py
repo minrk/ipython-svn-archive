@@ -1381,7 +1381,7 @@ There seemed to be a problem with your sys.stderr.
                 iFun,theRest = line,''
         else:
             pre,iFun,theRest = lsplit.groups()
-        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest) # dbg
+        print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest) # dbg
         return pre,iFun.strip(),theRest
 
     def _prefilter(self, line, continue_prompt):
@@ -1585,7 +1585,7 @@ There seemed to be a problem with your sys.stderr.
             newcmd = iFun + '("' + '", "'.join(theRest.split()) + '")\n'
         else:
             # Auto-paren
-            if theRest[0:1] in '=[':
+            if theRest[0:1] in ('=','['):
                 # Don't autocall in these cases.  They can be either
                 # rebindings of an existing callable's name, or item access
                 # for an object which is BOTH callable and implements
