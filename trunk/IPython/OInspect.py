@@ -203,9 +203,8 @@ class Inspector:
             # run contents of file through pager starting at line
             # where the object is defined            
             page(self.format(open(inspect.getabsfile(obj)).read()),lineno)
-        
-    def pinfo(self,obj,oname='',ospace='',formatter = None, detail_level=0,
-              ismagic=0):
+
+    def pinfo(self,obj,oname='',formatter=None,info=None,detail_level=0):
         """Show detailed information about an object.
 
         Optional arguments:
@@ -217,7 +216,16 @@ class Inspector:
         """
 
         header = self.__head
-        ds = indent(inspect.getdoc(obj))
+        if info is None:
+            ds = indent(inspect.getdoc(obj))
+            ismagic = 0
+            isalias = 0
+            ospace = ''
+        else:
+            ds = indent(info.docstring)
+            ismagic = info.ismagic
+            isalias = info.isalias
+            ospace = info.namespace
         if formatter is not None:
             ds = formatter(ds)
 
@@ -229,6 +237,8 @@ class Inspector:
 
         if ismagic:
             obj_type = 'Magic function'
+        elif isalias:
+            obj_type = 'System alias'
         else:
             obj_type = type(obj).__name__
         out.writeln(header('Type:\t\t')+obj_type)
