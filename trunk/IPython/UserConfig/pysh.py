@@ -46,9 +46,6 @@ else:
 __IPYTHON__.magic_unalias('sc')
 __IPYTHON__.magic_unalias('sx')
 
-# Reorder the tab-completion priorities
-__IPYTHON__.Completer.matchers = ['file_matches','alias_matches','python_matches']
-
 # We need different criteria for line-splitting, so that aliases such as
 # 'gnome-terminal' are interpreted as a single alias instead of variable
 # 'gnome' minus variable 'terminal'.
