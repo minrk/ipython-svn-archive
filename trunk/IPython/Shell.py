@@ -32,6 +32,7 @@ import sys
 import os
 import code
 import threading
+import signal
 
 import IPython
 from IPython.iplib import InteractiveShell
@@ -241,6 +242,14 @@ class IPShellEmbed:
         self.exit_msg = exit_msg
 
 #-----------------------------------------------------------------------------
+def signal_handler (signum,stack_frame):
+    print '\nSIGNAL caught:', signum,'- Press <Enter> to continue.',
+    sys.stdout.flush()
+
+def sigint_handler (signum,stack_frame):
+    print '\nKeyboardInterrupt - Press <Enter> to continue.',
+    sys.stdout.flush()
+
 class MTInteractiveShell(InteractiveShell):
     """Simple multi-threaded shell."""
 
@@ -273,7 +282,7 @@ class MTInteractiveShell(InteractiveShell):
             if not callable(t):
                 raise TypeError,'on_kill must be a list of callables'
         self.on_kill = on_kill
-        
+
     def runsource(self, source, filename="<input>", symbol="single"):
         """Compile and run some source in the interpreter.
 
@@ -304,6 +313,10 @@ class MTInteractiveShell(InteractiveShell):
         """Execute a code object.
 
         Multithreaded wrapper around IPython's runcode()."""
+
+        # Install signal handlers
+        signal.signal(signal.SIGINT, sigint_handler)
+        signal.signal(signal.SIGSEGV, signal_handler)
 
         # lock thread-protected stuff
         self.ready.acquire()

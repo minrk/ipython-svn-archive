@@ -1,3 +1,9 @@
+2004-10-28  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (signal_handler): add signal handlers to trap
+	SIGINT and SIGSEGV in threaded code properly.  Thanks to a bug
+	report by Francesc Alted.
+
 2004-10-21  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Extensions/InterpreterExec.py (prefilter_shell): Fix @
