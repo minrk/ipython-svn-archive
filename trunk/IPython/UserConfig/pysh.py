@@ -20,13 +20,20 @@
 __author__ = 'Fernando Pérez. <fperez@colorado.edu>'
 __license__= 'LGPL'
 
+import os,sys,shutil
 import IPython.Extensions.InterpreterExec
 from IPython.genutils import system,getoutput,getoutputerror
 
 def shell():
     """
-    This profile loads a special input line filter to allow executing as shell
-    commands any lines which begin with ~/, ./ and /.
+    This profile loads a set of modules and facilities to make shell-like
+    usage with Python syntax more convenient.
+
+    In particular, any lines which begin with ~/, ./ and /. will be executed
+    as shell commands instead of as Python code.
+
+    The os, sys and shutil modules from the Python standard library are
+    automatically loaded.
 
     The following functions are also loaded from IPython.genutils.  You can
     request more help about each one of them:
@@ -38,4 +45,5 @@ def shell():
     pass
 
 print """Welcome to pysh, a set of extensions to IPython for shell usage.
-    help(shell)  -- help on the installed shell extensions."""
+    help(shell) -> help on the installed shell extensions.
+    """

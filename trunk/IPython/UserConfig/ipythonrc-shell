@@ -19,9 +19,19 @@
 # First load basic user configuration
 include ipythonrc
 
-# Configure prompt for more shell-like usage
-prompt_in1 '\C_LightRed\u\C_Blue@\C_Red\h\C_LightBlue[\C_LightCyan\Y1\C_LightBlue]\C_LightGreen>'
+# Configure prompt for more shell-like usage.
+
+# Most bash-like escapes can be used to customize IPython's prompts, as well as
+# a few additional ones which are IPython-specific.  All valid prompt escapes
+# are described in detail in the Customization section of the IPython HTML/PDF
+# manual.
+
+prompt_in1 '\C_LightRed\u\C_LightBlue[\C_LightCyan\Y1\C_LightBlue]\C_LightGreen\#>'
+prompt_in2 ' ..\D>'
 prompt_out '<\#>'
+
+# Here's a more complex prompt, showing the hostname and more path depth (\Y3)
+#prompt_in1 '\C_LightRed\u\C_Blue@\C_Red\h\C_LightBlue[\C_LightCyan\Y3\C_LightBlue]\C_LightGreen\#>'
 
 separate_in 0
 separate_out 0
