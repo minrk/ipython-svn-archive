@@ -48,9 +48,9 @@ cd $ipdir
 ./setup.py sdist --formats=gztar,zip bdist --formats=rpm
 
 # Keep a local Windows copy
-cd $ipdir/dist
-echo "Copying to Windows directory..."
-cp *.zip *.exe ~/win/IPython
+#cd $ipdir/dist
+#echo "Copying to Windows directory..."
+#cp *.zip *.exe ~/win/IPython
 
 # Upload
 cd $ipdir/dist
