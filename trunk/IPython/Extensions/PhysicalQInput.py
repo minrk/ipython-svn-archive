@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Modified input prompt for entering quantities with units.
 
 Modify the behavior of the interactive interpreter to allow direct input of
@@ -28,10 +28,9 @@ All other input is processed normally.
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
-__version__= '0.1.0'
-__license__ = 'LGPL'
-__date__   = 'Tue Dec 11 00:27:58 MST 2001'
+from IPython import Release
+__author__  = '%s <%s>' % Release.authors['Fernando']
+__license__ = Release.license
 
 # This file is an example of how to modify IPython's line-processing behavior
 # without touching the internal code. We'll define an alternate pre-processing
@@ -63,7 +62,8 @@ def prefilter_PQ(self,line,continuation):
     from IPython.iplib import InteractiveShell
 
     # This regexp is what does the real work
-    unit_split = match(r'\s*(\w+)\s*=\s*(-?\d*\.?\d*[eE]?-?\d*)\s+([a-zA-Z].*)',line)
+    unit_split = match(r'\s*(\w+)\s*=\s*(-?\d*\.?\d*[eE]?-?\d*)\s+([a-zA-Z].*)',
+                       line)
 
     # If special input was ecnountered, process it:
     if unit_split:
@@ -79,7 +79,6 @@ def prefilter_PQ(self,line,continuation):
     # that self must be passed explicitly, b/c we're calling the unbound class
     # method (since this method will overwrite the instance prefilter())
     return InteractiveShell._prefilter(self,line,continuation)
-
 
 # Rebind this to be the new IPython prefilter:
 from IPython.iplib import InteractiveShell

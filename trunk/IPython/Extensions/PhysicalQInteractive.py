@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Modify the PhysicalQuantities class for more convenient interactive use.
 
 Also redefine some math functions to operate on PhysQties with no need for
@@ -23,11 +23,9 @@ overwrite math functions with the versions that handle units."""
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
-__version__= '0.1.0'
-__license__ = 'LGPL'
-__date__   = 'Tue Dec 11 00:27:58 MST 2001'
-
+from IPython import Release
+__author__  = '%s <%s>' % Release.authors['Fernando']
+__license__ = Release.license
 
 from Scientific.Physics.PhysicalQuantities import PhysicalQuantity
 
@@ -39,7 +37,6 @@ import math
 
 # If you use Numeric, sin(x) works for x a float, PhysQty an array.
 #import Numeric as math
-
 
 class PhysicalQuantityFunction:
     """Generic function wrapper for PhysicalQuantity instances.

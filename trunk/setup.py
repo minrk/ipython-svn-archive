@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Setup script for IPython.
 
 Under Posix environments it works like a typical setup.py script. Under

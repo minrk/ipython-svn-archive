@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """pysh --- shell-like extensions for IPython.
 """
 
@@ -17,8 +17,9 @@
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Perez. <fperez@colorado.edu>'
-__license__= 'LGPL'
+from IPython import Release
+__author__  = '%s <%s>' % Release.authors['Fernando']
+__license__ = Release.license
 
 # This module contains the bulk of the core changes.  By importing it we
 # benefit from python's bytecode compilation

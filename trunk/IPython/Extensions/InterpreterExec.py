@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Modified input prompt for executing files.
 
 We define a special input line filter to allow typing lines which begin with
@@ -22,11 +22,10 @@ $Id$"""
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
+from IPython import Release
 __author__ = 'W.J. van der Laan <gnufnork@hetdigitalegat.nl>, '\
-             'Fernando Perez. <fperez@colorado.edu> '
-__version__= '0.1.0'
-__license__= 'LGPL'
-__date__   = 'Tue Jan 27 18:56:01 CET 2004'
+             '%s <%s>' %  Release.authors['Fernando']
+__license__ = Release.license
 
 def prefilter_shell(self,line,continuation):
     """Alternate prefilter, modified for shell-like functionality.

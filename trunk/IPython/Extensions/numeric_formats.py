@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """
 Extension for printing Numeric Arrays in flexible ways.
 """
@@ -12,7 +12,7 @@ def num_display(self,arg):
         self._display(arg)
         return
     # Otherwise, we do work.
-    format = __IP.runtime_rc.numarray_print_format
+    format = __IPYTHON__.runtime_rc.numarray_print_format
     print 'NumPy array, format:',format
     # Here is where all the printing logic needs to be implemented
     print arg # nothing yet :)
@@ -34,8 +34,8 @@ def magic_format(self,parameter_s=''):
         print 'Valid formats:',valid_formats
 
 # setup default format
-__IP.runtime_rc.numarray_print_format = 'long'
+__IPYTHON__.runtime_rc.numarray_print_format = 'long'
 
 # Bind our new functions to the interpreter
-__IP.__class__.magic_format = magic_format
-__IP.hooks.display = num_display
+__IPYTHON__.__class__.magic_format = magic_format
+__IPYTHON__.hooks.display = num_display

@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Modified input prompt for entering text with >>> or ... at the start.
 
 We define a special input line filter to allow typing lines which begin with
@@ -47,10 +47,9 @@ All other input is processed normally.
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
-__version__= '0.1.0'
-__license__ = 'LGPL'
-__date__   = 'Tue Dec 11 00:27:58 MST 2001'
+from IPython import Release
+__author__  = '%s <%s>' % Release.authors['Fernando']
+__license__ = Release.license
 
 # This file is an example of how to modify IPython's line-processing behavior
 # without touching the internal code. We'll define an alternate pre-processing
