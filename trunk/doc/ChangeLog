@@ -1,5 +1,15 @@
 2004-04-01  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/Magic.py (Magic.magic_sx): modified (as well as @sc) to
+	use the new getoutputerror() function, so it properly
+	distinguishes stdout/err.
+
+	* IPython/genutils.py (getoutputerror): added a function to
+	capture separately the standard output and error of a command.
+	After a comment from dang on the mailing lists.  This code is
+	basically a modified version of commands.getstatusoutput(), from
+	the standard library.
+
 	* IPython/iplib.py (InteractiveShell.handle_shell_escape): added
 	'!!' as a special syntax (shorthand) to access @sx.
 
