@@ -133,13 +133,15 @@ class IPShellEmbed:
         self.IP = make_IPython(argv,rc_override=rc_override,embedded=True)
 
         self.IP.name_space_init()
-        # mark this as an embedded instance so we know if we get a crash post-mortem
+        # mark this as an embedded instance so we know if we get a crash
+        # post-mortem
         self.IP.rc.embedded = 1
         # copy our own displayhook also
         self.sys_displayhook_embed = sys.displayhook
         # and leave the system's display hook clean
         sys.displayhook = self.sys_displayhook_ori
-        # don't use the ipython crash handler so that user exceptions aren't trapped
+        # don't use the ipython crash handler so that user exceptions aren't
+        # trapped
         sys.excepthook = ultraTB.FormattedTB(color_scheme = self.IP.rc.colors,
                                              mode = self.IP.rc.xmode,
                                              call_pdb = self.IP.rc.pdb)
@@ -269,12 +271,8 @@ class MTInteractiveShell(InteractiveShell):
         
         IPython.iplib.InteractiveShell.__init__(self,name,usage,rc,user_ns,banner2)
 
-        # Object variable to store code object waiting execution.  No need to
-        # use a Queue here, since it's a single item which gets cleared once run.
-        self.code_to_run = None
-
         # Locking control variable
-        self.ready = threading.Condition()
+        self.thread_ready = threading.Condition()
 
         # Stuff to do at closing time
         self._kill = False
@@ -313,10 +311,11 @@ class MTInteractiveShell(InteractiveShell):
 
         # Case 3
         # Store code in self, so the execution thread can handle it
-        self.ready.acquire()
+        self.thread_ready.acquire()
+        self.code_to_run_src = source
         self.code_to_run = code
-        self.ready.wait()  # Wait until processed in timeout interval
-        self.ready.release()
+        self.thread_ready.wait()  # Wait until processed in timeout interval
+        self.thread_ready.release()
 
         return False
 
@@ -326,7 +325,7 @@ class MTInteractiveShell(InteractiveShell):
         Multithreaded wrapper around IPython's runcode()."""
 
         # lock thread-protected stuff
-        self.ready.acquire()
+        self.thread_ready.acquire()
 
         # Install sigint handler
         try:
@@ -345,21 +344,19 @@ class MTInteractiveShell(InteractiveShell):
 
         # Run pending code by calling parent class
         if self.code_to_run is not None:
-            self.ready.notify()
+            self.thread_ready.notify()
             InteractiveShell.runcode(self,self.code_to_run)
-            # Flush out code object which has been run
-            self.code_to_run = None
             
         # We're done with thread-protected variables
-        self.ready.release()
+        self.thread_ready.release()
         # This MUST return true for gtk threading to work
         return True
 
     def kill (self):
         """Kill the thread, returning when it has been shut down."""
-        self.ready.acquire()
+        self.thread_ready.acquire()
         self._kill = True
-        self.ready.release()
+        self.thread_ready.release()
 
 class MatplotlibShellBase:
     """Mixin class to provide the necessary modifications to regular IPython
@@ -414,11 +411,6 @@ class MatplotlibShellBase:
         matplotlib.backends.show._needmain = False
         self.mpl_backend = matplotlib.rcParams['backend']
 
-##        # If the user forgets to call show(), we do it for them but give a
-##        # warning.  Since we don't want to print this warning every time, we
-##        # need a flag to track its use
-##        self.mpl_autoshow_warned = False
-
         # we also need to block switching of interactive backends by use()
         self.mpl_use = matplotlib.use
         self.mpl_use._called = False
@@ -427,7 +419,6 @@ class MatplotlibShellBase:
 
         # We need to detect at runtime whether show() is called by the user.
         # For this, we wrap it into a decorator which adds a 'called' flag.
-##        backend.show = flag_calls(backend.show)
         backend.draw_if_interactive = flag_calls(backend.draw_if_interactive)
 
         # This must be imported last in the matplotlib series, after
