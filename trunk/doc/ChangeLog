@@ -1,3 +1,8 @@
+2004-05-25  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.parse_options): Fix bug where naked
+	parens would get passed to the shell.
+
 2004-05-20  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py (Magic.magic_prun): changed default profile
@@ -447,7 +452,7 @@
 	* IPython/genutils.py (EvalDict.__getitem__): Renamed EvalString
 	to EvalDict (it's a mapping, after all) and simplified its code
 	quite a bit, after a nice discussion on c.l.py where Gustavo
-	Córdova <gcordova@sismex.com> suggested the new version.
+	CÃ³rdova <gcordova@sismex.com> suggested the new version.
 
 2003-04-30  Fernando Perez  <fperez@colorado.edu>
 
@@ -758,7 +763,7 @@
 2002-11-12  Fernando Perez  <fperez@pizero.colorado.edu>
 
 	* IPython/genutils.py (ask_yes_no): trap EOF and ^C so that they
-	don't propagate up to caller. Fixes crash reported by François
+	don't propagate up to caller. Fixes crash reported by FranÃ§ois
 	Pinard.
 
 2002-11-09  Fernando Perez  <fperez@pizero.colorado.edu>
@@ -822,7 +827,7 @@
 
 	* IPython/UserConfig/ipythonrc.py: Made confirm_exit 1 by
 	default. Now that the default at the confirmation prompt is yes,
-	it's not so intrusive. François' argument that ipython sessions
+	it's not so intrusive. FranÃ§ois' argument that ipython sessions
 	tend to be complex enough not to lose them from an accidental C-d,
 	is a valid one.
 
@@ -838,7 +843,7 @@
 
 	* IPython/UserConfig/ipythonrc.py: new confirm_exit option
 	added. If set, IPython now traps EOF and asks for
-	confirmation. After a request by François Pinard.
+	confirmation. After a request by FranÃ§ois Pinard.
 
 	* IPython/Magic.py (Magic.magic_Exit): New @Exit and @Quit instead
 	of @abort, and with a new (better) mechanism for handling the
@@ -850,7 +855,7 @@
 	the ipythonrc file to indicate that -log generates
 	./ipython.log. Also fixed the corresponding info in @logstart.
 	This and several other fixes in the manuals thanks to reports by
-	François Pinard <pinard@iro.umontreal.ca>.
+	FranÃ§ois Pinard <pinard@iro.umontreal.ca>.
 	
 	* IPython/Logger.py (Logger.switch_log): Fixed error message to
 	refer to @logstart (instead of @log, which doesn't exist).
