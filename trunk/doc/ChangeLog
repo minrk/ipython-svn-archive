@@ -1,3 +1,11 @@
+2004-07-26  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (protect_filename): Applied Ville's patch for
+	escaping '()[]{}' in filenames.
+
+	* IPython/Magic.py (shlex_split): Fix handling of '*' and '?' for
+	Python 2.2 users who lack a proper shlex.split.
+
 2004-07-19  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.init_readline): Add support
