@@ -35,5 +35,5 @@ download the ipython-XXX.tar.gz file, which contains the full IPython source
 distribution (the popular WinZip can read .tar.gz files). After uncompressing
 the archive, you can install it at a command terminal just like any other
 Python module, by using python setup.py install'. After this completes, you
-can run the supplied win32_py24_manual_post_install.py script which will add
+can run the supplied win32_manual_post_install.py script which will add
 the relevant shortcuts to your startup menu.
