@@ -1814,5 +1814,34 @@ self.magic_$alias = magic_$alias
             print '%s ==\n%s' % (var,pformat(out))
         self.shell.user_ns.update({var:out})
 
+    def magic_sx(self, parameter_s=''):
+        """Shell execute - run a shell command and capture its output.
+
+        @sx command
+
+	IPython will run the given command using commands.getoutput(), and
+	return the result formatted as a list (split on '\\n').  Since the
+	output is _returned_, it will be stored in ipython's regular output
+	cache Out[N] and in the '_' automatic variables.
+
+	Notes:
+
+	1) If an input line begins with '!!', then @sx is automatically
+	invoked.  That is, while:
+	  !ls
+	causes ipython to simply issue system('ls'), typing
+	  !!ls
+	is a shorthand equivalent to:
+	  @sx ls
+	
+	2) @sx differs from @sc in that @sx automatically splits into a list,
+	like '@sc -l'.  The reason for this is to make it as easy as possible
+	to process line-oriented shell output via further python commands.
+	@sc is meant to provide much finer control, but requires more
+	typing."""
+
+	if parameter_s:
+	    return commands.getoutput(parameter_s).split('\n')
+
 # end Magic
 
