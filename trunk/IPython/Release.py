@@ -1,7 +1,7 @@
 # -*- coding: iso-8859-1 -*-
-"""Release data for the IPython project."""
+"""Release data for the IPython project.
 
-# $Id$
+$Id$"""
 
 name = 'IPython'
 
