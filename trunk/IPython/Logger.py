@@ -7,7 +7,7 @@ from __future__ import nested_scopes
 
 #*****************************************************************************
 #       Copyright (C) 2001 Janko Hauser <jh@comunit.de> and
-#                          Fernando Pérez <fperez@colorado.edu>
+#                          Fernando PÃ©rez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -74,7 +74,12 @@ class Logger:
             self.logfile = open(self.logfname,'w')
         if self.LOGMODE == 'backup':
             if os.path.isfile(self.logfname):
-                os.rename(self.logfname,self.logfname+'~')
+                backup_logname = self.logfname+'~'
+                # Manually remove any old backup, since os.remove may fail
+                # under Windows.
+                if os.path.isfile(backup_logname):
+                    os.remove(backup_logname)
+                os.rename(self.logfname,backup_logname)
             self.logfile = open(self.logfname,'w')
         elif self.LOGMODE == 'global':
             self.logfname = os.path.join(self.home_dir, self.defname)
