@@ -77,18 +77,17 @@ def prefilter_paste(self,line,continuation):
     """
 
     from re import match
-    from IPython.iplib import InteractiveShell
 
     if match(r'^>>> |^\.\.\. ',line):
         # In the end, always call the default IPython _prefilter() function.
         # Note that self must be passed explicitly, b/c we're calling the
         # unbound class method (since this method will overwrite the instance
         # prefilter())
-        return InteractiveShell._prefilter(self,line[4:],continuation)
+        return self._prefilter(line[4:],continuation)
     elif line.strip() == '...':
-        return InteractiveShell._prefilter(self,'',continuation)
+        return self._prefilter('',continuation)
     else:
-        return InteractiveShell._prefilter(self,line,continuation)
+        return self._prefilter(line,continuation)
             
 # Rebind this to be the new IPython prefilter:
 from IPython.iplib import InteractiveShell

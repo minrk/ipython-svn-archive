@@ -2,13 +2,13 @@
 """Modified input prompt for executing files.
 
 We define a special input line filter to allow typing lines which begin with
-'~/', '/' or './'. If one of those strings is encountered, it is automatically
+'~', '/' or '.'. If one of those strings is encountered, it is automatically
 executed.
 
 All other input is processed normally."""
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando Perez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -27,19 +27,17 @@ __version__= '0.1.0'
 __license__= 'LGPL'
 __date__   = 'Tue Jan 27 18:56:01 CET 2004'
 
-def prefilter_paste(self,line,continuation):
-    """Alternate prefilter for input of pasted code from an interpreter.
-    """
+def prefilter_shell(self,line,continuation):
+    """Alternate prefilter.  Execute all lines beginning with '~', '/' or '.'."""
 
-    from IPython.iplib import InteractiveShell
-    if line.startswith("~/") or line.startswith("./") or line.startswith("/"):
-        return InteractiveShell._prefilter(self,"!"+line,continuation)
+    if line and line[0] in '~/.':
+        return self._prefilter("!"+line,continuation)
     else:
-        return InteractiveShell._prefilter(self,line,continuation)
+        return self._prefilter(line,continuation)
 
 # Rebind this to be the new IPython prefilter:
 from IPython.iplib import InteractiveShell
-InteractiveShell.prefilter = prefilter_paste
+InteractiveShell.prefilter = prefilter_shell
 
 # Clean up the namespace.
-del InteractiveShell,prefilter_paste
+del InteractiveShell,prefilter_shell
