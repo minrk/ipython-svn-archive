@@ -1,6 +1,6 @@
 # -*- coding: iso-8859-1 -*-
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando P�rez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando PÃ©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -182,18 +182,23 @@ instead of -option) to turn the feature off.
  inclusions, IPython will stop if it reaches 15 recursive inclusions.
 
  -prompt_in1|pi1 <string>: Specify the string used for input prompts. Note
- that if you are using numbered prompts, the number is represented with a '%n'
+ that if you are using numbered prompts, the number is represented with a '\\#'
  in the string. Don't forget to quote strings with spaces embedded in
- them. Default: 'In [%n]:'
- 
+ them. Default: 'In [\\#]:'.
+
+ Most bash-like escapes can be used to customize IPython's prompts, as well as
+ a few additional ones which are IPython-specific.  All valid prompt escapes
+ are described in detail in the Customization section of the IPython HTML/PDF
+ manual.
+
  -prompt_in2|pi2 <string>: Similar to the previous option, but used for the
- continuation prompts. In this case, the number (%n) is replaced by as many
- dots as there are digits in the number (so you can have your continuation
- prompt aligned with your input prompt). Default: ' .%n.:' (note three spaces
- at the start for alignment with 'In [%n]')
+ continuation prompts. The special sequence '\\D' is similar to '\\#', but
+ with all digits replaced dots (so you can have your continuation prompt
+ aligned with your input prompt). Default: '   .\\D.:' (note three spaces at
+ the start for alignment with 'In [\\#]').
 
  -prompt_out|po <string>: String used for output prompts, also uses numbers
- like prompt_in1. Default: 'Out[%n]:'
+ like prompt_in1. Default: 'Out[\\#]:'
 
  -quick: start in bare bones mode (no config file loaded).
 

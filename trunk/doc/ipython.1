@@ -196,20 +196,26 @@ inclusions, IPython will stop if it reaches 15 recursive inclusions.
 .TP
 .B \-prompt_in1|pi1 <string>
 Specify the string used for input prompts. Note that if you are using
-numbered prompts, the number is represented with a '%n' in the
+numbered prompts, the number is represented with a '\\#' in the
 string. Don't forget to quote strings with spaces embedded in
-them. Default: 'In [%n]:'.
+them. Default: 'In [\\#]:'.
+.br
+.sp 1
+Most bash-like escapes can be used to customize IPython's prompts, as well as
+a few additional ones which are IPython-specific.  All valid prompt escapes
+are described in detail in the Customization section of the IPython HTML/PDF
+manual.
 .TP
 .B \-prompt_in2|pi2 <string>
-Similar to the previous option, but used for the continuation
-prompts. In this case, the number (%n) is replaced by as many dots as
-there are digits in the number (so you can have your continuation
-prompt aligned with your input prompt). Default: '   .%n.:' (note three
-spaces at the start for alignment with 'In [%n]').
+Similar to the previous option, but used for the continuation prompts. The
+special sequence '\\D' is similar to '\\#', but with all digits replaced dots
+(so you can have your continuation prompt aligned with your input
+prompt). Default: '   .\\D.:' (note three spaces at the start for alignment
+with 'In [\\#]').
 .TP
 .B \-prompt_out|po <string>
 String used for output prompts, also uses numbers like prompt_in1.
-Default: 'Out[%n]:'.
+Default: 'Out[\\#]:'.
 .TP
 .B \-quick
 Start in bare bones mode (no config file loaded).
