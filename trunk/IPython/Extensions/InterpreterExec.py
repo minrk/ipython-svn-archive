@@ -121,6 +121,7 @@ def pysh():
         fperez[~/test]|7> $astr = ls *s.py
         fperez[~/test]|8> astr
                       <8> 'scopes.py\\nstrings.py'
+
         fperez[~/test]|9> $$alist = ls *s.py
         fperez[~/test]|10> alist
                       <10> ['scopes.py', 'strings.py']
