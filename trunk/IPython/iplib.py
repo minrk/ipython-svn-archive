@@ -605,14 +605,20 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
 
         self.dir_stack = [os.getcwd().replace(self.home_dir,'~')]
 
-        # Function to call the underlying shell.  Similar to os.system, but it
-        # doesn't return a value, and it allows interpolation of variables in
-        # the user's namespace.
+        # Functions to call the underlying shell.
+
+        # The first is similar to os.system, but it doesn't return a value,
+        # and it allows interpolation of variables in the user's namespace.
         self.system = lambda cmd: shell(str(ItplNS(cmd.replace('#','\#'),
                                                    self.user_ns)),
                                         header='IPython system call: ',
                                         verbose=self.rc.system_verbose)
-        # Similar one for getoutputerror.
+        # These are for getoutput and getoutputerror:
+        self.getoutput = lambda cmd: \
+                         getoutput(str(ItplNS(cmd.replace('#','\#'),
+                                              self.user_ns)),
+                                   header='IPython system call: ',
+                                   verbose=self.rc.system_verbose)
         self.getoutputerror = lambda cmd: \
                               getoutputerror(str(ItplNS(cmd.replace('#','\#'),
                                                         self.user_ns)),
