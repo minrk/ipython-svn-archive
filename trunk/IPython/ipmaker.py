@@ -172,7 +172,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     # The "ignore" option is a kludge so that Emacs buffers don't crash, since
     # the 'C-c !' command in emacs automatically appends a -i option at the end.
     cmdline_only = ('help ignore|i ipythondir=s Version upgrade '
-                    'gthread! wthread! pylab! ')
+                    'gthread! wthread! pylab! tk!')
 
     # Build the actual name list to be used by DPyGetOpt
     opts_names = qw(cmdline_opts) + qw(cmdline_only)
@@ -219,6 +219,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       gthread = 0,
                       wthread = 0,
                       pylab = 0,
+                      tk = 0,
                       upgrade = 0,
                       Version = 0,
                       xmode = 'Verbose',
