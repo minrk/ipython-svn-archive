@@ -934,7 +934,7 @@ def native_line_ends(filename,backup=1):
     original = open(filename).read()
     shutil.copy2(filename,bak_filename)
     try:
-        new = open(filename,'w')
+        new = open(filename,'wb')
         new.write(os.linesep.join(original.splitlines()))
         new.write(os.linesep) # ALWAYS put an eol at the end of the file
         new.close()
