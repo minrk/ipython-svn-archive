@@ -1,3 +1,11 @@
+2004-08-24  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.magic_prun): cleanup some dead code.  I
+	tried to switch the profiling to using hotshot, but I'm getting
+	strange errors from prof.runctx() there.  I may be misreading the
+	docs, but it looks weird.  For now the profiling code will
+	continue to use the standard profiler.
+
 2004-08-23  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Shell.py (IPShellWX.__init__): Improvements to the WX
