@@ -256,9 +256,21 @@ def getoutput(cmd,verbose=0,debug=0,header=''):
     if not debug:
         output = commands.getoutput(cmd)
         return output
+
 # for compatibility with older naming conventions
 xsys = system
 bq = getoutput
+
+def getoutputerror(cmd):
+    """Return (standard output,standard error) of executing cmd in a shell."""
+
+    pin,pout,perr = os.popen3(cmd)
+    tout = pout.read().rstrip()
+    terr = perr.read().rstrip()
+    pin.close()
+    pout.close()
+    perr.close()
+    return tout,terr
 
 #-----------------------------------------------------------------------------
 def warn(msg,level=2,exit_val=1):

@@ -1807,9 +1807,11 @@ self.magic_$alias = magic_$alias
 	    error('you must specify a variable to assign the command to.')
             return
         # If all looks ok, proceed
-        out = commands.getoutput(cmd)
+        out,err = getoutputerror(cmd)
+	if err:
+	    print >> sys.stderr,err
         if opts.has_key('l'):
-            out = out.split('\n')
+	    out = out.split('\n')
         if opts.has_key('v'):
             print '%s ==\n%s' % (var,pformat(out))
         self.shell.user_ns.update({var:out})
@@ -1841,7 +1843,8 @@ self.magic_$alias = magic_$alias
 	typing."""
 
 	if parameter_s:
-	    return commands.getoutput(parameter_s).split('\n')
-
+	    out,err = getoutputerror(parameter_s)
+	    if err:
+		print >> sys.stderr,err
+	    return out.split('\n')
 # end Magic
-
