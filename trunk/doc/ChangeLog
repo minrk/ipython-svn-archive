@@ -1,6 +1,8 @@
 2005-03-18  Fernando Perez  <fperez@colorado.edu>
 
-	* IPython/Magic.py (magic_sc): 
+	* IPython/Magic.py (magic_sc): %sc and %sx now use the fancy
+	LSString and SList classes which allow transparent conversions
+	between list mode and whitespace-separated string.
 
 	* IPython/genutils.py (LSString): New class to be used for
 	automatic storage of the results of all alias/system calls in _o
