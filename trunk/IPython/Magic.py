@@ -178,26 +178,6 @@ class Magic:
     
     def set_shell(self,shell):
         self.shell = shell
-    
-    def getargspec(self,obj):
-        """Get the names and default values of a function's arguments.
-
-        A tuple of four things is returned: (args, varargs, varkw, defaults).
-        'args' is a list of the argument names (it may contain nested lists).
-        'varargs' and 'varkw' are the names of the * and ** arguments or None.
-        'defaults' is an n-tuple of the default values of the last n arguments.
-
-        Modified version of inspect.getargspec from the Python Standard
-        Library."""
-
-        if inspect.isfunction(obj):
-            func_obj = obj
-        elif inspect.ismethod(obj):
-            func_obj = obj.im_func
-        else:
-            raise TypeError, 'arg is not a Python function'
-        args, varargs, varkw = inspect.getargs(func_obj.func_code)
-        return args, varargs, varkw, func_obj.func_defaults
 
     def extract_input_slices(self,slices):
         """Return as a string a set of input history slices.
@@ -215,18 +195,7 @@ class Magic:
                 fin = ini+1
             cmds.append(self.shell.input_hist[ini:fin])
         return cmds
-
-    def _get_def(self,oname,obj):
-        """Return the definition header for any callable object and a success flag."""
-
-        # There used to be a lot of fancy code here, until I realized that the
-        # proper way of calling formatargspec() is with a * in the args! Now
-        # this function is trivial.
-        try:
-            return oname + inspect.formatargspec(*self.getargspec(obj)), 1
-        except:
-            return 'Could not get definition header for ' + `oname` , 0
-
+        
     def _ofind(self,oname):
         """Find an object in the available namespaces.
 
@@ -234,11 +203,8 @@ class Magic:
 
         Has special code to detect magic functions.
         """
-
-        # the @ in magics isn't really part of the name
+        
         oname = oname.strip()
-        if oname.startswith('@'):
-            oname = oname[1:]
 
         # Namespaces to search in:
         user_ns        = self.shell.user_ns
@@ -246,8 +212,8 @@ class Magic:
         internal_ns    = self.shell.internal_ns
         builtin_ns     = __builtin__.__dict__
 
-        # Put them in a list. The order is important so that we find things in the
-        # same order that Python finds them.
+        # Put them in a list. The order is important so that we find things in
+        # the same order that Python finds them.
         namespaces = [ ('Interactive',user_ns),
                        ('User-defined configuration',user_config_ns),
                        ('IPython internal',internal_ns),
@@ -257,57 +223,53 @@ class Magic:
         # initialize results to 'null'
         found = 0; obj = None;  ospace = None;  ds = None; ismagic = 0
 
-        try:
-            for nsname,ns in namespaces:
-                try:
-                    obj = ns[oname]
-                except KeyError:
-                    pass
+        # Look for the given name by splitting it in parts.  If the head is
+        # found, then we look for all the remaining parts as members, and only
+        # declare success if we can find them all.
+        oname_parts = oname.split('.')
+        oname_head, oname_rest = oname_parts[0],oname_parts[1:]
+        for nsname,ns in namespaces:
+            try:
+                obj = ns[oname_head]
+            except KeyError:
+                continue
+            else:
+                for part in oname_rest:
+                    try:
+                        obj = getattr(obj,part)
+                    except AttributeError:
+                        break
                 else:
+                    # If we finish the for loop (no break), we got all members
                     found = 1
                     ospace = nsname
-                    ds = inspect.getdoc(obj)
-                    raise 'found it'
-        except 'found it':
-            pass
+                    break  # namespace loop
 
-        # try to see if it's magic
+        # Try to see if it's magic
         if not found:
-            try:
-                obj = eval('self.magic_'+oname)
+            if oname.startswith('@'):
+                oname = oname[1:]
+            obj = getattr(self,'magic_'+oname,None)
+            if obj is not None:
                 found = 1
                 ospace = 'IPython internal'
                 ismagic = 1
+
+        # Last try: special-case some literals like '', [], {}, etc:
+        if not found and oname_head in ["''",'""','[]','{}','()']:
+            obj = eval(oname_head)
+            found = 1
+            ospace = 'Interactive'
+            
+        # Get the object's docstring
+        if found:
+            try:
                 ds = inspect.getdoc(obj)
             except:
+                # Harden against an inspect failure, which can occur with
+                # SWIG-wrapped extensions.
                 pass
-        # Play some games to try and find info about dotted objects
-        # and for things like {}.get? or ''.remove? to work
-        if not found:
-            try:
-                ns_test = namespaces[0]
-                self.tmp_obj = eval(oname,ns_test[1])
-                found = 1
-            except:
-                try:
-                    ns_test = namespaces[3]
-                    self.tmp_obj = eval(oname,ns_test[1])
-                    found = 1
-                except:
-                    pass
-            if found:
-                try:
-                    # Harden against an inspect failure, which can occur with
-                    # SWIG-wrapped extensions.  These can easily crash
-                    # inspect.
-                    ds = inspect.getdoc(self.tmp_obj)
-                except:
-                    ds = None
-                ospace = ns_test[0]
-                obj = self.tmp_obj
-                del self.tmp_obj
 
-        #return found,obj,ospace,ds,ismagic
         return {'found':found, 'obj':obj, 'namespace':ospace,
                 'docstring':ds, 'ismagic':ismagic}
         
@@ -1302,8 +1264,8 @@ Currently the magic system has the following functions:\n"""
         your IPython session.
         
         If called without arguments, @edit opens up an empty editor with a
-        temporary file and will execute the contents of this file (don't
-        forget to save it!) when you close it.
+        temporary file and will execute the contents of this file when you
+        close it (don't forget to save it!).
 
         Options:
 
@@ -1394,6 +1356,22 @@ Currently the magic system has the following functions:\n"""
         hello again\\
         Out[10]: "print 'hello again'\\n"
         """
+        # FIXME: This function has become a convoluted mess.  It needs a
+        # ground-up rewrite with clean, simple logic.
+
+        def make_filename(arg):
+            "Make a filename from the given args"
+            try:
+                filename = get_py_filename(arg)
+            except IOError:
+                if args.endswith('.py'):
+                    filename = arg
+                else:
+                    filename = None
+            return filename
+
+        # custom exceptions
+        class DataIsObject(Exception): pass
 
         opts,args = self.parse_options(parameter_s,'px')
 
@@ -1422,44 +1400,53 @@ Currently the magic system has the following functions:\n"""
             # numbers this way. Tough.
             ranges = args.split()
             data = ''.join(self.extract_input_slices(ranges))
+        elif args.endswith('.py'):
+            filename = make_filename(args)
+            data = ''
+            use_temp = 0
         elif args:
             try:
                 # Load the parameter given as a variable. If not a string,
                 # process it as an object instead (below)
+
+                #print '*** args',args,'type',type(args)  # dbg
                 data = eval(args,self.shell.user_ns)
                 if not type(data) in StringTypes:
-                    raise 'data is an object'
+                    raise DataIsObject
             except (NameError,SyntaxError):
                 # given argument is not a variable, try as a filename
-                try:
-                    filename = get_py_filename(args)
-                except IOError:
-                    if args.endswith('.py'):
-                        filename = args
-                    else:
-                        warn("Argument given (%s) can't be found as a variable "
-                             "or as a filename." % args)
-                        return
+                filename = make_filename(args)
+                if filename is None:
+                    warn("Argument given (%s) can't be found as a variable "
+                         "or as a filename." % args)
+                    return
                 data = ''
                 use_temp = 0
-            except 'data is an object':
+            except DataIsObject:
                 # For objects, try to edit the file where they are defined
                 try:
                     filename = inspect.getabsfile(data)
+                    datafile = 1
                 except TypeError:
-                    warn('Could not find file where `%s` is defined.' % args)
-                    return
+                    filename = make_filename(args)
+                    datafile = 1
+                    warn('Could not find file where `%s` is defined.\n'
+                         'Opening a file named `%s`' % (args,filename))
                 # Now, make sure we can actually read the source (if it was in
                 # a temp file it's gone by now).
-                try:
-                    lineno = inspect.getsourcelines(data)[1]
-                except IOError:
-                    warn('The file `%s` where `%s` was defined cannot be read.'
-                         % (filename,data))
-                    return
-                # Decent Unix editors know how to start at a given line
-                if os.name == 'posix':
-                    linemark = '+%s' % lineno
+                if datafile:
+                    try:
+                        lineno = inspect.getsourcelines(data)[1]
+                    except IOError:
+                        lineno = None
+                        filename = make_filename(args)
+                        if filename is None:
+                            warn('The file `%s` where `%s` was defined cannot be read.'
+                                 % (filename,data))
+                            return
+                    # Decent Unix editors know how to start at a given line
+                    if os.name == 'posix' and lineno is not None:
+                        linemark = '+%s' % lineno
                 use_temp = 0
         else:
             data = ''
