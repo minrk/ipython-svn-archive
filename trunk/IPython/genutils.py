@@ -238,7 +238,7 @@ def timings(reps,func,*args,**kw):
     return timings_out(reps,func,*args,**kw)[0:2]
 
 def timing(func,*args,**kw):
-    """timing(reps,func,*args,**kw) -> t_total
+    """timing(func,*args,**kw) -> t_total
 
     Execute a function once, return the elapsed total CPU time in
     seconds. This is just the first value in timings_out()."""
