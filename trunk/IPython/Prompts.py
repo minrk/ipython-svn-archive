@@ -7,7 +7,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2004 Fernando PÃ©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -29,25 +29,24 @@ __license__ = Release.license
 
 #****************************************************************************
 # Required modules
-import os,sys
+import os,sys,socket
 from pprint import pprint,pformat
 
 # Homebrewed
 from genutils import *
 from Struct import Struct
-import ultraTB
-from ColorANSI import *
 from Magic import Macro
 from Itpl import Itpl
+import ColorANSI
 
 #****************************************************************************
 #Color schemes for Prompts.
 
-PromptColors = ColorSchemeTable()
-InputColors = ultraTB.InputTermColors  # just a shorthand
-Colors = ultraTB.TermColors  # just a shorthand
+PromptColors = ColorANSI.ColorSchemeTable()
+InputColors = ColorANSI.InputTermColors  # just a shorthand
+Colors = ColorANSI.TermColors  # just a shorthand
 
-PromptColors.add_scheme(ColorScheme(
+PromptColors.add_scheme(ColorANSI.ColorScheme(
     'NoColor',
     in_prompt = InputColors.NoColor,  # Input prompt
     in_number = InputColors.NoColor,  # Input prompt number
@@ -60,7 +59,7 @@ PromptColors.add_scheme(ColorScheme(
     normal = Colors.NoColor  # color off (usu. Colors.Normal)
     ))
 # make some schemes as instances so we can copy them for modification easily:
-__PColLinux =  ColorScheme(
+__PColLinux =  ColorANSI.ColorScheme(
     'Linux',
     in_prompt = InputColors.Green,
     in_number = InputColors.LightGreen,
@@ -75,7 +74,7 @@ __PColLinux =  ColorScheme(
 # Don't forget to enter it into the table!
 PromptColors.add_scheme(__PColLinux)
 # Slightly modified Linux for light backgrounds
-__PColLightBG = ColorScheme('LightBG',**__PColLinux.colors.dict().copy())
+__PColLightBG = ColorANSI.ColorScheme('LightBG',**__PColLinux.colors.dict().copy())
 
 __PColLightBG.colors.update(
     in_prompt = InputColors.Blue,
@@ -84,39 +83,166 @@ __PColLightBG.colors.update(
 )
 PromptColors.add_scheme(__PColLightBG)
 
-del Colors
-
+del Colors,InputColors
 
 #-----------------------------------------------------------------------------
-class Prompt1:
-    """Interactive prompt similar to Mathematica's."""
+def multiple_replace(dict, text):
+    """ Replace in 'text' all occurences of any key in the given
+    dictionary by its corresponding value.  Returns the new string."""
 
-    def __init__(self,cache,colors='NoColor',input_sep = '\n',prompt = 'In [%n]:'):
+    # Function by Xavier Defrang
+
+    # Create a regular expression  from the dictionary keys
+    regex = re.compile("(%s)" % "|".join(map(re.escape, dict.keys())))
+    # For each match, look-up corresponding value in dictionary
+    return regex.sub(lambda mo: dict[mo.string[mo.start():mo.end()]], text)
+
+#-----------------------------------------------------------------------------
+# Special characters that can be used in prompt templates, mainly bash-like
+
+# If $HOME isn't defined (Windows), make it an absurd string so that it can
+# never be expanded out into '~'.  Basically anything which can never be a
+# reasonable directory name will do, we just want the $HOME -> '~' operation
+# to become a no-op.  We pre-compute $HOME here so it's not done on every
+# prompt call.
+HOME = os.environ.get("HOME","//////:::::ZZZZZ,,,~~~")
+
+def cwd_filt(depth):
+    """Return the last depth elements of the current working directory.
+
+    $HOME is always replaced with '~'.
+    If depth==0, the full path is returned."""
+    
+    cwd = os.getcwd().replace(HOME,"~")
+    out = os.sep.join(cwd.split(os.sep)[-depth:])
+    if out:
+        return out
+    else:
+        return os.sep
+
+def cwd_filt2(depth):
+    """Return the last depth elements of the current working directory.
+
+    $HOME is always replaced with '~'.
+    If depth==0, the full path is returned."""
+    
+    cwd = os.getcwd().replace(HOME,"~").split(os.sep)
+    if '~' in cwd and len(cwd) == depth+1:
+        depth += 1
+    out = os.sep.join(cwd[-depth:])
+    if out:
+        return out
+    else:
+        return os.sep
+
+# We precompute a few more strings here for the prompt_specials, which are
+# fixed once ipython starts.  This reduces the runtime overhead of computing
+# prompt strings.
+USER           = os.environ.get("USER")
+HOSTNAME       = socket.gethostname()
+HOSTNAME_SHORT = HOSTNAME.split(".")[0]
+ROOT_SYMBOL    = "$#"[os.getuid()==0]
+
+prompt_specials = {
+    # Prompt/history count
+    '%n' : '${self.col_num}' '${self.cache.prompt_count}' '${self.col_p}',
+    '\\#': '${self.col_num}' '${self.cache.prompt_count}' '${self.col_p}',
+    # Current working directory
+    '\\w': '${os.getcwd()}',
+    # Basename of current working directory, filtered out to depth 5
+    # (use os.sep to make this portable across OSes)
+    '\\W' : '${os.getcwd().split("%s")[-1]}' % os.sep,
+    # These X<N> are an extension to the normal bash prompts.  They return
+    # N terms of the path, after replacing $HOME with '~'
+    '\\X0': '${os.getcwd().replace("%s","~")}' % HOME,
+    '\\X1': '${cwd_filt(1)}',
+    '\\X2': '${cwd_filt(2)}',
+    '\\X3': '${cwd_filt(3)}',
+    '\\X4': '${cwd_filt(4)}',
+    '\\X5': '${cwd_filt(5)}',
+    # Y<N> are similar to X<N>, but they show '~' if it's the directory
+    # N+1 in the list.  Somewhat like %cN in tcsh.
+    '\\Y0': '${cwd_filt2(0)}',
+    '\\Y1': '${cwd_filt2(1)}',
+    '\\Y2': '${cwd_filt2(2)}',
+    '\\Y3': '${cwd_filt2(3)}',
+    '\\Y4': '${cwd_filt2(4)}',
+    '\\Y5': '${cwd_filt2(5)}',
+    # Hostname up to first .
+    '\\h': HOSTNAME_SHORT,
+    # Full hostname
+    '\\H': HOSTNAME,
+    # Username of current user
+    '\\u': USER,
+    # Escaped '\'
+    '\\\\': '\\',
+    # Newline
+    '\\n': '\n',
+    # Carriage return
+    '\\r': '\r',
+    # Release version
+    '\\v': __version__,
+    # Root symbol ($ or #)
+    '\\$': ROOT_SYMBOL,
+    }
+
+# A copy of the prompt_specials dictionary but with all color escapes removed,
+# so we can correctly compute the prompt length for the auto_rewrite method.
+prompt_specials_nocolor = prompt_specials.copy()
+prompt_specials_nocolor['%n'] = '${self.cache.prompt_count}'
+prompt_specials_nocolor['\\#'] = '${self.cache.prompt_count}'
+
+# Add in all the InputTermColors color escapes as valid prompt characters.
+# They all get added as \\C_COLORNAME, so that we don't have any conflicts
+# with a color name which may begin with a letter used by any other of the
+# allowed specials.  This of course means that \\C will never be allowed for
+# anything else.
+for _color in dir(ColorANSI.InputTermColors):
+    if _color[0] != '_':
+        prompt_specials['\\C_%s' % _color] = getattr(ColorANSI.InputTermColors,_color)
+        prompt_specials_nocolor['\\C_%s' % _color] = ''
+#-----------------------------------------------------------------------------
+class BasePrompt:
+    """Interactive prompt similar to Mathematica's."""
+    def __init__(self,cache,input_sep,prompt):
+
+        # Hack: we access information about the primary prompt through the
+        # cache argument.  We need this, because we want the secondary prompt
+        # to be aligned with the primary one.  Color table info is also shared
+        # by all prompt classes through the cache.  Nice OO spaghetti code!
         self.cache = cache
         self.input_sep = input_sep
+        # Set template to create each actual prompt (where numbers change)
+        self.p_template = prompt
+        self.p_str = Itpl('%s%s%s ' %
+                          ('$self.input_sep${self.col_p}',
+                           multiple_replace(prompt_specials, self.p_template),
+                          '$self.col_norm'))
+        self.p_str_nocolor = Itpl(multiple_replace(prompt_specials_nocolor,
+                                                   self.p_template))
 
-        # Set colors
-        self.color_table = PromptColors
-        self.color_table.set_active_scheme(colors)
-        Colors = self.color_table.active_colors # shorthand
+    def __str__(self):
+        return str(self.p_str)
+
+class Prompt1(BasePrompt):
+    """Input interactive prompt similar to Mathematica's."""
+
+    def __init__(self,cache,input_sep='\n',prompt='In [%n]:'):
+        BasePrompt.__init__(self,cache,input_sep,prompt)
+
+    def set_colors(self):
+        Colors = self.cache.color_table.active_colors # shorthand
         self.col_p = Colors.in_prompt
         self.col_num = Colors.in_number
         self.col_norm = Colors.in_normal
-        self.col_norm_ni = Colors.normal
-        # We need a non-input version of this escape for the '--->'
+        # We need a non-input version of these escapes for the '--->'
         # auto-call prompts used in the auto_rewrite() method.
         self.col_p_ni = self.col_p.replace('\001','').replace('\002','') 
-
-        # Set template to create each actual prompt (where numbers change)
-        self.p_template = prompt.replace('%n','%s') + ' '
-        self.p_str = Itpl('$self.input_sep${self.col_p}' +
-                          self.p_template.replace('%s','$self.col_num'
-                                                  '$self.cache.prompt_count'
-                                                  '$self.col_p') +
-                          '$self.col_norm')
-
+        self.col_norm_ni = Colors.normal        
+        
     def __str__(self):
         self.cache.prompt_count += 1
+        self.cache.last_prompt = str(self.p_str_nocolor)
         return str(self.p_str)
 
     def auto_rewrite(self):
@@ -124,25 +250,74 @@ class Prompt1:
         input string. Useful for systems which re-write the user input when
         handling automatically special syntaxes."""
 
-        curr = self.p_template.replace('%s',str(self.cache.prompt_count))
+        curr = str(self.cache.last_prompt)
         return self.col_p_ni + '-'*(len(curr)-2)+'> ' + self.col_norm_ni
-        
 
-class Prompt2:
-    """Interactive continuation prompt."""
-    def __init__(self,cache,colors='NoColor',prompt='   .%n.:'):
-        self.cache = cache
-        self.color_table = PromptColors
-        self.color_table.set_active_scheme(colors)
-        Colors = self.color_table.active_colors # shorthand
-        self.col_p2 = Colors.in_prompt2
+class PromptOut(BasePrompt):
+    """Output interactive prompt similar to Mathematica's."""
+
+    def __init__(self,cache,input_sep='\n',prompt='Out[%n]:'):
+        BasePrompt.__init__(self,cache,input_sep,prompt)
+
+    def set_colors(self):
+        Colors = self.cache.color_table.active_colors # shorthand
+        self.col_p = Colors.out_prompt
+        self.col_num = Colors.out_number
         self.col_norm = Colors.normal
-        self.p_template = prompt + ' '
 
     def __str__(self):
-        ndots = len(`self.cache.prompt_count`)
-        curr = self.p_template.replace('%n','.'*ndots)
-        return self.col_p2 + curr + self.col_norm
+        if not self.p_template:
+            return ''
+        else:
+            # We must find the amount of padding required to match lengths, #
+            # taking the color escapes (which are invisible on-screen) into
+            # account.
+            out_str = str(self.p_str)
+            esc_pad = len(out_str) - len(str(self.p_str_nocolor))
+            format = '%%%ss' % (len(str(self.cache.last_prompt))+esc_pad)
+            return format % out_str
+        
+class Prompt2:
+    """Interactive continuation prompt."""
+    
+    def __init__(self,cache,prompt='   .%n.:'):
+
+        self.cache = cache
+        self.p_template = prompt
+        # Choose the actual string representation based on the form of the
+        # primary prompt: if PS1 has the prompt counter pattern in it, use
+        # _str_numprompt, else use _str_other.  See their docstrings for
+        # details.        
+        if re.search('%n',cache.ps1_str) or re.search('\\#',cache.ps1_str):
+            self.__str__ = self._str_numprompt
+        else:
+            self.__str__ = self._str_other
+
+    def set_colors(self):
+        Colors = self.cache.color_table.active_colors # shorthand
+        self.col_p2 = Colors.in_prompt2
+        self.col_norm = Colors.normal
+
+    def _str_numprompt(self):
+        """String form of the prompt, for use with counted prompts.
+
+        We evaluate the provided template, replacing the prompt counter
+        pattern (%n or \\#) with the corresponding number of dots."""
+        
+        dots = '.'*len(`self.cache.prompt_count`)
+        return '%s%s%s ' % (self.col_p2,
+                            self.p_template.replace('%n',dots).replace('\\#',dots),
+                            self.col_norm)
+    
+    def _str_other(self):
+        """String form of the prompt, for use with non-counted prompts.
+
+        In this form, the internal template is COMPLETELY IGNORED.  The
+        returned string simply consists of dots plus ': '.  There are as many
+        dots as needed to line up with the previous primary prompt."""
+
+        dots = '.'*(len(str(self.cache.last_prompt))-2)
+        return '%s%s:%s ' % (self.col_p2,dots,self.col_norm)
 
 #-----------------------------------------------------------------------------
 class CachedOutput:
@@ -161,7 +336,6 @@ class CachedOutput:
                  ps1 = None, ps2 = None,ps_out = None,
                  input_hist = None):
 
-        self.color_table = PromptColors
         cache_size_min = 20
         if cache_size <= 0:
             self.do_full_cache = 0
@@ -173,30 +347,31 @@ class CachedOutput:
                  cache_size_min,level=3)
         else:
             self.do_full_cache = 1
-            
+
         self.cache_size = cache_size
         self.input_sep = input_sep
 
         # Set input prompt strings and colors
         if cache_size == 0:
-            if ps1.find('%n') > -1: ps1 = '>>> '
-            if ps2.find('%n') > -1: ps2 = '>>> '
-        self.ps1_str = self._set_prompt_str(ps1,'In [%n]:','>>> ')
-        self.ps2_str = self._set_prompt_str(ps2,'   .%n.:','... ')
+            if ps1.find('%n') > -1 or ps1.find('\\#') > -1: ps1 = '>>>'
+            if ps2.find('%n') > -1 or ps2.find('\\#') > -1: ps2 = '...'
+        self.ps1_str = self._set_prompt_str(ps1,'In [%n]:','>>>')
+        self.ps2_str = self._set_prompt_str(ps2,'   .%n.:','...')
+        self.ps_out_str = self._set_prompt_str(ps_out,'Out[%n]:','')
+
+        self.prompt1 = Prompt1(self,input_sep=input_sep,prompt=self.ps1_str)
+        self.prompt2 = Prompt2(self,prompt=self.ps2_str)
+        self.prompt_out = PromptOut(self,input_sep=input_sep,prompt=self.ps_out_str)
+        self.color_table = PromptColors
         self.set_colors(colors)
 
-        # Set output string as an Itpl object (evaluates dynamically)
-        ps_out = self._set_prompt_str(ps_out,'Out[%n]:','') + ' '
-        self.ps_out_str = Itpl('${self.col_op}'+
-                               ps_out.replace('%n','$self.col_num'
-                                             '$self.prompt_count'
-                                             '$self.col_op') + \
-                               '$self.col_norm')
-        
         # other more normal stuff
         # b/c each call to the In[] prompt raises it by 1, even the first.
         self.prompt_count = 0
         self.cache_count = 1
+        # Store the last prompt string each time, we need it for aligning
+        # continuation and auto-rewrite prompts
+        self.last_prompt = ''
         self.entries = [None]  # output counter starts at 1 for the user
         self.Pprint = Pprint
         self.output_sep = output_sep
@@ -222,21 +397,13 @@ class CachedOutput:
                 return no_cache_def
                 
     def set_colors(self,colors):
-        # The Prompt1/2 stuff seems ugly, and I'm not sure how clean it
-        # actually is deep down.  but it works, so fo now it stays!
+        """Set the active color scheme and configure colors for the three
+        prompt subsystems."""
+        
         self.color_table.set_active_scheme(colors)
-        Colors = self.color_table.active_colors # shorthand
-        if self.do_full_cache:
-            self.prompt1 = Prompt1(self,colors=colors,input_sep = self.input_sep,
-                                   prompt = self.ps1_str)
-            self.prompt2 = Prompt2(self,colors=colors,prompt = self.ps2_str)
-            self.col_op = Colors.out_prompt
-            self.col_num = Colors.out_number
-            self.col_norm = Colors.normal
-        else:
-            self.prompt1 = self.input_sep + Colors.in_prompt + self.ps1_str + \
-                           Colors.normal
-            self.prompt2 = Colors.in_prompt2 + self.ps2_str + Colors.normal
+        self.prompt1.set_colors()
+        self.prompt2.set_colors()
+        self.prompt_out.set_colors()
 
     def __call__(self,arg=None):
         """Printing with history cache management.
@@ -253,7 +420,7 @@ class CachedOutput:
 
             Term.cout.write(self.output_sep)  # don't use print, puts an extra space
             if self.do_full_cache:
-                Term.cout.write(str(self.ps_out_str))
+                Term.cout.write(str(self.prompt_out))
 
             if isinstance(arg,Macro):
                 print 'Executing Macro...'
@@ -263,10 +430,8 @@ class CachedOutput:
 
             # and now call a possibly user-defined print mechanism
             self.display(arg)
-            
             Term.cout.write(self.output_sep2)
             Term.cout.flush()
-
 
     def _display(self,arg):
         """Default printer method, uses pprint.
@@ -288,7 +453,10 @@ class CachedOutput:
             except:
                 out = pformat(arg)
             if '\n' in out:
-                print
+                # So that multi-line strings line up with the left column of
+                # the screen, instead of having the output prompt mess up
+                # their first line.                
+                Term.cout.write('\n')
             print >>Term.cout, out
         else:
             print >>Term.cout, arg
@@ -330,4 +498,3 @@ class CachedOutput:
             except: pass
         self.prompt_count = 1
         self.cache_count = 1
-        
