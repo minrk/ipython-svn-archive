@@ -50,7 +50,7 @@ if os_name == 'windows':
 from distutils.core import setup
 
 # update the manuals when building a source dist
-if len(sys.argv) >= 2 and sys.argv[1] == 'sdist':
+if len(sys.argv) >= 2 and sys.argv[1] in ('sdist','bdist_rpm'):
     from IPython.genutils import target_update
     # list of things to be updated. Each entry is a triplet of args for
     # target_update()
