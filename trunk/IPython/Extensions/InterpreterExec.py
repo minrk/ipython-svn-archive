@@ -31,8 +31,8 @@ def prefilter_shell(self,line,continuation):
     """Alternate prefilter, modified for shell-like functionality.
 
     - Execute all lines beginning with '~', '/' or '.'
-    - $var=cmd <=> @sc var=cmd
-    - $$var=cmd <=> @sc -l var=cmd
+    - $var=cmd <=> %sc var=cmd
+    - $$var=cmd <=> %sc -l var=cmd
     """
 
     if line:
@@ -42,11 +42,13 @@ def prefilter_shell(self,line,continuation):
         elif l0=='$':
             lrest = line[1:]
             if lrest.startswith('$'):
-                # $$var=cmd <=> @sc -l var=cmd
-                return self._prefilter("@sc -l %s" % lrest[1:],continuation)
+                # $$var=cmd <=> %sc -l var=cmd
+                return self._prefilter("%ssc -l %s" % (self.ESC_MAGIC,lrest[1:]),
+                                       continuation)
             else:
-                # $var=cmd <=> @sc var=cmd
-                return self._prefilter("@sc %s" % lrest,continuation)
+                # $var=cmd <=> %sc var=cmd
+                return self._prefilter("%ssc %s" % (self.ESC_MAGIC,lrest),
+                                       continuation)
         else:
             return self._prefilter(line,continuation)
     else:
@@ -82,8 +84,8 @@ def pysh():
     ALIASES
     -------
     All of your $PATH has been loaded as IPython aliases, so you should be
-    able to type any normal system command and have it executed.  See @alias? 
-    and @unalias? for details on the alias facilities.
+    able to type any normal system command and have it executed.  See %alias? 
+    and %unalias? for details on the alias facilities.
 
     SPECIAL SYNTAX
     --------------
@@ -181,12 +183,12 @@ def pysh():
     a subshell which exits immediately, you can NOT use !cd to navigate the
     filesystem.
 
-    Pysh provides its own builtin '@cd' magic command to move in the
-    filesystem (the @ is not required with automagic on).  It also maintains a
-    list of visited directories (use @dhist to see it) and allows direct
+    Pysh provides its own builtin '%cd' magic command to move in the
+    filesystem (the % is not required with automagic on).  It also maintains a
+    list of visited directories (use %dhist to see it) and allows direct
     switching to any of them.  Type 'cd?' for more details.
 
-    @pushd, @popd and @dirs are provided for directory stack handling.
+    %pushd, %popd and %dirs are provided for directory stack handling.
 
     PROMPT CUSTOMIZATION
     --------------------

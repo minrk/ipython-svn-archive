@@ -1,3 +1,8 @@
+2004-10-21  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Extensions/InterpreterExec.py (prefilter_shell): Fix @
+	to % for pysh syntax extensions.
+
 2004-10-09  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py (Magic.magic_whos): modify output of Numeric

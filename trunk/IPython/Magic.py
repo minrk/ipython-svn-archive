@@ -603,10 +603,11 @@ Currently the magic system has the following functions:\n"""
             input = self.shell.input_hist[n]
             if input.startswith('#'+esc_magic):
                 input = input[1:]
-            if input != '%sr\n' + esc_magic and \
+            # skip plain 'r' lines so we don't recurse to infinity
+            if input != '%sr\n' % esc_magic and \
                (input.startswith(start) or input.startswith(start_magic)):
                 #print 'match',`input`  # dbg
-                if input.startswith(esc):
+                if input.startswith(esc_magic):
                     input = magic2python(input)
                     #print 'modified',`input`  # dbg
                 print 'Executing:',input,
