@@ -1,3 +1,13 @@
+2003-04-17  Fernando Perez  <fperez@colorado.edu>
+
+	* setup.py (scriptfiles): Split windows-specific stuff over to a
+	separate file, in an attempt to have a Windows GUI installer.
+	That didn't work, but part of the groundwork is done.
+
+	* IPython/UserConfig/ipythonrc: Added M-i, M-o and M-I for
+	indent/unindent with 4 spaces.  Particularly useful in combination
+	with the new auto-indent option.
+
 2003-04-16  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py: various replacements of self.rc for

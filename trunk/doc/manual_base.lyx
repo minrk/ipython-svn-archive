@@ -489,6 +489,13 @@ SyntaxError
 RedHat 7.x notes
 \layout Standard
 
+The problems discussed in this section do 
+\emph on 
+not
+\emph default 
+ apply to RedHat 8.0 and newer versions, only to the 7.x series.
+\layout Standard
+
 RedHat made the 'wise' choice of using Python 1.5.2 as the default standard
  even for users (not just for internal system stuff).
  Since they couldn't be bothered to make things right, now you need to manually
@@ -531,7 +538,19 @@ $ python2 setup.py install
 
 Hopefully, things will work.
  If they don't, go yell at RedHat, not me.
- 
+ One possible manual fix you may try is to edit 
+\family typewriter 
+/usr/bin/ipython
+\family default 
+ and rename the 
+\family typewriter 
+#/usr/bin/python
+\family default 
+ line at the top to 
+\family typewriter 
+#/usr/bin/python2
+\family default 
+.
 \layout Subsubsection
 
 Mac OSX notes
@@ -5609,10 +5628,10 @@ Credits
 The main authors of the code are:
 \layout Standard
 
-Fernando Pérez <fperez@pizero.colorado.edu> (currently main contact)
+Fernando Pérez <fperez@colorado.edu> (currently main contact)
 \layout Standard
 
-Janko Hauser <jhauser@ifm.uni-kiel.de> 
+Janko Hauser <jhauser@comunit.de> 
 \layout Standard
 
 Nathan Gray <n8gray@caltech.edu>
