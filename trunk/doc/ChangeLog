@@ -1,3 +1,32 @@
+2004-07-01  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.magic_cd): integrated bookmark handling
+	into @cd.  Patch by Ville.
+
+	* IPython/iplib.py (InteractiveShell.post_config_initialization):
+	new function to store things after ipmaker runs.  Patch by Ville.
+	Eventually this will go away once ipmaker is removed and the class
+	gets cleaned up, but for now it's ok.  Key functionality here is
+	the addition of the persistent storage mechanism, a dict for
+	keeping data across sessions (for now just bookmarks, but more can
+	be implemented later).
+
+	* IPython/Magic.py (Magic.magic_bookmark): New bookmark system,
+	persistent across sections.  Patch by Ville, I modified it
+	soemwhat to allow bookmarking arbitrary dirs other than CWD.  Also
+	added a '-l' option to list all bookmarks.
+
+	* IPython/iplib.py (InteractiveShell.atexit_operations): new
+	center for cleanup.  Registered with atexit.register().  I moved
+	here the old exit_cleanup().  After a patch by Ville.
+
+	* IPython/Magic.py (get_py_filename): added '~' to the accepted
+	characters in the hacked shlex_split for python 2.2.
+
+	* IPython/iplib.py (file_matches): more fixes to filenames with
+	whitespace in them.  It's not perfect, but limitations in python's
+	readline make it impossible to go further.
+
 2004-06-29  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (file_matches): escape whitespace correctly in

@@ -182,6 +182,17 @@ Complete system shell access.
  !! captures shell output into python variables for further use.
 \layout Itemize
 
+Filesystem navigation, via a magic 
+\family typewriter 
+@cd
+\family default 
+ command, along with a persistent bookmark system (using 
+\family typewriter 
+@bookmark
+\family default 
+) for fast access to frequently visited directories.
+\layout Itemize
+
 Automatic indentation (optional) of code as you type (through the readline
  library).
 \layout Itemize
@@ -278,7 +289,7 @@ Developed under
 Linux
 \series default 
 , IPython should work under most unices (tested OK under Solaris and the
- *BSD family).
+ *BSD family, for which a port exists thanks to Dryice Liu).
 \layout Standard
 
 
@@ -294,15 +305,21 @@ Mac OS X
 \series bold 
 CygWin
 \series default 
-: it works fine.
+: it works mostly OK, though some users have reported problems with prompt
+ coloring.
+ No satisfactory solution to this has been found so far, you may want to
+ disable colors permanently in the 
+\family typewriter 
+ipythonrc
+\family default 
+ configuration file if you experience problems.
 \layout Standard
 
 
 \series bold 
 Windows
 \series default 
-: it works reasonably well under Windows XP/2k, and I suspect NT should
- behave similarly.
+: it works well under Windows XP/2k, and I suspect NT should behave similarly.
  Section\SpecialChar ~
 
 \begin_inset LatexCommand \ref{sub:Under-Windows}
@@ -310,7 +327,7 @@ Windows
 \end_inset 
 
  describes installation details for Windows, including the additional tools
- needed to gain access to IPython's full functionality under this OS.
+ needed on this platform.
 \layout Standard
 
 Windows 9x support has been added but has seen very little testing, as I
@@ -778,11 +795,7 @@ Gary Bishop's readline and color support for Windows
 \series bold 
 Note:
 \series default 
- this 
-\emph on 
-needs
-\emph default 
- 
+ this needs 
 \family typewriter 
 PyWin32
 \family default 
@@ -3413,22 +3426,26 @@ Note that there are 4 spaces between the quote marks after
  above.
 \layout Standard
 
-The feature is off by default because it can cause problems with pasting
- of indented code (the pasted code gets re-indented on each line).
- But a magic function 
+
+\series bold 
+Warning:
+\series default 
+ this feature is ON by default, but it can cause problems with the pasting
+ of multi-line indented code (the pasted code gets re-indented on each line).
+ A magic function 
 \family typewriter 
 @autoindent
 \family default 
  allows you to toggle it on/off at runtime.
- You can also set it permanently on in your 
+ You can also disable it permanently on in your 
 \family typewriter 
 ipythonrc
 \family default 
  file (set 
 \family typewriter 
-autoindent 1
+autoindent 0
 \family default 
-), and disable it only when needed via the magic function.
+).
 \layout Subsubsection
 
 Customizing readline behavior
@@ -7190,4 +7207,5 @@ Vainio
 <vivainio@kolumbus.fi>
 \family default 
  Bugfixes and suggestions.
+ Excellent patches for many new features.
 \the_end
