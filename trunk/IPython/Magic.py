@@ -389,7 +389,7 @@ class Magic:
     def magic_lsmagic(self, parameter_s = ''):
         """List currently available magic functions."""
         print 'Available magic functions:\n@'+'  @'.join(self.lsmagic())
-        print '\n' + Magic.auto_status[self.rc.automagic]
+        print '\n' + Magic.auto_status[self.shell.rc.automagic]
         return None
         
     def magic_magic(self, parameter_s = ''):
@@ -456,9 +456,9 @@ Currently the magic system has the following functions:\n"""
                   "\n\n@%s\n\n%s" % (outmsg,
                                      magic_docs,
                                      '  @'.join(self.lsmagic()),
-                                     Magic.auto_status[self.rc.automagic] ) )
+                                     Magic.auto_status[self.shell.rc.automagic] ) )
 
-        page(outmsg,screen_lines=self.rc.screen_length)
+        page(outmsg,screen_lines=self.shell.rc.screen_length)
   
     def magic_automagic(self, parameter_s = ''):
         """Make magic functions callable without having to type the initial @.
@@ -469,17 +469,25 @@ Currently the magic system has the following functions:\n"""
         won't work for that function (you get the variable instead). However,
         if you delete the variable (del var), the previously shadowed magic
         function becomes visible to automagic again."""
-        
-        self.rc.automagic = not self.rc.automagic
-        print '\n' + Magic.auto_status[self.rc.automagic]
+
+        rc = self.shell.rc
+        rc.automagic = not rc.automagic
+        print '\n' + Magic.auto_status[rc.automagic]
 
     def magic_autocall(self, parameter_s = ''):
         """Make functions callable without having to type parentheses.
 
         This toggles the autocall command line option on and off."""
         
-        self.rc.autocall = not self.rc.autocall
-        print "Automatic calling is:",['OFF','ON'][self.rc.autocall]
+        rc = self.shell.rc
+        rc.autocall = not rc.autocall
+        print "Automatic calling is:",['OFF','ON'][rc.autocall]
+
+    def magic_autoindent(self, parameter_s = ''):
+        """Toggle autoindent on/off (if available)."""
+
+        self.shell.set_autoindent()
+        print "Automatic indentation is:",['OFF','ON'][self.shell.autoindent]
 
     def magic_hist(self, parameter_s = ''):
         """Print input history (_i<n> variables), with most recent last.
@@ -583,8 +591,8 @@ Currently the magic system has the following functions:\n"""
 
     def magic_profile(self, parameter_s=''):
         """Print your currently active IPyhton profile."""
-        if self.rc.profile:
-            printpl('Current IPython profile: $self.rc.profile.')
+        if self.shell.rc.profile:
+            printpl('Current IPython profile: $self.shell.rc.profile.')
         else:
             print 'No profile active.'
         
@@ -769,7 +777,7 @@ Currently the magic system has the following functions:\n"""
         """Show IPython's internal configuration."""
         
         page('Current configuration structure:\n'+
-             pformat(self.rc.dict()))
+             pformat(self.shell.rc.dict()))
 
     def magic_logstart(self,parameter_s=''):
         """Start logging anywhere in a session.
@@ -823,9 +831,10 @@ Currently the magic system has the following functions:\n"""
         print 'Logging mode: ',logmode
         # put logname into rc struct as if it had been called on the command line,
         # so it ends up saved in the log header
-        old_logfile = self.rc.opts.get('logfile','')  # in case we need to restore it
+        # Save it in case we need to restore it...
+        old_logfile = self.shell.rc.opts.get('logfile','')  
         logname = os.path.expanduser(logname)
-        self.rc.opts.logfile = logname
+        self.shell.rc.opts.logfile = logname
         self.LOGMODE = logmode  # FIXME: this should be set through a function.
         try:
             header = str(self.LOGHEAD)
@@ -833,7 +842,7 @@ Currently the magic system has the following functions:\n"""
             self.logstart(header,logname)
         except:
             self.LOG = ''  # we are NOT logging, something went wrong
-            self.rc.opts.logfile = old_logfile
+            self.shell.rc.opts.logfile = old_logfile
             warn("Couldn't start log: "+str(sys.exc_info()[1]))
         else:  # log input history up to this point
             self.logfile.write(self.shell.user_ns['_ih'][1:])
@@ -1035,7 +1044,7 @@ Currently the magic system has the following functions:\n"""
         output = stdout_trap.getvalue()
         output = output.rstrip()
 
-        page(output,screen_lines=self.rc.screen_length)
+        page(output,screen_lines=self.shell.rc.screen_length)
         print sys_exit,
 
         dump_file = opts.d[0]
@@ -1583,7 +1592,7 @@ Currently the magic system has the following functions:\n"""
 
         par = parameter_s.strip()
         if not par:
-            if self.rc.automagic:
+            if self.shell.rc.automagic:
                 prechar = ''
             else:
                 prechar = '@'

@@ -62,12 +62,14 @@ instead of -option) to turn the feature off.
 
  -help: print this help and exit.
  
- -no|automagic: make magic commands automatic (without needing their first
- character to be @). Type @magic at the IPython prompt for more information.
-
- -no|autoparens: make IPython automatically call any callable object even if
+ -no|autocall: make IPython automatically call any callable object even if
  you didn't type explicit parentheses. For example, 'str 43' becomes 'str(43)'
  automatically.
+
+ -no|autoindent: turn automatic indentation on/off.
+
+ -no|automagic: make magic commands automatic (without needing their first
+ character to be @). Type @magic at the IPython prompt for more information.
 
  -no|banner: Print the initial information banner (default on).
 

@@ -43,6 +43,7 @@ import exceptions
 import code, glob, types, re, inspect,pydoc,StringIO,shutil,pdb,string
 from pprint import pprint,pformat
 
+
 # Homebrewed modules
 from Logger import Logger
 from Magic import Magic,magic2python
@@ -90,11 +91,11 @@ try:
 
             Return a completer object suitable for use by the readline library
             via readline.set_completer().
-            
+
             The optional omit__names parameter sets the completer to omit the
             'magic' names (__magicname__) for python objects unless the text
             to be completed explicitly starts with one or more underscores."""
-            
+
             FlexCompleter.Completer.__init__(self,namespace)
             delims = FlexCompleter.readline.get_completer_delims()
             delims = delims.replace('@','')
@@ -118,7 +119,7 @@ try:
                 pass
             return completions
         # /end Alex Schmolck code.
-            
+
         def complete(self, text, state):
             """Return the next possible completion for 'text'.
 
@@ -136,7 +137,7 @@ try:
                         # true if txt is _not_ a __ name, false otherwise:
                         no__name = (lambda txt:
                                     re.match(r'.*\.__.*?__',txt) is None)
-                        self.matches = filter(no__name,self.matches) 
+                        self.matches = filter(no__name,self.matches)
                 else:
                     self.matches = self.global_matches(text)
                     # this is so completion finds magics when automagic is on:
@@ -160,13 +161,13 @@ class InputList(UserList.UserList):
 
     It's basically a list, but slices return a string instead of a list, thus
     allowing things like (assuming 'In' is an instance):
-    
+
     exec In[4:7]
 
     or
 
     exec In[5:9] + In[14] + In[21:25]"""
-    
+
     def __getslice__(self,i,j):
         return ''.join(UserList.UserList.__getslice__(self,i,j))
 
@@ -181,7 +182,7 @@ class SpaceInInput(exceptions.Exception):
 
 class InteractiveShell(code.InteractiveConsole, Logger, Magic):
     """An enhanced console for Python."""
-    
+
     def __init__(self,name,usage=None,rc=Struct(opts=None,args=None),
                  user_ns = None):
 
@@ -218,7 +219,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # everything out of __main__, but for embedding purposes each IPython
         # instance has its own private namespace, so we can't go shoving
         # everything into __main__.
-        
+
         try:
             main_name = self.user_ns['__name__']
         except KeyError:
@@ -226,8 +227,8 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         else:
             #print "pickle hack in place"  # dbg
             sys.modules[main_name] = FakeModule(self.user_ns)
-            
-        # List of input with multi-line handling. 
+
+        # List of input with multi-line handling.
         # Fill its zero entry, user counter starts at 1
         self.input_hist = InputList(['\n'])
 
@@ -282,7 +283,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.pager = 'less'
         # temporary files used for various purposes.  Deleted at exit.
         self.tempfiles = []
-        
+
         # for pushd/popd management
         try:
             self.home_dir = get_home_dir()
@@ -294,7 +295,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
                 print 'Exiting...'
                 sys.exit()
         self.dir_stack = [os.getcwd().replace(self.home_dir,'~')]
-            
+
         # escapes for automatic behavior on the command line
         self.ESC_SHELL = '!'
         self.ESC_HELP  = '?'
@@ -308,7 +309,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # Don't get carried away with trying to make the autocalling catch too
         # much:  it's better to be conservative rather than to trigger hidden
         # evals() somewhere and end up causing side effects.
-        
+
         self.line_split = re.compile(r'(^[\s*!\?@,/]?)([\?\w\.]+\w*\s*)(\(?.*$)')
 
         # RegExp to identify potential function names
@@ -336,7 +337,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
 #log# It is safe to make manual edits below here.
 #log#-----------------------------------------------------------------------
 """)
-        # Various switches which can be set 
+        # Various switches which can be set
         self.CACHELENGTH = 5000  # this is cheap, it's just text
         self.BANNER = itpl("Python $sys.version on $sys.platform\n"
         "$sys.copyright\nIPP\nType ? for more help\n")
@@ -371,6 +372,20 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         for name,cmd in auto_shell.items():
             self.magic_alias(name+' '+cmd)
     # end __init__
+
+    def set_autoindent(self,value=None):
+        """Set the autoindent flag, checking for readline support.
+
+        If called with no arguments, it acts as a toggle."""
+
+        if not self.has_readline:
+            warn("The auto-indent feature requires the readline library")
+            self.autoindent = 0
+            return
+        if value is None:
+            self.autoindent = not self.autoindent
+        else:
+            self.autoindent = value
 
     def user_setup(self,ipythondir,rc_suffix,mode='install'):
         """Install the user configuration directory.
@@ -426,7 +441,7 @@ Try to correct it or contact the developers if you think it's a bug.
 IPython will proceed with builtin defaults.""" % sys.exc_info()[1]
                 wait()
                 return
-                
+
         elif mode == 'upgrade':
             try:
                 os.chdir(ipythondir)
@@ -486,7 +501,7 @@ cause any problems during execution.  """ % (ipythondir,sys.exc_info()[1])
                 if line.find('colors NoColor') >= 0:
                     line = 'colors NoColor\r\n'
                 iprc.write(line)
-                
+
         if mode == 'install':
             print """
 Successful installation!
@@ -516,6 +531,13 @@ want to merge them back into the new files.""" % locals()
             print 'Unable to save IPython command history to file: ' + \
                   `self.histfile`
 
+    def pre_readline(self):
+        """readline hook to be used at the start of each line.
+
+        Currently it handles auto-indent only."""
+        
+        self.readline.insert_text(' '* self.readline_indent)
+
     def init_readline(self):
         """Command history completion/saving/reloading."""
         try:
@@ -524,6 +546,7 @@ want to merge them back into the new files.""" % locals()
             import atexit
             self.has_readline = 1
             self.readline = readline
+            self.readline_indent = 0  # for auto-indenting via readline
             self.Completer = MagicCompleter(self.user_ns,
                                             self.rc.readline_omit__names)
             # save this in sys so embedded copies can restore it properly
@@ -541,6 +564,7 @@ want to merge them back into the new files.""" % locals()
             readline.set_completer_delims(delims)
             # otherwise we end up with a monster history after a while:
             readline.set_history_length(1000)
+            self.set_autoindent(self.rc.autoindent)
             try:
                 #print '*** Reading readline history'  # dbg
                 readline.read_history_file(self.histfile)
@@ -549,7 +573,7 @@ want to merge them back into the new files.""" % locals()
 
             atexit.register(self.savehist)
             del atexit
-            
+
         except ImportError,msg:
             self.has_readline = 0
             # no point in bugging windows users with this every time:
@@ -595,12 +619,15 @@ want to merge them back into the new files.""" % locals()
             return
         pdb.pm()
 
-    def showtraceback(self):
+    def showtraceback(self,exc_tuple = None):
         """Display the exception that just occurred."""
 
         # Though this won't be called by syntax errors in the input line,
         # there may be SyntaxError cases whith imported code.
-        type, value, tb = sys.exc_info()
+        if exc_tuple is None:
+            type, value, tb = sys.exc_info()
+        else:
+            type, value, tb = exc_tuple
         if type is SyntaxError:
             self.showsyntaxerror()
         else:
@@ -622,7 +649,7 @@ want to merge them back into the new files.""" % locals()
         """Create local namespace."""
         # We want this to be a method to facilitate embedded initialization.
         code.InteractiveConsole.__init__(self,self.user_ns)
-        
+
     def mainloop(self):
         """Creates the local namespace and starts the mainloop"""
         self.name_space_init()
@@ -641,7 +668,7 @@ want to merge them back into the new files.""" % locals()
         """Embeds IPython into a running python program.
 
         Input:
-        
+
           - header: An optional header message can be specified.
 
           - local_ns, global_ns: working namespaces. If given as None, the
@@ -654,7 +681,7 @@ want to merge them back into the new files.""" % locals()
           allows an intermediate caller to make sure that this function gets
           the namespace from the intended level in the stack.  By default (0)
           it will get its locals and globals from the immediate caller.
-        
+
         Warning: it's possible to use this in a program which is being run by
         IPython itself (via @run), but some funny things will happen (a few
         globals get overwritten). In the future this will be cleaned up, as
@@ -678,11 +705,11 @@ want to merge them back into the new files.""" % locals()
         # Update namespaces and fire up interpreter
         self.user_ns.update(local_ns)
         self.interact(header)
-        
+
         # Remove locals from namespace
         for k in local_ns.keys():
             del self.user_ns[k]
-        
+
     def interact(self, banner=None):
         """Closely emulate the interactive Python console.
 
@@ -710,11 +737,17 @@ want to merge them back into the new files.""" % locals()
             try:
                 if more:
                     prompt = self.outputcache.prompt2
+                    if self.autoindent:
+                        self.readline.set_startup_hook(self.pre_readline)
                 else:
                     prompt = self.outputcache.prompt1
                 try:
                     line = self.raw_input(prompt)
+                    if self.autoindent:
+                        self.readline.set_startup_hook(None)
                 except EOFError:
+                    if self.autoindent:
+                        self.readline.set_startup_hook(None)
                     self.write("\n")
                     if self.rc.confirm_exit:
                         if ask_yes_no('Do you really want to exit ([y]/n)?','y'):
@@ -723,13 +756,32 @@ want to merge them back into the new files.""" % locals()
                         break
                 else:
                     more = self.push(line)
-                        
+                    # Auto-indent management
+                    if self.autoindent:
+                        if line:
+                            ini_spaces = re.match('^(\s+)',line)
+                            if ini_spaces:
+                                nspaces = ini_spaces.end()
+                            else:
+                                nspaces = 0
+                            self.readline_indent = nspaces
+
+                            if line[-1] == ':':
+                                self.readline_indent += 4
+                            elif re.match(r'^\s+raise|^\s+return',line):
+                                self.readline_indent -= 4
+                        else:
+                            self.readline_indent = 0
+
             except KeyboardInterrupt:
                 self.write("\nKeyboardInterrupt\n")
                 self.resetbuffer()
                 more = 0
                 # keep cache in sync with the prompt counter:
                 self.outputcache.prompt_count -= 1
+
+                if self.autoindent:
+                    self.readline_indent = 0
 
             except SystemExit:
                 # If a SystemExit gets here, it's from an IPython @Exit call
@@ -738,48 +790,31 @@ want to merge them back into the new files.""" % locals()
                 # We should never get here except in fairly bizarre situations
                 # (or b/c of an IPython bug). One reasonable exception is if
                 # the user sets stdout/err to a broken object.
-                fix_out_err = 0
-                try:
-                    print 'Testing sys.sdtout...',
-                except:
+                fixed_out_err = 0
+                
+                if sys.stdout is not sys.__stdout__:
                     sys.stdout = sys.__stdout__
-                    fix_out_err = 1
-                    warn(
-"""sys.sdtout has been reset to sys.__stdout__.
-There seemed to be a problem with your normal sys.stdout.""")
-                else:
-                    print 'OK.'
-                try:
-                    print >> sys.stderr, 'Testing sys.sdterr...',
-                except:
+                    fixed_out_err = 1
+                    print """
+WARNING:
+sys.sdtout has been reset to sys.__stdout__.
+There seemed to be a problem with your sys.stdout.
+"""
+
+                if sys.stderr is not sys.__stderr__:
                     sys.stderr = sys.__stderr__
-                    fix_out_err = 1
-                    warn(
-"""sys.sdterr has been reset to sys.__stderr__.
-There seemed to be a problem with your normal sys.stderr.""")
-                else:
-                    print 'OK.'
-
-                self.showtraceback()
-
-                # If the problem wasn't a broken out/err, it may be a bug
-                if not fix_out_err:
-                    warn("""
-The above exception has been trapped by IPython's 'last line of defense'.
-
-It is likely a bug in IPython. Unless you are positive it is not, it's
-probably best to close this IPython session.
-
-IPython can now crash and generate a bug report for the developers. If you
-choose to continue, there may be unexpected behavior.
-""")
-                    crash = ask_yes_no(
-'Do you want to let IPython crash and generate a bug report (y/n)?')
-                    if crash:
-                        raise
-                    else:
-                        print 'IPython will continue operating.'
-
+                    fixed_out_err = 1
+                    print """
+WARNING:
+sys.sdterr has been reset to sys.__stderr__.
+There seemed to be a problem with your sys.stderr.
+"""
+                # If the problem wasn't a broken out/err, it's an IPython bug
+                # I wish we could ask the user whether to crash or not, but
+                # calling any function at this point messes up the stack.
+                if not fixed_out_err:
+                    raise
+                
         # We are off again...
         __builtin__.__dict__['__IPYTHON__active'] -= 1
 
@@ -810,10 +845,10 @@ choose to continue, there may be unexpected behavior.
 
     def raw_input(self, prompt=""):
         """Write a prompt and read a line.
- 
+
         The returned line does not include the trailing newline.
         When the user enters the EOF key sequence, EOFError is raised.
- 
+
         The base implementation uses the built-in function
         raw_input(); a subclass may replace this with a different
         implementation.
@@ -831,7 +866,7 @@ choose to continue, there may be unexpected behavior.
         # array stays synced).
 
         #if line.startswith('@crash'): raise 'Crash now!'  # dbg
-        
+
         # save the line away in case we crash, so the post-mortem handler can
         # record it
         self._last_input_line = line
@@ -893,7 +928,7 @@ choose to continue, there may be unexpected behavior.
                 return self.handle_magic('@'+line.lstrip())
             else:
                 return self.handle_normal(line,continue_prompt)
-            
+
         # If we get here, we have a normal Python line. Log and return.
         return self.handle_normal(line,continue_prompt)
 
@@ -905,7 +940,7 @@ choose to continue, there may be unexpected behavior.
         self.log(line,continue_prompt)
         self.update_cache(line)
         return line
-        
+
     def handle_shell_escape(self, line):
         """Execute the line in a shell, empty return value"""
 
@@ -916,13 +951,13 @@ choose to continue, there may be unexpected behavior.
         # retrieved with the arrows. The log and input array _ih should only
         # contain valid python, the readline cache contains anything that was
         # input exactly as it was entered at the prompt.
-        
+
         self.log('#'+line)        # comment out into log/_ih
         self.update_cache(line)   # readline cache gets normal line
         line = line.strip()[1:]
         os.system(line)
         return ''               # MUST return something, at least an empty string
-            
+
     def handle_help(self, line, continue_prompt):
         """Try to get some help for the object.
 
@@ -958,9 +993,9 @@ choose to continue, there may be unexpected behavior.
         """Execute magic functions.
 
         Also log them with a prepended # so the log is clean Python."""
-        
+
         #print 'in handle_magic'  # dbg
-        self.log('#'+line)        
+        self.log('#'+line)
         self.update_cache(line)
         shell = self.name+'.'
         # remove @ and de-mangle magic name
@@ -993,7 +1028,7 @@ choose to continue, there may be unexpected behavior.
             if theRest.startswith('='):
                 return iFun + ' '+theRest+'\n'
             newcmd = iFun.rstrip() + '(' + theRest + ')\n'
-            
+
         print self.outputcache.prompt1.auto_rewrite() + newcmd,
         # log what is now valid Python, not the actual user input (without end \n)
         self.log(newcmd.strip())
@@ -1008,7 +1043,7 @@ choose to continue, there may be unexpected behavior.
         if not sys.path.count(dname):
             sys.path.append(dname)
         # end patch by RA <ralf_ahlbrink@web.de>
-        
+
         try:
             xfile = open(fname)
         except:
@@ -1036,13 +1071,13 @@ choose to continue, there may be unexpected behavior.
                 except:
                     globs = locs = globals()
             badblocks = []
-                
+
             # we also need to identify indented blocks of code when replaying
             # logs and put them together before passing them to an exec
             # statement. This takes a bit of regexp and look-ahead work in the
             # file. It's easiest if we swallow the whole thing in memory
             # first, and manually walk through the lines list moving the
-            # counter ourselves.            
+            # counter ourselves.
             indent_re = re.compile('\s+\S')
             filelines = xfile.readlines()
             xfile.close()
@@ -1102,7 +1137,7 @@ choose to continue, there may be unexpected behavior.
                 self.InteractiveTB()
                 warn('Failure executing file: <%s>' % fname)
 
-                
+
 #-----------------------------------------------------------------------------
 # Janko's original Changelog from the IPP days follows. For current
 # information, see the IPython global ChangeLog file.

@@ -38,18 +38,6 @@ include
 # is encountered more than once, the last value remains, all earlier ones get
 # discarded.
 
-# Auto-magic. This gives you access to all the magic functions without having
-# to prepend them with an @ sign. If you define a variable with the same name
-# as a magic function (say who=1), you will need to access the magic function
-# with @ (@who in this example). However, if later you delete your variable
-# (del who), you'll recover the automagic calling form.
-
-# Considering that many magic functions provide a lot of shell-like
-# functionality, automagic gives you something close to a full Python+system
-# shell environment (and you can extend it further if you want).
-
-automagic 1
-
 # Automatic calling of callable objects.  If set to true, callable objects are
 # automatically called when invoked at the command line, even if you don't
 # type parentheses.  IPython adds the parentheses for you.  For example:
@@ -72,6 +60,37 @@ automagic 1
 #Out[8]: '43'
 
 autocall 1
+
+# Auto-indent. IPython can recognize lines ending in ':' and indent the next
+# line, while also un-indenting automatically after 'raise' or 'return'.  
+
+# This feature uses the readline library, so it will honor your ~/.inputrc
+# configuration (or whatever file your INPUTRC variable points to).  Adding
+# the following lines to your inputrc file can make indent/unindenting more
+# convenient (M-i indents, M-o unindents):
+
+#  $if Python
+#  "\M-i": "    "
+#  "\M-o": "\d\d\d\d"
+#  $endif
+
+# The feature is off by default because it can cause problems with pasting of
+# indented code (the pasted code gets re-indented on each line).  But a magic
+# function @autoindent allows you to toggle it on/off at runtime.
+
+autoindent 0
+
+# Auto-magic. This gives you access to all the magic functions without having
+# to prepend them with an @ sign. If you define a variable with the same name
+# as a magic function (say who=1), you will need to access the magic function
+# with @ (@who in this example). However, if later you delete your variable
+# (del who), you'll recover the automagic calling form.
+
+# Considering that many magic functions provide a lot of shell-like
+# functionality, automagic gives you something close to a full Python+system
+# shell environment (and you can extend it further if you want).
+
+automagic 1
 
 
 # Size of the output cache. After this many entries are stored, the cache will
