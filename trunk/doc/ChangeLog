@@ -1,3 +1,10 @@
+2004-11-30  Fernando Perez  <fperez@colorado.edu>
+
+	* setup.py (docfiles): Fix problem where the doc glob I was using
+	was COMPLETELY BROKEN.  It was giving the right files by pure
+	accident, but failed once I tried to include ipython.el.  Note:
+	glob() does NOT allow you to do exclusion on multiple endings!
+
 2004-11-29  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/usage.py (__doc__): cleaned up usage docstring, by using

@@ -32,10 +32,8 @@ diff ChangeLog.previous ChangeLog | grep -v '^0a' | sed 's/^> //g' >> NEWS
 cp ChangeLog ChangeLog.previous
 
 # Clean up build/dist directories
-cd $ipdir/build
-rm -rf *
-cd $ipdir/dist
-rm -f *
+rm -rf $ipdir/build/*
+rm -rf $ipdir/dist/*
 
 # Perform local backup
 cd $ipdir/tools
