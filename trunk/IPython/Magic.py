@@ -1021,6 +1021,7 @@ Currently the magic system has the following functions:\n"""
         finally:
             sys.stdout = sys_stdout
         output = stdout_trap.getvalue()
+        output = output.rstrip()
 
         page(output,screen_lines=self.rc.screen_length)
         print sys_exit,
