@@ -7,7 +7,7 @@ matplotlib's author.
 $Id$"""
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando PÃ��©rez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando Perez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -55,8 +55,8 @@ class IPShell:
         self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
                                shell_class=shell_class)
 
-    def mainloop(self,sys_exit=0):
-        self.IP.mainloop()
+    def mainloop(self,sys_exit=0,banner=None):
+        self.IP.mainloop(banner)
         if sys_exit:
             sys.exit()
 
@@ -353,8 +353,10 @@ class MatplotlibShellBase:
         self.matplotlib = matplotlib
         
         # we'll handle the mainloop, tell show not to
-        from matplotlib.backends import show 
-        show._needmain = False
+        from matplotlib.backends import show,draw_if_interactive
+        self.mpl_idraw = draw_if_interactive
+        self.mpl_show = show
+        self.mpl_show._needmain = False
 
         # This must be imported last in the matplotlib series, after
         # backend/interactivity choices have been made
@@ -385,7 +387,9 @@ class MatplotlibShellBase:
         self.matplotlib.interactive(False)
         self.safe_execfile(fname,*where)
         self.matplotlib.interactive(isInteractive)
-        self.matplotlib.matlab.draw()
+        if self.mpl_idraw._called:
+            self.matplotlib.matlab.draw()
+            self.mpl_idraw._called = False
         
     def magic_run(self,parameter_s=''):
         """Modified @run for Matplotlib"""
@@ -512,9 +516,10 @@ class IPShellWX(threading.Thread):
 
         class App(self.wx.wxApp):
             wx = self.wx
+            TIMEOUT = self.TIMEOUT
             def OnInit(self):
                 'Create the main window and insert the custom frame'
-                self.agent = TimerAgent(None, 100)
+                self.agent = TimerAgent(None, self.TIMEOUT)
                 self.agent.Show(self.wx.false)
                 self.agent.StartWork()
 
