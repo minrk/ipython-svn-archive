@@ -1,3 +1,41 @@
+2005-02-15  *** Released version 0.6.11
+
+2005-02-14  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/background_jobs.py: New background job management
+	subsystem.  This is implemented via a new set of classes, and
+	IPython now provides a builtin 'jobs' object for background job
+	execution.  A convenience %bg magic serves as a lightweight
+	frontend for starting the more common type of calls.  This was
+	inspired by discussions with B. Granger and the BackgroundCommand
+	class described in the book Python Scripting for Computational
+	Science, by H. P. Langtangen: http://folk.uio.no/hpl/scripting
+	(although ultimately no code from this text was used, as IPython's
+	system is a separate implementation).
+
+	* IPython/iplib.py (MagicCompleter.python_matches): add new option
+	to control the completion of single/double underscore names
+	separately.  As documented in the example ipytonrc file, the
+	readline_omit__names variable can now be set to 2, to omit even
+	single underscore names.  Thanks to a patch by Brian Wong
+	<BrianWong@AirgoNetworks.Com>.
+	(InteractiveShell.__init__): Fix bug which would cause foo[1] to
+	be autocalled as foo([1]) if foo were callable.  A problem for
+	things which are both callable and implement __getitem__.
+	(init_readline): Fix autoindentation for win32.  Thanks to a patch
+	by Vivian De Smedt <vivian@vdesmedt.com>.
+
+2005-02-12  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/ipmaker.py (make_IPython): Disabled the stout traps
+	which I had written long ago to sort out user error messages which
+	may occur during startup.  This seemed like a good idea initially,
+	but it has proven a disaster in retrospect.  I don't want to
+	change much code for now, so my fix is to set the internal 'debug'
+	flag to true everywhere, whose only job was precisely to control
+	this subsystem.  This closes issue 28 (as well as avoiding all
+	sorts of strange hangups which occur from time to time).
+
 2005-02-07  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py (magic_edit): Fix 'ed -p' not working when the

@@ -76,7 +76,10 @@ class BackgroundJobManager:
       jobs.traceback(N) <--> jobs[N].traceback()
 
     While this appears minor, it allows you to use tab completion
-    interactively on the job manager instance."""
+    interactively on the job manager instance.
+
+    In interactive mode, IPython provides the magic fuction %bg for quick
+    creation of backgrounded expression-based jobs. Type bg? for details."""
 
     def __init__(self):
         # Lists for job management
@@ -147,7 +150,14 @@ class BackgroundJobManager:
         start modifying that same mutable object interactively (or in another
         backgrounded job), all sorts of bizarre behaviour will occur.
 
-        3. There is no way, due to limitations in the Python threads library,
+        3. If a background job is spending a lot of time inside a C extension
+        module which does not release the Python Global Interpreter Lock
+        (GIL), this will block the IPython prompt.  This is simply because the
+        Python interpreter can only switch between threads at Python
+        bytecodes.  While the execution is inside C code, the interpreter must
+        simply wait unless the extension module releases the GIL.
+
+        4. There is no way, due to limitations in the Python threads library,
         to kill a thread once it has started."""
         
         if callable(func_or_exp):

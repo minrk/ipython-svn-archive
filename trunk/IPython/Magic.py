@@ -2231,13 +2231,13 @@ Defaulting color scheme to 'NoColor'"""
 
         For example,
 
-        %bg myfunc(x,y,z=1)
+          %bg myfunc(x,y,z=1)
 
         will execute 'myfunc(x,y,z=1)' in a background thread.  As soon as the
         execution starts, a message will be printed indicating the job
         number.  If your job number is 5, you can use
 
-        myvar = jobs.result(5)  or  myvar = jobs[5].result
+          myvar = jobs.result(5)  or  myvar = jobs[5].result
 
         to assign this result to variable 'myvar'.
 
@@ -2252,6 +2252,10 @@ Defaulting color scheme to 'NoColor'"""
         new job with an explicit function object and arguments, you must call
         jobs.new() directly.
 
+        The jobs.new docstring also describes in detail several important
+        caveats associated with a thread-based model for background job
+        execution.  Type jobs.new? for details.
+
         You can check the status of all jobs with jobs.status().
 
         The jobs variable is set by IPython into the Python builtin namespace.
@@ -2261,8 +2265,8 @@ Defaulting color scheme to 'NoColor'"""
         to the manager (stored in IPython's namespace).  For example, to
         assign the job manager to the Jobs name, use:
 
-          Jobs = __builtins__.jobs
-        """
+          Jobs = __builtins__.jobs"""
+        
         self.shell.jobs.new(parameter_s,self.shell.user_ns)
         
     def magic_bookmark(self, parameter_s=''):
