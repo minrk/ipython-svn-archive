@@ -32,7 +32,7 @@ include ipythonrc
 # are described in detail in the Customization section of the IPython HTML/PDF
 # manual.
 
-prompt_in1 '\C_LightRed\u@\h\C_LightBlue[\C_LightCyan\Y1\C_LightBlue]\C_Green|\#>'
+prompt_in1 '\C_LightGreen\u@\h\C_LightBlue[\C_LightCyan\Y1\C_LightBlue]\C_Green|\#>'
 prompt_in2 '\C_Green|\C_LightGreen\D\C_Green>'
 prompt_out '<\#>'
 

@@ -28,9 +28,10 @@ from IPython.Extensions.InterpreterExec import *
 # doesn't really expose a clean API for it.  Be careful if you start making
 # many modifications here.
 
-print """Welcome to pysh, a set of extensions to IPython for shell usage.
-    help(pysh) -> help on the installed shell extensions and syntax.
-    """
+print """\
+Welcome to pysh, a set of extensions to IPython for shell usage.
+help(pysh) -> help on the installed shell extensions and syntax.
+"""
 
 #  Set the 'cd' command to quiet mode, a more shell-like behavior
 __IP.default_option('cd','-q')
