@@ -11,7 +11,7 @@ lists/tuples of arrays.
 This module is meant to be used as a drop-in replacement to the original
 Gnuplot, so it should be safe to do:
 
-import Gnuplot2 as Gnuplot
+import IPython.Gnuplot2 as Gnuplot
 
 $Id$"""
 

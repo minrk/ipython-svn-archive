@@ -40,13 +40,6 @@ Installation instructions for ColorTB:
     import sys,ultraTB
     sys.excepthook = ultraTB.VerboseTB()
 
-* Cohabitating with LazyPython
-Either module will work in conjunction with my LazyPython hack if you 
-install it *before* you install LazyPython.  e.g.:
-    import sys,LazyPython,ultraTB
-    sys.excepthook = ultraTB.ColorTB()
-    sys.excepthook = LazyPython.LazyPython()
-    
 Note:  Much of the code in this module was lifted verbatim from the standard
 library module 'traceback.py' and Ka-Ping Yee's 'cgitb.py'.
 

@@ -31,10 +31,10 @@ import os,sys
 from pprint import pprint,pformat
 
 # Homebrewed
-from genutils import *
-from Itpl import Itpl,itpl,printpl
-import ultraTB
-from ultraTB import ColorScheme,ColorSchemeTable  # too long names
+from IPython.genutils import *
+from IPython.Itpl import Itpl,itpl,printpl
+from IPython import ultraTB
+from IPython.ultraTB import ColorScheme,ColorSchemeTable  # too long names
 
 
 #****************************************************************************

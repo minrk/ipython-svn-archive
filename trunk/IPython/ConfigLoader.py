@@ -23,11 +23,12 @@ __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
 
 import os
-from Struct import Struct
 from pprint import pprint
 import exceptions
-from genutils import *
-import ultraTB
+
+from IPython import ultraTB
+from IPython.Struct import Struct
+from IPython.genutils import *
 
 class ConfigLoaderError(exceptions.Exception):
     """Exception for ConfigLoader class."""

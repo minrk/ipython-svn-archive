@@ -27,7 +27,8 @@ __all__ = ['TermColors','InputTermColors','ColorScheme','ColorSchemeTable']
 
 import os
 from UserDict import UserDict
-from Struct import Struct
+
+from IPython.Struct import Struct
 
 def make_color_table(in_class):
     """Build a set of color attributes in a class.
