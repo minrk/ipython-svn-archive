@@ -130,7 +130,7 @@ class IPShellEmbed:
         
         # FIXME. Passing user_ns breaks namespace handling.
         #self.IP = make_IPython(argv,user_ns=__main__.__dict__)
-        self.IP = make_IPython(argv,rc_override=rc_override)
+        self.IP = make_IPython(argv,rc_override=rc_override,embedded=True)
 
         self.IP.name_space_init()
         # mark this as an embedded instance so we know if we get a crash post-mortem
@@ -398,8 +398,13 @@ class MatplotlibShellBase:
             else:
                 self.mpl_use(arg)
                 self.mpl_use._called = True
-
+        
         self.matplotlib = matplotlib
+
+        # Take control of matplotlib's error handling, which can normally
+        # lock up the python interpreter when raw_input() is called
+        import matplotlib.backends as backend
+        backend.error_msg = error
         
         # we'll handle the mainloop, tell show not to
         from matplotlib.backends import show,draw_if_interactive
@@ -416,20 +421,33 @@ class MatplotlibShellBase:
 
         # This must be imported last in the matplotlib series, after
         # backend/interactivity choices have been made
-        import matplotlib.matlab as matlab
+        try:
+            import matplotlib.pylab as pylab
+            self.pylab = pylab
+            self.pylab_name = 'pylab'
+        except ImportError:
+            import matplotlib.matlab as matlab            
+            self.pylab = matlab
+            self.pylab_name = 'matlab'
 
         # Build a user namespace initialized with matplotlib/matlab features.
         user_ns = {'__name__':'__main__',
                    '__builtins__' : __builtin__ }
-        exec 'import matplotlib' in user_ns
-        exec 'import matplotlib.matlab as matlab' in user_ns
-        exec 'from matplotlib.matlab import *' in user_ns
 
+        # Be careful not to remove the final \n in the code string below, or
+        # things will break badly with py22 (I think it's a python bug, 2.3 is
+        # OK).
+        pname = self.pylab_name # Python can't interpolate dotted var names
+        exec ("import matplotlib\n"
+              "import matplotlib.%(pname)s as %(pname)s\n"
+              "from matplotlib.%(pname)s import *\n" % locals()) in user_ns
+        
         # Build matplotlib info banner
-        b=('\nWelcome to pylab, a matplotlib-based Python environment.\n'
-           '  help(matplotlib) -> generic matplotlib information.\n'
-           '  help(matlab)     -> matlab-compatible commands from matplotlib.\n'
-           '  help(plotting)   -> plotting commands.\n')
+        b="""
+  Welcome to pylab, a matplotlib-based Python environment
+    help(matplotlib) -> generic matplotlib information
+    help(%s)     -> matlab-compatible commands from matplotlib
+    help(plotting)   -> plotting commands\n""" % pname
 
         return user_ns,b
 
@@ -447,7 +465,7 @@ class MatplotlibShellBase:
         self.matplotlib.interactive(isInteractive)
         # make rendering call now, if the user tried to do it
         if self.mpl_idraw._called:
-            self.matplotlib.matlab.draw()
+            self.pylab.draw()
             self.mpl_idraw._called = False
         # if a backend switch was performed, reverse it now
         if self.mpl_use._called:
@@ -605,6 +623,16 @@ class IPShellGTK(threading.Thread):
                     self.gtk.threads_init()
             except AttributeError:
                 pass
+            except RuntimeError:
+                error('Your pyGTK likely has not been compiled with '
+                      'threading support.\n'
+                      'The exception printout is below.\n'
+                      'You can either rebuild pyGTK with threads, or '
+                      'try using \n'
+                      'matplotlib with a different backend (like Tk or WX).\n'
+                      'Note that matplotlib will most likely not work in its '
+                      'current state!')
+                self.IP.InteractiveTB()
         self.start()
         self.gtk_mainloop()
         self.join()
