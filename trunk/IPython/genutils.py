@@ -181,9 +181,20 @@ try:
         time.clock()."""
         
         return resource.getrusage(resource.RUSAGE_SELF)[0]
+    
+    def clock2():
+        """clock2() -> (t_user,t_system)
+
+        Similar to clock(), but return a tuple of user/system times."""
+        return resource.getrusage(resource.RUSAGE_SELF)[:2]
 
 except ImportError:
     clock = time.clock
+    def clock2():
+        """Under windows, system CPU time can't be measured.
+
+        This just returns clock() and zero."""
+        return time.clock(),0.0
 
 def timings_out(reps,func,*args,**kw):
     """timings_out(reps,func,*args,**kw) -> (t_total,t_per_call,output)
@@ -222,13 +233,13 @@ def timings(reps,func,*args,**kw):
 
     return timings_out(reps,func,*args,**kw)[0:2]
 
-def timing(reps,func,*args,**kw):
+def timing(func,*args,**kw):
     """timing(reps,func,*args,**kw) -> t_total
 
-    Execute a function reps times, the elapsed total CPU time in seconds. This
-    is just the first value in timings_out()."""
+    Execute a function once, return the elapsed total CPU time in
+    seconds. This is just the first value in timings_out()."""
 
-    return timings_out(reps,func,*args,**kw)[0]
+    return timings_out(1,func,*args,**kw)[0]
 
 #****************************************************************************
 # file and system
@@ -694,7 +705,6 @@ def get_home_dir():
     else:
         raise HomeDirError,'support for your operating system not implemented.'
 
-
 #****************************************************************************
 # strings and text
 
@@ -770,7 +780,6 @@ def ask_yes_no(prompt,default=None):
             
     return answers[ans]
 
-    
 #----------------------------------------------------------------------------
 class EvalDict:
     """
@@ -792,7 +801,6 @@ class EvalDict:
         return eval(name, frame.f_globals, frame.f_locals)
 
 EvalString = EvalDict  # for backwards compatibility
-
 #----------------------------------------------------------------------------
 def qw(words,flat=0,sep=None,maxsplit=-1):
     """Similar to Perl's qw() operator, but with some more options.
@@ -850,7 +858,6 @@ def grep(pat,list,case=1):
 
     if len(out): return out
     else: return None
-# end grep
 
 #----------------------------------------------------------------------------
 def dgrep(pat,*opts):
@@ -972,8 +979,7 @@ def page_dumb(strng,start=0,screen_lines=25):
             ans = raw_input('---Return to continue, q to quit--- ')
             if ans.lower().startswith('q'): return
         print >>Term.cout, os.linesep.join(screens[-1])
-    
-        
+
 #----------------------------------------------------------------------------
 def page(strng,start=0,screen_lines=0,pager_cmd = None):
     """Print a string, piping through a pager after a certain length.
@@ -1097,7 +1103,6 @@ def page_file(fname,start = 0, pager_cmd = None):
         except:
             print 'Unable to show file',`fname`
 
-
 #----------------------------------------------------------------------------
 def snip_print(str,width = 75,print_full = 0,header = ''):
     """Print a string snipping the midsection to fit in width.
@@ -1134,6 +1139,29 @@ def belong(candidates,checklist):
     Returns a list of 1 and 0, one for each candidate given."""
 
     return [x in checklist for x in candidates]
+
+#----------------------------------------------------------------------------
+def uniq_stable(elems):
+    """uniq_stable(elems) -> list
+
+    Return from an iterable, a list of all the unique elements in the input,
+    but maintaining the order in which they first appear.
+
+    A naive solution to this problem which just makes a dictionary with the
+    elements as keys fails to respect the stability condition, since
+    dictionaries are unsorted by nature.
+
+    Note: All elements in the input must be valid dictionary keys for this
+    routine to work, as it internally uses a dictionary for efficiency
+    reasons."""
+    
+    unique = []
+    unique_dict = {}
+    for nn in elems:
+        if nn not in unique_dict:
+            unique.append(nn)
+            unique_dict[nn] = None
+    return unique
 
 #----------------------------------------------------------------------------
 class NLprinter:
