@@ -410,15 +410,14 @@ class MatplotlibShellBase:
         backend.error_msg = error
         
         # we'll handle the mainloop, tell show not to
-        from matplotlib.backends import show
-        self.mpl_show = show
-        self.mpl_show._needmain = False
+        import matplotlib.backends
+        matplotlib.backends.show._needmain = False
         self.mpl_backend = matplotlib.rcParams['backend']
 
-        # If the user forgets to call show(), we do it for them but give a
-        # warning.  Since we don't want to print this warning every time, we
-        # need a flag to track its use
-        self.mpl_autoshow_warned = False
+##        # If the user forgets to call show(), we do it for them but give a
+##        # warning.  Since we don't want to print this warning every time, we
+##        # need a flag to track its use
+##        self.mpl_autoshow_warned = False
 
         # we also need to block switching of interactive backends by use()
         self.mpl_use = matplotlib.use
@@ -428,7 +427,7 @@ class MatplotlibShellBase:
 
         # We need to detect at runtime whether show() is called by the user.
         # For this, we wrap it into a decorator which adds a 'called' flag.
-        backend.show = flag_calls(backend.show)
+##        backend.show = flag_calls(backend.show)
         backend.draw_if_interactive = flag_calls(backend.draw_if_interactive)
 
         # This must be imported last in the matplotlib series, after
@@ -458,7 +457,7 @@ class MatplotlibShellBase:
         b="""
   Welcome to pylab, a matplotlib-based Python environment
     help(matplotlib) -> generic matplotlib information
-    help(%s)     -> matlab-compatible commands from matplotlib
+    help(%s)      -> matlab-compatible commands from matplotlib
     help(plotting)   -> plotting commands\n""" % pname
 
         return user_ns,b
@@ -479,30 +478,34 @@ class MatplotlibShellBase:
         if self.pylab.draw_if_interactive.called:
             self.pylab.draw()
             self.pylab.draw_if_interactive.called = False
-            # Let's be nice and call show() for the user if he didn't, but
-            # give a warning (once).  I won't make this warning optional,
-            # because not calling show() is potentially a bug: such a script
-            # will produce no visible output outside of ipython, so it's
-            # better to force users to write valid matplotlib code.
-            if not self.pylab.show.called:
-                self.pylab.show()
-                self.pylab.show.called = False
-                if not self.mpl_autoshow_warned:
-                    print ("Did you forget to call matplotlib's show()?\n"
-                           "IPython has called show() for you, but if "
-                           "you run this script \n"
-                           "outside of IPython, it will not display any plots.\n"
-                           "This warning appears only once per session.")
-                    self.mpl_autoshow_warned = True
+
+##            # Let's be nice and call show() for the user if he didn't, but
+##            # give a warning (once).  I won't make this warning optional,
+##            # because not calling show() is potentially a bug: such a script
+##            # will produce no visible output outside of ipython, so it's
+##            # better to force users to write valid matplotlib code.
+##            if not self.pylab.show.called:
+##                self.pylab.show()
+##                self.pylab.show.called = False
+##                if not self.mpl_autoshow_warned:
+##                    print ("Did you forget to call matplotlib's show()?\n"
+##                           "IPython has called show() for you, but if "
+##                           "you run this script \n"
+##                           "outside of IPython, it will not display any plots.\n"
+##                           "This warning appears only once per session.")
+##                    self.mpl_autoshow_warned = True
                 
         # if a backend switch was performed, reverse it now
         if self.mpl_use._called:
             self.matplotlib.rcParams['backend'] = self.mpl_backend
         
     def magic_run(self,parameter_s=''):
-        """Modified %run for Matplotlib"""
-
         Magic.magic_run(self,parameter_s,runner=self.mplot_exec)
+
+    # Fix the docstring so users see the original as well
+    magic_run.__doc__ = "%s\n%s" % (Magic.magic_run.__doc__,
+                                    "\n        *** Modified %run for Matplotlib,"
+                                    " with proper interactive handling ***")
 
 # Now we provide 2 versions of a matplotlib-aware IPython base shells, single
 # and multithreaded.  Note that these are meant for internal use, the IPShell*

@@ -4,7 +4,7 @@
 $Id$"""
 
 #*****************************************************************************
-#       Copyright (C) 2002-2004 Fernando Perez <fperez@colorado.edu>
+#       Copyright (C) 2001-2005 Fernando Perez <fperez@colorado.edu>
 #
 #       Copyright (c) 2001 Janko Hauser <jhauser@zscout.de> and Nathaniel Gray
 #       <n8gray@caltech.edu>
@@ -19,7 +19,7 @@ name = 'ipython'
 
 # For versions with substrings (like 0.6.7_rc1), use _ but NOT -, since
 # bdist_rpm chokes on dashes in the version string.
-version = '0.6.7'
+version = '0.6.8'
 
 description = "An enhanced interactive Python shell."
 
