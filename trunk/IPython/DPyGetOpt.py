@@ -469,8 +469,9 @@ class DPyGetOpt:
 		encountered) and termValues will contain all of the options that
 		appeared after the Terminator (or an empty list).
 		"""
-		if args == sys.argv:
-			args = sys.argv[1:]
+                
+                if hasattr(sys, "argv") and args == sys.argv:
+                    args = sys.argv[1:]
 
 		max		= len(args) # maximum index + 1
 		self.freeValues	= []        # array to hold return values
