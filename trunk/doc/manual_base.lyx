@@ -1724,6 +1724,34 @@ import
 \end_inset 
 
  for a recursive reload command.
+\newline 
+
+\family typewriter 
+%run
+\family default 
+ also has special flags for timing the execution of your scripts (
+\family typewriter 
+-t
+\family default 
+) and for executing them under the control of either Python's 
+\family typewriter 
+pdb 
+\family default 
+debugger (
+\family typewriter 
+-d
+\family default 
+) or profiler (
+\family typewriter 
+-p
+\family default 
+).
+ With all of these, 
+\family typewriter 
+%run
+\family default 
+ can be used as the main tool for efficient interactive development of code
+ which you write in your editor of choice.
 \layout Itemize
 
 Use the Python debugger, 
