@@ -73,11 +73,12 @@ autocall 1
 #  "\M-u": "\d\d\d\d"
 #  $endif
 
-# The feature is off by default because it can cause problems with pasting of
-# indented code (the pasted code gets re-indented on each line).  But a magic
+# The feature is potentially a bit dangerous, because it can cause problems
+# with pasting of indented code (the pasted code gets re-indented on each
+# line).  But it's a huge time-saver when working interactively.  The magic
 # function @autoindent allows you to toggle it on/off at runtime.
 
-autoindent 0
+autoindent 1
 
 # Auto-magic. This gives you access to all the magic functions without having
 # to prepend them with an @ sign. If you define a variable with the same name
