@@ -146,9 +146,9 @@ try:
             #print 'Completer->file_matches: <%s>' % text # dbg
             text = os.path.expanduser(text)
             if text == "":
-                return glob.glob("*") # current directory
+                return [f.replace(' ',r'\ ') for f in glob.glob("*")]
             
-            matches = glob.glob(text + "*")
+            matches = [f.replace(' ',r'\ ') for f in glob.glob("%s*"%text)]
             #print '\nmatches:',matches # dbg
             if len(matches) == 1:
                 if os.path.isdir(matches[0]): # takes care of links to directories also
