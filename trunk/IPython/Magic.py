@@ -296,7 +296,13 @@ class Magic:
                 except:
                     pass
             if found:
-                ds = inspect.getdoc(self.tmp_obj)
+                try:
+                    # Harden against an inspect failure, which can occur with
+                    # SWIG-wrapped extensions.  These can easily crash
+                    # inspect.
+                    ds = inspect.getdoc(self.tmp_obj)
+                except:
+                    ds = None
                 ospace = ns_test[0]
                 obj = self.tmp_obj
                 del self.tmp_obj
