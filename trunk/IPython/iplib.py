@@ -844,10 +844,8 @@ choose to continue, there may be unexpected behavior.
         if line0 == self.ESC_SHELL:
             return self.handle_shell_escape(line)
         # Both ?word and  word? go to help
-        elif line0 == self.ESC_HELP:
-            return self.handle_help(line[1:])
-        elif line[-1] == self.ESC_HELP:
-            return self.handle_help(line[:-1])
+        elif line0 == self.ESC_HELP or line[-1] == self.ESC_HELP:
+            return self.handle_help(line,continue_prompt)
         elif line0 == self.ESC_MAGIC:
             return self.handle_magic(line)
         elif line0 in self.ESC_QUOTE+self.ESC_PAREN:
@@ -911,20 +909,36 @@ choose to continue, there may be unexpected behavior.
         os.system(line)
         return ''               # MUST return something, at least an empty string
             
-    def handle_help(self, line):
+    def handle_help(self, line, continue_prompt):
         """Try to get some help for the object.
 
         obj? or ?obj   -> basic information.
         obj?? or ??obj -> more details.
         """
 
-        self.log('#?'+line)
-        self.update_cache(line)
-        if line:
-            self.magic_pinfo(line)
+        # We need to make sure that we don't process lines which would be
+        # otherwise valid python, such as "x=1 # what?"
+        try:
+            code.compile_command(line)
+        except SyntaxError:
+            # We should only handle as help stuff which is NOT valid syntax
+            if line[0]==self.ESC_HELP:
+                line = line[1:]
+            elif line[-1]==self.ESC_HELP:
+                line = line[:-1]
+            self.log('#?'+line)
+            self.update_cache(line)
+            if line:
+                self.magic_pinfo(line)
+            else:
+                page(self.usage,screen_lines=self.rc.screen_length)
+            return '' # Empty string is needed here!
+        except:
+            # Pass any other exceptions through to the normal handler
+            return self.handle_normal(line,continue_prompt)
         else:
-            page(self.usage,screen_lines=self.rc.screen_length)
-        return '' # Empty string is needed here!
+            # If the code compiles ok, we should handle it normally
+            return self.handle_normal(line,continue_prompt)
 
     def handle_magic(self, line):
         """Execute magic functions.
