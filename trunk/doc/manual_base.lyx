@@ -177,7 +177,8 @@ Alias facility for defining your own system aliases.
 \layout Itemize
 
 Complete system shell access.
- Lines starting with ! are passed directly to the system shell.
+ Lines starting with ! are passed directly to the system shell, and using
+ !! captures shell output into python variables for further use.
 \layout Itemize
 
 Automatic indentation (optional) of code as you type (through the readline
@@ -275,7 +276,7 @@ Developed under
 \series bold 
 Linux
 \series default 
-, should work under most unices (tested OK under Solaris).
+, should work under most unices (tested OK under Solaris and the *BSD family).
 \layout Standard
 
 
@@ -284,24 +285,34 @@ Mac OS X
 \series default 
 : it works, apparently without any problems (thanks to Jim Boyle at Lawrence
  Livermore for the information).
+ Thanks to Andrea Riciputi, Fink support is available.
 \layout Standard
 
 
 \series bold 
 CygWin
 \series default 
-: I would guess this environment is Unix enough for IPython to work unchanged
- (any comments welcome).
+: works fine.
 \layout Standard
 
 
 \series bold 
 Windows
 \series default 
-: It works reasonably well under Windows XP, and I suspect NT and Win2000
- should work similarly.
- Windows 9x support has been added but has seen very little testing, as
- I don't have access to a machine with that operating system.
+: It works reasonably well under Windows XP/2k, and I suspect NT should
+ work similarly.
+ Section\SpecialChar ~
+
+\begin_inset LatexCommand \ref{sub:Under-Windows}
+
+\end_inset 
+
+ describes installation details for Windows, including the additional tools
+ to gain access to IPython's full functionality under Windows.
+\layout Standard
+
+Windows 9x support has been added but has seen very little testing, as I
+ don't have access to a machine with that operating system.
  
 \layout Standard
 
@@ -322,8 +333,13 @@ MacOS Classic
  But someone else will have to do that, since I have no access to a Macintosh.
 \layout Standard
 
-IPython requires Python version 2.1 or newer.
- It has been tested with Python 2.2 and showed no problems.
+IPython requires Python version 2.2 or newer.
+ As of version 0.6.0, it works correctly with Python 2.3 (earlier versions
+ had some issues with Python 2.3).
+ Support for Python 2.1 hasn't been recently tested, since I don't have access
+ to it on any of my systems.
+ But I suspect there may be some problems with Python 2.1, because some of
+ the newer code may use 2.2 features.
 \layout Subsection
 
 Location
@@ -337,7 +353,12 @@ IPython is generously hosted at
  by the SciPy project.
  This site offers downloads, CVS access, mailing lists and a bug tracking
  system.
- I am very grateful to the SciPy team for their contribution.
+ I am very grateful to Enthought (
+\begin_inset LatexCommand \htmlurl{http://www.enthought.com}
+
+\end_inset 
+
+) and all of the SciPy team for their contribution.
 \layout Section
 
 
@@ -585,7 +606,15 @@ Hopefully, things will work.
 .
 \layout Subsubsection
 
-Mac OSX notes
+Mac OSX 10.1 information
+\layout Standard
+
+
+\series bold 
+Note
+\series default 
+: I think all of this information only applies to users of OSX 10.1.
+ As far as I know, newer versions run IPython fine without further tweaking.
 \layout Standard
 
 Apparently the problems which Mac OSX users may encounter with in the terminal
@@ -600,20 +629,6 @@ I don't have access to a Mac, so I rely on the helpful users from the OSX
  to others.
  If you find a mistake/update to this information, please let me know so
  that I can include it in future releases.
-\layout Standard
-
-
-\series bold 
-Note
-\series default 
-: I don't know if this information applies to 10.2 (Jaguar).
- It is 
-\emph on 
-possible 
-\emph default 
-that 10.2 fixes these problems, but this information has not been confirmed.
- Please let me know of any details concerning Jaguar which should be added
- to this documentation.
 \layout Standard
 
 Many thanks to Andrea for taking the time to do this.
@@ -673,32 +688,89 @@ color_info
  (not easy at all) 
 \layout Subsection
 
+
+\begin_inset LatexCommand \label{sub:Under-Windows}
+
+\end_inset 
+
 Under Windows
 \layout Standard
 
-Please note that for the automatic installer to work you need Mark Hammond's
- PythonWin extensions (and they're great for anything Windows-related anyway,
- so you might as well get them).
+While you can use IPython under Windows with only a stock Python installation,
+ there are two sets of extensions which will make the whole experience a
+ lot more pleasant:
+\layout Subsubsection
+
+Mark Hammond's PythonWin
+\layout Standard
+
+For the automatic installer to work you need Mark Hammond's PythonWin extensions
+ (and they're great for anything Windows-related anyway, so you might as
+ well get them).
  If you don't have them, get them at:
 \layout Standard
 
 
-\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mhammond/}
+\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mhammond}
 
 \end_inset 
 
 
+\layout Subsubsection
+
+Gary Bishop's readline and color support for Windows
 \layout Standard
 
-From the download directory grab the 
+Some of IPython's more powerful features are:
+\layout Itemize
+
+Integrated readline support (Tab-based file, object and attribute completion,
+ input history across sessions, editable command line, etc.)
+\layout Itemize
+
+Coloring of prompts, code and tracebacks
+\layout Standard
+
+These, by default, are only available by default under Unix-like operating
+ systems.
+ However, thanks to Gary Bishop's work, Windows XP/2k users can also benefit
+ from them.
+ His readline library implements both GNU readline functionality and color
+ support, so that IPython under Windows XP/2k can be as friendly and powerful
+ as under Unix-like environments.
+\layout Standard
+
+You can find Gary's tools at 
+\begin_inset LatexCommand \htmlurl{http://sourceforge.net/projects/uncpythontools}
+
+\end_inset 
+
+; note that his readline module requires in turn the 
+\family typewriter 
+ctypes
+\family default 
+ library, available at 
+\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/theller/ctypes}
+
+\end_inset 
+
+.
+\layout Subsubsection
+
+Installation procedeure
+\layout Standard
+
+Once you have the above installed, from the download directory grab the
+ 
 \family typewriter 
 IPython-XXX.zip
 \family default 
- file (but the popular WinZip handles 
+ file.
+ The popular WinZip handles 
 \family typewriter 
 .tar.gz
 \family default 
- files perfectly, so use that if you have WinZip and want a smaller download).
+ files perfectly, so use that if you have WinZip and want a smaller download.
  
 \layout Standard
 
@@ -891,7 +963,7 @@ PYTHONDOCS
  pointing to the directory where your HTML Python documentation lives.
  In my system it's 
 \family typewriter 
-/usr/share/doc/python-docs-2.1.1/html
+/usr/share/doc/python-docs-2.2.3/html
 \family default 
 , check your local details or ask your systems administrator.
  
@@ -1083,21 +1155,33 @@ CDE terminal (tested under Solaris).
 \end_inset 
 
  for more details on using IPython with (X)Emacs.
-\layout Standard
-
-These have shown problems:
 \layout Itemize
 
-Windows command prompt in Win2k/XP logged into a Linux machine via telnet
- or ssh.
-\layout Itemize
+A Windows (XP/2k) command prompt 
+\emph on 
+with Gary Bishop's support extensions
+\emph default 
+.
+ Gary's extensions are discussed in Sec.\SpecialChar ~
 
-Windows native command prompt in Win2k/XP for local execution.
- Colors do not work at all.
- The installer is set up to disable colors by default.
- If you have a terminal replacement which can handle colors, you can turn
- them back on.
- Test it by typing '
+\begin_inset LatexCommand \ref{sub:Under-Windows}
+
+\end_inset 
+
+.
+ Note that IPython doesn't auto-detect these tools, so for safety reasons
+ it defaults to 
+\emph on 
+not
+\emph default 
+ using coloring and readline under Windows.
+ If you have Gary's tools, you can turn these features on manually by editing
+ the 
+\family typewriter 
+ipythonrc.ini
+\family default 
+ file.
+ You may test the color support by typing '
 \family typewriter 
 colors Linux
 \family default 
@@ -1106,9 +1190,23 @@ colors Linux
 colors NoColor
 \family default 
 '.
-\newline 
-Note that under Windows, if you use the CygWin environment, coloring (and
- readline-related features) all work correctly.
+\layout Itemize
+
+A Windows (XP/2k) CygWin shell.
+\layout Standard
+
+These have shown problems:
+\layout Itemize
+
+Windows command prompt in WinXP/2k logged into a Linux machine via telnet
+ or ssh.
+\layout Itemize
+
+Windows native command prompt in WinXP/2k, 
+\emph on 
+without 
+\emph default 
+Gary Bishop's extensions.
 \layout Standard
 
 Currently the following color schemes are available:
@@ -1324,7 +1422,14 @@ If you are on a system which lacks proper data pagers (such as Windows),
 
 Thanks to the work of Alexander Schmolck, currently (X)Emacs and IPython
  get along very well.
- You will need to use a recent version of 
+ 
+\layout Standard
+
+
+\series bold 
+Important note:
+\series default 
+ You will need to use a specially patched version of 
 \family typewriter 
 python-mode.el
 \family default 
@@ -1335,7 +1440,19 @@ ipython.el
 .
  At the IPython website's download section, you will find a tarball containing
  both of these files.
- Once you put them in your Emacs path, all you need in your 
+ Alex's support code does 
+\emph on 
+not
+\emph default 
+ work with the normal 
+\family typewriter 
+python-mode.el
+\family default 
+, because some patches required for properly handling the prompt have not
+ been applied by the main authors.
+\layout Standard
+
+Once you put these files in your Emacs path, all you need in your 
 \family typewriter 
 .emacs
 \family default 
@@ -5173,6 +5290,39 @@ Gnuplot.py
 Proper Gnuplot configuration
 \layout Standard
 
+As of version 4.0, Gnuplot has excellent mouse and interactive keyboard support.
+ However, as of 
+\family typewriter 
+Gnuplot.py
+\family default 
+ version 1.7, a new option was added to communicate between Python and Gnuplot
+ via FIFOs (pipes).
+ This mechanism, while fast, also breaks the mouse system.
+ You must therefore set the variable 
+\family typewriter 
+prefer_fifo_data
+\family default 
+ to 
+\family typewriter 
+0
+\family default 
+ in file 
+\family typewriter 
+gp_unix.py
+\family default 
+ if you wish to keep the interactive mouse and keyboard features working
+ properly (
+\family typewriter 
+prefer_inline_data
+\family default 
+ also must be 
+\family typewriter 
+0
+\family default 
+, but this is the default so unless you've changed it manually you should
+ be fine).
+\layout Standard
+
 'Out of the box', Gnuplot is configured with a rather poor set of size,
  color and linewidth choices which make the graphs fairly hard to read on
  modern high-resolution displays (although they work fine on old 640x480
@@ -5297,8 +5447,8 @@ plot
 \family typewriter 
 hardcopy
 \family default 
- fixes a bug in the original which under some systems makes the resulting
- PostScript files not be created.
+ fixes a bug in the original which under some circumstances blocks the creation
+ of PostScript output.
 \layout Standard
 
 For scripting use, 
@@ -5478,7 +5628,7 @@ IPP by Janko Hauser.
  Very well organized, great usability.
  Had an old help system.
  IPP was used as the `container' code into which I added the functionality
- from the other two systems.
+ from ipython and LazyPython.
 \layout List
 \labelwidthstring 00.00.0000
 
@@ -5516,7 +5666,7 @@ The above listed features work, and quite well for the most part.
  and well localized in the cleaner parts of the code).
 \layout Standard
 
-IPython consists of almost 11000 lines of pure python code, of which roughly
+IPython consists of some 12000 lines of pure python code, of which roughly
  50% are fairly clean.
  The other 50% are fragile, messy code which needs a massive restructuring
  before any further major work is done.
@@ -5584,30 +5734,51 @@ Credits
 The main authors of the code are:
 \layout Standard
 
-Fernando Pérez <fperez@colorado.edu> (currently main contact)
+Fernando Pérez 
+\family typewriter 
+<fperez@colorado.edu>
+\family default 
+ (currently main contact)
 \layout Standard
 
-Janko Hauser <jhauser@comunit.de> 
+Janko Hauser 
+\family typewriter 
+<jhauser@comunit.de>
+\family default 
+ 
 \layout Standard
 
-Nathan Gray <n8gray@caltech.edu>
+Nathan Gray 
+\family typewriter 
+<n8gray@caltech.edu>
 \layout Standard
 
 And we are very grateful to:
 \layout Standard
 
-Bill Bumgarner <bbum@friday.com>: for providing the DPyGetOpt module which
- gives very powerful and convenient handling of command-line options (light
- years ahead of what Python 2.1.1's getopt module does).
+Bill Bumgarner 
+\family typewriter 
+<bbum@friday.com>
+\family default 
+: for providing the DPyGetOpt module which gives very powerful and convenient
+ handling of command-line options (light years ahead of what Python 2.1.1's
+ getopt module does).
 \layout Standard
 
-Ka-Ping Yee <ping@lfw.org>: for providing the Itpl module for convenient
- and powerful string interpolation with a much nicer syntax than formatting
- through the '%' operator.
+Ka-Ping Yee 
+\family typewriter 
+<ping@lfw.org>
+\family default 
+: for providing the Itpl module for convenient and powerful string interpolation
+ with a much nicer syntax than formatting through the '%' operator.
 \layout Standard
 
-Arnd Bäcker <arnd.baecker@physik.uni-ulm.de>: for his many very useful suggestions
- and comments, and lots of help with testing and documentation checking.
+Arnd Bäcker 
+\family typewriter 
+<baecker@physik.tu-dresden.de>
+\family default 
+: for his many very useful suggestions and comments, and lots of help with
+ testing and documentation checking.
  Many of IPython's newer features are a result of discussions with him (bugs
  are still my fault, not his).
 \layout Standard
@@ -5617,14 +5788,31 @@ Rossum and the whole Python development team, that goes
  without saying.
 \layout Standard
 
+IPython's website is generously hosted at 
+\begin_inset LatexCommand \htmlurl{http://ipython.scipy.org}
+
+\end_inset 
+
+ by Enthought (
+\begin_inset LatexCommand \htmlurl{http://www.enthought.com}
+
+\end_inset 
+
+).
+ I am very grateful to them and all of the SciPy team for their contribution.
+\layout Standard
+
 
 \begin_inset LatexCommand \label{figgins}
 
 \end_inset 
 
-Fernando would also like to thank Stephen Figgins <fig@monitor.net>, an O'Reilly
- Python editor.
- His Oct/11/01 article about IPP and LazyPython, was what got this project
+Fernando would also like to thank Stephen Figgins 
+\family typewriter 
+<fig@monitor.net>
+\family default 
+, an O'Reilly Python editor.
+ His Oct/11/2001 article about IPP and LazyPython, was what got this project
  started.
  You can read it at: 
 \begin_inset LatexCommand \htmlurl{http://www.onlamp.com/pub/a/python/2001/10/11/pythonnews.html}
@@ -5653,6 +5841,56 @@ Moffit
  like these folks.
 \newline 
 Jack is also contributing with Debian packaging and many other things.
+\layout List
+\labelwidthstring 00.00.0000
+
+Alexander\SpecialChar ~
+Schmolck 
+\family typewriter 
+<a.schmolck@gmx.net> 
+\family default 
+Emacs work, bug reports, bug fixes, ideas, lots more.
+ The ipython.el mode for (X)Emacs is Alex's code, providing full support
+ for IPython under (X)Emacs.
+\layout List
+\labelwidthstring 00.00.0000
+
+Andrea\SpecialChar ~
+Riciputi 
+\family typewriter 
+<andrea.riciputi@libero.it>
+\family default 
+ Mac OSX information, Fink package management.
+\layout List
+\labelwidthstring 00.00.0000
+
+Gary\SpecialChar ~
+Bishop 
+\family typewriter 
+<gb@cs.unc.edu>
+\family default 
+ Bug reports, and patches to work around the exception handling idiosyncracies
+ of WxPython.
+ Readline and color support for Windows.
+\layout List
+\labelwidthstring 00.00.0000
+
+Jeffrey\SpecialChar ~
+Collins 
+\family typewriter 
+<Jeff.Collins@vexcel.com>
+\family default 
+ Bug reports.
+ Much improved readline support, including fixes for Python 2.3.
+\layout List
+\labelwidthstring 00.00.0000
+
+Dryice\SpecialChar ~
+Liu 
+\family typewriter 
+<dryice@liu.com.cn>
+\family default 
+ FreeBSD port.
 \layout List
 \labelwidthstring 00.00.0000
 
@@ -5697,15 +5935,6 @@ Krekel
 \layout List
 \labelwidthstring 00.00.0000
 
-Alexander\SpecialChar ~
-Schmolck 
-\family typewriter 
-<a.schmolck@gmx.net> 
-\family default 
-Emacs work, bug reports, bug fixes, ideas, lots more.
-\layout List
-\labelwidthstring 00.00.0000
-
 Robin\SpecialChar ~
 Siebler 
 \family typewriter 
@@ -5717,15 +5946,6 @@ Ralf\SpecialChar ~
 Ahlbrink
 \family typewriter 
  <ralf_ahlbrink@web.de>
-\layout List
-\labelwidthstring 00.00.0000
-
-Andrea\SpecialChar ~
-Riciputi 
-\family typewriter 
-<andrea.riciputi@libero.it>
-\family default 
- Mac OSX information.
 \layout List
 \labelwidthstring 00.00.0000
 
@@ -5816,15 +6036,6 @@ Aubert
 \layout List
 \labelwidthstring 00.00.0000
 
-Jeffrey\SpecialChar ~
-Collins 
-\family typewriter 
-<Jeff.Collins@vexcel.com>
-\family default 
- Bug reports.
-\layout List
-\labelwidthstring 00.00.0000
-
 King\SpecialChar ~
 C.\SpecialChar ~
 Shu 
@@ -5851,17 +6062,6 @@ Avila
 <gcordova@sismex.com>
 \family default 
  EvalDict code for nice, lightweight string interpolation.
-\layout List
-\labelwidthstring 00.00.0000
-
-Gary\SpecialChar ~
-Bishop 
-\family typewriter 
-<gb@cs.unc.edu>
-\family default 
- Bug reports, and patches to work around the exception handling idiosyncracies
- of WxPython.
- Readline and color support for Windows.
 \layout List
 \labelwidthstring 00.00.0000
 
@@ -5901,15 +6101,6 @@ Sander
 \layout List
 \labelwidthstring 00.00.0000
 
-Dryice\SpecialChar ~
-Liu 
-\family typewriter 
-<dryice@liu.com.cn>
-\family default 
- FreeBSD port.
-\layout List
-\labelwidthstring 00.00.0000
-
 Rod\SpecialChar ~
 Holland 
 \family typewriter 
@@ -5926,4 +6117,22 @@ Griffith
 <pythondev-dang@lazytwinacres.net>
 \family default 
  Fixes, enhancement suggestions for system shell use.
+\layout List
+\labelwidthstring 00.00.0000
+
+Viktor\SpecialChar ~
+Ransmayr 
+\family typewriter 
+<viktor.ransmayr@t-online.de>
+\family default 
+ Tests and reports on Windows installation issues.
+\layout List
+\labelwidthstring 00.00.0000
+
+Mike\SpecialChar ~
+Salib 
+\family typewriter 
+<msalib@mit.edu>
+\family default 
+ Help fixing a subtle bug related to traceback printing.
 \the_end
