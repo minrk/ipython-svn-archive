@@ -1,4 +1,5 @@
 include README_Windows.txt
+include win32_py24_manual_post_install.py
 
 graft scripts
 
