@@ -86,7 +86,7 @@ from IPython import Debugger
 
 from IPython.Struct import Struct
 from IPython.ColorANSI import *
-from IPython.genutils import Term
+from IPython.genutils import Term, uniq_stable
 
 #---------------------------------------------------------------------------
 class TBTools:
@@ -241,7 +241,7 @@ class ListTB(TBTools):
         """Return a color formatted string with the traceback info."""
 
         Colors = self.Colors
-        out_string = [Colors.topline + '-'*60 + Colors.Normal +'\n']
+        out_string = ['%s%s%s\n' % (Colors.topline,'-'*60,Colors.Normal)]
         if elist:
             out_string.append('Traceback %s(most recent call last)%s:' % \
                                 (Colors.normalEm, Colors.Normal) + '\n')
@@ -381,30 +381,40 @@ class VerboseTB(TBTools):
     def text(self, etype, evalue, etb, context=5):
         """Return a nice text document describing the traceback."""
 
-        Colors = self.Colors   # just a shorthand + quicker name lookup
-        indent_size = 8  # we need some space to put line numbers before
-        numbers_width = indent_size - 1 # leave space btween numbers & code
-        
+        # some locals
+        Colors        = self.Colors   # just a shorthand + quicker name lookup
+        ColorsNormal  = Colors.Normal  # used a lot
+        indent_size   = 8  # we need some space to put line numbers before
+        indent        = ' '*indent_size
+        numbers_width = indent_size - 1 # leave space between numbers & code
+        text_repr     = pydoc.text.repr
+        exc           = "%s%s%s" % (Colors.excName, str(etype), ColorsNormal)
+        em_normal     = '%s\n%s%s' % (Colors.valEm, indent,ColorsNormal)
+        undefined     = '%sundefined%s' % (Colors.em, ColorsNormal)
+
+        # some internal-use functions
+        def eqrepr(value, repr=text_repr): return '=%s' % repr(value)
+        def nullrepr(value, repr=text_repr): return ''
+
+        # meat of the code begins
         if type(etype) is types.ClassType:
             etype = etype.__name__
 
-        exc = "%s%s%s" % (Colors.excName, str(etype), Colors.Normal)
         if self.long_header:
             # Header with the exception type, python version, and date
             pyver = 'Python ' + string.split(sys.version)[0] + ': ' + sys.executable
             date = time.ctime(time.time())
             
-            head = '%s%s%s\n%s%s%s\n%s' % (Colors.topline, '-'*75, Colors.Normal,
+            head = '%s%s%s\n%s%s%s\n%s' % (Colors.topline, '-'*75, ColorsNormal,
                                            exc, ' '*(75-len(str(etype))-len(pyver)),
                                            pyver, string.rjust(date, 75) )
             head += "\nA problem occured executing Python code.  Here is the sequence of function"\
                     "\ncalls leading up to the error, with the most recent (innermost) call last."
         else:
             # Simplified header
-            head = '%s%s%s\n%s%s' % (Colors.topline, '-'*75, Colors.Normal,exc,
+            head = '%s%s%s\n%s%s' % (Colors.topline, '-'*75, ColorsNormal,exc,
                                      string.rjust('Traceback (most recent call last)',
                                                   75 - len(str(etype)) ) )
-        indent = ' '*indent_size
         frames = []
         # Flush cache before calling inspect.  This helps alleviate some of the
         # problems with python 2.3's inspect.py.
@@ -421,31 +431,39 @@ class VerboseTB(TBTools):
             # So far, I haven't been able to find an isolated example to
             # reproduce the problem.
 
-            _msg = ("*** Internal Python error in the inspect.py module.\n"
-                    "    Aborting traceback printing.  Sorry.")
+            _msg = ('*** Internal Python error in the inspect.py module.\n'
+                    '    Aborting traceback printing.  Sorry.')
             return _msg
-        
+
+        # build some color string templates outside these nested loops
+        tpl_link       = '%s%%s%s' % (Colors.filenameEm,ColorsNormal)
+        tpl_call       = 'in %s%%s%s%%s%s' % (Colors.vName, Colors.valEm,
+                                              ColorsNormal)
+        tpl_call_fail  = 'in %s%%s%s(***failed resolving arguments***)%s' % \
+                         (Colors.vName, Colors.valEm, ColorsNormal)
+        tpl_local_var  = '%s%%s%s' % (Colors.vName, ColorsNormal)
+        tpl_global_var = '%sglobal%s %s%%s%s' % (Colors.em, ColorsNormal,
+                                                 Colors.vName, ColorsNormal)
+        tpl_name_val   = '%%s %s= %%s%s' % (Colors.valEm, ColorsNormal)
+        tpl_line       = '%s%%s%s %%s' % (Colors.lineno, ColorsNormal)
+        tpl_line_em    = '%s%%s%s %%s%s' % (Colors.linenoEm,Colors.line,
+                                            ColorsNormal)
+
+        # now, loop over all records printing context and info
         for frame, file, lnum, func, lines, index in records:
             #print '*** record:',file,lnum,func,lines,index  # dbg
             file = file and os.path.abspath(file) or '?'
-            link = Colors.filenameEm + file + Colors.Normal
+            link = tpl_link % file
             args, varargs, varkw, locals = inspect.getargvalues(frame)
             if func == '?':
                 call = ''
             else:
-                def eqrepr(value, repr=pydoc.text.repr): return '=%s' % repr(value)
-                def nullrepr(value, repr=pydoc.text.repr): return ''
-
                 # Decide whether to include variable details or not
                 var_repr = self.include_vars and eqrepr or nullrepr
-
                 try:
-                    call = 'in %s%s%s%s%s' % \
-                           (Colors.vName, func, Colors.valEm, 
-                            inspect.formatargvalues(args, varargs, varkw,
-                                                    locals, 
-                                                    formatvalue=var_repr),
-                            Colors.Normal)
+                    call = tpl_call % (func,inspect.formatargvalues(args,
+                                                varargs, varkw,
+                                                locals,formatvalue=var_repr))
                 except KeyError:
                     # Very odd crash from inspect.formatargvalues().  The
                     # scenario under which it appeared was a call to
@@ -454,53 +472,92 @@ class VerboseTB(TBTools):
                     # inspect messes up resolving the argument list of view()
                     # and barfs out. At some point I should dig into this one
                     # and file a bug report about it.
-                    call = 'in %s%s%s(***failed resolving arguments***)%s' % \
-                           (Colors.vName, func, Colors.valEm,
-                            Colors.Normal)
+                    call = tpl_call_fail % func
+
+            # Initialize a list of names on the current line, which the
+            # tokenizer below will populate.
             names = []
 
-            def tokeneater(type, token, start, end, line,
-                           names=names, kwlist=keyword.kwlist,
-                           NAME=tokenize.NAME, NEWLINE=tokenize.NEWLINE):
-                if type == NAME and token not in kwlist:
-                    if token not in names: names.append(token)
-                if type == NEWLINE: raise IndexError
+            def tokeneater(token_type, token, start, end, line):
+                """Stateful tokeneater which builds dotted names.
+
+                The list of names it appends to (from the enclosing scope) can
+                contain repeated composite names.  This is unavoidable, since
+                there is no way to disambguate partial dotted structures until
+                the full list is known.  The caller is responsible for pruning
+                the final list of duplicates before using it."""
+                
+                # build composite names
+                if token == '.':
+                    try:
+                        names[-1] += '.'
+                        # store state so the next token is added for x.y.z names
+                        tokeneater.name_cont = True
+                        return
+                    except IndexError:
+                        pass
+                if token_type == tokenize.NAME and token not in keyword.kwlist:
+                    if tokeneater.name_cont:
+                        # dotted names
+                        names[-1] += token
+                        tokeneater.name_cont = False
+                    elif token not in names:
+                        # regular new names
+                        names.append(token)
+                elif token_type == tokenize.NEWLINE:
+                    raise IndexError
+            # we need to store a bit of state in the tokenizer to build
+            # dotted names
+            tokeneater.name_cont = False
 
             def linereader(file=file, lnum=[lnum], getline=linecache.getline):
                 line = getline(file, lnum[0])
                 lnum[0] += 1
                 return line
 
+            # Build the list of names on this line of code where the exception
+            # occurred.
             try:
+                # This builds the names list in-place by capturing it from the
+                # enclosing scope.
                 tokenize.tokenize(linereader, tokeneater)
-            except IndexError: pass
+            except IndexError:
+                # signals exit of tokenizer
+                pass
+            
+            # prune names list of duplicates, but keep the right order
+            unique_names = uniq_stable(names)
+
+            # Start loop over vars
             lvals = []
             if self.include_vars:
-                for name in names:
-                    if name in frame.f_code.co_varnames:
-                        if locals.has_key(name):
-                            value = pydoc.text.repr(locals[name])
+                for name_full in unique_names:
+                    name_base = name_full.split('.',1)[0]
+                    if name_base in frame.f_code.co_varnames:
+                        if locals.has_key(name_base):
+                            try:
+                                value = repr(eval(name_full,locals))
+                            except:
+                                value = undefined
                         else:
-                            value = '%sundefined%s' % (Colors.em, Colors.Normal)
-                        name = '%s%s%s' % (Colors.vName, name, Colors.Normal)
+                            value = undefined
+                        name = tpl_local_var % name_full
                     else:
-                        if frame.f_globals.has_key(name):
-                            value = pydoc.text.repr(frame.f_globals[name])
+                        if frame.f_globals.has_key(name_base):
+                            try:
+                                value = repr(eval(name_full,frame.f_globals))
+                            except:
+                                value = undefined
                         else:
-                            value = '%sundefined%s' % (Colors.em, Colors.Normal)
-                        name = '%sglobal%s %s%s%s' % (Colors.em, Colors.Normal,
-                                                      Colors.vName, name, 
-                                                      Colors.Normal)
-                    lvals.append('%s %s= %s%s' % (name, Colors.valEm, value,
-                                                  Colors.Normal))
+                            value = undefined
+                        name = tpl_global_var % name_base
+                    lvals.append(tpl_name_val % (name,value))
             if lvals:
-                lvals = string.join(lvals, '%s,%s ' % (Colors.valEm, 
-                                                        Colors.Normal) )
-                lvals = indent + lvals
+                lvals = '%s%s' % (indent,em_normal.join(lvals))
             else:
                 lvals = ''
 
-            level = link + ' ' + call + '\n'
+            level = '%s %s\n' % (link,call)
             excerpt = []
             if index is not None:
                 i = lnum - index
@@ -516,44 +573,34 @@ class VerboseTB(TBTools):
                             marker = '>'
                         else:
                             marker = ''
-                        num = marker + str(i)
-                        line = '%s%s%s %s%s' %(Colors.linenoEm, num, 
-                                               Colors.line, line, Colors.Normal)
+                        num = '%s%s' % (marker,i)
+                        line = tpl_line_em % (num,line)
                     else:
                         num = '%*s' % (numbers_width,i)
-                        line = '%s%s%s %s' %(Colors.lineno, num, 
-                                             Colors.Normal, line)
+                        line = tpl_line % (num,line)
 
-                    excerpt.append( line)
+                    excerpt.append(line)
                     if self.include_vars and i == lnum:
-                        excerpt.append(lvals + '\n')
-                    i = i + 1
-            frames.append(level + string.join(excerpt, ''))
+                        excerpt.append('%s\n' % lvals)
+                    i += 1
+            frames.append('%s%s' % (level,''.join(excerpt)) )
 
+        # Get (safely) a string form of the exception info
         try:
-            exception = ['%s%s%s: %s' % (Colors.excName, str(etype), 
-                                         Colors.Normal, str(evalue))]
+            etype_str,evalue_str = map(str,(etype,evalue))
         except:
             # User exception is improperly defined.
-            etype,evalue = sys.exc_info()[:2]
-            exception = ['%s%s%s: %s' % (Colors.excName, str(etype), 
-                                         Colors.Normal, str(evalue))]
-            
+            etype,evalue = str,sys.exc_info()[:2]
+            etype_str,evalue_str = map(str,(etype,evalue))
+        # ... and format it
+        exception = ['%s%s%s: %s' % (Colors.excName, etype_str,
+                                     ColorsNormal, evalue_str)]
         if type(evalue) is types.InstanceType:
             for name in dir(evalue):
-                value = pydoc.text.repr(getattr(evalue, name))
+                value = text_repr(getattr(evalue, name))
                 exception.append('\n%s%s = %s' % (indent, name, value))
-
-        # Changed to join(exception[:-1]) to avoid repeating the exception
-        # arguments.
-
-        # FIXME: added checks for version 2.2, the interface for frame
-        # handling seems to have changed. Need to look into this more
-        # carefully and see if a unified solution is possible for all versions
-        # or not:
-        
-        return head + '\n\n' + string.join(frames, '\n') + '\n' + \
-               string.join(exception[0], '')
+        # return all our info assembled as a single string
+        return '%s\n\n%s\n%s' % (head,'\n'.join(frames),''.join(exception[0]) )
 
     def debugger(self):
         """Call up the pdb debugger if desired, always clean up the tb reference.
