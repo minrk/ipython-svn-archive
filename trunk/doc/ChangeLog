@@ -1,5 +1,8 @@
 2005-03-23  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/Prompts.py (Prompt1.__str__): Make sure that prompts are
+	properly aligned if they have embedded newlines.
+
 	* IPython/iplib.py (runlines): Add a public method to expose
 	IPython's code execution machinery, so that users can run strings
 	as if they had been typed at the prompt interactively.

@@ -309,7 +309,7 @@ class Prompt1(BasePrompt):
         
     def __str__(self):
         self.cache.prompt_count += 1
-        self.cache.last_prompt = str_safe(self.p_str_nocolor)
+        self.cache.last_prompt = str_safe(self.p_str_nocolor).split('\n')[-1]
         return str_safe(self.p_str)
 
     def auto_rewrite(self):
