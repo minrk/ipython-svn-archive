@@ -281,6 +281,19 @@ Easy debugger access.
  This drops you inside the code which triggered the exception with all the
  data live and it is possible to navigate the stack to rapidly isolate the
  source of a bug.
+ The 
+\family typewriter 
+%run
+\family default 
+ magic command --with the 
+\family typewriter 
+-d
+\family default 
+ option-- can run any script under 
+\family typewriter 
+pdb
+\family default 
+'s control, automatically setting initial breakpoints for you.
 \layout Itemize
 
 Profiler support.
@@ -355,9 +368,8 @@ Windows
  needed on this platform.
 \layout Standard
 
-Windows 9x support has been added but has seen very little testing, as I
- don't have access to a machine with that operating system.
- 
+Windows 9x support is present, and has been reported to work fine (at least
+ on WinME).
 \layout Standard
 
 Please note, however, that I have very little access to and experience with
@@ -1000,7 +1012,11 @@ If all goes well, the first time you run IPython it should automatically
 \family typewriter 
 ipythonrc
 \family default 
-, included for reference in Sec.
+ (with a 
+\family typewriter 
+.ini
+\family default 
+ extension under Windows), included for reference in Sec.
  
 \begin_inset LatexCommand \ref{sec:ipytonrc-sample}
 
@@ -1117,7 +1133,7 @@ Emacs
 Emacs
 \family default 
  process is already running).
- For this wo work, you need to set your 
+ For this to work, you need to set your 
 \family typewriter 
 EDITOR 
 \family default 
@@ -1130,7 +1146,7 @@ environment variable to
 \family typewriter 
  
 \family default 
-The code below, supplied by François Pinard, can then be used in your 
+The code below, supplied by Francois Pinard, can then be used in your 
 \family typewriter 
 .emacs
 \family default 
@@ -1212,8 +1228,8 @@ ipythonrc
 \family default 
  file.
  This is useful if you wish to use specifically for IPython an editor different
- from your typical default (and for Windows users who tend to use less environme
-nt variables).
+ from your typical default (and for Windows users who tend to use fewer
+ environment variables).
 \layout Subsection
 
 Color 
@@ -1499,8 +1515,8 @@ If you are on a system which lacks proper data pagers (such as Windows),
 (X)Emacs configuration
 \layout Standard
 
-Thanks to the work of Alexander Schmolck, currently (X)Emacs and IPython
- get along very well.
+Thanks to the work of Alexander Schmolck and Prabhu Ramachandran, currently
+ (X)Emacs and IPython get along very well.
  
 \layout Standard
 
@@ -1508,7 +1524,7 @@ Thanks to the work of Alexander Schmolck, currently (X)Emacs and IPython
 \series bold 
 Important note:
 \series default 
- You will need to use a specially patched version of 
+ You will need to use a recent enough version of 
 \family typewriter 
 python-mode.el
 \family default 
@@ -1517,18 +1533,25 @@ python-mode.el
 ipython.el
 \family default 
 .
- At the IPython website's download section, you will find a tarball containing
- both of these files.
- Alex's support code does 
-\emph on 
-not
-\emph default 
- work with the normal 
+ You can check that the version you have of 
 \family typewriter 
 python-mode.el
 \family default 
-, because some patches required for properly handling the prompt have not
- been applied by the main authors.
+ is new enough by either looking at the revision number in the file itself,
+ or asking for it in (X)Emacs via 
+\family typewriter 
+M-x py-version
+\family default 
+.
+ Versions 4.68 and newer contain the necessary fixes for proper IPython support.
+\layout Standard
+
+The file 
+\family typewriter 
+ipython.el
+\family default 
+ is included with the IPython distribution, in the documentation directory
+ (where this manual resides in PDF and HTML formats).
 \layout Standard
 
 Once you put these files in your Emacs path, all you need in your 
@@ -1622,8 +1645,7 @@ object_name.<TAB>
  Tab completion also works on file and directory names, which combined with
  IPython's alias system allows you to do from within IPython many of the
  things you normally would need the system shell for.
- Note that this feature does not work on platforms lacking readline support,
- such as Windows.
+ 
 \layout Itemize
 
 Explore your objects.
@@ -1704,14 +1726,18 @@ import
  for a recursive reload command.
 \layout Itemize
 
-Use the Python debugger, pdb
+Use the Python debugger, 
+\family typewriter 
+pdb
+\family default 
+
 \begin_inset Foot
 collapsed true
 
 \layout Standard
 
-Thanks to Christian Hart for the suggestions leading to this feature and
- the profiler support.
+Thanks to Christian Hart and Matthew Arnison for the suggestions leading
+ to IPython's improved debugger and profiler support.
 \end_inset 
 
 .
@@ -1751,6 +1777,24 @@ print
 1/0
 \family default 
 .
+\newline 
+Note also that `
+\family typewriter 
+%run -d
+\family default 
+' activates 
+\family typewriter 
+pdb
+\family default 
+ and automatically sets initial breakpoints for you to step through your
+ code, watch variables, etc.
+ See Sec.\SpecialChar ~
+
+\begin_inset LatexCommand \ref{sec:cache_output}
+
+\end_inset 
+
+ for details.
 \layout Itemize
 
 Use the output cache.
@@ -1793,8 +1837,8 @@ ___
  are always kept updated with the for the last three results.
  This allows you to recall any previous result and further use it for new
  calculations.
- See sec.
- 
+ See Sec.\SpecialChar ~
+
 \begin_inset LatexCommand \ref{sec:cache_output}
 
 \end_inset 
@@ -2064,14 +2108,175 @@ IPYTHONDIR
 \layout Subsection
 
 
+\begin_inset LatexCommand \label{sec:threading-opts}
+
+\end_inset 
+
+Special Threading Options
+\layout Standard
+
+The following special options are ONLY valid at the beginning of the command
+ line, and not later.
+ This is because they control the initial- ization of ipython itself, before
+ the normal option-handling mechanism is active.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-gthread,\SpecialChar ~
+-wthread,\SpecialChar ~
+-pylab:
+\family default 
+\series default 
+ Only 
+\emph on 
+one
+\emph default 
+ of these can be given, and it can only be given as the first option passed
+ to IPython (it will have no effect in any other position).
+ They provide threading support for the GTK and WXPython toolkits, and for
+ the matplotlib library.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ If 
+\family typewriter 
+-gthread
+\family default 
+ is given, IPython starts running a separate thread for GTK operation, so
+ that pyGTK-based programs can open and control GUIs without blocking IPython.
+ 
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ Similarly, 
+\family typewriter 
+-wthread
+\family default 
+ instantiates IPython with threading support for the WXPython toolkit.
+ You can control WX application windows from within IPython.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ If 
+\family typewriter 
+-pylab
+\family default 
+ is given, IPython loads special support for the mat- plotlib library (
+\begin_inset LatexCommand \htmlurl{http://matplotlib.sourceforge.net}
+
+\end_inset 
+
+), allowing interactive usage of any of its backends as defined in the user's
+ .matplotlibrc file.
+ It automatically activates GTK or WX threading for IPyhton if the choice
+ of matplotlib backend requires it.
+ It also modifies the 
+\family typewriter 
+%run
+\family default 
+ command to correctly execute (without blocking) any matplotlib-based script
+ which calls 
+\family typewriter 
+show()
+\family default 
+ at the end.
+ 
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-tk
+\family default 
+\series default 
+ The 
+\family typewriter 
+-g/wthread
+\family default 
+ options, and 
+\family typewriter 
+-pylab
+\family default 
+ (if matplotlib is configured to use WX or GTK), will normally block Tk
+ graphical interfaces.
+ This means that when either GTK or WX threading is active, any attempt
+ to open a Tk GUI will result in a dead window, and pos- sibly cause the
+ Python interpreter to crash.
+ An extra option, 
+\family typewriter 
+-tk
+\family default 
+, is available to address this issue.
+ It can 
+\emph on 
+only
+\emph default 
+ be given as a 
+\emph on 
+second
+\emph default 
+ option after any of the above (
+\family typewriter 
+-gthread
+\family default 
+, 
+\family typewriter 
+-wthread
+\family default 
+ or 
+\family typewriter 
+-pylab
+\family default 
+).
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ If 
+\family typewriter 
+-tk
+\family default 
+ is given, IPython will try to coordinate Tk threading with WX or GTK.
+ This is however potentially unreliable, and you will have to test on your
+ platform and Python configuration to determine whether it works for you.
+ Debian users have reported success, apparently due to the fact that Debian
+ builds all of Tcl, Tk, Tkinter and Python with pthreads support.
+ Under other Linux environments (such as Fedora Core 2), this option has
+ caused random crashes and lockups of the Python interpreter.
+ Under other operating systems (Mac OSX and Windows), you'll need to try
+ it to find out, since currently no user reports are available.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ There is unfortunately no way for IPython to determine at run time whether
+ 
+\family typewriter 
+-tk
+\family default 
+ will work reliably or not, so you will need to do some experiments before
+ relying on it for regular work.
+ 
+\layout Subsection
+
+
 \begin_inset LatexCommand \label{sec:cmd-line-opts}
 
 \end_inset 
 
-Options
+Regular Options
 \layout Standard
 
-All options can be abbreviated to their shortest non-ambiguous form and
+After the above threading options have been given, regular options can follow
+ in any order.
+ All options can be abbreviated to their shortest non-ambiguous form and
  are case-sensitive.
  One or two dashes can be used.
  Some options have an alternate short form, indicated after a 
@@ -2110,45 +2315,6 @@ no|
 \family default 
 \series default 
 : print a help message and exit.
-\layout Comment
-
-
-\family typewriter 
-\series bold 
--gthread,\SpecialChar ~
--wthread\SpecialChar ~
-,-pylab:
-\family default 
-\series default 
- these are special options, only 
-\emph on 
-one
-\emph default 
- of which can be given, and which can 
-\emph on 
-only
-\emph default 
- be given as the 
-\emph on 
-first
-\emph default 
- option passed to IPython (they will have no effect in any other position).
- They provide threading support for the GTK and WXPython toolkits, and for
- the matplotlib library.
- The chosen option must be given first because it will determine how IPython
- itself is initialized, before any of the other regular options are processed.
-\newline 
-If 
-\family typewriter 
--gthread
-\family default 
- is given, IPython starts running a separate thread for GTK operation, so
- that pyGTK-based programs can open GUIs without blocking IPython.
- Similarly, 
-\family typewriter 
--wthread
-\family default 
- instantiates IPython with threading support for the WXPython toolkit.
 \layout List
 \labelwidthstring 00.00.0000
 
@@ -5630,11 +5796,107 @@ preview false
 
 \layout Section
 
+
+\begin_inset LatexCommand \label{sec:using-pdb}
+
+\end_inset 
+
 Using the Python debugger (
 \family typewriter 
 pdb
 \family default 
 )
+\layout Subsection
+
+Running entire programs via 
+\family typewriter 
+pdb
+\layout Standard
+
+
+\family typewriter 
+pdb
+\family default 
+, the Python debugger, is a powerful interactive debugger which allows you
+ to step through code, set breakpoints, watch variables, etc.
+ IPython makes it very easy to start any script under the control of 
+\family typewriter 
+pdb
+\family default 
+, regardless of whether you have wrapped it into a 
+\family typewriter 
+`main()'
+\family default 
+ function or not.
+ For this, simply type 
+\family typewriter 
+`%run -d myscript'
+\family default 
+ at an IPython prompt.
+ See the 
+\family typewriter 
+%run
+\family default 
+ command's documentation (via 
+\family typewriter 
+`%run?'
+\family default 
+ or in Sec.\SpecialChar ~
+
+\begin_inset LatexCommand \ref{sec:magic}
+
+\end_inset 
+
+) for more details, including how to control where 
+\family typewriter 
+pdb
+\family default 
+ will stop execution first.
+\layout Standard
+
+For more information on the use of the 
+\family typewriter 
+pdb
+\family default 
+ debugger, read the included 
+\family typewriter 
+pdb.doc
+\family default 
+ file (part of the standard Python distribution).
+ On a stock Linux system it is located at 
+\family typewriter 
+/usr/lib/python2.3/pdb.doc
+\family default 
+, but the easiest way to read it is by using the 
+\family typewriter 
+help()
+\family default 
+ function of the 
+\family typewriter 
+pdb
+\family default 
+ module as follows (in an IPython prompt):
+\layout Standard
+
+
+\family typewriter 
+In [1]: import pdb
+\newline 
+In [2]: pdb.help()
+\layout Standard
+
+This will load the 
+\family typewriter 
+pdb.doc
+\family default 
+ document in a file viewer for you automatically.
+\layout Subsection
+
+Automatic invocation of 
+\family typewriter 
+pdb
+\family default 
+ on exceptions
 \layout Standard
 
 IPython, if started with the 
@@ -5656,7 +5918,7 @@ Many thanks to Christopher Hart for the request which prompted adding this
 \end_inset 
 
 .
- This feature can also be turned on and off at any time with the 
+ This feature can also be toggled at any time with the 
 \family typewriter 
 %pdb
 \family default 
@@ -5751,44 +6013,6 @@ This will give any of your programs detailed, colored tracebacks with automatic
 pdb
 \family default 
 .
-\layout Standard
-
-If you want more information on the use of the 
-\family typewriter 
-pdb
-\family default 
- debugger, read the included 
-\family typewriter 
-pdb.doc
-\family default 
- file (part of the standard Python distribution).
- On a stock Mandrake Linux system it is located at 
-\family typewriter 
-/usr/lib/python2.2/pdb.doc
-\family default 
-, but the easiest way to read it is by using the 
-\family typewriter 
-help()
-\family default 
- function of the 
-\family typewriter 
-pdb
-\family default 
- module as follows (in an IPython prompt):
-\layout Standard
-
-
-\family typewriter 
-In [1]: import pdb
-\newline 
-In [2]: pdb.help()
-\layout Standard
-
-This will load the 
-\family typewriter 
-pdb.doc
-\family default 
- document in a file viewer for you automatically.
 \layout Section
 
 
@@ -6857,6 +7081,11 @@ $ - Root symbol ($ or #).
 
 
 \backslash 
+t - Current time, in H:M:S format.
+\layout Description
+
+
+\backslash 
 v - IPython release version.
  
 \layout Description
@@ -6974,11 +7203,129 @@ C_Normal Stop coloring, defaults to your terminal settings.
 \layout Section
 
 
+\begin_inset LatexCommand \label{sec:Threading-support}
+
+\end_inset 
+
+Threading support
+\layout Standard
+
+
+\series bold 
+WARNING: 
+\series default 
+The threading support is still somewhat experimental, and it has only seen
+ reasonable testing under Linux.
+ Threaded code is particularly tricky to debug, and it tends to show extremely
+ platform-dependent behavior.
+ Since I only have access to Linux machines, I will have to rely on user's
+ experiences and assistance for this area of IPython to improve under other
+ platforms.
+\layout Standard
+
+IPython, via the 
+\family typewriter 
+-gthread
+\family default 
+ and 
+\family typewriter 
+-wthread
+\family default 
+ options (described in Sec.\SpecialChar ~
+
+\begin_inset LatexCommand \ref{sec:threading-opts}
+
+\end_inset 
+
+), can run in multithreaded mode to support pyGTK and WXPython applications
+ respectively.
+ Both of these GUI toolkits need to control the python main loop of execution,
+ so under a normal Python interpreter, starting a pyGTK (or WXPython) applicatio
+n will immediately freeze the shell.
+ 
+\layout Standard
+
+IPython, with one of these options (you can only use one at a time), separates
+ the graphical loop and IPython's code execution run into different threads.
+ This allows you to test interactively (with 
+\family typewriter 
+@run
+\family default 
+, for example) your GUI code without blocking.
+\layout Subsection
+
+Tk issues
+\layout Standard
+
+As indicated in Sec.\SpecialChar ~
+
+\begin_inset LatexCommand \ref{sec:threading-opts}
+
+\end_inset 
+
+, a special 
+\family typewriter 
+-tk
+\family default 
+ option is provided to try and allow Tk graphical applications to coexist
+ interactively with WX or GTK ones.
+ Whether this works at all, however, is very platform and configuration
+ dependent.
+ Please experiment with simple test cases before committing to using this
+ combination of Tk and WX/GTK threading in a production environment.
+\layout Subsection
+
+Signals and Threads
+\layout Standard
+
+When any of the thread systems (WX or GTK) are active, either directly or
+ via 
+\family typewriter 
+-pylab
+\family default 
+ with a threaded backend, it is impossible to interrupt long-running Python
+ code via 
+\family typewriter 
+Ctrl-C
+\family default 
+.
+ IPython can not pass the KeyboardInterrupt exception (or the underlying
+ 
+\family typewriter 
+SIGINT
+\family default 
+) across threads, so any long-running process started from IPython will
+ run to completion, or will have to be killed via an external (OS-based)
+ mechanism.
+\layout Standard
+
+To the best of my knowledge, this limitation is imposed by the Python interprete
+r itself, and it comes from the difficulty of writing portable signal/threaded
+ code.
+ If any user is an expert on this topic and can suggest a better solution,
+ I would love to hear about it.
+ In the IPython sources, look at the 
+\family typewriter 
+Shell.py
+\family default 
+ module, and in particular at the 
+\family typewriter 
+runcode()
+\family default 
+ method.
+ 
+\layout Section
+
+
 \begin_inset LatexCommand \label{sec:matplotlib-support}
 
 \end_inset 
 
-Support for the matplotlib library
+Plotting with 
+\family typewriter 
+matplotlib
+\family default 
+ 
 \layout Standard
 
 The matplotlib library (
@@ -7057,7 +7404,9 @@ ipythonrc-myprofile
 
 \end_inset 
 
-Gnuplot support
+Plotting with 
+\family typewriter 
+Gnuplot
 \layout Standard
 
 Through the magic extension system described in sec.
@@ -8075,4 +8424,26 @@ Hunter
 \family default 
  Matplotlib author, helped with all the development of support for matplotlib
  in IPyhton, including making necessary changes to matplotlib itself.
+\layout List
+\labelwidthstring 00.00.0000
+
+Matthew\SpecialChar ~
+Arnison 
+\family typewriter 
+<maffew@cat.org.au>
+\family default 
+ Bug reports, `
+\family typewriter 
+%run -d
+\family default 
+' idea.
+\layout List
+\labelwidthstring 00.00.0000
+
+Prabhu\SpecialChar ~
+Ramachandran 
+\family typewriter 
+<prabhu_r@users.sourceforge.net>
+\family default 
+ Help with (X)Emacs support, threading patches, ideas...
 \the_end
