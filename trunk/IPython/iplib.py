@@ -809,6 +809,9 @@ want to merge them back into the new files.""" % locals()
                     else:
                         break
                 else:
+                    # don't increment the prompt if there's no user input.
+                    if not (more or line): 
+                        self.outputcache.prompt_count -= 1
                     more = self.push(line)
                     # Auto-indent management
                     if self.autoindent:
@@ -848,44 +851,43 @@ want to merge them back into the new files.""" % locals()
 		
                 fixed_in_out_err = 0
 
-		# Call the Term I/O class and have it reopen any stream which
-		# the user might have closed.
+                # Call the Term I/O class and have it reopen any stream which
+                # the user might have closed.
+                Term.reopen_all()
 		
-		Term.reopen_all()
+                # Do the same manually for sys.stderr/out/in
 		
-		# Do the same manually for sys.stderr/out/in
-		
-		# err first, so we can print at least warnings
-		if sys.__stderr__.closed:
-		    sys.__stderr__ = os.fdopen(os.dup(2),'w',0)
+                # err first, so we can print at least warnings
+                if sys.__stderr__.closed:
+                    sys.__stderr__ = os.fdopen(os.dup(2),'w',0)
                     fixed_err_err = 1
-		    print >> sys.__stderr__,"""
+                    print >> sys.__stderr__,"""
 WARNING:
 sys.__stderr__ was closed!
 I've tried to reopen it, but bear in mind that things may not work normally
 from now.  In particular, readline support may have broken.
 """
-		# Next, check stdin/out    
-		if sys.__stdin__.closed:
-		    sys.__stdin__ = os.fdopen(os.dup(0),'r',0)
+                # Next, check stdin/out    
+                if sys.__stdin__.closed:
+                    sys.__stdin__ = os.fdopen(os.dup(0),'r',0)
                     fixed_in_out_err = 1
-		    print >> sys.__stderr__,"""
+                    print >> sys.__stderr__,"""
 WARNING:
 sys.__stdin__ was closed!
 I've tried to reopen it, but bear in mind that things may not work normally
 from now.  In particular, readline support may have broken.
 """		    
-		if sys.__stdout__.closed:
-		    sys.__stdout__ = os.fdopen(os.dup(1),'w',0)
+                if sys.__stdout__.closed:
+                    sys.__stdout__ = os.fdopen(os.dup(1),'w',0)
                     fixed_in_out_err = 1
-		    print >> sys.__stderr__,"""
+                    print >> sys.__stderr__,"""
 WARNING:
 sys.__stdout__ was closed!
 I've tried to reopen it, but bear in mind that things may not work normally
 from now.  In particular, readline support may have broken.
 """		    
 
-		# Now, check mismatch of objects
+                # Now, check mismatch of objects
                 if sys.stdin is not sys.__stdin__:
                     sys.stdin = sys.__stdin__
                     fixed_in_out_err = 1
@@ -1012,8 +1014,8 @@ There seemed to be a problem with your sys.stderr.
 	    # somewhat gracefully nonetheless.
 
             sys.stdout = os.fdopen(os.dup(1), 'w',0)
-	    Term.out = os.fdopen(os.dup(Term.out_fileno), 'w',0)
-	    return ''
+            Term.cout = os.fdopen(os.dup(Term.cout_fileno), 'w',0)
+            return ''
         
     def split_user_input(self,line):
         """Split user input into pre-char, function part and rest."""
@@ -1128,14 +1130,14 @@ There seemed to be a problem with your sys.stderr.
         # contain valid python, the readline cache contains anything that was
         # input exactly as it was entered at the prompt.
 
-	if line.startswith('!!'):
-	    return self.handle_magic('@sx '+line[2:],continue_prompt)
-	else:
-	    self.log('#'+line)        # comment out into log/_ih
-	    self.update_cache(line)   # readline cache gets normal line
-	    line = line.strip()[1:]
-	    os.system(line)
-	    return ''     # MUST return something, at least an empty string
+        if line.startswith('!!'):
+            return self.handle_magic('@sx '+line[2:],continue_prompt)
+        else:
+            self.log('#'+line)        # comment out into log/_ih
+            self.update_cache(line)   # readline cache gets normal line
+            line = line.strip()[1:]
+            os.system(line)
+            return ''     # MUST return something, at least an empty string
 
     def handle_emacs(self,line,continue_prompt):
         """Handle input lines marked by python-mode."""
@@ -1218,7 +1220,7 @@ There seemed to be a problem with your sys.stderr.
                 return iFun + ' '+theRest+'\n'
             newcmd = iFun.rstrip() + '(' + theRest + ')\n'
 
-        print >>Term.out, self.outputcache.prompt1.auto_rewrite() + newcmd,
+        print >>Term.cout, self.outputcache.prompt1.auto_rewrite() + newcmd,
         # log what is now valid Python, not the actual user input (without end \n)
         self.log(newcmd.strip())
         return newcmd
