@@ -97,35 +97,18 @@ def multiple_replace(dict, text):
 # reasonable directory name will do, we just want the $HOME -> '~' operation
 # to become a no-op.  We pre-compute $HOME here so it's not done on every
 # prompt call.
+
+# FIXME:
+
+# - This should be turned into a class which does proper namespace management,
+# since the prompt specials need to be evaluated in a certain namespace.
+# Currently it's just globals, which need to be managed manually by code
+# below.
+
+# - I also need to split up the color schemes from the prompt specials
+# somehow.  I don't have a clean design for that quite yet.
+
 HOME = os.environ.get("HOME","//////:::::ZZZZZ,,,~~~")
-
-def cwd_filt(depth):
-    """Return the last depth elements of the current working directory.
-
-    $HOME is always replaced with '~'.
-    If depth==0, the full path is returned."""
-    
-    cwd = os.getcwd().replace(HOME,"~")
-    out = os.sep.join(cwd.split(os.sep)[-depth:])
-    if out:
-        return out
-    else:
-        return os.sep
-
-def cwd_filt2(depth):
-    """Return the last depth elements of the current working directory.
-
-    $HOME is always replaced with '~'.
-    If depth==0, the full path is returned."""
-    
-    cwd = os.getcwd().replace(HOME,"~").split(os.sep)
-    if '~' in cwd and len(cwd) == depth+1:
-        depth += 1
-    out = os.sep.join(cwd[-depth:])
-    if out:
-        return out
-    else:
-        return os.sep
 
 # We precompute a few more strings here for the prompt_specials, which are
 # fixed once ipython starts.  This reduces the runtime overhead of computing
@@ -152,19 +135,19 @@ prompt_specials_color = {
     # These X<N> are an extension to the normal bash prompts.  They return
     # N terms of the path, after replacing $HOME with '~'
     '\\X0': '${os.getcwd().replace("%s","~")}' % HOME,
-    '\\X1': '${cwd_filt(1)}',
-    '\\X2': '${cwd_filt(2)}',
-    '\\X3': '${cwd_filt(3)}',
-    '\\X4': '${cwd_filt(4)}',
-    '\\X5': '${cwd_filt(5)}',
+    '\\X1': '${self.cwd_filt(1)}',
+    '\\X2': '${self.cwd_filt(2)}',
+    '\\X3': '${self.cwd_filt(3)}',
+    '\\X4': '${self.cwd_filt(4)}',
+    '\\X5': '${self.cwd_filt(5)}',
     # Y<N> are similar to X<N>, but they show '~' if it's the directory
     # N+1 in the list.  Somewhat like %cN in tcsh.
-    '\\Y0': '${cwd_filt2(0)}',
-    '\\Y1': '${cwd_filt2(1)}',
-    '\\Y2': '${cwd_filt2(2)}',
-    '\\Y3': '${cwd_filt2(3)}',
-    '\\Y4': '${cwd_filt2(4)}',
-    '\\Y5': '${cwd_filt2(5)}',
+    '\\Y0': '${self.cwd_filt2(0)}',
+    '\\Y1': '${self.cwd_filt2(1)}',
+    '\\Y2': '${self.cwd_filt2(2)}',
+    '\\Y3': '${self.cwd_filt2(3)}',
+    '\\Y4': '${self.cwd_filt2(4)}',
+    '\\Y5': '${self.cwd_filt2(5)}',
     # Hostname up to first .
     '\\h': HOSTNAME_SHORT,
     # Full hostname
@@ -194,11 +177,12 @@ prompt_specials_nocolor['\\#'] = '${self.cache.prompt_count}'
 # with a color name which may begin with a letter used by any other of the
 # allowed specials.  This of course means that \\C will never be allowed for
 # anything else.
-for _color in dir(ColorANSI.InputTermColors):
+input_colors = ColorANSI.InputTermColors
+for _color in dir(input_colors):
     if _color[0] != '_':
-        prompt_specials_color['\\C_%s' % _color] = \
-                                       getattr(ColorANSI.InputTermColors,_color)
-        prompt_specials_nocolor['\\C_%s' % _color] = ''
+        c_name = '\\C_'+_color
+        prompt_specials_color[c_name] = getattr(input_colors,_color)
+        prompt_specials_nocolor[c_name] = ''
 
 # we default to no color for safety.  Note that prompt_specials is a global
 # variable used by all prompt objects.
@@ -227,13 +211,6 @@ class BasePrompt:
         self.cache = cache
         self.sep = sep
         
-        # The namespace where the prompts get resolved is the global one for
-        # now, where we actually defined all the specials.  By having this as
-        # a controlled dict, we can later move it into a cleaner place.  Note
-        # that set_p_str() below will need these to have been set.
-        self.prompt_ns = globals()
-        self.prompt_ns['self'] = self
-
         # regexp to count the number of spaces at the end of a prompt
         # expression, useful for prompt auto-rewriting
         self.rspace = re.compile(r'(\s*)$')
@@ -250,13 +227,20 @@ class BasePrompt:
         This must be called every time the color settings change, because the
         prompt_specials global may have changed."""
 
+        import os,time  # needed in locals for prompt string handling
+        loc = locals()
         self.p_str = ItplNS('%s%s%s' %
-                            ('$self.sep${self.col_p}',
+                            ('${self.sep}${self.col_p}',
                              multiple_replace(prompt_specials, self.p_template),
-                             '$self.col_norm'),self.cache.user_ns,self.prompt_ns)
+                             '${self.col_norm}'),self.cache.user_ns,loc)
+        
         self.p_str_nocolor = ItplNS(multiple_replace(prompt_specials_nocolor,
                                                      self.p_template),
-                                    self.cache.user_ns,self.prompt_ns)
+                                    self.cache.user_ns,loc)
+
+    def write(self,msg):  # dbg
+        sys.stdout.write(msg)
+        return ''
 
     def __str__(self):
         """Return a string form of the prompt.
@@ -275,6 +259,36 @@ class BasePrompt:
             return format % out_str
         else:
             return out_str
+
+    # these path filters are put in as methods so that we can control the
+    # namespace where the prompt strings get evaluated
+    def cwd_filt(self,depth):
+        """Return the last depth elements of the current working directory.
+
+        $HOME is always replaced with '~'.
+        If depth==0, the full path is returned."""
+
+        cwd = os.getcwd().replace(HOME,"~")
+        out = os.sep.join(cwd.split(os.sep)[-depth:])
+        if out:
+            return out
+        else:
+            return os.sep
+
+    def cwd_filt2(self,depth):
+        """Return the last depth elements of the current working directory.
+
+        $HOME is always replaced with '~'.
+        If depth==0, the full path is returned."""
+
+        cwd = os.getcwd().replace(HOME,"~").split(os.sep)
+        if '~' in cwd and len(cwd) == depth+1:
+            depth += 1
+        out = os.sep.join(cwd[-depth:])
+        if out:
+            return out
+        else:
+            return os.sep
 
 class Prompt1(BasePrompt):
     """Input interactive prompt similar to Mathematica's."""
@@ -329,23 +343,20 @@ class Prompt2(BasePrompt):
     def __init__(self,cache,prompt='   .\\D.: ',pad_left=True):
         self.cache = cache
         self.p_template = prompt
-
-        # The namespace where the prompts get resolved.
-        self.prompt_ns = globals()
-        self.prompt_ns['self'] = self
-
         self.pad_left = pad_left
         self.set_p_str()
 
     def set_p_str(self):
+        import os,time  # needed in locals for prompt string handling
+        loc = locals()
         self.p_str = ItplNS('%s%s%s ' %
                             ('${self.col_p2}',
                              multiple_replace(prompt_specials, self.p_template),
                              '$self.col_norm'),
-                            self.cache.user_ns,self.prompt_ns)
+                            self.cache.user_ns,loc)
         self.p_str_nocolor = ItplNS(multiple_replace(prompt_specials_nocolor,
                                                      self.p_template),
-                                    self.cache.user_ns,self.prompt_ns)
+                                    self.cache.user_ns,loc)
 
     def set_colors(self):
         self.set_p_str()
