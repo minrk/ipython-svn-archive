@@ -318,8 +318,13 @@ class Inspector:
         # Constructor docstring for classes
         if obj_type is types.ClassType:
             # reconstruct the function definition and print it:
-            init_def = self.__getdef(obj.__init__,oname)
-            init_ds  = getdoc(obj.__init__)
+            try:
+                obj_init =  obj.__init__
+            except AttributeError:
+                init_def = init_ds = None
+            else:
+                init_def = self.__getdef(obj_init,oname)
+                init_ds  = getdoc(obj_init)
 
             if init_def or init_ds:
                 out.writeln(header('\nConstructor information:'))
