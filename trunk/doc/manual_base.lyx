@@ -701,17 +701,66 @@ Under Windows
 While you can use IPython under Windows with only a stock Python installation,
  there are two sets of extensions which will make the whole experience a
  lot more pleasant.
- One of them (readline) is almost a requirement, since IPython will complain
- in its absence (though it will function).
-\layout Subsubsection
-
-Mark Hammond's PythonWin
+ They are almost a requirement, since IPython will complain in their absence
+ (though it will function).
 \layout Standard
 
-For the automatic installer to work you need Mark Hammond's PythonWin extensions
- (and they're great for anything Windows-related anyway, so you might as
- well get them).
- If you don't have them, get them at:
+In short, for optimal performance under Windows you need:
+\layout Enumerate
+
+
+\family typewriter 
+PyWin32
+\family default 
+ from 
+\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mhammond}
+
+\end_inset 
+
+
+\layout Enumerate
+
+
+\family typewriter 
+CTypes
+\family default 
+ from 
+\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/theller/ctypes}
+
+\end_inset 
+
+
+\layout Enumerate
+
+
+\family typewriter 
+Readline
+\family default 
+ for Windows from 
+\begin_inset LatexCommand \htmlurl{http://sourceforge.net/projects/uncpythontools}
+
+\end_inset 
+
+
+\layout Subsubsection
+
+Mark Hammond's 
+\family typewriter 
+PyWin32
+\layout Standard
+
+For the automatic installer to work you need Mark Hammond's 
+\family typewriter 
+PyWin32
+\family default 
+ (formerly 
+\family typewriter 
+PythonWin
+\family default 
+) extensions.
+ They are great for anything Windows-related anyway, so you might as well
+ get them.
+ If you don't have them, they are located at:
 \layout Standard
 
 
@@ -723,6 +772,21 @@ For the automatic installer to work you need Mark Hammond's PythonWin extensions
 \layout Subsubsection
 
 Gary Bishop's readline and color support for Windows
+\layout Standard
+
+
+\series bold 
+Note:
+\series default 
+ this 
+\emph on 
+needs
+\emph default 
+ 
+\family typewriter 
+PyWin32
+\family default 
+ to function correctly.
 \layout Standard
 
 Some of IPython's more powerful features are:
@@ -752,7 +816,7 @@ You can find Gary's tools at
 \family typewriter 
 ctypes
 \family default 
- library, available at 
+ library by Thomas Heller, available at 
 \begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/theller/ctypes}
 
 \end_inset 
@@ -761,7 +825,10 @@ ctypes
 \layout Standard
 
 Under MS\SpecialChar ~
-Windows, IPython will complain if it can not find this readline
+Windows, IPython will complain if it can not find this 
+\family typewriter 
+readline
+\family default 
  library at startup and any time the 
 \family typewriter 
 @colors
