@@ -111,7 +111,7 @@ def run(wait=0):
 
     print """Done.
 
-I created the directory C:\\Program Files\\IPython. There you will find the
+I created the directory %s. There you will find the
 IPython startup script and manuals.
 
 An IPython menu was also created in your Start Menu, with entries for
@@ -120,7 +120,7 @@ IPython itself and the manual in HTML and PDF formats.
 For reading PDF documents you need the freely available Adobe Acrobat
 Reader. If you don't have it, you can download it from:
 http://www.adobe.com/products/acrobat/readstep2.html
-"""
+""" % ip_dir
 
     if wait:
         print "Finished with IPython installation. Press Enter to exit this installer.",
