@@ -1381,7 +1381,7 @@ There seemed to be a problem with your sys.stderr.
                 iFun,theRest = line,''
         else:
             pre,iFun,theRest = lsplit.groups()
-        print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest) # dbg
+        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest) # dbg
         return pre,iFun.strip(),theRest
 
     def _prefilter(self, line, continue_prompt):
