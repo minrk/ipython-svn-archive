@@ -65,19 +65,26 @@ instead of -option) to turn the feature off.
 
  -help: print this help and exit.
 
- -gthread, -mpthread: these are special options, only one of which can be
- given, and which can ONLY be given as the FIRST option passed to IPython
- (they will have no effect in any other position).
+ -gthread, -wthread, -mpthread: These are special options, only one of which
+ can be given, and which can ONLY be given as the FIRST option passed to
+ IPython (they will have no effect in any other position).  They provide
+ threading support for the GTK and WXPython toolkits, and for the matplotlib
+ library.  The threading option must be given first because it will determine
+ internally how IPython itself is initialized, before any of the other regular
+ options are processed.
 
  If -gthread is given, IPython starts running a separate thread for GTK
  operation, so that pyGTK-based programs can open GUIs without blocking
- IPython.
+ IPython.  Similarly, -wthread instantiates IPython with threading support for
+ the WXPython toolkit.
 
- The -mpthread option adds special support for the matplotlib library
- (http://matplotlib.sourceforge.net), allowing interactive usage of the GTK
- and WX backends.  This also modifies the @run command to correctly execute
- (without blocking) any matplotlib-based script which calls show() at the end.
-  
+ The -pylab option adds special support for the matplotlib library
+ (http://matplotlib.sourceforge.net), allowing interactive usage of any of its
+ backends as defined in the user's .matplotlibrc file.  It automatically
+ activates GTK or WX threading for IPyhton if the choice of matplotlib backend
+ requires it.  It also modifies the @run command to correctly execute (without
+ blocking) any matplotlib-based script which calls show() at the end.
+
  -no|autocall: make IPython automatically call any callable object even if
  you didn't type explicit parentheses. For example, 'str 43' becomes 'str(43)'
  automatically.

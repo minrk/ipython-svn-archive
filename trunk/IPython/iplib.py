@@ -322,7 +322,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
     """An enhanced console for Python."""
 
     def __init__(self,name,usage=None,rc=Struct(opts=None,args=None),
-                 user_ns = None):
+                 user_ns = None,banner2=''):
 
         # Put a reference to self in builtins so that any form of embedded or
         # imported code can test for being inside IPython.
@@ -518,6 +518,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.CACHELENGTH = 5000  # this is cheap, it's just text
         self.BANNER = itpl("Python $sys.version on $sys.platform\n"
         "$sys.copyright\nIPP\nType ? for more help\n")
+        self.banner2 = banner2
         # TraceBack handlers:
         # Need two, one for syntax errors and one for other exceptions.
         # plain/color
@@ -923,7 +924,7 @@ want to merge them back into the new files.""" % locals()
         self.name_space_init()
         if self.rc.c:  # Emulate Python's -c option
             self.exec_init_cmd()
-        self.interact(self.BANNER)
+        self.interact(self.BANNER+self.banner2)
 
     def exec_init_cmd(self):
         """Execute a command given at the command line.

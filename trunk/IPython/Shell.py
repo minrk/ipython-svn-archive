@@ -4,7 +4,7 @@
 $Id$"""
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando PÃ©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -25,6 +25,7 @@ __license__ = Release.license
 
 # Code begins
 import __main__
+import __builtin__
 import sys
 import os
 import code
@@ -32,7 +33,7 @@ import threading
 
 import IPython
 from ipmaker import make_IPython
-from genutils import qw,Term,warn
+from genutils import Term,warn,error
 from Struct import Struct
 from Magic import Magic
 import ultraTB
@@ -253,10 +254,10 @@ class MTInteractiveShell(IPython.iplib.InteractiveShell):
     # from the pygtk mailing list, to avoid lockups with system calls.
 
     def __init__(self,name,usage=None,rc=Struct(opts=None,args=None),
-                 user_ns = None, **kw):
+                 user_ns = None, banner2='',**kw):
         """Similar to the normal InteractiveShell, but with threading control"""
         
-        IPython.iplib.InteractiveShell.__init__(self,name,usage,rc,user_ns)
+        IPython.iplib.InteractiveShell.__init__(self,name,usage,rc,user_ns,banner2)
 
         # Object variable to store code object waiting execution.  No need to
         # use a Queue here, since it's a single item which gets cleared once run.
@@ -348,19 +349,30 @@ class MatplotlibShell(MTInteractiveShell):
         import matplotlib
         matplotlib.interactive(True)
 
-        # we'll handle the mainloop, tell show not to, for the user's backend of
-        # choice
-        # makes the backend choice for you
+        # we'll handle the mainloop, tell show not to
         from matplotlib.backends import show 
         show._needmain = False
 
         # This must be imported last in the matplotlib series, after
         # backend/interactivity choices have been made
-        import matplotlib.matlab
+        import matplotlib.matlab as matlab
         self.matplotlib = matplotlib
 
+        # Build a user namespace initialized with matplotlib/matlab features.
+        user_ns = {'__name__':'__main__',
+                   '__builtins__' : __builtin__,
+                   name:self,
+                   }
+        exec "import matplotlib.matlab as matlab" in user_ns
+        exec "from matplotlib.matlab import *" in user_ns
+
+        # Add matplotlib info to banner
+        b2= """\nWelcome to pylab, a matplotlib-based Python environment.
+help(matlab)   -> help on matlab compatible commands from matplotlib.
+help(plotting) -> help on plotting commands.
+"""
         # Initialize parent class
-        MTInteractiveShell.__init__(self,name,usage,rc,user_ns,**kw)
+        MTInteractiveShell.__init__(self,name,usage,rc,user_ns,banner2=b2,**kw)
 
     def mplot_exec(self,fname,*where):
         """Execute a matplotlib script."""
@@ -377,9 +389,11 @@ class MatplotlibShell(MTInteractiveShell):
         """Modified @run for Matplotlib"""
         Magic.magic_run(self,parameter_s,runner=self.mplot_exec)
 
-
+#-----------------------------------------------------------------------------
 # The IPShell* classes below are the ones meant to be run by external code as
-# IPython instances.
+# IPython instances.  Note that unless a specific threading strategy is
+# desired, the factory function start() below should be used instead (it
+# selects the proper threaded class).
 
 class IPShellGTK(threading.Thread):
     """Run a gtk mainloop() in a separate thread.
@@ -392,19 +406,19 @@ class IPShellGTK(threading.Thread):
 
     def __init__(self,argv=None,user_ns=None,debug=0,
                  shell_class=MTInteractiveShell):
-        threading.Thread.__init__(self)
 
         import pygtk
         pygtk.require("2.0")
         import gtk
-        self.gtk = gtk
 
+        self.gtk = gtk
         self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
                                shell_class=shell_class,
                                on_kill=[self.gtk.mainquit])
+        threading.Thread.__init__(self)
 
     def run(self):
-        self.IP.interact()
+        self.IP.mainloop()
         self.IP.kill()
 
     def mainloop(self):
@@ -429,10 +443,11 @@ class IPShellWX(threading.Thread):
 
     def __init__(self,argv=None,user_ns=None,debug=0,
                  shell_class=MTInteractiveShell):
-        threading.Thread.__init__(self)
+
         import wxPython.wx as wx
+
+        threading.Thread.__init__(self)
         self.wx = wx
-        def wxquit(*args): pass # mainquit for wx
         self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
                                shell_class=shell_class,
                                on_kill=[self.wxexit])
@@ -441,10 +456,10 @@ class IPShellWX(threading.Thread):
     def wxexit(self, *args):
         if self.app is not None:
             self.app.agent.timer.Stop()
-            # kill wx?
-            
+            self.app.ExitMainLoop()
+
     def run(self):
-        self.IP.interact()
+        self.IP.mainloop()
         self.IP.kill()
 
     def mainloop(self):
@@ -455,9 +470,9 @@ class IPShellWX(threading.Thread):
             wx = self.wx
             IP = self.IP
             def __init__(self, parent, interval):
+                style = self.wx.wxDEFAULT_FRAME_STYLE | self.wx.wxTINY_CAPTION_HORIZ
                 self.wx.wxMiniFrame.__init__(self, parent, -1, ' ', pos=(200, 200),
-                                             size=(100, 100),
-                                             style=self.wx.wxDEFAULT_FRAME_STYLE | self.wx.wxTINY_CAPTION_HORIZ)
+                                             size=(100, 100),style=style)
                 self.Show(False)
                 self.interval = interval
                 self.timerId = self.wx.wxNewId()                                
@@ -474,7 +489,6 @@ class IPShellWX(threading.Thread):
             wx = self.wx
             def OnInit(self):
                 'Create the main window and insert the custom frame'
-                print 'OnInit'
                 self.agent = TimerAgent(None, 100)
                 self.agent.Show(self.wx.false)
                 self.agent.StartWork()
@@ -486,42 +500,66 @@ class IPShellWX(threading.Thread):
         self.join()
 
 class IPShellMatplotlibGTK(IPShellGTK):
-    """Simple derivative of IPShellGTK with MatplotlibShell as the internal
-    shell.
+    """Subclass IPShellGTK with MatplotlibShell as the internal shell.
 
-    Having this on a separate class allows simpler external driver code."""
+    Having this on a separate class simplifies the external driver code."""
     
     def __init__(self,argv=None,user_ns=None,debug=0):
-        IPShellGTK.__init__(self,argv,user_ns,debug,
-                            shell_class=MatplotlibShell)
+        IPShellGTK.__init__(self,argv,user_ns,debug,shell_class=MatplotlibShell)
 
 class IPShellMatplotlibWX(IPShellWX):
-    """Simple derivative of IPShellWX with MatplotlibShell as the internal
-    shell.
+    """Subclass IPShellWX with MatplotlibShell as the internal shell.
 
-    Having this on a separate class allows simpler external driver code."""
+    Having this on a separate class simplifies the external driver code."""
     
     def __init__(self,argv=None,user_ns=None,debug=0):
-        IPShellWX.__init__(self,argv,user_ns,debug,
-                            shell_class=MatplotlibShell)
+        IPShellWX.__init__(self,argv,user_ns,debug,shell_class=MatplotlibShell)
 
-def matplotlib_shell():
+#-----------------------------------------------------------------------------
+# Factory functions to actually start the proper thread-aware shell
+def _matplotlib_shell_class():
     """Factory function to handle shell class selection for matplotlib.
 
     The proper shell class to use depends on the matplotlib backend, since
     each backend requires a different threading strategy."""
 
-    import matplotlib
-
-    backend = matplotlib.rcParams['backend']
-    if backend.startswith('WX'):
-        name,shell = 'WX shell',IPShellMatplotlibWX
-    elif backend.startswith('GTK'):
-        name,shell = 'WX shell',IPShellMatplotlibGTK
+    try:
+        import matplotlib
+    except ImportError:
+        error('matplotlib could NOT be imported!  Starting normal IPython.')
+        shell = IPShell
     else:
-        name,shell = 'IPShell',IPShell
-
+        backend = matplotlib.rcParams['backend']
+        if backend.startswith('GTK'):
+            shell = IPShellMatplotlibGTK
+        elif backend.startswith('WX'):
+            shell = IPShellMatplotlibWX
+        else:
+            shell = IPShell
     print 'Using %s with the %s backend.' % (shell,backend) # dbg
     return shell
 
-#************************ end of file <Shell.py> ***************************
+# This is the one which should be called by external code.
+def start():
+    """Return a running shell instance, dealing with threading options.
+
+    This is a factory function which will instantiate the proper IPython shell
+    based on the user's threading choice.  Such a selector is needed because
+    different GUI toolkits require different thread handling details."""
+    
+    # Simple sys.argv hack to extract the threading option.
+    if len(sys.argv) > 1:
+        arg1 = sys.argv[1]
+        if arg1.endswith('-gthread'):
+            shell = IPShellGTK
+        elif arg1.endswith('-wthread'):
+            shell = IPShellWX
+        elif arg1.endswith('-pylab'):
+            shell = _matplotlib_shell_class()
+        else:
+            shell = IPShell
+    else:
+        shell = IPShell
+    return shell()
+
+#************************ End of file <Shell.py> ***************************

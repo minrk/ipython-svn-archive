@@ -119,7 +119,6 @@ def make_IPython(argv=None,user_ns=None,debug=0,rc_override=None,
         import CrashHandler
         sys.excepthook = CrashHandler.CrashHandler(IP)
 
-
     IP.BANNER_PARTS = ['Python %s\n'
                          'Type "copyright", "credits" or "license" '
                          'for more information.\n'
@@ -172,7 +171,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                     'logfile|lf=s logplay|lp=s profile|p=s '
                     'readline! readline_omit__names! '
                     'rcfile=s separate_in|si=s separate_out|so=s '
-                    'separate_out2|so2=s gthread! mpthread! xmode=s '
+                    'separate_out2|so2=s xmode=s '
                     'magic_docstrings system_verbose! '
                     'multi_line_specials!')
 
@@ -180,7 +179,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     
     # The "ignore" option is a kludge so that Emacs buffers don't crash, since
     # the 'C-c !' command in emacs automatically appends a -i option at the end.
-    cmdline_only = 'help ignore|i ipythondir=s Version upgrade'
+    cmdline_only = ('help ignore|i ipythondir=s Version upgrade '
+                    'gthread! wthread! pylab! ')
 
     # Build the actual name list to be used by DPyGetOpt
     opts_names = qw(cmdline_opts) + qw(cmdline_only)
@@ -225,7 +225,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       separate_out2 = '',
                       system_verbose = 0,
                       gthread = 0,
-                      mpthread = 0,
+                      wthread = 0,
+                      pylab = 0,
                       upgrade = 0,
                       Version = 0,
                       xmode = 'Verbose',

@@ -28,8 +28,8 @@ __license__ = 'LGPL'
 __date__   = 'Tue Dec 11 00:27:58 MST 2001'
 
 __all__ = """
-gnuplot_exec sum_flat mean_flat binary_repr zeros_like amap 
-rms_flat frange diagonal_matrix fromfunction identity 
+sum_flat mean_flat base_repr binary_repr zeros_like amap 
+rms_flat frange diagonal_matrix fromfunction_kw identity log2 ispower2
 inf infty Infinity exp_safe spike spike_odd norm l1norm l2norm 
 Numeric
 """.split()
@@ -264,6 +264,7 @@ def ispower2(n):
     """Returns the log base 2 of n if n is a power of 2, zero otherwise.
 
     Note the potential ambiguity if n==1: 2**0==1, interpret accordingly."""
+
     bin_n = binary_repr(n)[1:]
     if '1' in bin_n:
         return 0
@@ -282,6 +283,9 @@ def fromfunction_kw(function, dimensions, **kwargs):
     keywords it will recieve."""
 
     return function(tuple(indices(dimensions)),**kwargs)
+
+#-----------------------------------------------------------------------------
+# DEPRECATED CODE
 
 def spike(x,x0=0,delta=1):
     """Return exp(-((x-x0)/delta)**2), a simple spike. """
@@ -307,20 +311,4 @@ def spike_odd(x,x0=0,delta=1,norm = math.sqrt(2.0*math.e)):
     else:
         xnew = x0-x
         return (norm/delta)*xnew*spike(xnew,delta=delta)
-
-#-----------------------------------------------------------------------------
-# DEPRECATED CODE
-
-# gnuplot can already take multi-line strings, so this was unnecessary!
-def gnuplot_exec(gnuplot,string_of_commands,verbose=0):
-    """Have gnuplot execute a string of commands, one per line.
-
-    DEPRECATED."""
-
-    if verbose:
-        print 'Calling gnuplot to execute:'
-    for cmd in string_of_commands.splitlines():
-        if verbose:
-            print cmd
-        gnuplot(cmd)
 #**************************** end file <numutils.py> ************************
