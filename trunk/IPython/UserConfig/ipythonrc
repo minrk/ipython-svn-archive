@@ -339,6 +339,12 @@ readline_parse_and_bind "\C-s": forward-search-history
 readline_parse_and_bind "\C-p": history-search-backward
 readline_parse_and_bind "\C-n": history-search-forward
 
+# I also like to have the same functionality on the plain arrow keys. If you'd
+# rather have the arrows use all the history (and not just match what you've
+# typed so far), comment out or delete the next two lines.
+readline_parse_and_bind "\e[A": history-search-backward
+readline_parse_and_bind "\e[B": history-search-forward
+
 # (ii) readline_remove_delims: a string of characters to be removed from the
 # default word-delimiters list used by readline, so that completions may be
 # performed on strings which contain them.
