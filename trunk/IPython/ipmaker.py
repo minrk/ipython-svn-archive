@@ -143,11 +143,11 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
 
     # Make sure there's a space before each end of line (they get auto-joined!)
     cmdline_opts = ('autocall! autoindent! automagic! banner! cache_size|cs=i '
-                    'classic|cl color_info! confirm_exit! '
+                    'c=s classic|cl color_info! colors=s confirm_exit! '
                     'debug! deep_reload! editor=s log|l messages! nosep pdb! '
                     'pprint! prompt_in1|pi1=s prompt_in2|pi2=s prompt_out|po=s '
                     'quick screen_length|sl=i '
-                    'colors|c=s logfile|lf=s logplay|lp=s profile|p=s '
+                    'logfile|lf=s logplay|lp=s profile|p=s '
                     'readline! readline_omit__names! '
                     'rcfile=s separate_in|si=s separate_out|so=s '
                     'separate_out2|so2=s xmode=s '
@@ -169,6 +169,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       automagic = 1,
                       banner = 1,
                       cache_size = 1000,
+                      c = '',
                       classic = 0,
                       colors = 'NoColor',
                       color_info = 0,
@@ -177,6 +178,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       deep_reload = 0,
                       editor = '0',
                       help = 0,
+                      ignore = 0,
                       ipythondir = ipythondir,
                       log = 0,
                       logfile = '',
@@ -638,7 +640,6 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     # Initialize cache, set in/out prompts and printing system
     IP.outputcache = CachedOutput(IP.rc.cache_size,
                                   IP.rc.pprint,
-                                  colors = IP.rc.colors,
                                   input_sep = IP.rc.separate_in,
                                   output_sep = IP.rc.separate_out,
                                   output_sep2 = IP.rc.separate_out2,
@@ -647,7 +648,9 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                                   ps_out = IP.rc.prompt_out,
                                   user_ns = IP.user_ns,
                                   input_hist = IP.input_hist)
-    
+
+    # Set user colors (don't do it in the constructor above so that it doesn't
+    # crash if colors option is invalid)
     IP.magic_colors(IP.rc.colors)
     
     # user may have over-ridden the default print hook:
@@ -669,6 +672,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     IP.do_full_cache = IP.outputcache.do_full_cache
     
     # configure startup banner
+    if IP.rc.c:  # regular python doesn't print the banner with -c
+        IP.rc.banner = 0
     if IP.rc.banner:
         IP.BANNER = '\n'.join(IP.BANNER_PARTS)
     else:
