@@ -3,9 +3,7 @@
 
 We define a special input line filter to allow typing lines which begin with
 '~', '/' or '.'. If one of those strings is encountered, it is automatically
-executed.
-
-All other input is processed normally."""
+executed."""
 
 #*****************************************************************************
 #       Copyright (C) 2001 Fernando Perez. <fperez@colorado.edu>
@@ -56,6 +54,8 @@ def prefilter_shell(self,line,continuation):
 # Rebind this to be the new IPython prefilter:
 from IPython.iplib import InteractiveShell
 InteractiveShell.prefilter = prefilter_shell
+# Clean up the namespace.
+del InteractiveShell,prefilter_shell
 
 # Provide pysh and further shell-oriented services
 import os,sys,shutil
@@ -65,8 +65,8 @@ from IPython.genutils import system,shell,getoutput,getoutputerror
 sout = getoutput
 lout = lambda cmd: getoutput(cmd,split=1)
 
+# Empty function, meant as a docstring holder so help(pysh) works.
 def pysh():
-
     """Pysh is a set of modules and extensions to IPython which make shell-like
     usage with Python syntax more convenient.  Keep in mind that pysh is NOT a
     full-blown shell, so don't try to make it your /etc/passwd entry!
@@ -135,10 +135,22 @@ def pysh():
         file scopes.py     13 scopes.py
         file strings.py      4 strings.py
 
+    Note that you may need to protect your variables with braces if you want
+    to append strings to their names.  To copy all files in alist to .bak
+    extensions, you must use:
+        fperez[~/test]|12> for f in alist:
+                      |..>     cp $f ${f}.bak
+
+    If you try using $f.bak, you'll get an AttributeError exception saying
+    that your string object doesn't have a .bak attribute.  This is because
+    the $ expansion mechanism allows you to expand full Python expressions:
+        fperez[~/test]|13> echo "sys.platform is: $sys.platform"
+        sys.platform is: linux2
+
     IPython's input history handling is still active, which allows you to
     rerun a single block of multi-line input by simply using exec:    
-        fperez[~/test]|12> $$alist = ls *.eps
-        fperez[~/test]|13> exec _i11
+        fperez[~/test]|14> $$alist = ls *.eps
+        fperez[~/test]|15> exec _i11
         file image2.eps    921 image2.eps
         file image.eps    921 image.eps
 
@@ -165,7 +177,7 @@ def pysh():
     DIRECTORY MANAGEMENT
     --------------------
     Since each command passed by pysh to the underlying system is executed in
-    a shell which exits immediately, you can NOT use !cd to navigate the
+    a subshell which exits immediately, you can NOT use !cd to navigate the
     filesystem.
 
     Pysh provides its own builtin '@cd' magic command to move in the
@@ -174,8 +186,49 @@ def pysh():
     switching to any of them.  Type 'cd?' for more details.
 
     @pushd, @popd and @dirs are provided for directory stack handling.
+
+    PROMPT CUSTOMIZATION
+    --------------------
+    
+    The supplied ipythonrc-pysh profile comes with an example of a very
+    colored and detailed prompt, mainly to serve as an illustration.  The
+    valid escape sequences, besides color names, are:
+
+        \\#  - Prompt number.
+        \\D  - Dots, as many as there are digits in \\# (so they align).
+        \\w  - Current working directory (cwd).
+        \\W  - Basename of current working directory.
+        \\XN - Where N=0..5. N terms of the cwd, with $HOME written as ~.
+        \\YN - Where N=0..5. Like XN, but if ~ is term N+1 it's also shown.
+        \\u  - Username.
+        \\H  - Full hostname.
+        \\h  - Hostname up to first '.'
+        \\$  - Root symbol ($ or #).
+        \\v  - IPython release version.
+        \\n  - Newline.
+        \\r  - Carriage return.
+        \\\\ - An explicitly escaped '\\'.
+
+    You can configure your prompt colors using any ANSI color escape.  Each
+    color escape sets the color for any subsequent text, until another escape
+    comes in and changes things.  The valid color escapes are:
+
+        \\C_Black
+        \\C_Blue
+        \\C_Brown
+        \\C_Cyan
+        \\C_DarkGray
+        \\C_Green
+        \\C_LightBlue
+        \\C_LightCyan
+        \\C_LightGray
+        \\C_LightGreen
+        \\C_LightPurple
+        \\C_LightRed
+        \\C_Purple
+        \\C_Red
+        \\C_White
+        \\C_Yellow
+        \\C_Normal - Stop coloring, defaults to your terminal settings.
     """
     pass
-
-# Clean up the namespace.
-del InteractiveShell,prefilter_shell
