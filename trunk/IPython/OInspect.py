@@ -104,13 +104,16 @@ class Inspector:
 
     def __getdef(self,obj,oname=''):
         """Return the definition header for any callable object."""
-        return oname + inspect.formatargspec(*self.__getargspec(obj))
 
+        # We don't trap any inspect exceptions here, it's the caller's role to
+        # handle those.  In fact, caller code may use a generated exception to
+        # inform that definition headers aren't available.
+        return oname + inspect.formatargspec(*self.__getargspec(obj))
  
     def __head(self,h):
         """Return a header string with proper colors."""
         return '%s%s%s' % (self.color_table.active_colors.header,h,
-                          self.color_table.active_colors.normal)
+                           self.color_table.active_colors.normal)
 
     def set_active_scheme(self,scheme):
         self.color_table.set_active_scheme(scheme)
@@ -191,11 +194,11 @@ class Inspector:
         """Show the whole file where an object was defined."""
         try:
             sourcelines,lineno = inspect.getsourcelines(obj)
-        except 'ha':
+        except:
             self.noinfo('file',oname)
         else:
             # run contents of file through pager starting at line
-            # where the object is defined
+            # where the object is defined            
             page(self.format(open(inspect.getabsfile(obj)).read()),lineno)
         
     def pinfo(self,obj,oname='',ospace='',formatter = None, detail_level=0,
