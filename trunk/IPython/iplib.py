@@ -1451,8 +1451,9 @@ There seemed to be a problem with your sys.stderr.
         # interactive IPython session (via a magic, for example).
         self.resetbuffer()
         lines = lines.split('\n')
-        for lnum,line in enumerate(lines):
-            more = self.push((self.prefilter(line,lnum)))
+        more = 0
+        for line in lines:
+            more = self.push((self.prefilter(line,more)))
             if more is None:
                 # IPython's runsource returns None if there was an error
                 # compiling the code.  This allows us to stop processing right
@@ -1508,18 +1509,28 @@ There seemed to be a problem with your sys.stderr.
         self.code_to_run_src = source
         self.code_to_run = code
         # now actually execute the code object
-        self.runcode(code)
-        return False
+        if self.runcode(code) == 0:
+            return False
+        else:
+            return None
 
     def runcode(self,code_obj):
         """Execute a code object.
 
         When an exception occurs, self.showtraceback() is called to display a
-        traceback."""
+        traceback.
+
+        Return value: a flag indicating whether the code to be run completed
+        successfully:
+
+          - 0: successful execution.
+          - 1: an error occurred.
+        """
 
         # Set our own excepthook in case the user code tries to call it
         # directly, so that the IPython crash handler doesn't get triggered
         old_excepthook,sys.excepthook = sys.excepthook, self.excepthook
+        outflag = 1  # happens in more places, so it's easier as default
         try:
             try:
                 exec code_obj in self.locals
@@ -1536,11 +1547,13 @@ There seemed to be a problem with your sys.stderr.
         except:
             self.showtraceback()
         else:
+            outflag = 0
             if code.softspace(sys.stdout, 0):
                 print
         # Flush out code object which has been run (and source)
         self.code_to_run = None
         self.code_to_run_src = ''
+        return outflag
 
     def raw_input(self, prompt=""):
         """Write a prompt and read a line.
