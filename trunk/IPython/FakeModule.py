@@ -30,7 +30,10 @@ class FakeModule:
             self.__dict__ = adict
 
     def __getattr__(self,key):
-        return self.__dict__[key]
+        try:
+            return self.__dict__[key]
+        except KeyError, e:
+            raise AttributeError("FakeModule object has no attribute %s" % e)
 
     def __str__(self):
         return "<IPython.FakeModule instance>"
