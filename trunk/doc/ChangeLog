@@ -1,3 +1,17 @@
+2003-05-22  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/FlexCompleter.py (Completer.attr_matches): fixed to
+	return [] instead of None when nothing matches, also match to end
+	of line.  Patch by Gary Bishop.
+
+	* IPython/ipmaker.py (make_IPython): Added same sys.excepthook
+	protection as before, for files passed on the command line.  This
+	prevents the CrashHandler from kicking in if user files call into
+	sys.excepthook (such as PyQt and WxWindows have a nasty habit of
+	doing).  After a report by Kasper Souren <Kasper.Souren@ircam.fr>
+
+2003-05-20  *** Released version 0.4.0
+
 2003-05-20  Fernando Perez  <fperez@colorado.edu>
 
 	* setup.py: added support for manpages.  It's a bit hackish b/c of

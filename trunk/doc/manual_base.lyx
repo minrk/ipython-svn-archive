@@ -5746,4 +5746,13 @@ Bishop
 \family default 
  Bug reports, and patches to work around the exception handling idiosyncracies
  of WxPython.
+\layout List
+\labelwidthstring 00.00.0000
+
+Kasper\SpecialChar ~
+Souren 
+\family typewriter 
+<Kasper.Souren@ircam.fr>
+\family default 
+ Bug reports, ideas.
 \the_end
