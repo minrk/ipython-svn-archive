@@ -463,7 +463,8 @@ Some configuration files may have incorrect line endings.  This should not
 cause any problems during execution.  """ % (ipythondir,sys.exc_info()[1])
             wait()
         else:
-            for fname in glb('*'):
+            print 'FILES TO FIX',glb('ipythonrc*')
+            for fname in glb('ipythonrc*'):
                 try:
                     native_line_ends(fname,backup=0)
                 except IOError:
