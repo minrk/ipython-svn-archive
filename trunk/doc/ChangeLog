@@ -1,5 +1,7 @@
 2004-08-22  Fernando Perez  <fperez@colorado.edu>
 
+	* ipython.1: document threading options in manpage.
+
 	* scripts/ipython: Changed name of -thread option to -gthread,
 	since this is GTK specific.  I want to leave the door open for a
 	-wthread option for WX, which will most likely be necessary.  This

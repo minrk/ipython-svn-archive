@@ -2323,7 +2323,7 @@ If
 -gthread
 \family default 
  is given, IPython starts running a separate thread for GTK operation, so
- that pyGTK-based programs can open GUIs without blocking IPython's operation.
+ that pyGTK-based programs can open GUIs without blocking IPython.
 \newline 
 The 
 \family typewriter 

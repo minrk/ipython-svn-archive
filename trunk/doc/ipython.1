@@ -42,6 +42,22 @@ All options with a no| prepended can be specified in 'no' form
 .B \-h, \-\-help
 Show summary of options.
 .TP
+.B \-gthread, \-mpthread
+These are special options, only one of which can be given, and which can ONLY
+be given as the FIRST option passed to IPython (they will have no effect in
+any other position).
+.br
+.sp 1
+If -gthread is given, IPython starts running a separate thread for GTK
+operation, so that pyGTK-based programs can open GUIs without blocking
+IPython.
+.br
+.sp 1
+The -mpthread option adds special support for the matplotlib library
+(http://matplotlib.sourceforge.net), allowing interactive usage of the GTK and
+WX backends.  This also modifies the @run command to correctly execute any
+matplotlib-based script which calls show() at the end, without blocking.
+.TP
 .B \-no|automagic
 Make magic commands automatic (without needing their first character
 to be @).  Type @magic at the IPython prompt for more information.
