@@ -11,11 +11,9 @@
 # This is an example of a 'profile' file which includes a base file and adds
 # some customizaton for a particular purpose.
 
-# If this file is found in the executing directory or in the user's home
-# directory as .ipythonrc-math, it can be loaded by calling
-#  ipython -profile math
-# or just
-#  ipython -p math
+# If this file is found in the user's ~/.ipython directory as ipythonrc-math,
+# it can be loaded by calling passing the '-profile math' (or '-p math')
+# option to IPython.
 
 # This example is a light customization to have ipython have basic math functions
 # readily available, effectively making the python prompt a very capable scientific
