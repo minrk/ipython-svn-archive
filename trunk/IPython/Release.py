@@ -10,14 +10,14 @@ $Id$"""
 #       <n8gray@caltech.edu>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
-#  the file LICENSE.txt, distributed as part of this software.
+#  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
 # Name of the package for release purposes.  This is the name which labels
 # the tarballs and RPMs made by distutils, so it's best to lowercase it.
 name = 'ipython'
 
-version = '0.6.4.rc2'
+version = '0.6.4.rc3'
 
 description = "An enhanced interactive Python shell."
 

@@ -36,7 +36,7 @@ All other input is processed normally.
 #       Copyright (C) 2001-2004 Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
-#  the file LICENSE.txt, distributed as part of this software.
+#  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
 from IPython import Release
