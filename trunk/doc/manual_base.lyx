@@ -5916,4 +5916,14 @@ Holland
 <rhh@structurelabs.com>
 \family default 
  Bug reports and fixes to logging module.
+\layout List
+\labelwidthstring 00.00.0000
+
+Daniel\SpecialChar ~
+'Dang'\SpecialChar ~
+Griffith 
+\family typewriter 
+<pythondev-dang@lazytwinacres.net>
+\family default 
+ Fixes, enhancement suggestions for system shell use.
 \the_end

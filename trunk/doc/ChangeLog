@@ -1,3 +1,15 @@
+2004-04-03  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (Term): Standardized the names of
+	the Term class streams to cin/cout/cerr, following C++ naming
+	conventions (I can't use in/out/err because 'in' is not a valid
+	attribute name.
+
+	* IPython/iplib.py (InteractiveShell.interact): don't increment
+	the prompt if there's no user input.  By Daniel 'Dang' Griffith
+	<pythondev-dang@lazytwinacres.net>, after a suggestion from
+	Francois Pinard.
+
 2004-04-02  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/genutils.py (Stream.__init__): Modified to survive at
