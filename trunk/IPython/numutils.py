@@ -25,10 +25,11 @@ __version__= '0.1.1'
 __license__ = 'LGPL'
 __date__   = 'Tue Dec 11 00:27:58 MST 2001'
 
-from genutils import qw
-__all__ = qw('gnuplot_exec sum_flat mean_flat binary_repr zeros_like '
-             'rms_flat frange diagonal_matrix fromfunction inf infty Infinity '
-             'exp_safe spike spike_odd l2norm Numeric')
+__all__ = """
+gnuplot_exec sum_flat mean_flat binary_repr zeros_like 
+rms_flat frange diagonal_matrix fromfunction identity 
+inf infty Infinity exp_safe spike spike_odd norm l1norm l2norm Numeric
+""".split()
 
 #****************************************************************************
 # required modules
@@ -108,28 +109,53 @@ def zeros_like(a):
     """Return an array of zeros of the shape and typecode of a."""
 
     return zeros(a.shape,a.typecode())
-    
-def sum_flat(a):
-    """Return the sum of all the elements of a, flattened out (recursively)."""
 
-    if type(a) is not ArrayType: return a
-    return sum_flat(sum(a))
+def sum_flat(a):
+    """Return the sum of all the elements of a, flattened out.
+
+    It uses a.flat, and if a is not contiguous, a call to ravel(a) is made."""
+
+    if a.iscontiguous():
+        return sum(a.flat)
+    else:
+        return sum(ravel(a))
 
 def mean_flat(a):
-    """Return the mean of all the elements of a, flattened out (recursively)."""
+    """Return the mean of all the elements of a, flattened out."""
 
     return sum_flat(a)/float(size(a))
 
 def rms_flat(a):
-    """Return the root mean square of all the elements of a, flattened out
-    (recursively)."""
+    """Return the root mean square of all the elements of a, flattened out."""
 
     return sqrt(sum_flat(absolute(a)**2)/float(size(a)))
 
+def l1norm(a):
+    """Return the l1 norm of a, flattened out.
+
+    Implemented as a separate function (not a call to norm() for speed)."""
+
+    return sum_flat(absolute(a))
+
 def l2norm(a):
-    """Return the l2 norm of a, flattened out (recursively)."""
+    """Return the l2 norm of a, flattened out.
+
+    Implemented as a separate function (not a call to norm() for speed)."""
 
     return sqrt(sum_flat(absolute(a)**2))
+
+def norm(a,p=2):
+    """norm(a,p=2) -> l-p norm of a.flat
+
+    Return the l-p norm of a, considered as a flat array.  This is NOT a true
+    matrix norm, since arrays of arbitrary rank are always flattened.
+
+    p can be a number or the string 'Infinity' to get the L-infinity norm."""
+    
+    if p=='Infinity':
+        return max(absolute(a).flat)
+    else:
+        return (sum_flat(absolute(a)**p))**(1.0/p)    
     
 def frange(xini,xfin=None,delta=None,**kw):
     """frange([start,] stop[, step, keywords]) -> list of floats
@@ -194,6 +220,26 @@ def diagonal_matrix(diag):
     input array."""
 
     return diag*identity(len(diag))
+
+def identity(n,rank=2,typecode='l'):
+    """identity(n,r) returns the identity matrix of shape (n,n,...,n) (rank r).
+
+    For ranks higher than 2, this object is simply a multi-index Kronecker
+    delta:
+                        /  1  if i0=i1=...=iR,
+    id[i0,i1,...,iR] = -|
+                        \  0  otherwise.
+
+    Optionally a typecode may be given (it defaults to 'l').
+
+    Since rank defaults to 2, this function behaves in the default case (when
+    only n is given) like the Numeric identity function."""
+    
+    iden = zeros((n,)*rank,typecode=typecode)
+    for i in range(n):
+        idx = (i,)*rank
+        iden[idx] = 1
+    return iden
 
 def base_repr (number, base = 2, padding = 0):
     """Return the representation of a number in any given base."""
