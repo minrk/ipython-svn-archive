@@ -128,6 +128,23 @@ These things need to be ripped out, they cause no end of problems.
  For now I've just disabled them, and I'll live with the ugly error messages.
 \layout Itemize
 
+Fix coloring of prompts: the pysh color strings don't have any effect on
+ prompt numbers, b/c these are controlled by the global scheme.
+ Make the prompts fully user-definable, colors and all.
+ This is what I said to a user:
+\newline 
+As far as the green 
+\backslash 
+#, this is a minor bug of the coloring code due to the vagaries of history.
+ While the color strings allow you to control the coloring of most elements,
+ there are a few which are still controlled by the old ipython internal
+ coloring code, which only accepts a global 'color scheme' choice.
+ So basically the input/output numbers are hardwired to the choice in the
+ color scheme, and there are only 'Linux', 'LightBG' and 'NoColor' schemes
+ to choose from.
+ 
+\layout Itemize
+
 Clean up FakeModule issues.
  Currently, unittesting with embedded ipython breaks because a FakeModule
  instance overwrites __main__.
