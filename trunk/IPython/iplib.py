@@ -576,20 +576,6 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
 
         self.dir_stack = [os.getcwd().replace(self.home_dir,'~')]
 
-        # Function to call the underlying shell.  Similar to os.system, but it
-        # doesn't return a value, and it allows interpolation of variables in
-        # the user's namespace.
-        self.system = lambda cmd: shell(str(ItplNS(cmd.replace('#','\#'),
-                                                   self.user_ns)),
-                                        header='IPython system call: ',
-                                        verbose=self.rc.system_verbose)
-        # Similar one for getoutputerror.
-        self.getoutputerror = lambda cmd: \
-                              getoutputerror(str(ItplNS(cmd.replace('#','\#'),
-                                                        self.user_ns)),
-                                             header='IPython system call: ',
-                                             verbose=self.rc.system_verbose)
-    
         # RegExp for splitting line contents into pre-char//first
         # word-method//rest.  For clarity, each group in on one line.
 
@@ -993,6 +979,36 @@ want to merge them back into the new files.""" % locals()
         # Configure auto-indent for all platforms
         self.set_autoindent(self.rc.autoindent)
 
+    def system(self,cmd):
+        """Function to call the underlying shell.
+
+        Similar to os.system, but it doesn't return a value, and it allows
+        interpolation of variables in the user's namespace.
+
+        It also sets the _o, _e variables in the user's namespace.  These
+        always contain the last values for standard output and error, as
+        strings.  Furthermore, these special variables hold a .l attribute
+        which automatically returns them as a list, allowing easy looping over
+        their contents."""
+        
+        out,err = self.getoutputerror(cmd)
+        if out:
+            print >> Term.cout, out
+        if err:
+            print >> Term.cerr, err
+        # Now, set _o and _e.
+        self.user_ns['_o'] = LSString(out)
+        self.user_ns['_e'] = LSString(err)
+        
+    def getoutputerror(self,cmd):
+        """Call a command and return stdout/err, allowing variable
+        interpolation in the user's namespace."""
+        
+        return getoutputerror(str(ItplNS(cmd.replace('#','\#'),
+                                         self.user_ns)),
+                              header='IPython system call: ',
+                              verbose=self.rc.system_verbose)
+
     def showsyntaxerror(self, filename=None):
         """Display the syntax error that just occurred.
 
@@ -1343,8 +1359,6 @@ There seemed to be a problem with your sys.stderr.
             cmd = '%s %s' % (cmd % tuple(args[:nargs]),' '.join(args[nargs:]))
         # Now call the macro, evaluating in the user's namespace
         try:
-            # flush stdout so we don't mangle python's buffering
-            sys.stdout.flush()
             self.system(cmd)
         except:
             self.showtraceback()

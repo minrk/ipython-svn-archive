@@ -2257,7 +2257,63 @@ Defaulting color scheme to 'NoColor'"""
           assigning it to the given variable.  By default the output is stored
           as a single string.
 
-          -v: verbose.  Print the contents of the variable."""
+          -v: verbose.  Print the contents of the variable.
+
+        In most cases you should not need to split as a list, because the
+        returned value is a special type of string which can automatically
+        provide its contents either as a list (split on newlines) or as a
+        space-separated string.  These are convenient, respectively, either
+        for sequential processing or to be passed to a shell command.
+
+        For example:
+
+            # Capture into variable a
+            In [9]: sc a=ls *py
+
+            # a is a string with embedded newlines
+            In [10]: a
+            Out[10]: 'setup.py\nwin32_manual_post_install.py'
+
+            # which can be seen as a list:
+            In [11]: a.l
+            Out[11]: ['setup.py', 'win32_manual_post_install.py']
+
+            # or as a whitespace-separated string:
+            In [12]: a.s
+            Out[12]: 'setup.py win32_manual_post_install.py'
+
+            # a.s is useful to pass as a single command line:
+            In [13]: !wc -l $a.s
+              146 setup.py
+              130 win32_manual_post_install.py
+              276 total
+
+            # while the list form is useful to loop over:
+            In [14]: for f in a.l:
+               ....:      !wc -l $f
+               ....:
+            146 setup.py
+            130 win32_manual_post_install.py
+
+        Similiarly, the lists returned by the -l option are also special, in
+        the sense that you can equally invoke the .s attribute on them to
+        automatically get a whitespace-separated string from their contents:
+
+            In [1]: sc -l b=ls *py
+
+            In [2]: b
+            Out[2]: ['setup.py', 'win32_manual_post_install.py']
+
+            In [3]: b.s
+            Out[3]: 'setup.py win32_manual_post_install.py'
+
+        In summary, both the lists and strings used for ouptut capture have
+        the following special attributes:
+
+            .l (or .list) : value as list.
+            .n (or .nlstr): value as newline-separated string.
+            .s (or .spstr): value as space-separated string.
+        """
 
         opts,args = self.parse_options(parameter_s,'lv')
         # Try to get a variable name and command to run
@@ -2280,7 +2336,9 @@ Defaulting color scheme to 'NoColor'"""
         if err:
             print >> Term.cerr,err
         if opts.has_key('l'):
-            out = out.split('\n')
+            out = SList(out.split('\n'))
+        else:
+            out = LSString(out)
         if opts.has_key('v'):
             print '%s ==\n%s' % (var,pformat(out))
         self.shell.user_ns.update({var:out})
@@ -2309,13 +2367,22 @@ Defaulting color scheme to 'NoColor'"""
         like '%sc -l'.  The reason for this is to make it as easy as possible
         to process line-oriented shell output via further python commands.
         %sc is meant to provide much finer control, but requires more
-        typing."""
+        typing.
+
+        3) Just like %sc -l, this is a list with special attributes:
+
+          .l (or .list) : value as list.
+          .n (or .nlstr): value as newline-separated string.
+          .s (or .spstr): value as whitespace-separated string.
+
+        This is very useful when trying to use such lists as arguments to
+        system commands."""
 
         if parameter_s:
             out,err = self.shell.getoutputerror(parameter_s)
             if err:
                 print >> Term.cerr,err
-            return out.split('\n')
+            return SList(out.split('\n'))
 
     def magic_bg(self, parameter_s=''):
         """Run a job in the background, in a separate thread.

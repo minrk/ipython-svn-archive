@@ -287,6 +287,7 @@ def shell(cmd,verbose=0,debug=0,header=''):
 
     stat = 0
     if verbose or debug: print header+cmd
+    # flush stdout so we don't mangle python's buffering
     sys.stdout.flush()
     if not debug:
         os.system(cmd)
@@ -735,6 +736,79 @@ def get_home_dir():
 
 #****************************************************************************
 # strings and text
+
+class LSString(str):
+    """String derivative with a special access attributes.
+
+    These are normal strings, but with the special attributes:
+
+        .l (or .list) : value as list (split on newlines).
+        .n (or .nlstr): original value (the string itself).
+        .s (or .spstr): value as whitespace-separated string.
+        
+    Any values which require transformations are computed only once and
+    cached.
+
+    Such strings are very useful to efficiently interact with the shell, which
+    typically only understands whitespace-separated options for commands."""
+
+    def get_list(self):
+        try:
+            return self.__list
+        except AttributeError:
+            self.__list = self.split('\n')
+            return self.__list
+
+    l = list = property(get_list)
+
+    def get_spstr(self):
+        try:
+            return self.__spstr
+        except AttributeError:
+            self.__spstr = self.replace('\n',' ')
+            return self.__spstr
+
+    s = spstr = property(get_spstr)
+
+    def get_nlstr(self):
+        return self
+
+    n = nlstr = property(get_nlstr)
+
+class SList(list):
+    """List derivative with a special access attributes.
+
+    These are normal lists, but with the special attributes:
+
+        .l (or .list) : value as list (the list itself).
+        .n (or .nlstr): value as a string, joined on newlines.
+        .s (or .spstr): value as a string, joined on spaces.
+
+    Any values which require transformations are computed only once and
+    cached."""
+
+    def get_list(self):
+        return self
+
+    l = list = property(get_list)
+
+    def get_spstr(self):
+        try:
+            return self.__spstr
+        except AttributeError:
+            self.__spstr = ' '.join(self)
+            return self.__spstr
+
+    s = spstr = property(get_spstr)
+
+    def get_nlstr(self):
+        try:
+            return self.__nlstr
+        except AttributeError:
+            self.__nlstr = '\n'.join(self)
+            return self.__nlstr
+
+    n = nlstr = property(get_nlstr)
 
 def raw_input_multi(header='', ps1='==> ', ps2='..> ',terminate_str = '.'):
     """Take multiple lines of input.

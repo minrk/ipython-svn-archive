@@ -15,7 +15,7 @@ __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
 
 import exceptions,sys
-from StringIO import StringIO
+from cStringIO import StringIO
 
 class OutputTrapError(exceptions.Exception):
     """Exception for OutputTrap class."""

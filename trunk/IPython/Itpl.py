@@ -188,7 +188,7 @@ class Itpl:
             if live: result.append(str(eval(chunk,glob,loc)))
             else: result.append(chunk)
 
-        return string.join(result, "")
+        return ''.join(result)
 
 class ItplNS(Itpl):
     """Class representing a string with interpolation abilities.
@@ -221,7 +221,7 @@ class ItplNS(Itpl):
         for live, chunk in self.chunks:
             if live: result.append(str(eval(chunk,glob,loc)))
             else: result.append(chunk)
-        return string.join(result, "")
+        return ''.join(result)
 
 # utilities for fast printing
 def itpl(text): return str(Itpl(text))
