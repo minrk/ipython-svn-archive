@@ -36,79 +36,74 @@ Data = Gnuplot_ori.Data
 Func = Gnuplot_ori.Func
 GridData = Gnuplot_ori.GridData
 PlotItem = Gnuplot_ori.PlotItem
+PlotItems = Gnuplot_ori.PlotItems
 
 # Modify some of Gnuplot's functions with improved versions (or bugfixed, in
 # hardcopy's case). In order to preserve the docstrings at runtime, I've
 # copied them from the original code.
 
-# Fix the File class to add the 'index' option
-class File(Gnuplot_ori.File):
 
-    _option_list = Gnuplot_ori.File._option_list.copy()
-    _option_list.update({
-        'index' : lambda self, index: self.set_option_index(index),
-        })
+# After some significant changes in v 1.7 of Gnuplot.py, we need to do a bit
+# of version checking.
 
-    # A new initializer is needed b/c we want to add a modified
-    # _option_sequence list which includes 'index' in the right place.
-    def __init__(self,*args,**kw):
-        self._option_sequence = ['binary', 'index', 'using', 'smooth', 'axes',
-                                 'title', 'with']
-        
-        Gnuplot_ori.File.__init__(self,*args,**kw)
+#print "*** Gnuplot version:",Gnuplot_ori.__version__  # dbg
 
-    # Let's fix the constructor docstring
-    __newdoc = \
-        """Additional Keyword arguments added by IPython:
+if Gnuplot_ori.__version__ <= '1.6':
+    _BaseFileItem = PlotItems.File
+    _BaseTempFileItem = PlotItems.TempFile
 
-             'index=<int>' -- similar to the `index` keyword in Gnuplot.
-                 This allows only some of the datasets in a file to be
-                 plotted. Datasets within a file are assumed to be separated
-                 by _pairs_ of blank lines, and the first one is numbered as
-                 0 (similar to C/Python usage)."""
-    __init__.__doc__ = Gnuplot_ori.File.__init__.__doc__ + __newdoc
+    # Fix the File class to add the 'index' option for Gnuplot versions < 1.7
+    class File(_BaseFileItem):
 
-    def set_option_index(self, index):
-        if index is None:
-            self.clear_option('index')
-        elif type(index) in [type(''), type(1)]:
-            self._options['index'] = (index, 'index %s' % index)
-        elif type(index) is type(()):
-            self._options['index'] = (index,
-                                      'index %s' %
-                                      string.join(map(repr, index), ':'))
-        else:
-            raise OptionException('index=%s' % (index,))
+	_option_list = _BaseFileItem._option_list.copy()
+	_option_list.update({
+	    'index' : lambda self, index: self.set_option_index(index),
+	    })
 
+	# A new initializer is needed b/c we want to add a modified
+	# _option_sequence list which includes 'index' in the right place.
+	def __init__(self,*args,**kw):
+	    self._option_sequence = ['binary', 'index', 'using', 'smooth', 'axes',
+				     'title', 'with']
 
-class String(File):
-    """Make a PlotItem from data in a string with the same format as a File.
+	    _BaseFileItem.__init__(self,*args,**kw)
 
-    This allows writing data directly inside python scripts using the exact
-    same format and manipulation options which would be used for external
-    files."""
+	# Let's fix the constructor docstring
+	__newdoc = \
+	    """Additional Keyword arguments added by IPython:
 
-    def __init__(self, data_str, **keyw):
-        """Construct a String object.
+		 'index=<int>' -- similar to the `index` keyword in Gnuplot.
+		     This allows only some of the datasets in a file to be
+		     plotted. Datasets within a file are assumed to be separated
+		     by _pairs_ of blank lines, and the first one is numbered as
+		     0 (similar to C/Python usage)."""
+	__init__.__doc__ = PlotItems.File.__init__.__doc__ + __newdoc
 
-        <data_str> is a string formatted exactly like a valid Gnuplot data
-        file would be. All options from the File constructor are valid here.
+	def set_option_index(self, index):
+	    if index is None:
+		self.clear_option('index')
+	    elif type(index) in [type(''), type(1)]:
+		self._options['index'] = (index, 'index %s' % index)
+	    elif type(index) is type(()):
+		self._options['index'] = (index,
+					  'index %s' %
+					  string.join(map(repr, index), ':'))
+	    else:
+		raise OptionException('index=%s' % (index,))
 
-        Warning: when used for interactive plotting in scripts which exit
-        immediately, you may get an error because the temporary file used to
-        hold the string data was deleted before Gnuplot had a chance to see
-        it. You can work around this problem by putting a raw_input() call at
-        the end of the script.
+    # We need a FileClass with a different name from 'File', which is a
+    # factory function in 1.7, so that our String class can subclass FileClass
+    # in any version.
+    _FileClass = File
 
-        This problem does not appear when generating PostScript output, only
-        with Gnuplot windows."""
+else:  # Gnuplot.py version 1.7 and greater
+    _FileClass = _BaseFileItem = PlotItems._FileItem
+    _BaseTempFileItem = PlotItems._TempFileItem
+    File = PlotItems.File
 
-        self.tmpfile = Gnuplot_ori.PlotItems.TempFile()
-        tmpfile = file(self.tmpfile.filename,'w')
-        tmpfile.write(data_str)
-        File.__init__(self,self.tmpfile,**keyw)
-    
+# Now, we can add our generic code which is version independent
 
+# First some useful utilities
 def eps_fix_bbox(fname):
     """Fix the bounding box of an eps file by running ps2eps on it.
 
@@ -206,6 +201,35 @@ def zip_items(items,titles=None):
         n+=1
 
     return new_items
+
+# And some classes with enhanced functionality.
+class String(_FileClass):
+    """Make a PlotItem from data in a string with the same format as a File.
+
+    This allows writing data directly inside python scripts using the exact
+    same format and manipulation options which would be used for external
+    files."""
+
+    def __init__(self, data_str, **keyw):
+	"""Construct a String object.
+
+	<data_str> is a string formatted exactly like a valid Gnuplot data
+	file would be. All options from the File constructor are valid here.
+
+	Warning: when used for interactive plotting in scripts which exit
+	immediately, you may get an error because the temporary file used to
+	hold the string data was deleted before Gnuplot had a chance to see
+	it. You can work around this problem by putting a raw_input() call at
+	the end of the script.
+
+	This problem does not appear when generating PostScript output, only
+	with Gnuplot windows."""
+
+	self.tmpfile = _BaseTempFileItem()
+	tmpfile = file(self.tmpfile.filename,'w')
+	tmpfile.write(data_str)
+	_BaseFileItem.__init__(self,self.tmpfile,**keyw)
+
 
 class Gnuplot(Gnuplot_ori.Gnuplot):
     """Improved Gnuplot class.
