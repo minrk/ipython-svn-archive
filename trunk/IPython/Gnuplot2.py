@@ -529,6 +529,9 @@ class Gnuplot(Gnuplot_ori.Gnuplot):
                    OptionException('default_lpr is not set, so you can only '
                                    'print to a file.')
             filename = gp.GnuplotOpts.default_lpr
+            lpr_output = 1
+        else:
+            lpr_output = 0
 
         # Be careful processing the options.  If the user didn't
         # request an option explicitly, do not specify it on the 'set
@@ -575,7 +578,7 @@ class Gnuplot(Gnuplot_ori.Gnuplot):
 
         # fperez. Ugly kludge: often for some reason the file is NOT created
         # and we must reissue the creation commands. I have no idea why!
-        if filename is not None:
+        if not lpr_output:
             #print 'Hardcopy <%s>' % filename  # dbg
             maxtries = 20
             delay = 0.1  # delay (in seconds) between print attempts
