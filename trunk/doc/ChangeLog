@@ -1,5 +1,7 @@
 2004-07-26  Fernando Perez  <fperez@colorado.edu>
 
+	* ipython_win_post_install.py (run): Added pysh shortcut for Windows.
+
 	* IPython/iplib.py (protect_filename): Applied Ville's patch for
 	escaping '()[]{}' in filenames.
 
