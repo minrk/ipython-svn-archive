@@ -568,6 +568,18 @@ Currently the magic system has the following functions:\n"""
                 return
         print 'No previous input matching `%s` found.' % start
 
+    def magic_page(self, parameter_s=''):
+        """Pretty print the object and display it through a pager.
+        
+        If no parameter is given, use _ (last output)."""
+        # After a function contributed by Olivier Aubert, slightly modified.
+
+        oname = parameter_s and parameter_s or '_' 
+        info = self._ofind(oname)
+        if info['found']:
+            page(pformat(info['obj']))
+        else:
+            print 'Object `%s` not found' % oname
 
     def magic_profile(self, parameter_s=''):
         """Print your currently active IPyhton profile."""
