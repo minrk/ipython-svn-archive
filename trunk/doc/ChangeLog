@@ -1,3 +1,16 @@
+2004-11-03  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/OInspect.py (getdoc): wrap inspect.getdoc() safely for
+	use throughout ipython.
+
+	* IPython/Magic.py (Magic._ofind): Switch to using the new
+	OInspect.getdoc() function.
+
+	* IPython/Shell.py (sigint_handler): Hack to ignore the execution
+	of the line currently being canceled via Ctrl-C.  It's extremely
+	ugly, but I don't know how to do it better (the problem is one of
+	handling cross-thread exceptions).
+
 2004-10-28  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Shell.py (signal_handler): add signal handlers to trap

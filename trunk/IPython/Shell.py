@@ -258,7 +258,7 @@ def sigint_handler (signum,stack_frame):
     
     print '\nKeyboardInterrupt - Press <Enter> to continue.',
     sys.stdout.flush()
-    readline_insert_text(' IPythonIgnoreLine')
+    readline_insert_text(' IPythonIgnoreLine ')
 
 class MTInteractiveShell(InteractiveShell):
     """Simple multi-threaded shell."""
@@ -300,7 +300,7 @@ class MTInteractiveShell(InteractiveShell):
         See the original for full docstring details."""
         
         # If Ctrl-C was typed, we return right away.
-        if source.endswith('IPythonIgnoreLine'):
+        if source.find('IPythonIgnoreLine') > -1:
             return False
         
         try:
