@@ -1,3 +1,9 @@
+2005-02-17  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (handle_auto): Fix bug which I introduced when
+	trying to catch spurious foo[1] autocalls.  My fix actually broke
+	',/' autoquote/call with explicit escape (bad regexp).
+
 2005-02-15  *** Released version 0.6.11
 
 2005-02-14  Fernando Perez  <fperez@colorado.edu>
