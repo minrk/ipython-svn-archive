@@ -109,12 +109,15 @@ class Inspector:
         return args, varargs, varkw, func_obj.func_defaults
 
     def __getdef(self,obj,oname=''):
-        """Return the definition header for any callable object."""
+        """Return the definition header for any callable object.
 
-        # We don't trap any inspect exceptions here, it's the caller's role to
-        # handle those.  In fact, caller code may use a generated exception to
-        # inform that definition headers aren't available.
-        return oname + inspect.formatargspec(*self.__getargspec(obj))
+        If any exception is generated, None is returned instead and the
+        exception is suppressed."""
+        
+        try:
+            return oname + inspect.formatargspec(*self.__getargspec(obj))
+        except:
+            return None
  
     def __head(self,h):
         """Return a header string with proper colors."""
@@ -148,12 +151,12 @@ class Inspector:
             obj = obj.__init__
         elif type(obj) is types.InstanceType:
             obj = obj.__call__
-        try:
-            output =  self.format(self.__getdef(obj,oname))
-        except:
+
+        output = self.__getdef(obj,oname)
+        if output is None:
             self.noinfo('definition header',oname)
         else:
-            print >>Term.cout, header,output,
+            print >>Term.cout, header,self.format(output),
 
     def pdoc(self,obj,oname='',formatter = None):
         """Print the docstring for any object.
@@ -182,7 +185,7 @@ class Inspector:
                 output = ds
         else:
             output = ds
-        if output == None:
+        if output is None:
             self.noinfo('documentation',oname)
             return
         page(output)
@@ -222,14 +225,16 @@ class Inspector:
         - detail_level: if set to 1, more information is given.
         """
 
+        obj_type = type(obj)
+
         header = self.__head
         if info is None:
-            ds = indent(getdoc(obj))
+            ds = getdoc(obj)
             ismagic = 0
             isalias = 0
             ospace = ''
         else:
-            ds = indent(info.docstring)
+            ds = info.docstring
             ismagic = info.ismagic
             isalias = info.isalias
             ospace = info.namespace
@@ -243,12 +248,12 @@ class Inspector:
         shalf = int((string_max -5)/2)
 
         if ismagic:
-            obj_type = 'Magic function'
+            obj_type_name = 'Magic function'
         elif isalias:
-            obj_type = 'System alias'
+            obj_type_name = 'System alias'
         else:
-            obj_type = type(obj).__name__
-        out.writeln(header('Type:\t\t')+obj_type)
+            obj_type_name = obj_type.__name__
+        out.writeln(header('Type:\t\t')+obj_type_name)
 
         try:
             bclass = obj.__class__
@@ -290,16 +295,14 @@ class Inspector:
         except: pass
 
         # reconstruct the function definition and print it:
-        try:
-            defln = self.__getdef(obj,oname)
-        except:
-            pass
-        else:
+        defln = self.__getdef(obj,oname)
+        if defln:
             out.write(header('Definition:\t')+self.format(defln))
  
-        # Docstrings only in detail 0 mode (unless source fails, see below)
+        # Docstrings only in detail 0 mode, since source contains them (we
+        # avoid repetitions).  If source fails, we add them back, see below.
         if ds and detail_level == 0:
-                out.writeln(header('Docstring:\n') + ds)
+                out.writeln(header('Docstring:\n') + indent(ds))
 
         # Original source code for any callable
         if detail_level:
@@ -310,44 +313,51 @@ class Inspector:
                 out.write(header('Source:\n')+source.rstrip())
             except:
                 if ds:
-                    out.writeln(header('Docstring:\n') + ds)
+                    out.writeln(header('Docstring:\n') + indent(ds))
 
         # Constructor docstring for classes
-        if type(obj) is types.ClassType:
+        if obj_type is types.ClassType:
             # reconstruct the function definition and print it:
-            gotdef = init_ds = 0
-            try:
-                init_def = self.__getdef(obj.__init__,oname)
-                gotdef = 1
-            except:
-                gotdef = 0
-            try:
-                init_ds = getdoc(obj.__init__)
-            except:
-                init_ds = None
+            init_def = self.__getdef(obj.__init__,oname)
+            init_ds  = getdoc(obj.__init__)
 
-            if gotdef or init_ds:
+            if init_def or init_ds:
                 out.writeln(header('\nConstructor information:'))
-                if gotdef:
+                if init_def:
                     out.write(header('Definition:\t')+ self.format(init_def))
                 if init_ds:
                     out.writeln(header('Docstring:\n') + indent(init_ds))
+        # and class docstring for instances:
+        elif obj_type is types.InstanceType:
 
-        # Call form docstring for callable instances
-        if type(obj) is types.InstanceType and hasattr(obj,'__call__'):
-            out.writeln(header('Callable:\t')+'Yes')
-            try:
+            # First, check whether the instance docstring is identical to the
+            # class one, and print it separately if they don't coincide.  In
+            # most cases they will, but it's nice to print all the info for
+            # objects which use instance-customized docstrings.
+            if ds:
+                class_ds = getdoc(obj.__class__)
+                if class_ds and ds != class_ds:
+                    out.writeln(header('Class Docstring:\n') +
+                                indent(class_ds))
+
+            # Next, try to show constructor docstrings
+            init_ds = getdoc(obj.__init__)
+            if init_ds:
+                out.writeln(header('Constructor Docstring:\n') +
+                            indent(init_ds))
+
+            # Call form docstring for callable instances
+            if hasattr(obj,'__call__'):
+                out.writeln(header('Callable:\t')+'Yes')
                 call_def = self.__getdef(obj.__call__,oname)
-            except TypeError:
-                # Some callables may raise a TypeError if inspect's
-                # isfunction and ismethod can't identify them.
-                out.write(header('Call def:\t')+
-                          'Calling definition not available.')
-            else:
-                out.write(header('Call def:\t')+self.format(call_def))
-            call_ds = getdoc(obj.__call__)
-            if call_ds:
-                out.writeln(header('Call docstring:\n') + indent(call_ds))
+                if call_def is None:
+                    out.write(header('Call def:\t')+
+                              'Calling definition not available.')
+                else:
+                    out.write(header('Call def:\t')+self.format(call_def))
+                call_ds = getdoc(obj.__call__)
+                if call_ds:
+                    out.writeln(header('Call docstring:\n') + indent(call_ds))
 
         # Finally send to printer/pager
         output = out.getvalue()
