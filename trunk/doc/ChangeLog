@@ -1,3 +1,66 @@
+2004-06-07  Fernando Perez  <fperez@colorado.edu>
+
+	* setup.py (isfile): Pass local_icons option to latex2html, so the
+	resulting HTML file is self-contained.  Thanks to
+	dryice@liu.com.cn for the tip.
+
+	* pysh.py: I created a new profile 'shell', which implements a
+	_rudimentary_ IPython-based shell.  This is in NO WAY a realy
+	system shell, nor will it become one anytime soon.  It's mainly
+	meant to illustrate the use of the new flexible bash-like prompts.
+	I guess it could be used by hardy souls for true shell management,
+	but it's no tcsh/bash...  pysh.py is loaded by the 'shell'
+	profile.  This uses the InterpreterExec extension provided by
+	W.J. van der Laan <gnufnork@hetdigitalegat.nl>
+
+	* IPython/Prompts.py (PromptOut.__str__): now it will correctly
+	auto-align itself with the length of the previous input prompt
+	(taking into account the invisible color escapes).
+	(CachedOutput.__init__): Large restructuring of this class.  Now
+	all three prompts (primary1, primary2, output) are proper objects,
+	managed by the 'parent' CachedOutput class.  The code is still a
+	bit hackish (all prompts share state via a pointer to the cache),
+	but it's overall far cleaner than before.
+
+	* IPython/genutils.py (getoutputerror): modified to add verbose,
+	debug and header options.  This makes the interface of all getout*
+	functions uniform.
+	(SystemExec.getoutputerror): added getoutputerror to SystemExec.
+
+	* IPython/Magic.py (Magic.default_option): added a function to
+	allow registering default options for any magic command.  This
+	makes it easy to have profiles which customize the magics globally
+	for a certain use.  The values set through this function are
+	picked up by the parse_options() method, which all magics should
+	use to parse their options.
+
+	* IPython/genutils.py (warn): modified the warnings framework to
+	use the Term I/O class.  I'm trying to slowly unify all of
+	IPython's I/O operations to pass through Term.
+
+	* IPython/Prompts.py (Prompt2._str_other): Added functionality in
+	the secondary prompt to correctly match the length of the primary
+	one for any prompt.  Now multi-line code will properly line up
+	even for path dependent prompts, such as the new ones available
+	via the prompt_specials.
+
+2004-06-06  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Prompts.py (prompt_specials): Added the ability to have
+	bash-like special sequences in the prompts, which get
+	automatically expanded.  Things like hostname, current working
+	directory and username are implemented already, but it's easy to
+	add more in the future.  Thanks to a patch by W.J. van der Laan
+	<gnufnork@hetdigitalegat.nl>
+	(prompt_specials): Added color support for prompt strings, so
+	users can define arbitrary color setups for their prompts.
+
+2004-06-05  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (Term.reopen_all): Added Windows-specific
+	code to load Gary Bishop's readline and configure it
+	automatically.  Thanks to Gary for help on this.
+
 2004-06-01  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Logger.py (Logger.create_log): fix bug for logging

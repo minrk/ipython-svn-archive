@@ -7,7 +7,7 @@ See http://www.pfdubois.com/numpy for details.
 """
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando PÃ©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -21,7 +21,7 @@ See http://www.pfdubois.com/numpy for details.
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
+__author__ = 'Fernando PÃ©rez. <fperez@colorado.edu>'
 __version__= '0.1.1'
 __license__ = 'LGPL'
 __date__   = 'Tue Dec 11 00:27:58 MST 2001'
@@ -29,7 +29,7 @@ __date__   = 'Tue Dec 11 00:27:58 MST 2001'
 __all__ = """
 gnuplot_exec sum_flat mean_flat binary_repr zeros_like amap 
 rms_flat frange diagonal_matrix fromfunction identity 
-inf infty Infinity exp_safe spike spike_odd norm l1norm l2norm Numeric
+inf infty Infinity exp_safe spike spike_odd norm l1norm l2norm
 """.split()
 
 #****************************************************************************
@@ -52,6 +52,9 @@ inf = infty = Infinity = (array([1])/0.0)[0]
 
 #****************************************************************************
 # function definitions        
+exp_safe_MIN = math.log(2.2250738585072014e-308)
+exp_safe_MAX = 1.7976931348623157e+308
+
 def exp_safe(x):
     """Compute exponentials which safely underflow to zero.
 
@@ -60,13 +63,9 @@ def exp_safe(x):
     hardware."""
 
     if type(x) is ArrayType:
-        return exp(clip(x,exp_safe.MIN,exp_safe.MAX))
+        return exp(clip(x,exp_safe_MIN,exp_safe_MAX))
     else:
         return math.exp(x)
-
-exp_safe.MIN = math.log(2.2250738585072014e-308)
-exp_safe.MAX = 1.7976931348623157e+308
-
 
 def spike(x,x0=0,delta=1):
     """Return exp(-((x-x0)/delta)**2), a simple spike. """

@@ -23,7 +23,7 @@
 include ipythonrc
 
 # import ...
-# Module with alternate input syntax for PhysicalQuantity objects.
+# Module with alternate input syntax for pasting python input
 import_mod IPython.Extensions.InterpreterPasteInput
 
 # from ... import *
