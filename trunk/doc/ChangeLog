@@ -1,3 +1,11 @@
+2004-07-19  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.init_readline): Add support
+	for reading readline's init file.  I follow the normal chain:
+	$INPUTRC is honored, otherwise ~/.inputrc is used.  Thanks to a
+	report by Mike Heeter.  This closes
+	http://www.scipy.net/roundup/ipython/issue16.
+
 2004-07-18  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (__init__): Add better handling of '\' under
