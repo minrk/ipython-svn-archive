@@ -24,6 +24,7 @@ Windows."""
 import sys,os
 from glob import glob
 from setupext import install_data_ext
+isfile = os.path.isfile
 
 # BEFORE importing distutils, remove MANIFEST. distutils doesn't properly
 # update it when the contents of directories change.
@@ -84,12 +85,14 @@ execfile(os.path.join('IPython','Release.py'))
 # I can't find how to make distutils create a nested dir. structure, so
 # in the meantime do it manually. Butt ugly.
 docdirbase  = 'share/doc/IPython'
-docfiles    = filter(os.path.isfile, glob('doc/*[!~|.lyx|.sh]'))
-examfiles   = filter(os.path.isfile, glob('doc/examples/*.py'))
-manfiles    = filter(os.path.isfile, glob('doc/manual/*.html')) + \
-              filter(os.path.isfile, glob('doc/manual/*.css'))
-cfgfiles    = filter(os.path.isfile, glob('IPython/UserConfig/*'))
-scriptfiles = filter(os.path.isfile, glob('scripts/*'))
+manpagebase = 'share/man/man1'
+docfiles    = filter(isfile, glob('doc/*[!~|.lyx|.sh|.1|.1.gz]'))
+examfiles   = filter(isfile, glob('doc/examples/*.py'))
+manfiles    = filter(isfile, glob('doc/manual/*.html')) + \
+              filter(isfile, glob('doc/manual/*.css'))
+manpages    = filter(isfile, glob('doc/*.1.gz'))
+cfgfiles    = filter(isfile, glob('IPython/UserConfig/*'))
+scriptfiles = filter(isfile, glob('scripts/*'))
 
 # Call the setup() routine which does most of the work
 setup(name             = name,
@@ -110,6 +113,7 @@ setup(name             = name,
                            examfiles),
                           ('data', os.path.join(docdirbase, 'manual'),
                            manfiles),
+                          ('data', manpagebase, manpages),
                           ('lib', 'IPython/UserConfig', cfgfiles)]
       )
 

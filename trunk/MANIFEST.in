@@ -8,6 +8,7 @@ graft setupext
 graft IPython/UserConfig
 
 graft doc
+exclude doc/*.1
 exclude doc/*.lyx
 exclude doc/*.previous
 exclude doc/magic.tex
