@@ -339,7 +339,7 @@ class Magic:
         args = arg_str.split()
         odict = {}  # Dictionary with options
         
-        if len(args) > 1:
+        if len(args) >= 1:
             # If the list of inputs only has 0 or 1 thing in it, there's no
             # need to look for options
 
@@ -550,11 +550,9 @@ Currently the magic system has the following functions:\n"""
             else:
                 print inline,
 
-
     def magic_p(self, parameter_s=''):
         """Just a short alias for Python's 'print'."""
         exec 'print ' + parameter_s in self.shell.user_ns
-
 
     def magic_r(self, parameter_s=''):
         """Repeat previous input.
@@ -670,7 +668,6 @@ Currently the magic system has the following functions:\n"""
                 print msg
                 return
             page(self.shell.inspector.format(file(filename).read()))
-
             
     def magic_pinfo(self, parameter_s=''):
         """Provide detailed information about an object.
@@ -1075,7 +1072,6 @@ Currently the magic system has the following functions:\n"""
             return stats
         else:
             return None
-
 
     def magic_run(self, parameter_s =''):
         """Run the named file inside IPython as a program.
