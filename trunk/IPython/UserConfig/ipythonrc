@@ -343,12 +343,20 @@ readline_remove_delims '"-/~
 
 # (iii) readline_omit__names: normally hitting <tab> after a '.' in a name
 # will complete all attributes of an object, including all the special methods
-# whose names inlclude double underscores (like __getitem__ or __class__). If
-# you'd rather not see these names by default, you can set this option to 1.
+# whose names start with single or double underscores (like __getitem__ or
+# __class__).
 
-# Note that even when this option is set, you can still see those names by
-# explicitly typing a _ after the period and hitting <tab>: 'name._<tab>' will
-# always complete attribute names starting with '_'.
+# This variable allows you to control this completion behavior:
+
+# readline_omit__names 1 -> completion will omit showing any names starting
+# with two __, but it will still show names starting with one _.
+
+# readline_omit__names 2 -> completion will omit all names beginning with one
+# _ (which obviously means filtering out the double __ ones).
+
+# Even when this option is set, you can still see those names by explicitly
+# typing a _ after the period and hitting <tab>: 'name._<tab>' will always
+# complete attribute names starting with '_'.
 
 # This option is off by default so that new users see all attributes of any
 # objects they are dealing with.
