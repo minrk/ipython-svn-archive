@@ -37,6 +37,9 @@ from IPython import ultraTB
 # global flag to pass around information about Ctrl-C without exceptions
 KBINT = False
 
+# global flag to turn on/off Tk support.
+USE_TK = False
+
 #-----------------------------------------------------------------------------
 # This class is trivial now, but I want to have it in to publish a clean
 # interface. Later when the internals are reorganized, code that uses this
@@ -238,16 +241,17 @@ class IPShellEmbed:
 
 #-----------------------------------------------------------------------------
 def sigint_handler (signum,stack_frame):
-    """Sigint handler which marks the input line with a special tag.
+    """Sigint handler for threaded apps.
 
     This is a horrible hack to pass information about SIGINT _without_ using
     exceptions, since I haven't been able to properly manage cross-thread
-    exceptions in GTK/WX.  """
+    exceptions in GTK/WX.  In fact, I don't think it can be done (or at least
+    that's my understanding from a c.l.py thread where this was discussed)."""
 
     global KBINT
     
     print '\nKeyboardInterrupt - Press <Enter> to continue.',
-    sys.stdout.flush()
+    Term.cout.flush()
     # Set global flag so that runsource can know that Ctrl-C was hit
     KBINT = True
 
@@ -339,6 +343,7 @@ class MTInteractiveShell(InteractiveShell):
         if self.code_to_run is not None:
             self.ready.notify()
             self.parent_runcode(self.code_to_run)
+                
             # Flush out code object which has been run
             self.code_to_run = None
             
@@ -474,6 +479,87 @@ class MatplotlibMTShell(MatplotlibShellBase,MTInteractiveShell):
         MTInteractiveShell.__init__(self,name,usage,rc,user_ns,banner2=b2,**kw)
 
 #-----------------------------------------------------------------------------
+# Utility functions for the different GUI enabled IPShell* classes.
+
+def get_tk():
+    """Tries to import Tkinter and returns a withdrawn Tkinter root
+    window.  If Tkinter is already imported or not available, this
+    returns None.  This function calls `hijack_tk` underneath.
+    """
+    if not USE_TK or sys.modules.has_key('Tkinter'):
+        return None
+    else:
+        try:
+            import Tkinter
+        except ImportError:
+            return None
+        else:
+            hijack_tk()
+            r = Tkinter.Tk()
+            r.withdraw()
+            return r
+
+def hijack_tk():
+    """Modifies Tkinter's mainloop with a dummy so when a module calls
+    mainloop, it does not block.
+
+    """
+    def misc_mainloop(self, n=0):
+        pass
+    def tkinter_mainloop(n=0):
+        pass
+    
+    import Tkinter
+    Tkinter.Misc.mainloop = misc_mainloop
+    Tkinter.mainloop = tkinter_mainloop
+
+def update_tk(tk):
+    """Updates the Tkinter event loop.  This is typically called from
+    the respective WX or GTK mainloops.
+    """    
+    if tk:
+        tk.update()
+
+def hijack_wx():
+    """Modifies wxPython's MainLoop with a dummy so user code does not
+    block IPython.  The hijacked mainloop function is returned.
+    """    
+    def dummy_mainloop(*args, **kw):
+        pass
+    import wxPython
+    ver = wxPython.__version__
+    orig_mainloop = None
+    if ver[:3] == '2.5':
+        import wx
+        if hasattr(wx, '_core_'): core = getattr(wx, '_core_')
+        elif hasattr(wx, '_core'): core = getattr(wx, '_core')
+        else: raise AttributeError('Could not find wx core module')
+        orig_mainloop = core.PyApp_MainLoop
+        core.PyApp_MainLoop = dummy_mainloop
+    elif ver[:3] == '2.4':
+        orig_mainloop = wxPython.wxc.wxPyApp_MainLoop
+        wxPython.wxc.wxPyApp_MainLoop = dummy_mainloop
+    else:
+        warn("Unable to find either wxPython version 2.4 or 2.5.")
+    return orig_mainloop
+
+def hijack_gtk():
+    """Modifies pyGTK's mainloop with a dummy so user code does not
+    block IPython.  This function returns the original `gtk.mainloop`
+    function that has been hijacked.
+
+    NOTE: Make sure you import this *AFTER* you call
+    pygtk.require(...).
+    """    
+    def dummy_mainloop(*args, **kw):
+        pass
+    import gtk
+    orig_mainloop = gtk.mainloop
+    gtk.mainloop = dummy_mainloop
+    gtk.main = dummy_mainloop
+    return orig_mainloop
+
+#-----------------------------------------------------------------------------
 # The IPShell* classes below are the ones meant to be run by external code as
 # IPython instances.  Note that unless a specific threading strategy is
 # desired, the factory function start() below should be used instead (it
@@ -494,7 +580,13 @@ class IPShellGTK(threading.Thread):
         import pygtk
         pygtk.require("2.0")
         import gtk
+        
         self.gtk = gtk
+        self.gtk_mainloop = hijack_gtk()
+
+        # Allows us to use both Tk and GTK.
+        self.tk = get_tk()
+        
         self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
                                shell_class=shell_class,
                                on_kill=[self.gtk.mainquit])
@@ -506,7 +598,7 @@ class IPShellGTK(threading.Thread):
 
     def mainloop(self):
         
-        self.gtk.timeout_add(self.TIMEOUT, self.IP.runcode)
+        self.gtk.timeout_add(self.TIMEOUT, self.on_timer)
         if sys.platform != 'win32':
             try:
                 if self.gtk.gtk_version[0] >= 2:
@@ -514,8 +606,13 @@ class IPShellGTK(threading.Thread):
             except AttributeError:
                 pass
         self.start()
-        self.gtk.mainloop()
+        self.gtk_mainloop()
         self.join()
+
+    def on_timer(self):
+        update_tk(self.tk)
+        return self.IP.runcode()
+        
 
 class IPShellWX(threading.Thread):
     """Run a wx mainloop() in a separate thread.
@@ -533,6 +630,11 @@ class IPShellWX(threading.Thread):
 
         threading.Thread.__init__(self)
         self.wx = wx
+        self.wx_mainloop = hijack_wx()
+
+        # Allows us to use both Tk and GTK.
+        self.tk = get_tk()
+        
         self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
                                shell_class=shell_class,
                                on_kill=[self.wxexit])
@@ -554,6 +656,7 @@ class IPShellWX(threading.Thread):
         class TimerAgent(self.wx.wxMiniFrame):
             wx = self.wx
             IP = self.IP
+            tk = self.tk
             def __init__(self, parent, interval):
                 style = self.wx.wxDEFAULT_FRAME_STYLE | self.wx.wxTINY_CAPTION_HORIZ
                 self.wx.wxMiniFrame.__init__(self, parent, -1, ' ', pos=(200, 200),
@@ -568,6 +671,7 @@ class IPShellWX(threading.Thread):
                 self.timer.Start(self.interval)
 
             def OnTimer(self, event):
+                update_tk(self.tk)
                 self.IP.runcode()
 
         class App(self.wx.wxApp):
@@ -581,7 +685,7 @@ class IPShellWX(threading.Thread):
                 return self.wx.true
         
         self.app = App(redirect=False)
-        self.app.MainLoop()
+        self.wx_mainloop(self.app)
         self.join()
 
 # A set of matplotlib public IPython shell classes, for single-threaded
@@ -611,7 +715,6 @@ class IPShellMatplotlibWX(IPShellWX):
     
     def __init__(self,argv=None,user_ns=None,debug=0):
         IPShellWX.__init__(self,argv,user_ns,debug,shell_class=MatplotlibMTShell)
-
 
 #-----------------------------------------------------------------------------
 # Factory functions to actually start the proper thread-aware shell
@@ -645,18 +748,19 @@ def start():
     This is a factory function which will instantiate the proper IPython shell
     based on the user's threading choice.  Such a selector is needed because
     different GUI toolkits require different thread handling details."""
-    
-    # Simple sys.argv hack to extract the threading option.
+
+    global USE_TK
+    # Crude sys.argv hack to extract the threading options.
     if len(sys.argv) > 1:
+        if len(sys.argv) > 2:
+            arg2 = sys.argv[2]
+            if arg2.endswith('-tk'):
+                USE_TK = True
         arg1 = sys.argv[1]
         if arg1.endswith('-gthread'):
-            warn('\nGTK threading is not enabled yet for IPython, pending testing.\n'
-                 'A normal (non-threaded) IPython will start.\n')
-            shell = IPShell
+            shell = IPShellGTK
         elif arg1.endswith('-wthread'):
-            warn('\nWX threading is not enabled yet for IPython, pending testing.\n'
-                 'A normal (non-threaded) IPython will start.\n')
-            shell = IPShell
+            shell = IPShellWX
         elif arg1.endswith('-pylab'):
             shell = _matplotlib_shell_class()
         else:
