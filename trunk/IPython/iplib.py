@@ -385,7 +385,9 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.alias_table = {}
 
         # dict of things NOT to alias (keywords and builtins)
-        self.no_alias = keyword.kwdict.copy()
+        self.no_alias = {}
+        for key in keyword.kwlist:
+            self.no_alias[key] = 1
         self.no_alias.update(__builtin__.__dict__)
         
         # make global variables for user access to these
