@@ -13,10 +13,18 @@
 
 # This profile loads a special input line filter to allow executing as shell
 # commands any lines which begin with ~, . and /
+#
+# We only set a few options here, the rest is done in the companion pysh.py
+# file.  In the future _all_ of IPython's configuration will be done via
+# proper python code.
 
-# First load basic user configuration
+############################################################################
+# First load common user configuration
 include ipythonrc
 
+############################################################################
+# PROMPTS
+#
 # Configure prompt for more shell-like usage.
 
 # Most bash-like escapes can be used to customize IPython's prompts, as well as
@@ -36,5 +44,37 @@ separate_in 0
 separate_out 0
 separate_out2 0
 
-# pysh.py does all of the proper configuration with real python code
+############################################################################
+# ALIASES
+
+# Declare some common aliases. Type alias? at an ipython prompt for details on
+# the syntax.  Don't go too crazy here, the file pysh.py called below runs
+# @rehash, which loads ALL of your $PATH as aliases.
+
+# Some examples:
+
+# A simple example without arguments
+#alias cl clear
+
+# An alias which expands the full line before the end of the alias.  This
+# lists only directories:
+#alias ldir pwd;ls -oF --color %l | grep /$
+
+# An alias with two positional arguments:
+#alias parts echo 'First <%s> Second <%s>'
+
+# In use they give (note that ldir is already built into IPython for Unix):
+
+#fperez[IPython]16> ldir
+#/usr/local/home/fperez/ipython/ipython/IPython
+#drwxr-xr-x  2 fperez  4096 Jun 21 01:01 CVS/
+#drwxr-xr-x  3 fperez  4096 Jun 21 01:10 Extensions/
+#drwxr-xr-x  3 fperez  4096 Jun 21 01:27 UserConfig/
+
+#fperez[IPython]17> parts Hello world and goodbye
+#First <Hello> Second <world> and goodbye
+
+############################################################################
+# MORE COMPLEX CONFIGURATION
+# pysh.py does the rest of the configuration with real python code.
 execfile pysh.py
