@@ -489,9 +489,9 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.line_split = re.compile(r'(^[\s*!\?@,/]?)([\?\w\.]+\w*\s*)(\(?.*$)')
 
         # RegExp to identify potential function names
-        self.re_fun_name = re.compile (r'[a-zA-Z_]([a-zA-Z0-9_.]*) *$')
-        # RegExp to identify potential function names
-        self.re_exclude_auto = re.compile ('^[!=()<>,\*/\+-]|^is ')
+        self.re_fun_name = re.compile(r'[a-zA-Z_]([a-zA-Z0-9_.]*) *$')
+        # RegExp to exclude strings with this start from autocalling
+        self.re_exclude_auto = re.compile('^[!=()<>,\+-\*/]|^is ')
         # try to catch also methods for stuff in lists/tuples/dicts: off
         # (experimental). For this to work, the line_split regexp would need
         # to be modified so it wouldn't break things at '['. That line is
