@@ -1,0 +1,65 @@
+#!/bin/sh
+# IPython release script
+
+version=`ipython -Version`
+
+echo
+echo Releasing IPython version $version
+echo ==================================
+
+echo Marking ChangeLog with release information and making NEWS file...
+
+# stamp changelog
+cd ~/ipython/doc
+cp ChangeLog ChangeLog.old
+daystamp=`date +%Y-%m-%d`
+echo $daystamp " ***" Released version $version > ChangeLog
+echo >> ChangeLog
+cat ChangeLog.old >> ChangeLog
+rm ChangeLog.old
+
+# build NEWS file
+echo "Changes between the last two releases (major or minor)" > NEWS
+echo Note that this is an auto-generated diff of the ChangeLogs >> NEWS
+echo >> NEWS
+diff ChangeLog.previous ChangeLog | grep -v '^0a' | sed 's/^> //g' >> NEWS
+cp ChangeLog ChangeLog.previous
+
+# clean up dist directory
+cd ~/ipython/dist
+rm -f *
+
+# do backup
+cd ~/ipython/tools
+./bkp.py
+
+# build source distros
+cd ~/ipython
+./setup.py sdist --formats=gztar,zip
+
+# build rpms
+# CURRENTLY BROKEN (as of RedHat 8.0)
+#./setup.py bdist_rpm
+
+# upload
+cd ~/ipython/dist
+echo Uploading distribution files...
+scp * fperez@culogin.colorado.edu:"~/ipython/dist"
+
+echo Copying to Windows directory...
+cp *.zip ~/win/IPython
+
+echo Uploading backup files...
+cd ~/ipython/backup
+scp `ls -1tr | tail -1` fperez@culogin.colorado.edu:"~/ipython/backup"
+
+cd ~/ipython/doc
+echo Uploading changes information
+scp ChangeLog NEWS fperez@culogin.colorado.edu:"~/public_html/ipython"
+
+echo "Alerting Andrea Riciputi (Fink IPython maintainer)..."
+addr=andrea.riciputi@libero.it
+mail -s "[ANN] A new IPython is out. Version: $version" fperez@colorado.edu  < NEWS
+mail -s "[ANN] A new IPython is out. Version: $version" $addr  < NEWS
+
+echo Done!
