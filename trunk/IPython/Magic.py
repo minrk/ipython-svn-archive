@@ -1854,22 +1854,23 @@ Defaulting color scheme to 'NoColor'"""
         !command runs is immediately discarded after executing 'command'."""
 
         parameter_s = parameter_s.strip()
-        numcd = re.match(r'(-)(\d+)$',parameter_s)
-        opts,ps = self.parse_options(parameter_s,'qb',mode='string')
         bkms = self.shell.persist.get("bookmarks",{})
 
+        numcd = re.match(r'(-)(\d+)$',parameter_s)
         # jump in directory history by number
         if numcd:
             nn = int(numcd.group(2))
             try:
                 ps = self.shell.user_ns['_dh'][nn]
             except IndexError:
-                print 'Requested directory does not exist in history.'
+                print 'The requested directory does not exist in history.'
                 return
             else:
                 opts = {}
+        else:
+            opts,ps = self.parse_options(parameter_s,'qb',mode='string')
         # jump to previous
-        elif ps == '-':
+        if ps == '-':
             try:
                 ps = self.shell.user_ns['_dh'][-2]
             except IndexError:
@@ -2088,7 +2089,10 @@ Defaulting color scheme to 'NoColor'"""
         elif opts.has_key('l'):
             bks = bkms.keys()
             bks.sort()
-            size = max(map(len,bks))
+            if bks:
+                size = max(map(len,bks))
+            else:
+                size = 0
             fmt = '%-'+str(size)+'s -> %s'
             print 'Current bookmarks:'
             for bk in bks:
