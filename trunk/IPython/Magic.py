@@ -999,8 +999,8 @@ Currently the magic system has the following functions:\n"""
         objects. The profile is still shown on screen.
 
         If you want to run complete programs under the profiler's control, use
-        '@run -p [opts] filename.py [args to program]' and then any profile
-        specific options as described here.
+        '@run -p [prof_opts] filename.py [args to program]' where prof_opts
+        contains profiler specific options as described here.
         
         You can read the complete documentation for the profile module with:
           In [1]: import profile; profile.help() """

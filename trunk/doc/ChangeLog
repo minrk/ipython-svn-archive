@@ -1,5 +1,8 @@
 2004-05-20  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/Magic.py (Magic.magic_prun): changed default profile
+	sort order to 'time' (the more common profiling need).
+
 	* IPython/OInspect.py (Inspector.pinfo): flush the inspect cache
 	so that source code shown is guaranteed in sync with the file on
 	disk (also changed in psource).  Similar fix to the one for
