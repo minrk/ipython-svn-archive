@@ -3507,7 +3507,7 @@ Readline-based features
 \layout Standard
 
 These features require the GNU readline library, so they won't work if your
- Python lacks readline support (as is the case under Windows).
+ Python installation lacks readline support.
  We will first describe the default behavior IPython uses, and then how
  to change it to suit your preferences.
 \layout Subsubsection
@@ -6974,6 +6974,85 @@ C_Normal Stop coloring, defaults to your terminal settings.
 \layout Section
 
 
+\begin_inset LatexCommand \label{sec:matplotlib-support}
+
+\end_inset 
+
+Support for the matplotlib library
+\layout Standard
+
+The matplotlib library (
+\begin_inset LatexCommand \htmlurl[http://matplotlib.sourceforge.net]{http://matplotlib.sourceforge.net}
+
+\end_inset 
+
+) provides high quality 2D plotting for Python.
+ Matplotlib can produce plots on screen using a variety of GUI toolkits,
+ including Tk, GTK and WXPython.
+ It also provides a number of commands useful for scientific computing,
+ all with a syntax compatible with that of the popular Matlab program.
+\layout Standard
+
+IPython accepts the special option 
+\family typewriter 
+-pylab
+\family default 
+ (Sec.\SpecialChar ~
+
+\begin_inset LatexCommand \ref{sec:cmd-line-opts}
+
+\end_inset 
+
+).
+ This configures it to support matplotlib, honoring the settings in the
+ 
+\family typewriter 
+.matplotlibrc
+\family default 
+ file.
+ IPython will detect the user's choice of matplotlib GUI backend, and automatica
+lly select the proper threading model to prevent blocking.
+ It also sets matplotlib in interactive mode and modifies 
+\family typewriter 
+%run
+\family default 
+ slightly, so that any matplotlib-based script can be executed using 
+\family typewriter 
+%run
+\family default 
+ and the final 
+\family typewriter 
+show()
+\family default 
+ command does not block the interactive shell.
+\layout Standard
+
+The 
+\family typewriter 
+-pylab
+\family default 
+ option must be given first in order for IPython to configure its threading
+ mode.
+ However, you can still issue other options afterwards.
+ This allows you to have a matplotlib-based environment customized with
+ additional modules using the standard IPython profile mechanism (Sec.\SpecialChar ~
+
+\begin_inset LatexCommand \ref{sec:profiles}
+
+\end_inset 
+
+): ``
+\family typewriter 
+ipython -pylab -p myprofile
+\family default 
+'' will load the profile defined in 
+\family typewriter 
+ipythonrc-myprofile
+\family default 
+ after configuring matplotlib.
+\layout Section
+
+
 \begin_inset LatexCommand \label{sec:Gnuplot}
 
 \end_inset 
@@ -7284,85 +7363,6 @@ at the IPython prompt.
  to view them.
 \layout Section
 
-
-\begin_inset LatexCommand \label{sec:matplotlib-support}
-
-\end_inset 
-
-Support for the matplotlib library
-\layout Standard
-
-The matplotlib library (
-\begin_inset LatexCommand \htmlurl[http://matplotlib.sourceforge.net]{http://matplotlib.sourceforge.net}
-
-\end_inset 
-
-) provides high quality 2D plotting for Python.
- Matplotlib can produce plots on screen using a variety of GUI toolkits,
- including Tk, GTK and WXPython.
- It also provides a number of commands useful for scientific computing,
- all with a syntax compatible with that of the popular Matlab program.
-\layout Standard
-
-IPython accepts the special option 
-\family typewriter 
--pylab
-\family default 
- (Sec.\SpecialChar ~
-
-\begin_inset LatexCommand \ref{sec:cmd-line-opts}
-
-\end_inset 
-
-).
- This configures it to support matplotlib, honoring the settings in the
- 
-\family typewriter 
-.matplotlibrc
-\family default 
- file.
- IPython will detect the user's choice of matplotlib GUI backend, and automatica
-lly select the proper threading model to prevent blocking.
- It also sets matplotlib in interactive mode and modifies 
-\family typewriter 
-%run
-\family default 
- slightly, so that any matplotlib-based script can be executed using 
-\family typewriter 
-%run
-\family default 
- and the final 
-\family typewriter 
-show()
-\family default 
- command does not block the interactive shell.
-\layout Standard
-
-The 
-\family typewriter 
--pylab
-\family default 
- option must be given first in order for IPython to configure its threading
- mode.
- However, you can still issue other options afterwards.
- This allows you to have a matplotlib-based environment customized with
- additional modules using the standard IPython profile mechanism (Sec.\SpecialChar ~
-
-\begin_inset LatexCommand \ref{sec:profiles}
-
-\end_inset 
-
-): ``
-\family typewriter 
-ipython -pylab -p myprofile
-\family default 
-'' will load the profile defined in 
-\family typewriter 
-ipythonrc-myprofile
-\family default 
- after configuring matplotlib.
-\layout Section
-
 Reporting bugs
 \layout Subsection*
 
@@ -7460,8 +7460,8 @@ When I found out (see sec.
  regular programming and scientific computing: shell-like features, IDL/Matlab
  numerics, Mathematica-type prompt history and great object introspection
  and help facilities.
- I think it worked reasonably well, though it was a lot more work I had
- initially planned.
+ I think it worked reasonably well, though it was a lot more work than I
+ had initially planned.
 \layout Subsection
 
 Current status
@@ -7616,29 +7616,43 @@ Versions of IPython up to and including 0.6.3 were released under the GNU
 Credits
 \layout Standard
 
-The main authors of the code are:
-\layout Standard
-
-Fernando Pérez 
+IPython is mainly developed by Fernando Pérez 
 \family typewriter 
 <fperez@colorado.edu>
 \family default 
- (currently main contact)
-\layout Standard
-
-Janko Hauser 
+, but the project was born from mixing in Fernando's code with the IPP project
+ by Janko Hauser 
 \family typewriter 
 <jhauser@zscout.de>
 \family default 
- 
-\layout Standard
-
-Nathan Gray 
+ and LazyPython by Nathan Gray 
 \family typewriter 
 <n8gray@caltech.edu>
+\family default 
+.
+ For all IPython-related requests, please contact Fernando.
+ User or development help should be requested via the IPython mailing lists:
+\layout Description
+
+User\SpecialChar ~
+list: 
+\begin_inset LatexCommand \htmlurl{http://scipy.net/mailman/listinfo/ipython-user}
+
+\end_inset 
+
+
+\layout Description
+
+Developer's\SpecialChar ~
+list: 
+\begin_inset LatexCommand \htmlurl{http://scipy.net/mailman/listinfo/ipython-dev}
+
+\end_inset 
+
+
 \layout Standard
 
-And we are very grateful to:
+The IPython project is also very grateful to:
 \layout Standard
 
 Bill Bumgarner 

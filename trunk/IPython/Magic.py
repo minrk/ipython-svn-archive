@@ -978,8 +978,11 @@ Currently the magic system has the following functions:\n"""
 
         If you really need to assign this value via an explicit function call,
         you can always tap directly into the true name of the magic function
-        with:\\
-          In [3]: stats = __IPYTHON__.magic_prun('-r print 4')
+        by using the ipmagic function (which IPython automatically adds to the
+        builtins):\\
+          In [3]: stats = ipmagic('prun','-r print 4')
+
+        You can type ipmagic? for more details on ipmagic.
 
        -s <key>: sort profile by given key. You can provide more than one key
         by using the option several times: '-s key1 -s key2 -s key3...'. The

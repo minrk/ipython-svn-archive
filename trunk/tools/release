@@ -31,7 +31,9 @@ echo >> NEWS
 diff ChangeLog.previous ChangeLog | grep -v '^0a' | sed 's/^> //g' >> NEWS
 cp ChangeLog ChangeLog.previous
 
-# Clean up dist directory
+# Clean up build/dist directories
+cd $ipdir/build
+rm -rf *
 cd $ipdir/dist
 rm -f *
 
