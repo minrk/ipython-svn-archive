@@ -198,16 +198,22 @@ pdb 0
 # display (than print) for complex nested data structures.
 pprint 1
 
-# Prompt strings (see ipython --help for more details).
-# Use %n to represent the current prompt number, and quote them to protect
+# Prompt strings
+
+# Most bash-like escapes can be used to customize IPython's prompts, as well as
+# a few additional ones which are IPython-specific.  All valid prompt escapes
+# are described in detail in the Customization section of the IPython HTML/PDF
+# manual.
+
+# Use \# to represent the current prompt number, and quote them to protect
 # spaces.
-prompt_in1 'In [%n]:'
+prompt_in1 'In [\#]:'
 
-# In prompt_in2, %n is replaced by as many dots as there are digits in the
-# current value of %n.
-prompt_in2 '   .%n.:'
+# \D is replaced by as many dots as there are digits in the
+# current value of \#.
+prompt_in2 '   .\D.:'
 
-prompt_out 'Out[%n]:'
+prompt_out 'Out[\#]:'
 
 # quick 1 -> same as ipython -quick
 quick 0
