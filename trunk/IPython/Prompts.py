@@ -49,10 +49,10 @@ Colors = ColorANSI.TermColors  # just a shorthand
 
 PromptColors.add_scheme(ColorANSI.ColorScheme(
     'NoColor',
-    in_prompt = InputColors.NoColor,  # Input prompt
-    in_number = InputColors.NoColor,  # Input prompt number
+    in_prompt  = InputColors.NoColor,  # Input prompt
+    in_number  = InputColors.NoColor,  # Input prompt number
     in_prompt2 = InputColors.NoColor, # Continuation prompt
-    in_normal = InputColors.NoColor,  # color off (usu. Colors.Normal)
+    in_normal  = InputColors.NoColor,  # color off (usu. Colors.Normal)
     
     out_prompt = Colors.NoColor, # Output prompt
     out_number = Colors.NoColor, # Output prompt number
@@ -62,10 +62,10 @@ PromptColors.add_scheme(ColorANSI.ColorScheme(
 # make some schemes as instances so we can copy them for modification easily:
 __PColLinux =  ColorANSI.ColorScheme(
     'Linux',
-    in_prompt = InputColors.Green,
-    in_number = InputColors.LightGreen,
+    in_prompt  = InputColors.Green,
+    in_number  = InputColors.LightGreen,
     in_prompt2 = InputColors.Green,
-    in_normal = InputColors.Normal,  # color off (usu. Colors.Normal)
+    in_normal  = InputColors.Normal,  # color off (usu. Colors.Normal)
 
     out_prompt = Colors.Red,
     out_number = Colors.LightRed,
@@ -75,11 +75,11 @@ __PColLinux =  ColorANSI.ColorScheme(
 # Don't forget to enter it into the table!
 PromptColors.add_scheme(__PColLinux)
 # Slightly modified Linux for light backgrounds
-__PColLightBG = ColorANSI.ColorScheme('LightBG',**__PColLinux.colors.dict().copy())
+__PColLightBG  = ColorANSI.ColorScheme('LightBG',**__PColLinux.colors.dict().copy())
 
 __PColLightBG.colors.update(
-    in_prompt = InputColors.Blue,
-    in_number = InputColors.LightBlue,
+    in_prompt  = InputColors.Blue,
+    in_number  = InputColors.LightBlue,
     in_prompt2 = InputColors.Blue
 )
 PromptColors.add_scheme(__PColLightBG)
@@ -317,7 +317,7 @@ class Prompt2(BasePrompt):
         self.set_p_str()
         Colors = self.cache.color_table.active_colors
         self.col_p2 = Colors.in_prompt2
-        self.col_norm = Colors.normal
+        self.col_norm = Colors.in_normal
         # FIXME (2004-06-16) HACK: prevent crashes for users who haven't
         # updated their prompt_in2 definitions.  Remove eventually.
         self.col_p = Colors.out_prompt
