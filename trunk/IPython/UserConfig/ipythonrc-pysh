@@ -32,12 +32,19 @@ include ipythonrc
 # are described in detail in the Customization section of the IPython HTML/PDF
 # manual.
 
-prompt_in1 '\C_LightGreen\u@\h\C_LightBlue[\C_LightCyan\Y1\C_LightBlue]\C_Green|\#>'
-prompt_in2 '\C_Green|\C_LightGreen\D\C_Green>'
-prompt_out '<\#>'
+prompt_in1 '\C_LightGreen\u@\h\C_LightBlue[\C_LightCyan\Y1\C_LightBlue]\C_Green|\#> '
+prompt_in2 '\C_Green|\C_LightGreen\D\C_Green> '
+prompt_out '<\#> '
 
 # Here's a more complex prompt, showing the hostname and more path depth (\Y3)
-#prompt_in1 '\C_LightRed\u\C_Blue@\C_Red\h\C_LightBlue[\C_LightCyan\Y3\C_LightBlue]\C_LightGreen\#>'
+#prompt_in1 '\C_LightRed\u\C_Blue@\C_Red\h\C_LightBlue[\C_LightCyan\Y3\C_LightBlue]\C_LightGreen\#> '
+
+# Select whether to left-pad the output prompts to match the length of the
+# input ones.  This allows you for example to use a simple '>' as an output
+# prompt, and yet have the output line up with the input.  If set to false,
+# the output prompts will be unpadded (flush left).
+prompts_pad_left 1
+
 
 # Remove all blank lines in between prompts, like a normal shell.
 separate_in 0

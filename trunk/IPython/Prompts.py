@@ -206,7 +206,7 @@ prompt_specials = prompt_specials_nocolor
 #-----------------------------------------------------------------------------
 class BasePrompt:
     """Interactive prompt similar to Mathematica's."""
-    def __init__(self,cache,sep,prompt):
+    def __init__(self,cache,sep,prompt,pad_left=False):
 
         # Hack: we access information about the primary prompt through the
         # cache argument.  We need this, because we want the secondary prompt
@@ -217,6 +217,12 @@ class BasePrompt:
         # Set template to create each actual prompt (where numbers change)
         self.p_template = prompt
         self.set_p_str()
+        # regexp to count the number of spaces at the end of a prompt
+        # expression, useful for prompt auto-rewriting
+        self.rspace = re.compile(r'(\s*)$')
+        # Flag to left-pad prompt strings to match the length of the primary
+        # prompt
+        self.pad_left = pad_left
 
     def set_p_str(self):
         """ Set the interpolating prompt strings.
@@ -224,7 +230,7 @@ class BasePrompt:
         This must be called every time the color settings change, because the
         prompt_specials global may have changed."""
         
-        self.p_str = Itpl('%s%s%s ' %
+        self.p_str = Itpl('%s%s%s' %
                           ('$self.sep${self.col_p}',
                            multiple_replace(prompt_specials, self.p_template),
                           '$self.col_norm'))
@@ -234,21 +240,26 @@ class BasePrompt:
     def __str__(self):
         """Return a string form of the prompt.
 
-        This for is useful for continuation and output prompts, since it
-        matches lengths with the primary one."""
+        This for is useful for continuation and output prompts, since it is
+        left-padded to match lengths with the primary one (if the
+        self.pad_left attribute is set)."""
 
-        # We must find the amount of padding required to match lengths, taking
-        # the color escapes (which are invisible on-screen) into account.
         out_str = str(self.p_str)
-        esc_pad = len(out_str) - len(str(self.p_str_nocolor))
-        format = '%%%ss' % (len(str(self.cache.last_prompt))+esc_pad)
-        return format % out_str
+        if self.pad_left:
+            # We must find the amount of padding required to match lengths,
+            # taking the color escapes (which are invisible on-screen) into
+            # account.
+            esc_pad = len(out_str) - len(str(self.p_str_nocolor))
+            format = '%%%ss' % (len(str(self.cache.last_prompt))+esc_pad)
+            return format % out_str
+        else:
+            return out_str
 
 class Prompt1(BasePrompt):
     """Input interactive prompt similar to Mathematica's."""
 
-    def __init__(self,cache,sep='\n',prompt='In [\\#]:'):
-        BasePrompt.__init__(self,cache,sep,prompt)
+    def __init__(self,cache,sep='\n',prompt='In [\\#]:',pad_left=True):
+        BasePrompt.__init__(self,cache,sep,prompt,pad_left)
 
     def set_colors(self):
         self.set_p_str()
@@ -272,13 +283,15 @@ class Prompt1(BasePrompt):
         handling automatically special syntaxes."""
 
         curr = str(self.cache.last_prompt)
-        return self.col_p_ni + '-'*(len(curr)-1)+'> ' + self.col_norm_ni
+        nrspaces = len(self.rspace.search(curr).group())
+        return '%s%s>%s%s' % (self.col_p_ni,'-'*(len(curr)-nrspaces-1),
+                              ' '*nrspaces,self.col_norm_ni)
 
 class PromptOut(BasePrompt):
     """Output interactive prompt similar to Mathematica's."""
 
-    def __init__(self,cache,sep='',prompt='Out[\\#]:'):
-        BasePrompt.__init__(self,cache,sep,prompt)
+    def __init__(self,cache,sep='',prompt='Out[\\#]:',pad_left=True):
+        BasePrompt.__init__(self,cache,sep,prompt,pad_left)
         if not self.p_template:
             self.__str__ = lambda: ''
 
@@ -292,10 +305,11 @@ class PromptOut(BasePrompt):
 class Prompt2(BasePrompt):
     """Interactive continuation prompt."""
     
-    def __init__(self,cache,prompt='   .\\D.:'):
+    def __init__(self,cache,prompt='   .\\D.:',pad_left=True):
         self.cache = cache
         self.p_template = prompt
         self.set_p_str()
+        self.pad_left = pad_left
 
     def set_p_str(self):
         self.p_str = Itpl('%s%s%s ' %
@@ -330,7 +344,7 @@ class CachedOutput:
     def __init__(self,cache_size,Pprint,colors='NoColor',input_sep='\n',
                  output_sep='\n',output_sep2='',user_ns={},
                  ps1 = None, ps2 = None,ps_out = None,
-                 input_hist = None):
+                 input_hist = None,pad_left=True):
 
         cache_size_min = 20
         if cache_size <= 0:
@@ -355,9 +369,11 @@ class CachedOutput:
         self.ps2_str = self._set_prompt_str(ps2,'   .\\D.:','...')
         self.ps_out_str = self._set_prompt_str(ps_out,'Out[\\#]:','')
 
-        self.prompt1 = Prompt1(self,sep=input_sep,prompt=self.ps1_str)
-        self.prompt2 = Prompt2(self,prompt=self.ps2_str)
-        self.prompt_out = PromptOut(self,sep='',prompt=self.ps_out_str)
+        self.prompt1 = Prompt1(self,sep=input_sep,prompt=self.ps1_str,
+                               pad_left=pad_left)
+        self.prompt2 = Prompt2(self,prompt=self.ps2_str,pad_left=pad_left)
+        self.prompt_out = PromptOut(self,sep='',prompt=self.ps_out_str,
+                                    pad_left=pad_left)
         self.color_table = PromptColors
         self.set_colors(colors)
 
@@ -384,13 +400,13 @@ class CachedOutput:
         self.user_ns.update(to_user_ns)
 
     def _set_prompt_str(self,p_str,cache_def,no_cache_def):
-        if p_str:
-            return p_str
-        else:
+        if p_str is None:
             if self.do_full_cache:
                 return cache_def
             else:
                 return no_cache_def
+        else:
+            return p_str
                 
     def set_colors(self,colors):
         """Set the active color scheme and configure colors for the three
@@ -412,8 +428,8 @@ class CachedOutput:
     def __call__(self,arg=None):
         """Printing with history cache management.
         
-        This is invoked everytime the interpreter needs to print, and is activated
-        by setting the variable sys.displayhook to it."""
+        This is invoked everytime the interpreter needs to print, and is
+        activated by setting the variable sys.displayhook to it."""
 
         # If something injected a '_' variable in __builtin__, delete
         # ipython's automatic one so we don't clobber that.  gettext() in
@@ -429,14 +445,15 @@ class CachedOutput:
             # do not print output if input ends in ';'
             if self.input_hist[self.prompt_count].endswith(';\n'):
                 return
-
-            Term.cout.write(self.output_sep)  # don't use print, puts an extra space
+            # don't use print, puts an extra space
+            Term.cout.write(self.output_sep)
             if self.do_full_cache:
                 Term.cout.write(str(self.prompt_out))
 
             if isinstance(arg,Macro):
                 print 'Executing Macro...'
-                Term.cout.flush()  # in case the macro takes a long time to execute
+                # in case the macro takes a long time to execute
+                Term.cout.flush()
                 exec arg.value in self.user_ns
                 return None
 
@@ -487,7 +504,6 @@ class CachedOutput:
             self.__ = self._
             self._ = arg
             self.user_ns.update({'_':self._,'__':self.__,'___':self.___})
-            #to_main.update({'_':self._,'__':self.__,'___':self.___})
             
         # hackish access to top-level  namespace to create _1,_2... dynamically
         to_main = {}

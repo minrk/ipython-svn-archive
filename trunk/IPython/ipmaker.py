@@ -67,6 +67,9 @@ def make_IPython(argv=None,user_ns=None,debug=1,rc_override=None,
 
     #----------------------------------------------------------------------
     # Defaults and initialization
+    
+    # For developer debugging, deactivates crash handler and uses pdb.
+    DEVDEBUG = False
 
     if argv is None:
         argv = sys.argv
@@ -96,13 +99,8 @@ def make_IPython(argv=None,user_ns=None,debug=1,rc_override=None,
     else:
         IP.user_ns['help'] = _Helper()
 
-    if debug:
-        # For developer debugging only.  Activate this by changing the main
-        # ipython script from:
-        #   IPython.Shell.IPShell().mainloop()
-        # to:
-        #   IPython.Shell.IPShell(debug=1).mainloop()
-        #
+    if DEVDEBUG:
+        # For developer debugging only (global flag)
         from IPython import ultraTB
         sys.excepthook = ultraTB.VerboseTB(call_pdb=1)
     else:
@@ -159,7 +157,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                     'c=s classic|cl color_info! colors=s confirm_exit! '
                     'debug! deep_reload! editor=s log|l messages! nosep pdb! '
                     'pprint! prompt_in1|pi1=s prompt_in2|pi2=s prompt_out|po=s '
-                    'quick screen_length|sl=i '
+                    'quick screen_length|sl=i prompts_pad_left=i '
                     'logfile|lf=s logplay|lp=s profile|p=s '
                     'readline! readline_omit__names! '
                     'rcfile=s separate_in|si=s separate_out|so=s '
@@ -207,6 +205,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       prompt_in1 = 'In [\\#]:',
                       prompt_in2 = '   .\\D.:',
                       prompt_out = 'Out[\\#]:',
+                      prompts_pad_left = 1,
                       quick = 0,
                       readline = 1,
                       readline_omit__names = 0,
@@ -329,8 +328,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     # Log replay
     
     # if -logplay, we need to 'become' the other session. That basically means
-    # replacing the current command line environment with that of the old session
-    # and moving on.
+    # replacing the current command line environment with that of the old
+    # session and moving on.
 
     # this is needed so that later we know we're in session reload mode, as
     # opts_all will get overwritten:
@@ -356,8 +355,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                 # this reloads that session's command line
                 cmd = logplay.readline()[6:] 
                 exec cmd
-                # restore the true debug flag given so that the process of session
-                # loading itself can be monitored.
+                # restore the true debug flag given so that the process of
+                # session loading itself can be monitored.
                 opts.debug = opts_debug_save
                 # save the logplay flag so later we don't overwrite the log
                 opts.logplay = load_logplay
@@ -688,7 +687,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                                   ps2 = IP.rc.prompt_in2,
                                   ps_out = IP.rc.prompt_out,
                                   user_ns = IP.user_ns,
-                                  input_hist = IP.input_hist)
+                                  input_hist = IP.input_hist,
+                                  pad_left = IP.rc.prompts_pad_left)
 
     # Set user colors (don't do it in the constructor above so that it doesn't
     # crash if colors option is invalid)

@@ -208,13 +208,19 @@ pprint 1
 
 # Use \# to represent the current prompt number, and quote them to protect
 # spaces.
-prompt_in1 'In [\#]:'
+prompt_in1 'In [\#]: '
 
 # \D is replaced by as many dots as there are digits in the
 # current value of \#.
-prompt_in2 '   .\D.:'
+prompt_in2 '   .\D.: '
 
-prompt_out 'Out[\#]:'
+prompt_out 'Out[\#]: '
+
+# Select whether to left-pad the output prompts to match the length of the
+# input ones.  This allows you for example to use a simple '>' as an output
+# prompt, and yet have the output line up with the input.  If set to false,
+# the output prompts will be unpadded (flush left).
+prompts_pad_left 1
 
 # quick 1 -> same as ipython -quick
 quick 0
