@@ -2178,7 +2178,7 @@ Defaulting color scheme to 'NoColor'"""
         # If all looks ok, proceed
         out,err = self.shell.getoutputerror(cmd)
         if err:
-            print >> sys.stderr,err
+            print >> Term.cerr,err
         if opts.has_key('l'):
             out = out.split('\n')
         if opts.has_key('v'):
@@ -2214,7 +2214,7 @@ Defaulting color scheme to 'NoColor'"""
         if parameter_s:
             out,err = self.shell.getoutputerror(parameter_s)
             if err:
-                print >> sys.stderr,err
+                print >> Term.cerr,err
             return out.split('\n')
 
     def magic_bookmark(self, parameter_s=''):
