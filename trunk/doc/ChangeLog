@@ -1,3 +1,5 @@
+2005-01-27  *** Released version 0.6.10
+
 2005-01-27  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/numutils.py (norm): Added 'inf' as optional name for
