@@ -1,5 +1,8 @@
 2004-11-30  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/Magic.py (Magic.magic_run): Fix bug in breakpoint
+	setting with -d option.
+
 	* setup.py (docfiles): Fix problem where the doc glob I was using
 	was COMPLETELY BROKEN.  It was giving the right files by pure
 	accident, but failed once I tried to include ipython.el.  Note:
