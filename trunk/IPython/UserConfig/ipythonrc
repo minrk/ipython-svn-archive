@@ -312,6 +312,14 @@ readline_parse_and_bind set show-all-if-ambiguous on
 # default) to insert a true TAB character.
 readline_parse_and_bind "\C-o": tab-insert
 
+# These commands allow you to indent/unindent easily, with the 4-space
+# convention of the Python coding standards.  Since IPython's internal
+# auto-indent system also uses 4 spaces, you should not change the number of
+# spaces in the code below.
+readline_parse_and_bind "\M-i": "    "
+readline_parse_and_bind "\M-o": "\d\d\d\d"
+readline_parse_and_bind "\M-I": "\d\d\d\d"
+
 # Bindings for incremental searches in the history. These searches use the
 # string typed so far on the command line and search anything in the previous
 # input history containing them.
