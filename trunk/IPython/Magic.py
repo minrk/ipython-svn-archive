@@ -605,11 +605,9 @@ Currently the magic system has the following functions:\n"""
         # Look through the input history in reverse
         for n in range(len(self.shell.input_hist)-2,0,-1):
             input = self.shell.input_hist[n]
-            if input.startswith('#'+esc_magic):
-                input = input[1:]
             # skip plain 'r' lines so we don't recurse to infinity
-            if input != '%sr\n' % esc_magic and \
-               (input.startswith(start) or input.startswith(start_magic)):
+            if input != 'ipmagic("r")\n' and \
+                   (input.startswith(start) or input.startswith(start_magic)):
                 #print 'match',`input`  # dbg
                 if input.startswith(esc_magic):
                     input = magic2python(input)
@@ -1632,7 +1630,7 @@ Currently the magic system has the following functions:\n"""
 
         In [1]: ed\\
         Editing... done. Executing edited code...\\
-        Out[1]: 'def foo():\n    print "foo() was defined in an editing session"\n'
+        Out[1]: 'def foo():\\n    print "foo() was defined in an editing session"\\n'
 
         We can then call the function foo():
         
