@@ -1,3 +1,8 @@
+2004-06-21  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.magic_rehash): Fix crash when
+	non-existent items are found in $PATH.  Reported by Thorsten.
+
 2004-06-20  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (complete): modified the completer so that the
