@@ -26,13 +26,6 @@ import code
 import threading
 import signal
 
-try:
-    import readline
-except ImportError:
-    def readline_insert_text(msg): pass
-else:
-    readline_insert_text = readline.insert_text
-
 import IPython
 from IPython.iplib import InteractiveShell
 from IPython.ipmaker import make_IPython
@@ -40,6 +33,9 @@ from IPython.genutils import Term,warn,error
 from IPython.Struct import Struct
 from IPython.Magic import Magic
 from IPython import ultraTB
+
+# global flag to pass around information about Ctrl-C without exceptions
+KBINT = False
 
 #-----------------------------------------------------------------------------
 # This class is trivial now, but I want to have it in to publish a clean
@@ -247,10 +243,13 @@ def sigint_handler (signum,stack_frame):
     This is a horrible hack to pass information about SIGINT _without_ using
     exceptions, since I haven't been able to properly manage cross-thread
     exceptions in GTK/WX.  """
+
+    global KBINT
     
     print '\nKeyboardInterrupt - Press <Enter> to continue.',
     sys.stdout.flush()
-    readline_insert_text(' IPythonIgnoreLine ')
+    # Set global flag so that runsource can know that Ctrl-C was hit
+    KBINT = True
 
 class MTInteractiveShell(InteractiveShell):
     """Simple multi-threaded shell."""
@@ -290,9 +289,12 @@ class MTInteractiveShell(InteractiveShell):
 
         Modified version of code.py's runsource(), to handle threading issues.
         See the original for full docstring details."""
+
+        global KBINT
         
-        # If Ctrl-C was typed, we return right away.
-        if source.find('IPythonIgnoreLine') > -1:
+        # If Ctrl-C was typed, we reset the flag and return right away
+        if KBINT:
+            KBINT = False
             return False
         
         try:
