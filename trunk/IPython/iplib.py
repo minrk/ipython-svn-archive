@@ -37,6 +37,7 @@ import __main__
 import __builtin__
 import exceptions
 import keyword
+import new
 import os, sys, shutil
 import code, glob, types, re
 import string, StringIO
@@ -48,6 +49,7 @@ import cPickle as pickle
 import traceback
 
 # IPython's own modules
+import IPython
 from IPython import OInspect,PyColorize,ultraTB
 from IPython.ultraTB import ColorScheme,ColorSchemeTable  # too long names
 from IPython.Logger import Logger
@@ -65,6 +67,9 @@ raw_input_original = raw_input
 
 #****************************************************************************
 # Some utility function definitions
+
+class Bunch: pass
+
 def import_fail_info(mod_name,fns=None):
     """Inform load failure for a module."""
 
@@ -400,6 +405,9 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         __builtin__.ipmagic = ipmagic
         __builtin__.ipalias = ipalias
 
+        # Add to __builtin__ other parts of IPython's public API
+        __builtin__.ip_set_hook = self.set_hook
+
         # Keep in the builtins a flag for when IPython is active.  We set it
         # with setdefault so that multiple nested IPythons don't clobber one
         # another.  Each will increase its value by one upon being activated,
@@ -527,10 +535,13 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # magic code via this pointer instead of the current mixin salad.
         Magic.set_shell(self,self)
 
-        # hooks is a Struct holding pointers to various system hooks, and will
-        # be used for further user-side customizations in the future
-        #self.hooks = Struct(ps1 = sys.ps1,ps2 = sys.ps2,display = sys.displayhook)
+        # hooks holds pointers used for user-side customizations
         self.hooks = Struct()
+        
+        # Set all default hooks, defined in the IPython.hooks module.
+        hooks = IPython.hooks
+        for hook_name in hooks.__all__:
+            self.set_hook(hook_name,getattr(hooks,hook_name))
 
         # Flag to mark unconditional exit
         self.exit_now = False
@@ -643,7 +654,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # Prepare list of shell aliases to auto-define
         if os.name == 'posix':            
             auto_alias = ('mkdir mkdir', 'rmdir rmdir',
-                          'mv mv -i','rm rm -i','rmf rm -f','cp cp -i',
+                          'mv mv -i','rm rm -i','cp cp -i',
                           'cat cat','less less','clear clear',
                           # a better ls
                           'ls ls -F',
@@ -664,14 +675,25 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
             auto_alias = ('dir dir /on', 'ls dir /on',
                           'ddir dir /ad /on', 'ldir dir /ad /on',
                           'mkdir mkdir','rmdir rmdir','echo echo',
-                          'ren ren','cls cls','cp copy','copy copy',
-                          'more type','type type')
+                          'ren ren','cls cls','copy copy')
         else:
             auto_alias = ()
         self.auto_alias = map(lambda s:s.split(None,1),auto_alias)
         # Call the actual (public) initializer
         self.init_auto_alias()
     # end __init__
+
+    def set_hook(self,name,hook):
+        """set_hook(name,hook) -> sets an internal IPython hook.
+
+        IPython exposes some of its internal API as user-modifiable hooks.  By
+        resetting one of these hooks, you can modify IPython's behavior to
+        call at runtime your own routines."""
+
+        # At some point in the future, this should validate the hook before it
+        # accepts it.  Probably at least check that the hook takes the number
+        # of args it's supposed to.
+        setattr(self.hooks,name,new.instancemethod(hook,self,self.__class__))
 
     def post_config_initialization(self):
         """Post configuration init method
@@ -710,7 +732,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
                 if verbose:
                     print ("Deleting alias <%s>, it's a Python "
                            "keyword or builtin." % k)
-
+    
     def set_autoindent(self,value=None):
         """Set the autoindent flag, checking for readline support.
 
