@@ -32,11 +32,27 @@ __all__ = qw('gnuplot_exec sum_flat mean_flat binary_repr zeros_like '
 
 #****************************************************************************
 # required modules
-import math,kinds
+import math
 import Numeric
 from Numeric import *
 import sys, ultraTB,operator
 import __main__
+
+try:
+    import kinds
+except ImportError:
+    # Hand-built mockup of the things we need from the kinds package, since it
+    # was recently removed from the standard Numeric distro.  Some users may
+    # not have it by default, and we just need two things from it.
+    class _bunch:
+        pass
+    
+    class _kinds(_bunch):
+        default_float_kind = _bunch()
+        default_float_kind.MIN = 2.2250738585072014e-308
+        default_float_kind.MAX = 1.7976931348623157e+308
+
+    kinds = _kinds()
 
 AutoTB = ultraTB.AutoFormattedTB(mode='Verbose',color_scheme='Linux')
 
@@ -48,10 +64,8 @@ AutoTB = ultraTB.AutoFormattedTB(mode='Verbose',color_scheme='Linux')
 # Python, LaTeX and Mathematica names.
 inf = infty = Infinity = (array([1])/0.0)[0]
 
-
 #****************************************************************************
-# function definitions
-
+# function definitions        
 def exp_safe(x):
     """Compute exponentials which safely underflow to zero.
 
