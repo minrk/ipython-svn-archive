@@ -320,7 +320,6 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
 
         # escapes for automatic behavior on the command line
         self.ESC_SHELL = '!'
-        self.ESC_SHELL_ASSIGN = '$'
         self.ESC_HELP  = '?'
         self.ESC_MAGIC = '@'
         self.ESC_QUOTE = ','
@@ -332,7 +331,6 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
                              self.ESC_MAGIC:self.handle_magic,
                              self.ESC_HELP:self.handle_help,
                              self.ESC_SHELL:self.handle_shell_escape,
-                             self.ESC_SHELL_ASSIGN:self.handle_shell_assign,
 			     }
 
         # RegExp for splitting line contents into pre-char//first word-method//rest
@@ -1064,37 +1062,6 @@ There seemed to be a problem with your sys.stderr.
         line = line.strip()[1:]
         os.system(line)
         return ''               # MUST return something, at least an empty string
-
-    def handle_shell_assign(self, line, continue_prompt=None):
-        """Execute the line in a shell, assigning the result to the given variable.
-
-	The command line syntax is:
-
-	$varname=command
-
-	IPython will run the given command using commands.getoutput(), and
-	will then update the user's interactive namespace with a variable
-	called varname, containing the value of the call (as a string)."""
-
-	# Log input as in handle_shell_escape
-	
-        self.log('#'+line)        # comment out into log/_ih
-        self.update_cache(line)   # readline cache gets normal line
-        line = line.strip()[1:]
-
-	# Now try to get a variable name and command to run
-	try:
-	    var,cmd = line.split('=',1)
-	except ValueError:
-	    var = ''
-	var = var.strip()
-	if not var:
-	    print 'ERROR: you must specify a variable to assign the command to.'
-	else:
-	    out = commands.getoutput(cmd)
-	    self.user_ns.update({var:out})
-	    print '--- IPython variable set --- %s:\n%s' % (var,out)
-	return ''
 
     def handle_emacs(self,line,continue_prompt):
         """Handle input lines marked by python-mode."""

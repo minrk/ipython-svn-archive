@@ -1774,4 +1774,44 @@ self.magic_$alias = magic_$alias
         """Return the current directory stack."""
 
         return self.dir_stack[:]
+
+    def magic_sc(self, parameter_s=''):
+        """Shell capture - execute a shell command and capture its output.
+
+        @sc [options] varname=command
+
+	IPython will run the given command using commands.getoutput(), and
+	will then update the user's interactive namespace with a variable
+	called varname, containing the value of the call.  Your command can
+        contain shell wildcards, pipes, etc.
+
+        The '=' sign in the syntax is mandatory, and the variable name you
+        supply must follow Python's standard conventions for valid names.
+
+        Options:
+
+          -l: list output.  Split the output into a list before assigning it
+          to the given variable.  By default the output is stored as a string.
+
+          -v: verbose.  Print the contents of the variable."""
+
+        opts,args = self.parse_options(parameter_s,'lv')
+	# Try to get a variable name and command to run
+	try:
+	    var,cmd = args.split('=',1)
+            var = var.strip()
+	except ValueError:
+	    var = ''
+	if not var:
+	    error('you must specify a variable to assign the command to.')
+            return
+        # If all looks ok, proceed
+        out = commands.getoutput(cmd)
+        if opts.has_key('l'):
+            out = out.split()
+        if opts.has_key('v'):
+            print '%s ==\n%s' % (var,pformat(out))
+        self.shell.user_ns.update({var:out})
+
 # end Magic
+
