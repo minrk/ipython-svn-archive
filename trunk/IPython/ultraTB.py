@@ -105,7 +105,6 @@ from genutils import Term
 
 if sys.version[0:3] < '2.1':
     raise ImportError, 'Python Version 2.1 or above is required.'
-
         
 #---------------------------------------------------------------------------
 class TBTools:
@@ -701,7 +700,6 @@ class FormattedTB(VerboseTB,ListTB):
     def verbose(self):
         self.set_mode(self.valid_modes[2])
 
-
 #----------------------------------------------------------------------------
 class AutoFormattedTB(FormattedTB):
     """A traceback printer which can be called on the fly.
@@ -750,7 +748,6 @@ class ColorTB(FormattedTB):
     def __init__(self,color_scheme='Linux',call_pdb=0):
         FormattedTB.__init__(self,color_scheme=color_scheme,
                              call_pdb=call_pdb)
-
 
 #----------------------------------------------------------------------------
 # module testing (minimal)

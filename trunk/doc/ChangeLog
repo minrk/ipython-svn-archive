@@ -3,6 +3,12 @@
 	* setup.py (isfile): Fix build so documentation gets updated for
 	rpms (it was only done for .tgz builds).
 
+2004-08-10  Fernando Perez  <fperez@colorado.edu>
+
+	* genutils.py (Term): Fix misspell of stdin stream (sin->cin).
+
+	* iplib.py : Silence syntax error exceptions in tab-completion.
+	
 2004-08-05  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Prompts.py (Prompt2.set_colors): Fix incorrectly set

@@ -38,8 +38,6 @@ class IPShell:
     """Create an IPython instance."""
     
     def __init__(self,argv=None,user_ns=None,debug=0):
-        if argv is None:
-            argv = sys.argv
         self.IP = make_IPython(argv,user_ns=user_ns,debug=debug)
 
     def mainloop(self,sys_exit=0):
@@ -106,7 +104,7 @@ class IPShellEmbed:
     <cmkleffner@gmx.de> on Dec. 06/01 concerning similar uses of pyrepl, and
     by the IDL stop/continue commands."""
 
-    def __init__(self,argv=[''],banner='',exit_msg=None,rc_override=None):
+    def __init__(self,argv=None,banner='',exit_msg=None,rc_override=None):
         """Note that argv here is a string, NOT a list."""
         self.set_banner(banner)
         self.set_exit_msg(exit_msg)
