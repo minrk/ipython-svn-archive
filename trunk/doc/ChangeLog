@@ -1,3 +1,11 @@
+2005-04-06  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (ipmagic): big overhaul of the magic system for
+	consistency.  Now magics can be called in multiline statements,
+	and python variables can be expanded in magic calls via $var.
+	This makes the magic system behave just like aliases or !system
+	calls.
+
 2005-03-28  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (handle_auto): cleanup to use %s instead of
