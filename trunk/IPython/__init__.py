@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 IPython -- An enhanced Interactive Python
 
@@ -28,24 +29,29 @@ IPython requires Python 2.2 or newer.
 
 $Id$"""
 
+# Enforce proper version requirements
+import sys
+if sys.version[0:3] < '2.2':
+    raise ImportError, 'Python Version 2.2 or above is required.'
+        
 # Define what gets imported with a 'from IPython import *'
-
-__all__ = ('deep_reload genutils ultraTB DPyGetOpt Itpl ConfigLoader '
-           'OutputTrap Release Struct Shell '.split() )
+__all__ = ['deep_reload','genutils','ultraTB','DPyGetOpt','Itpl',
+           'ConfigLoader','OutputTrap','Release','Struct','Shell']
 
 # Load __all__ in IPython namespace so that a simple 'import IPython' gives
 # access to them via IPython.<name>
+glob,loc = globals(),locals()
 for name in __all__:
-    __import__(name,globals(),locals(),[])
+    __import__(name,glob,loc,[])
 
 # Release data
-import Release  # do it explicitly so pydoc can see it - pydoc bug
-__version__ = Release.version
-__date__    = Release.date
+from IPython import Release # do it explicitly so pydoc can see it - pydoc bug
 __author__  = '%s <%s>\n%s <%s>\n%s <%s>' % \
               ( Release.authors['Fernando'] + Release.authors['Janko'] + \
                 Release.authors['Nathan'] )
 __license__ = Release.license
+__version__ = Release.version
+__date__    = Release.date
 
 # Namespace cleanup
-del name
+del name,glob,loc

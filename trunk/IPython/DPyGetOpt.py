@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """DPyGetOpt -- Demiurge Python GetOptions Module
 
  $Id$
@@ -62,9 +62,9 @@ $Id$"""
 #
 #*****************************************************************************
 
-__author__ = 'Bill Bumgarner <bbum@friday.com>'
-__version__= '1.2'
+__author__  = 'Bill Bumgarner <bbum@friday.com>'
 __license__ = 'MIT'
+__version__ = '1.2'
 
 # Modified to use re instead of regex and regsub modules.
 # 2001/5/7, Jonathan Hogg <jonathan@onegoodidea.com>
@@ -89,7 +89,7 @@ StringArgType	= 'String Argument Type'
 IntegerArgType	= 'Integer Argument Type'
 RealArgType		= 'Real Argument Type'
 BooleanArgType	= 'Boolean Argument Type'
-GenericArgType = 'Generic Argument Type'
+GenericArgType  = 'Generic Argument Type'
 
 # dictionary of conversion functions-- boolean and generic options
 # do not accept arguments and do not need conversion functions;
@@ -101,6 +101,7 @@ ConversionFunctions = {
 	BooleanArgType : lambda x: x,
 	GenericArgType : lambda x: x,
 	}
+
 class DPyGetOpt:
 
 	def __init__(self, spec = None, terminators = ['--']):

@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """IPython Shell classes.
 
 All the matplotlib support code was co-developed with John Hunter,
@@ -20,9 +20,8 @@ $Id$"""
 #
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
-import Release
-__version__ = Release.version
-__date__    = Release.date
+
+from IPython import Release
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
 
@@ -36,11 +35,11 @@ import threading
 
 import IPython
 from IPython.iplib import InteractiveShell
-from ipmaker import make_IPython
-from genutils import Term,warn,error
-from Struct import Struct
-from Magic import Magic
-import ultraTB
+from IPython.ipmaker import make_IPython
+from IPython.genutils import Term,warn,error
+from IPython.Struct import Struct
+from IPython.Magic import Magic
+from IPython import ultraTB
 
 #-----------------------------------------------------------------------------
 # This class is trivial now, but I want to have it in to publish a clean

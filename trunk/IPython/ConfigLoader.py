@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Configuration loader
 
 $Id$"""
@@ -17,10 +17,10 @@ $Id$"""
 #
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
-__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
-__version__= '0.1.0'
-__license__ = 'LGPL'
-__date__   = 'Tue Dec 11 00:27:58 MST 2001'
+
+from IPython import Release
+__author__  = '%s <%s>' % Release.authors['Fernando']
+__license__ = Release.license
 
 import os
 from Struct import Struct

@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """
 Pdb debugger class.
 
@@ -10,28 +10,20 @@ In the future, this class will be expanded with improvements over the standard
 pdb.
 
 The code in this file is mainly lifted out of cmd.py in Python 2.2, with minor
-changes. Licensing should therefore be under the standard Python terms.
+changes. Licensing should therefore be under the standard Python terms.  For
+details on the PSF (Python Software Foundation) standard license, see:
+
+http://www.python.org/2.2.3/license.html
 
 $Id$"""
 
-import Release
-__version__ = Release.version
-__date__    = Release.date
+from IPython import Release
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = 'Python'
 
 import pdb,bdb,cmd,os,sys
 
-# Workaround for lack of 'completekey' keyword in 2.1's version of cmd.Cmd
-if sys.version[0:3] < '2.2':
-    class Command(cmd.Cmd):
-        def __init__(self, completekey=None):
-            pass
-else:
-    Command = cmd.Cmd
-
-
-class Pdb(pdb.Pdb, bdb.Bdb, Command):
+class Pdb(pdb.Pdb, bdb.Bdb, cmd.Cmd):
     """Modified Pdb class, does not load readline."""
     def __init__(self):
         bdb.Bdb.__init__(self)

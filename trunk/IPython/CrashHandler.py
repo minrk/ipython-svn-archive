@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """sys.excepthook for IPython itself, leaves a detailed report on disk.
 
 $Id$"""
@@ -18,11 +18,10 @@ $Id$"""
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-import Release
-__version__ = Release.version
-__date__    = Release.date
+from IPython import Release
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
+__version__ = Release.version
 
 #****************************************************************************
 # Required modules

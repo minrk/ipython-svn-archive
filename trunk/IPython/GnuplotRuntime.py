@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Basic Gnuplot functionality for inclusion in other code.
 
 This module creates a running Gnuplot instance called 'gp' and builds other
@@ -50,11 +50,11 @@ Inspired by a suggestion/request from Arnd Baecker.
 
 $Id$"""
 
-__all__ = ('Gnuplot gp gp_new Data File Func GridData pm3d_config '
-           'eps_fix_bbox'.split())
+__all__ = ['Gnuplot','gp','gp_new','Data','File','Func','GridData',
+           'pm3d_config','eps_fix_bbox']
 
 import os,tempfile,sys
-from genutils import getoutput
+from IPython.genutils import getoutput
 
 #---------------------------------------------------------------------------
 # Notes on mouse support for Gnuplot.py
@@ -95,7 +95,7 @@ if os.name in ['nt','dos'] or sys.platform == 'cygwin':
 else:
     gnuplot_persist = 1
 
-import Gnuplot2 as Gnuplot
+import IPython.Gnuplot2 as Gnuplot
 
 class NotGiven: pass
 

@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """
 IPython -- An enhanced Interactive Python
 
@@ -8,8 +8,6 @@ This file contains the main make_IPython() starter function.
 
 $Id$
 """
-
-from __future__ import nested_scopes
 
 #*****************************************************************************
 #       Copyright (C) 2001 Fernando Perez. <fperez@colorado.edu>
@@ -26,11 +24,10 @@ from __future__ import nested_scopes
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-import Release
-__version__ = Release.version
-__date__    = Release.date
+from IPython import Release
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
+__version__ = Release.version
 
 credits._Printer__data = """
 Python: %s
@@ -53,14 +50,14 @@ import os,sys,types,re
 from pprint import pprint,pformat
 
 # Our own
-import DPyGetOpt
-from Struct import Struct
-from OutputTrap import OutputTrap
-from ConfigLoader import ConfigLoader
-from iplib import InteractiveShell,qw_lol,import_fail_info
-from usage import cmd_line_usage,interactive_usage
-from Prompts import CachedOutput
-from genutils import *
+from IPython import DPyGetOpt
+from IPython.Struct import Struct
+from IPython.OutputTrap import OutputTrap
+from IPython.ConfigLoader import ConfigLoader
+from IPython.iplib import InteractiveShell,qw_lol,import_fail_info
+from IPython.usage import cmd_line_usage,interactive_usage
+from IPython.Prompts import CachedOutput
+from IPython.genutils import *
 
 #-----------------------------------------------------------------------------
 def make_IPython(argv=None,user_ns=None,debug=0,rc_override=None,
@@ -76,10 +73,6 @@ def make_IPython(argv=None,user_ns=None,debug=0,rc_override=None,
     sys.argv.
 
     - user_ns: a dict to be used as the user's namespace."""
-
-    if sys.version[0:3] < '2.2':
-        print 'IPython requires Python Version 2.2 or above. Sorry.'
-        sys.exit()
 
     #----------------------------------------------------------------------
     # Defaults and initialization
@@ -119,12 +112,12 @@ def make_IPython(argv=None,user_ns=None,debug=0,rc_override=None,
         # to:
         #   IPython.Shell.IPShell(debug=1).mainloop()
         #
-        import ultraTB
+        from IPython import ultraTB
         sys.excepthook = ultraTB.VerboseTB(call_pdb=1)
     else:
         # IPython itself shouldn't crash. This will produce a detailed
         # post-mortem if it does
-        import CrashHandler
+        from IPython import CrashHandler
         sys.excepthook = CrashHandler.CrashHandler(IP)
 
     IP.BANNER_PARTS = ['Python %s\n'
@@ -543,7 +536,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
 
     # Recursive reload
     try:
-        import deep_reload
+        from IPython import deep_reload
         if IP.rc.deep_reload:
             __builtin__.reload = deep_reload.reload
         else:

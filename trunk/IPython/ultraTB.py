@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """
 ultraTB.py -- Spice up your tracebacks!
 
@@ -85,27 +85,24 @@ $Id$"""
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__version__ = '0.2' 
-__author__  = ('Nathaniel Gray <n8gray@caltech.edu>\n'
-               'Fernando Pérez <fperez@colorado.edu>')
-__license__ = 'LGPL'
-__date__    = 'Tue Dec 11 00:27:58 MST 2001'
+from IPython import Release
+__author__  = '%s <%s>\n%s <%s>' % (Release.authors['Nathan']+
+                                    Release.authors['Fernando'])
+__license__ = Release.license
 
 # Required modules
 import sys, os, traceback, types, string, time
 import keyword, tokenize, linecache, inspect, pydoc
 from UserDict import UserDict
 
+# IPython's own modules
 # Modified pdb which doesn't damage IPython's readline handling
-import Debugger
+from IPython import Debugger
 
-from Struct import Struct
-from ColorANSI import *
-from genutils import Term
+from IPython.Struct import Struct
+from IPython.ColorANSI import *
+from IPython.genutils import Term
 
-if sys.version[0:3] < '2.1':
-    raise ImportError, 'Python Version 2.1 or above is required.'
-        
 #---------------------------------------------------------------------------
 class TBTools:
     """Basic tools used by all traceback printer classes."""
@@ -570,12 +567,8 @@ class VerboseTB(TBTools):
         # carefully and see if a unified solution is possible for all versions
         # or not:
         
-        if sys.version_info[0:3] >= (2,2,0):
-            return head + '\n\n' + string.join(frames, '\n') + '\n' + \
-                   string.join(exception[0], '')
-        else:
-            return head + '\n\n' + string.join(frames, '\n') + '\n' + \
-                   string.join(exception[:-1], '')
+        return head + '\n\n' + string.join(frames, '\n') + '\n' + \
+               string.join(exception[0], '')
 
     def debugger(self):
         """Call up the pdb debugger if desired, always clean up the tb reference.

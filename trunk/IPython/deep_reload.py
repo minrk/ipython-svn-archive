@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """
 A module to change reload() so that it acts recursively.
 To enable it type:
@@ -29,21 +29,17 @@ $Id$"""
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__  = "Nathaniel Gray <n8gray@caltech.edu>"
+
+from IPython import Release # do it explicitly so pydoc can see it - pydoc bug
+__author__  = '%s <%s>' %  Release.authors['Nathan']
+__license__ = Release.license
 __version__ = "0.5"
 __date__    = "21 August 2001"
-__license__ = 'LGPL'
 
 import sys, imp, __builtin__
 
 # Replacement for __import__()
 def deep_import_hook(name, globals=None, locals=None, fromlist=None):
-
-##    if fromlist:
-##        print 'Importing', fromlist, 'from module', name
-##    else:
-##        print 'Importing module', name
-
     parent = determine_parent(globals)
     q, tail = find_head_package(parent, name)
     m = load_tail(q, tail)

@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Release data for the IPython project.
 
 $Id$"""
@@ -44,8 +44,8 @@ Main features:
 license = 'LGPL'
 
 authors = {'Fernando' : ('Fernando Perez','fperez@colorado.edu'),
-           'Janko' : ('Janko Hauser','jhauser@zscout.de'),
-           'Nathan' : ('Nathaniel Gray','n8gray@caltech.edu')
+           'Janko'    : ('Janko Hauser','jhauser@zscout.de'),
+           'Nathan'   : ('Nathaniel Gray','n8gray@caltech.edu')
            }
 
 url = 'http://ipython.scipy.org'

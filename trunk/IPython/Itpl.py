@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """String interpolation for Python (by Ka-Ping Yee, 14 Feb 2000).
 
 This module lets you quickly and conveniently interpolate values into
@@ -46,7 +46,6 @@ each time the instance is evaluated with str(instance).  For example:
 
 $Id$
 """                   # ' -> close an open quote for stupid emacs
-
 
 #*****************************************************************************
 #

@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Improved replacement for the Gnuplot.Gnuplot class.
 
 This module imports Gnuplot and replaces some of its functionality with
@@ -15,13 +15,11 @@ import Gnuplot2 as Gnuplot
 
 $Id$"""
 
-from __future__ import nested_scopes
-
 import string,os,time,types
 import cStringIO
-import Numeric
 import sys
 import tempfile
+import Numeric
 import Gnuplot as Gnuplot_ori
 from IPython.genutils import popkey,xsys
 
@@ -36,21 +34,18 @@ except AttributeError:
     OptionException = Gnuplot_ori.Errors.OptionError
 
 # exhibit a similar interface to Gnuplot so it can be somewhat drop-in
-Data = Gnuplot_ori.Data
-Func = Gnuplot_ori.Func
-GridData = Gnuplot_ori.GridData
-PlotItem = Gnuplot_ori.PlotItem
+Data      = Gnuplot_ori.Data
+Func      = Gnuplot_ori.Func
+GridData  = Gnuplot_ori.GridData
+PlotItem  = Gnuplot_ori.PlotItem
 PlotItems = Gnuplot_ori.PlotItems
 
 # Modify some of Gnuplot's functions with improved versions (or bugfixed, in
 # hardcopy's case). In order to preserve the docstrings at runtime, I've
 # copied them from the original code.
 
-
 # After some significant changes in v 1.7 of Gnuplot.py, we need to do a bit
 # of version checking.
-
-#print "*** Gnuplot version:",Gnuplot_ori.__version__  # dbg
 
 if Gnuplot_ori.__version__ <= '1.6':
     _BaseFileItem = PlotItems.File

@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Interactive functions and magic functions for Gnuplot usage.
 
 This requires the Gnuplot.py module for interfacing python with Gnuplot, which
@@ -12,11 +12,12 @@ Inspired by a suggestion/request from Arnd Baecker.
 
 $Id$"""
 
-__all__ = ('Gnuplot gp gp_new plot plot2 splot replot hardcopy '
-           'gpdata gpfile gpstring gpfunc gpgrid gphelp'.split())
+__all__ = ['Gnuplot','gp','gp_new','plot','plot2','splot','replot',
+           'hardcopy','gpdata','gpfile','gpstring','gpfunc','gpgrid',
+           'gphelp']
 
 import IPython.GnuplotRuntime as GRun
-from genutils import page,warn
+from IPython.genutils import page,warn
 
 # Set global names for interactive use
 Gnuplot  = GRun.Gnuplot

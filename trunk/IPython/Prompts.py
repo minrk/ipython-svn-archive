@@ -1,10 +1,9 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """
 Classes for handling input/output prompts.
 
 $Id$
 """
-from __future__ import nested_scopes
 
 #*****************************************************************************
 #       Copyright (C) 2001-2004 Fernando Perez <fperez@colorado.edu>
@@ -21,11 +20,10 @@ from __future__ import nested_scopes
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-import Release
-__version__ = Release.version
-__date__    = Release.date
+from IPython import Release
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
+__version__ = Release.version
 
 #****************************************************************************
 # Required modules
@@ -33,12 +31,12 @@ import __builtin__
 import os,sys,socket
 from pprint import pprint,pformat
 
-# Homebrewed
-from genutils import *
-from Struct import Struct
-from Magic import Macro
-from Itpl import Itpl
-import ColorANSI
+# IPython's own
+from IPython.genutils import *
+from IPython.Struct import Struct
+from IPython.Magic import Macro
+from IPython.Itpl import Itpl
+from IPython import ColorANSI
 
 #****************************************************************************
 #Color schemes for Prompts.

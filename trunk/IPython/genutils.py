@@ -7,8 +7,6 @@ these things are also convenient when working at the command line.
 
 $Id$"""
 
-from __future__ import nested_scopes
-
 #*****************************************************************************
 #       Copyright (C) 2001-2004 Fernando Perez. <fperez@colorado.edu>
 #
@@ -24,18 +22,17 @@ from __future__ import nested_scopes
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Perez. <fperez@colorado.edu>'
-__version__= '0.1.1'
-__license__= 'LGPL'
-__date__   = 'Tue Dec 11 00:27:58 MST 2001'
+from IPython import Release
+__author__  = '%s <%s>' % Release.authors['Fernando']
+__license__ = Release.license
 
 #****************************************************************************
 # required modules
 import __main__
 import types,commands,time,sys,os,re,shutil
 import tempfile
-from Itpl import Itpl,itpl,printpl
-import DPyGetOpt
+from IPython.Itpl import Itpl,itpl,printpl
+from IPython import DPyGetOpt
 
 #****************************************************************************
 # Exceptions
@@ -176,12 +173,7 @@ def fatal(msg,exit_val=1):
 
 #----------------------------------------------------------------------------    
 
-# the types module in Python 2.1 doesn't know about unicode, so let's kludge
-# around the problem a bit:
-if sys.version_info[0:3] >= (2,2,0):
-    StringTypes = types.StringTypes
-else:
-    StringTypes = (types.StringType,)
+StringTypes = types.StringTypes
 
 # Basic timing functionality
 
@@ -1208,10 +1200,6 @@ def mkdict(**kwargs):
     If you need more than this, look at the Struct() class."""
 
     return kwargs
-
-# Don't do this for python 2.2 which now has a builtin dict():
-if sys.version_info[0:3] < (2,2,0):
-    dict = mkdict
 
 #----------------------------------------------------------------------------
 def list2dict(lst):

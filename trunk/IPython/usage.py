@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 #*****************************************************************************
 #       Copyright (C) 2001 Fernando Perez. <fperez@colorado.edu>
 #
@@ -16,11 +16,10 @@
 
 # $Id$
 
-import Release
-__version__ = Release.version
-__date__    = Release.date
+from IPython import Release
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
+__version__ = Release.version
 
 __doc__ = """
 IPython -- An enhanced Interactive Python

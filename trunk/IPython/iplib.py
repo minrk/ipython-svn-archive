@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """
 IPython -- An enhanced Interactive Python
 
@@ -8,8 +8,6 @@ This file contains all the classes and helper functions specific to IPython.
 
 $Id$
 """
-
-from __future__ import nested_scopes
 
 #*****************************************************************************
 #       Copyright (C) 2001 Janko Hauser <jhauser@zscout.de> and
@@ -38,12 +36,11 @@ from __future__ import nested_scopes
 #****************************************************************************
 # Modules and globals
 
-import Release
-__version__ = Release.version
-__date__    = Release.date
+from IPython import Release
 __author__  = '%s <%s>\n%s <%s>' % \
               ( Release.authors['Janko'] + Release.authors['Fernando'] )
 __license__ = Release.license
+__version__ = Release.version
 
 # Python standard modules
 import __main__
@@ -60,17 +57,16 @@ from pprint import pprint, pformat
 import cPickle as pickle
 import traceback
 
-# Homebrewed modules
-import OInspect,PyColorize
-import ultraTB
-from ultraTB import ColorScheme,ColorSchemeTable  # too long names
-from Logger import Logger
-from Magic import Magic,magic2python,shlex_split
-from usage import cmd_line_usage,interactive_usage
-from Struct import Struct
-from Itpl import Itpl,itpl,printpl,ItplNS,itplns
-from FakeModule import FakeModule
-from genutils import *
+# IPython's own modules
+from IPython import OInspect,PyColorize,ultraTB
+from IPython.ultraTB import ColorScheme,ColorSchemeTable  # too long names
+from IPython.Logger import Logger
+from IPython.Magic import Magic,magic2python,shlex_split
+from IPython.usage import cmd_line_usage,interactive_usage
+from IPython.Struct import Struct
+from IPython.Itpl import Itpl,itpl,printpl,ItplNS,itplns
+from IPython.FakeModule import FakeModule
+from IPython.genutils import *
 
 #****************************************************************************
 # Some utility function definitions
@@ -125,7 +121,7 @@ def ipmagic(magic_name,arg=''):
 #-----------------------------------------------------------------------------
 # Local use classes
 try:
-    import FlexCompleter
+    from IPython import FlexCompleter
 
     class MagicCompleter(FlexCompleter.Completer):
         """Extension of the completer class to work on %-prefixed lines."""

@@ -22,17 +22,15 @@ $Id$"""
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Perez. <fperez@colorado.edu>'
-__version__= '0.1.1'
-__license__ = 'LGPL'
-__date__   = 'Tue Dec 11 00:27:58 MST 2001'
+from IPython import Release
+__author__  = '%s <%s>' % Release.authors['Fernando']
+__license__ = Release.license
 
-__all__ = """
-sum_flat mean_flat base_repr binary_repr zeros_like amap 
-rms_flat frange diagonal_matrix fromfunction_kw identity log2 ispower2
-inf infty Infinity exp_safe spike spike_odd norm l1norm l2norm 
-Numeric
-""".split()
+__all__ = ['sum_flat','mean_flat','base_repr','binary_repr',
+           'zeros_like','amap','rms_flat','frange','diagonal_matrix',
+           'fromfunction_kw','identity','log2','ispower2','inf','infty',
+           'Infinity','exp_safe','spike','spike_odd','norm','l1norm',
+           'l2norm','Numeric']
 
 #****************************************************************************
 # required modules
@@ -42,7 +40,7 @@ import math
 import Numeric
 from Numeric import *
 
-import ultraTB
+from  IPython import ultraTB
 AutoTB = ultraTB.AutoFormattedTB(mode='Verbose',color_scheme='Linux')
 
 #*****************************************************************************

@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """
     Class and program to colorize python source code for ANSI terminals.
 
@@ -30,8 +30,6 @@
 
     $Id$"""
 
-from __future__ import nested_scopes
-
 __all__ = ['ANSICodeColors','Parser']
 
 _scheme_default = 'Linux'
@@ -42,14 +40,12 @@ import keyword, token, tokenize
 
 from IPython.ColorANSI import *
 
-
 #############################################################################
 ### Python Source Parser (does Hilighting)
 #############################################################################
 
 _KEYWORD = token.NT_OFFSET + 1
 _TEXT    = token.NT_OFFSET + 2
-
 
 #****************************************************************************
 # Builtin color schemes

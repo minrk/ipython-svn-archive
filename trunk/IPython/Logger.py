@@ -1,11 +1,9 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """
 Logger class for IPython's logging facilities.
 
 $Id$
 """
-
-from __future__ import nested_scopes
 
 #*****************************************************************************
 #       Copyright (C) 2001 Janko Hauser <jhauser@zscout.de> and
@@ -26,19 +24,16 @@ from __future__ import nested_scopes
 #****************************************************************************
 # Modules and globals
 
-import Release
-__version__ = Release.version
-__date__    = Release.date
+from IPython import Release
 __author__  = '%s <%s>\n%s <%s>' % \
               ( Release.authors['Janko'] + Release.authors['Fernando'] )
 __license__ = Release.license
 
 # Python standard modules
-import os, sys,glob
+import os,sys,glob
 
 # Homebrewed
-from genutils import *
-
+from IPython.genutils import *
 
 #****************************************************************************
 # FIXME: The logger class shouldn't be a mixin, it throws too many things into

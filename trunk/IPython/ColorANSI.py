@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Tools for coloring text in ANSI terminals.
 
 $Id$
@@ -19,10 +19,9 @@ $Id$
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
-__version__ = '0.1.0'
-__license__ = 'LGPL'
-__date__   = 'Sat May 18 12:24:48 MDT 2002'
+from IPython import Release
+__author__  = '%s <%s>' % Release.authors['Fernando']
+__license__ = Release.license
 
 __all__ = ['TermColors','InputTermColors','ColorScheme','ColorSchemeTable']
 
