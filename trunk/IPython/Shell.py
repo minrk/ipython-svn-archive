@@ -446,10 +446,9 @@ class MatplotlibShellBase:
         
         # Build matplotlib info banner
         b="""
-  Welcome to pylab, a matplotlib-based Python environment
-    help(matplotlib) -> generic matplotlib information
-    help(%s)      -> matlab-compatible commands from matplotlib
-    help(plotting)   -> plotting commands\n""" % pname
+  Welcome to pylab, a matplotlib-based Python environment.
+  For more information, type 'help(pylab)'.
+  """
 
         return user_ns,b
 
