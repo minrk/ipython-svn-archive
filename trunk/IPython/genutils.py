@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """
 General purpose utilities.
 
@@ -52,16 +52,17 @@ class Stream:
         try:
             self.fileno = stream.fileno()
         except AttributeError:
-            warn("Stream <%s> looks suspicious: it lacks a 'fileno' attribute"
-                 % name)
+            msg = ("Stream <%s> looks suspicious: it lacks a 'fileno' attribute."
+                   % name)
+            print >> sys.stderr, 'WARNING:',msg
         try:
             self.mode = stream.mode
         except AttributeError:
-            warn("Stream <%s> looks suspicious: it lacks a 'mode' attribute"
-                 % name)
+            msg = ("Stream <%s> looks suspicious: it lacks a 'mode' attribute."
+                   % name)
+            print >> sys.stderr, 'WARNING:',msg
 
 class Term:
-
     """ Term holds the file or file-like objects for handling I/O operations.
 
     These are normally just sys.stdin, sys.stdout and sys.stderr but for
