@@ -47,6 +47,9 @@ Inspired by a suggestion/request from Arnd Baecker."""
 __all__ = ('Gnuplot gp gp_new Data File Func GridData pm3d_config '
            'eps_fix_bbox'.split())
 
+import os,tempfile
+from genutils import getoutput
+
 # If you do not have a mouse-enabled gnuplot, set gnuplot_mouse to 0. If you
 # use gnuplot, you should really grab a recent, mouse enabled copy. It is an
 # extremely useful feature.
@@ -60,10 +63,22 @@ __all__ = ('Gnuplot gp gp_new Data File Func GridData pm3d_config '
 # confuses the mouse control system (even though they may be a bit faster than
 # temp files).
 
-gnuplot_mouse = 1
+tmpname = tempfile.mktemp()
+open(tmpname,'w').write('set mouse')
+gnu_out = getoutput('gnuplot '+ tmpname)
+os.unlink(tmpname)
+if gnu_out:  # Gnuplot won't print anything if it has mouse support
+    print "*** Your version of Gnuplot does not have mouse support."
+    gnuplot_mouse = 0
+else:
+    gnuplot_mouse = 1
+del tmpname,gnu_out
 
 # Default state for persistence of new gnuplot instances
-gnuplot_persist = 1
+if os.name in ['nt','dos']:
+    gnuplot_persist = 0
+else:
+    gnuplot_persist = 1
 
 import Gnuplot2 as Gnuplot
 
