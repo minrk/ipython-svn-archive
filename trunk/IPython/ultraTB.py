@@ -521,11 +521,16 @@ class VerboseTB(TBTools):
                         pass
                 if token_type == tokenize.NAME and token not in keyword.kwlist:
                     if tokeneater.name_cont:
-                        # dotted names
+                        # Dotted names
                         names[-1] += token
                         tokeneater.name_cont = False
-                    elif token not in names:
-                        # regular new names
+                    else:
+                        # Regular new names.  We append everything, the caller
+                        # will be responsible for pruning the list later.  It's
+                        # very tricky to try to prune as we go, b/c composite
+                        # names can fool us.  The pruning at the end is easy
+                        # to do (or the caller can print a list with repeated
+                        # names if so desired.
                         names.append(token)
                 elif token_type == tokenize.NEWLINE:
                     raise IndexError
