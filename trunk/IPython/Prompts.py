@@ -7,7 +7,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando PÃ��©rez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2004 Fernando PÃ��¿½ï¿½Â©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -278,7 +278,7 @@ class Prompt1(BasePrompt):
         handling automatically special syntaxes."""
 
         curr = str(self.cache.last_prompt)
-        return self.col_p_ni + '-'*(len(curr)-2)+'> ' + self.col_norm_ni
+        return self.col_p_ni + '-'*(len(curr)-1)+'> ' + self.col_norm_ni
 
 class PromptOut(BasePrompt):
     """Output interactive prompt similar to Mathematica's."""
@@ -353,9 +353,9 @@ class CachedOutput:
         if cache_size == 0:
             if ps1.find('%n') > -1 or ps1.find('\\#') > -1: ps1 = '>>>'
             if ps2.find('%n') > -1 or ps2.find('\\#') > -1: ps2 = '...'
-        self.ps1_str = self._set_prompt_str(ps1,'In [%n]:','>>>')
-        self.ps2_str = self._set_prompt_str(ps2,'   .%n.:','...')
-        self.ps_out_str = self._set_prompt_str(ps_out,'Out[%n]:','')
+        self.ps1_str = self._set_prompt_str(ps1,'In [\\#]:','>>>')
+        self.ps2_str = self._set_prompt_str(ps2,'   .\\D.:','...')
+        self.ps_out_str = self._set_prompt_str(ps_out,'Out[\\#]:','')
 
         self.prompt1 = Prompt1(self,sep=input_sep,prompt=self.ps1_str)
         self.prompt2 = Prompt2(self,prompt=self.ps2_str)

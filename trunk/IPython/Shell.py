@@ -64,11 +64,11 @@ class IPShellEmbed:
 
     For example, the following command-line options:
 
-      $ ipython -prompt_in1 'Input <%n>' -colors LightBG
+      $ ipython -prompt_in1 'Input <\\#>' -colors LightBG
 
     would be passed in the argv list as:
 
-      ['-prompt_in1','Input <%n>','-colors','LightBG']
+      ['-prompt_in1','Input <\\#>','-colors','LightBG']
 
     - banner: string which gets printed every time the interpreter starts.
 
