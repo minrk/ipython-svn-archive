@@ -32,7 +32,7 @@ import threading
 
 import IPython
 from ipmaker import make_IPython
-from genutils import qw,Term
+from genutils import qw,Term,warn
 from Struct import Struct
 from Magic import Magic
 import ultraTB
@@ -350,17 +350,9 @@ class MatplotlibShell(MTInteractiveShell):
 
         # we'll handle the mainloop, tell show not to, for the user's backend of
         # choice
-        backend_name = matplotlib.rcParams['backend']
-        if backend_name.startswith('Tk'):
-            import matplotlib.backends.backend_tkagg as backend
-        elif backend_name.startswith('GTK'):
-            import matplotlib.backends.backend_gtk as backend
-        elif backend_name.startswith('WX'):
-            import matplotlib.backends.backend_wx as backend
-        else:
-            raise ValueError,'unsupported matplotlib backend'
-        # Set the mainloop control
-        backend.show._needmain = False
+        # makes the backend choice for you
+        from matplotlib.backends import show 
+        show._needmain = False
 
         # This must be imported last in the matplotlib series, after
         # backend/interactivity choices have been made
@@ -379,7 +371,7 @@ class MatplotlibShell(MTInteractiveShell):
         self.matplotlib.interactive(False)
         self.safe_execfile(fname,*where)
         self.matplotlib.interactive(isInteractive)
-	self.matplotlib.matlab.draw()
+        self.matplotlib.matlab.draw()
         
     def magic_run(self,parameter_s=''):
         """Modified @run for Matplotlib"""
@@ -426,8 +418,41 @@ class IPShellGTK(threading.Thread):
         self.gtk.mainloop()
         self.join()
 
+class IPShellWX(threading.Thread):
+    """Run a wx mainloop() in a separate thread.
+    
+    Python commands can be passed to the thread where they will be executed.
+    This is implemented by periodically checking for passed code using a
+    GTK timeout callback."""
+    
+    TIMEOUT = 100 # Millisecond interval between timeouts.
 
-class IPShellMatplotlib(IPShellGTK):
+    def __init__(self,argv=None,user_ns=None,debug=0,
+                 shell_class=MTInteractiveShell):
+        threading.Thread.__init__(self)
+
+        def wxquit(*args): pass # how to quit wx?
+        self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
+                               shell_class=shell_class,
+                               on_kill=[wxquit])
+
+    def run(self):
+        self.IP.interact()
+        self.IP.kill()
+
+    def mainloop(self):
+        self.start()
+
+        def runcode(*args):
+            self.IP.runcode()
+            t = threading.Timer(self.TIMEOUT/1000.0, runcode)
+            t.start()
+
+        t = threading.Timer(self.TIMEOUT/1000.0, runcode)
+        t.start()
+        self.join()
+
+class IPShellMatplotlibGTK(IPShellGTK):
     """Simple derivative of IPShellGTK with MatplotlibShell as the internal
     shell.
 
@@ -437,5 +462,37 @@ class IPShellMatplotlib(IPShellGTK):
         IPShellGTK.__init__(self,argv,user_ns,debug,
                             shell_class=MatplotlibShell)
 
+class IPShellMatplotlibWX(IPShellWX):
+    """Simple derivative of IPShellWX with MatplotlibShell as the internal
+    shell.
+
+    Having this on a separate class allows simpler external driver code."""
+    
+    def __init__(self,argv=None,user_ns=None,debug=0):
+        IPShellWX.__init__(self,argv,user_ns,debug,
+                            shell_class=MatplotlibShell)
+
+def matplotlib_shell():
+    """Factory function to handle backend selection for matplotlib."""
+    import matplotlib
+    backend = matplotlib.rcParams['backend']
+    if backend.startswith('WX'):
+        
+        # FIXME: temporarily disable the real WX shell until we get it to work
+        # cleanly
+
+        #print 'Using WX shell with the %s backend'%backend  # dbg
+        #return IPShellMatplotlibWX
+        
+        matplotlib.rcParams['backend'] = 'TkAgg'
+        warn('WX backend support is currently broken, reverting to TkAgg.')
+        return IPShell
+        
+    elif backend.startswith('GTK'):
+        print 'Using GTK shell with the %s backend'%backend # dbg
+        return IPShellMatplotlibGTK
+    else:
+        print 'Using IPShell with the %s backend'%backend # dbg
+        return IPShell
 
 #************************ end of file <Shell.py> ***************************
