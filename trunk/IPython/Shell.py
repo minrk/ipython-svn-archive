@@ -69,7 +69,7 @@ class IPShellEmbed:
 
     Usage (see also the example-embed.py file for a running example):
 
-    IPShell = IPythonShellEmbed([argv,banner,exit_msg,rc_override])
+    ipshell = IPShellEmbed([argv,banner,exit_msg,rc_override])
 
     - argv: list containing valid command-line options for IPython, as they
     would appear in sys.argv.
@@ -97,7 +97,7 @@ class IPShellEmbed:
 
     Then the IPShell instance can be called anywhere inside your code:
     
-    IPShell(local_ns=None,header='') -> Opens up an IPython shell.
+    ipshell(local_ns=None,header='') -> Opens up an IPython shell.
 
     - local_ns: local namespace. When IPShell is called inside a function, the
     call MUST be IPShell(vars()) so that IPShell knows about local
