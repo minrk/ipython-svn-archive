@@ -1,3 +1,15 @@
+2004-05-09  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic.parse_options): skip system call when
+	there are no options to look for.  Faster, cleaner for the common
+	case.
+
+	* Documentation: many updates to the manual: describing Windows
+	support better, Gnuplot updates, credits, misc small stuff.  Also
+	updated the new_design doc a bit.
+
+2004-05-06  *** Released version 0.6.0.rc1
+
 2004-05-06  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/ultraTB.py (ListTB.text): modified a ton of string +=

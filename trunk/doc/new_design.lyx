@@ -59,14 +59,12 @@ This is a draft document with notes and ideas for the IPython rewrite.
 A tentative plan for the future:
 \layout Itemize
 
-0.4.x series: the long-running 0.2 series got a number upgrade, to signal all
- the recent improvements which haven't seen much public announcement.
- In practice, enough people are using IPython for real work that I think
- it warrants a higher number.
+0.6.x series: in practice, enough people are using IPython for real work that
+ I think it warrants a higher number.
  This series will continue to evolve with bugfixes and incremental improvements.
 \layout Itemize
 
-0.5.x series: (maybe) If resources allow, there may be a branch for 'unstable'
+0.7.x series: (maybe) If resources allow, there may be a branch for 'unstable'
  development, where the architectural rewrite may take place.
 \layout Standard
 
@@ -84,7 +82,7 @@ LyX
 -like approach, where the main branch slowly transforms and evolves.
  Having CVS support now makes this a reasonable alternative, as I don't
  have to make pre-releases as often.
- The 0.8 branch can remain the mainline of development, and users interested
+ The active branch can remain the mainline of development, and users interested
  in the bleeding-edge stuff can always grab the CVS code.
 \layout Standard
 
@@ -187,13 +185,6 @@ your_post_install_stuff.py can do anything you want.
  
 \layout Itemize
 
-Try to add readline support to windows: http://newcenturycomputers.net/projects/r
-eadline.html.
- Currently using this apparently crashes everything (see report by Thilo
- Ernst).
- It may be fixable.
-\layout Itemize
-
 Get Holger's completer in, once he adds filename completion.
 \layout Standard
 
@@ -206,12 +197,6 @@ Make a nice Gnuplot example of making eps plots using the various types
 
 Add @showopt/@setopt (decide name) for viewing/setting all options.
  The existing option-setting magics should become aliases for setopt calls.
-\layout Itemize
-
-Suggestion by Francois Pinard: When I enter many empty lines in a row to
- IPython, the `N' in the successive `In [N]' prompts gets incremented.
- Would it not be more meaningful if it was only incremented when there is
- actual (non-empty) input?
 \layout Itemize
 
 It would be nice to be able to continue with python stuff after an @ command.
@@ -304,7 +289,7 @@ STATUS
 \series default 
 : this is actually a Python bug.
  I reported it at SF, it is fixed for 2.3 (and possibly in 2.2.3, if it is
- released).
+ ever released).
 \layout Section
 
 Lighten the code
