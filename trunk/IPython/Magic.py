@@ -21,7 +21,11 @@ __license__ = Release.license
 
 # Python standard modules
 import __builtin__
-import os,sys,inspect,pydoc,re,tempfile,profile,pstats,shlex,pdb,bdb
+import os,sys,inspect,pydoc,re,tempfile,shlex,pdb,bdb
+try:
+    import profile,pstats
+except ImportError:
+    profile = pstats = None
 from getopt import getopt
 from pprint import pprint, pformat
 from cStringIO import StringIO
@@ -161,7 +165,15 @@ class Magic:
         self.options_table = {}
         MAGIC_PREFIX = shell.name+'.magic_'
         MAGIC_ESCAPE = shell.ESC_MAGIC
+        if profile is None:
+            self.magic_prun = self.profile_missing_notice
 
+    def profile_missing_notice(self, *args, **kwargs):
+        error("""\
+The profile module could not be found.  If you are a Debian user,
+it has been removed from the standard Debian package because of its non-free
+license. To use profiling, please install"python2.3-profiler" from non-free.""")
+    
     def default_option(self,fn,optstr):
         """Make an entry in the options_table for fn, with value optstr"""
         
@@ -974,6 +986,7 @@ Currently the magic system has the following functions:\n"""
             self.shell.InteractiveTB.call_pdb = 1 - self.shell.InteractiveTB.call_pdb
         print 'Automatic pdb calling has been turned',\
               on_off(self.shell.InteractiveTB.call_pdb)
+
 
     def magic_prun(self, parameter_s ='',user_mode=1,
                    opts=None,arg_lst=None,prog_ns=None):
