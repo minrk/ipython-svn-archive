@@ -185,8 +185,10 @@ try:
                 matches = [f.replace(' ',r'\ ') for f in m0]
             if len(matches) == 1:
                 if os.path.isdir(matches[0]):
-                    # takes care of links to directories also
-                    matches[0] += os.sep
+                    # Takes care of links to directories also.  Use '/' explicitly,
+                    # even under Windows, so that name completions don't end up
+                    # escaped.
+                    matches[0] += '/'
             return matches
 
         def alias_matches(self, text, state):
@@ -350,8 +352,8 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.user_ns['_dh'] = self.dir_hist
 
         # user aliases to input and output histories
-        self.user_ns['In'] = self.user_ns['_ih']
-        self.user_ns['Out'] = self.user_ns['_oh']
+        self.user_ns['In']  = self.input_hist
+        self.user_ns['Out'] = self.output_hist
 
         # class initializations
         code.InteractiveConsole.__init__(self,locals = self.user_ns)
@@ -746,14 +748,21 @@ want to merge them back into the new files.""" % locals()
         """Command history completion/saving/reloading."""
         try:
             import readline
-            #print '*** Loading readline'  # dbg
+            self.Completer = MagicCompleter(self.user_ns,
+                                            self.rc.readline_omit__names,
+                                            self.alias_table)
+        except ImportError,NameError:
+            # If FlexCompleter failed to import, MagicCompleter won't be 
+            # defined.  This can happen because of a problem with readline
+            self.has_readline = 0
+            # no point in bugging windows users with this every time:
+            if os.name == 'posix':
+                warn('Readline services not available on this platform.')
+        else:
             import atexit
             self.has_readline = 1
             self.readline = readline
             self.readline_indent = 0  # for auto-indenting via readline
-            self.Completer = MagicCompleter(self.user_ns,
-                                            self.rc.readline_omit__names,
-                                            self.alias_table)
             # save this in sys so embedded copies can restore it properly
             sys.ipcompleter = self.Completer.complete
             readline.set_completer(self.Completer.complete)
@@ -777,15 +786,6 @@ want to merge them back into the new files.""" % locals()
 
             atexit.register(self.atexit_operations)
             del atexit
-
-        except ImportError,msg:
-            self.has_readline = 0
-            # no point in bugging windows users with this every time:
-            if os.name == 'posix':
-                warn('Readline services not available on this platform.')
-
-        except KeyError:
-            pass  # under windows, no environ['term'] key
 
         # Configure auto-indent for all platforms
         self.set_autoindent(self.rc.autoindent)
@@ -1545,43 +1545,5 @@ There seemed to be a problem with your sys.stderr.
             except:
                 self.InteractiveTB()
                 warn('Failure executing file: <%s>' % fname)
-
-
-#-----------------------------------------------------------------------------
-# Janko's original Changelog from the IPP days follows. For current
-# information, see the IPython global ChangeLog file.
-
-# 03.05.99 20:53 porto.ifm.uni-kiel.de
-# --Started changelog.
-# --make clear do what it say it does
-# --added pretty output of lines from inputcache
-# --Made Logger a mixin class, simplifies handling of switches
-# --Added own completer class. .string<TAB> expands to last history line which
-#   starts with string.
-#   -The new expansion is also present with Ctrl-r from the readline library.
-#    But this shows, who this can be done for other cases.
-# --Added convention that all shell functions should accept a parameter_string
-#   This opens the door for different behaviour for each function. @cd is a
-#   good example of this.
-#
-# 04.05.99 12:12 porto.ifm.uni-kiel.de
-# --added logfile rotation
-# --added new mainloop method which freezes first the namespace
-#
-# 07.05.99 21:24 porto.ifm.uni-kiel.de
-# --added the docreader classes. Now there is a help system.
-#   -This is only a first try. Currently it's not easy to put new stuff in the
-#    indices. But this is the way to go. Info would be better, but HTML is every
-#    where and not everybody has an info system installed and it's not so easy to
-#    change html-docs to info.
-# --added global logfile option
-# --there is now a hook for object inspection method pinfo needs to be provided
-#   for this. Can be reached by two '??'.
-#
-# 08.05.99 20:51 porto.ifm.uni-kiel.de
-# --added a README
-# --bug in rc file. Something has changed so functions in the rc file need to
-#   reference the shell and not self. Not clear if it's a bug or feature.
-# --changed rc file for new behavior
 
 #************************* end of file <iplib.py> *****************************
