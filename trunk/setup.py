@@ -105,10 +105,10 @@ setup(name             = name,
       packages         = ['IPython', 'IPython.Extensions'],
       scripts          = scriptfiles,
       cmdclass         = {'install_data': install_data_ext},
-      data_files       = [('base', docdirbase, docfiles),
-                          ('base', os.path.join(docdirbase, 'examples'),
+      data_files       = [('data', docdirbase, docfiles),
+                          ('data', os.path.join(docdirbase, 'examples'),
                            examfiles),
-                          ('base', os.path.join(docdirbase, 'manual'),
+                          ('data', os.path.join(docdirbase, 'manual'),
                            manfiles),
                           ('lib', 'IPython/UserConfig', cfgfiles)]
       )
