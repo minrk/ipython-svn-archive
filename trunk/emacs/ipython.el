@@ -3,7 +3,7 @@
 ;; Copyright (C) 2002, 2003, 2004 Alexander Schmolck
 ;; Author:        Alexander Schmolck <a.schmolck@gmx.net>
 ;; Keywords:      ipython python languages oop
-;; URL:           http://www-hep.colorado.edu/~fperez/ipython/dist/
+;; URL:           http://ipython.scipy.org
 ;; Compatibility: Emacs21, XEmacs21
 ;; FIXME: #$@! INPUT RING
 
