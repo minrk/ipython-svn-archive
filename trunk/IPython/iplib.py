@@ -13,7 +13,7 @@ from __future__ import nested_scopes
 
 #*****************************************************************************
 #       Copyright (C) 2001 Janko Hauser <jh@comunit.de> and
-#                          Fernando Pérez <fperez@colorado.edu>
+#                          Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -49,6 +49,7 @@ __license__ = Release.license
 import __main__
 import __builtin__
 import exceptions
+import keyword
 import os, sys, shutil
 import code, glob, types, re
 import string, StringIO
@@ -142,12 +143,13 @@ try:
 
         def file_matches(self, text, state):
             """Match filneames, expanding ~USER type strings"""
-            #print 'Completer->file_matches' # dbg
+            #print 'Completer->file_matches: <%s>' % text # dbg
             text = os.path.expanduser(text)
             if text == "":
                 return glob.glob("*") # current directory
             
             matches = glob.glob(text + "*")
+            #print '\nmatches:',matches # dbg
             if len(matches) == 1:
                 if os.path.isdir(matches[0]): # takes care of links to directories also
                     matches[0] += os.sep
@@ -195,7 +197,6 @@ try:
                 text = text.replace('@','__IP.magic_')
             if text.startswith('~'):
                 text = os.path.expanduser(text)
-            self.matches = []
             if state == 0:
                 for matcher in self.matchers:
                     #print 'Calling matcher:',matcher # dbg
@@ -304,6 +305,10 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # alias table must be a 2-tuple of the form (N,name), where N is the
         # number of positional arguments of the alias.
         self.alias_table = {}
+
+        # dict of things NOT to alias (keywords and builtins)
+        self.no_alias = keyword.kwdict.copy()
+        self.no_alias.update(__builtin__.__dict__)
         
         # make global variables for user access to these
         self.user_ns['_ih'] = self.input_hist
@@ -363,6 +368,11 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
                 sys.exit()
         self.dir_stack = [os.getcwd().replace(self.home_dir,'~')]
 
+        # Function to call the underlying shell.  Similar to os.system, but it
+        # doesn't return a value, and it allows interpolation of variables in
+        # the user's namespace.
+        self.system = lambda cmd: shell(str(ItplNS(cmd,self.user_ns)))
+    
         # escapes for automatic behavior on the command line
         self.ESC_SHELL = '!'
         self.ESC_HELP  = '?'
@@ -431,7 +441,9 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         ins_colors = OInspect.InspectColors
         code_colors = PyColorize.ANSICodeColors
         self.inspector = OInspect.Inspector(ins_colors,code_colors,'NoColor')
-        # List of shell aliases to auto-define
+        self.autoindent = 0
+        # Make some aliases automatically
+        # Prepare list of shell aliases to auto-define
         if os.name == 'posix':            
             auto_alias = ('mkdir mkdir', 'rmdir rmdir',
                           'mv mv -i','rm rm -i','rmf rm -f','cp cp -i',
@@ -446,25 +458,43 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
                           'lf ls -F -o --color %l | grep ^-',
                           # ls symbolic links 
                           'lk ls -F -o --color %l | grep ^l',
-                          # directories or links to directories, both as 'ld'
-                          # and 'ldir' in case users load the real 'ld' linker
-                          'ld ls -F -o --color %l | grep /$',
+                          # directories or links to directories,
                           'ldir ls -F -o --color %l | grep /$',
                           # things which are executable
                           'lx ls -F -o --color %l | grep ^-..x',
                           )
         elif os.name in ['nt','dos']:
             auto_alias = ('dir dir /on', 'ls dir /on',
-                          'ddir dir /ad /on', 'ld dir /ad /on',
-                          'mkdir mkdir','rmdir rmdir',
+                          'ddir dir /ad /on', 'ldir dir /ad /on',
+                          'mkdir mkdir','rmdir rmdir','echo echo',
                           'ren ren','cls cls','cp copy','copy copy',
                           'more type','type type')
         else:
             auto_alias = ()
-        map(self.magic_alias,auto_alias)
-
-        self.autoindent = 0
+        self.auto_alias = map(lambda s:s.split(None,1),auto_alias)
+        # Call the actual (public) initializer
+        self.init_auto_alias()
     # end __init__
+
+    def init_auto_alias(self):
+        """Define some aliases automatically.
+
+        These are ALL parameter-less aliases"""
+        for alias,cmd in self.auto_alias:
+            self.alias_table[alias] = (0,cmd)
+
+    def alias_table_validate(self,verbose=0):
+        """Update information about the alias table.
+
+        In particular, make sure no Python keywords/builtins are in it."""
+
+        no_alias = self.no_alias
+        for k in self.alias_table.keys():
+            if k in no_alias:
+                del self.alias_table[k]
+                if verbose:
+                    print ("Deleting alias <%s>, it's a Python "
+                           "keyword or builtin." % k)
 
     def set_autoindent(self,value=None):
         """Set the autoindent flag, checking for readline support.
@@ -1019,6 +1049,8 @@ There seemed to be a problem with your sys.stderr.
             cmd = '%s %s' % (cmd % tuple(args[:nargs]),' '.join(args[nargs:]))
         # Now call the macro, evaluating in the user's namespace
         try:
+            # flush stdout so we don't mangle python's buffering
+            sys.stdout.flush()
             os.system(itplns(cmd,self.user_ns))
         except:
             self.showtraceback()
@@ -1070,7 +1102,18 @@ There seemed to be a problem with your sys.stderr.
 
         lsplit = self.line_split.match(line)
         if lsplit is None:  # no regexp match returns None
-            pre,iFun,theRest = '',line,''
+            line = line.rstrip()
+            ini_spaces = re.match('^(\s+)',line)
+            if ini_spaces:
+                nspaces = ini_spaces.end()
+            else:
+                nspaces = 0
+
+            pre = ' '*nspaces
+            try:
+                iFun,theRest = line.split(None,1)
+            except ValueError:
+                iFun,theRest = line,''
         else:
             pre,iFun,theRest = lsplit.groups()
         #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest)  # dbg
@@ -1103,6 +1146,8 @@ There seemed to be a problem with your sys.stderr.
         # record it
         self._last_input_line = line
 
+        #print '***line: <%s>' % line # dbg
+
         # the input history needs to track even empty lines
         if not line.strip():
             if not continue_prompt:
@@ -1111,7 +1156,7 @@ There seemed to be a problem with your sys.stderr.
 
         # print '***cont',continue_prompt  # dbg
         # special handlers are only allowed for single line statements
-        if continue_prompt:
+        if continue_prompt and not self.rc.multi_line_specials:
             return self.handle_normal(line,continue_prompt)
 
         # First check for explicit escapes in the last/first character
@@ -1129,6 +1174,13 @@ There seemed to be a problem with your sys.stderr.
 
         # Next, check if we can automatically execute this thing
         pre,iFun,theRest = self.split_user_input(line)
+        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest)  # dbg
+
+        # Allow ! in multi-line statements if multi_line_specials is on:
+        if continue_prompt and self.rc.multi_line_specials and \
+               not pre.strip() and iFun.startswith(self.ESC_SHELL):
+            return self.handle_shell_escape(line,continue_prompt,
+                                            pre=pre,iFun=iFun,theRest=theRest)
 
         # Let's try to find if the input line is a magic fn
         oinfo = None
@@ -1138,7 +1190,8 @@ There seemed to be a problem with your sys.stderr.
                 # Be careful not to call magics when a variable assignment is
                 # being made (ls='hi', for example)
                 if self.rc.automagic and \
-                       (len(theRest)==0 or theRest[0] not in '!=()<>,'):
+                       (len(theRest)==0 or theRest[0] not in '!=()<>,') and \
+                       not continue_prompt:
                     return self.handle_magic('@'+line.lstrip(),continue_prompt)
                 else:
                     return self.handle_normal(line,continue_prompt)
@@ -1147,7 +1200,6 @@ There seemed to be a problem with your sys.stderr.
             oinfo = self._ofind(iFun) # FIXME - _ofind is part of Magic
 
         if not oinfo['found']:
-            #print 'not found'  # dbg
             return self.handle_normal(line,continue_prompt)
         else:
             #print 'iFun <%s> rest <%s>' % (iFun,theRest) # dbg
@@ -1156,7 +1208,8 @@ There seemed to be a problem with your sys.stderr.
                 # to normal python code so an alias can be redefined as a
                 # variable, for example.
                 if len(theRest)==0 or theRest[0] not in '!=()<>,':
-                    return self.handle_alias(line,iFun,theRest)
+                    return self.handle_alias(line,continue_prompt,
+                                             pre,iFun,theRest)
                 else:
                     return self.handle_normal(line,continue_prompt)
                 
@@ -1189,79 +1242,35 @@ There seemed to be a problem with your sys.stderr.
         self.update_cache(line)
         return line
 
-    def handle_alias(self,line,iFun,theRest):
+    def handle_alias(self,line,continue_prompt,pre,iFun,theRest):
         """Handle alias input lines. """
 
-        # Log the call, but comment it out 
-        self.log('#%s' % line)
-        self.update_cache(line)
-        self.call_alias(iFun,theRest)
-        return ''
+        line_out = "%s%s.call_alias('%s','%s')" % (pre,self.name,iFun,theRest)
+        self.log(line_out,continue_prompt)
+        self.update_cache(line_out)
+        return line_out
 
-    def handle_shell_escape(self, line, continue_prompt=None):
+    def handle_shell_escape(self, line, continue_prompt=None,
+                            pre=None,iFun=None,theRest=None):
         """Execute the line in a shell, empty return value"""
 
         # Example of a special handler. Others follow a similar pattern.
-
-        # These lines aren't valid python, so log should comment them out. But
-        # the readline cache should have them normally, so they can be
-        # retrieved with the arrows. The log and input array _ih should only
-        # contain valid python, the readline cache contains anything that was
-        # input exactly as it was entered at the prompt.
-
-        if line.startswith('!!'):
-            return self.handle_magic('@sx %s' % line[2:],continue_prompt)
-        else:
-            self.log('#%s' % line)    # comment out into log/_ih
-            self.update_cache(line)   # readline cache gets normal line
-            try:
-                line = itplns(line.strip()[1:],self.user_ns)
-            except:
-                self.showtraceback()
+        if continue_prompt:  # multi-line statements
+            if iFun.startswith('!!'):
+                print 'SyntaxError: !! is not allowed in multiline statements'
+                return ''
             else:
-                os.system(line)
-            return ''     # MUST return something, at least an empty string
-
-    def handle_emacs(self,line,continue_prompt):
-        """Handle input lines marked by python-mode."""
-
-        # Currently, nothing is done.  Later more functionality can be added
-        # here if needed.
-
-        # The input cache shouldn't be updated
-
-        return line
-
-    def handle_help(self, line, continue_prompt):
-        """Try to get some help for the object.
-
-        obj? or ?obj   -> basic information.
-        obj?? or ??obj -> more details.
-        """
-
-        # We need to make sure that we don't process lines which would be
-        # otherwise valid python, such as "x=1 # what?"
-        try:
-            code.compile_command(line)
-        except SyntaxError:
-            # We should only handle as help stuff which is NOT valid syntax
-            if line[0]==self.ESC_HELP:
-                line = line[1:]
-            elif line[-1]==self.ESC_HELP:
-                line = line[:-1]
-            self.log('#?'+line)
-            self.update_cache(line)
-            if line:
-                self.magic_pinfo(line)
+                line_out = '%s%s.system("%s %s")' % (pre,self.name,
+                                                     iFun[1:],theRest)
+        else: # single-line input
+            if line.startswith('!!'):
+                return self.handle_magic('@sx %s' % line[2:],continue_prompt)
             else:
-                page(self.usage,screen_lines=self.rc.screen_length)
-            return '' # Empty string is needed here!
-        except:
-            # Pass any other exceptions through to the normal handler
-            return self.handle_normal(line,continue_prompt)
-        else:
-            # If the code compiles ok, we should handle it normally
-            return self.handle_normal(line,continue_prompt)
+                line_out = '%s.system("%s")' % (self.name,line[1:])
+        # update cache/log and return
+        self.log(line_out,continue_prompt)
+        self.update_cache(line_out)   # readline cache gets normal line
+        return line_out
 
     def handle_magic(self, line, continue_prompt=None):
         """Execute magic functions.
@@ -1269,7 +1278,7 @@ There seemed to be a problem with your sys.stderr.
         Also log them with a prepended # so the log is clean Python."""
 
         #print 'in handle_magic'  # dbg
-        self.log('#'+line)
+        self.log('#'+line,continue_prompt)
         self.update_cache(line)
         shell = self.name+'.'
         # remove @ and de-mangle magic name
@@ -1305,8 +1314,49 @@ There seemed to be a problem with your sys.stderr.
 
         print >>Term.cout, self.outputcache.prompt1.auto_rewrite() + newcmd,
         # log what is now valid Python, not the actual user input (without end \n)
-        self.log(newcmd.strip())
+        self.log(newcmd.strip(),continue_prompt)
         return newcmd
+
+    def handle_help(self, line, continue_prompt):
+        """Try to get some help for the object.
+
+        obj? or ?obj   -> basic information.
+        obj?? or ??obj -> more details.
+        """
+
+        # We need to make sure that we don't process lines which would be
+        # otherwise valid python, such as "x=1 # what?"
+        try:
+            code.compile_command(line)
+        except SyntaxError:
+            # We should only handle as help stuff which is NOT valid syntax
+            if line[0]==self.ESC_HELP:
+                line = line[1:]
+            elif line[-1]==self.ESC_HELP:
+                line = line[:-1]
+            self.log('#?'+line)
+            self.update_cache(line)
+            if line:
+                self.magic_pinfo(line)
+            else:
+                page(self.usage,screen_lines=self.rc.screen_length)
+            return '' # Empty string is needed here!
+        except:
+            # Pass any other exceptions through to the normal handler
+            return self.handle_normal(line,continue_prompt)
+        else:
+            # If the code compiles ok, we should handle it normally
+            return self.handle_normal(line,continue_prompt)
+
+    def handle_emacs(self,line,continue_prompt):
+        """Handle input lines marked by python-mode."""
+
+        # Currently, nothing is done.  Later more functionality can be added
+        # here if needed.
+
+        # The input cache shouldn't be updated
+
+        return line
 
     def safe_execfile(self,fname,*where,**kw):
         fname = os.path.expanduser(fname)
