@@ -1128,11 +1128,14 @@ There seemed to be a problem with your sys.stderr.
         # contain valid python, the readline cache contains anything that was
         # input exactly as it was entered at the prompt.
 
-        self.log('#'+line)        # comment out into log/_ih
-        self.update_cache(line)   # readline cache gets normal line
-        line = line.strip()[1:]
-        os.system(line)
-        return ''               # MUST return something, at least an empty string
+	if line.startswith('!!'):
+	    return self.handle_magic('@sx '+line[2:],continue_prompt)
+	else:
+	    self.log('#'+line)        # comment out into log/_ih
+	    self.update_cache(line)   # readline cache gets normal line
+	    line = line.strip()[1:]
+	    os.system(line)
+	    return ''     # MUST return something, at least an empty string
 
     def handle_emacs(self,line,continue_prompt):
         """Handle input lines marked by python-mode."""
