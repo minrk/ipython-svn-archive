@@ -1,3 +1,19 @@
+2004-07-18  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (__init__): Add better handling of '\' under
+	Win32 for filenames.  After a patch by Ville.
+
+2004-07-17  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell._prefilter): fix bug where
+	autocalling would be triggered for 'foo is bar' if foo is
+	callable.  I also cleaned up the autocall detection code to use a
+	regexp, which is faster.  Bug reported by Alexander Schmolck.
+
+	* IPython/Magic.py (Magic.magic_pinfo): Fix bug where strings with
+	'?' in them would confuse the help system.  Reported by Alex
+	Schmolck.
+
 2004-07-16  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/GnuplotInteractive.py (__all__): added plot2.

@@ -5,7 +5,7 @@ $Id$"""
 
 name = 'IPython'
 
-version = '0.6.1.cvs'
+version = '0.6.1.rc1'
 
 description = "An enhanced interactive Python shell."
 
