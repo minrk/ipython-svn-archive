@@ -78,7 +78,6 @@ if len(sys.argv) >= 2 and sys.argv[1] in ('sdist','bdist_rpm'):
                  ('doc/pycolor.1.gz',
                   ['doc/pycolor.1'],
                   "cd doc && gzip -9c pycolor.1 > pycolor.1.gz"),
-                 
                  ]
     for target in to_update:
         target_update(*target)
@@ -86,11 +85,32 @@ if len(sys.argv) >= 2 and sys.argv[1] in ('sdist','bdist_rpm'):
 # Release.py contains version, authors, license, url, keywords, etc.
 execfile(os.path.join('IPython','Release.py'))
 
+# A little utility we'll need below, since glob() does NOT allow you to do
+# exclusion on multiple endings!
+def file_doesnt_endwith(test,endings):
+    """Return true if test is a file and its name does NOT end with any
+    of the strings listed in endings."""
+    if not isfile(test):
+        return False
+    for e in endings:
+        if test.endswith(e):
+            return False
+    return True
+
 # I can't find how to make distutils create a nested dir. structure, so
 # in the meantime do it manually. Butt ugly.
-docdirbase  = 'share/doc/IPython'
+docdirbase  = 'share/doc/ipython-%s' % version
 manpagebase = 'share/man/man1'
-docfiles    = filter(isfile, glob('doc/*[!~|.lyx|.sh|.1|.1.gz]'))
+
+# We only need to exclude from this things NOT already excluded in the
+# MANIFEST.in file.
+exclude     = '.sh .1.gz'.split()
+docfiles    = filter(lambda f:file_doesnt_endwith(f,exclude),glob('doc/*'))
+
+print 'docfiles:'
+print docfiles
+#stop
+
 examfiles   = filter(isfile, glob('doc/examples/*.py'))
 manfiles    = filter(isfile, glob('doc/manual/*.html')) + \
               filter(isfile, glob('doc/manual/*.css')) + \
