@@ -8,7 +8,7 @@ See http://www.pfdubois.com/numpy for details.
 $Id$"""
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando Perez <fperez@colorado.edu>
+#       Copyright (C) 2001-2005 Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
@@ -18,11 +18,13 @@ from IPython import Release
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
 
-__all__ = ['sum_flat','mean_flat','base_repr','binary_repr',
-           'zeros_like','amap','rms_flat','frange','diagonal_matrix',
-           'fromfunction_kw','identity','log2','ispower2','inf','infty',
-           'Infinity','exp_safe','spike','spike_odd','norm','l1norm',
-           'l2norm','Numeric']
+__all__ = ['sum_flat','mean_flat','rms_flat','base_repr','binary_repr',
+           'amin','amax','amap','zeros_like','empty_like',
+           'frange','diagonal_matrix','identity',
+           'fromfunction_kw','log2','ispower2',
+           'norm','l1norm','l2norm','exp_safe',
+           'inf','infty','Infinity',
+           'Numeric']
 
 #****************************************************************************
 # required modules
@@ -31,9 +33,6 @@ import sys,operator
 import math
 import Numeric
 from Numeric import *
-
-from  IPython import ultraTB
-AutoTB = ultraTB.AutoFormattedTB(mode='Verbose',color_scheme='Linux')
 
 #*****************************************************************************
 # Globals
@@ -67,11 +66,33 @@ def amap(fn,*args):
     shorthand for Numeric.array(map(...))"""
     return array(map(fn,*args))
 
+def amin(m,axis=0):
+    """amin(m,axis=0) returns the minimum of m along dimension axis.
+    """
+    return minimum.reduce(asarray(m),axis)
+
+def amax(m,axis=0):
+    """amax(m,axis=0) returns the maximum of m along dimension axis.
+    """
+    return maximum.reduce(asarray(m),axis)
 
 def zeros_like(a):
-    """Return an array of zeros of the shape and typecode of a."""
+    """Return an array of zeros of the shape and typecode of a.
+
+    If you don't explicitly need the array to be zeroed, you should instead
+    use empty_like(), which is faster as it only allocates memory."""
 
     return zeros(a.shape,a.typecode())
+
+def empty_like(a):
+    """Return an empty (uninitialized) array of the shape and typecode of a.
+
+    Note that this does NOT initialize the returned array.  If you require
+    your array to be initialized, you should use zeros_like().
+
+    This requires Numeric.empty(), which appeared in Numeric 23.7."""
+
+    return empty(a.shape,a.typecode())
 
 def sum_flat(a):
     """Return the sum of all the elements of a, flattened out.
@@ -79,9 +100,9 @@ def sum_flat(a):
     It uses a.flat, and if a is not contiguous, a call to ravel(a) is made."""
 
     if a.iscontiguous():
-        return sum(a.flat)
+        return Numeric.sum(a.flat)
     else:
-        return sum(ravel(a))
+        return Numeric.sum(ravel(a))
 
 def mean_flat(a):
     """Return the mean of all the elements of a, flattened out."""
@@ -91,21 +112,25 @@ def mean_flat(a):
 def rms_flat(a):
     """Return the root mean square of all the elements of a, flattened out."""
 
-    return sqrt(sum_flat(absolute(a)**2)/float(size(a)))
+    return math.sqrt(sum_flat(absolute(a)**2)/float(size(a)))
 
 def l1norm(a):
     """Return the l1 norm of a, flattened out.
 
-    Implemented as a separate function (not a call to norm() for speed)."""
+    Implemented as a separate function (not a call to norm() for speed).
+
+    Ref: http://mathworld.wolfram.com/L1-Norm.html"""
 
     return sum_flat(absolute(a))
 
 def l2norm(a):
     """Return the l2 norm of a, flattened out.
 
-    Implemented as a separate function (not a call to norm() for speed)."""
+    Implemented as a separate function (not a call to norm() for speed).
 
-    return sqrt(sum_flat(absolute(a)**2))
+    Ref: http://mathworld.wolfram.com/L2-Norm.html"""
+
+    return math.sqrt(sum_flat(absolute(a)**2))
 
 def norm(a,p=2):
     """norm(a,p=2) -> l-p norm of a.flat
@@ -113,9 +138,13 @@ def norm(a,p=2):
     Return the l-p norm of a, considered as a flat array.  This is NOT a true
     matrix norm, since arrays of arbitrary rank are always flattened.
 
-    p can be a number or the string 'Infinity' to get the L-infinity norm."""
+    p can be a number or one of the strings ('inf','Infinity') to get the
+    L-infinity norm.
+
+    Ref: http://mathworld.wolfram.com/VectorNorm.html
+         http://mathworld.wolfram.com/L-Infinity-Norm.html"""
     
-    if p=='Infinity':
+    if p in ('inf','Infinity'):
         return max(absolute(a).flat)
     else:
         return (sum_flat(absolute(a)**p))**(1.0/p)    
@@ -177,7 +206,6 @@ def frange(xini,xfin=None,delta=None,**kw):
         npts=int(round((xfin-xini)/delta+endpoint))
 
     return arange(npts)*delta+xini
-# end frange()
 
 def diagonal_matrix(diag):
     """Return square diagonal matrix whose non-zero elements are given by the
@@ -274,31 +302,4 @@ def fromfunction_kw(function, dimensions, **kwargs):
 
     return function(tuple(indices(dimensions)),**kwargs)
 
-#-----------------------------------------------------------------------------
-# DEPRECATED CODE
-
-def spike(x,x0=0,delta=1):
-    """Return exp(-((x-x0)/delta)**2), a simple spike. """
-
-    # for large arrays, the extra ifs are cheaper than the needless arithmetic
-    if x0==0 and delta == 1:
-        return exp_safe(-(x**2))
-    elif x0==0:
-        return exp_safe(-((x/delta)**2))
-    elif delta == 1:
-        return exp_safe(-(x-x0)**2)
-    else:
-        return exp_safe(-((x-x0)/delta)**2)
-
-def spike_odd(x,x0=0,delta=1,norm = math.sqrt(2.0*math.e)):
-    """Return (sqrt(2*E)/delta)*(x0-x)*exp(-((x-x0)/delta)**2).
-
-    This is a simple odd spike normalized to amplitude 1 which starts
-    positive."""
-
-    if x0==0:
-        return -(norm/delta)*x*spike(x,delta=delta)
-    else:
-        xnew = x0-x
-        return (norm/delta)*xnew*spike(xnew,delta=delta)
 #**************************** end file <numutils.py> ************************
