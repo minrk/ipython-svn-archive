@@ -324,6 +324,11 @@ def getoutputerror(cmd,verbose=0,debug=0,header='',split=0):
     SystemExec class."""
 
     if verbose or debug: print header+cmd
+    if not cmd:
+        if split:
+            return [],[]
+        else:
+            return '',''
     if not debug:
         pin,pout,perr = os.popen3(cmd)
         tout = pout.read().rstrip()
