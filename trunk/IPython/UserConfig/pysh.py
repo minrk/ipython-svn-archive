@@ -3,7 +3,7 @@
 """
 
 #*****************************************************************************
-#       Copyright (C) 2004 Fernando PÃ©rez. <fperez@colorado.edu>
+#       Copyright (C) 2004 Fernando Perez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -17,7 +17,7 @@
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando PÃ©rez. <fperez@colorado.edu>'
+__author__ = 'Fernando Perez. <fperez@colorado.edu>'
 __license__= 'LGPL'
 
 import os,sys,shutil
@@ -49,3 +49,11 @@ def shell():
 print """Welcome to pysh, a set of extensions to IPython for shell usage.
     help(shell) -> help on the installed shell extensions.
     """
+
+#  Set the 'cd' command to quiet mode, a more shell-like behavior
+__IP.default_option('cd','-q')
+# load all of $PATH as aliases
+__IP.magic_rehash()
+
+# reorder the tab-completion priorities
+__IP.Completer.matchers = ['file_matches','alias_matches','python_matches']

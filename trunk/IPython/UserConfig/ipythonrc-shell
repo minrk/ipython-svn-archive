@@ -12,7 +12,7 @@
 # option to IPython.
 
 # This profile loads a special input line filter to allow executing as shell
-# commands any lines which begin with ~/, ./ and /
+# commands any lines which begin with ~, . and /
 
 # First load basic user configuration
 include ipythonrc
@@ -31,12 +31,10 @@ prompt_out '<\#>'
 # Here's a more complex prompt, showing the hostname and more path depth (\Y3)
 #prompt_in1 '\C_LightRed\u\C_Blue@\C_Red\h\C_LightBlue[\C_LightCyan\Y3\C_LightBlue]\C_LightGreen\#>'
 
+# Remove all blank lines in between prompts, like a normal shell.
 separate_in 0
 separate_out 0
 separate_out2 0
 
-#  Set the 'cd' command to quiet mode, a more shell-like behavior
-execute __IP.default_option('cd','-q')
-
-# pysh.py loads the rest of the necessary modules
+# pysh.py does all of the proper configuration with real python code
 execfile pysh.py
