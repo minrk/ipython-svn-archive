@@ -7,7 +7,7 @@ from __future__ import nested_scopes
 
 #*****************************************************************************
 #       Copyright (C) 2001 Janko Hauser <jh@comunit.de> and
-#                          Fernando PÃ©rez <fperez@colorado.edu>
+#                          Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -158,17 +158,17 @@ State:\t%s """ % (logfile,self.LOGMODE,state)
     def log(self, line,continuation=None):
         """Write the line to a log and create input cache variables _i*."""
 
-        logline=line
         # update the auto _i tables
         #print '***logging line',line # dbg
         #print '***cache_count', self.outputcache.prompt_count # dbg
-        if continuation is not None:
+        input_hist = self.log_ns['_ih']
+        if not continuation:
             self._iii = self._ii
             self._ii = self._i
             self._i = self._i00
             # put back the final \n of every input line
             self._i00 = line+'\n'
-            self.log_ns['_ih'].append(self._i00)
+            input_hist.append(self._i00)
 
         # hackish access to top-level namespace to create _i1,_i2... dynamically
         to_main = {'_i':self._i,'_ii':self._ii,'_iii':self._iii}
@@ -176,38 +176,20 @@ State:\t%s """ % (logfile,self.LOGMODE,state)
             in_num = self.outputcache.prompt_count
             # add blank lines if the input cache fell out of sync. This can happen
             # for embedded instances which get killed via C-D and then get resumed.
-            while in_num >= len(self.log_ns['_ih']):
-                self.log_ns['_ih'].append('\n')
-            new_i = '_i'+`in_num`
+            while in_num >= len(input_hist):
+                input_hist.append('\n')
+            new_i = '_i%s' % in_num
             if continuation:
-                self._i00 = self.log_ns[new_i] +line + '\n'
-                self.log_ns['_ih'][in_num] = self._i00
+                self._i00 = '%s%s\n' % (self.log_ns[new_i],line)
+                input_hist[in_num] = self._i00
             to_main[new_i] = self._i00
         self.log_ns.update(to_main)
-
         
         if self._dolog and line:
-            #if line.lstrip()[0] in '!@?': logline = '#'+line.lstrip()
-            # print 'logging line: ',logline, 'to' ,self.logfile  # dbg
-            self.logfile.write(logline+'\n')
+            self.logfile.write(line+'\n')
             self.logfile.flush()
 
     def close_log(self):
         if hasattr(self, 'logfile'):
             self.logfile.close()
             self.logfname = ''
-
-#-----------------------------------------------------------------------------
-# Changelog:
-
-# 2001. fperez, heavy changes for inclusion in IPython. Documented in more
-# detail in the IPython ChangeLog
-
-# Changes to Logger:
-# - made the default log filename a parameter
-
-# - put a check for lines beginning with !@? in log(). Needed (even if the
-# handlers properly log their lines) for mid-session logging activation to
-# work properly. Without this, lines logged in mid session, which get read
-# from the cache, would end up 'bare' (with !@? in the open) in the log. Now
-# they are caught and prepended with a #.
