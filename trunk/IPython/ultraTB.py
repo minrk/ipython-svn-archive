@@ -425,7 +425,21 @@ class VerboseTB(TBTools):
         indent = ' '*indent_size
         frames = []
         # Drop topmost frames if requested
-        records = inspect.getinnerframes(etb, context)[self.tb_offset:]
+        try:
+            records = inspect.getinnerframes(etb, context)[self.tb_offset:]
+        except:
+
+            # FIXME: I've been getting many crash reports from python 2.3
+            # users, traceable to inspect.py.  If I can find a small test-case
+            # to reproduce this, I should either write a better workaround or
+            # file a bug report against inspect (if that's the real problem).
+            # So far, I haven't been able to find an isolated example to
+            # reproduce the problem.
+
+            _msg = ("*** Internal Python error in the inspect.py module.\n"
+                    "    Aborting traceback printing.  Sorry.")
+            return _msg
+        
         for frame, file, lnum, func, lines, index in records:
             #print '*** record:',file,lnum,func,lines,index  # dbg
             file = file and os.path.abspath(file) or '?'
@@ -531,8 +545,15 @@ class VerboseTB(TBTools):
                     i = i + 1
             frames.append(level + string.join(excerpt, ''))
 
-        exception = ['%s%s%s: %s' % (Colors.excName, str(etype), 
-                                     Colors.Normal, str(evalue))]
+        try:
+            exception = ['%s%s%s: %s' % (Colors.excName, str(etype), 
+                                         Colors.Normal, str(evalue))]
+        except:
+            etype = '***USER EXCEPTION ERROR***'
+            evalue = 'User-defined exception crashes when str() is called on it'
+            exception = ['%s%s%s: %s' % (Colors.excName, str(etype), 
+                                         Colors.Normal, str(evalue))]
+            
         if type(evalue) is types.InstanceType:
             for name in dir(evalue):
                 value = pydoc.text.repr(getattr(evalue, name))
@@ -576,9 +597,9 @@ class VerboseTB(TBTools):
                 self.tb = self.tb.tb_next
             try:
                 self.pdb.interaction(self.tb.tb_frame, self.tb)
-            except IndexError:
+            except:
                 print '*** ERROR ***'
-                print 'This version of pdb has a known bug and crashed.'
+                print 'This version of pdb has a bug and crashed.'
                 print 'Returning to IPython...'
             sys.displayhook = dhook
         del self.tb
