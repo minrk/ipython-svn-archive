@@ -29,6 +29,7 @@ __license__ = Release.license
 
 #****************************************************************************
 # Required modules
+import __builtin__
 import os,sys,socket
 from pprint import pprint,pformat
 
@@ -422,6 +423,14 @@ class CachedOutput:
         This is invoked everytime the interpreter needs to print, and is activated
         by setting the variable sys.displayhook to it."""
 
+        # If something injected a '_' variable in __builtin__, delete
+        # ipython's automatic one so we don't clobber that.  gettext() in
+        # particular uses _, so we need to stay away from it.
+        if '_' in __builtin__.__dict__:
+            try:
+                del self.user_ns['_']
+            except KeyError:
+                pass
         if arg is not None:
             # first handle the cache and counters
             self.update(arg)
@@ -479,11 +488,17 @@ class CachedOutput:
         #print '***cache_count', self.cache_count # dbg
         if self.cache_count >= self.cache_size and self.do_full_cache:
             self.flush()
-        self.___ = self.__
-        self.__ = self._
-        self._ = arg
+        # Don't overwrite '_' and friends if '_' is in __builtin__ (otherwise
+        # we cause buggy behavior for things like gettext).
+        if '_' not in __builtin__.__dict__:
+            self.___ = self.__
+            self.__ = self._
+            self._ = arg
+            self.user_ns.update({'_':self._,'__':self.__,'___':self.___})
+            #to_main.update({'_':self._,'__':self.__,'___':self.___})
+            
         # hackish access to top-level  namespace to create _1,_2... dynamically
-        to_main = {'_':self._,'__':self.__,'___':self.___}
+        to_main = {}
         if self.do_full_cache:
             self.cache_count += 1
             self.entries.append(arg)
