@@ -4,14 +4,14 @@
 
 This is just the startup wrapper script, kept deliberately to a minimum.
 
-IPShell's mainloop() takes an optional argument, sys_exit (default=0). If set
-to 1, it calls sys.exit() at exit time. You can use the following code in your
-PYTHONSTARTUP file:
+The shell's mainloop() takes an optional argument, sys_exit (default=0). If
+set to 1, it calls sys.exit() at exit time. You can use the following code in
+your PYTHONSTARTUP file:
 
 import IPython
 IPython.Shell.IPShell().mainloop(sys_exit=1)
 
-[or simply IPython.Shell.IPShell().mainloop(1)  ]
+[or simply IPython.Shell.IPShell().mainloop(1) ]
 
 and IPython will be your working environment when you start python. The final
 sys.exit() call will make python exit transparently when IPython finishes, so
@@ -23,5 +23,21 @@ this mode, there is no way to pass IPython any command-line options, as those
 are trapped first by Python itself.
 """
 
-import IPython
-IPython.Shell.IPShell().mainloop()
+import sys
+import IPython.Shell as Shell
+
+# sys.argv hack to extract the threading option, since it determines the
+# actual class which we instantiate for IPython.
+if len(sys.argv) > 1:
+    arg1 = sys.argv[1]
+    if arg1.endswith('-thread'):
+        shell = Shell.IPShellGTK
+    elif arg1.endswith('-mpthread'):
+        shell = Shell.IPShellMatplotlib
+    else:
+        shell = Shell.IPShell
+else:
+    shell = Shell.IPShell
+
+# The real IPython starts
+shell().mainloop()
