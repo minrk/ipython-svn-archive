@@ -1,3 +1,9 @@
+2004-05-10  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Logger.py (Logger.create_log): fix recently introduced
+	bug (misindented line) where logstart would fail when not given an
+	explicit filename.
+
 2004-05-09  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py (Magic.parse_options): skip system call when
