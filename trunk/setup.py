@@ -69,8 +69,8 @@ if len(sys.argv) >= 2 and sys.argv[1] == 'sdist':
                    'IPython/UserConfig/ipythonrc',
                    ],
                   "cd doc && "
-                  "lyxport -tt --leave --pdf --html -o '-noinfo -split +1' "
-                  "manual.lyx"),
+                  "lyxport -tt --leave --pdf "
+                  "--html -o '-noinfo -split +1 -local_icons' manual.lyx"),
                  
                  ('doc/new_design.pdf',
                   ['doc/new_design.lyx'],
