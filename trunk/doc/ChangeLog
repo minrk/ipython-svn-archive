@@ -1,8 +1,53 @@
+2005-03-20  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.set_custom_exc): new system
+	for custom exception handling.  This is quite powerful, and it
+	allows for user-installable exception handlers which can trap
+	custom exceptions at runtime and treat them separately from
+	IPython's default mechanisms.  At the request of Frédéric
+	Mantegazza <mantegazza-AT-ill.fr>.
+	(InteractiveShell.set_custom_completer): public API function to
+	add new completers at runtime.
+
+2005-03-19  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/OInspect.py (getdoc): Add a call to obj.getdoc(), to
+	allow objects which provide their docstrings via non-standard
+	mechanisms (like Pyro proxies) to still be inspected by ipython's
+	? system.
+
+	* IPython/iplib.py (InteractiveShell.__init__): back off the _o/_e
+	automatic capture system.  I tried quite hard to make it work
+	reliably, and simply failed.  I tried many combinations with the
+	subprocess module, but eventually nothing worked in all needed
+	cases (not blocking stdin for the child, duplicating stdout
+	without blocking, etc).  The new %sc/%sx still do capture to these
+	magical list/string objects which make shell use much more
+	conveninent, so not all is lost.
+
+	XXX - FIX MANUAL for the change above!
+
+	(runsource): I copied code.py's runsource() into ipython to modify
+	it a bit.  Now the code object and source to be executed are
+	stored in ipython.  This makes this info accessible to third-party
+	tools, like custom exception handlers.  After a request by Frédéric
+	Mantegazza <mantegazza-AT-ill.fr>.
+
+	* IPython/UserConfig/ipythonrc: Add up/down arrow keys to
+	history-search via readline (like C-p/C-n).  I'd wanted this for a
+	long time, but only recently found out how to do it.  For users
+	who already have their ipythonrc files made and want this, just
+	add:
+
+	readline_parse_and_bind "\e[A": history-search-backward
+	readline_parse_and_bind "\e[B": history-search-forward
+
 2005-03-18  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py (magic_sc): %sc and %sx now use the fancy
 	LSString and SList classes which allow transparent conversions
 	between list mode and whitespace-separated string.
+	(magic_r): Fix recursion problem in %r.
 
 	* IPython/genutils.py (LSString): New class to be used for
 	automatic storage of the results of all alias/system calls in _o
