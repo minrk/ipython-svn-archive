@@ -1,0 +1,16 @@
+# -*- Mode: Shell-Script -*-  Not really, but it shows comments correctly
+#***************************************************************************
+# Configuration file for ipython -- ipythonrc format
+
+# If this file is found in the user's ~/.ipython directory as ipythonrc-pylab,
+# it can be loaded by calling passing the '-profile pylab' (or '-p pylab')
+# option to IPython.
+
+# This profile load modules which turn IPython into a very capable environment
+# for numerical work, as compatible with Matlab as possible.
+
+# Load the user's basic configuration
+include ipythonrc
+
+# Load all additional matlab-like functionality from matplotlib
+execfile matplotlib_load.py
