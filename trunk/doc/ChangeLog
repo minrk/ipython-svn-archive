@@ -1,3 +1,29 @@
+2004-08-21  Fernando Perez  <fperez@colorado.edu>
+
+	* matplotlib_config.py: new files for matplotlib support, part of
+	the pylab profile.
+
+	* IPython/usage.py (__doc__): documented the threading options.
+
+2004-08-20  Fernando Perez  <fperez@colorado.edu>
+
+	* ipython: Modified the main calling routine to handle the -thread
+	and -mpthread options.  This needs to be done as a top-level hack,
+	because it determines which class to instantiate for IPython
+	itself.
+
+	* IPython/Shell.py (MTInteractiveShell.__init__): New set of
+	classes to support multithreaded GTK operation without blocking,
+	and matplotlib with all backends.  This is a lot of still very
+	experimental code, and threads are tricky.  So it may still have a
+	few rough edges...  This code owes a lot to
+	http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/65109, by
+	Brian # McErlean and John Finlay, to Antoon Pardon for fixes, and
+	to John Hunter for all the matplotlib work.
+
+	* IPython/ipmaker.py (__call__): Added -thread and -mpthread
+	options for gtk thread and matplotlib support.
+
 2004-08-16  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.__init__): don't trigger
