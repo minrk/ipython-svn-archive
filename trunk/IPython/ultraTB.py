@@ -86,9 +86,19 @@ from IPython import Debugger
 
 from IPython.Struct import Struct
 from IPython.ColorANSI import *
-from IPython.genutils import Term, uniq_stable
+from IPython.genutils import Term,uniq_stable,error,info
 
 #---------------------------------------------------------------------------
+# Code begins
+
+def inspect_error():
+    """Print a message about internal inspect errors.
+
+    These are unfortunately quite common."""
+    
+    error('Internal Python error in the inspect module.\n'
+          'Below is the traceback from this internal error.\n')
+    
 class TBTools:
     """Basic tools used by all traceback printer classes."""
 
@@ -388,7 +398,7 @@ class VerboseTB(TBTools):
         indent        = ' '*indent_size
         numbers_width = indent_size - 1 # leave space between numbers & code
         text_repr     = pydoc.text.repr
-        exc           = "%s%s%s" % (Colors.excName, str(etype), ColorsNormal)
+        exc           = '%s%s%s' % (Colors.excName, str(etype), ColorsNormal)
         em_normal     = '%s\n%s%s' % (Colors.valEm, indent,ColorsNormal)
         undefined     = '%sundefined%s' % (Colors.em, ColorsNormal)
 
@@ -430,10 +440,10 @@ class VerboseTB(TBTools):
             # file a bug report against inspect (if that's the real problem).
             # So far, I haven't been able to find an isolated example to
             # reproduce the problem.
-
-            _msg = ('*** Internal Python error in the inspect.py module.\n'
-                    '    Aborting traceback printing.  Sorry.')
-            return _msg
+            inspect_error()
+            traceback.print_exc(file=Term.cerr)
+            info('\nUnfortunately, your original traceback can not be constructed.\n')
+            return ''
 
         # build some color string templates outside these nested loops
         tpl_link       = '%s%%s%s' % (Colors.filenameEm,ColorsNormal)
@@ -454,7 +464,14 @@ class VerboseTB(TBTools):
             #print '*** record:',file,lnum,func,lines,index  # dbg
             file = file and os.path.abspath(file) or '?'
             link = tpl_link % file
-            args, varargs, varkw, locals = inspect.getargvalues(frame)
+
+            try:
+                args, varargs, varkw, locals = inspect.getargvalues(frame)
+            except:
+                inspect_error()
+                traceback.print_exc(file=Term.cerr)
+                info("\nIPython's exception reporting continues...\n")
+                
             if func == '?':
                 call = ''
             else:
@@ -472,6 +489,9 @@ class VerboseTB(TBTools):
                     # inspect messes up resolving the argument list of view()
                     # and barfs out. At some point I should dig into this one
                     # and file a bug report about it.
+                    inspect_error()
+                    traceback.print_exc(file=Term.cerr)
+                    info("\nIPython's exception reporting continues...\n")
                     call = tpl_call_fail % func
 
             # Initialize a list of names on the current line, which the
@@ -550,7 +570,7 @@ class VerboseTB(TBTools):
                                 value = undefined
                         else:
                             value = undefined
-                        name = tpl_global_var % name_base
+                        name = tpl_global_var % name_full
                     lvals.append(tpl_name_val % (name,value))
             if lvals:
                 lvals = '%s%s' % (indent,em_normal.join(lvals))
