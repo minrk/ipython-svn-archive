@@ -24,9 +24,17 @@ __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
 
 # Code begins
-import __main__,sys
+import __main__
+import sys
+import os
+import code
+import threading
+
+import IPython
 from ipmaker import make_IPython
-from genutils import qw
+from genutils import qw,Term
+from Struct import Struct
+from Magic import Magic
 import ultraTB
 
 #-----------------------------------------------------------------------------
@@ -234,5 +242,200 @@ class IPShellEmbed:
 
 # alias for backwards compatibility
 IPythonShellEmbed = IPShellEmbed
+
+#-----------------------------------------------------------------------------
+class MTInteractiveShell(IPython.iplib.InteractiveShell):
+    """Simple multi-threaded shell."""
+
+    # Threading strategy taken from:
+    # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/65109, by Brian
+    # McErlean and John Finlay.  Modified with corrections by Antoon Pardon,
+    # from the pygtk mailing list, to avoid lockups with system calls.
+
+    def __init__(self,name,usage=None,rc=Struct(opts=None,args=None),
+                 user_ns = None, **kw):
+        """Similar to the normal InteractiveShell, but with threading control"""
+        
+        IPython.iplib.InteractiveShell.__init__(self,name,usage,rc,user_ns)
+
+        # Object variable to store code object waiting execution.  No need to
+        # use a Queue here, since it's a single item which gets cleared once run.
+        self.code_to_run = None
+        self.parent_runcode = lambda obj: \
+                              IPython.iplib.InteractiveShell.runcode(self,obj)
+
+        # Locking control variable
+        self.ready = threading.Condition()
+
+        # Stuff to do at closing time
+        self._kill = False
+        on_kill = kw.get('on_kill')
+        if on_kill is None:
+            on_kill = []
+        # Check that all things to kill are callable:
+        for t in on_kill:
+            if not callable(t):
+                raise TypeError,'on_kill must be a list of callables'
+        self.on_kill = on_kill
+        
+    def runsource(self, source, filename="<input>", symbol="single"):
+        """Compile and run some source in the interpreter.
+
+        Modified version of code.py's runsource(), to handle threading issues.
+        See the original for full docstring details."""
+        
+        try:
+            code = self.compile(source, filename, symbol)
+        except (OverflowError, SyntaxError, ValueError):
+            # Case 1
+            self.showsyntaxerror(filename)
+            return False
+
+        if code is None:
+            # Case 2
+            return True
+
+        # Case 3
+        # Store code in self, so the execution thread can handle it
+        self.ready.acquire()
+        self.code_to_run = code
+        self.ready.wait()  # Wait until processed in timeout interval
+        self.ready.release()
+
+        return False
+
+    def runcode(self):
+        """Execute a code object.
+
+        Multithreaded wrapper around IPython's runcode()."""
+
+        # lock thread-protected stuff
+        self.ready.acquire()
+        if self._kill:
+            print >>Term.cout, 'Closing threads...',
+            Term.cout.flush()
+            for tokill in self.on_kill:
+                tokill()
+            print >>Term.cout, 'Done.'
+
+        # Run pending code by calling parent class
+        if self.code_to_run is not None:
+            self.ready.notify()
+            self.parent_runcode(self.code_to_run)
+
+        # Flush out code object which has been run
+        self.code_to_run = None
+        # We're done with thread-protected variables
+        self.ready.release()
+        # This MUST return true for gtk threading to work
+        return True
+
+    def kill (self):
+        """Kill the thread, returning when it has been shut down."""
+        self.ready.acquire()
+        self._kill = True
+        self.ready.release()
+
+class MatplotlibShell(MTInteractiveShell):
+    """Multithreaded shell, modified to handle matplotlib scripts."""
+
+    # This code was co-developed with John Hunter, matplotlib's author.
+
+    def __init__(self,name,usage=None,rc=Struct(opts=None,args=None),
+                 user_ns = None, **kw):
+        
+        # Initialize matplotlib to interactive mode always
+        import matplotlib
+        matplotlib.interactive(True)
+
+        # we'll handle the mainloop, tell show not to, for the user's backend of
+        # choice
+        backend_name = matplotlib.rcParams['backend']
+        if backend_name.startswith('Tk'):
+            import matplotlib.backends.backend_tkagg as backend
+        elif backend_name.startswith('GTK'):
+            import matplotlib.backends.backend_gtk as backend
+        elif backend_name.startswith('WX'):
+            import matplotlib.backends.backend_wx as backend
+        else:
+            raise ValueError,'unsupported matplotlib backend'
+        # Set the mainloop control
+        backend.show._needmain = False
+
+        # This must be imported last in the matplotlib series, after
+        # backend/interactivity choices have been made
+        import matplotlib.matlab
+        self.matplotlib = matplotlib
+
+        # Initialize parent class
+        MTInteractiveShell.__init__(self,name,usage,rc,user_ns,**kw)
+
+    def mplot_exec(self,fname,*where):
+        """Execute a matplotlib script."""
+
+        #print '*** Matplotlib runner ***' # dbg
+        # turn off rendering until end of script
+        isInteractive = self.matplotlib.rcParams['interactive']
+        self.matplotlib.interactive(False)
+        self.safe_execfile(fname,*where)
+        self.matplotlib.interactive(isInteractive)
+	self.matplotlib.matlab.draw()
+        
+    def magic_run(self,parameter_s=''):
+        """Modified @run for Matplotlib"""
+        Magic.magic_run(self,parameter_s,runner=self.mplot_exec)
+
+
+# The IPShell* classes below are the ones meant to be run by external code as
+# IPython instances.
+
+class IPShellGTK(threading.Thread):
+    """Run a gtk mainloop() in a separate thread.
+    
+    Python commands can be passed to the thread where they will be executed.
+    This is implemented by periodically checking for passed code using a
+    GTK timeout callback."""
+    
+    TIMEOUT = 100 # Millisecond interval between timeouts.
+
+    def __init__(self,argv=None,user_ns=None,debug=0,
+                 shell_class=MTInteractiveShell):
+        threading.Thread.__init__(self)
+
+        import pygtk
+        pygtk.require("2.0")
+        import gtk
+        self.gtk = gtk
+
+        self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
+                               shell_class=shell_class,
+                               on_kill=[self.gtk.mainquit])
+
+    def run(self):
+        self.IP.interact()
+        self.IP.kill()
+
+    def mainloop(self):
+        self.start()
+        self.gtk.timeout_add(self.TIMEOUT, self.IP.runcode)
+        try:
+            if self.gtk.gtk_version[0] >= 2:
+                self.gtk.threads_init()
+        except AttributeError:
+            pass
+        self.gtk.mainloop()
+        self.join()
+
+
+class IPShellMatplotlib(IPShellGTK):
+    """Simple derivative of IPShellGTK with MatplotlibShell as the internal
+    shell.
+
+    Having this on a separate class allows simpler external driver code."""
+    
+    def __init__(self,argv=None,user_ns=None,debug=0):
+        IPShellGTK.__init__(self,argv,user_ns,debug,
+                            shell_class=MatplotlibShell)
+
 
 #************************ end of file <Shell.py> ***************************
