@@ -51,7 +51,7 @@ class CrashHandler:
         color_scheme = 'NoColor'
 
         # Use this ONLY for developer debugging (keep commented out for release)
-        #color_scheme = 'Linux'
+        #color_scheme = 'Linux'   # dbg
         
         try:
             rptdir = self.IP.rc.ipythondir
