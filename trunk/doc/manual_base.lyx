@@ -276,7 +276,8 @@ Developed under
 \series bold 
 Linux
 \series default 
-, should work under most unices (tested OK under Solaris and the *BSD family).
+, IPython should work under most unices (tested OK under Solaris and the
+ *BSD family).
 \layout Standard
 
 
@@ -292,15 +293,15 @@ Mac OS X
 \series bold 
 CygWin
 \series default 
-: works fine.
+: it works fine.
 \layout Standard
 
 
 \series bold 
 Windows
 \series default 
-: It works reasonably well under Windows XP/2k, and I suspect NT should
- work similarly.
+: it works reasonably well under Windows XP/2k, and I suspect NT should
+ behave similarly.
  Section\SpecialChar ~
 
 \begin_inset LatexCommand \ref{sub:Under-Windows}
@@ -308,7 +309,7 @@ Windows
 \end_inset 
 
  describes installation details for Windows, including the additional tools
- to gain access to IPython's full functionality under Windows.
+ needed to gain access to IPython's full functionality under this OS.
 \layout Standard
 
 Windows 9x support has been added but has seen very little testing, as I

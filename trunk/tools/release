@@ -38,7 +38,7 @@ gzip -9c pycolor.1 > pycolor.1.gz
 cd $ipdir/dist
 rm -f *
 
-# Do backup
+# Perform local backup
 cd $ipdir/tools
 ./bkp.py
 
@@ -47,12 +47,7 @@ cd $ipdir
 #./setup.py sdist --formats=gztar,zip bdist --formats=rpm,wininst
 ./setup.py sdist --formats=gztar,zip bdist --formats=rpm
 
-# Keep a local Windows copy
-#cd $ipdir/dist
-#echo "Copying to Windows directory..."
-#cp *.zip *.exe ~/win/IPython
-
-# Upload
+# Upload all files
 cd $ipdir/dist
 echo "Uploading distribution files..."
 scp * fperez@scipy.org:www/dist/
@@ -70,12 +65,16 @@ cp -r manual.pdf manual/ $www/doc
 cd $www
 ./update
 
+# Alert package maintainers
 echo "Alerting package maintainers..."
-maintainers='fperez@colorado.edu andrea.riciputi@libero.it jack@xiph.org'
+maintainers='fperez@colorado.edu andrea.riciputi@libero.it jack@xiph.org \
+dryice@hotpop.com'
+
 for email in $maintainers
     do
 	echo "Emailing $email..."
-	mail -s "[ANN] A new IPython is out. Version: $version" $email < NEWS
+	mail -s "[Package maintainer notice] A new IPython is out. Version: $version" \
+    $email < NEWS
     done
 
 echo "Done!"
