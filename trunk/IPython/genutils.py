@@ -153,13 +153,18 @@ def warn(msg,level=2,exit_val=1):
             print >> Term.cerr,'Exiting.\n'
             sys.exit(exit_val)
 
+def info(msg):
+    """Equivalent to warn(msg,level=1)."""
+
+    warn(msg,level=1)
+
 def error(msg):
-    """Equivalent to warn(msg,level=3). """
+    """Equivalent to warn(msg,level=3)."""
 
     warn(msg,level=3)
 
 def fatal(msg,exit_val=1):
-    """Equivalent to warn(msg,exit_val=exit_val,level=4). """
+    """Equivalent to warn(msg,exit_val=exit_val,level=4)."""
 
     warn(msg,exit_val=exit_val,level=4)
 
