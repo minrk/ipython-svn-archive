@@ -1,3 +1,16 @@
+2004-05-20  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/OInspect.py (Inspector.pinfo): flush the inspect cache
+	so that source code shown is guaranteed in sync with the file on
+	disk (also changed in psource).  Similar fix to the one for
+	ultraTB on 2004-05-06.  Thanks to a bug report by Yann Le Du
+	<yann.ledu@noos.fr>.
+	
+	* IPython/Magic.py (Magic.parse_options): Fixed bug where commands
+	with a single option would not be correctly parsed. Closes
+	http://www.scipy.net/roundup/ipython/issue14.  This bug had been
+	introduced in 0.6.0 (on 2004-05-06).
+
 2004-05-13  *** Released version 0.6.0
 
 2004-05-13  Fernando Perez  <fperez@colorado.edu>
