@@ -35,7 +35,7 @@ __all__ = ['ANSICodeColors','Parser']
 _scheme_default = 'Linux'
 
 # Imports
-import string, sys, cStringIO
+import string, sys, os, cStringIO
 import keyword, token, tokenize
 
 from IPython.ColorANSI import *
@@ -165,11 +165,14 @@ class Parser:
             return output
 
     def __call__(self, toktype, toktext, (srow,scol), (erow,ecol), line):
-        """ Token handler.
-        """
+        """ Token handler, with syntax highlighting."""
 
         # local shorthand
         colors = self.colors
+
+        # line separator, so this works across platforms
+        linesep = os.linesep
+
         # calculate new positions
         oldpos = self.pos
         newpos = self.lines[srow] + scol
@@ -177,7 +180,7 @@ class Parser:
 
         # handle newlines
         if toktype in [token.NEWLINE, tokenize.NL]:
-            self.out.write('\n')
+            self.out.write(linesep)
             return
 
         # send the original whitespace, if needed
@@ -200,12 +203,12 @@ class Parser:
 
         # Triple quoted strings must be handled carefully so that backtracking
         # in pagers works correctly. We need color terminators on _each_ line.
-        if '\n' in toktext:
-            toktext = toktext.replace('\n','%s\n%s' % (colors.normal,color))
+        if linesep in toktext:
+            toktext = toktext.replace(linesep, '%s%s%s' %
+                                      (colors.normal,linesep,color))
 
         # send text
         self.out.write('%s%s%s' % (color,toktext,colors.normal))
-            
             
 def main():
     """Colorize a python file using ANSI color escapes and print to stdout.
