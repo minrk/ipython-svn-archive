@@ -549,8 +549,8 @@ class VerboseTB(TBTools):
             exception = ['%s%s%s: %s' % (Colors.excName, str(etype), 
                                          Colors.Normal, str(evalue))]
         except:
-            etype = '***USER EXCEPTION ERROR***'
-            evalue = 'User-defined exception crashes when str() is called on it'
+            # User exception is improperly defined.
+            etype,evalue = sys.exc_info()[:2]
             exception = ['%s%s%s: %s' % (Colors.excName, str(etype), 
                                          Colors.Normal, str(evalue))]
             
