@@ -99,8 +99,8 @@ http://www.scipy.net/roundup/ipython  (IPython's online bug tracker).
 
         sec_sep = '\n\n'+'*'*75+'\n\n'
         report.write('*'*75+'\n\n'+'IPython post-mortem report\n\n')
-        report.write('IPython version: ' + __version__)
-        report.write('Platform info: os.name -> %s, sys.platform -> %s' %
+        report.write('IPython version: %s \n\n' % __version__)
+        report.write('Platform info  : os.name -> %s, sys.platform -> %s' %
                      (os.name,sys.platform) )
         report.write(sec_sep+'Current user configuration structure:\n\n')
         report.write(pformat(self.IP.rc.dict()))
