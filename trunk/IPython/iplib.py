@@ -56,6 +56,7 @@ from IPython.usage import cmd_line_usage,interactive_usage
 from IPython.Struct import Struct
 from IPython.Itpl import Itpl,itpl,printpl,ItplNS,itplns
 from IPython.FakeModule import FakeModule
+from IPython.background_jobs import BackgroundJobManager
 from IPython.genutils import *
 
 # store the builtin raw_input globally, and use this always, in case user code
@@ -306,9 +307,14 @@ try:
                 try:
                     matches = self.attr_matches(text)
                     if text.endswith('.') and self.omit__names:
-                        # true if txt is _not_ a __ name, false otherwise:
-                        no__name = (lambda txt:
-                                    re.match(r'.*\.__.*?__',txt) is None)
+                        if self.omit__names == 1:
+                            # true if txt is _not_ a __ name, false otherwise:
+                            no__name = (lambda txt:
+                                        re.match(r'.*\.__.*?__',txt) is None)
+                        else:
+                            # true if txt is _not_ a _ name, false otherwise:
+                            no__name = (lambda txt:
+                                        re.match(r'.*\._.*?',txt) is None)
                         matches = filter(no__name, matches)
                 except NameError:
                     # catches <undefined attributes>.<tab>
@@ -492,6 +498,11 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
 
         self.name = name
 
+        # Job manager (for jobs run as background threads)
+        self.jobs = BackgroundJobManager()
+        # Put the job manager into builtins so it's always there.
+        __builtin__.jobs = self.jobs
+
         # escapes for automatic behavior on the command line
         self.ESC_SHELL = '!'
         self.ESC_HELP  = '?'
@@ -511,8 +522,9 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         code.InteractiveConsole.__init__(self,locals = self.user_ns)
         Logger.__init__(self,log_ns = self.user_ns)
         Magic.__init__(self,self)
-        # an ugly hack to get a pointer to the shell, so I can start writing magic
-        # code via this pointer instead of the current mixin salad.
+
+        # an ugly hack to get a pointer to the shell, so I can start writing
+        # magic code via this pointer instead of the current mixin salad.
         Magic.set_shell(self,self)
 
         # hooks is a Struct holding pointers to various system hooks, and will
@@ -574,7 +586,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # much:  it's better to be conservative rather than to trigger hidden
         # evals() somewhere and end up causing side effects.
 
-        self.line_split = re.compile(r'(^[\s*!\?%,/]?)([\?\w\.]+\w*\s*)(\(?.*$)')
+        self.line_split = re.compile(r'(^[\s*!\?%,/]?)( [\?\w\.]+\w*\s*)(\(?.*$)')
 
         # RegExp to identify potential function names
         self.re_fun_name = re.compile(r'[a-zA-Z_]([a-zA-Z0-9_.]*) *$')
@@ -622,6 +634,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         code_colors = PyColorize.ANSICodeColors
         self.inspector = OInspect.Inspector(ins_colors,code_colors,'NoColor')
         self.autoindent = 0
+
         # Make some aliases automatically
         # Prepare list of shell aliases to auto-define
         if os.name == 'posix':            
@@ -897,12 +910,16 @@ want to merge them back into the new files.""" % locals()
         else:
             import atexit
 
+            # Platform-specific configuration
             if os.name == 'nt':
                 # readline under Windows modifies the default exit behavior
                 # from being Ctrl-Z/Return to the Unix Ctrl-D one.
                 __builtin__.exit = __builtin__.quit = \
                      ('Use Ctrl-D (i.e. EOF) to exit. '
                       'Use %Exit or %Quit to exit without confirmation.')
+                self.readline_startup_hook = readline.set_pre_input_hook
+            else:
+                self.readline_startup_hook = readline.set_startup_hook
 
             # Load user's initrc file (readline config)
             inputrc_name = os.environ.get('INPUTRC')
@@ -1115,16 +1132,16 @@ want to merge them back into the new files.""" % locals()
                 if more:
                     prompt = self.outputcache.prompt2
                     if self.autoindent:
-                        self.readline.set_startup_hook(self.pre_readline)
+                        self.readline_startup_hook(self.pre_readline)
                 else:
                     prompt = self.outputcache.prompt1
                 try:
                     line = self.raw_input(prompt)
                     if self.autoindent:
-                        self.readline.set_startup_hook(None)
+                        self.readline_startup_hook(None)
                 except EOFError:
                     if self.autoindent:
-                        self.readline.set_startup_hook(None)
+                        self.readline_startup_hook(None)
                     self.write("\n")
                     if self.rc.confirm_exit:
                         if ask_yes_no('Do you really want to exit ([y]/n)?','y'):
