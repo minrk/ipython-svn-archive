@@ -37,14 +37,65 @@ import tempfile
 from Itpl import Itpl,itpl,printpl
 import DPyGetOpt
 
+#****************************************************************************
+# Exceptions
+class Error(Exception):
+    """Base class for exceptions in this module."""
+    pass
+
+#****************************************************************************
+# Generic warning/error printer, used by everything else
+def warn(msg,level=2,exit_val=1):
+    """Standard warning printer. Gives formatting consistency.
+
+    Output is sent to sys.stderr.
+    
+    Options:
+    
+    -level(2): allows finer control:
+      0 -> Do nothing, dummy function.
+      1 -> Print message.
+      2 -> Print 'WARNING:' + message. (Default level).
+      3 -> Print 'ERROR:' + message.
+      4 -> Print 'FATAL ERROR:' + message and trigger a sys.exit().
+
+    -exit_val (1): exit value returned by sys.exit() for a level 4
+    warning. Ignored for all other levels."""
+    
+    if level>0:
+        header = ['','','WARNING: ','ERROR: ','FATAL ERROR: ']
+        print >> sys.stderr, '%s%s' % (header[level],msg)
+        if level == 4:
+            print >> sys.stderr,'Exiting.\n'
+            sys.exit(exit_val)
+
+def error(msg):
+    """Equivalent to warn(msg,level=3). """
+
+    warn(msg,level=3)
+
+def fatal(msg,exit_val=1):
+    """Equivalent to warn(msg,exit_val=exit_val,level=4). """
+
+    warn(msg,exit_val=exit_val,level=4)
+
+#----------------------------------------------------------------------------
 class Stream:
     """Simple class to hold the various I/O streams in Term"""
 
     def __init__(self,stream,name):
 	self.stream = stream
 	self.name = name
-	self.fileno = stream.fileno()
-	self.mode = stream.mode
+        try:
+            self.fileno = stream.fileno()
+        except AttributeError:
+            warn("Stream <%s> looks suspicious: it lacks a 'fileno' attribute"
+                 % name)
+        try:
+            self.mode = stream.mode
+        except AttributeError:
+            warn("Stream <%s> looks suspicious: it lacks a 'mode' attribute"
+                 % name)
 
 class Term:
 
@@ -167,12 +218,6 @@ def timing(reps,func,*args,**kw):
     return timings_out(reps,func,*args,**kw)[0]
 
 #****************************************************************************
-# Exceptions
-class Error(Exception):
-    """Base class for exceptions in this module."""
-    pass
-
-#****************************************************************************
 # file and system
 
 class SystemExec:
@@ -273,41 +318,6 @@ def getoutputerror(cmd):
     return tout,terr
 
 #-----------------------------------------------------------------------------
-def warn(msg,level=2,exit_val=1):
-    """Standard warning printer. Gives formatting consistency.
-
-    Output is sent to sys.stderr.
-    
-    Options:
-    
-    -level(2): allows finer control:
-      0 -> Do nothing, dummy function.
-      1 -> Print message.
-      2 -> Print 'WARNING:' + message. (Default level).
-      3 -> Print 'ERROR:' + message.
-      4 -> Print 'FATAL ERROR:' + message and trigger a sys.exit().
-
-    -exit_val (1): exit value returned by sys.exit() for a level 4
-    warning. Ignored for all other levels."""
-    
-    if level>0:
-        header = ['','','WARNING: ','ERROR: ','FATAL ERROR: ']
-        print >> sys.stderr, '%s%s' % (header[level],msg)
-        if level == 4:
-            print >> sys.stderr,'Exiting.\n'
-            sys.exit(exit_val)
-
-def error(msg):
-    """Equivalent to warn(msg,level=3). """
-
-    warn(msg,level=3)
-
-def fatal(msg,exit_val=1):
-    """Equivalent to warn(msg,exit_val=exit_val,level=4). """
-
-    warn(msg,exit_val=exit_val,level=4)
-
-#----------------------------------------------------------------------------
 def mutex_opts(dict,ex_op):
     """Check for presence of mutually exclusive keys in a dict.
 
