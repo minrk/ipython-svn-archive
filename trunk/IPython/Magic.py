@@ -1064,7 +1064,7 @@ Currently the magic system has the following functions:\n"""
         line numbers.  In fact, sort_stats("nfl") is the same as
         sort_stats("name", "file", "line").
 
-        -t <filename>: save profile results as shown on screen to a text
+        -T <filename>: save profile results as shown on screen to a text
         file. The profile is still shown on screen.
 
         -D <filename>: save (via dump_stats) profile statistics to given
@@ -1079,9 +1079,9 @@ Currently the magic system has the following functions:\n"""
         You can read the complete documentation for the profile module with:\\
           In [1]: import profile; profile.help() """
 
-        opts_def = Struct(d=[''],l=[],s=['time'],t=[''])
+        opts_def = Struct(D=[''],l=[],s=['time'],T=[''])
         if user_mode:  # regular user call
-            opts,arg_str = self.parse_options(parameter_s,'D:l:rs:t:',
+            opts,arg_str = self.parse_options(parameter_s,'D:l:rs:T:',
                                               list_all=1)
             namespace = self.shell.user_ns
         else:  # called to run a program by %run -p
@@ -1132,7 +1132,7 @@ Currently the magic system has the following functions:\n"""
         print sys_exit,
 
         dump_file = opts.D[0]
-        text_file = opts.t[0]
+        text_file = opts.T[0]
         if dump_file:
             prof.dump_stats(dump_file)
             print '\n*** Profile stats marshalled to file',\
@@ -1151,7 +1151,7 @@ Currently the magic system has the following functions:\n"""
         """Run the named file inside IPython as a program.
 
         Usage:\\
-          %run [-n -i -d [-bN] -p [profile options]] file [args]
+          %run [-n -i -t [-N<N>] -d [-b<N>] -p [profile options]] file [args]
 
         Parameters after the filename are passed as command-line arguments to
         the program (put in sys.argv). Then, control returns to IPython's
@@ -1159,7 +1159,7 @@ Currently the magic system has the following functions:\n"""
 
         This is similar to running at a system prompt:\\
           $ python file args\\
-        but has the advantage of giving you IPython's tracebacks, and of
+        but with the advantage of giving you IPython's tracebacks, and of
         loading all variables into your interactive namespace for further use
         (unless -p is used, see below).
 
@@ -1181,6 +1181,32 @@ Currently the magic system has the following functions:\n"""
         -i: run the file in IPython's namespace instead of an empty one. This
         is useful if you are experimenting with code written in a text editor
         which depends on variables defined interactively.
+
+        -t: print timing information at the end of the run.  IPython will give
+        you an estimated CPU time consumption for your script, which under
+        Unix uses the resource module to avoid the wraparound problems of
+        time.clock().  Under Unix, an estimate of time spent on system tasks
+        is also given (for Windows platforms this is reported as 0.0).
+
+        If -t is given, an additional -N<N> option can be given, where <N>
+        must be an integer indicating how many times you want the script to
+        run.  The final timing report will include total and per run results.
+
+        For example (testing the script uniq_stable.py):
+
+            In [1]: run -t uniq_stable
+
+            IPython CPU timings (estimated):\\
+              User  :    0.19597 s.\\
+              System:        0.0 s.\\
+
+            In [2]: run -t -N5 uniq_stable
+
+            IPython CPU timings (estimated):\\
+            Total runs performed: 5\\
+              Times :      Total       Per run\\
+              User  :   0.910862 s,  0.1821724 s.\\
+              System:        0.0 s,        0.0 s.
 
         -d: run your program under the control of pdb, the Python debugger.
         This allows you to execute your program step by step, watch variables,
@@ -1220,7 +1246,7 @@ Currently the magic system has the following functions:\n"""
         details on the options available specifically for profiling."""
 
         # get arguments and set sys.argv for program to be run.
-        opts,arg_lst = self.parse_options(parameter_s,'nidb:pD:l:rs:t:',
+        opts,arg_lst = self.parse_options(parameter_s,'nidtN:b:pD:l:rs:T:',
                                           mode='list',list_all=1)
 
         try:
@@ -1289,7 +1315,39 @@ Currently the magic system has the following functions:\n"""
                 else:
                     if runner is None:
                         runner = self.shell.safe_execfile
-                    runner(filename,prog_ns,prog_ns)
+                    if opts.has_key('t'):
+                        try:
+                            nruns = int(opts['N'][0])
+                            if nruns < 1:
+                                error('Number of runs must be >=1')
+                                return
+                        except (KeyError):
+                            nruns = 1
+                        if nruns == 1:
+                            t0 = clock2()
+                            runner(filename,prog_ns,prog_ns)
+                            t1 = clock2()
+                            t_usr = t1[0]-t0[0]
+                            t_sys = t1[1]-t1[1]
+                            print "\nIPython CPU timings (estimated):"
+                            print "  User  : %10s s." % t_usr
+                            print "  System: %10s s." % t_sys
+                        else:
+                            runs = range(nruns)
+                            t0 = clock2()
+                            for nr in runs:
+                                runner(filename,prog_ns,prog_ns)
+                            t1 = clock2()
+                            t_usr = t1[0]-t0[0]
+                            t_sys = t1[1]-t1[1]
+                            print "\nIPython CPU timings (estimated):"
+                            print "Total runs performed:",nruns
+                            print "  Times : %10s    %10s" % ('Total','Per run')
+                            print "  User  : %10s s, %10s s." % (t_usr,t_usr/nruns)
+                            print "  System: %10s s, %10s s." % (t_sys,t_sys/nruns)
+                            
+                    else:
+                        runner(filename,prog_ns,prog_ns)
                 if opts.has_key('i'):
                     self.shell.user_ns['__name__'] = __name__save
                 else:
