@@ -859,6 +859,209 @@ Syntax highlighting in listings.
  Use py2html code, implement color schemes.
 \layout Section
 
+Notes on a Python-based system shell
+\layout Standard
+
+These notes are meant as a working draft for discussions on the possibility
+ of having a python-based system shell.
+ They are the result of my own thinking about these issues as much of discussion
+s on the ipython lists.
+ I apologize in advance for not giving individual credit to the various
+ contributions, but right now I don't have the time to track down each message
+ from the archives.
+ So please consider this document as the result of a collective effort by
+ the ipython user community.
+\layout Standard
+
+While ipyhton is (and will remain) a python shell first, it does offer a
+ fair amount of system access functionality:
+\layout Standard
+
+- ! and !! for direct system access,
+\layout Standard
+
+- magic commands which wrap various system commands,
+\layout Standard
+
+- @sc and @sx, for shell output capture into python variables,
+\layout Standard
+
+- @alias, for defining new magics for system commands.
+\layout Standard
+
+This has prompted many users, over time, to ask for a way of extending ipython
+ to the point where it could be used as a full-time replacement over typical
+ user shells like bash, csh or tcsh.
+ While my interest in ipython is such that I'll concentrate my personal
+ efforts on other fronts (debugging, architecture, improvements for scientific
+ use, gui access), I will be happy to do anything which could make such
+ a development possible.
+ It would be the responsibility of someone else to maintain the code, but
+ I would do all necessary architectural changes to ipython for such an extension
+ to be feasible.
+\layout Standard
+
+I'll try to outline here what I see as the key issues which need to be taken
+ into account.
+ This document should be considered an evolving draft.
+ Feel free to submit comments/improvements, even in the form of patches.
+\layout Standard
+
+In what follows, I'll represent the hypothetical python-based shell ('pysh'
+ for now) prompt with '>>'.
+\layout Standard
+
+Basic design principles -----------------------
+\layout Standard
+
+I think the basic design guideline should be the following: a hypothetical
+ python system shell should behave, as much as possible, like a normal shell
+ that users are familiar with (bash, tcsh, etc).
+ This means:
+\layout Standard
+
+1.
+ System commands can be issued directly at the prompt with no special syntax:
+\layout Standard
+
+>> ls
+\layout Standard
+
+>> xemacs
+\layout Standard
+
+should just work like a user expects.
+\layout Standard
+
+2.
+ The facilities of the python language should always be available, like
+ they are in ipython:
+\layout Standard
+
+>> 3+4 
+\newline 
+7
+\layout Standard
+
+3.
+ It should be possible to easily capture shell output into a variable.
+ bash and friends use backquotes, I think using a command (@sc) like ipython
+ currently does is an acceptable compromise.
+\layout Standard
+
+4.
+ It should also be possible to expand python variables/commands in the middle
+ of system commands.
+ I thihk this will make it necessary to use $var for name expansions:
+\layout Standard
+
+>> var='hello' # var is a Python variable 
+\newline 
+>> print var hello # This is the result of a Python print command 
+\newline 
+>> echo $var hello # This calls the echo command, expanding 'var'.
+\layout Standard
+
+5.
+ The above capabilities should remain possible for multi-line commands.
+ One of the most annoying things I find about tcsh, is that I never quite
+ remember the syntactic details of looping.
+ I often want to do something at the shell which involves a simple loop,
+ but I can never remember how to do it in tcsh.
+ This often means I just write a quick throwaway python script to do it
+ (Perl is great for this kind of quick things, but I've forgotten most its
+ syntax as well).
+\layout Standard
+
+It should be possible to write code like:
+\layout Standard
+
+>> for ext in ['.jpg','.gif']: 
+\newline 
+..
+ ls file$ext
+\layout Standard
+
+And have it work as 'ls file.jpg;ls file.gif'.
+\layout Subsection
+
+Smaller details 
+\layout Standard
+
+If the above are considered as valid guiding principles for how such a python
+ system shell should behave, then some smaller considerations and comments
+ to keep in mind are listed below.
+\layout Standard
+
+- it's ok for shell builtins (in this case this includes the python language)
+ to override system commands on the path.
+ See tcsh's 'time' vs '/usr/bin/time'.
+ This settles the 'print' issue and related.
+\layout Standard
+
+- pysh should take
+\layout Standard
+
+foo args
+\layout Standard
+
+as a command if (foo args is NOT valid python) and (foo is in $PATH).
+\layout Standard
+
+If the user types
+\layout Standard
+
+>> ./foo args
+\layout Standard
+
+it should be considered a system command always.
+\layout Standard
+
+- _, __ and ___ should automatically remember the previous 3 outputs captured
+ from stdout.
+ In parallel, there should be _e, __e and ___e for stderr.
+ Whether capture is done as a single string or in list mode should be a
+ user preference.
+ If users have numbered prompts, ipython's full In/Out cache system should
+ be available.
+\layout Standard
+
+But regardless of how variables are captured, the printout should be like
+ that of a plain shell (without quotes or braces to indicate strings/lists).
+ The everyday 'feel' of pysh should be more that of bash/tcsh than that
+ of ipython.
+\layout Standard
+
+- filename completion first.
+ Tab completion could work like in ipython, but with the order of priorities
+ reversed: first files, then python names.
+\layout Standard
+
+- configuration via standard python files.
+ Instead of 'setenv' you'd simply write into the os.environ[] dictionary.
+ This assumes that IPython itself has been fixed to be configured via normal
+ python files, instead of the current clunky ipythonrc format.
+\layout Standard
+
+- IPython can already configure the prompt in fairly generic ways.
+ It should be able to generate almost any kind of prompt which bash/tcsh
+ can (within reason).
+\layout Standard
+
+- Keep the Magics system.
+ They provide a lightweight syntax for configuring and modifying the state
+ of the user's session itself.
+ Plus, they are an extensible system so why not give the users one more
+ tool which is fairly flexible by nature? Finally, having the @magic optional
+ syntax allows a user to always be able to access the shell's control system,
+ regardless of name collisions with defined variables or system commands.
+\layout Standard
+
+But we need to move all magic functionality into a protected namespace,
+ instead of the current messy name-mangling tricks (which don't scale well).
+ 
+\layout Section
+
 Future improvements
 \layout Itemize
 

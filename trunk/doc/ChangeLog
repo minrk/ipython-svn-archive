@@ -1,3 +1,16 @@
+2004-05-13  *** Released version 0.6.0
+
+2004-05-13  Fernando Perez  <fperez@colorado.edu>
+
+	* debian/: Added debian/ directory to CVS, so that debian support
+	is publicly accessible.  The debian package is maintained by Jack
+	Moffit <jack@xiph.org>.
+
+	* Documentation: included the notes about an ipython-based system
+	shell (the hypothetical 'pysh') into the new_design.pdf document,
+	so that these ideas get distributed to users along with the
+	official documentation.
+
 2004-05-10  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Logger.py (Logger.create_log): fix recently introduced
