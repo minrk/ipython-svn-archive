@@ -89,7 +89,7 @@ class Logger:
                     for f in old:
                         root, ext = os.path.splitext(f)
                         num = int(ext[1:-1])+1
-            os.rename(f, root+'.'+`num`.zfill(3)+'~')
+                        os.rename(f, root+'.'+`num`.zfill(3)+'~')
             os.rename(self.logfname, self.logfname+'.001~')
             self.logfile = open(self.logfname,'w')
         elif self.LOGMODE == 'append':
