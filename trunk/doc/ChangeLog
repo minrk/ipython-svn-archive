@@ -1,3 +1,19 @@
+2003-05-20  Fernando Perez  <fperez@colorado.edu>
+
+	* setup.py: added support for manpages.  It's a bit hackish b/c of
+	a bug in the way the bdist_rpm distutils target handles gzipped
+	manpages, but it works.
+
+2003-05-19  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/numutils.py: added a mockup of the kinds module, since
+	it was recently removed from Numeric.  This way, numutils will
+	work for all users even if they are missing kinds.
+
+	* IPython/Magic.py (Magic._ofind): Harden against an inspect
+	failure, which can occur with SWIG-wrapped extensions.  After a
+	crash report from Prabhu.
+
 2003-05-16  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.excepthook): New method to
