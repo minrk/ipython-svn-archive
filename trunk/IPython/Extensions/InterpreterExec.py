@@ -200,6 +200,7 @@ def pysh():
         \\H  - Full hostname.
         \\h  - Hostname up to first '.'
         \\$  - Root symbol ($ or #).
+        \\t  - Current time, in H:M:S format.
         \\v  - IPython release version.
         \\n  - Newline.
         \\r  - Carriage return.

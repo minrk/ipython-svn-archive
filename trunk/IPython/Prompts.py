@@ -20,6 +20,7 @@ __version__ = Release.version
 # Required modules
 import __builtin__
 import os,sys,socket
+import time
 from pprint import pprint,pformat
 
 # IPython's own
@@ -143,6 +144,8 @@ prompt_specials_color = {
     '\\D': '${"."*len(str(self.cache.prompt_count))}',
     # Current working directory
     '\\w': '${os.getcwd()}',
+    # Current time
+    '\\t' : '${time.strftime("%H:%M:%S")}',
     # Basename of current working directory.
     # (use os.sep to make this portable across OSes)
     '\\W' : '${os.getcwd().split("%s")[-1]}' % os.sep,
