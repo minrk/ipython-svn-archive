@@ -21,7 +21,7 @@ __license__ = Release.license
 
 # Python standard modules
 import __builtin__
-import os,sys,inspect,pydoc,re,tempfile,shlex,pdb,bdb
+import os,sys,inspect,pydoc,re,tempfile,shlex,pdb,bdb,time
 try:
     import profile,pstats
 except ImportError:
@@ -1394,44 +1394,68 @@ Currently the magic system has the following functions:\n"""
                                      self.shell.user_ns,islog=1)
 
     def magic_time(self,parameter_s = ''):
-        """Time execution of an expression which can be passed to eval().
+        """Time execution of a Python statement or expression.
 
-        The value of the expression is returned.
+        The CPU and wall clock times are printed, and the value of the
+        expression (if any) is returned.  Note that under Win32, system time
+        is always reported as 0, since it can not be measured.
 
-        Expressions are things which return a value, such as function calls or
-        arithmetic calculations:
+        This function provides very basic timing functionality.  In Python
+        2.3, the timeit module offers more control and sophistication, but for
+        now IPython supports Python 2.2, so we can not rely on timeit being
+        present.
+        
+        Some examples:
 
-         In [1]: time 2**128
-         Call time: 0.00 s.
-         Out[1]: 340282366920938463463374607431768211456L
+          In [1]: time 2**128
+          CPU times: user 0.00 s, sys: 0.00 s, total: 0.00 s
+          Wall time: 0.00
+          Out[1]: 340282366920938463463374607431768211456L
 
-         In [2]: n = 1000000
+          In [2]: n = 1000000
 
-         In [2]: time sum(range(n))
-         Call time: 1.19 s.
-         Out[2]: 499999500000L
+          In [3]: time sum(range(n))
+          CPU times: user 1.20 s, sys: 0.05 s, total: 1.25 s
+          Wall time: 1.37
+          Out[3]: 499999500000L
 
-        Note that since Python makes a distinction between statements and
-        expressions, the following gives an error:
-
-         In [3]: time print 'hello world'
-         ------------------------------------------------------------
-         File "<timed evaluation>", line 1
-         print 'hello world'
-             ^
-         SyntaxError: invalid syntax
-          %time print 'hello world'  """
+          In [4]: time print 'hello world'
+          hello world
+          CPU times: user 0.00 s, sys: 0.00 s, total: 0.00 s
+          Wall time: 0.00
+          """
         
         # fail immediately if the given expression can't be compiled
-        code = compile(parameter_s,'<timed evaluation>','eval')
+        try:
+            mode = 'eval'
+            code = compile(parameter_s,'<timed eval>',mode)
+        except SyntaxError:
+            mode = 'exec'
+            code = compile(parameter_s,'<timed exec>',mode)
         # skew measurement as little as possible
         glob = self.shell.user_ns
-        clk = clock
+        clk = clock2
+        wtime = time.time
         # time execution
-        s = clk()
-        out = eval(code,glob)
-        tot = clk()-s
-        print "Call time: %.2f s." % tot
+        wall_st = wtime()
+        if mode=='eval':
+            st = clk()
+            out = eval(code,glob)
+            end = clk()
+        else:
+            st = clk()
+            exec code in glob
+            end = clk()
+            out = None
+        wall_end = wtime()
+        # Compute actual times and report
+        wall_time = wall_end-wall_st
+        cpu_user = end[0]-st[0]
+        cpu_sys = end[1]-st[1]
+        cpu_tot = cpu_user+cpu_sys
+        print "CPU times: user %.2f s, sys: %.2f s, total: %.2f s" % \
+              (cpu_user,cpu_sys,cpu_tot)
+        print "Wall time: %.2f" % wall_time
         return out
 
     def magic_macro(self,parameter_s = ''):

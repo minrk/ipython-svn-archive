@@ -1,3 +1,41 @@
+2005-03-02  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (handle_magic): log magic calls properly as
+	ipmagic() function calls.
+
+	* IPython/Magic.py (magic_time): Improved %time to support
+	statements and provide wall-clock as well as CPU time.
+
+2005-02-27  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/hooks.py: New hooks module, to expose user-modifiable
+	IPython functionality in a clean manner.  For now only the editor
+	hook is actually written, and other thigns which I intend to turn
+	into proper hooks aren't yet there.  The display and prefilter
+	stuff, for example, should be hooks.  But at least now the
+	framework is in place, and the rest can be moved here with more
+	time later.  IPython had had a .hooks variable for a long time for
+	this purpose, but I'd never actually used it for anything.
+
+2005-02-26  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/ipmaker.py (make_IPython): make the default ipython
+	directory be called _ipython under win32, to follow more the
+	naming peculiarities of that platform (where buggy software like
+	Visual Sourcesafe breaks with .named directories).  Reported by
+	Ville Vainio.
+
+2005-02-23  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.__init__): removed a few
+	auto_aliases for win32 which were causing problems.  Users can
+	define the ones they personally like.
+
+2005-02-21  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (magic_time): new magic to time execution of
+	expressions.  After a request by Charles Moad <cmoad@indiana.edu>.
+
 2005-02-19  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/ConfigLoader.py (ConfigLoader.load): Allow empty strings

@@ -1573,11 +1573,13 @@ There seemed to be a problem with your sys.stderr.
         Also log them with a prepended # so the log is clean Python."""
 
         #print 'in handle_magic'  # dbg
-        self.log('#'+line,continue_prompt)
+        line_text = line.strip()[1:]
+        self.log('ipmagic("%s")' % line_text.replace('"','\\"'),
+                 continue_prompt)
         self.update_cache(line)
         shell = self.name+'.'
         # remove % and de-mangle magic name
-        line = 'magic_'+ line.strip()[1:]
+        line = 'magic_'+ line_text
         try:
             scommand, parameter_s = line.split(' ',1)
         except ValueError: # there is only the command

@@ -854,7 +854,11 @@ IPython tries to install the configuration information in a directory named
 \family typewriter 
 .ipython
 \family default 
- located in your `home' directory.
+ (
+\family typewriter 
+_ipython
+\family default 
+ under Windows) located in your `home' directory.
  IPython sets this directory by looking for a 
 \family typewriter 
 HOME
@@ -886,17 +890,6 @@ sys.path
 import
 \family default 
  statements.
-\layout Standard
-
-The convention of naming the IPython configuration directory with an initial
- dot (
-\family typewriter 
-.ipython
-\family default 
-) means that under Unix operating systems it is not normally listed or shown
- in file browsers.
- If you prefer not to see this directory, you can set its attributes to
- be hidden using the Windows file manager.
 \layout Paragraph
 
 Upgrading
@@ -927,12 +920,14 @@ ipython-XXX.tar.gz
 `python setup.py install'
 \family default 
 .
- After the installation, you can create a shortcut to the main IPython script,
- located in the 
+ 
+\layout Standard
+
+After the installation, run the supplied 
 \family typewriter 
-Scripts
+win32_manual_post_install.py 
 \family default 
- subdirectory of your Python installation directory.
+script, which creates the necessary Start Menu shortcuts for you.
 \layout Subsection
 
 
