@@ -41,25 +41,28 @@ All options with a no| prepended can be specified in 'no' form
 .TP
 .B \-h, \-\-help
 Show summary of options.
+\" .TP
+\" .B \-gthread, \-wthread, \-pylab
+\" These are special options, only ONE of which can be given, and which can ONLY
+\" be given as the FIRST option passed to IPython (they will have no effect in
+\" any other position).  They provide threading support for the GTK and WXPython
+\" toolkits, and for the matplotlib library.  The chosen option must be given
+\" first because it will determine how IPython itself is initialized, before any
+\" of the other regular options are processed.
+\" .br
+\" .sp 1
+\" If -gthread is given, IPython starts running a separate thread for GTK
+\" operation, so that pyGTK-based programs can open GUIs without blocking
+\" IPython.  Similarly, -wthread instantiates IPython with threading support for
+\" the WXPython toolkit.
+\" .br
+\" .sp 1
 .TP
-.B \-gthread, \-wthread, \-pylab
-These are special options, only ONE of which can be given, and which can ONLY
-be given as the FIRST option passed to IPython (they will have no effect in
-any other position).  They provide threading support for the GTK and WXPython
-toolkits, and for the matplotlib library.  The chosen option must be given
-first because it will determine how IPython itself is initialized, before any
-of the other regular options are processed.
-.br
-.sp 1
-If -gthread is given, IPython starts running a separate thread for GTK
-operation, so that pyGTK-based programs can open GUIs without blocking
-IPython.  Similarly, -wthread instantiates IPython with threading support for
-the WXPython toolkit.
-.br
-.sp 1
-The -pylab option adds special support for the matplotlib library
-(http://matplotlib.sourceforge.net), allowing interactive usage of any of its
-backends as defined in the user's .matplotlibrc file.  It automatically
+.B \-pylab
+This can only be given as the first option passed to IPython (it will have no
+effect in any other position). It adds special support for the matplotlib
+library (http://matplotlib.sourceforge.net), allowing interactive usage of any
+of its backends as defined in the user's .matplotlibrc file.  It automatically
 activates GTK or WX threading for IPyhton if the choice of matplotlib backend
 requires it.  It also modifies the @run command to correctly execute (without
 blocking) any matplotlib-based script which calls show() at the end.

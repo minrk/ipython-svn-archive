@@ -1,5 +1,11 @@
 2004-08-27  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/Shell.py (start): I've disabled -wthread and -gthread
+	for now.  They don't really work with standalone WX/GTK code
+	(though matplotlib IS working fine with both of those backends).
+	This will neeed much more testing.  I disabled most things with
+	comments, so turning it back on later should be pretty easy.
+
 	* IPython/iplib.py (InteractiveShell.__init__): Fix accidental
 	autocalling of expressions like r'foo', by modifying the line
 	split regexp.  Closes
