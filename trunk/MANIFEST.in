@@ -1,5 +1,4 @@
 include README_Windows.txt
-include ipython_win_post_install.py
 
 graft scripts
 
