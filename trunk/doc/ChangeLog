@@ -1,5 +1,16 @@
 2003-05-16  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/iplib.py (InteractiveShell.excepthook): New method to
+	protect ipython from user code which may call directly
+	sys.excepthook (this looks like an ipython crash to the user, even
+	when it isn't).  After a patch by Gary Bishop <gb@cs.unc.edu>.
+	This is especially important to help users of WxWindows, but may
+	also be useful in other cases.
+
+	* IPython/ultraTB.py (AutoFormattedTB.__call__): Changed to allow
+	an optional tb_offset to be specified, and to preserve exception
+	info if given.  After a patch by Gary Bishop <gb@cs.unc.edu>.
+
 	* ipython.1 (Default): Thanks to Jack's work, we now have manpages!
 
 2003-05-15  Fernando Perez  <fperez@colorado.edu>

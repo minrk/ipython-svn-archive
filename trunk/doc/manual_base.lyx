@@ -5526,6 +5526,21 @@ And last but not least, all the kind IPython users who have emailed bug
 \layout List
 \labelwidthstring 00.00.0000
 
+Jack\SpecialChar ~
+Moffit 
+\family typewriter 
+<jack@xiph.org>
+\family default 
+ Bug fixes, including the infamous color problem.
+ This bug alone caused many lost hours and frustration, many thanks to him
+ for the fix.
+ I've always been a fan of Ogg & friends, now I have one more reason to
+ like these folks.
+\newline 
+Jack is also contributing with Debian packaging and many other things.
+\layout List
+\labelwidthstring 00.00.0000
+
 Mike\SpecialChar ~
 Heeter 
 \family typewriter 
@@ -5677,22 +5692,6 @@ Dodt
 \layout List
 \labelwidthstring 00.00.0000
 
-Jack\SpecialChar ~
-Moffit 
-\family typewriter 
-<jack@xiph.org>
-\family default 
- Bug fixes, including the infamous color problem.
- This bug alone caused many lost hours and frustration, many thanks to him
- for the fix.
- I've always been a fan of Ogg & friends, now I have one more reason to
- like these folks.
-\newline 
-Jack is also contributing with Debian packaging and other things.
- 
-\layout List
-\labelwidthstring 00.00.0000
-
 Olivier\SpecialChar ~
 Aubert 
 \family typewriter 
@@ -5737,4 +5736,14 @@ Avila
 <gcordova@sismex.com>
 \family default 
  EvalDict code for nice, lightweight string interpolation.
+\layout List
+\labelwidthstring 00.00.0000
+
+Gary\SpecialChar ~
+Bishop 
+\family typewriter 
+<gb@cs.unc.edu>
+\family default 
+ Bug reports, and patches to work around the exception handling idiosyncracies
+ of WxPython.
 \the_end
