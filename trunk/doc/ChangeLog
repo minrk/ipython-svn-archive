@@ -1,3 +1,11 @@
+2004-04-02  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (Stream.__init__): Modified to survive at
+	least importing in contexts where stdin/out/err aren't true file
+	objects, such as PyCrust (they lack fileno() and mode).  However,
+	the recovery facilities which rely on these things existing will
+	not work.
+
 2004-04-01  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py (Magic.magic_sx): modified (as well as @sc) to
