@@ -317,7 +317,7 @@ class Magic:
         # Paragraph continue
         par_re = re.compile(r'\\$',re.MULTILINE)
 
-        str = cmd_name_re.sub(r'\n\\texttt{\\textbf{\1}}:',str)
+        str = cmd_name_re.sub(r'\n\\texttt{\\textsl{\\large \1}}:',str)
         str = cmd_re.sub(r'\\texttt{\g<cmd>}',str)
         str = par_re.sub(r'\\\\',str)
         str = escape_re.sub(r'\\\1',str)
@@ -2226,6 +2226,45 @@ Defaulting color scheme to 'NoColor'"""
                 print >> Term.cerr,err
             return out.split('\n')
 
+    def magic_bg(self, parameter_s=''):
+        """Run a job in the background, in a separate thread.
+
+        For example,
+
+        %bg myfunc(x,y,z=1)
+
+        will execute 'myfunc(x,y,z=1)' in a background thread.  As soon as the
+        execution starts, a message will be printed indicating the job
+        number.  If your job number is 5, you can use
+
+        myvar = jobs.result(5)  or  myvar = jobs[5].result
+
+        to assign this result to variable 'myvar'.
+
+        IPython has a job manager, accessible via the 'jobs' object.  You can
+        type jobs? to get more information about it, and use jobs.<TAB> to see
+        its attributes.  All attributes not starting with an underscore are
+        meant for public use.
+
+        In particular, look at the jobs.new() method, which is used to create
+        new jobs.  This magic %bg function is just a convenience wrapper
+        around jobs.new(), for expression-based jobs.  If you want to create a
+        new job with an explicit function object and arguments, you must call
+        jobs.new() directly.
+
+        You can check the status of all jobs with jobs.status().
+
+        The jobs variable is set by IPython into the Python builtin namespace.
+        If you ever declare a variable named 'jobs', you will shadow this
+        name.  You can either delete your global jobs variable to regain
+        access to the job manager, or make a new name and assign it manually
+        to the manager (stored in IPython's namespace).  For example, to
+        assign the job manager to the Jobs name, use:
+
+          Jobs = __builtins__.jobs
+        """
+        self.shell.jobs.new(parameter_s,self.shell.user_ns)
+        
     def magic_bookmark(self, parameter_s=''):
         """Manage IPython's bookmark system.
 
