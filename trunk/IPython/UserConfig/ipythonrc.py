@@ -120,29 +120,21 @@ colors Linux
 
 # I haven't been able to ever find a way to make color work reliably under
 # Windows. If you find a solution, please let me know so I can include it in
-# future releases. A note from Thorsten Kampe <thorsten@thorstenkampe.de>
-# which can be of use:
+# future releases.
 
-# "color" works under cygwin for the prompt, but the shell output (for
-# example error messages) is full of non printable characters. Had to
-# turn on "NoColor" <sigh>.
-
-# The coloured output from bash/zsh works fine, even from within the
-# ipython shell (ls -vxFT 0 --color=auto --show-control-chars)
 ########################
 
 
 # color_info: IPython can display information about objects via a set of
 # functions, and optionally can use colors for this, syntax highlighting
-# source code and various other elements. However, because this information is
-# passed through a pager (like 'less') and many pagers get confused with color
-# codes, this option is off by default. As a reference, the 'less' pager
-# supplied with Mandrake 8.2 works ok, but that in RedHat 7.2 doesn't.
+# source code and various other elements. This information is passed through a
+# pager (it defaults to 'less' if $PAGER is not set). 
 
-# Test it and turn it on permanently if it works with your system. The magic
+# If your pager has problems, try to setting it to properly handle escapes
+# (see the less manpage for detail), or disable this option.  The magic
 # function @color_info allows you to toggle this interactively for testing.
 
-color_info 0
+color_info 1
 
 # confirm_exit: set to 1 if you want IPython to confirm when you try to exit
 # with an EOF (Control-d in Unix, Control-Z/Enter in Windows). Note that using
