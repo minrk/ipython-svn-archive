@@ -5,6 +5,8 @@
 	split regexp.  Closes
 	http://www.scipy.net/roundup/ipython/issue18, reported by Nicholas
 	Riley <ipythonbugs@sabi.net>.
+	(InteractiveShell.mainloop): honor --nobanner with banner
+	extensions.
 
 	* IPython/Shell.py: Significant refactoring of all classes, so
 	that we can really support ALL matplotlib backends and threading
