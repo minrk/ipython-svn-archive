@@ -573,7 +573,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # much:  it's better to be conservative rather than to trigger hidden
         # evals() somewhere and end up causing side effects.
 
-        self.line_split = re.compile(r'(^[\s*!\?%,/]?)([\?\w\.]+\w*\s+)(\(?.*$)')
+        self.line_split = re.compile(r'(^[\s*!\?%,/]?)([\?\w\.]+\w*\s*)(\(?.*$)')
 
         # RegExp to identify potential function names
         self.re_fun_name = re.compile(r'[a-zA-Z_]([a-zA-Z0-9_.]*) *$')
@@ -1359,7 +1359,6 @@ There seemed to be a problem with your sys.stderr.
                 iFun,theRest = line,''
         else:
             pre,iFun,theRest = lsplit.groups()
-        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest)  # dbg
         return pre,iFun.strip(),theRest
 
     def _prefilter(self, line, continue_prompt):
@@ -1440,22 +1439,26 @@ There seemed to be a problem with your sys.stderr.
                 else:
                     return self.handle_normal(line,continue_prompt)
 
+        # If the rest of the line begins with an (in)equality, assginment or
+        # function call, we should not call _ofind but simply execute it.
+        # This avoids spurious geattr() accesses on objects upon assignment.
+        #
+        # It also allows users to assign to either alias or magic names true
+        # python variables (the magic/alias systems always take second seat to
+        # true python code).
+        if theRest and theRest[0] in '!=()':
+            return self.handle_normal(line,continue_prompt)
+
         if oinfo is None:
             oinfo = self._ofind(iFun) # FIXME - _ofind is part of Magic
-
+        
         if not oinfo['found']:
             return self.handle_normal(line,continue_prompt)
         else:
             #print 'iFun <%s> rest <%s>' % (iFun,theRest) # dbg
             if oinfo['isalias']:
-                # Same logic for aliases we had for magics: give precedence
-                # to normal python code so an alias can be redefined as a
-                # variable, for example.
-                if len(theRest)==0 or theRest[0] not in '!=()<>,':
-                    return self.handle_alias(line,continue_prompt,
+                return self.handle_alias(line,continue_prompt,
                                              pre,iFun,theRest)
-                else:
-                    return self.handle_normal(line,continue_prompt)
 
             if self.rc.autocall and \
                    not self.re_exclude_auto.match(theRest) and \
