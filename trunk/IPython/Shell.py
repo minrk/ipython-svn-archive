@@ -478,22 +478,6 @@ class MatplotlibShellBase:
         if self.pylab.draw_if_interactive.called:
             self.pylab.draw()
             self.pylab.draw_if_interactive.called = False
-
-##            # Let's be nice and call show() for the user if he didn't, but
-##            # give a warning (once).  I won't make this warning optional,
-##            # because not calling show() is potentially a bug: such a script
-##            # will produce no visible output outside of ipython, so it's
-##            # better to force users to write valid matplotlib code.
-##            if not self.pylab.show.called:
-##                self.pylab.show()
-##                self.pylab.show.called = False
-##                if not self.mpl_autoshow_warned:
-##                    print ("Did you forget to call matplotlib's show()?\n"
-##                           "IPython has called show() for you, but if "
-##                           "you run this script \n"
-##                           "outside of IPython, it will not display any plots.\n"
-##                           "This warning appears only once per session.")
-##                    self.mpl_autoshow_warned = True
                 
         # if a backend switch was performed, reverse it now
         if self.mpl_use._called:
