@@ -1,3 +1,8 @@
+2004-06-29  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (file_matches): escape whitespace correctly in
+	filename completions.  Bug reported by Ville.
+
 2004-06-28  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/ipmaker.py (__call__): Added per-profile histories.  Now
