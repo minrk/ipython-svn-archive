@@ -1,0 +1,5807 @@
+#LyX 1.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 220
+\textclass article
+\begin_preamble
+\usepackage{ae,aecompl}
+\usepackage{hyperref}
+\usepackage{html}
+\end_preamble
+\language english
+\inputencoding latin1
+\fontscheme default
+\graphics default
+\paperfontsize default
+\spacing single 
+\papersize Default
+\paperpackage a4
+\use_geometry 1
+\use_amsmath 0
+\use_natbib 0
+\use_numerical_citations 0
+\paperorientation portrait
+\leftmargin 1.25in
+\topmargin 1in
+\rightmargin 1.25in
+\bottommargin 1in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation skip
+\defskip medskip
+\quotes_language english
+\quotes_times 2
+\papercolumns 1
+\papersides 1
+\paperpagestyle fancy
+
+\layout Title
+
+IPython
+\newline 
+
+\size larger 
+An enhanced Interactive Python
+\size large 
+
+\newline 
+User Manual, v.
+ __version__
+\layout Author
+
+Fernando Pérez
+\layout Standard
+
+
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+latex{
+\end_inset 
+
+
+\begin_inset LatexCommand \tableofcontents{}
+
+\end_inset 
+
+
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+}
+\end_inset 
+
+
+\layout Standard
+
+
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+html{
+\backslash 
+bodytext{bgcolor=#ffffff}}
+\end_inset 
+
+
+\layout Section
+\pagebreak_top 
+Overview
+\layout Standard
+
+One of Python's most useful features is its interactive interpreter.
+ This system allows very fast testing of ideas without the overhead of creating
+ test files as is typical in most programming languages.
+ However, the interpreter supplied with the standard Python distribution
+ is somewhat limited for extended interactive use.
+\layout Standard
+
+IPython is a free software project (released under the GNU LGPL
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+IPython is distributed in the hope that it will be useful, but WITHOUT ANY
+ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ FOR A PARTICULAR PURPOSE.
+ See the GNU Lesser General Public License for more details.
+ Its full text is included in the file GNU-LGPL or can be obtained directly
+ from the Free Software Foundation at: 
+\begin_inset LatexCommand \htmlurl{http://www.gnu.org/copyleft/lesser.html}
+
+\end_inset 
+
+.
+\end_inset 
+
+) which tries to:
+\layout Enumerate
+
+Provide an interactive shell superior to Python's default.
+ IPython has many features for object introspection, system shell access,
+ and its own special command system for adding functionality when working
+ interactively.
+ It tries to be a very efficient environment both for Python code development
+ and for exploration of problems using Python objects (in situations like
+ data analysis).
+\layout Enumerate
+
+Serve as an embeddable, ready to use interpreter for your own programs.
+ IPython can be started with a single call from inside another program,
+ providing access to the current namespace.
+ This can be very useful both for debugging purposes and for situations
+ where a blend of batch-processing and interactive exploration are needed.
+\layout Enumerate
+
+Offer a flexible framework which can be used as the base environment for
+ other systems with Python as the underlying language.
+ Specifically scientific environments like Mathematica, IDL and Mathcad
+ inspired its design, but similar ideas can be useful in many fields.
+\layout Subsection
+
+Main features
+\layout Itemize
+
+Dynamic object introspection.
+ One can access docstrings, function definition prototypes, source code,
+ source files and other details of any object accessible to the interpreter
+ with a single keystroke ('?').
+\layout Itemize
+
+Numbered input/output prompts with command history (persistent across sessions),
+ full searching in this history and caching of all input and output.
+\layout Itemize
+
+Macro system for quickly re-executing multiple lines of previous input with
+ a single name.
+\layout Itemize
+
+Session logging (you can then later use these logs as code in your programs).
+\layout Itemize
+
+Session restoring: logs can be replayed to restore a previous session to
+ the state where you left it.
+\layout Itemize
+
+User-extensible 'magic' commands.
+ A set of commands prefixed with 
+\family typewriter 
+@
+\family default 
+ is available for controlling IPython itself and provides directory control,
+ namespace information and many aliases to common system shell commands.
+\layout Itemize
+
+Alias facility for defining your own system aliases.
+\layout Itemize
+
+Complete system shell access.
+ Lines starting with ! are passed directly to the system shell.
+\layout Itemize
+
+Completion in the local namespace, by typing TAB at the prompt.
+ This works for keywords, methods, variables and files in the current directory.
+ This is supported via the readline library, and full access to configuring
+ readline's behavior is provided.
+\layout Itemize
+
+Verbose and colored exception traceback printouts.
+ Easier to parse visually, and in verbose mode they produce a lot of useful
+ debugging information (basically a terminal version of the cgitb module).
+\layout Itemize
+
+Auto-parentheses: callable objects can be executed without parentheses:
+ 
+\family typewriter 
+'sin 3'
+\family default 
+ is automatically converted to 
+\family typewriter 
+'sin(3)
+\family default 
+'.
+\layout Itemize
+
+Auto-quoting: using ',' as the first character forces auto-quoting of the
+ rest of the line: 
+\family typewriter 
+',my_function a b'
+\family default 
+ becomes automatically 
+\family typewriter 
+'my_function("a","b")'.
+\layout Itemize
+
+Extensible input syntax.
+ You can define filters that pre-process user input to simplify input in
+ special situations.
+ This allows for example pasting multi-line code fragments which start with
+ 
+\family typewriter 
+'>>>'
+\family default 
+ or 
+\family typewriter 
+'...'
+\family default 
+ such as those from other python sessions or the standard Python documentation.
+\layout Itemize
+
+Flexible configuration system.
+ It uses a configuration file which allows permanent setting of all command-line
+ options, module loading, code and file execution.
+ The system allows recursive file inclusion, so you can have a base file
+ with defaults and layers which load other customizations for particular
+ projects.
+\layout Itemize
+
+Embeddable.
+ You can call IPython as a python shell inside your own python programs.
+ This can be used both for debugging code or for providing interactive abilities
+ to your programs with knowledge about the local namespaces (very useful
+ in data analysis situations, for example).
+\layout Itemize
+
+Easy debugger access.
+ You can set IPython to call up the Python debugger (pdb) every time there
+ is an uncaught exception.
+ This drops you inside the code which triggered the exception with all the
+ data live and its possible to navigate the stack to rapidly isolate the
+ source of a bug.
+\layout Itemize
+
+Profiler support.
+ You can run single statements (similar to 
+\family typewriter 
+profile.run()
+\family default 
+) or complete programs under the profiler's control.
+\layout Subsection
+
+Portability and Python requirements
+\layout Standard
+
+Developed under 
+\series bold 
+Linux
+\series default 
+, should work under most unices (tested OK under Solaris).
+\layout Standard
+
+
+\series bold 
+Mac OS X
+\series default 
+: it works, apparently without any problems (thanks to Jim Boyle at Lawrence
+ Livermore for the information).
+\layout Standard
+
+
+\series bold 
+CygWin
+\series default 
+: I would guess this environment is Unix enough for IPython to work unchanged
+ (any comments welcome).
+\layout Standard
+
+
+\series bold 
+Windows
+\series default 
+: It works fairly well under Windows XP, and I suspect NT and Win2000 should
+ work similarly.
+ Windows 9x support has been added but has seen very little testing, as
+ I don't have access to a machine with that operating system.
+ Comments welcome.
+\layout Standard
+
+
+\series bold 
+MacOS Classic
+\series default 
+: it may work (I have no idea), and if not it should be reasonably easy
+ to port it.
+ But someone else will have to do that, since I have no access to a Macintosh.
+\layout Standard
+
+IPython requires Python version 2.1 or newer.
+ It has been tested with Python 2.2 and showed no problems.
+\layout Subsection
+
+Location
+\layout Standard
+
+Currently IPython can be found at 
+\begin_inset LatexCommand \htmlurl{http://www-hep.colorado.edu/~fperez/ipython}
+
+\end_inset 
+
+.
+\layout Section
+
+
+\begin_inset LatexCommand \label{sec:install}
+
+\end_inset 
+
+Installation
+\layout Subsection
+
+Instant instructions
+\layout Standard
+
+If you are of the impatient kind, simply untar/unzip the download, install
+ with 
+\family typewriter 
+'python setup.py install'
+\family default 
+ under Linux/Unix or by double-clicking the 
+\family typewriter 
+setup.py
+\family default 
+ file under Windows, and take a look at Sections 
+\begin_inset LatexCommand \ref{sec:good_config}
+
+\end_inset 
+
+ for configuring things optimally and 
+\begin_inset LatexCommand \ref{sec:quick_tips}
+
+\end_inset 
+
+ for quick tips on efficient use of IPython.
+ You can later refer to the rest of the manual for all the gory details.
+\layout Standard
+
+See the notes in sec.
+ 
+\begin_inset LatexCommand \ref{sec:upgrade}
+
+\end_inset 
+
+ for upgrading IPython versions.
+\layout Subsection
+
+Under Unix-type operating systems (Linux, Mac OS X, etc.)
+\layout Enumerate
+
+Unzip/untar the 
+\family typewriter 
+IPython-XXX.tar.gz
+\family default 
+ file wherever you want (XXX is the version number).
+ It will make a directory called 
+\family typewriter 
+IPython-XXX.
+ 
+\family default 
+Change into that directory where you will find the files 
+\family typewriter 
+README
+\family default 
+ and 
+\family typewriter 
+setup.py
+\family default 
+.
+
+\family typewriter 
+ O
+\family default 
+nce you've completed the installation, you can safely remove this directory.
+ 
+\layout Enumerate
+
+If you are installing over a previous installation of version 0.2.0 or earlier,
+ first remove your 
+\family typewriter 
+$HOME/.ipython
+\family default 
+ directory, since the configuration file format has changed somewhat (the
+ '=' were removed from all option specifications).
+ Or you can call ipython with the 
+\family typewriter 
+-upgrade
+\family default 
+ option and it will do this automatically for you.
+\layout Enumerate
+
+IPython uses distutils, so you can install it simply by typing at the system
+ prompt (don't type the 
+\family typewriter 
+$
+\family default 
+)
+\newline 
+
+\family typewriter 
+$ python setup.py install
+\family default 
+
+\newline 
+Note that this assumes you have root access to your machine.
+ If you don't have root access or don't want IPython to go in the default
+ python directories, you'll need to use the 
+\family typewriter 
+--home
+\family default 
+ option.
+ For example:
+\newline 
+
+\family typewriter 
+$ python setup.py install --home $HOME/local
+\family default 
+
+\newline 
+will install
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+If you are reading these instructions in HTML format, please note that the
+ option is --home, with 
+\emph on 
+two
+\emph default 
+ dashes.
+ The automatic HTML conversion program seems to eat up one of the dashes,
+ unfortunately (it's ok in the PDF version).
+\end_inset 
+
+ IPython into 
+\family typewriter 
+$HOME/local 
+\family default 
+and its subdirectories (creating them if necessary).
+\newline 
+You can type
+\newline 
+
+\family typewriter 
+$ python setup.py --help
+\family default 
+
+\newline 
+for more details.
+\layout Standard
+
+Note that when installing, you will see some 
+\family typewriter 
+SyntaxError
+\family default 
+ messages go by rapidly.
+ Please ignore them, they are completely harmless (the result of an ugly
+ but necessary hack around some limitations of distutils).
+\layout Subsubsection
+
+RedHat 7.x notes
+\layout Standard
+
+RedHat made the 'wise' choice of using Python 1.5.2 as the default standard
+ even for users (not just for internal system stuff).
+ Since they couldn't be bothered to make things right, now you need to manually
+ play around to get things to work with Python 2.x (which IPython requires).
+\layout Standard
+
+First, your system administrator may have fixed things so that as a user
+ you automagically see python 2.x.
+ Test this by typing 
+\family typewriter 
+'python' 
+\family default 
+at the prompt.
+ If you get a Python 2.x prompt, you're safe.
+ Otherwise you'll need to explicitly call Python2.
+\layout Standard
+
+Start by making sure you did install Python 2.x.
+ The rpm for it is named 
+\family typewriter 
+python2....rpm
+\family default 
+.
+ You can check by typing 
+\family typewriter 
+'python2'
+\family default 
+ at the command prompt and seeing if you get a python prompt with 2.x as
+ the version.
+ If you don't have it, install the Python 2.x rpm now.
+\layout Standard
+
+Once you have confirmed you have Python 2.x installed, call the IPython setup
+ routine as 
+\newline 
+
+\family typewriter 
+$ python2 setup.py install
+\layout Standard
+
+Hopefully, things will work.
+ If they don't, go yell at RedHat, not me.
+ 
+\layout Subsubsection
+
+Mac OSX notes
+\layout Standard
+
+Apparently the problems which Mac OSX users may encounter with in the terminal
+ window are due to poor VT100 emulation on Apple's part.
+ 
+\layout Standard
+
+I don't have access to a Mac, so I rely on the helpful users from the OSX
+ community for feedback on this issue.
+ The information below was graciously provided by Andrea Riciputti from
+ the Fink project, and I reproduce it unaltered hoping that it will be useful
+ to others.
+ If you find a mistake/update to this information, please let me know so
+ that I can include it in future releases.
+\layout Standard
+
+
+\series bold 
+Note
+\series default 
+: I don't know if this information applies to 10.2 (Jaguar).
+ It is 
+\emph on 
+possible 
+\emph default 
+that 10.2 fixes these problems, but this information has not been confirmed.
+ Please let me know of any details concerning Jaguar which should be added
+ to this documentation.
+\layout Standard
+
+Many thanks to Andrea for taking the time to do this.
+ His Mini-HOWTO follows.
+\layout Standard
+
+
+\series bold 
+Mac OSX Terminal Mini-HOWTO
+\layout Standard
+
+From: Andrea Riciputi <andrea.riciputi@libero.it>
+\layout Standard
+
+Date: Thu, 28 Nov 2002 19:07:20 +0100 
+\layout Standard
+
+1) In order to get IPython works smoothly on MacOSX you have to reset the
+ TERM env variable as follow:
+\layout Standard
+
+
+\family typewriter 
+% setenv TERM xterm
+\layout Standard
+
+2) Done.
+ Open a new terminal window and start ipython setting 
+\family typewriter 
+color
+\family default 
+ and 
+\family typewriter 
+color_info
+\family default 
+ to 1.
+ Everything will go well!!
+\layout Standard
+
+3) If someone wants to know more about this topics please look at these
+ links:
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://www.nyangau.fsnet.co.uk/terminfo/terminfo.htm}
+
+\end_inset 
+
+ (not so easy)
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://www.cs.utk.edu/~shuford/terminal/vt100_colorized_termcap.tx}
+
+\end_inset 
+
+ (not easy at all) 
+\layout Subsection
+
+Under Windows
+\layout Standard
+
+Please note that for the automatic installer to work you need Mark Hammond's
+ PythonWin extensions (and they're great for anything Windows-related anyway,
+ so you might as well get them).
+ If you don't have them, get them at:
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mhammond/}
+
+\end_inset 
+
+
+\layout Standard
+
+From the download directory grab the 
+\family typewriter 
+IPython-XXX.zip
+\family default 
+ file (but the popular WinZip handles 
+\family typewriter 
+.tar.gz
+\family default 
+ files perfectly, so use that if you have WinZip and want a smaller download).
+ 
+\layout Standard
+
+Unzip it and double-click on the 
+\family typewriter 
+setup.py
+\family default 
+ file.
+ A text console should open and proceed to install IPython in your system.
+ If all goes well, that's all you need to do.
+ You should now have an IPython entry in your Start Menu with links to IPython
+ and the manuals.
+\layout Standard
+
+If you don't have PythonWin, you can:
+\layout Itemize
+
+Copy the 
+\family typewriter 
+doc
+\backslash 
+
+\family default 
+ directory wherever you want it (it contains the manuals in HTML and PDF).
+\layout Itemize
+
+Create a shortcut to the main IPython script, located in the 
+\family typewriter 
+Scripts
+\family default 
+ subdirectory of your Python installation directory.
+\layout Standard
+
+These steps are basically what the auto-installer does for you.
+\layout Standard
+
+IPython tries to install the configuration information in a directory named
+ 
+\family typewriter 
+.ipython
+\family default 
+ located in your 'home' directory, which it determines by joining the environmen
+t variables 
+\family typewriter 
+HOMEDRIVE
+\family default 
+ and 
+\family typewriter 
+HOMEPATH
+\family default 
+.
+ This typically gives something like 
+\family typewriter 
+C:
+\backslash 
+Documents and Settings
+\backslash 
+YourUserName
+\family default 
+, but your local details may vary.
+ In this directory you will find all the files that configure IPython's
+ defaults, and you can put there your profiles and extensions.
+ This directory is automatically added by IPython to 
+\family typewriter 
+sys.path
+\family default 
+, so anything you place there can be found by 
+\family typewriter 
+import
+\family default 
+ statements.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:upgrade}
+
+\end_inset 
+
+Upgrading from a previous version
+\layout Standard
+
+If you are upgrading from a previous version of IPython, after doing the
+ routine installation described above, you should call IPython with the
+ 
+\family typewriter 
+-upgrade
+\family default 
+ option the first time you run your new copy.
+ This will automatically update your configuration directory while preserving
+ copies of your old files.
+ You can then later merge back any personal customizations you may have
+ made into the new files.
+ It is a good idea to do this as there may be new options available in the
+ new configuration files which you will not have.
+\layout Standard
+
+Under Windows, if you don't know how to call python scripts with arguments
+ from a command line, simply delete the old config directory and IPython
+ will make a new one.
+ Win2k and WinXP users will find it in 
+\family typewriter 
+C:
+\backslash 
+Documents and Settings
+\backslash 
+YourUserName
+\backslash 
+.ipython
+\family default 
+, and Win 9x users under 
+\family typewriter 
+C:
+\backslash 
+Program Files
+\backslash 
+IPython
+\backslash 
+.ipython.
+\layout Section
+
+
+\begin_inset LatexCommand \label{sec:good_config}
+
+\end_inset 
+
+Initial configuration of your environment
+\layout Standard
+
+This section will help you set various things in your environment for your
+ IPython sessions to be as efficient as possible.
+ All of IPython's configuration information, along with several example
+ files, is stored in a directory named by default 
+\family typewriter 
+$HOME/.ipython
+\family default 
+.
+ You can change this by defining the environment variable 
+\family typewriter 
+IPYTHONDIR
+\family default 
+, or at runtime with the command line option 
+\family typewriter 
+-ipythondir
+\family default 
+.
+\layout Standard
+
+If all goes well, the first time you run IPython it should automatically
+ create a user copy of the config directory for you, based on its builtin
+ defaults.
+ You can look at the files it creates to learn more about configuring the
+ system.
+ The main file you will modify to configure IPython's behavior is called
+ 
+\family typewriter 
+ipythonrc
+\family default 
+, included for reference in Sec.
+ 
+\begin_inset LatexCommand \ref{sec:ipytonrc-sample}
+
+\end_inset 
+
+.
+ This file is very commented and has many variables you can change to suit
+ your taste, you can find more details in Sec.
+ 
+\begin_inset LatexCommand \ref{sec:customization}
+
+\end_inset 
+
+.
+ Here we discuss the basic things you will want to make sure things are
+ working properly from the beginning.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:help-access}
+
+\end_inset 
+
+Access to the Python help system
+\layout Standard
+
+This is true for Python 2.1 in general (not just for IPython): you should
+ have an environment variable called 
+\family typewriter 
+PYTHONDOCS
+\family default 
+ pointing to the directory where your HTML Python documentation lives.
+ In my system it's 
+\family typewriter 
+/usr/share/doc/python-docs-2.1.1
+\family default 
+, check your local details or ask your systems administrator.
+ 
+\layout Standard
+
+This is the directory which holds the HTML version of the Python manuals.
+ Unfortunately it seems that different Linux distributions package these
+ files differently, so you may have to look around a bit.
+ Below I show the contents of this directory on my system for reference:
+\layout Standard
+
+
+\family typewriter 
+[python-docs-2.2]> ls 
+\newline 
+about.html api/ doc/ icons/ inst/ mac/ ref/ acks.html dist/ ext/ index.html
+ lib/ modindex.html tut/ 
+\layout Standard
+
+You should really make sure this variable is correctly set so that Python's
+ pydoc-based help system works.
+ It is a powerful and convenient system with full access to the Python manuals
+ and all modules accessible to you.
+\layout Standard
+
+Under Windows it seems that pydoc finds the documentation automatically,
+ so no extra setup appears necessary.
+\layout Subsection
+
+Editor
+\layout Standard
+
+The 
+\family typewriter 
+@edit
+\family default 
+ command (and its alias 
+\family typewriter 
+@ed
+\family default 
+) will invoke the editor set in your environment as 
+\family typewriter 
+EDITOR
+\family default 
+.
+ If this variable is not set, it will default to 
+\family typewriter 
+vi
+\family default 
+ under Linux/Unix and to 
+\family typewriter 
+notepad
+\family default 
+ under Windows.
+ You may want to set this variable properly and to a lightweight editor
+ which doesn't take too long to start (that is, something other than a new
+ instance of 
+\family typewriter 
+Emacs
+\family default 
+).
+ This way you can edit multi-line code quickly and with the power of a real
+ editor right inside IPython.
+ 
+\layout Standard
+
+If you are a dedicated 
+\family typewriter 
+Emacs
+\family default 
+ user, you should set up the 
+\family typewriter 
+Emacs
+\family default 
+ server so that new requests are handled by the original process.
+ This means that almost no time is spent in handling the request (assuming
+ an 
+\family typewriter 
+Emacs
+\family default 
+ process is already running).
+ For this wo work, you need to set your 
+\family typewriter 
+EDITOR 
+\family default 
+environment variable to 
+\family typewriter 
+'emacsclient'
+\family default 
+.
+
+\family typewriter 
+ 
+\family default 
+The code below, supplied by François Pinard, can then be used in your 
+\family typewriter 
+.emacs
+\family default 
+ file to enable the server:
+\layout Standard
+
+
+\family typewriter 
+(defvar server-buffer-clients)
+\layout Standard
+
+
+\family typewriter 
+(when (and (fboundp 'server-start) (string-equal (getenv "TERM") 'xterm))
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+(server-start)
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+(defun fp-kill-server-with-buffer-routine ()
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+(and server-buffer-clients (server-done)))
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+(add-hook 'kill-buffer-hook 'fp-kill-server-with-buffer-routine))
+\layout Standard
+
+You can also set the value of this editor via the commmand-line option '-
+\family typewriter 
+editor'
+\family default 
+ or in your 
+\family typewriter 
+ipythonrc
+\family default 
+ file.
+ This is useful if you wish to use specifically for IPython an editor different
+ from your typical default (and for Windows users which typically don't
+ set environment variables).
+\layout Subsection
+
+Color 
+\layout Standard
+
+The default IPython configuration has most bells and whistles turned on
+ (they're pretty safe).
+ But there's one that 
+\emph on 
+may
+\emph default 
+ cause problems on some systems: the use of color on screen for displaying
+ information.
+ This is very useful, since IPython can show prompts and exception tracebacks
+ with various colors, display syntax-highlighted source code, and in general
+ make it easier to visually parse information.
+ But not all terminals out there have reliable support for on-screen color,
+ so these options are not enabled by default to avoid confusing new users
+ with on-screen garbage.
+\layout Standard
+
+The following terminals seem to handle the color sequences fine:
+\layout Itemize
+
+Linux main text console, KDE Konsole, Gnome Terminal, E-term, rxvt, xterm.
+\layout Itemize
+
+CDE terminal (tested under Solaris).
+ This one boldfaces light colors.
+\layout Itemize
+
+(X)Emacs buffers.
+ See sec.
+\begin_inset LatexCommand \ref{sec:emacs}
+
+\end_inset 
+
+ for more details on using IPython with (X)Emacs.
+\layout Standard
+
+These have shown problems:
+\layout Itemize
+
+Windows command prompt in Win2k/XP logged into a Linux machine via telnet
+ or ssh.
+\layout Itemize
+
+Windows native command prompt in Win2k/XP for local execution.
+ Colors do not work at all.
+ The installer is set up to disable colors by default.
+ If you have a terminal replacement which can handle colors, you can turn
+ them back on.
+ Test it by typing '
+\family typewriter 
+colors Linux
+\family default 
+' at the prompt: if you get garbage on screen, go back with '
+\family typewriter 
+colors NoColor
+\family default 
+'.
+\newline 
+Note that under Windows, if you use the CygWin environment, coloring (and
+ readline-related features) all work correctly.
+\layout Standard
+
+Currently the following color schemes are available:
+\layout Itemize
+
+
+\family typewriter 
+NoColor
+\family default 
+: uses no color escapes at all (all escapes are empty 
+\begin_inset Quotes eld
+\end_inset 
+
+ 
+\begin_inset Quotes eld
+\end_inset 
+
+ strings).
+ This 'scheme' is thus fully safe to use in any terminal.
+\layout Itemize
+
+
+\family typewriter 
+Linux
+\family default 
+: works well in Linux console type environments: dark background with light
+ fonts.
+ It uses bright colors for information, so it is difficult to read if you
+ have a light colored background.
+\layout Itemize
+
+
+\family typewriter 
+LightBG
+\family default 
+: the basic colors are similar to those in the 
+\family typewriter 
+Linux
+\family default 
+ scheme but darker.
+ It is easy to read in terminals with light backgrounds.
+\layout Standard
+
+IPython uses colors for two main groups of things: prompts and tracebacks
+ which are directly printed to the terminal, and the object introspection
+ system which passes large sets of data through a pager.
+\layout Subsubsection
+
+Input/Output prompts and exception tracebacks
+\layout Standard
+
+You can test whether the colored prompts and tracebacks work on your system
+ interactively by typing 
+\family typewriter 
+'@colors Linux'
+\family default 
+ at the prompt (use '
+\family typewriter 
+@colors LightBG'
+\family default 
+ if your terminal has a light background).
+ If the input prompt shows garbage like:
+\newline 
+
+\family typewriter 
+[0;32mIn [[1;32m1[0;32m]: [0;00m
+\family default 
+
+\newline 
+instead of (in color) something like:
+\newline 
+
+\family typewriter 
+In [1]:
+\family default 
+ 
+\newline 
+this means that your terminal doesn't properly handle color escape sequences.
+ You can go to a 'no color' mode by typing '
+\family typewriter 
+@colors NoColor
+\family default 
+'.
+ 
+\layout Standard
+
+You can try using a different terminal emulator program.
+ To permanently set your color preferences, edit the file
+\family typewriter 
+ $HOME/.ipython/ipythonrc 
+\family default 
+and set the 
+\family typewriter 
+colors
+\family default 
+ option to the desired value.
+\layout Subsubsection
+
+Object details (types, docstrings, source code, etc.)
+\layout Standard
+
+IPython has a set of special functions for studying the objects you are
+ working with, discussed in detail in Sec.
+ 
+\begin_inset LatexCommand \ref{sec:dyn-object-info}
+
+\end_inset 
+
+.
+ But this system relies on passing information which is longer than your
+ screen through a data pager, such as the common Unix 
+\family typewriter 
+less
+\family default 
+ and 
+\family typewriter 
+more
+\family default 
+ programs.
+ In order to be able to see this information in color, your pager needs
+ to be properly configured.
+ I strongly recommend using 
+\family typewriter 
+less
+\family default 
+ instead of 
+\family typewriter 
+more
+\family default 
+, as it seems that 
+\family typewriter 
+more
+\family default 
+ simply can not understand colored text correctly.
+\layout Standard
+
+In order to configure 
+\family typewriter 
+less
+\family default 
+ as your default pager, do the following:
+\layout Enumerate
+
+Set the environment 
+\family typewriter 
+PAGER
+\family default 
+ variable to 
+\family typewriter 
+less
+\family default 
+.
+\layout Enumerate
+
+Set the environment 
+\family typewriter 
+LESS
+\family default 
+ variable to 
+\family typewriter 
+-r
+\family default 
+ (plus any other options you always want to pass to 
+\family typewriter 
+less
+\family default 
+ by default).
+ This tells 
+\family typewriter 
+less
+\family default 
+ to properly interpret control sequences, which is how color information
+ is given to your terminal.
+\layout Standard
+
+For the 
+\family typewriter 
+csh
+\family default 
+ or 
+\family typewriter 
+tcsh
+\family default 
+ shells, add to your 
+\family typewriter 
+~/.cshrc
+\family default 
+ file the lines:
+\layout Standard
+
+
+\family typewriter 
+setenv PAGER less
+\newline 
+setenv LESS -r
+\layout Standard
+
+There is similar syntax for other Unix shells, look at your system documentation
+ for details.
+\layout Standard
+
+If you are on a system which lacks proper data pagers (such as Windows),
+ IPython will use a very limited builtin pager.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:emacs}
+
+\end_inset 
+
+Tips specific to (X)Emacs users
+\layout Standard
+
+To the best of my knowledge, the comments below apply both to GNU Emacs
+ and to XEmacs
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+This section, and the lisp code in it, owes a lot to the kind help and comments
+ by Milan Zamazal <pdm@zamazal.org>.
+ Many thanks to him.
+\end_inset 
+
+.
+\layout Standard
+
+In X/Emacs we get the following types of terminals (as returned by 
+\family typewriter 
+os.environ['TERM']
+\family default 
+):
+\layout Itemize
+
+Term buffers (
+\family typewriter 
+M-x term
+\family default 
+): 'eterm' terminal type.
+\layout Itemize
+
+Shell buffers (
+\family typewriter 
+M-x shell
+\family default 
+): 'emacs' terminal type (or 'dumb' in some versions).
+\layout Itemize
+
+Python interpreter (comint) buffers (
+\family typewriter 
+C-c\SpecialChar ~
+!
+\family default 
+): 'emacs' terminal type (or 'dumb' in some versions).
+\layout Subsubsection
+
+Color support
+\layout Standard
+
+All of these terminal types will support coloring of prompts and tracebacks,
+ even though only light versions of colors seem to be displayed.
+ I may write an Emacs-specific color scheme in the future (contributions
+ welcome, look at 
+\family typewriter 
+ultraTB.py
+\family default 
+ for details).
+ But for this color support to work properly, you must first copy the following
+ lines to your 
+\family typewriter 
+.emacs
+\family default 
+ file:
+\layout Standard
+
+
+\family typewriter 
+;; Configuration for IPython, thanks to Alex Schmolck.
+\layout Standard
+
+
+\family typewriter 
+;; For things to really work correctly, a recent (4.22 or newer) version
+\layout Standard
+
+
+\family typewriter 
+;; of python-mode.el is needed.
+ Note that tab completion is currently NOT
+\layout Standard
+
+
+\family typewriter 
+;; working.
+\layout Standard
+
+
+\family typewriter 
+;; Get colors working correctly
+\layout Standard
+
+
+\family typewriter 
+(defun my-activate-ansi-colors ()
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+(require 'ansi-color)
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+(ansi-color-for-comint-mode-on))
+\layout Standard
+
+
+\family typewriter 
+(add-hook 'py-shell-hook 'my-activate-ansi-colors)
+\layout Standard
+
+
+\family typewriter 
+;; Regular expression that describes tracebacks for IPython in context and
+\layout Standard
+
+
+\family typewriter 
+;; verbose mode.
+\layout Standard
+
+
+\family typewriter 
+(add-hook 'python-mode-hook
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+'(lambda ()
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+;; this works for @xmode verbose or context
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+(setq py-traceback-line-re
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+"^
+\backslash 
+
+\backslash 
+(.+?
+\backslash 
+
+\backslash 
+) in [^
+\backslash 
+00]+?
+\backslash 
+n--> 
+\backslash 
+
+\backslash 
+([0-9]+
+\backslash 
+
+\backslash 
+) +")))
+\layout Standard
+
+
+\family typewriter 
+(setq py-shell-input-prompt-1-regexp "^In 
+\backslash 
+
+\backslash 
+[[0-9]+
+\backslash 
+
+\backslash 
+]: "
+\layout Standard
+
+
+\family typewriter 
+py-shell-input-prompt-2-regexp "^ [.][.][.]+: " )
+\layout Standard
+
+
+\family typewriter 
+;; Set IPython to be the python command and give it arguments
+\layout Standard
+
+
+\family typewriter 
+(setq py-python-command "ipython")
+\layout Standard
+
+
+\family typewriter 
+(setq py-python-command-args
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+(cond
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+((eq frame-background-mode 'dark)
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+'("-colors" "Linux"))
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+((eq frame-background-mode 'light)
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+'("-colors" "LightBG"))
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+(t ; default (backg-mode isn't always set by XEmacs)
+\layout Standard
+
+
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+'("-colors" "LightBG"))
+\layout Standard
+
+
+\family typewriter 
+))
+\layout Standard
+
+
+\family typewriter 
+;; End IPython configuration
+\layout Standard
+
+You can customize the above to suit your personal preferences.
+\layout Subsubsection
+
+Name completion
+\layout Standard
+
+'eterm' buffers support TAB name completion like a normal terminal, but
+ 'emacs' and 'dumb' ones do not support it well, because Emacs itself takes
+ control of line input.
+ You will thus lose full name completion in an IPython buffer started via
+ 
+\family typewriter 
+C-c\SpecialChar ~
+!
+\family default 
+.
+ All other features of IPython will work normally.
+ 
+\layout Standard
+
+Still, name completion works to some extent: the completions are not printed
+ when you hit TAB, instead you must hit Return after TAB (giving a 
+\family typewriter 
+SyntaxError
+\family default 
+, of course).
+ At this point you get a printout of the possible completions and you can
+ get your previous line with 
+\family typewriter 
+Ctrl-UpArrow
+\family default 
+.
+ Not perfect, but better than nothing.
+\layout Standard
+
+I know it's clumsy, but so far efforts to fix this have failed.
+ Any Emacs gurus out there who can think of a clean way to fix this are
+ encouraged to contact the developers at the addresses given in sec.
+ 
+\begin_inset LatexCommand \ref{sec:credits}
+
+\end_inset 
+
+.
+ The issue (I think) boils down to the following: Emacs only prints the
+ contents of a command received by its sub-process in a comint buffer when
+ it gets an EOL (or more precisely, the result of 
+\family typewriter 
+comint-send-input
+\family default 
+).
+ At that point it prints out all the buffered contents from the subprocess.
+ But for normal TAB completion to work, one needs to print the list of completio
+ns at the current cursor position (possibly completing part of the line)
+ 
+\emph on 
+before
+\emph default 
+ the command is finished.
+ So a kind of catch-22 situation arises.
+ As I said, all ideas/fixes are welcome from the Emacs gurus out there.
+\layout Section
+
+
+\begin_inset LatexCommand \label{sec:quick_tips}
+
+\end_inset 
+
+Quick tips
+\layout Standard
+
+IPython can be used as an improved replacement for the Python prompt, and
+ for that you don't really need to read any more of this manual.
+ But in this section we'll try to summarize a few tips on how to make the
+ most effective use of it for everyday Python development, highlighting
+ things you might miss in the rest of the manual (which is getting long).
+ We'll give references to parts in the manual which provide more detail
+ when appropriate.
+\layout Itemize
+
+The TAB key.
+ TAB-completion, especially for attributes, is a convenient way to explore
+ the structure of any object you're dealing with.
+ Simply type 
+\family typewriter 
+object_name.<TAB>
+\family default 
+ and a list of the object's attributes will be printed (see sec.
+ 
+\begin_inset LatexCommand \ref{sec:readline}
+
+\end_inset 
+
+ for more).
+ Tab completion also works on file and directory names, which combined with
+ IPython's alias system allows you to do from within IPython many of the
+ things you normally would need the system shell for.
+ Note that this feature does not work on platforms lacking readline support,
+ such as Windows.
+\layout Itemize
+
+Explore your objects.
+ Typing 
+\family typewriter 
+object_name?
+\family default 
+ will print all sorts of details about any object, including docstrings,
+ function definition lines (for call arguments) and constructor details
+ for classes.
+ The magic commands 
+\family typewriter 
+@pdoc
+\family default 
+, 
+\family typewriter 
+@pdef
+\family default 
+, 
+\family typewriter 
+@psource
+\family default 
+ and 
+\family typewriter 
+@pfile
+\family default 
+ will respectively print the docstring, function definition line, full source
+ code and the complete file for any object (when they can be found).
+ If automagic is on (it is by default), you don't need to type the '
+\family typewriter 
+@
+\family default 
+' explicitly.
+ See sec.
+ 
+\begin_inset LatexCommand \ref{sec:dyn-object-info}
+
+\end_inset 
+
+ for more.
+\layout Itemize
+
+The 
+\family typewriter 
+@run
+\family default 
+ magic command allows you to run any python script and load all of its data
+ directly into the interactive namespace.
+ Since the file is re-read from disk each time, changes you make to it are
+ reflected immediately (in contrast to the behavior of 
+\family typewriter 
+import
+\family default 
+).
+ I rarely use 
+\family typewriter 
+import
+\family default 
+ for code I am testing, relying on 
+\family typewriter 
+@run
+\family default 
+ instead.
+ See sec.
+ 
+\begin_inset LatexCommand \ref{sec:magic}
+
+\end_inset 
+
+ for more on this and other magic commands, or type the name of any magic
+ command and ? to get details on it.
+ See also sec.
+ 
+\begin_inset LatexCommand \ref{sec:dreload}
+
+\end_inset 
+
+ for a recursive reload command.
+\layout Itemize
+
+Use the Python debugger, pdb
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+Thanks to Christian Hart for the suggestions leading to this feature and
+ the profiler support.
+\end_inset 
+
+.
+ The 
+\family typewriter 
+@pdb
+\family default 
+ command allows you to toggle on and off the automatic invocation of the
+ pdb debugger at any uncaught exception.
+ The advantage of this is that pdb starts 
+\emph on 
+inside
+\emph default 
+ the function where the exception occurred, with all data still available.
+ You can print variables, see code, execute statements and even walk up
+ and down the call stack to track down the true source of the problem (which
+ often is many layers in the stack above where the exception gets triggered).
+\newline 
+Running programs with 
+\family typewriter 
+@run
+\family default 
+ and pdb active can be an efficient to develop and debug code, in many cases
+ eliminating the need for 
+\family typewriter 
+print
+\family default 
+ statements or external debugging tools.
+ I often simply put a 
+\family typewriter 
+1/0
+\family default 
+ in a place where I want to take a look so that pdb gets called, quickly
+ view whatever variables I need to or test various pieces of code and then
+ remove the 
+\family typewriter 
+1/0
+\family default 
+.
+\layout Itemize
+
+Use the output cache.
+ All output results are automatically stored in a global dictionary named
+ 
+\family typewriter 
+Out
+\family default 
+ and variables named 
+\family typewriter 
+_1
+\family default 
+, 
+\family typewriter 
+_2
+\family default 
+, etc.
+ alias them.
+ For example, the result of input line 4 is available either as 
+\family typewriter 
+Out[4]
+\family default 
+ or as 
+\family typewriter 
+_4
+\family default 
+.
+ Additionally, three variables named 
+\family typewriter 
+_
+\family default 
+, 
+\family typewriter 
+__
+\family default 
+ and 
+\family typewriter 
+___
+\family default 
+ are always kept updated with the for the last three results.
+ This allows you to recall any previous result and further use it for new
+ calculations.
+ See sec.
+ 
+\begin_inset LatexCommand \ref{sec:cache_output}
+
+\end_inset 
+
+ for more.
+\layout Itemize
+
+Put a '
+\family typewriter 
+;
+\family default 
+' at the end of a line to supress the printing of output.
+ This is useful when doing calculations which generate long output you are
+ not interested in seeing.
+ The 
+\family typewriter 
+_*
+\family default 
+ variables ant the 
+\family typewriter 
+Out[]
+\family default 
+ list do get updated with the contents of the output, even if it is not
+ printed.
+ You can thus still access the generated results this way for further processing.
+\layout Itemize
+
+A similar system exists for caching input.
+ All input is stored in a global list called 
+\family typewriter 
+In
+\family default 
+ , so you can re-execute lines 22 through 28 plus line 34 by typing 
+\family typewriter 
+'exec In[22:29]+In[34]'
+\family default 
+ (using Python slicing notation).
+ If you need to execute the same set of lines often, you can assign them
+ to a macro with the 
+\family typewriter 
+@macro
+\family default 
+ 
+\family typewriter 
+function.
+ 
+\family default 
+See sec.
+ 
+\begin_inset LatexCommand \ref{sec:cache_input}
+
+\end_inset 
+
+ for more.
+\layout Itemize
+
+Use your input history.
+ The 
+\family typewriter 
+@hist
+\family default 
+ command can show you all previous input, without line numbers if desired
+ (option 
+\family typewriter 
+-n
+\family default 
+) so you can directly copy and paste code either back in IPython or in a
+ text editor.
+ You can also save all your history by turning on logging via 
+\family typewriter 
+@logstart
+\family default 
+; these logs can later be either reloaded as IPython sessions or used as
+ code for your programs.
+\layout Itemize
+
+Define your own macros with 
+\family typewriter 
+@macro
+\family default 
+.
+ This can be useful for automating sequences of expressions when working
+ interactively.
+\layout Itemize
+
+Define your own system aliases.
+ Even though IPython gives you access to your system shell via the ! prefix,
+ it is convenient to have aliases to the system commands you use most often.
+ This allows you to work seamlessly from inside IPython with the same commands
+ you are used to in your system shell.
+\newline 
+IPython comes with some pre-defined aliases and a complete system for changing
+ directories, both via a stack (see 
+\family typewriter 
+@pushd
+\family default 
+, 
+\family typewriter 
+@popd
+\family default 
+ and 
+\family typewriter 
+@ds
+\family default 
+) and via direct 
+\family typewriter 
+@cd
+\family default 
+.
+ The latter keeps a history of visited directories and allows you to go
+ to any previously visited one.
+\layout Itemize
+
+Use profiles to maintain different configurations (modules to load, function
+ definitions, option settings) for particular tasks.
+ You can then have customized versions of IPython for specific purposes.
+ See sec.
+ 
+\begin_inset LatexCommand \ref{sec:profiles}
+
+\end_inset 
+
+ for more.
+\layout Itemize
+
+Embed IPython in your programs.
+ A few lines of code are enough to load a complete IPython inside your own
+ programs, giving you the ability to work with your data interactively after
+ automatic processing has been completed.
+ See sec.
+ 
+\begin_inset LatexCommand \ref{sec:embed}
+
+\end_inset 
+
+ for more.
+\layout Itemize
+
+Use the Python profiler.
+ When dealing with performance issues, the 
+\family typewriter 
+@run
+\family default 
+ command with a 
+\family typewriter 
+-p
+\family default 
+ option allows you to run complete programs under the control of the Python
+ profiler.
+ The 
+\family typewriter 
+@prun
+\family default 
+ command does a similar job for single Python expressions (like function
+ calls).
+\layout Standard
+
+If you have your own favorite tip on using IPython efficiently for a certain
+ task (especially things which can't be done in the normal Python interpreter),
+ don't hesitate to send it!
+\layout Section
+
+Command-line use
+\layout Standard
+
+You start IPython with the command:
+\layout Standard
+
+
+\family typewriter 
+$ ipython [options] files
+\layout Standard
+
+If invoked with no options, it executes all the files listed in sequence
+ and drops you into the interpreter while still acknowledging any options
+ you may have set in your ipythonrc file.
+ This behavior is different from standard Python, which when called as 
+\family typewriter 
+python -i
+\family default 
+ will only execute one file and ignore your configuration setup.
+\layout Standard
+
+Please note that some of the configuration options are not available at
+ the command line, simply because they are not practical here.
+ Look into your ipythonrc configuration file for details on those.
+ This file typically installed in the 
+\family typewriter 
+$HOME/.ipython
+\family default 
+ directory.
+ For Windows users, 
+\family typewriter 
+$HOME
+\family default 
+ resolves to 
+\family typewriter 
+C:
+\backslash 
+
+\backslash 
+Documents and Settings
+\backslash 
+
+\backslash 
+YourUserName
+\family default 
+ in most instances.
+ In the rest of this text, we will refer to this directory as 
+\family typewriter 
+IPYTHONDIR
+\family default 
+.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:cmd-line-opts}
+
+\end_inset 
+
+Options
+\layout Standard
+
+All options can be abbreviated to their shortest non-ambiguous form and
+ are case-sensitive.
+ One or two dashes can be used.
+ Some options have an alternate short form, indicated after a 
+\family typewriter 
+|
+\family default 
+.
+\layout Standard
+
+Most options can also be set from your ipythonrc configuration file.
+ See the provided example for more details on what the options do.
+ Options given at the command line override the values set in the ipythonrc
+ file.
+\layout Standard
+
+All options with a 
+\family typewriter 
+no|
+\family default 
+ prepended can be specified in 'no' form (
+\family typewriter 
+-nooption
+\family default 
+ instead of 
+\family typewriter 
+-option
+\family default 
+) to turn the feature off.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-help
+\family default 
+\series default 
+: print a help message and exit.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-no|automagic
+\series default 
+:
+\family default 
+ make magic commands automatic (without needing their first character to
+ be 
+\family typewriter 
+@
+\family default 
+).
+ Type 
+\family typewriter 
+@magic
+\family default 
+ at the IPython prompt for more information.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-no|banner
+\series default 
+:
+\family default 
+ Print the initial information banner (default on).
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-cache_size|cs\SpecialChar ~
+<n>
+\series default 
+:
+\family default 
+ size of the output cache (maximum number of entries to hold in memory).
+ The default is 1000, you can change it permanently in your config file.
+ Setting it to 0 completely disables the caching system, and the minimum
+ value accepted is 20 (if you provide a value less than 20, it is reset
+ to 0 and a warning is issued) This limit is defined because otherwise you'll
+ spend more time re-flushing a too small cache than working.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-classic|cl
+\series default 
+:
+\family default 
+ Gives IPython a similar feel to the classic Python prompt.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-colors|c\SpecialChar ~
+<scheme>:
+\family default 
+\series default 
+ Color scheme for prompts and exception reporting.
+ Currently implemented: NoColor, Linux and LightBG.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-no|color_info:
+\family default 
+\series default 
+ IPython can display information about objects via a set of functions, and
+ optionally can use colors for this, syntax highlighting source code and
+ various other elements.
+ However, because this information is passed through a pager (like 'less')
+ and many pagers get confused with color codes, this option is off by default.
+ You can test it and turn it on permanently in your ipythonrc file if it
+ works for you.
+ As a reference, the 'less' pager supplied with Mandrake 8.2 works ok, but
+ that in RedHat 7.2 doesn't.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ Test it and turn it on permanently if it works with your system.
+ The magic function @
+\family typewriter 
+color_info
+\family default 
+ allows you to toggle this interactively for testing.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-no|debug
+\family default 
+\series default 
+: Show information about the loading process.
+ Very useful to pin down problems with your configuration files or to get
+ details about session restores.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-no|deep_reload
+\series default 
+:
+\family default 
+ IPython can use the 
+\family typewriter 
+deep_reload
+\family default 
+ module which reloads changes in modules recursively (it replaces the 
+\family typewriter 
+reload()
+\family default 
+ function, so you don't need to change anything to use it).
+ 
+\family typewriter 
+deep_reload()
+\family default 
+ forces a full reload of modules whose code may have changed, which the
+ default 
+\family typewriter 
+reload()
+\family default 
+ function does not.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ When deep_reload is off, IPython will use the normal 
+\family typewriter 
+reload()
+\family default 
+, but deep_reload will still be available as 
+\family typewriter 
+dreload()
+\family default 
+.
+ This feature is off by default [which means that you have both normal 
+\family typewriter 
+reload()
+\family default 
+ and 
+\family typewriter 
+dreload()
+\family default 
+].
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-editor\SpecialChar ~
+<name>
+\family default 
+\series default 
+: Which editor to use with the 
+\family typewriter 
+@edit
+\family default 
+ command.
+ By default, IPython will honor your 
+\family typewriter 
+EDITOR
+\family default 
+ environment variable (if not set, vi is the Unix default and notepad the
+ Windows one).
+ Since this editor is invoked on the fly by IPython and is meant for editing
+ small code snippets, you may want to use a small, lightweight editor here
+ (in case your default 
+\family typewriter 
+EDITOR
+\family default 
+ is something like Emacs).
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-ipythondir\SpecialChar ~
+<name>
+\series default 
+:
+\family default 
+ name of your IPython configuration directory 
+\family typewriter 
+IPYTHONDIR
+\family default 
+.
+ This can also be specified through the environment variable 
+\family typewriter 
+IPYTHONDIR
+\family default 
+.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-log|l
+\family default 
+\series default 
+: generate a log file of all input.
+ Defaults to 
+\family typewriter 
+$IPYTHONDIR/log
+\family default 
+.
+ You can use this to later restore a session by loading your logfile as
+ a file to be executed with option 
+\family typewriter 
+-logplay
+\family default 
+ (see below).
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-logfile|lf\SpecialChar ~
+<name>
+\series default 
+: 
+\family default 
+specify the name of your logfile.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-logplay|lp\SpecialChar ~
+<name>
+\series default 
+:
+\family default 
+ you can replay a previous log.
+ For restoring a session as close as possible to the state you left it in,
+ use this option (don't just run the logfile).
+ With 
+\family typewriter 
+-logplay
+\family default 
+, IPython will try to reconstruct the previous working environment in full,
+ not just execute the commands in the logfile.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ When a session is restored, logging is automatically turned on again with
+ the name of the logfile it was invoked with (it is read from the log header).
+ So once you've turned logging on for a session, you can quit IPython and
+ reload it as many times as you want and it will continue to log its history
+ and restore from the beginning every time.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ Caveats: there are limitations in this option.
+ The history variables 
+\family typewriter 
+_i*
+\family default 
+,
+\family typewriter 
+_*
+\family default 
+ and 
+\family typewriter 
+_dh
+\family default 
+ don't get restored properly.
+ In the future we will try to implement full session saving by writing and
+ retrieving a 'snapshot' of the memory state of IPython.
+ But our first attempts failed because of inherent limitations of Python's
+ Pickle module, so this may have to wait.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-no|messages
+\series default 
+:
+\family default 
+ Print messages which IPython collects about its startup process (default
+ on).
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-no|pdb
+\family default 
+\series default 
+: Automatically call the pdb debugger after every uncaught exception.
+ If you are used to debugging using pdb, this puts you automatically inside
+ of it after any call (either in IPython or in code called by it) which
+ triggers an exception which goes uncaught.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-no|pprint
+\series default 
+:
+\family default 
+ ipython can optionally use the pprint (pretty printer) module for displaying
+ results.
+ pprint tends to give a nicer display of nested data structures.
+ If you like it, you can turn it on permanently in your config file (default
+ off).
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-profile|p <name>
+\series default 
+:
+\family default 
+ assume that your config file is 
+\family typewriter 
+ipythonrc-<name>
+\family default 
+ (looks in current dir first, then in 
+\family typewriter 
+IPYTHONDIR
+\family default 
+).
+ This is a quick way to keep and load multiple config files for different
+ tasks, especially if you use the include option of config files.
+ You can keep a basic 
+\family typewriter 
+IPYTHONDIR/ipythonrc
+\family default 
+ file and then have other 'profiles' which include this one and load extra
+ things for particular tasks.
+ For example:
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\SpecialChar ~
+ 
+\family default 
+1.
+
+\family typewriter 
+ $HOME/.ipython/ipythonrc
+\family default 
+ : load basic things you always want.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\SpecialChar ~
+ 
+\family default 
+2.
+
+\family typewriter 
+ $HOME/.ipython/ipythonrc-math
+\family default 
+ : load (1) and basic math-related modules.
+ 
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\SpecialChar ~
+ 
+\family default 
+3.
+
+\family typewriter 
+ $HOME/.ipython/ipythonrc-numeric
+\family default 
+ : load (1) and Numeric and plotting modules.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ Since it is possible to create an endless loop by having circular file
+ inclusions, IPython will stop if it reaches 15 recursive inclusions.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-prompt_in1|pi1\SpecialChar ~
+<string>:
+\family default 
+\series default 
+ Specify the string used for input prompts.
+ Note that if you are using numbered prompts, the number is represented
+ with a '
+\family typewriter 
+%n
+\family default 
+' in the string.
+ Don't forget to quote strings with spaces embedded in them.
+ Default: '
+\family typewriter 
+In\SpecialChar ~
+[%n]:
+\family default 
+'
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-prompt_in2|pi2\SpecialChar ~
+<string>:
+\family default 
+\series default 
+ Similar to the previous option, but used for the continuation prompts.
+ In this case, the number (
+\family typewriter 
+%n
+\family default 
+) is replaced by as many dots as there are digits in the number (so you
+ can have your continuation prompt aligned with your input prompt).
+ Default: '
+\family typewriter 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+.%n.:
+\family default 
+' (note three spaces at the start for alignment with '
+\family typewriter 
+In\SpecialChar ~
+[%n]
+\family default 
+')
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-prompt_out|po\SpecialChar ~
+<string>:
+\family default 
+\series default 
+ String used for output prompts, also uses numbers like 
+\family typewriter 
+prompt_in1
+\family default 
+.
+ Default: '
+\family typewriter 
+Out[%n]:
+\family default 
+'
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-quick
+\family default 
+\series default 
+: start in bare bones mode (no config file loaded).
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-rcfile\SpecialChar ~
+<name>
+\series default 
+:
+\family default 
+ name of your IPython resource configuration file.
+ Normally IPython loads ipythonrc (from current directory) or
+\family typewriter 
+ IPYTHONDIR/ipythonrc
+\family default 
+.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ If the loading of your config file fails, IPython starts with a bare bones
+ configuration (no modules loaded at all).
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-no|readline
+\family default 
+\series default 
+: use the readline library, which is needed to support name completion and
+ command history, among other things.
+ It is enabled by default, but may cause problems for users of X/Emacs in
+ Python comint or shell buffers.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ Note that X/Emacs 'eterm' buffers (opened with 
+\family typewriter 
+M-x\SpecialChar ~
+term
+\family default 
+) support IPython's readline and syntax coloring fine, only 'emacs' (
+\family typewriter 
+M-x\SpecialChar ~
+shell
+\family default 
+ and 
+\family typewriter 
+C-c\SpecialChar ~
+!
+\family default 
+) buffers do not.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-screen_length|sl\SpecialChar ~
+<n>
+\series default 
+:
+\family default 
+ number of lines of your screen.
+ This is used to control printing of very long strings.
+ Strings longer than this number of lines will be sent through a pager instead
+ of directly printed.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ The default value for this is 0, which means IPython will auto-detect your
+ screen size every time it needs to print certain potentially long strings
+ (this doesn't change the behavior of the 'print' keyword, it's only triggered
+ internally).
+ If for some reason this isn't working well (it needs curses support), specify
+ it yourself.
+ Otherwise don't change the default.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-separate_in|si\SpecialChar ~
+<string>
+\series default 
+:
+\family default 
+ separator before input prompts.
+ Default: '
+\family typewriter 
+
+\backslash 
+n
+\family default 
+'
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-separate_out|so\SpecialChar ~
+<string>
+\family default 
+\series default 
+: separator before output prompts.
+ Default: nothing.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-separate_out2|so2\SpecialChar ~
+<string>
+\series default 
+:
+\family default 
+ separator after output prompts.
+ Default: nothing.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ For these three options, use the value 0 to specify no separator.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-nosep
+\series default 
+: 
+\family default 
+shorthand for 
+\family typewriter 
+'-SeparateIn 0 -SeparateOut 0 -SeparateOut2 0'
+\family default 
+.
+ Simply removes all input/output separators.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-upgrade
+\family default 
+\series default 
+: allows you to upgrade your 
+\family typewriter 
+IPYTHONDIR
+\family default 
+ configuration when you install a new version of IPython.
+ Since new versions may include new command line options or example files,
+ this copies updated ipythonrc-type files.
+ However, it backs up (with a 
+\family typewriter 
+.old
+\family default 
+ extension) all files which it overwrites so that you can merge back any
+ customizations you might have in your personal files.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-Version
+\series default 
+:
+\family default 
+ print version information and exit.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+-xmode <modename>
+\series default 
+:
+\family default 
+ Mode for exception reporting.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ Valid modes: Plain, Context and Verbose.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ Plain: similar to python's normal traceback printing.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ Context: prints 5 lines of context source code around each line in the
+ traceback.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ Verbose: similar to Context, but additionally prints the variables currently
+ visible where the exception happened (shortening their strings if too long).
+ This can potentially be very slow, if you happen to have a huge data structure
+ whose string representation is complex to compute.
+ Your computer may appear to freeze for a while with cpu usage at 100%.
+ If this occurs, you can cancel the traceback with Ctrl-C (maybe hitting
+ it more than once).
+\layout Section
+
+Interactive use
+\layout Standard
+
+
+\series bold 
+Warning
+\series default 
+: IPython relies on the existence of a global variable called 
+\family typewriter 
+__IP
+\family default 
+ which controls the shell itself.
+ If you redefine 
+\family typewriter 
+__IP
+\family default 
+ to anything, bizarre behavior will quickly occur.
+\layout Standard
+
+Other than the above warning, IPython is meant to work as a drop-in replacement
+ for the standard interactive interpreter.
+ As such, any code which is valid python should execute normally under IPython
+ (cases where this is not true should be reported as bugs).
+ It does, however, offer many features which are not available at a standard
+ python prompt.
+ What follows is a list of these.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:magic}
+
+\end_inset 
+
+Magic command system
+\layout Standard
+
+IPython will treat any line whose first character is a 
+\family typewriter 
+@
+\family default 
+ as a special call to a 'magic' function.
+ These allow you to control the behavior of IPython itself, plus a lot of
+ system-type features.
+ They are all prefixed with a 
+\family typewriter 
+@
+\family default 
+ character, but parameters are given without parentheses or quotes.
+\layout Standard
+
+Example: typing 
+\family typewriter 
+'@cd mydir'
+\family default 
+ (without the quotes) changes you working directory to 
+\family typewriter 
+'mydir'
+\family default 
+, if it exists.
+\layout Standard
+
+If you have 'automagic' enabled (in your 
+\family typewriter 
+ipythonrc
+\family default 
+ file, via the command line option 
+\family typewriter 
+-automagic 
+\family default 
+or with the 
+\family typewriter 
+@automagic
+\family default 
+ function), you don't need to type in the 
+\family typewriter 
+@
+\family default 
+ explicitly.
+ IPython will scan its internal list of magic functions and call one if
+ it exists.
+ With automagic on you can then just type '
+\family typewriter 
+cd mydir
+\family default 
+' to go to directory '
+\family typewriter 
+mydir
+\family default 
+'.
+ The automagic system has the lowest possible precedence in name searches,
+ so defining an identifier with the same name as an existing magic function
+ will shadow it for automagic use.
+ You can still access the shadowed magic function by explicitly using the
+ 
+\family typewriter 
+@
+\family default 
+ character at the beginning of the line.
+\layout Standard
+
+An example (with automagic on) should clarify all this:
+\layout Standard
+
+
+\family typewriter 
+In [1]: cd ipython # @cd is called by automagic
+\newline 
+/usr/local/home/fperez/ipython
+\newline 
+In [2]: cd=1 # now cd is just a variable
+\newline 
+In [3]: cd ..
+ # and doesn't work as a function anymore 
+\newline 
+------------------------------------------------------------
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+ File "<console>", line 1
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ cd ..
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ ^
+\newline 
+SyntaxError: invalid syntax
+\newline 
+\SpecialChar ~
+
+\newline 
+In [4]: @cd ..
+
+\family default 
+ 
+\family typewriter 
+# but @cd always works
+\family default 
+
+\newline 
+
+\family typewriter 
+/usr/local/home/fperez
+\newline 
+In [5]: del cd # if you remove the cd variable
+\newline 
+In [6]: cd ipython # automagic can work again
+\newline 
+/usr/local/home/fperez/ipython
+\layout Standard
+
+You can define your own magic functions to extend the system.
+ The following is a snippet of code which shows how to do it.
+ It is provided as file 
+\family typewriter 
+example-magic.py
+\family default 
+ in your ipython configuration directory, typically 
+\family typewriter 
+$HOME/.ipython/:
+\layout Standard
+
+
+\begin_inset Include \verbatiminput{../IPython/UserConfig/example-magic.py}
+
+\end_inset 
+
+
+\layout Standard
+
+You can also define your own aliased names for magic functions.
+ In your 
+\family typewriter 
+ipythonrc
+\family default 
+ file, placing a line like:
+\layout Standard
+
+
+\family typewriter 
+execute __IP.magic_cl = __IP.magic_clear
+\layout Standard
+
+will define 
+\family typewriter 
+@cl
+\family default 
+ as a new name for 
+\family typewriter 
+@clear
+\family default 
+.
+\layout Standard
+
+Type 
+\family typewriter 
+@magic
+\family default 
+ for more information, including a list of all available magic functions
+ at any time and their docstrings.
+ You can also type 
+\family typewriter 
+@magic_function_name?
+\family default 
+ (see sec.
+ 
+\begin_inset LatexCommand \ref{sec:dyn-object-info}
+
+\end_inset 
+
+ for information on the 
+\family typewriter 
+'?'
+\family default 
+ system) to get information about any particular magic function you are
+ interested in.
+\layout Subsubsection
+
+Magic commands
+\layout Standard
+
+The rest of this section is automatically generated for each release from
+ the docstrings in the IPython code.
+ Therefore the formatting is somewhat minimal, but this method has the advantage
+ of having information always in sync with the code.
+\layout Standard
+
+A list of all the magic commands available in IPython's 
+\emph on 
+default
+\emph default 
+ installation follows.
+ This is similar to what you'll see by simply typing 
+\family typewriter 
+@magic
+\family default 
+ at the prompt, but that will also give you information about magic commands
+ you may have added as part of your personal customizations.
+\layout Standard
+
+
+\begin_inset Include \input{magic.tex}
+
+\end_inset 
+
+
+\layout Subsection
+
+Access to the standard Python help
+\layout Standard
+
+As of Python 2.1, a help system is available with access to object docstrings
+ and the Python manuals.
+ Simply type 
+\family typewriter 
+'help'
+\family default 
+ (no quotes) to access it.
+ You can also type 
+\family typewriter 
+help(object)
+\family default 
+ to obtain information about a given object, and 
+\family typewriter 
+help('keyword')
+\family default 
+ for information on a keyword.
+ As noted in sec.
+ 
+\begin_inset LatexCommand \ref{sec:help-access}
+
+\end_inset 
+
+, you need to properly configure your environment variable 
+\family typewriter 
+PYTHONDOCS
+\family default 
+ for this feature to work correctly.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:dyn-object-info}
+
+\end_inset 
+
+Dynamic object information
+\layout Standard
+
+Typing 
+\family typewriter 
+?word
+\family default 
+ or 
+\family typewriter 
+word?
+\family default 
+ prints detailed information about an object.
+ If certain strings in the object are too long (docstrings, code, etc.) they
+ get snipped in the center for brevity.
+ This system gives access variable types and values, full source code for
+ any object (if available), function prototypes and other useful information.
+\layout Standard
+
+Typing 
+\family typewriter 
+??word
+\family default 
+ or 
+\family typewriter 
+word??
+\family default 
+ gives access to the full information without snipping long strings.
+ Long strings are sent to the screen through the 
+\family typewriter 
+less
+\family default 
+ pager if longer than the screen and printed otherwise.
+ On systems lacking the 
+\family typewriter 
+less
+\family default 
+ command, IPython uses a very basic internal pager.
+\layout Standard
+
+The following magic functions are particularly useful for gathering information
+ about your working environment.
+ You can get more details by typing 
+\family typewriter 
+@magic
+\family default 
+ or querying them individually (use 
+\family typewriter 
+@function_name?
+\family default 
+ with or without the 
+\family typewriter 
+@
+\family default 
+), this is just a summary:
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+@pdoc\SpecialChar ~
+<object>
+\family default 
+\series default 
+: Print (or run through a pager if too long) the docstring for an object.
+ If the given object is a class, it will print both the class and the constructo
+r docstrings.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+@pdef\SpecialChar ~
+<object>
+\family default 
+\series default 
+: Print the definition header for any callable object.
+ If the object is a class, print the constructor information.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+@psource\SpecialChar ~
+<object>
+\family default 
+\series default 
+: Print (or run through a pager if too long) the source code for an object.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+@pfile\SpecialChar ~
+<object>
+\family default 
+\series default 
+: Show the entire source file where an object was defined via a pager, opening
+ it at the line where the object definition begins.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+@who/@whos
+\family default 
+\series default 
+: These functions give information about identifiers you have defined interactiv
+ely (not things you loaded or defined in your configuration files).
+ 
+\family typewriter 
+@who
+\family default 
+ just prints a list of identifiers and 
+\family typewriter 
+@whos
+\family default 
+ prints a table with some basic details about each identifier.
+\layout Standard
+
+Note that the dynamic object information functions (
+\family typewriter 
+?/??, @pdoc, @pfile, @pdef, @psource
+\family default 
+) give you access to documentation even on things which are not really defined
+ as separate identifiers.
+ Try for example typing 
+\family typewriter 
+{}.get?
+\family default 
+ or after doing 
+\family typewriter 
+import os
+\family default 
+, type 
+\family typewriter 
+os.path.abspath??
+\family default 
+.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:readline}
+
+\end_inset 
+
+Readline-based features
+\layout Standard
+
+These features require the GNU readline library, so they won't work if your
+ Python lacks readline support (as is the case under Windows).
+ We will first describe the default behavior IPython uses, and then how
+ to change it to suit your preferences.
+\layout Subsubsection
+
+Command line completion
+\layout Standard
+
+At any time, hitting TAB will complete any available python commands or
+ variable names, and show you a list of the possible completions if there's
+ no unambiguous one.
+ It will also complete filenames in the current directory if no python names
+ match what you've typed so far.
+\layout Subsubsection
+
+Search command history
+\layout Standard
+
+IPython provides two ways for searching through previous input and thus
+ reduce the need for repetitive typing:
+\layout Enumerate
+
+Start typing, and then use 
+\family typewriter 
+Ctrl-p
+\family default 
+ (previous,up) and 
+\family typewriter 
+Ctrl-n
+\family default 
+ (next,down) to search through only the history items that match what you've
+ typed so far.
+ If you use 
+\family typewriter 
+Ctrl-p/Ctrl-n
+\family default 
+ at a blank prompt, they just behave like normal arrow keys.
+\layout Enumerate
+
+Hit 
+\family typewriter 
+Ctrl-r
+\family default 
+: opens a search prompt.
+ Begin typing and the system searches your history for lines that contain
+ what you've typed so far, completing as much as it can.
+\layout Subsubsection
+
+Persistent command history across sessions
+\layout Standard
+
+IPython will save your input history when it leaves and reload it next time
+ you restart it.
+\layout Subsubsection
+
+Customizing readline behavior
+\layout Standard
+
+All these features are based on the GNU readline library, which has an extremely
+ customizable interface.
+ Normally, readline is configured via a file which defines the behavior
+ of the library; the details of the syntax for this can be found in the
+ readline documentation available with your system or on the Internet.
+ IPython doesn't read this file (if it exists) directly, but it does support
+ passing to readline valid options via a simple interface.
+ In brief, you can customize readline by setting the following options in
+ your 
+\family typewriter 
+ipythonrc
+\family default 
+ configuration file (note that these options can 
+\emph on 
+not
+\emph default 
+ be specified at the command line):
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+readline_parse_and_bind:
+\family default 
+\series default 
+ this option can appear as many times as you want, each time defining a
+ string to be executed via a 
+\family typewriter 
+readline.parse_and_bind()
+\family default 
+ command.
+ The syntax for valid commands of this kind can be found by reading the
+ documentation for the GNU readline library, as these commands are of the
+ kind which readline accepts in its configuration file.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+readline_remove_delims:
+\family default 
+\series default 
+ a string of characters to be removed from the default word-delimiters list
+ used by readline, so that completions may be performed on strings which
+ contain them.
+ Do not change the default value unless you know what you're doing.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+readline_omit__names
+\family default 
+\series default 
+: when tab-completion is enabled, hitting 
+\family typewriter 
+<tab>
+\family default 
+ after a '
+\family typewriter 
+.
+\family default 
+' in a name will complete all attributes of an object, including all the
+ special methods whose names include double underscores (like 
+\family typewriter 
+__getitem__
+\family default 
+ or 
+\family typewriter 
+__class__
+\family default 
+).
+ If you'd rather not see these names by default, you can set this option
+ to 1.
+ Note that even when this option is set, you can still see those names by
+ explicitly typing a 
+\family typewriter 
+_
+\family default 
+ after the period and hitting 
+\family typewriter 
+<tab>
+\family default 
+: '
+\family typewriter 
+name._<tab>
+\family default 
+' will always complete attribute names starting with '
+\family typewriter 
+_
+\family default 
+'.
+\layout List
+\labelwidthstring 00.00.0000
+
+\SpecialChar ~
+ This option is off by default so that new users see all attributes of any
+ objects they are dealing with.
+\layout Standard
+
+You will find the default values along with a corresponding detailed explanation
+ in your 
+\family typewriter 
+ipythonrc
+\family default 
+ file.
+\layout Subsection
+
+Session logging and restoring
+\layout Standard
+
+You can log all input from a session either by starting IPython with the
+ command line switches 
+\family typewriter 
+-log
+\family default 
+ or 
+\family typewriter 
+-logfile 
+\family default 
+(see sec.
+ 
+\begin_inset LatexCommand \ref{sec:cmd-line-opts}
+
+\end_inset 
+
+)or by activating the logging at any moment with the magic function 
+\family typewriter 
+@logstart
+\family default 
+.
+ 
+\layout Standard
+
+Log files can later be reloaded with the 
+\family typewriter 
+-logplay
+\family default 
+ option and IPython will attempt to 'replay' the log by executing all the
+ lines in it, thus restoring the state of a previous session.
+ This feature is not quite perfect, but can still be useful in many cases.
+\layout Standard
+
+The log files can also be used as a way to have a permanent record of any
+ code you wrote while experimenting.
+ Log files are regular text files which you can later open in your favorite
+ text editor to extract code or to 'clean them up' before using them to
+ replay a session.
+\layout Standard
+
+The 
+\family typewriter 
+@logstart
+\family default 
+ function for activating logging in mid-session is used as follows:
+\layout Standard
+
+
+\family typewriter 
+@logstart [log_name [log_mode]]
+\layout Standard
+
+If no name is given, it defaults to a file named 
+\family typewriter 
+'log'
+\family default 
+ in your IPYTHONDIR directory, in 
+\family typewriter 
+'rotate'
+\family default 
+ mode (see below).
+\layout Standard
+
+'
+\family typewriter 
+@logstart name
+\family default 
+' saves to file 
+\family typewriter 
+'name'
+\family default 
+ in 
+\family typewriter 
+'backup'
+\family default 
+ mode.
+ It saves your history up to that point and then continues logging.
+\layout Standard
+
+
+\family typewriter 
+@logstart
+\family default 
+ takes a second optional parameter: logging mode.
+ This can be one of (note that the modes are given unquoted):
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+over
+\family default 
+: overwrite existing 
+\family typewriter 
+log_name
+\family default 
+.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+backup
+\family default 
+: rename (if exists) to 
+\family typewriter 
+log_name~
+\family default 
+ and start 
+\family typewriter 
+log_name
+\family default 
+.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+append
+\family default 
+: well, that says it.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+rotate
+\family default 
+: create rotating logs 
+\family typewriter 
+log_name
+\family default 
+.
+\family typewriter 
+1~
+\family default 
+, 
+\family typewriter 
+log_name.2~
+\family default 
+, etc.
+\layout Standard
+
+The 
+\family typewriter 
+@logoff
+\family default 
+ and 
+\family typewriter 
+@logon
+\family default 
+ functions allow you to temporarily stop and resume logging to a file which
+ had previously been started with 
+\family typewriter 
+@logstart
+\family default 
+.
+ They will fail (with an explanation) if you try to use them before logging
+ has been started.
+\layout Subsection
+
+System shell access
+\layout Standard
+
+Any input line beginning with a 
+\family typewriter 
+!
+\family default 
+ character is passed verbatim (minus the 
+\family typewriter 
+!
+\family default 
+, of course) to the underlying operating system.
+ For example, typing 
+\family typewriter 
+!ls
+\family default 
+ will run 
+\family typewriter 
+'ls'
+\family default 
+ in the current directory.
+\layout Subsection
+
+System command aliases
+\layout Standard
+
+The 
+\family typewriter 
+@alias
+\family default 
+ magic function and the 
+\family typewriter 
+alias
+\family default 
+ option in the 
+\family typewriter 
+ipythonrc
+\family default 
+ configuration file allow you to define magic functions which are in fact
+ system shell commands.
+ These aliases can have parameters.
+ 
+\layout Standard
+
+'
+\family typewriter 
+@alias alias_name cmd
+\family default 
+' defines '
+\family typewriter 
+alias_name
+\family default 
+' as an alias for '
+\family typewriter 
+cmd
+\family default 
+' 
+\layout Standard
+
+Then, typing '
+\family typewriter 
+@alias_name params
+\family default 
+' will execute the system command '
+\family typewriter 
+cmd params
+\family default 
+' (from your underlying operating system).
+ 
+\layout Standard
+
+You can also define aliases with parameters using 
+\family typewriter 
+%s
+\family default 
+ specifiers (one per parameter).
+ The following example defines the 
+\family typewriter 
+@parts
+\family default 
+ function as an alias to the command '
+\family typewriter 
+echo first %s second %s
+\family default 
+' where each 
+\family typewriter 
+%s
+\family default 
+ will be replaced by a positional parameter to the call to 
+\family typewriter 
+@parts:
+\layout Standard
+
+
+\family typewriter 
+In [1]: alias parts echo first %s second %s
+\newline 
+In [2]: @parts A B
+\newline 
+first A second B 
+\newline 
+In [3]: @parts A 
+\newline 
+Incorrect number of arguments: 2 expected.
+ 
+\newline 
+parts is an alias to: 'echo first %s second %s' 
+\layout Standard
+
+If called with no parameters, 
+\family typewriter 
+@alias
+\family default 
+ prints the table of currently defined aliases.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:dreload}
+
+\end_inset 
+
+Recursive reload
+\layout Standard
+
+The 
+\family typewriter 
+@dreload
+\family default 
+ command does a recursive reload of a module: changes made to the module
+ since you imported will actually be available without having to exit.
+\layout Subsection
+
+Verbose and colored exception traceback printouts
+\layout Standard
+
+IPython provides the option to see very detailed exception tracebacks, which
+ can be especially useful when debugging large programs.
+ You can run any Python file with the 
+\family typewriter 
+@run
+\family default 
+ function to benefit from these detailed tracebacks.
+ Furthermore, both normal and verbose tracebacks can be colored (if your
+ terminal supports it) which makes them much easier to parse visually.
+\layout Standard
+
+See the magic 
+\family typewriter 
+xmode
+\family default 
+ and 
+\family typewriter 
+colors
+\family default 
+ functions for details (just type 
+\family typewriter 
+@magic
+\family default 
+).
+\layout Standard
+
+These features are basically a terminal version of Ka-Ping Yee's 
+\family typewriter 
+cgitb
+\family default 
+ module, now part of the standard Python library.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:cache_input}
+
+\end_inset 
+
+Input caching system
+\layout Standard
+
+IPython offers numbered prompts (In/Out) with input and output caching.
+ All input is saved and can be retrieved as variables (besides the usual
+ arrow key recall).
+\layout Standard
+
+The following GLOBAL variables always exist (so don't overwrite them!):
+ 
+\family typewriter 
+_i
+\family default 
+: stores previous input.
+ 
+\family typewriter 
+_ii
+\family default 
+: next previous.
+ 
+\family typewriter 
+_iii
+\family default 
+: next-next previous.
+ 
+\family typewriter 
+_ih
+\family default 
+ : a list of all input 
+\family typewriter 
+_ih[n]
+\family default 
+ is the input from line 
+\family typewriter 
+n
+\family default 
+ and this list is aliased to the global variable 
+\family typewriter 
+In
+\family default 
+.
+ If you overwrite 
+\family typewriter 
+In
+\family default 
+ with a variable of your own, you can remake the assignment to the internal
+ list with a simple 
+\family typewriter 
+'In=_ih'
+\family default 
+.
+\layout Standard
+
+Additionally, global variables named 
+\family typewriter 
+_i<n>
+\family default 
+ are dynamically created (
+\family typewriter 
+<n>
+\family default 
+ being the prompt counter), such that 
+\newline 
+
+\family typewriter 
+_i<n> == _ih[<n>] == In[<n>].
+\layout Standard
+
+For example, what you typed at prompt 14 is available as 
+\family typewriter 
+_i14,
+\family default 
+ 
+\family typewriter 
+_ih[14]
+\family default 
+ and 
+\family typewriter 
+In[14]
+\family default 
+.
+\layout Standard
+
+This allows you to easily cut and paste multi line interactive prompts by
+ printing them out: they print like a clean string, without prompt characters.
+ You can also manipulate them like regular variables (they are strings),
+ modify or exec them (typing 
+\family typewriter 
+'exec _i9'
+\family default 
+ will re-execute the contents of input prompt 9, '
+\family typewriter 
+exec In[9:14]+In[18]
+\family default 
+' will re-execute lines 9 through 13 and line 18).
+\layout Standard
+
+You can also re-execute multiple lines of input easily by using the magic
+ 
+\family typewriter 
+@macro
+\family default 
+ function (which automates the process and allows re-execution without having
+ to type '
+\family typewriter 
+exec
+\family default 
+' every time).
+ The macro system also allows you to re-execute previous lines which include
+ magic function calls (which require special processing).
+ Type 
+\family typewriter 
+@macro?
+\family default 
+ or see sec.
+ 
+\begin_inset LatexCommand \ref{sec:magic}
+
+\end_inset 
+
+ for more details on the macro system.
+\layout Standard
+
+A history function 
+\family typewriter 
+@hist
+\family default 
+ allows you to see any part of your input history by printing a range of
+ the 
+\family typewriter 
+_i
+\family default 
+ variables.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:cache_output}
+
+\end_inset 
+
+Output caching system
+\layout Standard
+
+For output that is returned from actions, a system similar to the input
+ cache exists but using 
+\family typewriter 
+_
+\family default 
+ instead of 
+\family typewriter 
+_i
+\family default 
+.
+ Only actions that produce a result (NOT assignments, for example) are cached.
+ If you are familiar with Mathematica, IPython's 
+\family typewriter 
+_
+\family default 
+ variables behave exactly like Mathematica's 
+\family typewriter 
+%
+\family default 
+ variables.
+\layout Standard
+
+The following GLOBAL variables always exist (so don't overwrite them!):
+ 
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+_
+\family default 
+\series default 
+ (a 
+\emph on 
+single
+\emph default 
+ underscore) : stores previous output, like Python's default interpreter.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+__
+\family default 
+\series default 
+ (two underscores): next previous.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+___
+\family default 
+\series default 
+ (three underscores): next-next previous.
+\layout Standard
+
+Additionally, global variables named 
+\family typewriter 
+_<n> 
+\family default 
+are dynamically created (
+\family typewriter 
+<n>
+\family default 
+ being the prompt counter), such that the result of output 
+\family typewriter 
+<n>
+\family default 
+ is always available as 
+\family typewriter 
+_<n>
+\family default 
+ (don't use the angle brackets, just the number, e.g.
+ 
+\family typewriter 
+_21
+\family default 
+).
+\layout Standard
+
+These global variables are all stored in a global dictionary (not a list,
+ since it only has entries for lines which returned a result) available
+ under the names 
+\family typewriter 
+_oh
+\family default 
+ and 
+\family typewriter 
+Out
+\family default 
+ (similar to 
+\family typewriter 
+_ih
+\family default 
+ and 
+\family typewriter 
+In
+\family default 
+).
+ So the output from line 12 can be obtained as 
+\family typewriter 
+_12
+\family default 
+, 
+\family typewriter 
+Out[12]
+\family default 
+ or 
+\family typewriter 
+_oh[12]
+\family default 
+.
+ If you accidentally overwrite the 
+\family typewriter 
+Out
+\family default 
+ variable you can recover it by typing 
+\family typewriter 
+'Out=_oh
+\family default 
+' at the prompt.
+\layout Standard
+
+This system obviously can potentially put heavy memory demands on your system,
+ since it prevents Python's garbage collector from removing any previously
+ computed results.
+ You can control how many results are kept in memory with the option (at
+ the command line or in your 
+\family typewriter 
+ipythonrc
+\family default 
+ file) 
+\family typewriter 
+cache_size
+\family default 
+.
+ If you set it to 0, the whole system is completely disabled and the prompts
+ revert to the classic 
+\family typewriter 
+'>>>'
+\family default 
+ of normal Python.
+\layout Subsection
+
+Directory history
+\layout Standard
+
+Your history of visited directories is kept in the global list 
+\family typewriter 
+_dh
+\family default 
+, and the magic 
+\family typewriter 
+@cd
+\family default 
+ command can be used to go to any entry in that list.
+ The 
+\family typewriter 
+@dhist
+\family default 
+ command allows you to view this history.
+\layout Subsection
+
+Automatic parentheses and quotes
+\layout Standard
+
+These features were adapted from Nathan Gray's LazyPython.
+ They are meant to allow less typing for common situations.
+\layout Subsubsection
+
+Automatic parentheses
+\layout Standard
+
+Callable objects (i.e.
+ functions, methods, etc) can be invoked like this (notice the commas between
+ the arguments):
+\layout Standard
+
+
+\family typewriter 
+>>> callable_ob arg1, arg2, arg3 
+\layout Standard
+
+and the input will be translated to this: 
+\layout Standard
+
+
+\family typewriter 
+--> callable_ob(arg1, arg2, arg3) 
+\layout Standard
+
+You can force automatic parentheses by using '/' as the first character
+ of a line.
+ For example:
+\layout Standard
+
+
+\family typewriter 
+>>> /globals # becomes 'globals()' 
+\layout Standard
+
+Note that the '/' MUST be the first character on the line! This won't work:
+ 
+\layout Standard
+
+
+\family typewriter 
+>>> print /globals # syntax error
+\layout Standard
+
+In most cases the automatic algorithm should work, so you should rarely
+ need to explicitly invoke /.
+ One notable exception is if you are trying to call a function with a list
+ of tuples as arguments (the parenthesis will confuse IPython): 
+\layout Standard
+
+
+\family typewriter 
+In [1]: zip (1,2,3),(4,5,6) # won't work 
+\layout Standard
+
+but this will work: 
+\layout Standard
+
+
+\family typewriter 
+In [2]: /zip (1,2,3),(4,5,6)
+\newline 
+------> zip ((1,2,3),(4,5,6)) 
+\newline 
+Out[2]= [(1, 4), (2, 5), (3, 6)] 
+\layout Subsubsection
+
+Automatic quoting 
+\layout Standard
+
+You can force automatic quoting of a function's arguments by using ',' as
+ the first character of a line.
+ For example: 
+\layout Standard
+
+
+\family typewriter 
+>>> ,my_function /home/me # becomes my_function("/home/me") 
+\layout Standard
+
+Note that the ',' MUST be the first character on the line! This won't work:
+ 
+\layout Standard
+
+
+\family typewriter 
+>>> x = ,my_function /home/me # syntax error
+\layout Subsubsection
+
+Notes on usage of these two features
+\layout Standard
+
+1.
+ IPython tells you that it has altered your command line by displaying the
+ new command line preceded by 
+\family typewriter 
+-->
+\family default 
+.
+ e.g.: 
+\layout Standard
+
+
+\family typewriter 
+In [18]: callable list
+\newline 
+-------> callable (list) 
+\layout Standard
+
+2.
+ Whitespace is more important than usual (even for Python!) Arguments to
+ auto-quote functions cannot have embedded whitespace.
+ 
+\layout Standard
+
+
+\family typewriter 
+In [21]: ,string.split a b
+\newline 
+-------> string.split ("a", "b")
+\newline 
+Out[21]= ['a'] # probably not what you wanted
+\newline 
+In [22]: string.split 'a b'
+\newline 
+-------> string.split ('a b') 
+\newline 
+Out[22]= ['a', 'b'] # quote explicitly and it works.
+\layout Section
+
+
+\begin_inset LatexCommand \label{sec:customization}
+
+\end_inset 
+
+Customization
+\layout Standard
+
+As we've already mentioned, IPython reads a configuration file which can
+ be specified at the command line (
+\family typewriter 
+-rcfile
+\family default 
+) or which by default is assumed to be called 
+\family typewriter 
+ipythonrc
+\family default 
+.
+ Such a file is looked for in the current directory where IPython is started
+ and then in your 
+\family typewriter 
+IPYTHONDIR
+\family default 
+, which allows you to have local configuration files for specific projects.
+ In this section we will call these types of configuration files simply
+ rcfiles (short for resource configuration file).
+\layout Standard
+
+The syntax of an rcfile is one of key-value pairs separated by whitespace,
+ one per line.
+ Lines beginning with a 
+\family typewriter 
+#
+\family default 
+ are ignored as comments, but comments can 
+\series bold 
+not
+\series default 
+ be put on lines with data (the parser is fairly primitive).
+ Note that these are not python files, and this is deliberate, because it
+ allows us to do some things which would be quite tricky to implement if
+ they were normal python files.
+\layout Standard
+
+First, an rcfile can contain permanent default values for almost all command
+ line options (except things like 
+\family typewriter 
+-help
+\family default 
+ or 
+\family typewriter 
+-Version
+\family default 
+).
+ However, values you explicitly specify at the command line override the
+ values defined in the rcfile.
+\layout Standard
+
+Besides command line option values, the rcfile can specify values for certain
+ extra special options which are not available at the command line.
+ These options are briefly described below.
+ 
+\layout Standard
+
+Each of these options may appear as many times as you need it in the file.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+include\SpecialChar ~
+<file1>\SpecialChar ~
+<file2>\SpecialChar ~
+...
+\family default 
+\series default 
+: you can name 
+\emph on 
+other 
+\emph default 
+rcfiles you want to recursively load up to 15 levels (don't use the 
+\family typewriter 
+<>
+\family default 
+ brackets in your names!).
+ This feature allows you to define a 'base' rcfile with general options
+ and special-purpose files which can be loaded only when needed with particular
+ configuration options.
+ To make this more convenient, IPython accepts the 
+\family typewriter 
+-profile <name>
+\family default 
+ option (abbreviates to 
+\family typewriter 
+-p <name
+\family default 
+>)
+\family typewriter 
+ which
+\family default 
+ tells it to look for an rcfile named 
+\family typewriter 
+ipythonrc-<name>
+\family default 
+.
+ 
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+import_mod\SpecialChar ~
+<mod1>\SpecialChar ~
+<mod2>\SpecialChar ~
+...
+\family default 
+\series default 
+: import modules with '
+\family typewriter 
+import
+\family default 
+ 
+\family typewriter 
+<mod1>,<mod2>,...
+\family default 
+' 
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+import_some\SpecialChar ~
+<mod>\SpecialChar ~
+<f1>\SpecialChar ~
+<f2>\SpecialChar ~
+...
+\family default 
+\series default 
+: import functions with '
+\family typewriter 
+from <mod> import
+\family default 
+ 
+\family typewriter 
+<f1>,<f2>,...
+\family default 
+' 
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+import_all\SpecialChar ~
+<mod1>\SpecialChar ~
+<mod2>\SpecialChar ~
+...
+\family default 
+\series default 
+: for each module listed import functions with '
+\family typewriter 
+from <mod> import *
+\family default 
+' 
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+execute\SpecialChar ~
+<python\SpecialChar ~
+code>
+\family default 
+\series default 
+: give any single-line python code to be executed.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+execfile\SpecialChar ~
+<filename>
+\family default 
+\series default 
+: execute the python file given with an '
+\family typewriter 
+execfile(filename)
+\family default 
+' command.
+ Username expansion is performed on the given names.
+ So if you need any amount of extra fancy customization that won't fit in
+ any of the above 'canned' options, you can just put it in a separate python
+ file and execute it.
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
+alias\SpecialChar ~
+<alias_def>
+\family default 
+\series default 
+: this is equivalent to calling '
+\family typewriter 
+@alias\SpecialChar ~
+<alias_def>
+\family default 
+' at the IPython command line.
+ This way, from within IPython you can do common system tasks without having
+ to exit it or use the 
+\family typewriter 
+!
+\family default 
+ escape.
+ IPython isn't meant to be a shell replacement, but it is often very useful
+ to be able to do things with files while testing code.
+ This gives you the flexibility to have within IPython any aliases you may
+ be used to under your normal system shell.
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:ipytonrc-sample}
+
+\end_inset 
+
+Sample 
+\family typewriter 
+ipythonrc
+\family default 
+ file
+\layout Standard
+
+The default rcfile, called 
+\family typewriter 
+ipythonrc
+\family default 
+ and supplied in your 
+\family typewriter 
+IPYTHONDIR 
+\family default 
+directory contains lots of comments on all of these options.
+ We reproduce it here for reference:
+\layout Standard
+
+
+\begin_inset Include \verbatiminput{../IPython/UserConfig/ipythonrc.py}
+
+\end_inset 
+
+
+\layout Subsection
+
+
+\begin_inset LatexCommand \label{sec:profiles}
+
+\end_inset 
+
+IPython profiles
+\layout Standard
+
+As we already mentioned, IPython supports the 
+\family typewriter 
+-profile
+\family default 
+ command-line option (see sec.
+ 
+\begin_inset LatexCommand \ref{sec:cmd-line-opts}
+
+\end_inset 
+
+).
+ A profile is nothing more than a particular configuration file like your
+ basic 
+\family typewriter 
+ipythonrc
+\family default 
+ one, but with particular customizations for a specific purpose.
+ When you start IPython with '
+\family typewriter 
+ipython -profile <name>
+\family default 
+', it assumes that in your 
+\family typewriter 
+IPYTHONDIR
+\family default 
+ there is a file called 
+\family typewriter 
+ipythonrc-<name>
+\family default 
+, and loads it instead of the normal 
+\family typewriter 
+ipythonrc
+\family default 
+.
+\layout Standard
+
+This system allows you to maintain multiple configurations which load modules,
+ set options, define functions, etc.
+ suitable for different tasks and activate them in a very simple manner.
+ In order to avoid having to repeat all of your basic options (common things
+ that don't change such as your color preferences, for example), any profile
+ can include another configuration file.
+ The most common way to use profiles is then to have each one include your
+ basic 
+\family typewriter 
+ipythonrc
+\family default 
+ file as a starting point, and then add further customizations.
+\layout Standard
+
+In sections 
+\begin_inset LatexCommand \ref{sec:syntax-extensions}
+
+\end_inset 
+
+ and 
+\begin_inset LatexCommand \ref{sec:Gnuplot}
+
+\end_inset 
+
+ we discuss some particular profiles which come as part of the standard
+ IPython distribution.
+ You may also look in your 
+\family typewriter 
+IPYTHONDIR
+\family default 
+ directory, any file whose name begins with 
+\family typewriter 
+ipythonrc-
+\family default 
+ is a profile.
+ You can use those as examples for further customizations to suit your own
+ needs.
+\layout Section
+
+Using IPython as your default Python environment.
+\layout Standard
+
+Python honors the environment variable 
+\family typewriter 
+PYTHONSTARTUP 
+\family default 
+and will execute at startup the file referenced by this variable.
+ If you put at the end of this file the following two lines of code:
+\layout Standard
+
+
+\family typewriter 
+import IPython
+\newline 
+IPython.Shell.IPShell().mainloop(sys_exit=1)
+\layout Standard
+
+then IPython will be your working environment anytime you start Python.
+ The 
+\family typewriter 
+sys_exit=1
+\family default 
+ is needed to have IPython issue a call to 
+\family typewriter 
+sys.exit()
+\family default 
+ when it finishes, otherwise you'll be back at the normal Python '
+\family typewriter 
+>>>
+\family default 
+' prompt
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+Based on an idea by Holger Krekel.
+\end_inset 
+
+.
+\layout Standard
+
+This is probably useful to developers who manage multiple Python versions
+ and don't want to have correspondingly multiple IPython versions.
+ Note that in this mode, there is no way to pass IPython any command-line
+ options, as those are trapped first by Python itself.
+\layout Section
+
+
+\begin_inset LatexCommand \label{sec:embed}
+
+\end_inset 
+
+Embedding IPython in other programs
+\layout Standard
+
+It is possible to start an IPython instance 
+\emph on 
+inside
+\emph default 
+ your own Python programs.
+ This allows you to evaluate dynamically the state of your code, operate
+ with your variables, analyze them, etc.
+ Note however that any changes you make to values while in the shell do
+ 
+\emph on 
+not
+\emph default 
+ propagate back to the running code, so it is safe to modify your values
+ because you won't break your code in bizarre ways by doing so.
+\layout Standard
+
+This feature allows you to easily have a fully functional python environment
+ for doing object introspection anywhere in your code with a simple function
+ call.
+ In some cases a simple print statement is enough, but if you need to do
+ more detailed analysis of a code fragment this feature can be very valuable.
+\layout Standard
+
+It can also be useful in scientific computing situations where it is common
+ to need to do some automatic, computationally intensive part and then stop
+ to look at data, plots, etc
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+This functionality was inspired by IDL's combination of the 
+\family typewriter 
+stop
+\family default 
+ keyword and the 
+\family typewriter 
+.continue
+\family default 
+ executive command, which I have found very useful in the past, and by a
+ posting on comp.lang.python by cmkl <cmkleffner@gmx.de> on Dec.
+ 06/01 concerning similar uses of pyrepl.
+\end_inset 
+
+.
+ Opening an IPython instance will give you full access to your data and
+ functions, and you can resume program execution once you are done with
+ the interactive part (perhaps to stop again later, as many times as needed).
+\layout Standard
+
+The following code snippet is the bare minimum you need to include in your
+ Python programs for this to work (detailed examples follow later):
+\layout Standard
+
+
+\family typewriter 
+from IPython.Shell import IPythonShellEmbed
+\newline 
+ipshell = IPythonShellEmbed()
+\newline 
+ipshell() # this call anywhere in your program will start IPython
+\layout Standard
+
+You can run embedded instances even in code which is itself being run at
+ the IPython interactive prompt with '
+\family typewriter 
+@run\SpecialChar ~
+<filename>
+\family default 
+'.
+ Since it's easy to get lost as to where you are (in your top-level IPython
+ or in your embedded one), it's a good idea in such cases to set the in/out
+ prompts to something different for the embedded instances.
+ The code examples below illustrate this.
+\layout Standard
+
+You can also have multiple IPython instances in your program and open them
+ separately, for example with different options for data presentation.
+ If you close and open the same instance multiple times, its prompt counters
+ simply continue from each execution to the next.
+\layout Standard
+
+Please look at the docstrings in the 
+\family typewriter 
+Shell.py
+\family default 
+ module for more details on the use of this system.
+\layout Standard
+
+The following sample file illustrating how to use the embedding functionality
+ is provided in your 
+\family typewriter 
+IPYTHONDIR
+\family default 
+ directory as 
+\family typewriter 
+example-embed.py
+\family default 
+.
+ It should be fairly self-explanatory:
+\layout Standard
+
+
+\begin_inset Include \verbatiminput{../IPython/UserConfig/example-embed.py}
+
+\end_inset 
+
+
+\layout Standard
+
+Once you understand how the system functions, you can use the following
+ code fragments in your programs which are ready for cut and paste (this
+ file is also in your 
+\family typewriter 
+IPYTHONDIR
+\family default 
+ directory as 
+\family typewriter 
+example-embed-short.py
+\family default 
+):
+\layout Standard
+
+
+\begin_inset Include \verbatiminput{../IPython/UserConfig/example-embed-short.py}
+
+\end_inset 
+
+
+\layout Section
+
+Using the Python debugger (
+\family typewriter 
+pdb
+\family default 
+)
+\layout Standard
+
+IPython, if started with the 
+\family typewriter 
+-pdb
+\family default 
+ option (or if the option is set in your rc file) can call the Python 
+\family typewriter 
+pdb
+\family default 
+ debugger every time your code triggers an uncaught exception
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+Many thanks to Christopher Hart for the request which prompted adding this
+ feature to IPython.
+\end_inset 
+
+.
+ This feature can also be turned on and off at any time with the 
+\family typewriter 
+@pdb
+\family default 
+ magic command.
+ This can be extremely useful in order to find the origin of subtle bugs,
+ because 
+\family typewriter 
+pdb
+\family default 
+ opens up at the point in your code which triggered the exception, and while
+ your program is at this point 'dead', all the data is still available and
+ you can walk up and down the stack frame and understand the origin of the
+ problem.
+\layout Standard
+
+Furthermore, you can use these debugging facilities both with the embedded
+ IPython mode and without IPython at all.
+ For an embedded shell (see sec.
+ 
+\begin_inset LatexCommand \ref{sec:embed}
+
+\end_inset 
+
+), simply call the constructor with 
+\family typewriter 
+'-pdb'
+\family default 
+ in the argument string and automatically 
+\family typewriter 
+pdb
+\family default 
+ will be called if an uncaught exception is triggered by your code.
+ 
+\layout Standard
+
+For stand-alone use of the feature in your programs which do not use IPython
+ at all, put the following lines toward the top of your 'main' routine:
+\layout Standard
+\align left 
+
+\family typewriter 
+import sys,IPython.ultraTB 
+\newline 
+sys.excepthook = IPython.ultraTB.FormattedTB(mode='Verbose', color_scheme='Linux',
+ call_pdb=1)
+\layout Standard
+
+The 
+\family typewriter 
+mode
+\family default 
+ keyword can be either 
+\family typewriter 
+'Verbose'
+\family default 
+ or 
+\family typewriter 
+'Plain'
+\family default 
+, giving either very detailed or normal tracebacks respectively.
+ The 
+\family typewriter 
+color_scheme
+\family default 
+ keyword can be one of 
+\family typewriter 
+'NoColor'
+\family default 
+, 
+\family typewriter 
+'Linux'
+\family default 
+ (default) or 
+\family typewriter 
+'LightBG'
+\family default 
+.
+ These are the same options which can be set in IPython with 
+\family typewriter 
+-colors
+\family default 
+ and 
+\family typewriter 
+-xmode
+\family default 
+.
+\layout Standard
+
+This will give any of your programs detailed, colored tracebacks with automatic
+ invocation of 
+\family typewriter 
+pdb
+\family default 
+.
+\layout Standard
+
+If you want more information on the use of the 
+\family typewriter 
+pdb
+\family default 
+ debugger, read the included 
+\family typewriter 
+pdb.doc
+\family default 
+ file (part of the standard Python distribution).
+ On a stock Mandrake Linux system it is located at 
+\family typewriter 
+/usr/lib/python2.2/pdb.doc
+\family default 
+, but the easiest way to read it is by using the 
+\family typewriter 
+help()
+\family default 
+ function of the 
+\family typewriter 
+pdb
+\family default 
+ module as follows (in an IPython prompt):
+\layout Standard
+
+
+\family typewriter 
+In [1]: import pdb
+\newline 
+In [2]: pdb.help()
+\layout Standard
+
+This will load the 
+\family typewriter 
+pdb.doc
+\family default 
+ document in a file viewer for you automatically.
+\layout Section
+
+
+\begin_inset LatexCommand \label{sec:syntax-extensions}
+
+\end_inset 
+
+Extensions for syntax processing
+\layout Standard
+
+This isn't for the faint of heart, because the potential for breaking things
+ is quite high.
+ But it can be a very powerful and useful feature.
+ In a nutshell, you can redefine the way IPython processes the user input
+ line to accept new, special extensions to the syntax without needing to
+ change any of IPython's own code.
+\layout Standard
+
+In the 
+\family typewriter 
+IPython/Extensions
+\family default 
+ directory you will find two examples supplied, which we will briefly describe
+ now.
+ These can be used 'as is' (and both provide very useful functionality),
+ or you can use them as a starting point for writing your own extensions.
+\layout Subsection
+
+Pasting of code fragments starting with '
+\family typewriter 
+>>> 
+\family default 
+' or '
+\family typewriter 
+...
+ 
+\family default 
+'
+\layout Standard
+
+In the python tutorial it is common to find code examples which have been
+ taken from real python sessions.
+ The problem with those is that all the lines begin with either '
+\family typewriter 
+>>> 
+\family default 
+' or '
+\family typewriter 
+...
+ 
+\family default 
+', which makes it impossible to paste them all at once.
+ One must instead do a line by line manual copying, carefully removing the
+ leading extraneous characters.
+\layout Standard
+
+This extension identifies those starting characters and removes them from
+ the input automatically, so that one can paste multi-line examples directly
+ into IPython, saving a lot of time.
+ Please look at the file 
+\family typewriter 
+InterpreterPasteInput.py
+\family default 
+ in the 
+\family typewriter 
+IPython/Extensions
+\family default 
+ directory for details on how this is done.
+\layout Standard
+
+IPython comes with a special profile enabling this feature, called 
+\family typewriter 
+tutorial
+\family default 
+\emph on 
+.
+
+\emph default 
+ Simply start IPython via 
+\family typewriter 
+'ipython\SpecialChar ~
+-p\SpecialChar ~
+tutorial'
+\family default 
+ and the feature will be available.
+ In a normal IPython session you can activate the feature by importing the
+ corresponding module with:
+\newline 
+
+\family typewriter 
+In [1]: import IPython.Extensions.InterpreterPasteInput
+\layout Standard
+
+The following is a 'screenshot' of how things work when this extension is
+ on, copying an example from the standard tutorial:
+\layout Standard
+
+
+\family typewriter 
+IPython profile: tutorial
+\newline 
+\SpecialChar ~
+
+\newline 
+*** Pasting of code with ">>>" or "..." has been enabled.
+\newline 
+\SpecialChar ~
+
+\newline 
+In [1]: >>> def fib2(n): # return Fibonacci series up to n
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+ ...: ...\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ """Return a list containing the Fibonacci series up to n."""
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+ ...: ...\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ result = []
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+ ...: ...\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ a, b = 0, 1
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+ ...: ...\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ while b < n:
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+ ...: ...\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ result.append(b)\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ # see below
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+ ...: ...\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ a, b = b, a+b
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+ ...: ...\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+ return result
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+ ...:
+\newline 
+\SpecialChar ~
+
+\newline 
+In [2]: fib2(10)
+\newline 
+Out[2]: [1, 1, 2, 3, 5, 8]
+\layout Standard
+
+Note that as currently written, this extension does 
+\emph on 
+not 
+\emph default 
+recognize IPython's prompts for pasting.
+ Those are more complicated, since the user can change them very easily,
+ they involve numbers and can vary in length.
+ One could however extract all the relevant information from the IPython
+ instance and build an appropriate regular expression.
+ This is left as an exercise for the reader.
+\layout Subsection
+
+Input of physical quantities with units
+\layout Standard
+
+The module 
+\family typewriter 
+PhysicalQInput
+\family default 
+ allows a simplified form of input for physical quantities with units.
+ This file is meant to be used in conjunction with the 
+\family typewriter 
+PhysicalQInteractive
+\family default 
+ module (in the same directory) and 
+\family typewriter 
+Physics.PhysicalQuantities
+\family default 
+ from Konrad Hinsen's ScientificPython (
+\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/hinsen/scientific.html}
+
+\end_inset 
+
+).
+\layout Standard
+
+The 
+\family typewriter 
+Physics.PhysicalQuantities
+\family default 
+ module defines 
+\family typewriter 
+PhysicalQuantity
+\family default 
+ objects, but these must be declared as instances of a class.
+ For example, to define 
+\family typewriter 
+v
+\family default 
+ as a velocity of 3\SpecialChar ~
+m/s, normally you would write:
+\family typewriter 
+
+\newline 
+In [1]: v = PhysicalQuantity(3,'m/s')
+\layout Standard
+
+Using the 
+\family typewriter 
+PhysicalQ_Input
+\family default 
+ extension this can be input instead as:
+\family typewriter 
+
+\newline 
+In [1]: v = 3 m/s
+\family default 
+
+\newline 
+which is much more convenient for interactive use (even though it is blatantly
+ invalid Python syntax).
+\layout Standard
+
+The 
+\family typewriter 
+physics
+\family default 
+ profile supplied with IPython (enabled via 
+\family typewriter 
+'ipython -p physics'
+\family default 
+) uses these extensions, which you can also activate with:
+\layout Standard
+
+
+\family typewriter 
+from math import * # math MUST be imported BEFORE PhysicalQInteractive
+\newline 
+from IPython.Extensions.PhysicalQInteractive import *
+\newline 
+import IPython.Extensions.PhysicalQInput
+\layout Section
+
+
+\begin_inset LatexCommand \label{sec:Gnuplot}
+
+\end_inset 
+
+Access to Gnuplot
+\layout Standard
+
+Through the magic extension system described in sec.
+ 
+\begin_inset LatexCommand \ref{sec:magic}
+
+\end_inset 
+
+, IPython incorporates a mechanism for conveniently interfacing with the
+ Gnuplot system (
+\begin_inset LatexCommand \htmlurl{http://www.gnuplot.vt.edu}
+
+\end_inset 
+
+).
+ Gnuplot is a very complete 2D and 3D plotting package available for many
+ operating systems and commonly included in modern Linux distributions.
+ 
+\layout Standard
+
+Besides having Gnuplot installed, this functionality requires the 
+\family typewriter 
+Gnuplot.py
+\family default 
+ module for interfacing python with Gnuplot.
+ It can be downloaded from: 
+\begin_inset LatexCommand \htmlurl{http://gnuplot-py.sourceforge.net}
+
+\end_inset 
+
+.
+\layout Subsection
+
+Proper Gnuplot configuration
+\layout Standard
+
+'Out of the box', Gnuplot is configured with a rather poor set of size,
+ color and linewidth choices which make the graphs fairly hard to read on
+ modern high-resolution displays (although they work fine on old 640x480
+ ones).
+ Below is a section of my 
+\family typewriter 
+.Xdefaults
+\family default 
+ file which I use for having a more convenient Gnuplot setup.
+ Remember to load it by running 
+\family typewriter 
+`xrdb .Xdefaults`
+\family default 
+:
+\layout Standard
+
+
+\family typewriter 
+!******************************************************************
+\newline 
+! gnuplot options
+\newline 
+! modify this for a convenient window size
+\newline 
+gnuplot*geometry: 780x580
+\layout Standard
+
+
+\family typewriter 
+! on-screen font (not for PostScript)
+\newline 
+gnuplot*font: -misc-fixed-bold-r-normal--15-120-100-100-c-90-iso8859-1
+\layout Standard
+
+
+\family typewriter 
+! color options
+\newline 
+gnuplot*background: black
+\newline 
+gnuplot*textColor: white
+\newline 
+gnuplot*borderColor: white
+\newline 
+gnuplot*axisColor: white
+\newline 
+gnuplot*line1Color: red
+\newline 
+gnuplot*line2Color: green
+\newline 
+gnuplot*line3Color: blue
+\newline 
+gnuplot*line4Color: magenta
+\newline 
+gnuplot*line5Color: cyan
+\newline 
+gnuplot*line6Color: sienna
+\newline 
+gnuplot*line7Color: orange
+\newline 
+gnuplot*line8Color: coral
+\layout Standard
+
+
+\family typewriter 
+! multiplicative factor for point styles
+\newline 
+gnuplot*pointsize: 2
+\layout Standard
+
+
+\family typewriter 
+! line width options (in pixels)
+\newline 
+gnuplot*borderWidth: 2
+\newline 
+gnuplot*axisWidth: 2
+\newline 
+gnuplot*line1Width: 2
+\newline 
+gnuplot*line2Width: 2
+\newline 
+gnuplot*line3Width: 2
+\newline 
+gnuplot*line4Width: 2
+\newline 
+gnuplot*line5Width: 2
+\newline 
+gnuplot*line6Width: 2
+\newline 
+gnuplot*line7Width: 2
+\newline 
+gnuplot*line8Width: 2
+\layout Subsection
+
+The 
+\family typewriter 
+IPython.GnuplotRuntime
+\family default 
+ module
+\layout Standard
+
+IPython includes a module called 
+\family typewriter 
+Gnuplot2.py
+\family default 
+ which extends and improves the default 
+\family typewriter 
+Gnuplot
+\family default 
+.
+\family typewriter 
+py
+\family default 
+ (which it still relies upon).
+ For example, the new 
+\family typewriter 
+plot
+\family default 
+ function adds several improvements to the original making it more convenient
+ for interactive use, and 
+\family typewriter 
+hardcopy
+\family default 
+ fixes a bug in the original which under some systems makes the resulting
+ PostScript files not be created.
+\layout Standard
+
+For scripting use, 
+\family typewriter 
+GnuplotRuntime.py
+\family default 
+ is provided, which wraps 
+\family typewriter 
+Gnuplot2.py
+\family default 
+ and creates a series of global aliases.
+ These make it easy to control Gnuplot plotting jobs through the Python
+ language.
+\layout Standard
+
+This system assumes you are using a reasonably recent version of Gnuplot
+ with mouse support.
+ If you are not and for some reason do not want to (or can not) upgrade,
+ you'll need to set 
+\family typewriter 
+gnuplot_mouse=0
+\family default 
+ in the 
+\family typewriter 
+IPython.GnuplotRuntime
+\family default 
+ module to prevent an error message from always appearing.
+\layout Standard
+
+Below is some example code which illustrates how to configure Gnuplot inside
+ your own programs but have it available for further interactive use through
+ an embedded IPython instance.
+ Simply run this file at a system prompt.
+ This file is provided in your 
+\family typewriter 
+IPYTHONDIR
+\family default 
+ as 
+\family typewriter 
+example-gnuplot.py
+\family default 
+:
+\layout Standard
+
+
+\begin_inset Include \verbatiminput{../IPython/UserConfig/example-gnuplot.py}
+
+\end_inset 
+
+
+\layout Subsection
+
+The 
+\family typewriter 
+numeric
+\family default 
+ profile: a scientific computing environment
+\layout Standard
+
+The 
+\family typewriter 
+numeric
+\family default 
+ IPython profile, which you can activate with '
+\family typewriter 
+ipython -p numeric
+\family default 
+' will automatically load the IPython Gnuplot extensions (plus Numeric and
+ other useful things for numerical computing), contained in the 
+\family typewriter 
+IPython.GnuplotInteractive
+\family default 
+ module.
+ This will create the globals 
+\family typewriter 
+Gnuplot 
+\family default 
+(an alias to the improved Gnuplot2 module), 
+\family typewriter 
+gp
+\family default 
+ (a Gnuplot active instance), the new magic commands 
+\family typewriter 
+@gpc
+\family default 
+ and 
+\family typewriter 
+@gp_set_instance
+\family default 
+ and several other convenient globals.
+ Type 
+\family typewriter 
+gphelp()
+\family default 
+ for further details.
+\layout Standard
+
+This should turn IPython into a convenient environment for numerical computing,
+ with all the functions in the NumPy library and the Gnuplot facilities
+ for plotting.
+ Further improvements can be obtained by loading the SciPy libraries for
+ scientific computing, available at 
+\begin_inset LatexCommand \htmlurl{http://scipy.org}
+
+\end_inset 
+
+.
+\layout Standard
+
+If you are in the middle of a working session with numerical objects and
+ need to plot them but you didn't start the 
+\family typewriter 
+numeric
+\family default 
+ profile, you can load these extensions at any time by typing
+\newline 
+
+\family typewriter 
+from GnuplotInteractive import *
+\newline 
+
+\family default 
+at the IPython prompt.
+ This will allow you to keep your objects intact and start using Gnuplot
+ to view them.
+\layout Section
+
+Reporting bugs
+\layout Standard
+
+Ideally, IPython itself shouldn't crash.
+ It will catch exceptions produced by you, but bugs in its internals will
+ still crash it.
+\layout Standard
+
+In such a situation, IPython will leave a file named 
+\family typewriter 
+'IPython_crash_report.txt'
+\family default 
+ in your IPYTHONDIR directory (that way if crashes happen several times
+ it won't litter many directories, the post-mortem file is always located
+ in the same place and new occurrences just overwrite the previous one).
+ If you can mail this file to the developers (see sec.
+ 
+\begin_inset LatexCommand \ref{sec:credits}
+
+\end_inset 
+
+ for names and addresses), it will help us 
+\emph on 
+a lot
+\emph default 
+ in understanding the cause of the problem and fixing it sooner.
+\layout Section
+
+Brief history
+\layout Subsection
+
+Origins
+\layout Standard
+
+The current IPython system grew out of the following three projects:
+\layout List
+\labelwidthstring 00.00.0000
+
+ipython by Fernando Pérez.
+ I was working on adding Mathematica-type prompts and a flexible configuration
+ system (something better than $PYTHONSTARTUP) to the standard Python interactiv
+e interpreter.
+\layout List
+\labelwidthstring 00.00.0000
+
+IPP by Janko Hauser.
+ Very well organized, great usability.
+ Had an old help system.
+ IPP was used as the `container' code into which I added the functionality
+ from the other two systems.
+\layout List
+\labelwidthstring 00.00.0000
+
+LazyPython by Nathan Gray.
+ Simple but 
+\emph on 
+very
+\emph default 
+ powerful.
+ The quick syntax (auto parens, auto quotes) and verbose/colored tracebacks
+ were all taken from here.
+\layout Standard
+
+When I found out (see sec.
+ 
+\begin_inset LatexCommand \ref{figgins}
+
+\end_inset 
+
+) about IPP and LazyPython I tried to join all three into a unified system.
+ I thought this could provide a very nice working environment, both for
+ regular programming and scientific computing: shell-like features, IDL/Matlab
+ numerics, Mathematica-type prompt history and great object introspection
+ and help facilities.
+ I think it worked reasonably well, though it was a lot more work I had
+ initially planned.
+\layout Subsection
+
+Current status
+\layout Standard
+
+The above listed features work, and quite well for the most part.
+ But until a major internal restructuring is done (see below), only bug
+ fixing will be done, no other features will be added (unless very minor
+ and well localized in the cleaner parts of the code).
+\layout Standard
+
+IPython consists of almost 11000 lines of pure python code, of which roughly
+ 50% are fairly clean.
+ The other 50% are fragile, messy code which needs a massive restructuring
+ before any further major work is done.
+ Even the messy code is fairly well documented though, and most of the problems
+ in the (non-existent) class design are well pointed to by a PyChecker run.
+ So the rewriting work isn't that bad, it will just be time-consuming.
+\layout Subsection
+
+Future
+\layout Standard
+
+See the separate 
+\family typewriter 
+new_design
+\family default 
+ document for details.
+ Ultimately, I would like to see IPython become part of the standard Python
+ distribution as a `big brother with batteries' to the standard Python interacti
+ve interpreter.
+ But that will never happen with the current state of the code, so all contribut
+ions are welcome.
+\layout Section
+
+License
+\layout Standard
+
+Unless indicated otherwise, files in this project are covered by the GNU
+ Lesser General Public License (LGPL).
+ Its full text is included in the file GNU-LGPL or can be obtained directly
+ from the Free Software Foundation at: 
+\begin_inset LatexCommand \htmlurl{http://www.gnu.org/copyleft/lesser.html}
+
+\end_inset 
+
+.
+\layout Standard
+
+IPython is distributed in the hope that it will be useful, but WITHOUT ANY
+ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ FOR A PARTICULAR PURPOSE.
+ See the GNU Lesser General Public License for more details.
+\layout Standard
+
+Individual authors are the holders of the copyright for their code and are
+ listed in each file.
+\layout Standard
+
+Some files (
+\family typewriter 
+DPyGetOpt.py
+\family default 
+, for example) may be licensed under different conditions.
+ Ultimately each file indicates clearly the conditions under which its author/au
+thors have decided to publish the code.
+\layout Section
+
+
+\begin_inset LatexCommand \label{sec:credits}
+
+\end_inset 
+
+Credits
+\layout Standard
+
+The main authors of the code are:
+\layout Standard
+
+Fernando Pérez <fperez@pizero.colorado.edu> (currently main contact)
+\layout Standard
+
+Janko Hauser <jhauser@ifm.uni-kiel.de> 
+\layout Standard
+
+Nathan Gray <n8gray@caltech.edu>
+\layout Standard
+
+And we are very grateful to:
+\layout Standard
+
+Bill Bumgarner <bbum@friday.com>: for providing the DPyGetOpt module which
+ gives very powerful and convenient handling of command-line options (light
+ years ahead of what Python 2.1.1's getopt module does).
+\layout Standard
+
+Ka-Ping Yee <ping@lfw.org>: for providing the Itpl module for convenient
+ and powerful string interpolation with a much nicer syntax than formatting
+ through the '%' operator.
+\layout Standard
+
+Arnd Bäcker <arnd.baecker@physik.uni-ulm.de>: for his many very useful suggestions
+ and comments, and lots of help with testing and documentation checking.
+ Many of IPython's newer features are a result of discussions with him (bugs
+ are still my fault, not his).
+\layout Standard
+
+Obviously Guido van\SpecialChar ~
+Rossum and the whole Python development team, that goes
+ without saying.
+\layout Standard
+
+
+\begin_inset LatexCommand \label{figgins}
+
+\end_inset 
+
+Fernando would also like to thank Stephen Figgins <fig@monitor.net>, an O'Reilly
+ Python editor.
+ His Oct/11/01 article about IPP and LazyPython, was what got this project
+ started.
+ You can read it at: 
+\begin_inset LatexCommand \htmlurl{http://www.onlamp.com/pub/a/python/2001/10/11/pythonnews.html}
+
+\end_inset 
+
+.
+\layout Standard
+
+And last but not least, all the kind IPython users who have emailed bug
+ reports, fixes, comments and ideas.
+ A brief list follows, please let me know if I have ommitted your name by
+ accident: 
+\layout List
+\labelwidthstring 00.00.0000
+
+Mike\SpecialChar ~
+Heeter 
+\family typewriter 
+<korora@SDF.LONESTAR.ORG>
+\layout List
+\labelwidthstring 00.00.0000
+
+Christopher\SpecialChar ~
+Hart 
+\family typewriter 
+<hart@caltech.edu>
+\family default 
+ PDB integration.
+\layout List
+\labelwidthstring 00.00.0000
+
+Milan\SpecialChar ~
+Zamazal 
+\family typewriter 
+<pdm@zamazal.org>
+\family default 
+ Emacs info.
+\layout List
+\labelwidthstring 00.00.0000
+
+Philip\SpecialChar ~
+Hisley 
+\family typewriter 
+<compsys@starpower.net>
+\layout List
+\labelwidthstring 00.00.0000
+
+Holger\SpecialChar ~
+Krekel 
+\family typewriter 
+<pyth@devel.trillke.net>
+\family default 
+ Tab completion, lots more.
+\layout List
+\labelwidthstring 00.00.0000
+
+Alexander\SpecialChar ~
+Schmolck 
+\family typewriter 
+<a.schmolck@gmx.net> 
+\family default 
+Emacs work, bug reports, bug fixes, ideas, lots more.
+\layout List
+\labelwidthstring 00.00.0000
+
+Robin\SpecialChar ~
+Siebler 
+\family typewriter 
+<robinsiebler@starband.net>
+\layout List
+\labelwidthstring 00.00.0000
+
+Ralf\SpecialChar ~
+Ahlbrink
+\family typewriter 
+ <ralf_ahlbrink@web.de>
+\layout List
+\labelwidthstring 00.00.0000
+
+Andrea\SpecialChar ~
+Riciputi 
+\family typewriter 
+<andrea.riciputi@libero.it>
+\family default 
+ Mac OSX information.
+\layout List
+\labelwidthstring 00.00.0000
+
+Thorsten\SpecialChar ~
+Kampe 
+\family typewriter 
+<thorsten@thorstenkampe.de>
+\layout List
+\labelwidthstring 00.00.0000
+
+Fredrik\SpecialChar ~
+Kant 
+\family typewriter 
+<fredrik.kant@front.com>
+\family default 
+ Windows setup.
+\layout List
+\labelwidthstring 00.00.0000
+
+Syver\SpecialChar ~
+Enstad 
+\family typewriter 
+<syver-en@online.no>
+\family default 
+ Windows setup.
+\layout List
+\labelwidthstring 00.00.0000
+
+Richard 
+\family typewriter 
+<rxe@renre-europe.com>
+\family default 
+ Global embedding.
+\layout List
+\labelwidthstring 00.00.0000
+
+Hayden\SpecialChar ~
+Callow 
+\family typewriter 
+<h.callow@elec.canterbury.ac.nz>
+\family default 
+ Gnuplot.py 1.6 compatibility.
+\layout List
+\labelwidthstring 00.00.0000
+
+Leonardo\SpecialChar ~
+Santagada 
+\family typewriter 
+<retype@terra.com.br>
+\family default 
+ Fixes for Windows installation.
+\layout List
+\labelwidthstring 00.00.0000
+
+Christopher\SpecialChar ~
+Armstrong 
+\family typewriter 
+<radix@twistedmatrix.com>
+\family default 
+ Bugfixes.
+\layout List
+\labelwidthstring 00.00.0000
+
+François\SpecialChar ~
+Pinard 
+\family typewriter 
+<pinard@iro.umontreal.ca>
+\family default 
+ Code and documentation fixes.
+\layout List
+\labelwidthstring 00.00.0000
+
+Cory\SpecialChar ~
+Dodt 
+\family typewriter 
+<cdodt@fcoe.k12.ca.us>
+\family default 
+ Bug reports and Windows ideas.
+\the_end
