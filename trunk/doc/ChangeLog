@@ -1,3 +1,9 @@
+2004-06-16  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Prompts.py (Prompt2.set_colors): prevent crashes for
+	users who haven't # updated their prompt_in2 definitions.  Remove
+	eventually.
+
 2004-06-15  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (InteractiveShell.__init__): add 'cp' to the
