@@ -262,8 +262,7 @@ class ListTB(TBTools):
         if elist:
             out_string.append('Traceback %s(most recent call last)%s:' % \
                                 (Colors.normalEm, Colors.Normal) + '\n')
-            slist = self._format_list(elist)
-            out_string.extend(slist)
+            out_string.extend(self._format_list(elist))
         lines = self._format_exception_only(etype, value)
         for line in lines[:-1]:
             out_string.append(" "+line)

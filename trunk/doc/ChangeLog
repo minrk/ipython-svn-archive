@@ -1,5 +1,14 @@
 2004-05-06  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/ultraTB.py (ListTB.text): modified a ton of string +=
+	operations to use the vastly more efficient list/''.join() method.
+	(FormattedTB.text): Fix
+	http://www.scipy.net/roundup/ipython/issue12 - exception source
+	extract not updated after reload.  Thanks to Mike Salib
+	<msalib@mit.edu> for pinning the source of the problem.
+	Fortunately, the solution works inside ipython and doesn't require
+	any changes to python proper.
+
 	* IPython/Magic.py (Magic.parse_options): Improved to process the
 	argument list as a true shell would (by actually using the
 	underlying system shell).  This way, all @magics automatically get
