@@ -149,7 +149,6 @@ try:
                 return None
 
 except ImportError:
-    print 'IE'
     pass  # no readline support
 
 except KeyError:
@@ -302,6 +301,14 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.ESC_MAGIC = '@'
         self.ESC_QUOTE = ','
         self.ESC_PAREN = '/'
+
+        # And their associated handlers
+        self.esc_handlers = {self.ESC_PAREN:self.handle_auto,
+                             self.ESC_QUOTE:self.handle_auto,
+                             self.ESC_MAGIC:self.handle_magic,
+                             self.ESC_HELP:self.handle_help,
+                             self.ESC_SHELL:self.handle_shell_escape,
+                             }
 
         # RegExp for splitting line contents into pre-char//first word-method//rest
         # update the regexp if the above escapes are changed
@@ -913,6 +920,17 @@ There seemed to be a problem with your sys.stderr.
         """
         return self.prefilter(raw_input(prompt),
                               prompt==self.outputcache.prompt2)
+        
+    def split_user_input(self,line):
+        """Split user input into pre-char, function part and rest."""
+
+        lsplit = self.line_split.match(line)
+        if lsplit is None:  # no regexp match returns None
+            pre,iFun,theRest = '',line,''
+        else:
+            pre,iFun,theRest = lsplit.groups()
+        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest)  # dbg
+        return pre,iFun,theRest
 
     def _prefilter(self, line, continue_prompt):
         """Calls different preprocessors, depending on the form of line."""
@@ -923,14 +941,11 @@ There seemed to be a problem with your sys.stderr.
         # as needed, update the cache AND log it (so that the input cache
         # array stays synced).
 
-        #if line.startswith('@crash'): raise 'Crash now!'  # dbg
+        #if line.startswith('@crash'): raise RuntimeError,'Crash now!'  # dbg
 
         # save the line away in case we crash, so the post-mortem handler can
         # record it
         self._last_input_line = line
-
-        if line.endswith('# PYTHON-MODE'):
-            return self.handle_emacs(line,continue_prompt)
 
         # the input history needs to track even empty lines
         if not line.strip():
@@ -940,35 +955,44 @@ There seemed to be a problem with your sys.stderr.
         # special handlers only allowed for single line statements
         if continue_prompt:
             return self.handle_normal(line,continue_prompt)
-        # Break the line into component parts for possible auto-execution
-        lsplit = self.line_split.match(line)
-        if lsplit is None:  # no regexp match returns None
-            iFun,theRest = line,''
-            #print 'iFun <%s> rest <%s>' % (iFun,theRest)  # dbg
-        else:
-            pre,iFun,theRest = lsplit.groups()
-            #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest)  # dbg
 
-        # First check for explicit escapes in the first character
-        line0 = line[0]
-        if line0 == self.ESC_SHELL:
-            return self.handle_shell_escape(line)
-        # Both ?word and  word? go to help
-        elif line0 == self.ESC_HELP or line[-1] == self.ESC_HELP:
-            return self.handle_help(line,continue_prompt)
-        elif line0 == self.ESC_MAGIC:
-            return self.handle_magic(line)
-        elif line0 in self.ESC_QUOTE+self.ESC_PAREN:
-            return self.handle_auto(line0,iFun,theRest,line)
+        # First check for explicit escapes in the last/first character
+        handler = None
+        if line[-1] == self.ESC_HELP:
+            handler = self.esc_handlers.get(line[-1])  # the ? can be at the end
+        if handler is None:
+            handler = self.esc_handlers.get(line[0])
+        if handler is not None:
+            return handler(line,continue_prompt)
+
+        # Emacs ipython-mode tags certain input lines
+        if line.endswith('# PYTHON-MODE'):
+            return self.handle_emacs(line,continue_prompt)
 
         # Next, check if we can automatically execute this thing
-        oinfo = self._ofind(iFun.strip()) # FIXME - _ofind is part of Magic
+        pre,iFun,theRest = self.split_user_input(line)
+
+        # Let's try to find if the input line is a magic fn
+        oinfo = None
+        if hasattr(self,'magic_'+iFun.strip()):
+            oinfo = self._ofind(iFun.strip()) # FIXME - _ofind is part of Magic
+            if oinfo['ismagic']:
+                # Be careful not to call magics when a variable assignment is
+                # being made (ls='hi', for example)
+                if self.rc.automagic and \
+                       (len(theRest)==0 or theRest[0] not in '!=()<>'):
+                    return self.handle_magic('@'+line.lstrip(),continue_prompt)
+                else:
+                    return self.handle_normal(line,continue_prompt)
+
+        if oinfo is None:
+            oinfo = self._ofind(iFun.strip()) # FIXME - _ofind is part of Magic
 
         if not oinfo['found']:
             #print 'not found'  # dbg
             return self.handle_normal(line,continue_prompt)
 
-        if not oinfo['ismagic']:
+        else:
             #print 'iFun <%s> rest <%s>' % (iFun,theRest) # dbg
             if self.rc.autocall and \
                    (len(theRest)==0 or theRest[0] not in '!=()<>') and \
@@ -976,21 +1000,17 @@ There seemed to be a problem with your sys.stderr.
                    callable(oinfo['obj']) :
                 #print 'going auto'  # dbg
                 #print 'fun match', self.fun_name.match(iFun)  # dbg
-                return self.handle_auto(self.ESC_PAREN,iFun,theRest,line)
+                return self.handle_auto(line,continue_prompt)
             else:
                 #print 'was callable?', callable(oinfo['obj'])  # dbg
                 #print 'fun match', self.fun_name.match(iFun)  # dbg
                 return self.handle_normal(line,continue_prompt)
-        else:
-            # Be careful not to call magics when a variable assignment is
-            # being made (ls='hi', for example)
-            if self.rc.automagic and \
-                   (len(theRest)==0 or theRest[0] not in '!=()<>'):
-                return self.handle_magic('@'+line.lstrip())
-            else:
-                return self.handle_normal(line,continue_prompt)
 
         # If we get here, we have a normal Python line. Log and return.
+        return self.handle_normal(line,continue_prompt)
+
+    def _prefilter_dumb(self, line, continue_prompt):
+        """simple prefilter function, for debugging"""
         return self.handle_normal(line,continue_prompt)
 
     # Set the default prefilter() function (this can be user-overridden)
@@ -1003,7 +1023,7 @@ There seemed to be a problem with your sys.stderr.
         self.update_cache(line)
         return line
 
-    def handle_shell_escape(self, line):
+    def handle_shell_escape(self, line, continue_prompt=None):
         """Execute the line in a shell, empty return value"""
 
         # Example of a special handler. Others follow a similar pattern.
@@ -1061,7 +1081,7 @@ There seemed to be a problem with your sys.stderr.
             # If the code compiles ok, we should handle it normally
             return self.handle_normal(line,continue_prompt)
 
-    def handle_magic(self, line):
+    def handle_magic(self, line, continue_prompt=None):
         """Execute magic functions.
 
         Also log them with a prepended # so the log is clean Python."""
@@ -1078,21 +1098,20 @@ There seemed to be a problem with your sys.stderr.
             parameter_s = ''
             scommand = line
         if hasattr(self, scommand):
-            if parameter_s.startswith('"'):
-                parameter_s = ' ' + parameter_s
-            if parameter_s.endswith('"'):
-                parameter_s += ' '
-            return shell+scommand+'(parameter_s="""%s""")' % (parameter_s,)
+            parameter_s = ' %s ' % parameter_s # Protect quotes at the end
+            return '%s%s(parameter_s=r"""%s"""[1:-1])' % (shell,scommand,
+                                                          parameter_s)
         else:
-            return shell+line+'()'
+            return '%s%s()' % (shell,line)
 
-    def handle_auto(self, line0, iFun,theRest,line):
+    def handle_auto(self, line, continue_prompt):
         """Hande lines which can be auto-executed, quoting if requested.
 
         Also log them with a prepended # so the log is clean Python."""
 
+        pre,iFun,theRest = self.split_user_input(line)
         # print 'auto: '+line0+'|'+iFun+'|'+theRest  # dbg
-        if line0 == self.ESC_QUOTE:
+        if line[0] == self.ESC_QUOTE:
             # Auto-quote
             newcmd = iFun + '("' + '", "'.join(theRest.split()) + '")\n'
         else:
