@@ -1,3 +1,10 @@
+2003-10-06  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/DPyGetOpt.py (DPyGetOpt.processArguments): changed to
+	prevent crashes if sys lacks an argv attribute (it happens with
+	embedded interpreters which build a bare-bones sys module).
+	Thanks to a report/bugfix by Adam Hupp <hupp@cs.wisc.edu>.
+
 2003-09-24  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py (Magic._ofind): blanket except around getattr()
