@@ -59,18 +59,33 @@ This is a draft document with notes and ideas for the IPython rewrite.
 A tentative plan for the future:
 \layout Itemize
 
-0.2.x: series for bug fixing only and as a reference of functionality.
+0.4.x series: the long-running 0.2 series got a number upgrade, to signal all
+ the recent improvements which haven't seen much public announcement.
+ In practice, enough people are using IPython for real work that I think
+ it warrants a higher number.
+ This series will continue to evolve with bugfixes and incremental improvements.
 \layout Itemize
 
-0.3.x: Start from a stable 0.2.x and restructure the code (see below) in 0.3.x
- until it has all the 0.2.x functionality but with a sound internal architecture.
-\layout Itemize
+0.5.x series: (maybe) If resources allow, there may be a branch for 'unstable'
+ development, where the architectural rewrite may take place.
+\layout Standard
 
-0.4.x: once the 0.3.x series is completed and stable, release 0.4.x for future
- bug fixing.
-\layout Itemize
+However, I am starting to doubt it is feasible to keep two separate branches.
+ I am leaning more towards a 
+\begin_inset ERT
+status Collapsed
 
-0.5.x: future development on the new architecture.
+\layout Standard
+
+\backslash 
+LyX
+\end_inset 
+
+-like approach, where the main branch slowly transforms and evolves.
+ Having CVS support now makes this a reasonable alternative, as I don't
+ have to make pre-releases as often.
+ The 0.8 branch can remain the mainline of development, and users interested
+ in the bleeding-edge stuff can always grab the CVS code.
 \layout Standard
 
 Ideally, IPython should have a clean class setup that would allow further
@@ -81,6 +96,199 @@ Ideally, IPython should have a clean class setup that would allow further
  The basic hooks are there: the magic extension syntax and the flexible
  system of recursive configuration files and profiles.
  But with a code as messy as the current one, nobody is going to touch it.
+\layout Section
+
+Immediate TODO and bug list
+\layout Standard
+
+Things that should be done for the current series, before starting major
+ changes.
+\layout Itemize
+
+Fix any bugs reported at the online bug tracker.
+\layout Itemize
+
+Clean up FakeModule issues.
+ Currently, unittesting with embedded ipython breaks because a FakeModule
+ instance overwrites __main__.
+ Maybe ipython should revert back to using __main__ directly as the user
+ namespace? Handling a separate namespace is proving 
+\emph on 
+very
+\emph default 
+ tricky in all corner cases.
+\layout Itemize
+
+Make the output cache depth independent of the input one.
+ This way one can have say only the last 10 results stored and still have
+ a long input history/cache.
+\layout Itemize
+
+Fix the fact that importing a shell for embedding screws up the command-line
+ history.
+ This can be done by not importing the history file when the shell is already
+ inside ipython.
+\layout Itemize
+
+Consider redesigning the output traps.
+ They cause problems when users try to execute code which relies on sys.stdout
+ being the 'true' sys.stdout.
+ The best solution is probably to print the banner first, and then just
+ execute all the user code straight with no output traps at all.
+ Whatever comes out comes out.
+ This makes the ipython code actually simpler, and eliminates the problem
+ altogether.
+\layout Itemize
+
+Fix Windows bug reported by Tony Cappellini.
+\layout Itemize
+
+Improve Windows installer.
+ Suggestion by Cory Dodt:
+\newline 
+
+\newline 
+And the suggestion: I noticed that you do some tricks with setup.py so that
+ you can double-click it.
+ I _suspect_ you did this because bdist_wininst doesn't do post-installation
+ stuff, meaning you can't install your data files and documentation to a
+ sensible place, all you can do is drop code into c:
+\backslash 
+pythonxx.
+\newline 
+
+\newline 
+I hit this problem on my own project.
+ The solution, if you're interested in it, is to get cvs distutils (version
+ 1.0.3 currently).
+\newline 
+
+\newline 
+c:
+\backslash 
+>python setup.py bdist_wininst --install-script your_post_install_stuff.py
+\newline 
+
+\newline 
+your_post_install_stuff.py can do anything you want.
+ It sends stdout to a frame that's displayed directly in the installer,
+ which is very nice and Windows-y.
+ And you can distribute an executable, instead of a zip file.
+ 
+\layout Itemize
+
+Try to add readline support to windows: http://newcenturycomputers.net/projects/r
+eadline.html.
+ Currently using this apparently crashes everything (see report by Thilo
+ Ernst).
+ It may be fixable.
+\layout Itemize
+
+Get Holger's completer in, once he adds filename completion.
+\layout Standard
+
+Lower priority stuff:
+\layout Itemize
+
+Add @showopt/@setopt (decide name) for viewing/setting all options.
+ The existing option-setting magics should become aliases for setopt calls.
+\layout Itemize
+
+'cd' under windows doesn't know how to change drive letters.
+ 
+\layout Itemize
+
+It would be nice to be able to continue with python stuff after an @ command.
+ For instance "@run something; test_stuff()" in order to test stuff even
+ faster.
+ Suggestion by Kasper Souren <Kasper.Souren@ircam.fr>
+\layout Itemize
+
+Run a 'first time wizard' which configures a few things for the user, such
+ as color_info, editor and the like.
+\layout Itemize
+
+Logging: @logstart and -log should start logfiles in ~.ipython, but with
+ unique names in case of collisions.
+ This would prevent ipython.log files all over while also allowing multiple
+ sessions.
+ Also the -log option should take an optional filename, instead of having
+ a separate -logfile option.
+\newline 
+In general the logging system needs a serious cleanup.
+ Many functions now in Magic should be moved to Logger, and the magic @s
+ should be very simple wrappers to the Logger methods.
+\layout Itemize
+
+Fix exception reporting.
+ It seems that inspect is getting the build paths for sources instead of
+ the current paths, and that's confusing ultraTB.
+\newline 
+
+\series bold 
+STATUS:
+\series default 
+ The problem is actually with the way RedHat built python:
+\newline 
+
+\family typewriter 
+In [3]: pickle.dump.func_code.co_filename 
+\newline 
+Out[3]: '/usr/src/build/143041-i386/install/usr/lib/python2.2/pickle.py'
+\newline 
+In [4]: pickle.__file__ 
+\newline 
+Out[4]: '/usr/lib/python2.2/pickle.pyc'
+\newline 
+
+\family default 
+Since those build files can't be found, we get None as filenames for all
+ functions which are part of the standard distribution.
+ Who knows how they built python, because this problem does _not_ occur
+ with normal distutils-based builds:
+\newline 
+
+\family typewriter 
+In [2]: Numeric.array_str.func_code.co_filename
+\newline 
+Out[2]: '/usr/lib/python2.2/site-packages/Numeric/Numeric.py'
+\newline 
+
+\family default 
+Even though Numeric was first built in some separate directory and only
+ later installed there.
+\layout Itemize
+
+Allow ipython to handle input from stdin.
+ Typical test case:
+\newline 
+
+\family typewriter 
+[~]> [~]> echo "print 2+4" | python 
+\newline 
+6 
+\newline 
+[~]> echo "print 2+4" | ipython 
+\newline 
+python: Objects/stringobject.c:111: PyString_FromString: Assertion `str !=
+ ((void *)0)' failed.
+ 
+\newline 
+Abort 
+\family default 
+
+\newline 
+This matters also for emacs integration, since a C-c-| will crash if ipython
+ hasn't been opened yet.
+ This should include supporting option '-c' just like the regular python.
+\newline 
+
+\series bold 
+STATUS
+\series default 
+: this is actually a Python bug.
+ I reported it at SF, it is fixed for 2.3 (and possibly in 2.2.3, if it is
+ released).
 \layout Section
 
 Lighten the code
@@ -210,6 +418,8 @@ It would be great to design the command-line processing system so that it
  can be dynamically modified in some easy way.
  This would allow systems based on IPython to include their own command-line
  processing to either extend or fully replace IPython's.
+ Probably moving to the new optparse library (also known as optik) will
+ make this a lot easier.
 \layout Section
 
 OS-dependent code
@@ -281,7 +491,7 @@ pyrepl
 \labelwidthstring 00.00.0000
 
 PyCrust 
-\begin_inset LatexCommand \htmlurl{http://sourceforge.net/projects/pycrust/}
+\begin_inset LatexCommand \htmlurl{http://sourceforge.net/projects/pycrust}
 
 \end_inset 
 
@@ -291,7 +501,7 @@ PyCrust
 \labelwidthstring 00.00.0000
 
 PythonWin 
-\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mhammond/}
+\begin_inset LatexCommand \htmlurl{http://starship.python.net/crew/mhammond}
 
 \end_inset 
 
@@ -655,7 +865,7 @@ When from <mod> import * is used, first check the existing namespace and
  at least issue a warning on screen if names are overwritten.
 \layout Itemize
 
-Auto indent? This would be nice to have, don't know how tricky to do.
+Auto indent? Done, for users with readline support.
 \layout Subsection
 
 Better completion a la zsh
@@ -728,223 +938,6 @@ compctl -g '*.tex' tex
 \layout Standard
 
 ...
-\layout Section
-
-Immediate TODO and bug list
-\layout Standard
-
-Things that should be done for the current series, before starting major
- changes.
-\layout Itemize
-
-Clean up FakeModule issues.
- Currently, unittesting with embedded ipython breaks because a FakeModule
- instance overwrites __main__.
- Maybe ipython should revert back to using __main__ directly as the user
- namespace? Handling a separate namespace is proving 
-\emph on 
-very
-\emph default 
- tricky in all corner cases.
-\layout Itemize
-
-When ';' is appended to the end of the line, the output cache is still being
- set (along with _).
-\layout Itemize
-
-Make the output cache depth independent of the input one.
- This way one can have say only the last 10 results stored and still have
- a long input history/cache.
-\layout Itemize
-
-Fix the fact that importing a shell for embedding screws up the command-line
- history.
- This can be done by not importing the history file when the shell is already
- inside ipython.
-\layout Itemize
-
-Simplify a bit the output of ?.
- There seems to be more detail in ? than necessary for daily work, maybe
- some things should be moved to ??.
-\layout Itemize
-
-Fix Windows bug reported by Tony Cappellini.
-\layout Itemize
-
-Improve Windows installer.
- Suggestion by Cory Dodt:
-\newline 
-
-\newline 
-And the suggestion: I noticed that you do some tricks with setup.py so that
- you can double-click it.
- I _suspect_ you did this because bdist_wininst doesn't do post-installation
- stuff, meaning you can't install your data files and documentation to a
- sensible place, all you can do is drop code into c:
-\backslash 
-pythonxx.
-\newline 
-
-\newline 
-I hit this problem on my own project.
- The solution, if you're interested in it, is to get cvs distutils (version
- 1.0.3 currently).
-\newline 
-
-\newline 
-c:
-\backslash 
->python setup.py bdist_wininst --install-script your_post_install_stuff.py
-\newline 
-
-\newline 
-your_post_install_stuff.py can do anything you want.
- It sends stdout to a frame that's displayed directly in the installer,
- which is very nice and Windows-y.
- And you can distribute an executable, instead of a zip file.
- 
-\layout Itemize
-
-Try to add readline support to windows: http://newcenturycomputers.net/projects/r
-eadline.html.
- Currently using this apparently crashes everything (see report by Thilo
- Ernst).
- It may be fixable.
-\layout Itemize
-
-Finish the Emacs integration (Alex & François).
- This includes fixing the manual and deciding whether to include ipython.el
- along with IPython itself (seems like a good idea, talk to Alex).
-\layout Itemize
-
-Allow ipython to handle input from stdin.
- Typical test case:
-\newline 
-
-\family typewriter 
-[~]> [~]> echo "print 2+4" | python 
-\newline 
-6 
-\newline 
-[~]> echo "print 2+4" | ipython 
-\newline 
-python: Objects/stringobject.c:111: PyString_FromString: Assertion `str !=
- ((void *)0)' failed.
- 
-\newline 
-Abort 
-\family default 
-
-\newline 
-This matters also for emacs integration, since a C-c-| will crash if ipython
- hasn't been opened yet.
- This should include supporting option '-c' just like the regular python.
-\layout Itemize
-
-Get Holger's completer in, once he adds filename completion.
-\layout Itemize
-
-Add @showopt/@setopt (decide name) for viewing/setting all options.
- The existing option-setting magics should become aliases for setopt calls.
-\layout Itemize
-
-Consider redesigning the output traps.
- They cause problems when users try to execute code which relies on sys.stdout
- being the 'true' sys.stdout.
- The best solution is probably to print the banner first, and then just
- execute all the user code straight with no output traps at all.
- Whatever comes out comes out.
- This makes the ipython code actually simpler, and eliminates the problem
- altogether.
-\layout Standard
-
-Lower priority stuff:
-\layout Itemize
-
-'cd' under windows doesn't know how to change drive letters.
- 
-\layout Itemize
-
-It would be nice to be able to continue with python stuff after an @ command.
- For instance "@run something; test_stuff()" in order to test stuff even
- faster.
- Suggestion by Kasper Souren <Kasper.Souren@ircam.fr>
-\layout Itemize
-
-Look at how f2py colors strings.
- It works just fine with an xterm, so maybe this will also solve the windows
- problems.
- Maybe.
- If nothing else, fixing the xterm behavior is good (also for cygwin users
- who don't know about rxvt).
-\newline 
-Done(partly).
- I changed some code which seems to work better.
- But I should refactor ultraTB & friends to use the colors as string templates
- which can color a string in one pass.
- Something like 'Colors.filename % filename' should do the necessary wrapping
- without the need for open/close color calls.
- The f2py approach uses function calls for everything, which is probably
- a performance problem for something with as much coloring as tracebacks.
-\layout Itemize
-
-Check problems with rpm generation (see email by Vasudev Ram).
- Currently (RedHat 8.0) rpm generation is just broken.
- This seems to be a distutils bug, as it is calling rpm with the -ba option
- which rpm doesn't recognize.
- I think the problem is that RedHat moved rpm building to the rpmbuild command.
- This means I won't be distributing rpms for the time being.
-\layout Itemize
-
-Run a 'first time wizard' which configures a few things for the user, such
- as color_info, editor and the like.
-\layout Itemize
-
-Logging: @logstart and -log should start logfiles in ~.ipython, but with
- unique names in case of collisions.
- This would prevent ipython.log files all over while also allowing multiple
- sessions.
- Also the -log option should take an optional filename, instead of having
- a separate -logfile option.
-\newline 
-In general the logging system needs a serious cleanup.
- Many functions now in Magic should be moved to Logger, and the magic @s
- should be very simple wrappers to the Logger methods.
-\layout Itemize
-
-Fix exception reporting.
- It seems that inspect is getting the build paths for sources instead of
- the current paths, and that's confusing ultraTB.
-\newline 
-The problem is actually with the way RedHat built python:
-\newline 
-
-\family typewriter 
-In [3]: pickle.dump.func_code.co_filename 
-\newline 
-Out[3]: '/usr/src/build/143041-i386/install/usr/lib/python2.2/pickle.py'
-\newline 
-In [4]: pickle.__file__ 
-\newline 
-Out[4]: '/usr/lib/python2.2/pickle.pyc'
-\newline 
-
-\family default 
-Since those build files can't be found, we get None as filenames for all
- functions which are part of the standard distribution.
- Who knows how they built python, because this problem does _not_ occur
- with normal distutils-based builds:
-\newline 
-
-\family typewriter 
-In [2]: Numeric.array_str.func_code.co_filename
-\newline 
-Out[2]: '/usr/lib/python2.2/site-packages/Numeric/Numeric.py'
-\newline 
-
-\family default 
-Even though Numeric was first built in some separate directory and only
- later installed there.
 \layout Section
 
 Outline of steps

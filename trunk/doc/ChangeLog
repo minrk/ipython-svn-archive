@@ -1,3 +1,38 @@
+2003-05-12  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.handle_emacs): New line
+	handler for Emacs comint-based lines.  Currently it doesn't do
+	much (but importantly, it doesn't update the history cache).  In
+	the future it may be expanded if Alex needs more functionality
+	there.
+
+	* IPython/CrashHandler.py (CrashHandler.__call__): Added platform
+	info to crash reports.
+
+	* IPython/iplib.py (InteractiveShell.mainloop): Added -c option,
+	just like Python's -c.  Also fixed crash with invalid -color
+	option value at startup. Thanks to Will French
+	<wfrench@bestweb.net> for the bug report.
+
+2003-05-09  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (EvalDict.__getitem__): Renamed EvalString
+	to EvalDict (it's a mapping, after all) and simplified its code
+	quite a bit, after a nice discussion on c.l.py where Gustavo
+	Córdova <gcordova@sismex.com> suggested the new version.
+
+2003-04-30  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (timings_out): modified it to reduce its
+	overhead in the common reps==1 case.
+
+2003-04-29  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (timings_out): Modified to use the resource
+	module, which avoids the wraparound problems of time.clock().
+
+2003-04-17  *** Released version 0.2.15pre4
+
 2003-04-17  Fernando Perez  <fperez@colorado.edu>
 
 	* setup.py (scriptfiles): Split windows-specific stuff over to a

@@ -298,11 +298,19 @@ CygWin
 \series bold 
 Windows
 \series default 
-: It works fairly well under Windows XP, and I suspect NT and Win2000 should
- work similarly.
+: It works reasonably well under Windows XP, and I suspect NT and Win2000
+ should work similarly.
  Windows 9x support has been added but has seen very little testing, as
  I don't have access to a machine with that operating system.
- Comments welcome.
+ 
+\layout Standard
+
+Please note, however, that I have very little access to and experience with
+ Windows development.
+ For this reason, Windows-specific bugs tend to linger far longer than I
+ would like, and often I just can't find a satisfactory solution.
+ If any Windows user wants to join in with development help, all hands are
+ always welcome.
 \layout Standard
 
 
@@ -321,12 +329,15 @@ IPython requires Python version 2.1 or newer.
 Location
 \layout Standard
 
-Currently IPython can be found at 
-\begin_inset LatexCommand \htmlurl{http://www-hep.colorado.edu/~fperez/ipython}
+IPython is generously hosted at 
+\begin_inset LatexCommand \htmlurl{http://ipython.scipy.org}
 
 \end_inset 
 
-.
+ by the SciPy project.
+ This site offers downloads, CVS access, mailing lists and a bug tracking
+ system.
+ I am very grateful to the SciPy team for their contribution.
 \layout Section
 
 
@@ -373,6 +384,11 @@ See the notes in sec.
 \layout Subsection
 
 Under Unix-type operating systems (Linux, Mac OS X, etc.)
+\layout Standard
+
+For RPM based systems, simply install the supplied package in the usual
+ manner.
+ If you download the tar archive, the process is:
 \layout Enumerate
 
 Unzip/untar the 
@@ -475,15 +491,6 @@ $ python setup.py --help
 
 \newline 
 for more details.
-\layout Standard
-
-Note that when installing, you will see some 
-\family typewriter 
-SyntaxError
-\family default 
- messages go by rapidly.
- Please ignore them, they are completely harmless (the result of an ugly
- but necessary hack around some limitations of distutils).
 \layout Subsubsection
 
 RedHat 7.x notes
@@ -544,11 +551,11 @@ Hopefully, things will work.
 \family default 
  and rename the 
 \family typewriter 
-#/usr/bin/python
+#!/usr/bin/python
 \family default 
  line at the top to 
 \family typewriter 
-#/usr/bin/python2
+#!/usr/bin/python2
 \family default 
 .
 \layout Subsubsection
@@ -859,7 +866,7 @@ PYTHONDOCS
  pointing to the directory where your HTML Python documentation lives.
  In my system it's 
 \family typewriter 
-/usr/share/doc/python-docs-2.1.1
+/usr/share/doc/python-docs-2.1.1/html
 \family default 
 , check your local details or ask your systems administrator.
  
@@ -873,10 +880,10 @@ This is the directory which holds the HTML version of the Python manuals.
 
 
 \family typewriter 
-[python-docs-2.2]> ls 
+[html]> ls
 \newline 
-about.html api/ doc/ icons/ inst/ mac/ ref/ acks.html dist/ ext/ index.html
- lib/ modindex.html tut/ 
+about.dat acks.html dist/ ext/ index.html lib/ modindex.html stdabout.dat tut/
+ about.html api/ doc/ icons/ inst/ mac/ ref/ style.css
 \layout Standard
 
 You should really make sure this variable is correctly set so that Python's
@@ -1287,335 +1294,77 @@ If you are on a system which lacks proper data pagers (such as Windows),
 
 \end_inset 
 
-Tips specific to (X)Emacs users
+(X)Emacs configuration
 \layout Standard
 
-To the best of my knowledge, the comments below apply both to GNU Emacs
- and to XEmacs
-\begin_inset Foot
-collapsed true
-
-\layout Standard
-
-This section, and the lisp code in it, owes a lot to the kind help and comments
- by Milan Zamazal <pdm@zamazal.org>.
- Many thanks to him.
-\end_inset 
-
+Thanks to the work of Alexander Schmolck, currently (X)Emacs and IPython
+ get along very well.
+ You will need to use a recent version of 
+\family typewriter 
+python-mode.el
+\family default 
+, along with the file 
+\family typewriter 
+ipython.el
+\family default 
 .
-\layout Standard
-
-In X/Emacs we get the following types of terminals (as returned by 
-\family typewriter 
-os.environ['TERM']
-\family default 
-):
-\layout Itemize
-
-Term buffers (
-\family typewriter 
-M-x term
-\family default 
-): 'eterm' terminal type.
-\layout Itemize
-
-Shell buffers (
-\family typewriter 
-M-x shell
-\family default 
-): 'emacs' terminal type (or 'dumb' in some versions).
-\layout Itemize
-
-Python interpreter (comint) buffers (
-\family typewriter 
-C-c\SpecialChar ~
-!
-\family default 
-): 'emacs' terminal type (or 'dumb' in some versions).
-\layout Subsubsection
-
-Color support
-\layout Standard
-
-All of these terminal types will support coloring of prompts and tracebacks,
- even though only light versions of colors seem to be displayed.
- I may write an Emacs-specific color scheme in the future (contributions
- welcome, look at 
-\family typewriter 
-ultraTB.py
-\family default 
- for details).
- But for this color support to work properly, you must first copy the following
- lines to your 
+ At the IPython website's download section, you will find a tarball containing
+ both of these files.
+ Once you put them in your Emacs path, all you need in your 
 \family typewriter 
 .emacs
 \family default 
- file:
+ file is:
 \layout Standard
 
 
 \family typewriter 
-;; Configuration for IPython, thanks to Alex Schmolck.
+(require 'ipython)
 \layout Standard
 
-
-\family typewriter 
-;; For things to really work correctly, a recent (4.22 or newer) version
-\layout Standard
-
-
-\family typewriter 
-;; of python-mode.el is needed.
- Note that tab completion is currently NOT
-\layout Standard
-
-
-\family typewriter 
-;; working.
-\layout Standard
-
-
-\family typewriter 
-;; Get colors working correctly
-\layout Standard
-
-
-\family typewriter 
-(defun my-activate-ansi-colors ()
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-(require 'ansi-color)
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-(ansi-color-for-comint-mode-on))
-\layout Standard
-
-
-\family typewriter 
-(add-hook 'py-shell-hook 'my-activate-ansi-colors)
-\layout Standard
-
-
-\family typewriter 
-;; Regular expression that describes tracebacks for IPython in context and
-\layout Standard
-
-
-\family typewriter 
-;; verbose mode.
-\layout Standard
-
-
-\family typewriter 
-(add-hook 'python-mode-hook
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-'(lambda ()
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-\SpecialChar ~
-;; this works for @xmode verbose or context
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-\SpecialChar ~
-(setq py-traceback-line-re
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-\SpecialChar ~
-\SpecialChar ~
-"^
-\backslash 
-
-\backslash 
-(.+?
-\backslash 
-
-\backslash 
-) in [^
-\backslash 
-00]+?
-\backslash 
-n--> 
-\backslash 
-
-\backslash 
-([0-9]+
-\backslash 
-
-\backslash 
-) +")))
-\layout Standard
-
-
-\family typewriter 
-(setq py-shell-input-prompt-1-regexp "^In 
-\backslash 
-
-\backslash 
-[[0-9]+
-\backslash 
-
-\backslash 
-]: "
-\layout Standard
-
-
-\family typewriter 
-py-shell-input-prompt-2-regexp "^ [.][.][.]+: " )
-\layout Standard
-
-
-\family typewriter 
-;; Set IPython to be the python command and give it arguments
-\layout Standard
-
-
-\family typewriter 
-(setq py-python-command "ipython")
-\layout Standard
-
-
-\family typewriter 
-(setq py-python-command-args
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-(cond
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-\SpecialChar ~
-((eq frame-background-mode 'dark)
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-\SpecialChar ~
-'("-colors" "Linux"))
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-\SpecialChar ~
-((eq frame-background-mode 'light)
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-\SpecialChar ~
-'("-colors" "LightBG"))
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-\SpecialChar ~
-(t ; default (backg-mode isn't always set by XEmacs)
-\layout Standard
-
-
-\family typewriter 
-\SpecialChar ~
-\SpecialChar ~
-'("-colors" "LightBG"))
-\layout Standard
-
-
-\family typewriter 
-))
-\layout Standard
-
-
-\family typewriter 
-;; End IPython configuration
-\layout Standard
-
-You can customize the above to suit your personal preferences.
-\layout Subsubsection
-
-Name completion
-\layout Standard
-
-'eterm' buffers support TAB name completion like a normal terminal, but
- 'emacs' and 'dumb' ones do not support it well, because Emacs itself takes
- control of line input.
- You will thus lose full name completion in an IPython buffer started via
- 
+This should give you full support for executing code snippets via IPython,
+ opening IPython as your Python shell via 
 \family typewriter 
 C-c\SpecialChar ~
 !
 \family default 
-.
- All other features of IPython will work normally.
+, etc.
  
-\layout Standard
+\layout Subsubsection*
 
-Still, name completion works to some extent: the completions are not printed
- when you hit TAB, instead you must hit Return after TAB (giving a 
-\family typewriter 
-SyntaxError
-\family default 
-, of course).
- At this point you get a printout of the possible completions and you can
- get your previous line with 
-\family typewriter 
-Ctrl-UpArrow
-\family default 
-.
- Not perfect, but better than nothing.
-\layout Standard
+Notes
+\layout Itemize
 
-I know it's clumsy, but so far efforts to fix this have failed.
- Any Emacs gurus out there who can think of a clean way to fix this are
- encouraged to contact the developers at the addresses given in sec.
- 
-\begin_inset LatexCommand \ref{sec:credits}
-
-\end_inset 
-
-.
- The issue (I think) boils down to the following: Emacs only prints the
- contents of a command received by its sub-process in a comint buffer when
- it gets an EOL (or more precisely, the result of 
-\family typewriter 
-comint-send-input
-\family default 
-).
- At that point it prints out all the buffered contents from the subprocess.
- But for normal TAB completion to work, one needs to print the list of completio
-ns at the current cursor position (possibly completing part of the line)
+There is one caveat you should be aware of: you must start the IPython shell
  
 \emph on 
 before
 \emph default 
- the command is finished.
- So a kind of catch-22 situation arises.
- As I said, all ideas/fixes are welcome from the Emacs gurus out there.
+ attempting to execute any code regions via 
+\family typewriter 
+C-c\SpecialChar ~
+|
+\family default 
+.
+ Simply type 
+\family typewriter 
+C-c\SpecialChar ~
+!
+\family default 
+ to start IPython before passing any code regions to the interpreter, and
+ you shouldn't experience any problems.
+\newline 
+This is due to a bug in Python itself, which has been fixed for Python 2.3,
+ but exists as of Python 2.2.2 (reported as SF bug [ 737947 ]).
+\layout Itemize
+
+The (X)Emacs support is maintained by Alexander Schmolck, so all comments/reques
+ts should be directed to him through the IPython mailing lists.
+ 
+\layout Itemize
+
+This code is still somewhat experimental so it's a bit rough around the
+ edges (although in practice, it works quite well).
 \layout Section
 
 
@@ -2125,6 +1874,27 @@ no|
 
 \family typewriter 
 \series bold 
+-c\SpecialChar ~
+<command>:
+\family default 
+\series default 
+ execute the given command string, and set sys.argv to 
+\family typewriter 
+['c']
+\family default 
+.
+ This is similar to the 
+\family typewriter 
+-c
+\family default 
+ option in the normal Python interpreter.
+ 
+\layout List
+\labelwidthstring 00.00.0000
+
+
+\family typewriter 
+\series bold 
 -cache_size|cs\SpecialChar ~
 <n>
 \series default 
@@ -2153,7 +1923,7 @@ no|
 
 \family typewriter 
 \series bold 
--colors|c\SpecialChar ~
+-colors\SpecialChar ~
 <scheme>:
 \family default 
 \series default 
@@ -2971,9 +2741,7 @@ You can define your own magic functions to extend the system.
 \family typewriter 
 example-magic.py
 \family default 
- in your ipython configuration directory, typically 
-\family typewriter 
-$HOME/.ipython/:
+ in the examples directory:
 \layout Standard
 
 
@@ -3308,6 +3076,90 @@ Persistent command history across sessions
 
 IPython will save your input history when it leaves and reload it next time
  you restart it.
+\layout Subsubsection
+
+Autoindent
+\layout Standard
+
+IPython can recognize lines ending in ':' and indent the next line, while
+ also un-indenting automatically after 'raise' or 'return'.
+ 
+\layout Standard
+
+This feature uses the readline library, so it will honor your 
+\family typewriter 
+~/.inputrc
+\family default 
+ configuration (or whatever file your 
+\family typewriter 
+INPUTRC
+\family default 
+ variable points to).
+ Adding the following lines to your 
+\family typewriter 
+.inputrc
+\family default 
+ file can make indenting/unindenting more convenient (
+\family typewriter 
+M-i
+\family default 
+ indents, 
+\family typewriter 
+M-u
+\family default 
+ unindents):
+\layout Standard
+
+
+\family typewriter 
+$if Python
+\newline 
+"
+\backslash 
+M-i": "\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+\SpecialChar ~
+" 
+\newline 
+"
+\backslash 
+M-u": "
+\backslash 
+d
+\backslash 
+d
+\backslash 
+d
+\backslash 
+d" 
+\newline 
+$endif
+\layout Standard
+
+Note that there are 4 spaces between the quote marks after 
+\family typewriter 
+"M-i"
+\family default 
+ above.
+\layout Standard
+
+The feature is off by default because it can cause problems with pasting
+ of indented code (the pasted code gets re-indented on each line).
+ But a magic function 
+\family typewriter 
+@autoindent
+\family default 
+ allows you to toggle it on/off at runtime.
+ You can also set it permanently on in your 
+\family typewriter 
+ipythonrc
+\family default 
+ file (set 
+\family typewriter 
+autoindent 1
+\family default 
+), and disable it only when needed via the magic function.
 \layout Subsubsection
 
 Customizing readline behavior
@@ -4692,11 +4544,7 @@ Shell.py
 \layout Standard
 
 The following sample file illustrating how to use the embedding functionality
- is provided in your 
-\family typewriter 
-IPYTHONDIR
-\family default 
- directory as 
+ is provided in the examples directory as 
 \family typewriter 
 example-embed.py
 \family default 
@@ -4714,16 +4562,7 @@ preview false
 \layout Standard
 
 Once you understand how the system functions, you can use the following
- code fragments in your programs which are ready for cut and paste (this
- file is also in your 
-\family typewriter 
-IPYTHONDIR
-\family default 
- directory as 
-\family typewriter 
-example-embed-short.py
-\family default 
-):
+ code fragments in your programs which are ready for cut and paste:
 \layout Standard
 
 
@@ -5193,7 +5032,7 @@ Through the magic extension system described in sec.
 
 , IPython incorporates a mechanism for conveniently interfacing with the
  Gnuplot system (
-\begin_inset LatexCommand \htmlurl{http://www.gnuplot.vt.edu}
+\begin_inset LatexCommand \htmlurl{http://www.gnuplot.info}
 
 \end_inset 
 
@@ -5360,33 +5199,15 @@ Gnuplot2.py
  language.
 \layout Standard
 
-This system assumes you are using a reasonably recent version of Gnuplot
- with mouse support.
- If you are not and for some reason do not want to (or can not) upgrade,
- you'll need to set 
-\family typewriter 
-gnuplot_mouse=0
-\family default 
- in the 
-\family typewriter 
-IPython.GnuplotRuntime
-\family default 
- module to prevent an error message from always appearing.
-\layout Standard
-
 Below is some example code which illustrates how to configure Gnuplot inside
  your own programs but have it available for further interactive use through
  an embedded IPython instance.
  Simply run this file at a system prompt.
- This file is provided in your 
-\family typewriter 
-IPYTHONDIR
-\family default 
- as 
+ This file is provided as 
 \family typewriter 
 example-gnuplot.py
 \family default 
-:
+ in the examples directory:
 \layout Standard
 
 
@@ -5474,6 +5295,9 @@ at the IPython prompt.
 \layout Section
 
 Reporting bugs
+\layout Subsection*
+
+Automatic crash reports
 \layout Standard
 
 Ideally, IPython itself shouldn't crash.
@@ -5499,6 +5323,23 @@ In such a situation, IPython will leave a file named
 a lot
 \emph default 
  in understanding the cause of the problem and fixing it sooner.
+\layout Subsection*
+
+The bug tracker
+\layout Standard
+
+IPython also has an online bug-tracker, located at 
+\begin_inset LatexCommand \htmlurl{http://www.scipy.net/roundup/ipython}
+
+\end_inset 
+
+.
+ In addition to mailing the developers, it would be a good idea to file
+ a bug report here.
+ This will ensure that the issue is properly followed to conclusion.
+\layout Standard
+
+You can also use this bug tracker to file feature requests.
 \layout Section
 
 Brief history
@@ -5877,4 +5718,23 @@ Shu
 <kingshu@myrealbox.com>
 \family default 
  Autoindent patch.
+\layout List
+\labelwidthstring 00.00.0000
+
+Chris\SpecialChar ~
+Drexler 
+\family typewriter 
+<chris@ac-drexler.de>
+\family default 
+ Readline packages for Win32/CygWin.
+\layout List
+\labelwidthstring 00.00.0000
+
+Gustavo\SpecialChar ~
+Córdova\SpecialChar ~
+Avila 
+\family typewriter 
+<gcordova@sismex.com>
+\family default 
+ EvalDict code for nice, lightweight string interpolation.
 \the_end
