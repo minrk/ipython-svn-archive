@@ -238,13 +238,19 @@ class Inspector:
         # String form, but snip if too long in ? form (full in ??)
         try:
             ostr = str(obj)
-            str_head = 'String Form:\t'
+            str_head = 'String Form:'
             if not detail_level and len(ostr)>string_max:
                 ostr = ostr[:shalf] + ' <...> ' + ostr[-shalf:]
                 ostr = ("\n" + " " * len(str_head.expandtabs())).\
                        join(map(string.strip,ostr.split("\n")))
-            out.writeln(header(str_head)+ostr)
-        except: pass
+            if ostr.find('\n') > -1:
+                # Print multi-line strings starting at the next line.
+                str_sep = '\n'
+            else:
+                str_sep = '\t'
+            out.writeln("%s%s%s" % (header(str_head),str_sep,ostr))
+        except:
+            pass
 
         if ospace:
             out.writeln(header('Namespace:\t')+ospace)
