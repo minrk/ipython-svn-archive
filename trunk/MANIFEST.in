@@ -15,6 +15,7 @@ exclude doc/#*
 exclude doc/magic.tex
 exclude doc/update_magic.sh
 exclude doc/update_version.sh
+exclude doc/manual_base*
 exclude doc/manual/WARNINGS
 exclude doc/manual/*.aux
 exclude doc/manual/*.log
