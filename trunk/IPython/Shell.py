@@ -34,6 +34,13 @@ import code
 import threading
 import signal
 
+try:
+    import readline
+except ImportError:
+    def readline_insert_text(msg): pass
+else:
+    readline_insert_text = readline.insert_text
+
 import IPython
 from IPython.iplib import InteractiveShell
 from IPython.ipmaker import make_IPython
@@ -242,13 +249,16 @@ class IPShellEmbed:
         self.exit_msg = exit_msg
 
 #-----------------------------------------------------------------------------
-def signal_handler (signum,stack_frame):
-    print '\nSIGNAL caught:', signum,'- Press <Enter> to continue.',
-    sys.stdout.flush()
-
 def sigint_handler (signum,stack_frame):
+    """Sigint handler which marks the input line with a special tag.
+
+    This is a horrible hack to pass information about SIGINT _without_ using
+    exceptions, since I haven't been able to properly manage cross-thread
+    exceptions in GTK/WX.  """
+    
     print '\nKeyboardInterrupt - Press <Enter> to continue.',
     sys.stdout.flush()
+    readline_insert_text(' IPythonIgnoreLine')
 
 class MTInteractiveShell(InteractiveShell):
     """Simple multi-threaded shell."""
@@ -289,6 +299,10 @@ class MTInteractiveShell(InteractiveShell):
         Modified version of code.py's runsource(), to handle threading issues.
         See the original for full docstring details."""
         
+        # If Ctrl-C was typed, we return right away.
+        if source.endswith('IPythonIgnoreLine'):
+            return False
+        
         try:
             code = self.compile(source, filename, symbol)
         except (OverflowError, SyntaxError, ValueError):
@@ -314,12 +328,12 @@ class MTInteractiveShell(InteractiveShell):
 
         Multithreaded wrapper around IPython's runcode()."""
 
-        # Install signal handlers
-        signal.signal(signal.SIGINT, sigint_handler)
-        signal.signal(signal.SIGSEGV, signal_handler)
-
         # lock thread-protected stuff
         self.ready.acquire()
+
+        # Install sigint handler
+        signal.signal(signal.SIGINT, sigint_handler)
+
         if self._kill:
             print >>Term.cout, 'Closing threads...',
             Term.cout.flush()
@@ -604,20 +618,6 @@ class IPShellMatplotlibWX(IPShellWX):
     def __init__(self,argv=None,user_ns=None,debug=0):
         IPShellWX.__init__(self,argv,user_ns,debug,shell_class=MatplotlibMTShell)
 
-
-# Experimental gui_thread code...
-class IPShellMatplotlibWX_gui_thread(IPShellWX):
-    """Subclass IPShellWX with MatplotlibMTShell as the internal shell.
-
-    Multi-threaded class, meant for the WX* backends."""
-    
-    def __init__(self,argv=None,user_ns=None,debug=0):
-
-        print 'gui_thread...' # dbg
-        import gui_thread
-        gui_thread.start()
-        
-        IPShellWX.__init__(self,argv,user_ns,debug,shell_class=MatplotlibMTShell)
 
 #-----------------------------------------------------------------------------
 # Factory functions to actually start the proper thread-aware shell
