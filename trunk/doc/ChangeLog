@@ -1,3 +1,32 @@
+2003-12-01  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/DPyGetOpt.py (DPyGetOpt.processArguments): Tab-related
+	cleanups, code unmodified.
+
+	* IPython/genutils.py (Term): added a class for IPython to handle
+	output.  In most cases it will just be a proxy for stdout/err, but
+	having this allows modifications to be made for some platforms,
+	such as handling color escapes under Windows.  All of this code
+	was contributed by Gary Bishop, with minor modifications by me.
+	The actual changes affect many files.
+
+2003-11-30  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (file_matches): new completion code, courtesy
+	of Jeff Collins.  This enables filename completion again under
+	python 2.3, which disabled it at the C level.
+
+2003-11-11  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/numutils.py (amap): Added amap() fn.  Simple shorthand
+	for Numeric.array(map(...)), but often convenient.
+
+2003-11-05  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/numutils.py (frange): Changed a call from int() to
+	int(round()) to prevent a problem reported with arange() in the
+	numpy list.
+
 2003-10-06  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/DPyGetOpt.py (DPyGetOpt.processArguments): changed to
