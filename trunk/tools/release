@@ -53,9 +53,14 @@ echo "Uploading backup files..."
 cd ~/ipython/backup
 scp `ls -1tr | tail -1` fperez@scipy.org:www/backup/
 
+echo "Updating webpage..."
 cd $ipdir/doc
-echo "Uploading changes information"
-scp ChangeLog NEWS fperez@scipy.org:www/
+www=~/ipython/homepage
+cp ChangeLog NEWS $www
+rm -f $www/doc/*
+cp -r manual.pdf manual/ $www/doc
+cd $www
+./update
 
 echo "Alerting package maintainers..."
 maintainers='fperez@colorado.edu andrea.riciputi@libero.it jack@xiph.org'
