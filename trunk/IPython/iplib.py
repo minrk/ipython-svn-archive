@@ -925,9 +925,10 @@ want to merge them back into the new files.""" % locals()
         if self.rc.c:  # Emulate Python's -c option
             self.exec_init_cmd()
         if self.rc.banner:
-            self.interact(self.BANNER+self.banner2)
+            banner = self.BANNER+self.banner2
         else:
-            self.interact('')
+            banner = ''
+        self.interact(banner)
 
     def exec_init_cmd(self):
         """Execute a command given at the command line.
