@@ -909,20 +909,17 @@ def page(strng,start=0,screen_lines=0,pager_cmd = None):
     else:  # try to open pager and default to internal one if that fails
         pager_cmd = get_pager_cmd(pager_cmd)
         pager_cmd += ' ' + get_pager_start(pager_cmd,start)
-        if os.name == 'nt':
-            try:
-                try:
-                    tmpname = tempfile.mktemp('.txt')
-                    tmpfile = file(tmpname,'wt')
-                    tmpfile.write(strng)
-                    tmpfile.close()
-                    cmd = pager_cmd + ' < ' + tmpname
-                    os.system(cmd)
-                    retval = None
-                finally:
-                    os.remove(tmpname)
-            except:  # FIXME: trap only the reasonable exceptions
-                retval = 1
+        if os.name == 'nt' and not pager_cmd.startswith('type'):
+            tmpname = tempfile.mktemp('.txt')
+            tmpfile = file(tmpname,'wt')
+            tmpfile.write(strng)
+            tmpfile.close()
+            cmd = "%s < %s" % (pager_cmd,tmpname)
+            if os.system(cmd):
+              retval = 1
+            else:
+              retval = None
+            os.remove(tmpname)
         else:
             try:
                 retval = None
