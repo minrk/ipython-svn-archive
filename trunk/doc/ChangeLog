@@ -1,3 +1,8 @@
+2004-09-08  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (IPShellWX.OnInit): Fix output redirection bug
+	for Win32 and OSX.  Fix by John Hunter.
+
 2004-08-30  *** Released version 0.6.3
 
 2004-08-30  Fernando Perez  <fperez@colorado.edu>

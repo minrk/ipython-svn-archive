@@ -7,7 +7,7 @@ matplotlib's author.
 $Id$"""
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando Pérez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando PÃ©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -518,7 +518,7 @@ class IPShellWX(threading.Thread):
 
                 return self.wx.true
         
-        self.app = App()
+        self.app = App(redirect=False)
         self.app.MainLoop()
         self.join()
 
