@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """
     Class and program to colorize python source code for ANSI terminals.
 
@@ -213,16 +212,16 @@ def main():
     """Colorize a python file using ANSI color escapes and print to stdout.
 
     Usage:
-      pycolorize [-s scheme] filename
+      %s [-s scheme] filename
 
     Options:
 
       -s scheme: give the color scheme to use. Currently only 'Linux'
       (default) and 'LightBG' and 'NoColor' are implemented (give without
-      quotes).  """
+      quotes).  """  
 
     def usage():
-        print >> sys.stderr, main.__doc__
+        print >> sys.stderr, main.__doc__ % sys.argv[0]
         sys.exit(1)
         
     # FIXME: rewrite this to at least use getopt
