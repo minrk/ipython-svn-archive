@@ -487,6 +487,8 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         #self.hooks = Struct(ps1 = sys.ps1,ps2 = sys.ps2,display = sys.displayhook)
         self.hooks = Struct()
 
+        # Flag to mark unconditional exit
+        self.exit_now = False
 
         self.usage_min =  """\
         An enhanced console for Python.
@@ -1071,6 +1073,9 @@ want to merge them back into the new files.""" % locals()
         # Mark activity in the builtins
         __builtin__.__dict__['__IPYTHON__active'] += 1
         while 1:
+            # This is set by a call to %Exit or %Quit
+            if self.exit_now:
+                break
             try:
                 if more:
                     prompt = self.outputcache.prompt2
@@ -1119,10 +1124,6 @@ want to merge them back into the new files.""" % locals()
 
                 if self.autoindent:
                     self.readline_indent = 0
-
-            except SystemExit:
-                # If a SystemExit gets here, it's from an IPython %Exit call
-                break
 
             except bdb.BdbQuit:
                 warn("The Python debugger has exited with a BdbQuit exception.\n"
@@ -1282,14 +1283,10 @@ There seemed to be a problem with your sys.stderr.
             finally:
                 # Reset our crash handler in place
                 sys.excepthook = old_excepthook
-
-        except SystemExit,msg:
-            if str(msg)=='IPythonExit':
-                raise
-            else:
-                self.resetbuffer()
-                self.showtraceback()
-                warn( __builtin__.exit,level=1)
+        except SystemExit:
+            self.resetbuffer()
+            self.showtraceback()
+            warn( __builtin__.exit,level=1)
         except:
             self.showtraceback()
         else:

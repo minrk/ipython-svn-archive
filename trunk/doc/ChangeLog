@@ -1,3 +1,13 @@
+2004-11-06  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (interact): Change the handling of %Exit from
+	trying to propagate a SystemExit to an internal ipython flag.
+	This is less elegant than using Python's exception mechanism, but
+	I can't get that to work reliably with threads, so under -pylab
+	%Exit was hanging IPython.  Cross-thread exception handling is
+	really a bitch.  Thaks to a bug report by Stephen Walton
+	<stephen.walton@csun.edu>.
+
 2004-11-04  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (raw_input_original): store a pointer to the
