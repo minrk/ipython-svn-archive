@@ -1,3 +1,10 @@
+2004-07-27  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.__init__): build dict of
+	keywords manually, b/c the one in keyword.py was removed in python
+	2.4.  Patch by Anakim Border <aborder@users.sourceforge.net>.
+	This is NOT a bug under python 2.3 and earlier.
+
 2004-07-26  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/ultraTB.py (VerboseTB.text): Add another
