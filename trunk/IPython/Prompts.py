@@ -1,5 +1,7 @@
 """
 Classes for handling input/output prompts.
+
+$Id$
 """
 from __future__ import nested_scopes
 
@@ -41,13 +43,15 @@ from Itpl import Itpl
 #Color schemes for Prompts.
 
 PromptColors = ColorSchemeTable()
+InputColors = ultraTB.InputTermColors  # just a shorthand
 Colors = ultraTB.TermColors  # just a shorthand
 
 PromptColors.add_scheme(ColorScheme(
     'NoColor',
-    in_prompt = Colors.NoColor,  # Input prompt
-    in_number = Colors.NoColor,  # Input prompt number
-    in_prompt2 = Colors.NoColor, # Continuation prompt
+    in_prompt = InputColors.NoColor,  # Input prompt
+    in_number = InputColors.NoColor,  # Input prompt number
+    in_prompt2 = InputColors.NoColor, # Continuation prompt
+    in_normal = InputColors.NoColor,  # color off (usu. Colors.Normal)
     
     out_prompt = Colors.NoColor, # Output prompt
     out_number = Colors.NoColor, # Output prompt number
@@ -57,11 +61,14 @@ PromptColors.add_scheme(ColorScheme(
 # make some schemes as instances so we can copy them for modification easily:
 __PColLinux =  ColorScheme(
     'Linux',
-    in_prompt = Colors.Green,
-    in_number = Colors.LightGreen,
-    in_prompt2 = Colors.Green,
+    in_prompt = InputColors.Green,
+    in_number = InputColors.LightGreen,
+    in_prompt2 = InputColors.Green,
+    in_normal = InputColors.Normal,  # color off (usu. Colors.Normal)
+
     out_prompt = Colors.Red,
     out_number = Colors.LightRed,
+
     normal = Colors.Normal
     )
 # Don't forget to enter it into the table!
@@ -70,9 +77,9 @@ PromptColors.add_scheme(__PColLinux)
 __PColLightBG = ColorScheme('LightBG',**__PColLinux.colors.dict().copy())
 
 __PColLightBG.colors.update(
-    in_prompt = Colors.Blue,
-    in_number = Colors.LightBlue,
-    in_prompt2 = Colors.Blue
+    in_prompt = InputColors.Blue,
+    in_number = InputColors.LightBlue,
+    in_prompt2 = InputColors.Blue
 )
 PromptColors.add_scheme(__PColLightBG)
 
@@ -86,23 +93,21 @@ class Prompt1:
     def __init__(self,cache,colors='NoColor',input_sep = '\n',prompt = 'In [%n]:'):
         self.cache = cache
         self.input_sep = input_sep
+
+        # Set colors
         self.color_table = PromptColors
         self.color_table.set_active_scheme(colors)
         Colors = self.color_table.active_colors # shorthand
         self.col_p = Colors.in_prompt
         self.col_num = Colors.in_number
-        self.col_norm = Colors.normal
+        self.col_norm = Colors.in_normal
+        self.col_norm_ni = Colors.normal
+        # We need a non-input version of this escape for the '--->'
+        # auto-call prompts used in the auto_rewrite() method.
+        self.col_p_ni = self.col_p.replace('\001','').replace('\002','') 
+
+        # Set template to create each actual prompt (where numbers change)
         self.p_template = prompt.replace('%n','%s') + ' '
-
-        # Problem code: % can't see through object attributes
-        # Keep it to discuss string interpolation limitations of % in c.l.p later.
-##        self.p_str = '%(self.input_sep)s%(self.col_p)s' + \
-##                     self.p_template.replace('%s','%(self.col_num)s'
-##                                             '%(self.cache.prompt_count)s'
-##                                             '%(self.col_p)s') + \
-##                     '%(self.col_norm)s'
-
-        # Solution: use Itpl!
         self.p_str = Itpl('$self.input_sep${self.col_p}' +
                           self.p_template.replace('%s','$self.col_num'
                                                   '$self.cache.prompt_count'
@@ -119,7 +124,7 @@ class Prompt1:
         handling automatically special syntaxes."""
 
         curr = self.p_template % self.cache.prompt_count
-        return self.col_p + '-'*(len(curr)-2)+'> ' + self.col_norm
+        return self.col_p_ni + '-'*(len(curr)-2)+'> ' + self.col_norm_ni
         
 
 class Prompt2:
@@ -262,29 +267,6 @@ class CachedOutput:
             sys.stdout.flush()
 
 
-    def __call__debug(self,arg=None):
-        """***DEBUGGING VERSION*** NEVER PRINTS OUTPUT!
-
-        This version is for testing the weird list comprehensions/generators
-        mess Alex pointed out."""
-        
-        if arg is not None:
-            # first handle the cache and counters
-            self.update(arg)
-            # do not print output if input ends in ';'
-            # Here's the bizarreness: the if/else codepaths should be fully
-            # equivalent, yet with list comprehensions which contain
-            # generators, they aren't!!!
-            # This is debugging code, it always exits without actually
-            # printing the output
-            if self.input_hist[self.prompt_count].endswith(';\n'):
-                print 'out 1'
-                return
-            else:
-                print 'out 2'
-                return
-
-
     def _display(self,arg):
         """Default printer method, uses pprint.
 
@@ -312,36 +294,6 @@ class CachedOutput:
 
     # Assign the default display method:
     display = _display
-
-    def _display_bug_study(self,arg):
-        """DO NOT USE THIS VERSION!!!
-        Default printer method, uses pprint.
-
-        This can be over-ridden by the users to implement special formatting
-        of certain types of output.
-
-        MODIFIED VERSION, TO UNDERSTAND AN ISSUE WITH CLASS IDENTIFICATION.
-        """
-
-        if self.Pprint:
-            try:
-                print '\nArgument passed belongs to class:',arg.__class__
-                print 'Is arg a Struct (via isinstance)?',isinstance(arg,Struct)
-                print 'id of Struct class:',id(Struct)
-                print 'id of sys.modules :',id(sys.modules)
-                if isinstance(arg,Struct):
-                    out = 'Struct:\n%s' % pformat(arg.dict())
-                else:
-                    out = pformat(arg)
-            except:
-                out = pformat(arg)
-            if '\n' in out:
-                print
-            print out
-        else:
-            print arg
-
-    #display = _display_bug_study
 
     def update(self,arg):
         #print '***cache_count', self.cache_count # dbg

@@ -1,4 +1,7 @@
-"""Tools for coloring text in ANSI terminals."""
+"""Tools for coloring text in ANSI terminals.
+
+$Id$
+"""
 
 #*****************************************************************************
 #       Copyright (C) 2002 Fernando Pérez. <fperez@pizero.colorado.edu>
@@ -20,68 +23,78 @@ __version__ = '0.1.0'
 __license__ = 'LGPL'
 __date__   = 'Sat May 18 12:24:48 MDT 2002'
 
-__all__ = ['TermColors','ColorScheme','ColorSchemeTable']
+__all__ = ['TermColors','InputTermColors','ColorScheme','ColorSchemeTable']
 
 import os
 from UserDict import UserDict
 from Struct import Struct
 
+def make_color_table(in_class):
+    """Build a set of color attributes in a class.
+
+    Helper function for building the *TermColors classes."""
+    
+    # Name table for the color escapes
+    # The 2; are needed for some terminals (CDE) to properly reset to dark colors
+    color_templates = (
+        ("Black"        , "0;2;30"),
+        ("Red"          , "0;2;31"),
+        ("Green"        , "0;2;32"),
+        ("Brown"        , "0;2;33"),
+        ("Blue"         , "0;2;34"),
+        ("Purple"       , "0;2;35"),
+        ("Cyan"         , "0;2;36"),
+        ("LightGray"    , "0;2;37"),
+        ("DarkGray"     , "1;30"),
+        ("LightRed"     , "1;31"),
+        ("LightGreen"   , "1;32"),
+        ("Yellow"       , "1;33"),
+        ("LightBlue"    , "1;34"),
+        ("LightPurple"  , "1;35"),
+        ("LightCyan"    , "1;36"),
+        ("White"        , "1;37") )
+
+    for name,value in color_templates:
+        setattr(in_class,name,in_class._base % value)
+
 class TermColors:
     """Color escape sequences.
 
-    Defines the escape sequences for all the standard (ANSI?) colors in
-    terminals. Also defines a NoColor escape which is just the null string,
-    suitable for defining 'dummy' color schemes in terminals which get
+    This class defines the escape sequences for all the standard (ANSI?) 
+    colors in terminals. Also defines a NoColor escape which is just the null
+    string, suitable for defining 'dummy' color schemes in terminals which get
     confused by color escapes.
 
     This class should be used as a mixin for building color schemes."""
     
     NoColor = ''  # for color schemes in color-less terminals.
+    Normal = '\033[0m'   # Reset normal coloring
+    _base  = '\033[%sm'  # Template for all other colors
 
-    # Try to set color escapes which work across various types of terminals.
-    # Problem: we need to wrap the escapes in \001..\002 for long lines not to
-    # wrap in random ways, but \001,\002 generate on-screen garbage in old
-    # xterms and Emacs terminals. I'd love to hear of a general solution.
+# Build the actual color table as a set of class attributes:
+make_color_table(TermColors)
 
-    # New approach.  Let's see if this (checking for COLORTERM) works also for
-    # WinXP.  It seems ok in Linux for konsole, xterm, rxvt, gnome-terminal
-    # and emacs.  Need to also check with Andrea about OSX.
+class InputTermColors:
+    """Color escape sequences for input prompts.
 
-    # Note that the fix works ok for xterms in terms of not giving garbage,
-    # but the line-wrapping problem persists.  Basically terminals which don't
-    # honor the full ANSI escapes will necessarily have broken line-wrapping
-    # for long lines.  There's just no way that I can find to have _both_
-    # color and proper line wrapping on certain terminals.
+    This class is similar to TermColors, but the escapes are wrapped in \001
+    and \002 so that readline can properly know the length of each line and
+    can wrap lines accordingly.  Use this class for any colored text which
+    needs to be used in input prompts, such as in calls to raw_input().
 
-    if os.environ.has_key('COLORTERM') or \
-           os.environ.get('TERM')=='linux':
-        #print '*** color: correct line wrapping'  # dbg
-        Normal = '\001\033[0m\002'   # Reset normal coloring
-        _base  = '\001\033[%sm\002'  # Template for all other colors
-    else:
-        #print '*** color: broken line wrapping'  # dbg
-        Normal = '\033[0m'   # Reset normal coloring
-        _base  = '\033[%sm'  # Template for all other colors
+    This class defines the escape sequences for all the standard (ANSI?) 
+    colors in terminals. Also defines a NoColor escape which is just the null
+    string, suitable for defining 'dummy' color schemes in terminals which get
+    confused by color escapes.
 
-    # Name table for the color escapes
-    # The 2; are needed for some terminals (CDE) to properly reset to dark colors
-    Black        = _base % '0;2;30'
-    Red          = _base % '0;2;31'
-    Green        = _base % '0;2;32'
-    Brown        = _base % '0;2;33'
-    Blue         = _base % '0;2;34'
-    Purple       = _base % '0;2;35'
-    Cyan         = _base % '0;2;36'
-    LightGray    = _base % '0;2;37'
-    DarkGray     = _base % '1;30'
-    LightRed     = _base % '1;31'
-    LightGreen   = _base % '1;32'
-    Yellow       = _base % '1;33'
-    LightBlue    = _base % '1;34'
-    LightPurple  = _base % '1;35'
-    LightCyan    = _base % '1;36'
-    White        = _base % '1;37'
+    This class should be used as a mixin for building color schemes."""
     
+    NoColor = ''  # for color schemes in color-less terminals.
+    Normal = '\001\033[0m\002'   # Reset normal coloring
+    _base  = '\001\033[%sm\002'  # Template for all other colors
+
+# Build the actual color table as a set of class attributes:
+make_color_table(InputTermColors)
 
 class ColorScheme:
     """Generic color scheme class. Just a name and a Struct."""
