@@ -703,7 +703,7 @@ Currently the magic system has the following functions:\n"""
         '@pinfo object' is just a synonym for object? or ?object."""
         
         # look for the given object in all namespaces
-        qmark1,oname,qmark2 = re.match('(\?*)([^?]*)(\??)',parameter_s).groups()
+        qmark1,oname,qmark2 = re.match('(\?*)(.*?)(\??$)',parameter_s).groups()
         # detail_level: 0 -> obj? , 1 -> obj??
         detail_level = 0
         if qmark1 or qmark2:
