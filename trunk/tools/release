@@ -61,7 +61,7 @@ echo "Updating webpage..."
 cd $ipdir/doc
 www=~/ipython/homepage
 cp ChangeLog NEWS $www
-rm -f $www/doc/*
+rm -rf $www/doc/*
 cp -r manual.pdf manual/ $www/doc
 cd $www
 ./update
