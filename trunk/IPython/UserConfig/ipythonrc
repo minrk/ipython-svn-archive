@@ -379,9 +379,14 @@ import_mod
 # imported from that module.
 
 # Example:
-# import_some struct pack unpack
+
+# import_some IPython.genutils timing timings
 # will produce internally the statement
-# from struct import pack,unpack
+# from IPython.genutils import timing, timings
+
+# timing() and timings() are two IPython utilities for timing the execution of
+# your own functions, which you may find useful.  Just commment out the above
+# line if you want to test them.
 
 # If you have more than one modules_some line, each gets its own try/except
 # block (like modules, see above).
