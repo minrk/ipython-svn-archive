@@ -1453,8 +1453,10 @@ There seemed to be a problem with your sys.stderr.
         lines = lines.split('\n')
         more = 0
         for line in lines:
-            # skip blank lines so we don't mess up the prompt counter
-            if line:
+            # skip blank lines so we don't mess up the prompt counter, but do
+            # NOT skip even a blank line if we are in a code block (more is
+            # true)
+            if line or more:
                 more = self.push((self.prefilter(line,more)))
                 # IPython's runsource returns None if there was an error
                 # compiling the code.  This allows us to stop processing right
