@@ -1,3 +1,25 @@
+2005-01-17  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/OInspect.py (Inspector.pinfo): Fix crash when inspecting
+	instances with no __init__.  After a crash report by Norbert Nemec
+	<Norbert@nemec-online.de>.
+
+2005-01-14  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/ultraTB.py (VerboseTB.text): Fix bug in reporting of
+	names for verbose exceptions, when multiple dotted names and the
+	'parent' object were present on the same line.
+
+2005-01-11  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (flag_calls): new utility to trap and flag
+	calls in functions.  I need it to clean up matplotlib support.
+	Also removed some deprecated code in genutils.
+
+	* IPython/Shell.py (MatplotlibShellBase.mplot_exec): small fix so
+	that matplotlib scripts called with %run, which don't call show()
+	themselves, still have their plotting windows open.
+
 2005-01-05  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Shell.py (IPShellGTK.__init__): Patch by Andrew Straw
