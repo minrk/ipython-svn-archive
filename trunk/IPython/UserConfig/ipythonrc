@@ -516,6 +516,6 @@ execfile
 
 # Use one 'alias' statement per alias you wish to define.
 
-alias 
+# alias 
 
 #************************* end of file <ipythonrc> ************************

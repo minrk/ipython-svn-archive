@@ -36,9 +36,14 @@ USAGE
        Please note that some of the configuration options are not available at
        the command line, simply because they are not practical here. Look into
        your ipythonrc configuration file for details on those. This file
-       typically installed in the $HOME/.ipython directory. For Windows users,
-       $HOME resolves to C:\\Documents and Settings\\YourUserName in most
-       instances. In the rest of this text, we will refer to this directory as
+       typically installed in the $HOME/.ipython directory.
+
+       For Windows users, $HOME resolves to C:\\Documents and
+       Settings\\YourUserName in most instances, and _ipython is used instead
+       of .ipython, since some Win32 programs have problems with dotted names
+       in directories.
+
+       In the rest of this text, we will refer to this directory as
        IPYTHONDIR.
 
 
