@@ -7,7 +7,7 @@ matplotlib's author.
 $Id$"""
 
 #*****************************************************************************
-#       Copyright (C) 2001 Fernando PÃ©rez. <fperez@colorado.edu>
+#       Copyright (C) 2001 Fernando PÃ��©rez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -445,13 +445,15 @@ class IPShellGTK(threading.Thread):
         self.IP.kill()
 
     def mainloop(self):
-        self.start()
+        
         self.gtk.timeout_add(self.TIMEOUT, self.IP.runcode)
-        try:
-            if self.gtk.gtk_version[0] >= 2:
-                self.gtk.threads_init()
-        except AttributeError:
-            pass
+        if sys.platform != 'win32':
+            try:
+                if self.gtk.gtk_version[0] >= 2:
+                    self.gtk.threads_init()
+            except AttributeError:
+                pass
+        self.start()
         self.gtk.mainloop()
         self.join()
 

@@ -1,3 +1,8 @@
+2004-09-09  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (IPShellGTK.mainloop): reorder to avoid
+	blocking problems in win32 and osx.  Fix by John.
+
 2004-09-08  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Shell.py (IPShellWX.OnInit): Fix output redirection bug
