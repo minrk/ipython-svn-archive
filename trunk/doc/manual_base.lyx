@@ -830,6 +830,19 @@ While you can use IPython under Windows with only a stock Python installation,
  (though it will function).
 \layout Standard
 
+
+\series bold 
+Warning: ctypes-readline conflict:
+\series default 
+ as of 08/27/2004, there is an incompatibility between ctypes 0.9 and readline.
+ You 
+\emph on 
+must
+\emph default 
+ use ctypes 0.6 at this moment (the IPython webpage carries a note describing
+ the current situation; check there for up to date information on this problem).
+\layout Standard
+
 In short, for optimal performance under Windows you need:
 \layout Enumerate
 
@@ -854,7 +867,8 @@ CTypes
 
 \end_inset 
 
-
+.
+ 
 \layout Enumerate
 
 
