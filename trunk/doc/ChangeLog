@@ -1,3 +1,40 @@
+2003-04-16  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Prompts.py (Prompt1.auto_rewrite): Fixed bug which would
+	crash ipython if there was an unmatched '%' in the user's prompt
+	string.  Reported by Thorsten Kampe <thorsten@thorstenkampe.de>.
+	
+	* IPython/iplib.py (InteractiveShell.interact): removed the
+	ability to ask the user whether he wants to crash or not at the
+	'last line' exception handler.  Calling functions at that point
+	changes the stack, and the error reports would have incorrect
+	tracebacks.
+
+	* IPython/Magic.py (Magic.magic_page): Added new @page magic, to
+	pass through a peger a pretty-printed form of any object.  After a
+	contribution by Olivier Aubert <oaubert@bat710.univ-lyon1.fr>
+
+2003-04-14  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.user_setup): Fixed bug where
+	all files in ~ would be modified at first install (instead of
+	~/.ipython).  This could be potentially disastrous, as the
+	modification (make line-endings native) could damage binary files.
+	
+2003-04-10  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.handle_help): Modified to
+	handle only lines which are invalid python.  This now means that
+	lines like 'x=1 #?' execute properly.  Thanks to Jeffery Collins
+	for the bug report.
+
+2003-04-01  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.showtraceback): Fixed bug
+	where failing to set sys.last_traceback would crash pdb.pm().
+	Thanks to Jeffery D. Collins <Jeff.Collins@vexcel.com> for the bug
+	report.
+
 2003-03-25  Fernando Perez  <fperez@pizero.colorado.edu>
 
 	* IPython/Magic.py (Magic.magic_prun): rstrip() output of profiler
