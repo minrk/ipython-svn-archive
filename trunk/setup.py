@@ -2,19 +2,18 @@
 # -*- coding: utf-8 -*-
 """Setup script for IPython.
 
-Under Posix environments it works like a typical setup.py script. Under
-windows, only the install option is supported (sys.argv is reset to it),
-because options like sdist require other utilities not available under
-Windows."""
+Under Posix environments it works like a typical setup.py script. 
+Under Windows, the command sdist is not supported, since IPython 
+requires utilities, which are not available under Windows."""
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando Perez <fperez@colorado.edu>
+#       Copyright (C) 2001-2005 Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import sys,os
+import sys, os
 from glob import glob
 from setupext import install_data_ext
 isfile = os.path.isfile
@@ -29,15 +28,13 @@ elif os.name in ['nt','dos']:
     os_name = 'windows'
 else:
     print 'Unsupported operating system:',os.name
-    sys.exit()
+    sys.exit(1)
 
 # Under Windows, 'sdist' is not supported, since it requires lyxport (and
 # hence lyx,perl,latex,pdflatex,latex2html,sh,...)
-if os_name == 'windows':
-    setup = os.path.join(os.getcwd(),'setup.py')
-    if len(sys.argv)==1 or \
-           sys.argv[1] not in ['install','bdist','bdist_wininst']:
-        sys.argv = [setup,'install']
+if os_name == 'windows' and sys.argv[1] == 'sdist':
+    print 'The sdist command is not available under Windows.  Exiting.'
+    sys.exit(1)
 
 from distutils.core import setup
 
@@ -107,19 +104,23 @@ manpagebase = 'share/man/man1'
 exclude     = '.sh .1.gz'.split()
 docfiles    = filter(lambda f:file_doesnt_endwith(f,exclude),glob('doc/*'))
 
-print 'docfiles:'
-print docfiles
-#stop
-
 examfiles   = filter(isfile, glob('doc/examples/*.py'))
 manfiles    = filter(isfile, glob('doc/manual/*.html')) + \
               filter(isfile, glob('doc/manual/*.css')) + \
               filter(isfile, glob('doc/manual/*.png'))
 manpages    = filter(isfile, glob('doc/*.1.gz'))
 cfgfiles    = filter(isfile, glob('IPython/UserConfig/*'))
-scriptfiles = filter(isfile, glob('scripts/*'))
+scriptfiles = filter(isfile, ['scripts/ipython','scripts/pycolor'])
+
+# Script to be run by the windows binary installer after the default setup
+# routine, to add shortcuts and similar windows-only things.  Windows
+# post-install scripts MUST reside in the scripts/ dir, otherwise distutils
+# doesn't find them.
 if 'bdist_wininst' in sys.argv:
-    scriptfiles.append('ipython_win_post_install.py')
+    if len(sys.argv) > 2:
+        print >> sys.stderr,"ERROR: bdist_wininst must be run alone. Exiting."
+        sys.exit(1)
+    scriptfiles.append('scripts/ipython_win_post_install.py')
 
 # Call the setup() routine which does most of the work
 setup(name             = name,
@@ -143,9 +144,3 @@ setup(name             = name,
                           ('data', manpagebase, manpages),
                           ('lib', 'IPython/UserConfig', cfgfiles)]
       )
-
-# For Unix users, things end here.
-# Under Windows, do some extra stuff.
-if os_name=='windows' and 'install' in sys.argv:
-    import ipython_win_post_install
-    ipython_win_post_install.run(wait=1)
