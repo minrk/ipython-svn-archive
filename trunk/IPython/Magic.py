@@ -2,6 +2,8 @@
 
 from __future__ import nested_scopes
 
+# $Id$
+
 #*****************************************************************************
 #       Copyright (C) 2001 Janko Hauser <jhauser@ifm.uni-kiel.de> and
 #                          Fernando Pérez <fperez@pizero.colorado.edu>
