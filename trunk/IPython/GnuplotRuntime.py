@@ -54,18 +54,27 @@ __all__ = ('Gnuplot gp gp_new Data File Func GridData pm3d_config '
 import os,tempfile
 from genutils import getoutput
 
+#---------------------------------------------------------------------------
+# Notes on mouse support for Gnuplot.py
+
 # If you do not have a mouse-enabled gnuplot, set gnuplot_mouse to 0. If you
 # use gnuplot, you should really grab a recent, mouse enabled copy. It is an
-# extremely useful feature.
+# extremely useful feature.  Mouse support is official as of gnuplot 4.0,
+# released in April 2004.
 
 # For the mouse features to work correctly, you MUST set your Gnuplot.py
-# module to use temporary files instead of pipes for data communication. Note
-# that this is the default, so unless you've manually fiddled with it you
-# should be ok. If you need to make changes, in the Gnuplot module directory,
-# loook for the gp_unix.py file and make sure the prefer_inline_data variable
-# is set to 0. If you set it to 1 Gnuplot will use pipes, which completely
-# confuses the mouse control system (even though they may be a bit faster than
-# temp files).
+# module to use temporary files instead of 'inline data' for data
+# communication. Note that this is the default, so unless you've manually
+# fiddled with it you should be ok. If you need to make changes, in the
+# Gnuplot module directory, loook for the gp_unix.py file and make sure the
+# prefer_inline_data variable is set to 0. If you set it to 1 Gnuplot.py will
+# try to pass the data to gnuplot via standard input, which completely
+# confuses the mouse control system (even though it may be a bit faster than
+# using temp files).
+
+# As of Gnuplot.py v1.7, a new option was added to use FIFOs (pipes).  This
+# mechanism, while fast, also breaks the mouse system.  You must therefore set
+# the variable prefer_fifo_data to 0 in gp_unix.py.
 
 tmpname = tempfile.mktemp()
 open(tmpname,'w').write('set mouse')
