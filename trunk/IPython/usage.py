@@ -64,6 +64,19 @@ All options with a no| prepended can be specified in 'no' form (-nooption
 instead of -option) to turn the feature off.
 
  -help: print this help and exit.
+
+ -thread, -mpthread: these are special options, only one of which can be
+ given, and which can ONLY be given as the FIRST option passed to IPython
+ (they will have no effect in any other position).
+
+ If -thread is given, IPython starts running a separate thread for GTK
+ operation, so that GTK-based programs can open GUIs without blocking
+ ipython's operation.
+
+ The -mpthread option adds special support for the matplotlib library
+ (http://matplotlib.sourceforge.net), allowing interactive usage of the GTK
+ and WX backends.  This also modifies the @run command to correctly execute
+ any matplotlib-based script which calls show() at the end, without blocking.
  
  -no|autocall: make IPython automatically call any callable object even if
  you didn't type explicit parentheses. For example, 'str 43' becomes 'str(43)'
