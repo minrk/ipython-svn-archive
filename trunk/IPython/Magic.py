@@ -7,7 +7,7 @@ $Id$
 from __future__ import nested_scopes
 
 #*****************************************************************************
-#       Copyright (C) 2001 Janko Hauser <jh@comunit.de> and
+#       Copyright (C) 2001-2004 Janko Hauser <jh@comunit.de> and
 #                          Fernando Pérez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
@@ -150,6 +150,14 @@ class Magic:
 
     def __init__(self):
         self.alias_table = {}
+        self.options_table = {}
+
+    def default_option(self,fn,optstr):
+        """Make an entry in the options_table for fn, with value optstr"""
+        
+        if fn not in self.lsmagic():
+            error("%s is not a magic function" % fn)
+        self.options_table[fn] = optstr
 
     def lsmagic(self):
         """Return a list of currently available magic functions.
@@ -329,6 +337,11 @@ class Magic:
           -list_all: put all option values in lists. Normally only options
           appearing more than once are put in a list."""
 
+
+        caller = sys._getframe(1).f_code.co_name.replace('magic_','')
+        #print 'CALLER: <%s>' % caller # dbg
+        arg_str = self.options_table.get(caller,'') + ' ' + arg_str
+        
         mode = kw.get('mode','string')
         if mode not in ['string','list']:
             raise ValueError,'incorrect mode given:'+`mode`
@@ -1710,10 +1723,16 @@ self.magic_$alias = magic_$alias
 
         cd - changes to the last visited directory.
 
+        Options:
+
+        -q: quiet.  Do not print the working directory after the cd command is
+        executed.  By default IPython's cd command does print this directory,
+        since the default prompts do not display path information.
+        
         Note that !cd doesn't work for this purpose because the shell where
         !command runs is immediately discarded after executing 'command'."""
         
-        ps = parameter_s.strip()
+        opts,ps = self.parse_options(parameter_s,'q',mode='string')
         if ps == '-':
             try:
                 ps = self.shell.user_ns['_dh'][-2]
@@ -1725,7 +1744,7 @@ self.magic_$alias = magic_$alias
                 ps = self.shell.user_ns['_dh'][
                     int(ps.replace('-','').strip())]
             except:
-                print 'Requested directory doesn not exist in history.'
+                print 'Requested directory does not exist in history.'
                 return
         if ps:
             try:
@@ -1734,11 +1753,11 @@ self.magic_$alias = magic_$alias
                 print sys.exc_info()[1]
             else:
                 self.shell.user_ns['_dh'].append(os.getcwd())
-                
         else:
             os.chdir(self.home_dir)
             self.shell.user_ns['_dh'].append(os.getcwd())
-        print self.shell.user_ns['_dh'][-1]
+        if not 'q' in opts:
+            print self.shell.user_ns['_dh'][-1]
 
     def magic_dhist(self, parameter_s=''):
         """Print your history of visited directories.
