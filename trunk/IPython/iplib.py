@@ -58,13 +58,14 @@ import bdb, pdb
 import UserList # don't subclass list so this works with Python2.1
 from pprint import pprint, pformat
 import cPickle as pickle
+import traceback
 
 # Homebrewed modules
 import OInspect,PyColorize
 import ultraTB
 from ultraTB import ColorScheme,ColorSchemeTable  # too long names
 from Logger import Logger
-from Magic import Magic,magic2python
+from Magic import Magic,magic2python,shlex_split
 from usage import cmd_line_usage,interactive_usage
 from Struct import Struct
 from Itpl import Itpl,itpl,printpl,ItplNS,itplns
@@ -154,11 +155,11 @@ try:
         # /end Alex Schmolck code.
 
         def _clean_glob(self,text):
-            return self.glob("%s*" % text.replace(r'\ ',' '))
+            return self.glob("%s*" % text)
             
         def _clean_glob_win32(self,text):
             return [f.replace("\\","/")
-                    for f in self.glob("%s*" % text.replace(r'\ ',' '))]            
+                    for f in self.glob("%s*" % text)]            
 
         def file_matches(self, text, state):
             """Match filneames, expanding ~USER type strings.
@@ -175,26 +176,48 @@ try:
             better."""
             
             #print 'Completer->file_matches: <%s>, state:%s' % (text,state) # dbg
-            lbuf = self.get_line_buffer()
-            lsplit = self.space_name_re.split(lbuf)[-1]
-            if '\\' in lsplit:
-                # if spaces are found, do matching on the whole escaped name
-                has_spaces = 1
+
+            # chars that require escaping with backslash - i.e. chars
+            # that readline treats incorrectly as delimiters, but we
+            # don't want to treat as delimiters in filename matching
+            # when escaped with backslash
+            
+            protectables = ' ()[]{}'
+
+            def protect_filename(s):
+                return "".join([(ch in protectables and '\\' + ch or ch) for ch in s])
+
+            lbuf = self.get_line_buffer()[:self.readline.get_endidx()]
+            try:
+                lsplit = shlex_split(lbuf)[-1]
+            except ValueError:
+                # unmatched ", or backslash without escaped character typically
+                return None   
+            except IndexError:
+                # tab pressed on empty line
+                lsplit = ""
+                
+            if lsplit != protect_filename(lsplit):
+                # if protectables are found, do matching on the whole escaped name
+                has_protectables = 1
                 text0,text = text,lsplit
             else:
-                has_spaces = 0
+                has_protectables = 0
                 text = os.path.expanduser(text)
             
             if text == "":
-                return [f.replace(' ',r'\ ') for f in self.glob("*")]
+                return [protect_filename(f) for f in self.glob("*")]
 
-            m0 = self.clean_glob(text)
-            if has_spaces:
-                # If we had spaces, we need to revert our changes so that
-                # we don't double-write the part of the filename we have so far
-                matches = [f.replace(' ',r'\ ').replace(lsplit,text0) for f in m0]
+            m0 = self.clean_glob(text.replace('\\',''))
+            if has_protectables:
+                # If we had protectables, we need to revert our
+                # changes to the beginning of filename so that we
+                # don't double-write the part of the filename we have
+                # so far
+                len_lsplit = len(lsplit)
+                matches = [text0 + protect_filename(f[len_lsplit:]) for f in m0]
             else:
-                matches = [f.replace(' ',r'\ ') for f in m0]
+                matches = [protect_filename(f) for f in m0]
             if len(matches) == 1:
                 if os.path.isdir(matches[0]):
                     # Takes care of links to directories also.  Use '/' explicitly,
@@ -241,20 +264,27 @@ try:
             returns None.  The completion should begin with 'text'.  """
             
             #print '\n*** COMPLETE: <%s>' % text  # dbg
-            if text.startswith('@'):
-                text = text.replace('@','__IP.magic_')
-            if text.startswith('~'):
-                text = os.path.expanduser(text)
-            if state == 0:
-                for matcher in self.matchers:
-                    #print 'Calling matcher:',matcher # dbg
-                    self.matches = getattr(self,matcher)(text,state)
-                    if self.matches:
-                        break
             try:
-                return self.matches[state].replace('__IP.magic_','@')
-            except IndexError:
-                return None
+                if text.startswith('@'):
+                    text = text.replace('@','__IP.magic_')
+                if text.startswith('~'):
+                    text = os.path.expanduser(text)
+                if state == 0:
+                    for matcher in self.matchers:
+                        #print 'Calling matcher:',matcher # dbg
+                        self.matches = getattr(self,matcher)(text,state)
+                        if self.matches:
+                            break
+                try:
+                    return self.matches[state].replace('__IP.magic_','@')
+                except IndexError:
+                    return None
+            except:
+                # needed because readline doesn't deal with exceptions
+                # properly (just beeps and ignores)
+                print "\nCompletion attempt raised an exception!"
+                traceback.print_exc()
+                
 
 except ImportError:
     pass  # no readline support
