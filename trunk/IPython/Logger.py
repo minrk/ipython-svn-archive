@@ -155,14 +155,14 @@ Mode:\t%s
 State:\t%s """ % (logfile,self.LOGMODE,state)
 
         
-    def log(self, line,continuation=0):
+    def log(self, line,continuation=None):
         """Write the line to a log and create input cache variables _i*."""
 
         logline=line
         # update the auto _i tables
         #print '***logging line',line # dbg
         #print '***cache_count', self.outputcache.prompt_count # dbg
-        if not continuation:
+        if continuation is not None:
             self._iii = self._ii
             self._ii = self._i
             self._i = self._i00
