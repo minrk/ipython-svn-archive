@@ -1,4 +1,4 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """
 A set of convenient utilities for numerical work.
 
@@ -21,7 +21,7 @@ See http://www.pfdubois.com/numpy for details.
 #                  http://www.gnu.org/copyleft/lesser.html
 #*****************************************************************************
 
-__author__ = 'Fernando Pérez. <fperez@colorado.edu>'
+__author__ = 'Fernando Perez. <fperez@colorado.edu>'
 __version__= '0.1.1'
 __license__ = 'LGPL'
 __date__   = 'Tue Dec 11 00:27:58 MST 2001'
