@@ -101,7 +101,12 @@ def make_IPython(argv=[''],user_ns=None,debug=0,rc_override=None):
         IP.user_ns['help'] = _Helper()
 
     if debug:
-        # For developer debugging only
+        # For developer debugging only.  Activate this by changing the main
+        # ipython script from:
+        #   IPython.Shell.IPShell().mainloop()
+        # to:
+        #   IPython.Shell.IPShell(debug=1).mainloop()
+        #
         import ultraTB
         sys.excepthook = ultraTB.VerboseTB(call_pdb=1)
     else:
