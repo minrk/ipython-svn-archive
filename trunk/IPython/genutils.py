@@ -745,18 +745,29 @@ def ask_yes_no(prompt,default=None):
 
     If default is given (one of 'y','n'), it is used if the user input is
     empty. Otherwise the question is repeated until an answer is given.
+    If EOF occurs 20 times consecutively, the default answer is assumed,
+    or if there is no default, an exception is raised to prevent infinite
+    loops.
 
     Valid answers are: y/yes/n/no (match is not case sensitive)."""
 
     answers = {'y':1,'n':0,'yes':1,'no':0}
     ans = None
+    eofs, max_eofs = 0, 20
     while ans not in answers.keys():
         try:
             ans = raw_input(prompt+' ').lower()
             if not ans:  # response was an empty string
                 ans = default
+            eofs = 0
         except (EOFError,KeyboardInterrupt):
-            pass
+            eofs = eofs + 1
+            if eofs >= max_eofs:
+                if default in answers.keys():
+                    ans = default
+                else:
+                    raise
+            
     return answers[ans]
 
     

@@ -1,5 +1,10 @@
 2004-11-18  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/genutils.py (ask_yes_no): Add check for a max of 20
+	EOFErrors and bail, to avoid infinite loops if a non-terminating
+	file is fed into ipython.  Patch submitted in issue 19 by user,
+	many thanks.
+
 	* IPython/iplib.py (InteractiveShell.handle_auto): do NOT trigger
 	autoquote/parens in continuation prompts, which can cause lots of
 	problems.  Closes roundup issue 20.
