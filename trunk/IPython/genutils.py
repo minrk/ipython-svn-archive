@@ -42,27 +42,48 @@ if sys.version_info[0:3] >= (2,2,0):
 else:
     StringTypes = (types.StringType,)
 
+# Basic timing functionality
 
-# basic timing functionality
+# If possible (Unix), use the resource module instead of time.clock()
+try:
+    import resource
+    def clock():
+        """clock() -> floating point number
+
+        Return the CPU time in seconds (user + system) since the start of the
+        process.  This is done via a call to resource.getrusage, so it avoids
+        the wraparound problems in time.clock()."""
+        
+        res = resource.getrusage(resource.RUSAGE_SELF)
+        return res[0]+res[1]
+except ImportError:
+    clock = time.clock
+
 def timings_out(reps,func,*args,**kw):
     """timings_out(reps,func,*args,**kw) -> (t_total,t_per_call,output)
 
     Execute a function reps times, return a tuple with the elapsed total
     CPU time in seconds, the time per call and the function's output.
 
-    Note that on Windows the return value is in wall clock seconds, since this
-    function internally uses time.clock(). See the documentation for the time
-    module for details."""
+    Under Unix, the return value is the sum of user+system time consumed by
+    the process, computed via the resource module.  This prevents problems
+    related to the wraparound effect which the time.clock() function has.
+    
+    Under Windows the return value is in wall clock seconds. See the
+    documentation for the time module for more details."""
 
     reps = int(reps)
     assert reps >=1, 'reps must be >= 1'
-    rng = range(reps-1) # the last time is executed separately to store output
-    out = None
-    clock = time.clock
-    start = clock()
-    for dummy in rng: func(*args,**kw)
-    out = func(*args,**kw)  # one last time
-    tot_time = clock()-start
+    if reps==1:
+        start = clock()
+        out = func(*args,**kw)
+        tot_time = clock()-start
+    else:
+        rng = xrange(reps-1) # the last time is executed separately to store output
+        start = clock()
+        for dummy in rng: func(*args,**kw)
+        out = func(*args,**kw)  # one last time
+        tot_time = clock()-start
     av_time = tot_time / reps
     return tot_time,av_time,out
 
@@ -598,30 +619,26 @@ def ask_yes_no(prompt,default=None):
 
     
 #----------------------------------------------------------------------------
-class EvalString:
+class EvalDict:
     """
-    Class to evaluate a string's contents for interpolation in a print.
+    Emulate a dict which evaluates its contents in the caller's frame.
 
     Usage:
     >>>number = 19
     >>>text = "python"
-    >>>print "%(text.capitalize())s %(number/9.0).1f rules!" % EvalString()
-
-    Taken from:
-    http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66018
-    (at the end, in the comments).
-    Author: Skip Montanaro (skip@pobox.com).
+    >>>print "%(text.capitalize())s %(number/9.0).1f rules!" % EvalDict()
     """
 
-    def __init__(self, globals=None, locals=None):
-        self.globals = globals or {}
-        self.locals = locals or None
-       
-    def __getitem__(self, key):
-        if self.locals is None:
-            self.locals = sys._getframe(1).f_locals
-        key = key % self
-        return eval(key, self.globals, self.locals)
+    # This version is due to sismex01@hebmex.com on c.l.py, and is basically a
+    # modified (shorter) version of:
+    # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/66018 by
+    # Skip Montanaro (skip@pobox.com).
+
+    def __getitem__(self, name):
+        frame = sys._getframe(1)
+        return eval(name, frame.f_globals, frame.f_locals)
+
+EvalString = EvalDict  # for backwards compatibility
 
 #----------------------------------------------------------------------------
 def qw(words,flat=0,sep=None,maxsplit=-1):
