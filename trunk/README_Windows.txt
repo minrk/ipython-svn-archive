@@ -32,8 +32,8 @@ you need to do. You should now have an IPython entry in your Start Menu.
 
 In case the automatic installer does not work for some reason, you can
 download the ipython-XXX.tar.gz file, which contains the full IPython source
-distribution (the popular WinZip can read .tar.gz files). After
-uncompressing the archive, you can install it at a command terminal just
-like any other Python module, by using python setup.py install'. After the
-installation, you can create a shortcut to the main IPython script, located
-in the Scripts subdirectory of your Python installation directory.
+distribution (the popular WinZip can read .tar.gz files). After uncompressing
+the archive, you can install it at a command terminal just like any other
+Python module, by using python setup.py install'. After this completes, you
+can run the supplied win32_py24_manual_post_install.py script which will add
+the relevant shortcuts to your startup menu.
