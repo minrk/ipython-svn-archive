@@ -1,5 +1,10 @@
 2004-07-16  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/GnuplotInteractive.py (__all__): added plot2.
+
+	* IPython/Gnuplot2.py (Gnuplot.plot2): added new function for
+	plotting dictionaries, lists or tuples of 1d arrays.
+
 	* IPython/Magic.py (Magic.magic_hist): small clenaups and
 	optimizations.
 
