@@ -8,7 +8,7 @@ from __future__ import nested_scopes
 
 #*****************************************************************************
 #       Copyright (C) 2001-2004 Janko Hauser <jh@comunit.de> and
-#                          Fernando Pérez <fperez@colorado.edu>
+#                          Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the GNU Lesser General Public License (LGPL)
 #
@@ -217,7 +217,6 @@ class Magic:
 
         # Namespaces to search in:
         user_ns        = self.shell.user_ns
-        user_config_ns = self.shell.user_config_ns
         internal_ns    = self.shell.internal_ns
         builtin_ns     = __builtin__.__dict__
         alias_ns       = self.shell.alias_table
@@ -225,7 +224,6 @@ class Magic:
         # Put them in a list. The order is important so that we find things in
         # the same order that Python finds them.
         namespaces = [ ('Interactive',user_ns),
-                       ('User-defined configuration',user_config_ns),
                        ('IPython internal',internal_ns),
                        ('Python builtin',builtin_ns),
                        ('Alias',alias_ns),
@@ -1737,8 +1735,16 @@ Defaulting color scheme to 'NoColor'"""
                       'in alias definitions.')
             else:  # all looks OK
                 self.shell.alias_table[alias] = (nargs,cmd)
+                self.shell.alias_table_validate(verbose=1)
     # end magic_alias
 
+    def magic_unalias(self, parameter_s = ''):
+        """Remove an alias"""
+
+        aname = parameter_s.strip()
+        if aname in self.shell.alias_table:
+            del self.shell.alias_table[aname]
+            
     def magic_rehash(self, parameter_s = ''):
         """Update the alias table with all entries in $PATH.
 
@@ -1758,26 +1764,61 @@ Defaulting color scheme to 'NoColor'"""
                 # each entry in the alias table must be (N,name), where
                 # N is the number of positional arguments of the alias.
                 alias_table[ff] = (0,ff)
-    
+        # Make sure the alias table doesn't contain keywords or builtins
+        self.shell.alias_table_validate()
+        # Call again init_auto_alias() so we get 'rm -i' and other modified
+        # aliases since @rehash will probably clobber them
+        self.shell.init_auto_alias()
+
     def magic_rehashx(self, parameter_s = ''):
         """Update the alias table with all executable files in $PATH.
 
         This version explicitly checks that every entry in $PATH is a file
-        with execute access (os.X_OK), so it is much slower than @rehash."""
+        with execute access (os.X_OK), so it is much slower than @rehash.
+
+        Under Windows, it checks executability as a match agains a
+        '|'-separated string of extensions, stored in the IPython config
+        variable win_exec_ext.  This defaults to 'exe|com|bat'. """
         
         path = filter(os.path.isdir,os.environ['PATH'].split(os.pathsep))
         alias_table = self.shell.alias_table
-        isexec = lambda fname:os.path.isfile(fname) and os.access(fname,os.X_OK)
+
+        if os.name == 'posix':
+            isexec = lambda fname:os.path.isfile(fname) and \
+                     os.access(fname,os.X_OK)
+        else:
+
+            try:
+                winext = os.environ['pathext'].replace(';','|').replace('.','')
+            except KeyError:
+                winext = 'exe|com|bat'
+    
+            execre = re.compile(r'(.*)\.(%s)$' % winext,re.IGNORECASE)
+            isexec = lambda fname:os.path.isfile(fname) and execre.match(fname)
         savedir = os.getcwd()
         try:
-            for pdir in path:
-                os.chdir(pdir)
-                for ff in os.listdir(pdir):
-                    if isexec(ff):
-                        # each entry in the alias table must be (N,name),
-                        # where N is the number of positional arguments of the
-                        # alias.
-                        alias_table[ff] = (0,ff)
+            # write the whole loop for posix/Windows so we don't have an if in
+            # the innermost part
+            if os.name == 'posix':
+                for pdir in path:
+                    os.chdir(pdir)
+                    for ff in os.listdir(pdir):
+                        if isexec(ff):
+                            # each entry in the alias table must be (N,name),
+                            # where N is the number of positional arguments of the
+                            # alias.
+                            alias_table[ff] = (0,ff)
+            else:
+                for pdir in path:
+                    os.chdir(pdir)
+                    for ff in os.listdir(pdir):
+                        if isexec(ff):
+                            alias_table[execre.sub(r'\1',ff)] = (0,ff)
+            # Make sure the alias table doesn't contain keywords or builtins
+            self.shell.alias_table_validate()
+            # Call again init_auto_alias() so we get 'rm -i' and other
+            # modified aliases since @rehashx will probably clobber them
+            self.shell.init_auto_alias()
         finally:
             os.chdir(savedir)
         
@@ -1792,9 +1833,13 @@ Defaulting color scheme to 'NoColor'"""
         you visit during your IPython session, in the variable _dh. The
         command @dhist shows this history nicely formatted.
 
-        cd -<n> changes to the n-th directory in the directory history.
+        Usage:
 
-        cd - changes to the last visited directory.
+          cd 'dir': changes to directory 'dir'.
+
+          cd -: changes to the last visited directory.
+
+          cd -<n>: changes to the n-th directory in the directory history.
 
         Options:
 
@@ -1804,21 +1849,26 @@ Defaulting color scheme to 'NoColor'"""
         
         Note that !cd doesn't work for this purpose because the shell where
         !command runs is immediately discarded after executing 'command'."""
-        
-        opts,ps = self.parse_options(parameter_s,'q',mode='string')
-        if ps == '-':
+
+        parameter_s = parameter_s.strip()
+        numcd = re.match(r'(-)(\d+)$',parameter_s)
+        if numcd:
+            nn = int(numcd.group(2))
             try:
-                ps = self.shell.user_ns['_dh'][-2]
-            except:
-                print 'No previous directory to change to.'
-                return
-        elif ps.startswith('-'):
-            try:
-                ps = self.shell.user_ns['_dh'][
-                    int(ps.replace('-','').strip())]
-            except:
+                ps = self.shell.user_ns['_dh'][nn]
+            except IndexError:
                 print 'Requested directory does not exist in history.'
                 return
+            else:
+                opts = {}
+        else:
+            opts,ps = self.parse_options(parameter_s,'q',mode='string')
+            if ps == '-':
+                try:
+                    ps = self.shell.user_ns['_dh'][-2]
+                except IndexError:
+                    print 'No previous directory to change to.'
+                    return
         if ps:
             try:
                 os.chdir(os.path.expanduser(ps))
