@@ -567,11 +567,12 @@ Currently the magic system has the following functions:\n"""
             return
         width = len(str(final))
         line_sep = ['','\n']
+        input_hist = self.shell.input_hist
+        print_nums = not opts.has_key('n')
         for in_num in range(init,final):
-            #inline = eval('self.shell.user_ns["_i'+str(in_num)+'"]')
-            inline = self.shell.user_ns['_ih'][in_num]
+            inline = input_hist[in_num]
             multiline = inline.count('\n') > 1
-            if not opts.has_key('n'):
+            if print_nums:
                 print str(in_num).ljust(width)+':'+ line_sep[multiline],
             if inline.startswith('#@') or inline.startswith('#!'):
                 print inline[1:],
