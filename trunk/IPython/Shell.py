@@ -272,7 +272,6 @@ class MTInteractiveShell(InteractiveShell):
         # Object variable to store code object waiting execution.  No need to
         # use a Queue here, since it's a single item which gets cleared once run.
         self.code_to_run = None
-        self.parent_runcode = lambda obj: InteractiveShell.runcode(self,obj)
 
         # Locking control variable
         self.ready = threading.Condition()
@@ -342,8 +341,7 @@ class MTInteractiveShell(InteractiveShell):
         # Run pending code by calling parent class
         if self.code_to_run is not None:
             self.ready.notify()
-            self.parent_runcode(self.code_to_run)
-                
+            InteractiveShell.runcode(self,self.code_to_run)
             # Flush out code object which has been run
             self.code_to_run = None
             
