@@ -5622,7 +5622,7 @@ from IPython.Extensions.PhysicalQInteractive import *
 import IPython.Extensions.PhysicalQInput
 \layout Section
 
-Using IPython as a system shell: the `pysh' profile.
+IPython as a system shell
 \layout Standard
 
 IPython ships with a special profile called `pysh', which you can activate
@@ -5641,7 +5641,7 @@ InterpreterExec
 
 Note that this does 
 \emph on 
-note
+not
 \emph default 
  make IPython a full-fledged system shell.
  In particular, it has no job control, so if you type Ctrl-Z (under Unix),
