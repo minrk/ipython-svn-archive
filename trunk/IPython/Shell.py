@@ -587,9 +587,15 @@ def start():
     if len(sys.argv) > 1:
         arg1 = sys.argv[1]
         if arg1.endswith('-gthread'):
-            shell = IPShellGTK
+            warn('\nGTK threading is not enabled yet for IPython, pending testing.\n'
+                 'A normal (non-threaded) IPython will start.\n')
+            shell = IPShell
+            #shell = IPShellGTK
         elif arg1.endswith('-wthread'):
-            shell = IPShellWX
+            warn('\nWX threading is not enabled yet for IPython, pending testing.\n'
+                 'A normal (non-threaded) IPython will start.\n')
+            shell = IPShell
+            #shell = IPShellWX
         elif arg1.endswith('-pylab'):
             shell = _matplotlib_shell_class()
         else:
