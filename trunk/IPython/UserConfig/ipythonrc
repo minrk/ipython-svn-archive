@@ -25,7 +25,6 @@
 # lower-level services. If this is your main ~/.ipython/ipythonrc file, you
 # should only keep here basic things you always want available. Then you can
 # include it in every other special-purpose config file you create.
-
 include 
 
 #---------------------------------------------------------------------------
@@ -92,7 +91,6 @@ autoindent 0
 
 automagic 1
 
-
 # Size of the output cache. After this many entries are stored, the cache will
 # get flushed. Depending on the size of your intermediate calculations, you
 # may have memory problems if you make it too big, since keeping things in the
@@ -106,7 +104,6 @@ automagic 1
 # help.
 
 cache_size 1000
-
 
 # Classic mode: Setting 'classic 1' you lose many of IPython niceties,
 # but that's your choice! Classic 1 -> same as IPython -classic.
@@ -136,13 +133,13 @@ colors Linux
 
 ########################
 # Note to Windows users
-
-# I haven't been able to ever find a way to make color work reliably under
-# Windows. If you find a solution, please let me know so I can include it in
-# future releases.
-
+#
+# Color and readline support is avaialble to Windows users via Gary Bishop's
+# readline library.  You can find Gary's tools at
+# http://sourceforge.net/projects/uncpythontools.
+# Note that his readline module requires in turn the ctypes library, available
+# at http://starship.python.net/crew/theller/ctypes.
 ########################
-
 
 # color_info: IPython can display information about objects via a set of
 # functions, and optionally can use colors for this, syntax highlighting
@@ -201,7 +198,6 @@ pdb 0
 # display (than print) for complex nested data structures.
 pprint 1
 
-
 # Prompt strings (see ipython --help for more details).
 # Use %n to represent the current prompt number, and quote them to protect
 # spaces.
@@ -212,7 +208,6 @@ prompt_in1 'In [%n]:'
 prompt_in2 '   .%n.:'
 
 prompt_out 'Out[%n]:'
-
 
 # quick 1 -> same as ipython -quick
 quick 0
@@ -247,9 +242,7 @@ screen_length 0
 # By choosing these you can organize your output any way you want.
 
 separate_in \n
-
 separate_out 0
-
 separate_out2 0
 
 # 'nosep 1' is a shorthand for '-SeparateIn 0 -SeparateOut 0 -SeparateOut2 0'.
