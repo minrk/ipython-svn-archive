@@ -1101,7 +1101,7 @@ Currently the magic system has the following functions:\n"""
         else:
             return None
 
-    def magic_run(self, parameter_s =''):
+    def magic_run(self, parameter_s ='',runner=None):
         """Run the named file inside IPython as a program.
 
         Usage:\\
@@ -1183,12 +1183,14 @@ Currently the magic system has the following functions:\n"""
         sys.modules[prog_ns['__name__']] = FakeModule(prog_ns)
         
         stats = None
+        if runner is None:
+            runner = self.shell.safe_execfile
         try:
             if opts.has_key('p'):
                 #cmd = parameter_s.split()[:-1] # FIXME: dead code?
                 stats = self.magic_prun('',0,opts,arg_lst,prog_ns)
             else:
-                self.shell.safe_execfile(filename,prog_ns,prog_ns)
+                runner(filename,prog_ns,prog_ns)
                 if opts.has_key('i'):
                     self.shell.user_ns['__name__'] = __name__save
                 else:
