@@ -996,7 +996,7 @@ There seemed to be a problem with your sys.stderr.
         else:
             #print 'iFun <%s> rest <%s>' % (iFun,theRest) # dbg
             if self.rc.autocall and \
-                   (len(theRest)==0 or theRest[0] not in '!=()<>[') and \
+                   (len(theRest)==0 or theRest[0] not in '!=()<>[,') and \
                    self.fun_name.match(iFun) and \
                    callable(oinfo['obj']) :
                 #print 'going auto'  # dbg
