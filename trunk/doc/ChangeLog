@@ -1,3 +1,10 @@
+2005-03-26  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Prompts.py (Prompt2.set_p_str): Fix spurious space in
+	continuation prompt, which misled users to think the line was
+	already indented.  Closes debian Bug#300847, reported to me by
+	Norbert Tretkowski <tretkowski-AT-inittab.de>.
+
 2005-03-23  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Prompts.py (Prompt1.__str__): Make sure that prompts are

@@ -349,7 +349,7 @@ class Prompt2(BasePrompt):
     def set_p_str(self):
         import os,time  # needed in locals for prompt string handling
         loc = locals()
-        self.p_str = ItplNS('%s%s%s ' %
+        self.p_str = ItplNS('%s%s%s' %
                             ('${self.col_p2}',
                              multiple_replace(prompt_specials, self.p_template),
                              '$self.col_norm'),
