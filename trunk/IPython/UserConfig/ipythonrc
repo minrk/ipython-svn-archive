@@ -66,12 +66,12 @@ autocall 1
 
 # This feature uses the readline library, so it will honor your ~/.inputrc
 # configuration (or whatever file your INPUTRC variable points to).  Adding
-# the following lines to your inputrc file can make indent/unindenting more
-# convenient (M-i indents, M-o unindents):
+# the following lines to your .inputrc file can make indent/unindenting more
+# convenient (M-i indents, M-u unindents):
 
 #  $if Python
 #  "\M-i": "    "
-#  "\M-o": "\d\d\d\d"
+#  "\M-u": "\d\d\d\d"
 #  $endif
 
 # The feature is off by default because it can cause problems with pasting of
