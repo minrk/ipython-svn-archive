@@ -238,7 +238,10 @@ class Magic:
                 for part in oname_rest:
                     try:
                         obj = getattr(obj,part)
-                    except AttributeError:
+                    except:
+                        # Blanket except b/c some badly implemented objects
+                        # allow __getattr__ to raise exceptions other than
+                        # AttributeError, which then crashes IPython.
                         break
                 else:
                     # If we finish the for loop (no break), we got all members
