@@ -1,5 +1,9 @@
 2005-02-17  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/genutils.py (native_line_ends): Fix bug which would
+	cause improper line-ends under win32 b/c I was not opening files
+	in binary mode.  Bug report and fix thanks to Ville.
+
 	* IPython/iplib.py (handle_auto): Fix bug which I introduced when
 	trying to catch spurious foo[1] autocalls.  My fix actually broke
 	',/' autoquote/call with explicit escape (bad regexp).
