@@ -1,10 +1,8 @@
-# -*- coding: iso-8859-1 -*-
+# -*- coding: utf-8 -*-
 """Magic functions for InteractiveShell.
 
 $Id$
 """
-
-from __future__ import nested_scopes
 
 #*****************************************************************************
 #       Copyright (C) 2001-2004 Janko Hauser <jhauser@zscout.de> and
@@ -25,9 +23,7 @@ from __future__ import nested_scopes
 #****************************************************************************
 # Modules and globals
 
-import Release
-__version__ = Release.version
-__date__    = Release.date
+from IPython import Release
 __author__  = '%s <%s>\n%s <%s>' % \
               ( Release.authors['Janko'] + Release.authors['Fernando'] )
 __license__ = Release.license
@@ -40,10 +36,10 @@ from pprint import pprint, pformat
 from cStringIO import StringIO
 
 # Homebrewed
-from genutils import *
-from Struct import Struct
-from Itpl import Itpl, itpl, printpl,itplns
-from FakeModule import FakeModule
+from IPython.Struct import Struct
+from IPython.Itpl import Itpl, itpl, printpl,itplns
+from IPython.FakeModule import FakeModule
+from IPython.genutils import *
 
 # Globals to be set later by Magic constructor
 MAGIC_PREFIX = ''
@@ -768,6 +764,14 @@ Currently the magic system has the following functions:\n"""
         # for these types, show len() instead of data:
         seq_types = [types.DictType,types.ListType,types.TupleType]
 
+        # for Numeric arrays, display summary info
+        try:
+            import Numeric
+        except ImportError:
+            array_type = None
+        else:
+            array_type = Numeric.ArrayType.__name__
+        
         # Find all variable names and types so we can figure out column sizes
         get_vars = lambda i: self.locals[i]
         type_name = lambda v: type(v).__name__
@@ -776,25 +780,34 @@ Currently the magic system has the following functions:\n"""
         # column labels and # of spaces as separator
         varlabel = 'Variable'
         typelabel = 'Type'
-        datalabel = 'Data/Length'
+        datalabel = 'Data/Info'
         colsep = 3
+        # variable format strings
+        vformat    = "$vname.ljust(varwidth)$vtype.ljust(typewidth)"
+        vfmt_short = '$vstr[:25]<...>$vstr[-25:]'
+        aformat    = "%s: %s elems, type `%s`, %s bytes"
         # find the size of the columns to format the output nicely
         varwidth = max(max(map(len,varnames)), len(varlabel)) + colsep
         typewidth = max(max(map(len,typelist)), len(typelabel)) + colsep
         # table header
         print varlabel.ljust(varwidth) + typelabel.ljust(typewidth) + \
-              datalabel+'\n' + '-'*(varwidth+typewidth+len(datalabel))
+              ' '+datalabel+'\n' + '-'*(varwidth+typewidth+len(datalabel)+1)
         # and the table itself
         for vname,var,vtype in zip(varnames,varlist,typelist):
-            print itpl("$vname.ljust(varwidth)$vtype.ljust(typewidth)"),
+            print itpl(vformat),
             if vtype in seq_types:
                 print len(var)
+            elif vtype==array_type:
+                vshape = str(var.shape).replace(', ','x')[1:-1]
+                vsize  = Numeric.size(var)
+                vbytes = vsize*var.itemsize()
+                print aformat % (vshape,vsize,var.typecode(),vbytes)
             else:
                 vstr = str(var)
                 if len(vstr) < 50:
                     print vstr
                 else:
-                    printpl('$vstr[:20]<...>$vstr[-20:]')
+                    printpl(vfmt_short)
                 
     def magic_reset(self, parameter_s=''):
         """Resets the namespace by removing all names defined by the user.
