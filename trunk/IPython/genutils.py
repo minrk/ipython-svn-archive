@@ -1053,15 +1053,16 @@ def page(strng,start=0,screen_lines=0,pager_cmd = None):
                 #pager,shell_out = os.popen4(pager_cmd)
                 pager = os.popen(pager_cmd,'w')
                 pager.write(strng)
-                #shell_out.close()
                 pager.close()
-                #retval = None
                 retval = pager.close()  # success returns None
             except IOError,msg:  # broken pipe when user quits
                 if msg.args == (32,'Broken pipe'):
                     retval = None
                 else:
                     retval = 1
+            except OSError:
+                # Other strange problems, sometimes seen in Win2k/cygwin
+                retval = 1
         if retval is not None:
             page_dumb(strng,screen_lines=screen_lines)
 

@@ -1,3 +1,8 @@
+2004-11-07  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (page): Add a trap for OSError exceptions,
+	sometimes seen by win2k/cygwin users.
+
 2004-11-06  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (interact): Change the handling of %Exit from
