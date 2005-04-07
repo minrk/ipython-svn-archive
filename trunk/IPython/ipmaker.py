@@ -199,7 +199,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       log = 0,
                       logfile = '',
                       logplay = '',
-                      multi_line_specials = 0,
+                      multi_line_specials = 1,
                       messages = 1,
                       nosep = 0,
                       pdb = 0,
