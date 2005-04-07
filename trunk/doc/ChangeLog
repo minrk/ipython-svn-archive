@@ -1,5 +1,9 @@
 2005-04-06  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/UserConfig/ipythonrc: Add multi_line_specials to the
+	config file, I'd forgotten about this, so users were getting it
+	off by default.
+
 	* IPython/iplib.py (ipmagic): big overhaul of the magic system for
 	consistency.  Now magics can be called in multiline statements,
 	and python variables can be expanded in magic calls via $var.

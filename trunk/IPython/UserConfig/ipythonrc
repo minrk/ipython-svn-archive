@@ -282,6 +282,17 @@ nosep 0
 xmode Context
 #xmode Verbose
 
+# multi_line_specials: if true, allow magics, aliases and shell escapes (via
+# !cmd) to be used in multi-line input (like for loops).  For example, if you
+# have this active, the following is valid in IPython:
+#
+#In [17]: for i in range(3):
+#   ....:     mkdir $i
+#   ....:     !touch $i/hello
+#   ....:     ls -l $i
+
+multi_line_specials 1
+
 #---------------------------------------------------------------------------
 # Section: Readline configuration (readline is not available for MS-Windows)
 
