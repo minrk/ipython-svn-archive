@@ -1,5 +1,9 @@
 2005-04-06  Fernando Perez  <fperez@colorado.edu>
 
+	* IPython/ipmaker.py (make_IPython): Make multi_line_specials on
+	by default, so that all users benefit from it.  Those who don't
+	want it can still turn it off.
+
 	* IPython/UserConfig/ipythonrc: Add multi_line_specials to the
 	config file, I'd forgotten about this, so users were getting it
 	off by default.
