@@ -23,6 +23,11 @@
 include ipythonrc
 
 ############################################################################
+# Load all the actual syntax extensions for shell-like operation, which live
+# in the InterpreterExec standard extension.
+import_all IPython.Extensions.InterpreterExec
+
+############################################################################
 # PROMPTS
 #
 # Configure prompt for more shell-like usage.
@@ -87,8 +92,3 @@ multi_line_specials 1
 
 #fperez[IPython]17> parts Hello world and goodbye
 #First <Hello> Second <world> and goodbye
-
-############################################################################
-# MORE COMPLEX CONFIGURATION
-# pysh.py does the rest of the configuration with real python code.
-execfile pysh.py
