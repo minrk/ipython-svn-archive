@@ -251,7 +251,7 @@ try:
             return [f.replace("\\","/")
                     for f in self.glob("%s*" % text)]            
 
-        def file_matches(self, text, state):
+        def file_matches(self, text):
             """Match filneames, expanding ~USER type strings.
 
             Most of the seemingly convoluted logic in this completer is an
@@ -265,7 +265,7 @@ try:
             current (as of Python 2.3) Python readline it's possible to do
             better."""
             
-            #print 'Completer->file_matches: <%s>, state:%s' % (text,state) # dbg
+            #print 'Completer->file_matches: <%s>' % text # dbg
 
             # chars that require escaping with backslash - i.e. chars
             # that readline treats incorrectly as delimiters, but we
@@ -317,7 +317,7 @@ try:
 
             return matches
 
-        def alias_matches(self, text, state):
+        def alias_matches(self, text):
             """Match internal system aliases"""
             #print 'Completer->alias_matches:',text # dbg
             text = os.path.expanduser(text)
@@ -327,7 +327,7 @@ try:
             else:
                 return [alias for alias in aliases if alias.startswith(text)]
             
-        def python_matches(self,text,state):
+        def python_matches(self,text):
             """Match attributes or global python names"""
             #print 'Completer->python_matches' # dbg
             if "." in text:
@@ -359,7 +359,7 @@ try:
             This is called successively with state == 0, 1, 2, ... until it
             returns None.  The completion should begin with 'text'.  """
             
-            #print '\n*** COMPLETE: <%s>' % text  # dbg
+            #print '\n*** COMPLETE: <%s> (%s)' % (text,state)  # dbg
             magic_escape = self.magic_escape
             magic_prefix = self.magic_prefix
             
@@ -375,10 +375,10 @@ try:
                     if self.merge_completions:
                         self.matches = []
                         for matcher in self.matchers:
-                            self.matches.extend(matcher(text,state))
+                            self.matches.extend(matcher(text))
                     else:
                         for matcher in self.matchers:
-                            self.matches = matcher(text,state)
+                            self.matches = matcher(text)
                             if self.matches:
                                 break
                         

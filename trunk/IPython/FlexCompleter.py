@@ -174,19 +174,25 @@ class Completer:
         words = dir(object)
         if hasattr(object,'__class__'):
             words.append('__class__')
-            words = words + get_class_members(object.__class__)
-        matches = []
+            words.extend(get_class_members(object.__class__))
         n = len(attr)
+        matches = []
         for word in words:
-            if word[:n] == attr and word != "__builtins__":
-                matches.append("%s.%s" % (expr, word))
+            try:
+                if word[:n] == attr and word != "__builtins__":
+                    matches.append("%s.%s" % (expr, word))
+            except:
+                # some badly behaved objects pollute dir() with non-strings,
+                # which cause the completion to fail.  This way we skip the
+                # bad entries and can still continue processing the others.
+                pass
         return matches
 
 def get_class_members(klass):
     ret = dir(klass)
     if hasattr(klass,'__bases__'):
         for base in klass.__bases__:
-            ret = ret + get_class_members(base)
+            ret.extend(get_class_members(base))
     return ret
 
 readline.set_completer(Completer().complete)
