@@ -185,10 +185,9 @@ class Inspector:
         formatted docstrings."""
         
         head = self.__head  # so that itpl can find it even if private
-        if formatter is None:
-            ds = getdoc(obj)
-        else:
-            ds = formatter(getdoc(obj))
+        ds = getdoc(obj)
+        if formatter:
+            ds = formatter(ds)
         if type(obj) is types.ClassType:
             init_ds = getdoc(obj.__init__)
             output = itpl('$head("Class Docstring:")\n'
@@ -238,9 +237,12 @@ class Inspector:
         Optional arguments:
         
         - oname: name of the variable pointing to the object.
+
         - formatter: special formatter for docstrings (see pdoc)
-        - info: a structure with some information fields (such as the
-        docstring) which may have been precomputed already.
+
+        - info: a structure with some information fields which may have been
+        precomputed already.
+
         - detail_level: if set to 1, more information is given.
         """
 
@@ -248,15 +250,18 @@ class Inspector:
 
         header = self.__head
         if info is None:
-            ds = getdoc(obj)
             ismagic = 0
             isalias = 0
             ospace = ''
         else:
-            ds = info.docstring
             ismagic = info.ismagic
             isalias = info.isalias
             ospace = info.namespace
+        # Get docstring, special-casing aliases:
+        if isalias:
+            ds = "Alias to the system command:\n  %s" % obj[1]
+        else:
+            ds = getdoc(obj)
         if formatter is not None:
             ds = formatter(ds)
 

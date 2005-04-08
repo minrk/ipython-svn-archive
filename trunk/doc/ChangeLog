@@ -1,3 +1,40 @@
+2005-04-08  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Magic.py (Magic._ofind): remove docstring evaluation
+	from _ofind, which gets called on almost every input line.  Now,
+	we only try to get docstrings if they are actually going to be
+	used (the overhead of fetching unnecessary docstrings can be
+	noticeable for certain objects, such as Pyro proxies).
+
+	* IPython/iplib.py (MagicCompleter.python_matches): Change the API
+	for completers.  For some reason I had been passing them the state
+	variable, which completers never actually need, and was in
+	conflict with the rlcompleter API.  Custom completers ONLY need to
+	take the text parameter.
+
+	* IPython/Extensions/InterpreterExec.py: Fix regexp so that magics
+	work correctly in pysh.  I've also moved all the logic which used
+	to be in pysh.py here, which will prevent problems with future
+	upgrades.  However, this time I must warn users to update their
+	pysh profile to include the line
+
+	import_all IPython.Extensions.InterpreterExec
+
+	because otherwise things won't work for them.  They MUST also
+	delete pysh.py and the line
+
+	execfile pysh.py
+
+	from their ipythonrc-pysh.
+
+	* IPython/FlexCompleter.py (Completer.attr_matches): Make more
+	robust in the face of objects whose dir() returns non-strings
+	(which it shouldn't, but some broken libs like ITK do).  Thanks to
+	a patch by John Hunter (implemented differently, though).  Also
+	minor improvements by using .extend instead of + on lists.
+
+	* pysh.py: 
+
 2005-04-06  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/ipmaker.py (make_IPython): Make multi_line_specials on

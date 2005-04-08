@@ -231,7 +231,7 @@ license. To use profiling, please install"python2.3-profiler" from non-free.""")
     def _ofind(self,oname):
         """Find an object in the available namespaces.
 
-        self._ofind(oname) -> dict with keys: found,obj,ospace,docstring,ismagic
+        self._ofind(oname) -> dict with keys: found,obj,ospace,ismagic
 
         Has special code to detect magic functions.
         """
@@ -299,15 +299,8 @@ license. To use profiling, please install"python2.3-profiler" from non-free.""")
             found = 1
             ospace = 'Interactive'
             
-        # Get the object's docstring
-        if found:
-            if isalias:
-                ds = "Alias to the system command:\n  %s" % obj[1]
-            else:
-                ds = OInspect.getdoc(obj)
-
         return {'found':found, 'obj':obj, 'namespace':ospace,
-                'docstring':ds, 'ismagic':ismagic, 'isalias':isalias}
+                'ismagic':ismagic, 'isalias':isalias}
         
     def arg_err(self,func):
         """Print docstring if incorrect arguments were passed"""
@@ -701,11 +694,16 @@ Currently the magic system has the following functions:\n"""
         """Provide detailed information about an object.
 
         '%pinfo object' is just a synonym for object? or ?object."""
-        
+
+        #print 'pinfo par: <%s>' % parameter_s  # dbg
+
         # detail_level: 0 -> obj? , 1 -> obj??
         detail_level = 0
-        qmark1,oname,qmark2 = re.match('(\?*)(.*?)(\??$)',parameter_s).groups()
-        if qmark1 or qmark2:
+        # We need to detect whether we got called as 'pinfo pinfo foo', which
+        # can happen if the user types 'pinfo foo?' at the cmd line.
+        pinfo,qmark1,oname,qmark2 = \
+               re.match('(pinfo )?(\?*)(.*?)(\??$)',parameter_s).groups()
+        if pinfo or qmark1 or qmark2:
             detail_level = 1
         self._inspect('pinfo',oname,detail_level=detail_level)
 
