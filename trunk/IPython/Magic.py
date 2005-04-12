@@ -699,8 +699,8 @@ Currently the magic system has the following functions:\n"""
 
         # detail_level: 0 -> obj? , 1 -> obj??
         detail_level = 0
-        # We need to detect whether we got called as 'pinfo pinfo foo', which
-        # can happen if the user types 'pinfo foo?' at the cmd line.
+        # We need to detect if we got called as 'pinfo pinfo foo', which can
+        # happen if the user types 'pinfo foo?' at the cmd line.
         pinfo,qmark1,oname,qmark2 = \
                re.match('(pinfo )?(\?*)(.*?)(\??$)',parameter_s).groups()
         if pinfo or qmark1 or qmark2:
