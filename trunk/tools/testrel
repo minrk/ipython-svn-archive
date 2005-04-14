@@ -27,7 +27,3 @@ python2.4 ./setup.py bdist_rpm --release=py24 --fix-python
 # the only one that fixes a crash in the post-install phase.
 $HOME/tmp/local/bin/python2.3 setup.py bdist_wininst \
   --install-script=ipython_win_post_install.py
-
-
-# To get a specific python in the spec file, we must fix it:
-#python2.3 ./setup.py bdist_rpm --release=py23 --fix-python
