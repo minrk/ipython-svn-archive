@@ -449,7 +449,6 @@ class MatplotlibShellBase:
   Welcome to pylab, a matplotlib-based Python environment.
   For more information, type 'help(pylab)'.
   """
-
         return user_ns,b
 
     def mplot_exec(self,fname,*where):
@@ -552,7 +551,7 @@ def hijack_wx():
     import wxPython
     ver = wxPython.__version__
     orig_mainloop = None
-    if ver[:3] == '2.5':
+    if ver[:3] >= '2.5':
         import wx
         if hasattr(wx, '_core_'): core = getattr(wx, '_core_')
         elif hasattr(wx, '_core'): core = getattr(wx, '_core')
@@ -563,7 +562,7 @@ def hijack_wx():
         orig_mainloop = wxPython.wxc.wxPyApp_MainLoop
         wxPython.wxc.wxPyApp_MainLoop = dummy_mainloop
     else:
-        warn("Unable to find either wxPython version 2.4 or 2.5.")
+        warn("Unable to find either wxPython version 2.4 or >= 2.5.")
     return orig_mainloop
 
 def hijack_gtk():
@@ -727,6 +726,69 @@ class IPShellWX(threading.Thread):
         self.wx_mainloop(self.app)
         self.join()
 
+
+class IPShellQt(threading.Thread):
+    """Run a Qt event loop in a separate thread.
+    
+    Python commands can be passed to the thread where they will be executed.
+    This is implemented by periodically checking for passed code using a
+    Qt timer / slot."""
+    
+    TIMEOUT = 100 # Millisecond interval between timeouts.
+
+    def __init__(self,argv=None,user_ns=None,debug=0,
+                 shell_class=MTInteractiveShell):
+        
+        import qt
+
+        class newQApplication:
+            def __init__( self ):
+                self.QApplication = qt.QApplication
+                
+            def __call__( *args, **kwargs ):
+                return qt.qApp
+
+            def exec_loop( *args, **kwargs ):
+                pass
+
+            def __getattr__( self, name ):
+                return getattr( self.QApplication, name )
+          
+        qt.QApplication = newQApplication()
+
+        # Allows us to use both Tk and QT.
+        self.tk = get_tk()
+
+        self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
+                               shell_class=shell_class,
+                               on_kill=[qt.qApp.exit])
+        threading.Thread.__init__(self)
+
+    def run(self):
+        self.IP.mainloop()
+        self.IP.kill()
+
+    def mainloop(self):
+
+        import qt, sys
+        if qt.QApplication.startingUp():
+          a = qt.QApplication.QApplication( sys.argv )
+        self.timer = qt.QTimer()
+        qt.QObject.connect( self.timer, qt.SIGNAL( 'timeout()' ), self.on_timer )
+
+        self.start()
+        self.timer.start( self.TIMEOUT, True )
+        while True:
+            if self.IP._kill: break
+            qt.qApp.exec_loop()
+        self.join()
+
+    def on_timer(self):
+        update_tk(self.tk)
+        result = self.IP.runcode()
+        self.timer.start( self.TIMEOUT, True )
+        return result
+
 # A set of matplotlib public IPython shell classes, for single-threaded
 # (Tk* and FLTK* backends) and multithreaded (GTK* and WX* backends) use.
 class IPShellMatplotlib(IPShell):
@@ -755,6 +817,14 @@ class IPShellMatplotlibWX(IPShellWX):
     def __init__(self,argv=None,user_ns=None,debug=1):
         IPShellWX.__init__(self,argv,user_ns,debug,shell_class=MatplotlibMTShell)
 
+class IPShellMatplotlibQt(IPShellQt):
+    """Subclass IPShellQt with MatplotlibMTShell as the internal shell.
+
+    Multi-threaded class, meant for the Qt* backends."""
+    
+    def __init__(self,argv=None,user_ns=None,debug=1):
+        IPShellQt.__init__(self,argv,user_ns,debug,shell_class=MatplotlibMTShell)
+
 #-----------------------------------------------------------------------------
 # Factory functions to actually start the proper thread-aware shell
 
@@ -775,6 +845,8 @@ def _matplotlib_shell_class():
             sh_class = IPShellMatplotlibGTK
         elif backend.startswith('WX'):
             sh_class = IPShellMatplotlibWX
+        elif backend.startswith('Qt'):
+            sh_class = IPShellMatplotlibQt
         else:
             sh_class = IPShellMatplotlib
     #print 'Using %s with the %s backend.' % (sh_class,backend) # dbg
@@ -802,6 +874,8 @@ def start():
             shell = IPShellWX
         elif arg1.endswith('-pylab'):
             shell = _matplotlib_shell_class()
+        elif arg1.endswith( '-qthread' ):
+            shell = IPShellQt
         else:
             shell = IPShell
     else:
