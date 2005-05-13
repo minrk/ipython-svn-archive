@@ -224,7 +224,8 @@ try:
                 self.clean_glob = self._clean_glob
             self.matchers = [self.python_matches,
                              self.file_matches,
-                             self.alias_matches]
+                             self.alias_matches,
+                             self.python_func_kw_matches]
 
         # Code contributed by Alex Schmolck, for ipython/emacs integration
         def all_completions(self, text):
@@ -352,6 +353,82 @@ try:
                 if matches == [] and not text.startswith(os.sep):
                     matches = self.attr_matches(self.magic_prefix+text)
             return matches
+
+        def _default_arguments(self, obj):
+            """Return the list of default arguments of obj if it is callable,
+            or empty list otherwise."""
+            
+            if not (inspect.isfunction(obj) or inspect.ismethod(obj)):
+                # for classes, check for __init__,__new__
+                if inspect.isclass(obj):
+                    obj = (getattr(obj,'__init__',None) or
+                           getattr(obj,'__new__',None))
+                # for all others, check if they are __call__able
+                elif hasattr(obj, '__call__'):
+                    obj = obj.__call__
+                # XXX: is there a way to handle the builtins ?
+            try:
+                args,_,_1,defaults = inspect.getargspec(obj)
+                if defaults:
+                    return args[-len(defaults):]
+            except TypeError: pass
+            return []
+
+        def python_func_kw_matches(self,text):
+            """Match named parameters (kwargs) of the last open function"""
+
+            if "." in text: # a parameter cannot be dotted
+                return []
+            try: regexp = self.__funcParamsRegex
+            except AttributeError:
+                regexp = self.__funcParamsRegex = re.compile(r'''
+                    '.*?' |    # single quoted strings or
+                    ".*?" |    # double quoted strings or
+                    \w+   |    # identifier
+                    \S         # other characters
+                    ''', re.VERBOSE | re.DOTALL)
+            # 1. find the nearest identifier that comes before an unclosed
+            # parenthesis e.g. for "foo (1+bar(x), pa", the candidate is "foo"
+            tokens = regexp.findall(self.get_line_buffer())
+            tokens.reverse()
+            iterTokens = iter(tokens); openPar = 0
+            for token in iterTokens:
+                if token == ')':
+                    openPar -= 1
+                elif token == '(':
+                    openPar += 1
+                    if openPar > 0:
+                        # found the last unclosed parenthesis
+                        break
+            else:
+                return []
+            # 2. Concatenate any dotted names (e.g. "foo.bar" for "foo.bar(x, pa" )
+            ids = []
+            isId = re.compile(r'\w+$').match
+            while True:
+                try:
+                    ids.append(iterTokens.next())
+                    if not isId(ids[-1]):
+                        ids.pop(); break
+                    if not iterTokens.next() == '.':
+                        break
+                except StopIteration:
+                    break
+            # lookup the candidate callable matches either using global_matches
+            # or attr_matches for dotted names
+            if len(ids) == 1:
+                callableMatches = self.global_matches(ids[0])
+            else:
+                callableMatches = self.attr_matches('.'.join(ids[::-1]))
+            argMatches = []
+            for callableMatch in callableMatches:
+                try: namedArgs = self._default_arguments(eval(callableMatch,
+                                                             self.namespace))
+                except: continue
+                for namedArg in namedArgs:
+                    if namedArg.startswith(text):
+                        argMatches.append("%s=" %namedArg)
+            return argMatches
 
         def complete(self, text, state):
             """Return the next possible completion for 'text'.
@@ -555,11 +632,13 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         self.ESC_HELP  = '?'
         self.ESC_MAGIC = '%'
         self.ESC_QUOTE = ','
+        self.ESC_QUOTE2 = ';'
         self.ESC_PAREN = '/'
 
         # And their associated handlers
         self.esc_handlers = {self.ESC_PAREN:self.handle_auto,
                              self.ESC_QUOTE:self.handle_auto,
+                             self.ESC_QUOTE2:self.handle_auto,
                              self.ESC_MAGIC:self.handle_magic,
                              self.ESC_HELP:self.handle_help,
                              self.ESC_SHELL:self.handle_shell_escape,
@@ -646,7 +725,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # much:  it's better to be conservative rather than to trigger hidden
         # evals() somewhere and end up causing side effects.
 
-        self.line_split = re.compile(r'^(\s*)'
+        self.line_split = re.compile(r'^([\s*,;/])'
                                      r'([\?\w\.]+\w*\s*)'
                                      r'(\(?.*$)')
 
@@ -1792,13 +1871,18 @@ There seemed to be a problem with your sys.stderr.
                     pre=None,iFun=None,theRest=None):
         """Hande lines which can be auto-executed, quoting if requested."""
 
+        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun,theRest)  # dbg
+        
         # This should only be active for single-line input!
         if continue_prompt:
             return line
 
         if pre == self.ESC_QUOTE:
-            # Auto-quote
+            # Auto-quote splitting on whitespace
             newcmd = '%s("%s")\n' % (iFun,'", "'.join(theRest.split()) )
+        elif pre == self.ESC_QUOTE2:
+            # Auto-quote whole string
+            newcmd = '%s("%s")\n' % (iFun,theRest)
         else:
             # Auto-paren
             if theRest[0:1] in ('=','['):
@@ -1878,6 +1962,7 @@ There seemed to be a problem with your sys.stderr.
 
         kw.setdefault('islog',0)
         kw.setdefault('quiet',1)
+        kw.setdefault('exit_ignore',0)
         first = xfile.readline()
         _LOGHEAD = str(self.LOGHEAD).split('\n',1)[0].strip()
         xfile.close()
@@ -1955,9 +2040,13 @@ There seemed to be a problem with your sys.stderr.
             try:
                 execfile(fname,*where)
             except SyntaxError:
-                type, value = sys.exc_info()[0:2]
-                self.SyntaxTB(type,value,[])
+                etype, evalue = sys.exc_info()[0:2]
+                self.SyntaxTB(etype,evalue,[])
                 warn('Failure executing file: <%s>' % fname)
+            except SystemExit,status:
+                if not kw['exit_ignore']:
+                    self.InteractiveTB()
+                    warn('Failure executing file: <%s>' % fname)
             except:
                 self.InteractiveTB()
                 warn('Failure executing file: <%s>' % fname)
