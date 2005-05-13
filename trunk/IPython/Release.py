@@ -19,7 +19,7 @@ name = 'ipython'
 
 # For versions with substrings (like 0.6.7_rc1), use _ but NOT -, since
 # bdist_rpm chokes on dashes in the version string.
-version = '0.6.13'
+version = '0.6.14_rc1'
 
 description = "An enhanced interactive Python shell."
 
