@@ -175,6 +175,17 @@ Fix the fact that importing a shell for embedding screws up the command-line
  inside ipython.
 \layout Itemize
 
+Lay out the class structure so that embedding into a gtk/wx/qt app is trivial,
+ much like the multithreaded gui shells now provide command-line coexistence
+ with the gui toolkits.
+ See 
+\begin_inset LatexCommand \url{http://www.livejournal.com/users/glyf/32396.html}
+
+\end_inset 
+
+
+\layout Itemize
+
 Get Holger's completer in, once he adds filename completion.
 \layout Standard
 

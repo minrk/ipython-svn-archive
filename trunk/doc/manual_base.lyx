@@ -78,7 +78,7 @@ status Collapsed
 
 
 \begin_inset ERT
-status Collapsed
+status Open
 
 \layout Standard
 
@@ -252,13 +252,29 @@ Auto-quoting: using `
 \family typewriter 
 ,
 \family default 
+' or `
+\family typewriter 
+;
+\family default 
 ' as the first character forces auto-quoting of the rest of the line: 
 \family typewriter 
-`,my_function a b'
+`,my_function a\SpecialChar ~
+b'
 \family default 
  becomes automatically 
 \family typewriter 
-`my_function("a","b")'.
+`my_function("a","b")'
+\family default 
+, while 
+\family typewriter 
+`;my_function a\SpecialChar ~
+b'
+\family default 
+ becomes 
+\family typewriter 
+`my_function("a b")'
+\family default 
+.
 \layout Itemize
 
 Extensible input syntax.
@@ -477,6 +493,21 @@ See the notes in sec.
 Detailed Unix instructions (Linux, Mac OS X, etc.)
 \layout Standard
 
+
+\begin_inset ERT
+status Open
+
+\layout Standard
+
+\backslash 
+html{ 
+\backslash 
+textbf{A warning to readers of the HTML version of this manual}: all options below are preceded with with TWO dashes and no intervening space between the dashes (e.g. Dash-Dash-home). The default HTML conversion tools mangle these into a single dash.}
+\end_inset 
+
+
+\layout Standard
+
 For RPM based systems, simply install the supplied package in the usual
  manner.
  If you download the tar archive, the process is:
@@ -617,66 +648,111 @@ IPython/
 ).
 \layout Subsubsection
 
-Mac OSX information - Tk problems under OSX 10.3.5
+Mac OSX information
 \layout Standard
 
-Users have reported some problems with Tk under OSX (quoting James Boyle
- from LLNL):
-\layout Quote
-
-I almost exclusively use ipython in my work.
- However, I have a problem using ipython and Tk.
- Using pythonw I can use Tk without any problem.
-\layout Quote
-
-I can start up using pythonw and perform the actions of the script by hand
- and get an ipython shell that can be used with Tk.
- Just using the ipython script and Tk results in the dreaded 
+The following instructions apply to an install of IPython under OSX from
+ unpacking the 
 \family typewriter 
-SetFrontProcess failed, -606
+.tar.gz
 \family default 
-.
- 
-\layout Quote
-
-My question is this - is there anyway to modify the ipython script to enable
- use of Tk.
- I would like to keep my usage of ipython consistent across platforms.
- I have looked at what pythonw does and what the ipython startup does but
- so far I have not gotten it to work.
- I am on OSX 10.3.5 and use the Apple python + the Mac Addons + Tk from package
- manager.
+ distribution and installing it for the default Python interpreter shipped
+ by Apple.
+ If you are using a fink install, fink will take care of these details for
+ you, by installing IPython against fink's Python.
 \layout Standard
 
-The solution suggested by Bob Ippolito 
-\family typewriter 
-<bob-AT-redivi.com>
-\family default 
- is to start IPython via 
+IPython offers various forms of support for interacting with graphical applicati
+ons from the command line, from simple Tk apps (which are in principle always
+ supported by Python) to interactive control of WX, QT and GTK apps.
+ Under OSX, however, this requires that ipython is installed by calling
+ the special 
 \family typewriter 
 pythonw
 \family default 
+ script at installation time, which takes care of coordinating things with
+ Apple's graphical environment.
+\layout Standard
+
+So when installing under OSX, it is best to use the following command
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+html{ 
+\backslash 
+emph{[Again, in the HTML manual, the option is called -~-install=scripts, with TWO dashes and no intervening space between the dashes]}}
+\end_inset 
+
 :
-\layout Standard
-
-
 \family typewriter 
-pythonw `which ipython` 
-\layout Standard
 
-This can be made into an alias, shown here for tcsh syntax:
-\layout Standard
-
-
-\family typewriter 
-alias ipythonw "pythonw `which ipython`"
-\layout Standard
-
-After this, call 
-\family typewriter 
-ipythonw
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+$ sudo pythonw setup.py install --install-scripts=/usr/local/bin
 \family default 
- at the command line.
+
+\newline 
+or
+\family typewriter 
+
+\newline 
+\SpecialChar ~
+\SpecialChar ~
+$ sudo pythonw setup.py install --install-scripts=/usr/bin
+\newline 
+
+\family default 
+depending on where you like to keep hand-installed executables.
+\layout Standard
+
+The resulting script will have an appropriate shebang line (the first line
+ in the script whic begins with 
+\family typewriter 
+#!...
+\family default 
+) such that the ipython interpreter can interact with the OS X GUI.
+ If the installed version does not work and has a shebang line that points
+ to, for example, just 
+\family typewriter 
+/usr/bin/python
+\family default 
+, then you might have a stale, cached version in your 
+\family typewriter 
+build/scripts-<python-version>
+\family default 
+ directory.
+ Delete that directory and rerun the 
+\family typewriter 
+setup.py
+\family default 
+.
+ 
+\layout Standard
+
+It is also a good idea to use the special flag 
+\family typewriter 
+--install-scripts
+\family default 
+ as indicated above, to ensure that the ipython scripts end up in a location
+ which is part of your 
+\family typewriter 
+$PATH
+\family default 
+.
+ Otherwise Apple's Python will put the scripts in an internal directory
+ not available by default at the command line (if you use 
+\family typewriter 
+/usr/local/bin
+\family default 
+, you need to make sure this is in your 
+\family typewriter 
+$PATH
+\family default 
+, which may not be true by default).
 \layout Subsection
 
 
@@ -4166,161 +4242,6 @@ Any input line beginning with a
  in the current directory.
 \layout Subsubsection
 
-Automatic capture of command output
-\layout Standard
-
-IPython will always store the contents of the standard output and error
- of the last command passed to the system (whether via 
-\family typewriter 
-!
-\family default 
- or via an alias) in the special variables 
-\family typewriter 
-_o
-\family default 
- (for stdout) and 
-\family typewriter 
-_e
-\family default 
- (for stderr).
- These variables hold the resulting strings, but they also provide a special
- attributes:
-\layout Description
-
-.l\SpecialChar ~
-(or\SpecialChar ~
-.list): value as list (split on newlines).
- 
-\layout Description
-
-.n\SpecialChar ~
-(or\SpecialChar ~
-.nlstr): original value (the string itself).
- 
-\layout Description
-
-.s\SpecialChar ~
-(or\SpecialChar ~
-.spstr): value as whitespace-separated string.
- 
-\layout Standard
-
-This system is similar to that used by IPython for caching the results of
- Python computations, described in Sec.\SpecialChar ~
-
-\begin_inset LatexCommand \ref{sec:cache_input}
-
-\end_inset 
-
-.
- It makes it very conveninent to quickly perform operations on the result
- of any system command:
-\layout LyX-Code
-
-In [11]: ls *py
-\layout LyX-Code
-
-setup.py*
-\layout LyX-Code
-
-win32_manual_post_install.py
-\layout LyX-Code
-
-\layout LyX-Code
-
-# the original output:
-\layout LyX-Code
-
-In [12]: _o
-\layout LyX-Code
-
-Out[12]: 'setup.py*
-\backslash 
-nwin32_manual_post_install.py'
-\layout LyX-Code
-
-\layout LyX-Code
-
-# the output as a string with whitespace
-\layout LyX-Code
-
-In [13]: _o.s
-\layout LyX-Code
-
-Out[13]: 'setup.py* win32_manual_post_install.py'
-\layout LyX-Code
-
-\layout LyX-Code
-
-# this can be passed to a shell command:
-\layout LyX-Code
-
-In [14]: !wc -l $_o.s
-\layout LyX-Code
-
-  146 setup.py
-\layout LyX-Code
-
-  130 win32_manual_post_install.py
-\layout LyX-Code
-
-  276 total
-\layout Standard
-
-Similarly, you can use the list form for more complex manipulations:
-\layout LyX-Code
-
-In [15]: ls *py
-\layout LyX-Code
-
-setup.py*
-\layout LyX-Code
-
-win32_manual_post_install.py
-\layout LyX-Code
-
-\layout LyX-Code
-
-# this output as a list:
-\layout LyX-Code
-
-In [16]: _o.l
-\layout LyX-Code
-
-Out[16]: ['setup.py*', 'win32_manual_post_install.py']
-\layout LyX-Code
-
-\layout LyX-Code
-
-# You can loop on the list form with Python code:
-\layout LyX-Code
-
-In [17]: for f in _o.l:
-\layout LyX-Code
-
-   ....:      !wc -l $f
-\layout LyX-Code
-
-   ....:
-\layout LyX-Code
-
-146 setup.py
-\layout LyX-Code
-
-130 win32_manual_post_install.py
-\layout LyX-Code
-
-\layout LyX-Code
-
-# Again, _o will hold the last system call:
-\layout LyX-Code
-
-In [18]: _o
-\layout LyX-Code
-
-Out[18]: '130 win32_manual_post_install.py'
-\layout Subsubsection
-
 Manual capture of command output
 \layout Standard
 
@@ -4996,35 +4917,9 @@ In [2]: /zip (1,2,3),(4,5,6)
 ------> zip ((1,2,3),(4,5,6)) 
 \newline 
 Out[2]= [(1, 4), (2, 5), (3, 6)] 
-\layout Subsubsection
-
-Automatic quoting 
 \layout Standard
 
-You can force automatic quoting of a function's arguments by using ',' as
- the first character of a line.
- For example: 
-\layout Standard
-
-
-\family typewriter 
->>> ,my_function /home/me # becomes my_function("/home/me") 
-\layout Standard
-
-Note that the ',' MUST be the first character on the line! This won't work:
- 
-\layout Standard
-
-
-\family typewriter 
->>> x = ,my_function /home/me # syntax error
-\layout Subsubsection
-
-Notes on usage of these two features
-\layout Standard
-
-1.
- IPython tells you that it has altered your command line by displaying the
+IPython tells you that it has altered your command line by displaying the
  new command line preceded by 
 \family typewriter 
 -->
@@ -5037,28 +4932,64 @@ Notes on usage of these two features
 \family typewriter 
 In [18]: callable list
 \newline 
--------> callable (list) 
+-------> callable (list)
+\layout Subsubsection
+
+Automatic quoting 
 \layout Standard
 
-2.
- Whitespace is more important than usual (even for Python!) Arguments to
- auto-quote functions cannot have embedded whitespace.
- 
+You can force automatic quoting of a function's arguments by using 
+\family typewriter 
+`,'
+\family default 
+ or 
+\family typewriter 
+`;'
+\family default 
+ as the first character of a line.
+ For example: 
 \layout Standard
 
 
 \family typewriter 
-In [21]: ,string.split a b
-\newline 
--------> string.split ("a", "b")
-\newline 
-Out[21]= ['a'] # probably not what you wanted
-\newline 
-In [22]: string.split 'a b'
-\newline 
--------> string.split ('a b') 
-\newline 
-Out[22]= ['a', 'b'] # quote explicitly and it works.
+>>> ,my_function /home/me # becomes my_function("/home/me") 
+\layout Standard
+
+If you use 
+\family typewriter 
+`;'
+\family default 
+ instead, the whole argument is quoted as a single string (while 
+\family typewriter 
+`,'
+\family default 
+ splits on whitespace):
+\layout Standard
+
+
+\family typewriter 
+>>> ,my_function a b c # becomes my_function("a","b","c")
+\layout Standard
+
+
+\family typewriter 
+>>> ;my_function a b c # becomes my_function("a b c")
+\layout Standard
+
+Note that the `
+\family typewriter 
+,
+\family default 
+' or `
+\family typewriter 
+;
+\family default 
+' MUST be the first character on the line! This won't work: 
+\layout Standard
+
+
+\family typewriter 
+>>> x = ,my_function /home/me # syntax error
 \layout Section
 
 
@@ -8793,4 +8724,23 @@ Tretkowski
 <tretkowski-AT-inittab.de>
 \family default 
  help with Debian packaging and distribution.
+\layout List
+\labelwidthstring 00.00.0000
+
+Robert\SpecialChar ~
+Kern 
+\family typewriter 
+<rkern-AT-ucsd.edu>
+\family default 
+ help with OSX issues, much help in general with various Python topics,
+ especially related to scientific computing.
+\layout List
+\labelwidthstring 00.00.0000
+
+George\SpecialChar ~
+Sakkis <
+\family typewriter 
+gsakkis-AT-eden.rutgers.edu>
+\family default 
+ New matcher for tab-completing named arguments of user-defined functions.
 \the_end

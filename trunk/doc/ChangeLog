@@ -1,3 +1,46 @@
+2005-05-13  Fernando Perez  <fperez@colorado.edu>
+
+	* ipython.1: Added info about Qt to manpage, and threads warning
+	to usage page (invoked with --help).
+
+	* IPython/iplib.py (MagicCompleter.python_func_kw_matches): Added
+	new matcher (it goes at the end of the priority list) to do
+	tab-completion on named function arguments.  Submitted by George
+	Sakkis <gsakkis-AT-eden.rutgers.edu>.  See the thread at
+	http://www.scipy.net/pipermail/ipython-dev/2005-April/000436.html
+	for more details.
+
+	* IPython/Magic.py (magic_run): Added new -e flag to ignore
+	SystemExit exceptions in the script being run.  Thanks to a report
+	by danny shevitz <danny_shevitz-AT-yahoo.com>, about this
+	producing very annoying behavior when running unit tests.
+
+2005-05-12  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (handle_auto): fixed auto-quoting and parens,
+	which I'd broken (again) due to a changed regexp.  In the process,
+	added ';' as an escape to auto-quote the whole line without
+	splitting its arguments.  Thanks to a report by Jerry McRae
+	<qrs0xyc02-AT-sneakemail.com>.
+
+	* IPython/ultraTB.py (VerboseTB.text): protect against rare but
+	possible crashes caused by a TokenError.  Reported by Ed Schofield
+	<schofield-AT-ftw.at>.
+	
+2005-05-06  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (hijack_wx): Fix to work with WX v.2.6.
+
+2005-04-29  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/Shell.py (IPShellQt): Thanks to Denis Rivière
+	<nudz-AT-free.fr>, Yann Cointepas <yann-AT-sapetnioc.org> and Benjamin
+	Thyreau <Benji2-AT-decideur.info>, we now have a -qthread option
+	which provides support for Qt interactive usage (similar to the
+	existing one for WX and GTK).  This had been often requested.
+
+2005-04-14  *** Released version 0.6.13
+
 2005-04-08  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Magic.py (Magic._ofind): remove docstring evaluation
