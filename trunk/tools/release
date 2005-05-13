@@ -42,12 +42,13 @@ cd $ipdir/tools
 # Build source and binary distros
 cd $ipdir
 ./setup.py sdist --formats=gztar
-./setup.py bdist_rpm --release=py$PYVER
+#./setup.py bdist_rpm --release=py$PYVER
+python2.3 ./setup.py bdist_rpm --release=py23 --python=/usr/bin/python2.3
 
-# A 2.4-specific RPM, where we must use the --fix-python option to ensure that
+# A 2.4-specific RPM, where we must use the --python option to ensure that
 # the resulting RPM is really built with 2.4 (so things go to
 # lib/python2.4/...)
-python2.4 ./setup.py bdist_rpm --release=py24 --fix-python
+python2.4 ./setup.py bdist_rpm --release=py24 --python=/usr/bin/python2.4
 
 # Call the windows build separately, so that the extra Windows scripts don't
 # get pulled into Unix builds (setup.py has code which checks for
