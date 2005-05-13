@@ -1198,6 +1198,12 @@ Currently the magic system has the following functions:\n"""
         is useful if you are experimenting with code written in a text editor
         which depends on variables defined interactively.
 
+        -e: ignore sys.exit() calls or SystemExit exceptions in the script
+        being run.  This is particularly useful if IPython is being used to
+        run unittests, which always exit with a sys.exit() call.  In such
+        cases you are interested in the output of the test results, not in
+        seeing a traceback of the unittest module.
+
         -t: print timing information at the end of the run.  IPython will give
         you an estimated CPU time consumption for your script, which under
         Unix uses the resource module to avoid the wraparound problems of
@@ -1262,7 +1268,7 @@ Currently the magic system has the following functions:\n"""
         details on the options available specifically for profiling."""
 
         # get arguments and set sys.argv for program to be run.
-        opts,arg_lst = self.parse_options(parameter_s,'nidtN:b:pD:l:rs:T:',
+        opts,arg_lst = self.parse_options(parameter_s,'nidtN:b:pD:l:rs:T:e',
                                           mode='list',list_all=1)
 
         try:
@@ -1275,6 +1281,9 @@ Currently the magic system has the following functions:\n"""
             error(msg)
             return
 
+        # Control the response to exit() calls made by the script being run
+        exit_ignore = opts.has_key('e')
+        
         # Make sure that the running script gets a proper sys.argv as if it
         # were run from a system shell.
         save_argv = sys.argv # save it for later restoring
@@ -1341,7 +1350,7 @@ Currently the magic system has the following functions:\n"""
                             nruns = 1
                         if nruns == 1:
                             t0 = clock2()
-                            runner(filename,prog_ns,prog_ns)
+                            runner(filename,prog_ns,prog_ns,exit_ignore=exit_ignore)
                             t1 = clock2()
                             t_usr = t1[0]-t0[0]
                             t_sys = t1[1]-t1[1]
@@ -1352,7 +1361,7 @@ Currently the magic system has the following functions:\n"""
                             runs = range(nruns)
                             t0 = clock2()
                             for nr in runs:
-                                runner(filename,prog_ns,prog_ns)
+                                runner(filename,prog_ns,prog_ns,exit_ignore=exit_ignore)
                             t1 = clock2()
                             t_usr = t1[0]-t0[0]
                             t_sys = t1[1]-t1[1]
@@ -1363,7 +1372,7 @@ Currently the magic system has the following functions:\n"""
                             print "  System: %10s s, %10s s." % (t_sys,t_sys/nruns)
                             
                     else:
-                        runner(filename,prog_ns,prog_ns)
+                        runner(filename,prog_ns,prog_ns,exit_ignore=exit_ignore)
                 if opts.has_key('i'):
                     self.shell.user_ns['__name__'] = __name__save
                 else:
