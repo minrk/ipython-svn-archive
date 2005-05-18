@@ -649,6 +649,9 @@ IPython/
 \layout Subsubsection
 
 Mac OSX information
+\layout Subsubsection*
+
+GUI problems
 \layout Standard
 
 The following instructions apply to an install of IPython under OSX from
@@ -753,6 +756,34 @@ $PATH
 $PATH
 \family default 
 , which may not be true by default).
+\layout Subsubsection*
+
+Readline problems
+\layout Standard
+
+By default, the Python version shipped by Apple does 
+\emph on 
+not
+\emph default 
+ include the readline library, so central to IPython's behavior.
+ If you install IPython against Apple's Python, you will not have arrow
+ keys, tab completion, etc.
+ For Mac OSX 10.3 (Panther), you can find a prebuilt readline library here:
+\newline 
+
+\begin_inset LatexCommand \htmlurl{http://pythonmac.org/packages/readline-5.0-py2.3-macosx10.3.zip}
+
+\end_inset 
+
+ 
+\layout Standard
+
+At this point I don't know of such a released version for OSX 10.4 (Tiger),
+ or if the problem even occurs with Tiger at all (feedback welcome).
+\layout Standard
+
+Users installing against fink's Python or a properly hand-built one should
+ not have this problem.
 \layout Subsection
 
 

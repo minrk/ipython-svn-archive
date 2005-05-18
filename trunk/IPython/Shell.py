@@ -451,7 +451,7 @@ class MatplotlibShellBase:
   """
         return user_ns,b
 
-    def mplot_exec(self,fname,*where):
+    def mplot_exec(self,fname,*where,**kw):
         """Execute a matplotlib script.
 
         This is a call to execfile(), but wrapped in safeties to properly
@@ -461,7 +461,7 @@ class MatplotlibShellBase:
         # turn off rendering until end of script
         isInteractive = self.matplotlib.rcParams['interactive']
         self.matplotlib.interactive(False)
-        self.safe_execfile(fname,*where)
+        self.safe_execfile(fname,*where,**kw)
         self.matplotlib.interactive(isInteractive)
         # make rendering call now, if the user tried to do it
         if self.pylab.draw_if_interactive.called:
