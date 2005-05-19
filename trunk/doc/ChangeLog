@@ -1,3 +1,9 @@
+2005-05-19  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (safe_execfile): close a file which could be
+	left open (causing problems in win32, which locks open files).
+	Thanks to a bug report by D Brown <dbrown2@yahoo.com>.
+
 2005-05-18  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/Shell.py (MatplotlibShellBase.mplot_exec): pass all

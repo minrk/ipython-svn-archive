@@ -1966,7 +1966,6 @@ There seemed to be a problem with your sys.stderr.
         first = xfile.readline()
         _LOGHEAD = str(self.LOGHEAD).split('\n',1)[0].strip()
         xfile.close()
-        xfile = open(fname)
         # line by line execution
         if first.startswith(_LOGHEAD) or kw['islog']:
             print 'Loading log file <%s> one line at a time...' % fname
@@ -1989,6 +1988,7 @@ There seemed to be a problem with your sys.stderr.
             # first, and manually walk through the lines list moving the
             # counter ourselves.
             indent_re = re.compile('\s+\S')
+            xfile = open(fname)
             filelines = xfile.readlines()
             xfile.close()
             nlines = len(filelines)
