@@ -957,7 +957,10 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         and 'upgrade'."""
 
         def wait():
-            raw_input("Please press <RETURN> to start IPython.")
+            try:
+                raw_input("Please press <RETURN> to start IPython.")
+            except EOFError:
+                print >> Term.cout
             print '*'*70
 
         cwd = os.getcwd()  # remember where we started
@@ -1026,8 +1029,15 @@ Can not upgrade: changing to directory %s failed. Details:
                     new_filename = os.path.basename(new_full_path)
                     if new_filename.startswith('ipythonrc'):
                         new_filename = new_filename + rc_suffix
+                    # The config directory should only contain files, skip any
+                    # directories which may be there (like CVS)
+                    if os.path.isdir(new_full_path):
+                        continue
                     if os.path.exists(new_filename):
-                        os.rename(new_filename,new_filename+'.old')
+                        old_file = new_filename+'.old'
+                        if os.path.exists(old_file):
+                            os.remove(old_file)
+                        os.rename(new_filename,old_file)
                     shutil.copy(new_full_path,new_filename)
         else:
             raise ValueError,'unrecognized mode for install:',`mode`
@@ -1956,7 +1966,7 @@ There seemed to be a problem with your sys.stderr.
         try:
             xfile = open(fname)
         except:
-            print >> sys.stderr, \
+            print >> Term.cerr, \
                   'Could not open file <%s> for safe execution.' % fname
             return None
 
