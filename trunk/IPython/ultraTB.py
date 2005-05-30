@@ -460,11 +460,17 @@ class VerboseTB(TBTools):
                                             ColorsNormal)
 
         # now, loop over all records printing context and info
+        abspath = os.path.abspath
         for frame, file, lnum, func, lines, index in records:
             #print '*** record:',file,lnum,func,lines,index  # dbg
-            file = file and os.path.abspath(file) or '?'
+            try:
+                file = file and abspath(file) or '?'
+            except OSError:
+                # if file is '<console>' or something not in the filesystem,
+                # the abspath call will throw an OSError.  Just ignore it and
+                # keep the original file string.
+                pass
             link = tpl_link % file
-
             try:
                 args, varargs, varkw, locals = inspect.getargvalues(frame)
             except:
