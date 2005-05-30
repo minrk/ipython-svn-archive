@@ -1,3 +1,14 @@
+2005-05-29  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/ultraTB.py (VerboseTB.text): Fix crash for tracebacks
+	with files not on the filesystem.  Reported by Eliyahu Sandler
+	<eli@gondolin.net>
+
+2005-05-22  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py: Fix a few crashes in the --upgrade option.
+	After an initial report by LUK ShunTim <shuntim.luk@polyu.edu.hk>.
+
 2005-05-19  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (safe_execfile): close a file which could be

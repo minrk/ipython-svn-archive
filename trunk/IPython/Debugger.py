@@ -23,7 +23,7 @@ __license__ = 'Python'
 
 import pdb,bdb,cmd,os,sys
 
-class Pdb(pdb.Pdb, bdb.Bdb, cmd.Cmd):
+class Pdb(pdb.Pdb):
     """Modified Pdb class, does not load readline."""
     def __init__(self):
         bdb.Bdb.__init__(self)
