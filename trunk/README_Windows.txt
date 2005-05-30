@@ -11,6 +11,9 @@ IPython runs under (as far as the Windows family is concerned):
 
 - Windows XP (I think WinNT/2000 are ok): works well.  It needs:
 
+  * PyWin32, the win32 Python extensions from
+    http://starship.python.net/crew/mhammond.
+
   * Gary Bishop's readline from 
     http://sourceforge.net/projects/uncpythontools.
     
