@@ -870,12 +870,12 @@ def start():
         arg1 = sys.argv[1]
         if arg1.endswith('-gthread'):
             shell = IPShellGTK
+        elif arg1.endswith( '-qthread' ):
+            shell = IPShellQt
         elif arg1.endswith('-wthread'):
             shell = IPShellWX
         elif arg1.endswith('-pylab'):
             shell = _matplotlib_shell_class()
-        elif arg1.endswith( '-qthread' ):
-            shell = IPShellQt
         else:
             shell = IPShell
     else:
