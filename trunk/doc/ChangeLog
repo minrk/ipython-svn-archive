@@ -1,3 +1,5 @@
+2005-05-31  *** Released version 0.6.14
+
 2005-05-29  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/ultraTB.py (VerboseTB.text): Fix crash for tracebacks
