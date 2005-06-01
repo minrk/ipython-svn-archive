@@ -280,15 +280,23 @@ try:
                                 for ch in s])
 
             lbuf = self.get_line_buffer()[:self.readline.get_endidx()]
+            open_quotes = 0  # track strings with open quotes
             try:
                 lsplit = shlex_split(lbuf)[-1]
             except ValueError:
-                # unmatched ", or backslash without escaped character typically
-                return None   
+                # typically an unmatched ", or backslash without escaped char.
+                if lbuf.count('"')==1:
+                    open_quotes = 1
+                    lsplit = lbuf.split('"')[-1]
+                elif lbuf.count("'")==1:
+                    open_quotes = 1
+                    lsplit = lbuf.split("'")[-1]
+                else:
+                    return None
             except IndexError:
                 # tab pressed on empty line
                 lsplit = ""
-                
+
             if lsplit != protect_filename(lsplit):
                 # if protectables are found, do matching on the whole escaped
                 # name
@@ -309,13 +317,15 @@ try:
                 len_lsplit = len(lsplit)
                 matches = [text0 + protect_filename(f[len_lsplit:]) for f in m0]
             else:
-                matches = [protect_filename(f) for f in m0]
+                if open_quotes:
+                    matches = m0
+                else:
+                    matches = [protect_filename(f) for f in m0]
             if len(matches) == 1 and os.path.isdir(matches[0]):
                 # Takes care of links to directories also.  Use '/'
                 # explicitly, even under Windows, so that name completions
                 # don't end up escaped.
                 matches[0] += '/'
-
             return matches
 
         def alias_matches(self, text):
@@ -459,7 +469,6 @@ try:
                             if self.matches:
                                 break
                         
-                    #print 'matches:',self.matches  # dbg
                 try:
                     return self.matches[state].replace(magic_prefix,magic_escape)
                 except IndexError:
