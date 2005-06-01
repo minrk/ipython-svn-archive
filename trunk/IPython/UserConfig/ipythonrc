@@ -360,9 +360,7 @@ readline_parse_and_bind "\e[B": history-search-forward
 # default word-delimiters list used by readline, so that completions may be
 # performed on strings which contain them.
 
-readline_remove_delims '"-/~
-
-#"' -- just to fix emacs coloring which gets confused by unmatched quotes.
+readline_remove_delims -/~
 
 # (iii) readline_merge_completions: whether to merge the result of all
 # possible completions or not.  If true, IPython will complete filenames,

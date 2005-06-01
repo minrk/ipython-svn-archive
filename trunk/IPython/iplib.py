@@ -318,6 +318,9 @@ try:
                 matches = [text0 + protect_filename(f[len_lsplit:]) for f in m0]
             else:
                 if open_quotes:
+                    # if we have a string with an open quote, we don't need to
+                    # protect the names at all (and we _shouldn't_, as it
+                    # would cause bugs when the filesystem call is made).
                     matches = m0
                 else:
                     matches = [protect_filename(f) for f in m0]
