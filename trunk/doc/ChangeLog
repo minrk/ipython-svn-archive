@@ -1,7 +1,14 @@
+2005-06-02  *** Released version 0.6.15
+
 2005-06-01  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/iplib.py (MagicCompleter.file_matches): Fix
-	tab-completion of filenames within open-quoted strings.
+	tab-completion of filenames within open-quoted strings.  Note that
+	this requires that in ~/.ipython/ipythonrc, users change the
+	readline delimiters configuration to read:
+
+	readline_remove_delims -/~
+	
 
 2005-05-31  *** Released version 0.6.14
 
