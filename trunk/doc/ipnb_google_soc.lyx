@@ -1,0 +1,414 @@
+#LyX 1.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 221
+\textclass article
+\begin_preamble
+\usepackage{hyperref}
+\end_preamble
+\language english
+\inputencoding auto
+\fontscheme palatino
+\graphics default
+\paperfontsize 11
+\spacing single 
+\papersize Default
+\paperpackage a4
+\use_geometry 1
+\use_amsmath 0
+\use_natbib 0
+\use_numerical_citations 0
+\paperorientation portrait
+\leftmargin 1in
+\topmargin 0.9in
+\rightmargin 1in
+\bottommargin 0.9in
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation skip
+\defskip medskip
+\quotes_language english
+\quotes_times 2
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+
+\layout Title
+
+Interactive Notebooks for Python
+\newline 
+
+\size small 
+An IPython project for Google's Summer of Code 2005
+\layout Author
+
+Fernando P
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+'{e}
+\end_inset 
+
+rez
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\family typewriter 
+\size small 
+Fernando.Perez@colorado.edu
+\end_inset 
+
+
+\layout Abstract
+
+A graphical extension to IPython to allow documents with rich text, code
+ and graphics is described.
+ This document was written by the IPython developer; it is made available
+ to students looking for projects of interest and for inclusion in their
+ application.
+\layout Section
+
+Project overview
+\layout Standard
+
+Python's interactive interpreter is one of the language's most appealing
+ features for certain types of usage, yet the basic shell which ships with
+ the language is very limited.
+ Over the last few years, IPython
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://ipython.scipy.org}
+
+\end_inset 
+
+
+\end_inset 
+
+ has become the de facto standard interactive shell in the scientific computing
+ community, and it enjoys wide popularity with general audiences.
+ All the major Linux distributions (Fedora Core via Extras, SUSE, Debian)
+ and OS X (via fink) carry IPython, and Windows users report using it as
+ a viable system shell.
+\layout Standard
+
+However, IPython is currently a command-line only application, based on
+ the readline library and hence with single-line editing capabilities.
+ While this kind of usage is sufficient for many contexts, there are usage
+ cases where integration in a graphical user interface (GUI) is desirable.
+ 
+\layout Standard
+
+In particular, we wish to have an interface where users can execute Python
+ code, input regular text (neither code nor comments) and keep inline graphics,
+ which we will call 
+\emph on 
+Python notebooks
+\emph default 
+.
+ This kind of system is very popular in scientific computing; well known
+ implementations can be found in Mathematica
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+texttrademark
+\end_inset 
+
+\SpecialChar ~
+
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://www.wolfram.com/products/mathematica}
+
+\end_inset 
+
+
+\end_inset 
+
+ and Maple
+\begin_inset ERT
+status Collapsed
+
+\layout Standard
+
+\backslash 
+texttrademark
+\end_inset 
+
+\SpecialChar ~
+
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://www.maplesoft.com}
+
+\end_inset 
+
+
+\end_inset 
+
+, among others.
+ However, these are proprietary (and quite expensive) systems aimed at an
+ audience of mathematicians, scientists and engineers.
+\layout Standard
+
+This project aims to implement a cross-platform GUI shell which provides
+ the execution capabilities of IPython within Python notebooks.
+ Such documents would be extremely useful for many audiences beyond scientists:
+ one can use them to produce additionally documented code, to explore a
+ problem with Python and maintain all relevant information in the same place,
+ as a way to distribute enhanced Python-based educational materials, etc.
+\layout Standard
+
+Demand for such a system exists, as evidenced by repeated requests made
+ to me by IPython users over the last few years.
+ Unfortunately IPython is only a spare-time project for me, and I have not
+ had the time to devote to this, despite being convinced of its long term
+ value and wide appeal.
+\layout Section
+
+Required implementation work
+\layout Standard
+
+IPython currently has all the necessary infrastructure for code execution,
+ albeit in a rather messy code base.
+ Most I/O is already abstracted out, a necessary condition for embedding
+ in a GUI (since you are not writing to stdout/err but to the GUI's text
+ area).
+\layout Standard
+
+The student(s) working on the project would need to:
+\layout Enumerate
+
+Study the existing text widgets in major GUI toolkits for feasibility.
+ I have a strong preference for WXPython, because its licensing terms are
+ compatible with those of IPython (BSD), which is not true of Qt.
+ A Tkinter widget would be acceptable, if the technical reasons indicate
+ it's the only viable solution.
+\layout Enumerate
+
+Make design decisions for the internal document structure.
+ I want these Python notebooks to be valid plain Python files, hand-editable
+ with a regular editor if so desired.
+ This means tagging the necessary information for rich rendering within
+ valid syntactic Python elements.
+\layout Enumerate
+
+Implement at least plain text support outside of code regions, execution
+ of multiple lines of code as a single unit, and pasting of external figures
+ from a Matplotlib
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://matplotlib.sf.net}
+
+\end_inset 
+
+
+\end_inset 
+
+ plot window.
+ Matplotlib is a widely used, very sophisticated plotting library for which
+ IPython already offers command-line support.
+\layout Standard
+
+If the above three goals are rapidly met, the participants could spend the
+ rest of their time enhancing this basic system to support more sophisticated
+ documents, with hierarchical nesting levels, rich text formatting, embedded
+ mathematical notation, etc.
+\layout Standard
+
+Ultimately this system should be considered an extensible environment, where
+ users can easily add new functionality via their own Python code.
+ In order to go in this direction, the Envisage framework
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://www.python.org/pycon/2005/papers/81/PyCon-2005.txt}
+
+\end_inset 
+
+
+\end_inset 
+
+ should be closely studied as a candidate for the underlying system.
+ Envisage offers much of the architectural backbone needed to tackle this
+ kind of problem, and it was built from the ground up as an extensible,
+ plugin-based architecture.
+\layout Standard
+
+Alternatively they could contribute, after meeting the required goals, internal
+ architectural improvements for IPython.
+ I currently intend to redesign IPython around a client/server model.
+ This would make the GUI embedding a cleaner process, as well as opening
+ many other interesting possibilities: disconnection/reconnection from a
+ server, multiple clients, multiple servers, remote execution, remote interactiv
+e collaboration, interactive parallel computing, etc.
+ These ideas build on design discussions and work done in conjunction with
+ the author of the PyXG and Braid projects
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://hammonds.scu.edu/~classes/computation.html}
+
+\end_inset 
+
+
+\end_inset 
+
+.
+\layout Section
+
+Other alternatives
+\layout Standard
+
+Currently a number of graphical shells exist for Python, but none of them
+ tackles this problem and none offers the rich functionality of IPython
+ either.
+ However, they could be considered a starting point by merging their code
+ base with that of IPython.
+ In particular PyCrust
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://sourceforge.net/projects/pycrust}
+
+\end_inset 
+
+
+\end_inset 
+
+ should be closely studied for possibilities to jump start this process,
+ in addition to the facilities offered by the Envisage framework cited above.
+\layout Standard
+
+The GNU TeXmacs
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://www.texmacs.org}
+
+\end_inset 
+
+
+\end_inset 
+
+ system offers already very sophisticated functionality in this direction,
+ and there is even a Python plugin for it available
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://dkbza.org/11.0.html}
+
+\end_inset 
+
+
+\end_inset 
+
+.
+ Unfortunately, TeXmacs doesn't use a standard GUI toolkit, has serious
+ performance and user interface issues, and it is very strongly focused
+ on a mathematical audience.
+ It requires LaTeX to be installed, which is a major stumbling block for
+ non-technical users.
+ I studied TeXmacs as a possible solution for this problem, and finally
+ concluded that a reimplementation was the proper technical decision, since
+ our goals aren't exactly those of TeXmacs.
+\layout Standard
+
+Similarly, the LyX editor
+\begin_inset Foot
+collapsed true
+
+\layout Standard
+
+
+\begin_inset LatexCommand \htmlurl{http://www.lyx.org}
+
+\end_inset 
+
+
+\end_inset 
+
+ provides facilities for interacting with external editors, and could be
+ considered a candidate.
+ LyX is however, like TeXmacs, highly focused on technical document creation;
+ for the same reasons it is not a good base for this project.
+\layout Standard
+
+However, I should note that the abstractions necessary for the successful
+ completion of this project will make it very easy to connect IPython to
+ any number of other environments.
+ In the future, users of LyX, TeXmacs or other environments should be able
+ to connect to such an IPython engine with ease, so this project can benefit
+ multiple other user communities.
+\layout Section
+
+Support offered to the students
+\layout Standard
+
+The IPython project already has an established Open Source infrastructure,
+ including CVS repositories, a bug tracker and mailing lists.
+ As the main author and sole maintainer of IPython, I will personally assist
+ the student(s) funded with architectural and design guidance, preferably
+ on the public development mailing list.
+ I expect them to start working by submitting patches until they show, by
+ the quality of their work, that they can be granted CVS write access.
+ I expect most actual implementation work to be done by the students, though
+ I will provide assistance if they need it with a specific technical issue.
+\layout Standard
+
+If more than one applicant is accepted to work on this project, there is
+ more than enough work to be done which can be coordinated between them.
+\layout Section
+
+Licensing and copyright
+\layout Standard
+
+IPython is licensed under BSD terms, and copyright of all sources rests
+ with the original authors of the core modules.
+ Over the years, all external contributions have been small enough patches
+ that they have been simply folded into the main source tree without additional
+ copyright attributions, though explicit credit has always been given to
+ all contributors.
+\layout Standard
+
+I expect the students participating in this project to contribute enough
+ standalone code that they can retain the copyright to it if they so desire,
+ as long as they accept all their work to be licensed under BSD terms.
+\the_end
