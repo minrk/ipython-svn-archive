@@ -1,3 +1,11 @@
+2005-06-08  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (write/write_err): Add methods to abstract all
+	I/O a bit more.
+
+	* IPython/Shell.py (IPShellGTK.mainloop): Fix GTK deprecation
+	warning, reported by Aric Hagberg, fix by JD Hunter.
+
 2005-06-02  *** Released version 0.6.15
 
 2005-06-01  Fernando Perez  <fperez@colorado.edu>
