@@ -1357,7 +1357,7 @@ want to merge them back into the new files.""" % locals()
                        (sys.version, sys.platform, cprt,
                         self.__class__.__name__))
         else:
-            sys.stdout.write(banner)
+            self.write(banner)
 
         more = 0
 
@@ -1966,6 +1966,14 @@ There seemed to be a problem with your sys.stderr.
         # The input cache shouldn't be updated
 
         return line
+
+    def write(self,data):
+        """Write a string to the default output"""
+        Term.cout.write(data)
+
+    def write_err(self,data):
+        """Write a string to the default error output"""
+        Term.cerr.write(data)
 
     def safe_execfile(self,fname,*where,**kw):
         fname = os.path.expanduser(fname)
