@@ -448,7 +448,7 @@ class MatplotlibShellBase:
         b="""
   Welcome to pylab, a matplotlib-based Python environment.
   For more information, type 'help(pylab)'.
-  """
+"""
         return user_ns,b
 
     def mplot_exec(self,fname,*where,**kw):
@@ -623,8 +623,13 @@ class IPShellGTK(threading.Thread):
         self.IP.kill()
 
     def mainloop(self):
-        
-        self.gtk.timeout_add(self.TIMEOUT, self.on_timer)
+
+        if self.gtk.pygtk_version >= (2,4,0):
+            import gobject
+            gobject.timeout_add(self.TIMEOUT, self.on_timer)
+        else:
+            self.gtk.timeout_add(self.TIMEOUT, self.on_timer)
+
         if sys.platform != 'win32':
             try:
                 if self.gtk.gtk_version[0] >= 2:
@@ -762,14 +767,15 @@ class IPShellQt(threading.Thread):
         self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
                                shell_class=shell_class,
                                on_kill=[qt.qApp.exit])
+        
         threading.Thread.__init__(self)
 
     def run(self):
+        #sys.excepthook = self.IP.excepthook # dbg
         self.IP.mainloop()
         self.IP.kill()
 
     def mainloop(self):
-
         import qt, sys
         if qt.QApplication.startingUp():
           a = qt.QApplication.QApplication( sys.argv )
