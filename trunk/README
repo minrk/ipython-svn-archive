@@ -9,3 +9,4 @@ running:
 
 python -c "import sys;print sys.prefix"
 
+# testing notes...
