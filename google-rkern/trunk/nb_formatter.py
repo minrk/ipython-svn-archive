@@ -1,6 +1,8 @@
 """Base Formatter class for notebooks.
 """
 
+import textwrap
+
 class Formatter(object):
     """Abstract base class implementing some useful common methods.
 
@@ -67,8 +69,15 @@ class Formatter(object):
     def format_figure(self, elem):
         """Format a <figure> element.
         """
-        return 'Fig[%s]: %s\n' % (elem.attrib['number'],
-                                  elem.attrib['filename'])
+        caption = elem.text
+        if caption and caption.strip():
+            caption = self.indent(textwrap.wrap(caption), 2)
+            return 'Fig[%s]: %s\n\n%s\n' % (elem.attrib['number'],
+                                            elem.attrib['filename'],
+                                            caption)
+        else:
+            return 'Fig[%s]: %s\n' % (elem.attrib['number'],
+                                      elem.attrib['filename'])
 
     def format_block(self, block):
         """Format an <ipython-block> tag.

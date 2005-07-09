@@ -177,12 +177,23 @@ class HTMLFragmentFormatter(Formatter):
         d = elem.attrib.copy()
         d.pop('filename', None)
         d.pop('type', None)
+        number = d.pop('number')
         logid = d.pop('logid', 'default-log')
         img.attrib.update(d)
 
-        img.tail = elem.tail
-
-        return img
+        caption = elem.text
+        if caption and caption.split():
+            div = ET.Element('div')
+            div.append(img)
+            text = ET.SubElement(div, 'p')
+            strong = ET.SubElement(text, 'strong')
+            strong.text = 'Fig[%s]: ' % number
+            strong.tail = caption.split()
+            new_elem = div
+        else:
+            new_elem = img
+        new_elem.tail = elem.tail
+        return new_elem
 
     def transform_block(self, block):
         """Transform an <ipython-block> element to a <div> element.
@@ -227,7 +238,10 @@ class HTMLFragmentFormatter(Formatter):
         for fig in figs:
             parent = cp[fig]
             idx = list(parent).index(fig)
-            img = self.transform_figure(fig)
+            number = fig.get('number')
+            logid = fig.get('logid', 'default-log')
+            elem = self.notebook.get_from_log('figure', number, logid=logid)
+            img = self.transform_figure(elem)
             parent[idx] = img
 
         sheet2.tag = 'div'

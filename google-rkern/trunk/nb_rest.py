@@ -1,6 +1,8 @@
 """Formatter object for reST notebook sheets.
 """
 
+import textwrap
+
 from nb_formatter import Formatter
 
 class ReSTFormatter(Formatter):
@@ -21,7 +23,13 @@ class ReSTFormatter(Formatter):
     def format_figure(self, elem):
         """Format a <figure> element.
         """
-        return '.. image:: %s\n' % elem.attrib['filename']
+        caption = elem.text
+        if caption and caption.strip():
+            caption = self.indent(textwrap.wrap(caption), 2)
+            return '.. figure:: %s\n\n%s\n' % (elem.get('filename'),
+                                              caption)
+        else:
+            return '.. image:: %s\n' % elem.get('filename')
 
     def format_sheet(self, sheet):
         """Format a reST sheet.
@@ -40,7 +48,11 @@ class ReSTFormatter(Formatter):
             if elem.tag == 'ipython-block':
                 text = self.format_block(elem)
             elif elem.tag == 'ipython-figure':
-                text = self.format_figure(elem)
+                logid = elem.get('logid')
+                number = elem.get('number')
+                figelem = self.notebook.get_from_log('figure', number,
+                    logid=logid)
+                text = self.format_figure(figelem)
             text = self.indent(text, spaces)
             texts.append(text)
             if elem.tail is not None:

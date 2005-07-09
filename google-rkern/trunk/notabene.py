@@ -187,13 +187,15 @@ class Notebook(object):
         if scheme is not None:
             meta.set("scheme", scheme)
 
-    def add_figure(self, filename, number, type='png', logid='default-log', **attribs):
+    def add_figure(self, filename, number, caption=None, type='png', logid='default-log', **attribs):
         """Add a figure.
         """
         log = self.get_log(logid)
         fig = ET.SubElement(log, 'figure', filename=filename,
             number=str(number), type=type)
         fig.attrib.update(attribs)
+        if caption is not None:
+            fig.text = caption
 
     def write(self, file=None):
         """Write the notebook as XML out to a file.
@@ -354,7 +356,7 @@ class Notebook(object):
         """
         return self.IP.outputcache.prompt_count
 
-    def pylab_savefig(self, filename=None, type='png', **attribs):
+    def pylab_savefig(self, filename=None, caption=None, type='png', **attribs):
         """Save the current pylab figure to a file and inserts a figure element
         into the notebook.
         """
@@ -365,7 +367,7 @@ class Notebook(object):
             filename = '%s-%s.%s' % (self.name, number, type)
 
         savefig(filename)
-        self.add_figure(os.path.split(filename)[-1], number, **attribs)
+        self.add_figure(os.path.split(filename)[-1], number, caption=caption, **attribs)
 
     def _get_tag_dict(self, tag, logid='default-log'):
         log = self.get_log(logid)
