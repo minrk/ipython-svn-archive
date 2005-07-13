@@ -3,27 +3,21 @@
 <meta content="/usr/local/bin/ipython" name="cmdline">
 </meta>
 </head>
-<ipython-log logid="default-log">
+<ipython-log id="default-log">
+<input number="3">
+from scipy import *
+</input>
 <input number="4">
 p = poly1d([3,4,5])
 </input>
-<output number="5">
-poly1d([3, 4, 5])
-</output>
 <input number="5">
-p
+print p
 </input>
-<output number="6">
-poly1d([ 9, 24, 46, 40, 25])
-</output>
 <input number="6">
-p*p
+print p*p
 </input>
-<output number="7">
-poly1d([ 1.,  2.,  5.,  6.])
-</output>
 <input number="7">
-p.integ(k=6)
+print p.integ(k=6)
 </input>
 <output number="8">
 poly1d([6, 4])
@@ -50,28 +44,30 @@ object can then be manipulated in algebraic expressions, integrated,
 differentiated, and evaluated. It even prints like a polynomial:
 </p>
 
-<ipython-block>
-    <ipython-input logid="default-log" number="4">
+<ipython-block logid="default-log">
+    <ipython-input number="3">
     </ipython-input>
-    <ipython-input logid="default-log" number="5">
+    <ipython-input number="4">
     </ipython-input>
-    <ipython-output logid="default-log" number="5">
+    <ipython-input number="5">
+    </ipython-input>
+    <ipython-stdout number="5">
+    </ipython-stdout>
+    <ipython-input number="6">
+    </ipython-input>
+    <ipython-stdout number="6">
+    </ipython-stdout>
+    <ipython-input number="7">
+    </ipython-input>
+    <ipython-stdout number="7">
+    </ipython-stdout>
+    <ipython-input number="8">
+    </ipython-input>
+    <ipython-output number="8">
     </ipython-output>
-    <ipython-input logid="default-log" number="6">
+    <ipython-input number="9">
     </ipython-input>
-    <ipython-output logid="default-log" number="6">
-    </ipython-output>
-    <ipython-input logid="default-log" number="7">
-    </ipython-input>
-    <ipython-output logid="default-log" number="7">
-    </ipython-output>
-    <ipython-input logid="default-log" number="8">
-    </ipython-input>
-    <ipython-output logid="default-log" number="8">
-    </ipython-output>
-    <ipython-input logid="default-log" number="9">
-    </ipython-input>
-    <ipython-output logid="default-log" number="9">
+    <ipython-output number="9">
     </ipython-output>
 </ipython-block>
 

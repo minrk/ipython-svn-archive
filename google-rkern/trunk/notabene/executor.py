@@ -1,6 +1,7 @@
 import code
 import sys
 import itertools
+import pprint
 
 from IPython import OutputTrap, ultraTB
 from lxml import etree as ET
@@ -40,7 +41,7 @@ class Executor(object):
             return retdict
         if ret is None:
             return None
-        trap = OutputTrap()
+        trap = OutputTrap.OutputTrap()
         try:
             trap.trap_all()
             exec ret in self.namespace
@@ -69,6 +70,8 @@ class Executor(object):
         inputs = oldlog.xpath('./input')
         for inp in inputs:
             number = inp.get('number')
+            newinp = ET.SubElement(newlog, 'input', number=number)
+            newinp.text = inp.text
             retdict = self.run_one(inp.text)
             if retdict is not None:
                 for tag, value in retdict.iteritems():
@@ -105,7 +108,7 @@ class Executor(object):
             root = sheet.xpath('/')[0]
         for logid in logids:
             # get the log; this assumes
-            log = root.xpath('/log[@id="%s"]' % logid)[0]
+            log = root.xpath('/ipython-log[@id="%s"]' % logid)[0]
             # get all ipython-cell elements from ipython-blocks with this logid
             cells = sheet.xpath('./ipython-block[@logid="%s"]/ipython-cell' %
                 logid)

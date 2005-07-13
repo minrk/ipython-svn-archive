@@ -4,7 +4,6 @@ import pprint
 import string
 import os
 
-from elementtree import SimpleXMLWriter as SXW
 #try:
 #    from lxml import etree as ET
 #except ImportError:
@@ -15,40 +14,42 @@ from elementtree import SimpleXMLWriter as SXW
 
 # Okay, lxml's XPath support just wins handsdown here.
 # We still need elementtree for SimpleXMLWriter *if* we still want the slightly
-# prettier XML output.
+# prettier XML output...
 from lxml import etree as ET
 
-def _my_escape_cdata(s, encoding=None, replace=string.replace):
-    if s.find('&') != -1 or s.find('<') != -1 or s.find('>') != -1:
-        if s.find(']]>') == -1:
-            s = '<!CDATA[[%s]]>' % s
-        else:
-            s = replace(s, '&', '&amp;')
-            s = replace(s, '<', '&lt;')
-            s = replace(s, '>', '&gt;')
-    if encoding:
-        try:
-            return SXW.encode(s, encoding)
-        except UnicodeError:
-            return SXW.encode_entity(s)
-    return s
-
-SXW.escape_cdata = _my_escape_cdata
-
-def write_element(elem, writer):
-    writer.start(elem.tag, attrib=elem.attrib)
-    writer.data('\n')
-    if elem.text is not None:
-        writer.data(elem.text)
-    for child in elem:
-        write_element(child, writer)
-        if child.tail is not None:
-            writer.data(child.tail)
-    if (elem.tag in ('input', 'output', 'special-input') 
-        and not elem.text.endswith('\n')):
-        writer.data('\n')
-    writer.end(elem.tag)
-    writer.data('\n')
+# ... which I'm nixing for the moment
+#from elementtree import SimpleXMLWriter as SXW
+#def _my_escape_cdata(s, encoding=None, replace=string.replace):
+#    if s.find('&') != -1 or s.find('<') != -1 or s.find('>') != -1:
+#        if s.find(']]>') == -1:
+#            s = '<!CDATA[[%s]]>' % s
+#        else:
+#            s = replace(s, '&', '&amp;')
+#            s = replace(s, '<', '&lt;')
+#            s = replace(s, '>', '&gt;')
+#    if encoding:
+#        try:
+#            return SXW.encode(s, encoding)
+#        except UnicodeError:
+#            return SXW.encode_entity(s)
+#    return s
+#
+#SXW.escape_cdata = _my_escape_cdata
+#
+#def write_element(elem, writer):
+#    writer.start(elem.tag, attrib=dict(elem.attrib))
+#    if elem.text is not None:
+#        writer.data(elem.text)
+#    writer.data('\n')
+#    for child in elem:
+#        write_element(child, writer)
+#        if child.tail is not None:
+#            writer.data(child.tail)
+#    if (elem.tag in ('input', 'output', 'special-input') 
+#        and not elem.text.endswith('\n')):
+#        writer.data('\n')
+#    writer.end(elem.tag)
+#    writer.data('\n')
 
 class Notebook(object):
     """The core notebook object.
@@ -116,7 +117,7 @@ class Notebook(object):
         ##self.logs[id] = log_element
 
     def get_log(self, logid='default-log'):
-        elems = self.root.xpath('./log[@id="%s"]' % logid)
+        elems = self.root.xpath('./ipython-log[@id="%s"]' % logid)
         if elems:
             return elems[0]
         else:
@@ -204,8 +205,9 @@ class Notebook(object):
         """
         if file is None:
             file = self.name + '.nbk'
-        writer = SXW.XMLWriter(file)
-        write_element(self.root, writer)
+        #writer = SXW.XMLWriter(file)
+        #write_element(self.root, writer)
+        ET.ElementTree(self.root).write(file)
 
     def get_code(self, logid='default-log', specials=False):
         """Strip all non-input tags and format the inputs as text that could be
@@ -420,7 +422,7 @@ class Notebook(object):
         return sheet
 
     def get_from_log(self, tag, number, logid='default-log'):
-        xpath = './log[@id="%s"]/%s[@number="%s"]' % (logid, tag, number)
+        xpath = './ipython-log[@id="%s"]/%s[@number="%s"]' % (logid, tag, number)
         elems = self.root.xpath(xpath)
         if elems:
             return elems[0]
