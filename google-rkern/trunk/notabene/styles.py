@@ -103,7 +103,7 @@ div.ipy_output_bundle {
 """
 
 class Style(object):
-    nsmap = {"xsl", "http://www.w3.org/1999/XSL/Transform",
+    nsmap = {"xsl": "http://www.w3.org/1999/XSL/Transform",
             }
     def __init__(self, styles_dict):
         self.styles_dict = styles_dict
