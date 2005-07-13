@@ -182,13 +182,13 @@ class HTMLFragmentFormatter(Formatter):
         img.attrib.update(d)
 
         caption = elem.text
-        if caption and caption.split():
+        if caption and caption.strip():
             div = ET.Element('div')
             div.append(img)
             text = ET.SubElement(div, 'p')
             strong = ET.SubElement(text, 'strong')
             strong.text = 'Fig[%s]: ' % number
-            strong.tail = caption.split()
+            strong.tail = caption.strip()
             new_elem = div
         else:
             new_elem = img

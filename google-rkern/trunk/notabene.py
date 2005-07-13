@@ -243,6 +243,7 @@ class Notebook(object):
         """
 
         # new input hook for Python source
+        # also, trap stdout, stderr
         IP._runsource = IP.runsource
         def runsource(source, filename="<input>", symbol="single"):
             code = IP._runsource(source, filename=filename, symbol=symbol)
