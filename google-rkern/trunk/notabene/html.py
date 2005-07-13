@@ -1,14 +1,10 @@
 """Formatter object for HTML notebook sheets.
 """
 
-from nb_formatter import Formatter
+from lxml import etree as ET
 
-try:
-    import cElementTree as ET
-except ImportError:
-    from elementtree import ElementTree as ET
-
-import PyHtmlify
+from notabene.formatter import Formatter
+from notabene import PyHtmlify
 
 CSS = """
 body {

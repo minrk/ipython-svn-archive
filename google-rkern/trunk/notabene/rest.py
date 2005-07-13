@@ -3,7 +3,7 @@
 
 import textwrap
 
-from nb_formatter import Formatter
+from notabene.formatter import Formatter
 
 class ReSTFormatter(Formatter):
     """Formatter for reST output.

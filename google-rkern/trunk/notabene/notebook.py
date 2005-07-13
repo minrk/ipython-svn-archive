@@ -465,12 +465,12 @@ def main():
     format = sheet.get('format', 'html')
 
     if format == 'rest':
-        import nb_rest
-        formatter = nb_rest.ReSTFormatter(nb)
+        from notabene import rest
+        formatter = rest.ReSTFormatter(nb)
         outname = base + '.txt'
     elif format == 'html':
-        import nb_html
-        formatter = nb_html.HTMLFormatter(nb)
+        from notabene import html
+        formatter = html.HTMLFormatter(nb)
         outname = base + '.html'
 
     text = formatter.format_sheet(sheet)
