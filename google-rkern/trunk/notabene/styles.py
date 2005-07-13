@@ -54,7 +54,7 @@ tt,pre {
     font-size: 100%
 }
 
-pre.code {
+div.programlisting {
     background-color: #EEE;
     white-space:pre;
     color:#111111;
@@ -147,8 +147,6 @@ class Style(object):
             text = text.replace(c, "\\" + c)
         return text
 
-        
-
 
 LightBGStyle = Style({
     'py_keyword': TextStyle("py_keyword", color="#C00000"),
@@ -162,6 +160,7 @@ LightBGStyle = Style({
     'ipy_out_number': TextStyle("ipy_out_number", color="#F33", weight="bold"),
     'ipy_stderr_prompt': TextStyle("ipy_stderr_prompt", color="#F00", weight="bold"),
     'ipy_stderr': TextStyle("ipy_stderr", color="#400", weight="bold"),
+    'ipy_fig_prompt': TextStyle("ipy_fig_prompt", weight="bold"),
 })
 
 
