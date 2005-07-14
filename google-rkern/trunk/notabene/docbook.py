@@ -35,10 +35,10 @@ class DBFormatter(Formatter):
         text = ''.join(dbify(text.strip()))
         number = elem.get('number')
         logid = elem.xpath("../@id")[0]
-        PS1 = (('<anchor id="%s-In%s">'
+        PS1 = (('<anchor id="%s-In%s"/>'
                 '<phrase role="ipy_in_prompt">In [</phrase>'
                 '<phrase role="ipy_in_number">%s</phrase>'
-                '<phrase role="ipy_in_prompt">]:</phrase></anchor> ') %
+                '<phrase role="ipy_in_prompt">]:</phrase> ') %
                     (logid, number, number))
         dots = '...: '.rjust(self.prompt_length(number))
         PS2 = '<phrase role="ipy_in_prompt2">%s</phrase> ' % dots
@@ -52,26 +52,26 @@ class DBFormatter(Formatter):
         text = elem.text.rstrip()
         number = elem.get('number')
         logid = elem.xpath("../@id")[0]
-        PS3 = (('<anchor id="%s-Out%s">'
+        PS3 = (('<anchor id="%s-Out%s"/>'
                 '<phrase role="ipy_out_prompt">Out[</phrase>'
                 '<phrase role="ipy_out_number">%s</phrase>'
-                '<phrase role="ipy_out_prompt">]:</phrase>'
-                '</anchor> ') 
+                '<phrase role="ipy_out_prompt">]:</phrase> ')
                     % (logid, number, number))
 
         lines = text.split('\n')
         first = PS3 + lines[0]
-        last = self.indent('\n'.join(lines[1:]), self.prompt_length(number))
-
-        wholetext = '%s\n%s' % (first, last)
+        if len(lines) > 1:
+            last = self.indent('\n'.join(lines[1:]), self.prompt_length(number))
+            wholetext = '%s\n%s' % (first, last)
+        else:
+            wholetext = first
         return wholetext
 
     def transform_stdout(self, elem):
         text = elem.text.rstrip()
         number = elem.get('number')
         logid = elem.xpath("../@id")[0]
-        text = self.indent(text, self.prompt_length(number))
-        wholetext = ('<anchor id="%s-stdout%s">%s</anchor>' % 
+        wholetext = ('<anchor id="%s-stdout%s"/>%s' % 
                         (logid, number, text))
         return wholetext
 
@@ -79,8 +79,7 @@ class DBFormatter(Formatter):
         text = elem.text.rstrip()
         number = elem.get('number')
         logid = elem.xpath("../@id")[0]
-        text = self.indent(text, self.prompt_length(number))
-        wholetext = ('<anchor id="%s-stderr%s">%s</anchor>' % 
+        wholetext = ('<anchor id="%s-stderr%s"/>%s' % 
                         (logid, number, text))
         return wholetext
 
@@ -88,8 +87,7 @@ class DBFormatter(Formatter):
         text = elem.text.rstrip()
         number = elem.get('number')
         logid = elem.xpath("../@id")[0]
-        text = self.indent(text, self.prompt_length(number))
-        wholetext = ('<anchor id="%s-traceback%s">%s</anchor>' % 
+        wholetext = ('<anchor id="%s-traceback%s"/>%s' % 
                         (logid, number, text))
         return wholetext
 
@@ -141,9 +139,10 @@ class DBFormatter(Formatter):
         """Transform a <sheet> element to a <section> element.
         """
         # Good G-d! Is this *really* the only way to copy an element(tree)?
-        #sheet2 = ET.XML(ET.tostring(sheet))
+        sheet2 = ET.XML(ET.tostring(sheet))
         # not with lxml!
-        sheet2 = copy.deepcopy(sheet)
+        #sheet2 = copy.deepcopy(sheet)
+        # or maybe it is
 
         # get all child->parent links
         cp = dict((c, p) for p in sheet2.getiterator() for c in p)
@@ -175,5 +174,16 @@ class DBFormatter(Formatter):
         """
         newsheet = self.transform_sheet(sheet)
         return ET.tostring(newsheet)
+
+    def to_text(self, sheet, kind='html', style=None):
+        if style is None:
+            from notabene.styles import LightBGStyle as style
+        xsl = getattr(style, '%s_xsl'%kind)()
+        xslt = ET.XSLT(xsl)
+        article_tree = ET.ElementTree(self.transform_sheet(sheet))
+        newtree = xslt.apply(article_tree)
+        return xslt.tostring(newtree)
+
+
 
 

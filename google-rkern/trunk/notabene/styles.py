@@ -5,7 +5,7 @@ from matplotlib import colors
 from lxml import etree as ET
 
 class TextStyle(object):
-    weights_latex = {"bold": "textbf",
+    weights_latex = {"bold": "bfseries",
                     }
     def __init__(self, name, color=None, weight=None):
         self.name = name
@@ -37,8 +37,11 @@ class TextStyle(object):
         if self.weight not in (None, "normal"):
             cmds.append(r"\%s" % self.weights_latex[self.weight])
 
-        cmd = "\\newcommand{\\%stext}[1]{{%s{#1}}}" % (self.name, "".join(cmds))
+        cmd = "\\newcommand{\\%s}[1]{{%s#1}}" % (self.cmd_name(), "".join(cmds))
         return cmd
+
+    def cmd_name(self):
+        return self.name.replace('_', '').replace('2', 'two')
 
 base_css = """
 body {
@@ -54,7 +57,7 @@ tt,pre {
     font-size: 100%
 }
 
-div.programlisting {
+pre.programlisting {
     background-color: #EEE;
     white-space:pre;
     color:#111111;
@@ -114,14 +117,48 @@ class Style(object):
         # configure this later
         ET.SubElement(sheet, "xsl:import",
             href="/Users/kern/projects/notebook-xsl/latex/docbook.xsl")
-        fvopt = ET.SubElement(sheet, "xsl:param", name="latex.fancyvrb.options")
+
+        # turn on fancyvrb
+        fancyvrb = ET.SubElement(sheet, "xsl:param", name="latex.use.fancyvrb")
+        fancyvrb.text = "1"
+        fvopt = ET.SubElement(sheet, "xsl:template", name="latex.fancyvrb.options")
         fvopt.text = r",commandchars=\\\{\}"
 
-        # Oops! What if it isn't an article?
-        amble = ET.SubElement(sheet, "xsl:param", name="latex.article.preamble.post")
+        docclass = ET.SubElement(sheet, "xsl:param",
+            name="latex.documentclass.article")
+        docclass.text = "letterpaper,10pt,twoside"
+
+        amble = ET.SubElement(sheet, "xsl:param",
+            name="latex.article.preamble.post")
         amble.text = '\n'.join(x.as_latex() for x in self.styles_dict.itervalues())
         amble.text = '\n%s\n' % amble.text
 
+        # and again for book
+        amble = ET.SubElement(sheet, "xsl:param",
+            name="latex.book.preamble.post")
+        amble.text = '\n'.join(x.as_latex() for x in self.styles_dict.itervalues())
+        amble.text = '\n%s\n' % amble.text
+
+        # change to English and UTF-8
+        lang = ET.SubElement(sheet, "xsl:variable", name="l10n.gentext.default.language")
+        lang.text = "en"
+        ET.SubElement(sheet, "xsl:variable", name="latex.documentclass.common")
+        ET.SubElement(sheet, "xsl:variable", name="latex.babel.language")
+        encoding = ET.SubElement(sheet, "xsl:output", method="text",
+            encoding="UTF-8", indent="yes")
+
+        # add the templates for syntax-highlighting
+        for textstyle in self.styles_dict.itervalues():
+            template = ET.SubElement(sheet, "xsl:template",
+                match='phrase[@role="%s"]' % textstyle.name,
+                mode="latex.verbatim")
+            template.text = '\\%s{' % textstyle.cmd_name()
+            value = ET.SubElement(template, "xsl:value-of", select="./text()")
+            value.tail = '}'
+
+
+        # lxml's namespace handling isn't *quite* as good as I was hoping
+        sheet = ET.ElementTree(ET.fromstring(ET.tostring(sheet)))
         return sheet
 
     def html_css(self):
@@ -132,13 +169,15 @@ class Style(object):
         sheet = ET.Element("xsl:stylesheet", version="1.0", nsmap=self.nsmap)
 
         ET.SubElement(sheet, "xsl:import",
-            href="/Users/kern/projects/notebook-xsl/other/html/docbook.xsl")
+            href="/Users/kern/projects/notebook-xsl/html/docbook.xsl")
 
         css = ET.SubElement(sheet, "xsl:template", name="user.head.content")
         css_style = ET.SubElement(css, "style", type="text/css")
         comment = ET.SubElement(css_style, "xsl:comment")
         comment.text = self.html_css()
 
+        # lxml's namespace handling isn't *quite* as good as I was hoping
+        sheet = ET.ElementTree(ET.fromstring(ET.tostring(sheet)))
         return sheet
 
     @staticmethod

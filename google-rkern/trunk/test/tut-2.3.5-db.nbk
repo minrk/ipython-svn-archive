@@ -1,4 +1,4 @@
-<notebook xmlns:db="urn:publicid:-:OASIS:DTD+DocBook+XML+V4.1.2.:EN">
+<notebook>
 <head>
 <meta content="/usr/local/bin/ipython" name="cmdline">
 </meta>
@@ -11,8 +11,8 @@
 <title>2.3.5 Polynomials</title>
 
 <para>There are two (interchangeable) ways to deal with 1-d polynomials in Scipy. The
-first is to use the <emphasis role="strong">poly1d</emphasis> class in
-<emphasis role="strong">scipy_base</emphasis>. This class accepts
+first is to use the <emphasis role="bold">poly1d</emphasis> class in
+<emphasis role="bold">scipy_base</emphasis>. This class accepts
 coefficients or polynomial roots to initialize a polynomial. The polynomial
 object can then be manipulated in algebraic expressions, integrated,
 differentiated, and evaluated. It even prints like a polynomial:
