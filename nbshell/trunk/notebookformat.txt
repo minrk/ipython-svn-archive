@@ -1,0 +1,74 @@
+This document describes the general format of a IPython notebook file.
+
+The notebook file is a regular Python file containing additional
+information as comments. Comments used by the notebook editor are
+escaped with "#%", and "#@". Each such comment should start at the
+beginning of the line. Comments starting with "#@" contain commands
+sent to IPN and to the raw code plugins. Comments starting with "#%"
+contain data about encoded cells (see below).
+
+The first or the second line must be
+
+#@ipn
+
+If the file is not executable this should be its first line. If the
+file is executable and the first line contains the path to the Python
+interpreter, then this string should be the second line. 
+
+Comments which should not be processed by ipn are escaped with
+
+#@#
+
+The notebook file is divided in sections which we shall call
+cells. Each cell corresponds to a cell in the GUI. Each cell must
+start with
+
+#@cell <type> [arg1 arg2 ...]
+
+"type" is a string which tells the UI which plugin should be used to
+read the data. Each plugin must tell the UI its type string at
+startup. arg1, arg2, etc. are arguments sent to the plugin. The cell
+end is marked by the string
+
+#@endcell
+
+(Remark: In the current implementation it is not necessary to mark the
+end of a cell. However, in the future, IPN will probably support
+nested cells, so the end of the cell should be stated explicitly.)
+
+Each cell can have one of two types: raw and encoded. Data in raw
+cells is passed to the plugin as is. In the current implementation
+only the python code cell is raw. Data in the encoded cells is escaped
+with "#% ", so each line in the encoded cell should look like
+
+#% randombitsofinformation;lfjasfj;lasfhlsdahf
+
+Please note, that the escape string includes one space. When IPN reads
+such cells, it strips each line of its first three symbols and passes
+it to the plugin. When the file is saved, IPN adds the escape string
+at the beginning of each line the plugin sends.
+
+(TODO: description of an encoded cell. Needed for future plugins)
+
+
+Specific Cell Description
+
+I. Plain text cells.
+
+type: 
+      plain
+arguments: 
+	   none
+
+(TODO: Add some description. There is nothing specific here, I think)
+
+II. Python code cells.
+
+type: 
+      python
+arguments: 
+	   -multiline : 
+		      specifies that the cell is multiline. 
+	
+
+The python code cell 
