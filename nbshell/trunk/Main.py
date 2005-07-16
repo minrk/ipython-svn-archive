@@ -24,14 +24,16 @@ class App(wx.App):
         for module in modlist:
             try:
                 dict = globals().copy()
-#                print "BEFORE"
- #               print dict
+                print "BEFORE"
+                #print dict
+                print module[0:-3]
                 exec "from "+module[0:-3] +" import GetPluginFactory\nprint \"()()()()()()\"" in dict
-  #              print "AFTER"
-   #             print dict
+                print "AFTER"
+                #print dict
     #            print "AAAFTER, module=",module
             except:
-                pass
+                if module[0:-3]=="PythonPlugin":
+                    raise
             else:
                 factory = dict["GetPluginFactory"]()
                 print factory.GetString()
@@ -51,13 +53,19 @@ class App(wx.App):
 
   
     def Demo(self):
-         self.document.LoadFile("./test.py")
-         #        print "inserting 0"
-         #        self.document.InsertCell("plaintext", "The new and improved plugin system works")
-         #        print "inserting 1"
-         #        self.document.InsertCell("plaintext", "Hooray!")
-         #        print "updating"
-         self.notebook.Update()
+        #         self.document.LoadFile("./test.py")
+        #        print "inserting 0"
+        #        self.document.InsertCell("plaintext", "The new and improved plugin system works")
+        #        print "inserting 1"
+        #        self.document.InsertCell("plaintext", "Hooray!")
+        #        print "updating"
+
+        log = self.document.logs["default-log"]
+        log.Append("\n")
+        cell = self.document.InsertCell("python")
+        cell.data = [(0,0)]
+        cell.view.Update()
+        self.notebook.Update()
 
 
 

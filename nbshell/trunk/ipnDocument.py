@@ -1,5 +1,7 @@
 import wx
 
+import IPythonLog
+
 class FileSyntaxError(Exception):
     """Thrown in document.LoadFile when a syntax error ocurred while
     reading the file"""
@@ -19,6 +21,7 @@ class FileSyntaxError(Exception):
     
 class ipnDocument:
     def __init__(self, app, notebook):
+        self.logs = {"default-log":IPythonLog.IPythonLog()} # here we store the ipython logs
         self.view = notebook
         self.app = app
         self.factory = self.app.plugin_dict
@@ -58,7 +61,8 @@ class ipnDocument:
         for cell in self.celllist:
             cell.GetViewPlugin(self.view).Close(update=False)
             self.delCell(cell.index)
-            
+        self.logs = {"default-log":self.logs["default-log"]}
+        self.logs["deafult-log"].Clear()
         self.view.Update()
         
     def _loadFile(self, f):
