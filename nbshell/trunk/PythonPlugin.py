@@ -97,13 +97,7 @@ class PythonDocumentPlugin:
     def LoadData(self, data=None):
         """Loads data in the object. If "data" is None then clears all data"""
         return #well we do nothing here
-        #There is a philosophical problem with Scintilla here. All its 
-        #functionality is in the widget object. They do not have an object of
-        #a separate type handling data. Well, they actually do, but it can do
-        #nothing with the data it conatains. So that's why when the view is
-        #created it will add a member self.data which is simply a reference
-        #to the Scintilla widget. And I will pretend, that I don't know this
-        #and will only use its functionality for handling data.
+    
         if (self.view is None):
             self.text = data #here self.data is not yet created
         else:
@@ -150,6 +144,12 @@ class PythonDocumentPlugin:
     def GetFactory(self):
         return PlainTextPluginFactory()
 
+#TODO:I don't know if I really need to have both the PythonNotebookViewPlugin and
+# Shell classes. I have split the functionality of the plugin between these two.
+# The rule to decide in which class should a method go, is this: the methods in the Shell
+# class must not know about the document class and its internal structure. Thus maintaining
+# the code should be easier. Also the methods which should not be used outside the class start
+# with a lowercaps letter.
 class PythonNotebookViewPlugin:
     def __init__(self, docplugin, view):
         """Initialization"""
@@ -169,6 +169,36 @@ class PythonNotebookViewPlugin:
         """See the description of GetFirstId"""
         return self.id
         
+    def createWindow(self):
+        """Creates the widget for displaying the code. Does nothing if it is
+        already created"""
+        if self.window is not None:
+            return self.window
+        #1. Create the window
+        self.window = Shell(self, self.view, -1)
+        #print "getting id" #dbg
+        self.id = self.window.GetId()
+        #print "id:", self.id #dbg
+        #self.window.view = self
+        #2. Add the window at the correct place in the notebook widget
+        if self.doc.index == 0: #put the window at the beginning of the document
+            #print "inserting cell" #dbg
+            self.view.InsertCell(self.window, 0, update=False)
+        else:
+            #print "adding cell" #dbg
+            prevcell = self.document.GetCell(self.doc.index-1)
+            viewplugin = prevcell.GetViewPlugin(self.view)
+            #print self.doc.index #dbg
+            #print viewplugin #dbg
+            lastid = viewplugin.GetLastId()
+            #print lastid #dbg
+            index = self.view.GetIndex(lastid)+1
+            self.view.InsertCell(self.window, index, update = False)
+        #3. Create line2log
+        self.line2log = list()
+        return self.window
+
+        
     def Update(self):
         """ This method is required for all view implementations. It must
         update the view plugin.
@@ -181,48 +211,160 @@ class PythonNotebookViewPlugin:
         RelayoutCells in each update this would be really inefficient.
         """
         if self.window is None: #then this is the first time Update is called
-            #1. Create the window and set the document plugin
-            self.window = Shell(self, self.view, -1)
-            print "getting id"
-            self.id = self.window.GetId()
-            print "id:", self.id
-            self.window.view = self
-            #2. Add the window at the correct place in the notebook widget
-            if self.doc.index == 0: #put the window at the beginning of the document
-                print "inserting cell"
-                self.view.InsertCell(self.window, 0, update=False)
-            else:
-                print "adding cell"
-                prevcell = self.document.GetCell(self.doc.index-1)
-                viewplugin = prevcell.GetViewPlugin(self.view)
-                print self.doc.index
-                print viewplugin
-                lastid = viewplugin.GetLastId()
-                print lastid
-                index = self.view.GetIndex(lastid)+1
-                self.view.InsertCell(self.window, index, update = False)
+            self.createWindow()
+
         # Set the text in the window
         #TODO: It is really stupid to rewrite the text for 
-        #every little change that can occur. Think of a way not to avoid this
+        #every little change that can occur. Think of a way to avoid this
         data = self.doc.data
-        print "data->", data
+        #print "data->", data #dbg
         
         log = self.doc.log
-        print "log->", log.log
+        #print "log->", log.log #dbg
         self.window.ClearAll()
-        self.window.line2log = []
-        for i in range(len(data)):
+        self.line2log = []
+        oldlinecnt = self.window.GetLineCount()
+        for i in range(len(data)-1):
             id, type = data[i]
             text = log.Get(id)[type]
-            linestart = self.window.GetLineCount()
-            self.window.AddText(((type and "Out[") or "In[") + str(id) + "] " + text)
-            lineend =  self.window.GetLineCount()
-            for j in range(linestart, lineend):
-                self.window.line2log.append((i, j - linestart))
+            self.window.AddText('\n' + ((type and "Out[") or "In[") + str(id) + "] " + text)
+            linecnt =  self.window.GetLineCount()
+           
+            #set up line2log. The first line is an empty one
+            self.line2log.append(None)
+            for j in range(oldlinecnt+1, linecnt):
+                self.line2log.append((i, j - oldlinecnt))
                 #print "i -> %s, id->%s, type->%s, text->%s"%(str(i), str(id), str(type), str(text))
+            oldlinecnt = linecnt
+            
+        #The last line must not end in '\n', so we write it separately
+        i = len(data)-1
+        if i>=0:
+            id, type = data[i]
+            text = log.Get(id)[type]
+            self.window.AddText('\n' + ((type and "Out[") or "In[") + str(id) + "] " + text[:-1])
+            linecnt =  self.window.GetLineCount()
+            
+            #set up line2log. The first line is an empty one
+            self.line2log.append(None)
+            for j in range(oldlinecnt+1, linecnt+1):
+                self.line2log.append((i, j - oldlinecnt))
+                #print "i -> %s, id->%s, type->%s, text->%s"%(str(i), str(id), str(type), str(text)) #dbg
+
+        #print "line2log->", self.window.line2log #dbg
+
+    
+
+    def promptLen(self, linenum):
+        """Returns the lenght of the prompt that is on the given line. It is used
+        only for input prompts."""
+        
+        #get the number of digits of the number of the input
+        doc_id = self.line2log[linenum][0]
+        id, type = self.doc.data[doc_id]
+        #print "promptLen: linenum->%d, doc_id->%d, id->%d, type->%d"%(linenum, doc_id, id, type) #dbg
+        return len(str(id))+(type and 6 or 5) #In[ ] -5, Out[ ]-6
+    
+    def updateLog(self):
+        """Updates the log to the current text in the widget. This method is
+        run whenever the user presses Enter"""
+        
+        for (id, type) in self.doc.data:
+            self.doc.log.Get(id)[type] = None
+        
+        for i in range(len(self.line2log)):
+            if self.line2log[i] is None:
+                self.window.GetLine(i)
+                continue
+            doc_id, line = self.line2log[i]
+            id, type = self.doc.data[doc_id]
+            element = self.doc.log.Get(id)
+            promptlen = self.promptLen(i)
+            line = self.window.GetLine(i)[promptlen:]
+            if line == "":
+                line = '\n'
+            elif line[-1]!='\n':
+                line = line + '\n'
+                
+            if element[type] is None:
+                
+                element[type] = line
+            else:
+                element[type] = element[type]+line
+        
+
+    def processLine(self):
+        """Process the line of text at which the user hit Enter."""
+        #Update the log
+        self.updateLog()
+        linenum = self.window.GetCurrentLine()
+        #print "linenum->", linenum #dbg
+        item = self.line2log[linenum]
+        if item is None:# we are in a empty separator line so do nothing
+            return
+        doc_id = item[0]
+        id, type = self.doc.data[doc_id]
+        line = item[1]
+        print "(doc_id, id, type, line)->", (doc_id, id, type, line)
+        if type == 1: #this is output, so we do nothing
+            return
+
+        #try to run the current input. If it needs more, insert a line and continue editing
+        if self.doc.log.Run(id): # we have run the text and generated output
+            if len(self.doc.data) == doc_id+1: #this is the last cell so add the output after it
+                self.doc.data.append((id, 1))
+                #append a new cell
+                id1 = self.doc.log.Append("\n") #all input and output strings must finish in '\n'
+                self.doc.data.append((id1, 0))
+                self.Update()
+            else:
+                if self.doc.data[doc_id+1] != (id, 1): #the next cell is not the output of this input
+                    self.doc.data.insert(doc_id+1, (id, 1))
+                self.Update()
+                #set the cursor to the next input cell.
+                newid = doc_id+1
+                while(self.doc.data[newid][1]):
+                    newid += 1
+                self.setCurrentInput(newid)
+        else: #We need more input, simply insert a line
+            self.window.InsertText(self.window.GetLineEndPosition(linenum), "\n")
+            self.line2log.append(None)
+            for i in range(len(self.line2log)-1, linenum+1, -1):
+                self.line2log[i] = self.line2log[i-1]
+            self.line2log[linenum+1] = (item[0], item[1]+1)
+            #here we don't need an update, I think
 
 
+    def setCurrentInput(self, id):
+        """Moves the cursor to the start of the element with the given id.
+        Should be used only for input cells, because the output cells cannot be edited"""
+        #TODO: this algorithm is slow. I check each line of the text if it is the start
+        # of the element I need to go to. There should be a faster way to do this
+        i = 0
+        for i in range(len(self.line2log)):
+            item = self.line2log[i]
+            if item is not None and item[0] == id:
+                break
+        self.window.GotoPos(self.window.PositionFromLine(i)+self.promptLen(i))
 
+
+    def GetLineType(self, linenum):
+        """Returns the type of the line with number linenum.
+
+        Return values:
+            None - if it is a separator line
+            0 - if it is an input line
+            1 - if it is an output line
+            
+        The return codes are strange, but I want them to match to the values
+        of self.line2log and self.doc.data"""
+        #print "linenum: %d\n line2log: %s"%(linenum, str(self.line2log)) #dbg
+        item = self.line2log[linenum]
+        if item == None:
+            return None
+        else:
+            return self.doc.data[item[0]][1]
+        
     def Close(self, update = True):
         index = self.view.GetIndex(self.id)
         self.view.DeleteCell(index, update)
@@ -545,7 +687,7 @@ class Shell(editwindow.EditWindow):
         if not controlDown and key == wx.WXK_RETURN:
             if self.CallTipActive():
                 self.CallTipCancel()
-            self.processLine()
+            self.view.processLine()
         # Ctrl+Return (Cntrl+Enter) is used to insert a line break.
         #elif controlDown and key == wx.WXK_RETURN:
         #    if self.CallTipActive():
@@ -735,100 +877,6 @@ class Shell(editwindow.EditWindow):
             self.write(os.linesep)
             self.more = True
             self.prompt()
-
-    def updateLog(self):
-        """Updates the log to the current text in the widget. This method is
-        run whenever the user presses Enter"""
-        
-        for (id, type) in self.document.data:
-            self.log.Get(id)[type] = None
-        
-        for i in range(len(self.line2log)):
-            doc_id, line = self.line2log[i]
-            id, type = self.document.data[doc_id]
-            element = self.log.Get(id)
-            promptlen = self.promptLen(i)
-            if element[type] is None:
-                
-                element[type] = self.GetLine(i)[promptlen:]
-            else:
-                element[type] = element[type]+self.GetLine(i)[promptlen:]
-
-    def promptLen(self, linenum):
-        """Returns the lenght of the prompt that is on the given line. Used
-        only for input prompts."""
-        
-        #get the number of digits of the number of the input
-        doc_id = self.line2log[linenum][0]
-        id, type = self.document.data[doc_id]
-        print "promptLen: linenum->%d, doc_id->%d, id->%d, type->%d"%(linenum, doc_id, id, type)
-        return len(str(id))+(type and 6 or 5)
-    
-    def processLine(self):
-        """Process the line of text at which the user hit Enter."""
-        #Update the log
-        self.updateLog()
-        linenum = self.GetCurrentLine()
-        print "linenum->", linenum
-        item = self.line2log[linenum]
-        doc_id = item[0]
-        id, type = self.document.data[doc_id]
-        line = item[1]
-        print "(doc_id, id, type, line)->", (doc_id, id, type, line)
-        if type == 1: #this is output, so we do nothing
-            return
-
-        #try to run the current input. If it needs more, insert a line and continue editing
-        if self.log.Run(id): # we have run the text and generated output
-            if len(self.document.data) == doc_id+1: #this is the last cell so add the output after it
-                self.document.data.append((id, 1))
-                #append a new cell
-                id1 = self.log.Append("\n") #all input and output strings must finish in '\n'
-                self.document.data.append((id1, 0))
-            elif self.document.data[doc_id+1] != (id, 1): #the next cell is not the output of this input
-                self.document.data.insert(doc_id+1, (id, 1))
-            self.view.Update()
-        else: #We need more input, simply insert a line
-            self.InsertText(self.GetLineEndPosition(linenum), "\n")
-            self.line2log.append(None)
-            for i in range(len(self.line2log)-1, linenum+1, -1):
-                self.line2log[i] = self.line2log[i-1]
-            self.line2log[linenum+1] = (item[0], item[1]+1)
-            #here we don't need an update, I think
-        #thepos = self.GetCurrentPos()
-        #startpos = self.promptPosEnd
-        #endpos = self.GetTextLength()
-        #ps2 = str(sys.ps2)
-        ## If they hit RETURN inside the current command, execute the
-        ## command.
-        #if self.CanEdit():
-            #self.SetCurrentPos(endpos)
-            #self.interp.more = False
-            #command = self.GetTextRange(startpos, endpos)
-            #lines = command.split(os.linesep + ps2)
-            #lines = [line.rstrip() for line in lines]
-            #command = '\n'.join(lines)
-            #if self.reader.isreading:
-                #if not command:
-                    ## Match the behavior of the standard Python shell
-                    ## when the user hits return without entering a
-                    ## value.
-                    #command = '\n'
-                #self.reader.input = command
-                #self.write(os.linesep)
-            #else:
-                #self.push(command)
-        ## Or replace the current command with the other command.
-        #else:
-            ## If the line contains a command (even an invalid one).
-            #if self.getCommand(rstrip=False):
-                #command = self.getMultilineCommand()
-                #self.clearCommand()
-                #self.write(command)
-            ## Otherwise, put the cursor back where we started.
-            #else:
-                #self.SetCurrentPos(thepos)
-                #self.SetAnchor(thepos)
 
     def getMultilineCommand(self, rstrip=True):
         """Extract a multi-line command from the editor.
@@ -1125,6 +1173,7 @@ class Shell(editwindow.EditWindow):
         else:
             return False
 
+
     def CanEdit(self):
         """Return true if editing should succeed."""
         #TODO: why we need to know anythong about the selection here
@@ -1139,13 +1188,13 @@ class Shell(editwindow.EditWindow):
         pos = self.GetCurrentPos()
         line = self.LineFromPosition(pos)
         startpos = self.PositionFromLine(line)
-        print "pos->", pos, " line->", line, " startpos->", startpos
-        if self.line2log[line][1] == 1: #this line is output
-            print "line is output"
+        type = self.view.GetLineType(line)
+        #print "pos->", pos, " line->", line, " startpos->", startpos," type->",type #dbg
+        if type is None or type==1: #separator or output line
             return False
         else:
-            promptlen = self.promptLen(line)
-            print "line is input, promptlen->", promptlen
+            promptlen = self.view.promptLen(line)
+            #print "line is input, promptlen->", promptlen #dbg
             if startpos+promptlen > pos:
                 return False
             else:
