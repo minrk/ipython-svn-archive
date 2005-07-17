@@ -356,6 +356,10 @@ readline_parse_and_bind "\C-n": history-search-forward
 readline_parse_and_bind "\e[A": history-search-backward
 readline_parse_and_bind "\e[B": history-search-forward
 
+# These are typically on by default under *nix, but not win32.
+readline_parse_and_bind "\C-k": kill-line
+readline_parse_and_bind "\C-u": unix-line-discard
+
 # (ii) readline_remove_delims: a string of characters to be removed from the
 # default word-delimiters list used by readline, so that completions may be
 # performed on strings which contain them.

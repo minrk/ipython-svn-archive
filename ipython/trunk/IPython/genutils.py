@@ -711,7 +711,7 @@ def get_home_dir():
     We first try $HOME.  Absent that, on NT it's $HOMEDRIVE\$HOMEPATH.
 
     Currently only Posix and NT are implemented, a HomeDirError exception is
-    raised for all other OSes. """ #'
+    raised for all other OSes. """
 
     try:
         return os.environ['HOME']
