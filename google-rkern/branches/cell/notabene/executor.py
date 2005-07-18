@@ -6,6 +6,8 @@ import pprint
 from IPython import OutputTrap, ultraTB
 from lxml import etree as ET
 
+from notabene import notebook
+
 class Executor(object):
     def __init__(self, namespace=None):
         if namespace is None:
@@ -67,15 +69,15 @@ class Executor(object):
         """Run all inputs from oldlog to create newlog.
         """
         self.add_hooks()
-        inputs = oldlog.xpath('./input')
-        for inp in inputs:
-            number = inp.get('number')
-            newinp = ET.SubElement(newlog, 'input', number=number)
-            newinp.text = inp.text
-            retdict = self.run_one(inp.text)
+        cells = sorted((Cell(x) for x in oldlog), key=lambda x: x.number)
+        for cell in cells:
+            newcell = ET.SubElement(newlog, 'cell', number=str(cell.number))
+            input = ET.SubElement(newcell, 'input')
+            input.text = cell.input
+            retdict = self.run_one(cell.input)
             if retdict is not None:
                 for tag, value in retdict.iteritems():
-                    elem = ET.SubElement(newlog, tag, number=number)
+                    elem = ET.SubElement(newcell, tag)
                     elem.text = value
         self.rm_hooks()
 
@@ -83,50 +85,60 @@ class Executor(object):
         """Rerun all inputs >= number and append them to the log.
         """
         self.add_hooks()
-        inputs = oldlog.xpath('./input[@number>=%s]' % number)
-        curnum = int(inputs[-1].get('number'))
-        for inp in inputs:
+        cells = sorted((Cell(x) for x in
+            oldlog.xpath('./cell[@number>=%s]' % number)),
+            key=lambda x: x.number)
+        curnum = cells[-1].number
+        for cell in cells:
             curnum += 1
-            newinp = ET.SubElement(log, 'input', number=str(curnum))
-            newinp.text = inp.text
-            retdict = self.run_one(inp.text)
+            newcell = ET.SubElement(log, 'cell', number=str(curnum))
+            input = ET.SubElement(newcell, 'input')
+            input.text = cell.input
+            retdict = self.run_one(input.text)
             if retdict is not None:
                 for tag, value in retdict.iteritems():
-                    elem = ET.SubElement(log, tag, number=str(curnum))
+                    elem = ET.SubElement(newcell, tag)
                     elem.text = value
         self.rm_hooks()
 
-    def vacuum(self, sheet, root=None):
+    def vacuum(self, nb):
         """Remove all unreferenced cells from logs.
-
-        XXX: And if we have multiple sheets? This is almost certainly the wrong
-        way to do this.
         """
-        # get all unique logids from the relevant elements in the sheet
-        logids = set(sheet.xpath('.//@logid'))
-        if root is None:
-            root = sheet.xpath('/')[0]
+        sheets = nb.root.xpath('./sheet')
+        keepers = {}
+        for sheet in sheets:
+            # get all unique logids from the relevant elements in the sheet
+            logids = set(sheet.xpath('.//@logid'))
+            for logid in logids:
+                # get the log
+                log = nb.get_log(logid)
+                # get all ipython-cell elements from ipython-blocks with this logid
+                cells = sheet.xpath('.//ipython-block[@logid="%s"]/ipython-cell' %
+                    logid)
+                # get all ipython-figure elements with this logid
+                figs = sheet.xpath('.//ipython-figure[@logid="%s"]' % logid)
+                logkeepers = keepers.get(logid, set())
+                logkeepers.update((x.get('type'), x.get('number')) for x in cells)
+                logkeepers.update(('figure', x.get('number')) for x in figs)
+                keepers[logid] = logkeepers
         for logid in logids:
-            # get the log; this assumes
-            log = root.xpath('/ipython-log[@id="%s"]' % logid)[0]
-            # get all ipython-cell elements from ipython-blocks with this logid
-            cells = sheet.xpath('./ipython-block[@logid="%s"]/ipython-cell' %
-                logid)
-            # get all ipython-figure elements with this logid
-            figs = sheet.xpath('./ipython-figure[@logid="%s"]' % logid)
-            keepers = set((x.get('type'), x.get('number')) for x in cells)
-            keepers.update(('figure', x.get('number')) for x in figs)
-            items = list(log)
-            for elem in items:
-                if (elem.tag, elem.get('number')) not in keepers:
-                    log.remove(elem)
+            log = nb.get_log(logid)
+            logkeepers = keepers[logid]
+            cells = list(log)
+            for cell in cells:
+                num = cell.get('number')
+                for subcell in list(cell):
+                    if (subcell.tag, num) not in logkeepers:
+                        cell.remove(subcell)
+                if len(cell) == 0:
+                    log.remove(cell)
 
     def contiguify(self, log, sheets=None):
         """Renumber cells in a log to make them contiguous.
 
         If sheets are provided, renumber the appropriate elements, too.
         """
-        numbers = sorted(set(int(x) for x in log.xpath('.//@number')))
+        numbers = sorted(int(x) for x in log.xpath('./cell/@number'))
         old2new = {}
         for i, oldnum in enumerate(numbers):
             newnum = str(i + 1)
@@ -134,8 +146,8 @@ class Executor(object):
             for elem in log.xpath('.//[@number="%s"]' % oldnum):
                 elem.set('number', newnum)
 
-        logid = log.get('id')
         if sheets is not None:
+            logid = log.get('id')
             for sheet in sheets:
                 cells = sheet.xpath('.//ipython-block[@logid="%s"]//' % logid)
                 figs = sheet.xpath('.//ipython-figure[@logid="%s"]' % logid)

@@ -39,7 +39,7 @@ class Cell(object):
         else:
             yield ET.Element('ipython-cell', type='input',
                 number=str(self.number))
-        for tag in ('stdout', 'stderr', 'output'):
+        for tag in ('traceback', 'stdout', 'stderr', 'output'):
             if hasattr(self, tag):
                 yield ET.Element('ipython-cell', type=tag,
                     number=str(self.number))
