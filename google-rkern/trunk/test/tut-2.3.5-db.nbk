@@ -3,7 +3,7 @@
 <meta content="/usr/local/bin/ipython" name="cmdline">
 </meta>
 </head>
-<sheet type="html">
+<sheet>
 <title>Scipy Tutorial</title>
 <section>
 <title>Chapter 2</title>
