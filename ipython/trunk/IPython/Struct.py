@@ -315,9 +315,8 @@ class Struct:
                     del inv_conflict_solve_user[name]
             conflict_solve.update(Struct.__dict_invert(self,inv_conflict_solve_user))
         #print 'merge. conflict_solve: '; pprint(conflict_solve) # dbg
-        # after Python 2.2, use iterators: for key in data_dict will then work
         #print '*'*50,'in merger. conflict_solver:';  pprint(conflict_solve)
-        for key in data_dict.keys():
+        for key in data_dict:
             if key not in self:
                 self[key] = data_dict[key]
             else:

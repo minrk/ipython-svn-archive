@@ -38,15 +38,6 @@ import threading,sys
 from IPython.ultraTB import AutoFormattedTB
 from IPython.genutils import warn,error
 
-# declares Python 2.2 compatibility symbols:
-try:
-    basestring
-except NameError:
-    import types
-    basestring = (types.StringType, types.UnicodeType)
-    True = 1==1
-    False = 1==0
-
 class BackgroundJobManager:
     """Class to manage a pool of backgrounded threaded jobs.
 

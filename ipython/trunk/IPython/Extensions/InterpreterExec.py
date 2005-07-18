@@ -264,7 +264,9 @@ __IPYTHON__.magic_unalias('sx')
 # 'gnome-terminal' are interpreted as a single alias instead of variable
 # 'gnome' minus variable 'terminal'.
 import re
-__IPYTHON__.line_split = re.compile(r'^(\s*)([\?\w\.\-\+]+\w*\s*)(\(?.*$)')
+__IPYTHON__.line_split = re.compile(r'^([\s*,;/])'
+                                    r'([\?\w\.\-\+]+\w*\s*)'
+                                    r'(\(?.*$)')
 
 # Namespace cleanup
 del re
