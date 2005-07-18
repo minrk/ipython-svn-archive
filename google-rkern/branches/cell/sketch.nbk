@@ -1,0 +1,41 @@
+<notebook>
+<head>
+    <meta name="title" content="I Am a Sketch"/>
+</head>
+
+<!-- Here, we keep a log of everything that has been typed in and output. -->
+<ipython-log logid="default-log">
+<input number="1">
+def foo(x, y):
+    return x + y
+</input>
+<input number="2">
+foo(3, 4)
+</input>
+<output number="2">
+7
+</output>
+</ipython-log>
+
+<!-- Now comes the first of possibly several sheets. -->
+<sheet format="rest">
+I Am a reST Sheet
+=================
+
+Here I define a function:
+
+<ipython-block>
+    <ipython-input number="1"/>
+    <ipython-input number="2"/>
+    <ipython-output number="2"/>
+</ipython-block>
+
+    And I could have more. I could repeat them any number of times. Let's look at
+    the function definition again (this time, we'll indent it a bit):
+
+    <ipython-block>
+        <ipython-input number="1"/>
+    </ipython-block>
+
+</sheet>
+</notebook>
