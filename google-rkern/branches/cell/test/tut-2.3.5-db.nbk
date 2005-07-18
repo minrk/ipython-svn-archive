@@ -3,7 +3,7 @@
 <meta content="/usr/local/bin/ipython" name="cmdline">
 </meta>
 </head>
-<sheet>
+<sheet type="docbook">
 <title>Scipy Tutorial</title>
 <section>
 <title>Chapter 2</title>
@@ -53,26 +53,34 @@ and evalute polynomials represented as sequences of coefficients.
 </section>
 </section>
 </sheet>
-<ipython-log id="default-log"><input number="3">
+<ipython-log id="default-log"><cell number="3"><input>
 from scipy import *
-</input><input number="4">
+</input></cell>
+<cell number="4"><input>
 p = poly1d([3,4,5])
-</input><input number="5">
+</input></cell>
+<cell number="5"><input>
 print p
-</input><stdout number="5">   2
+</input><stdout>   2
 3 x + 4 x + 5
-</stdout><input number="6">
+</stdout></cell>
+<cell number="6"><input>
 print p*p
-</input><stdout number="6">   4      3      2
+</input><stdout>   4      3      2
 9 x + 24 x + 46 x + 40 x + 25
-</stdout><input number="7">
+</stdout></cell>
+<cell number="7"><input>
 print p.integ(k=6)
-</input><stdout number="7"> 3     2
+</input><stdout> 3     2
 x + 2 x + 5 x + 6
-</stdout><input number="8">
+</stdout></cell>
+<cell number="8"><input>
 p.deriv()
-</input><output number="8">poly1d([6, 4])
-</output><input number="9">
+</input><output>poly1d([6, 4])
+</output></cell>
+<cell number="9"><input>
 p([4,5])
-</input><output number="9">array([ 69, 100])
-</output></ipython-log></notebook>
+</input><output>array([ 69, 100])
+</output></cell>
+</ipython-log>
+</notebook>

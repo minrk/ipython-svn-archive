@@ -28,13 +28,12 @@ class DBFormatter(Formatter):
     def prompt_length(number):
         return len(str(number)) + 7
 
-    def transform_input(self, elem):
+    def transform_input(self, elem, number):
         text = elem.text.strip()
 
         # color the Python code
         text = ''.join(dbify(text.strip()))
-        number = elem.get('number')
-        logid = elem.xpath("../@id")[0]
+        logid = elem.xpath("../../@id")[0]
         PS1 = (('<anchor id="%s-In%s"/>'
                 '<phrase role="ipy_in_prompt">In [</phrase>'
                 '<phrase role="ipy_in_number">%s</phrase>'
@@ -48,10 +47,9 @@ class DBFormatter(Formatter):
         wholetext = '\n'.join(x+y for x,y in izip(prompts, lines))
         return wholetext
 
-    def transform_output(self, elem):
+    def transform_output(self, elem, number):
         text = elem.text.rstrip()
-        number = elem.get('number')
-        logid = elem.xpath("../@id")[0]
+        logid = elem.xpath("../../@id")[0]
         PS3 = (('<anchor id="%s-Out%s"/>'
                 '<phrase role="ipy_out_prompt">Out[</phrase>'
                 '<phrase role="ipy_out_number">%s</phrase>'
@@ -67,32 +65,29 @@ class DBFormatter(Formatter):
             wholetext = first
         return wholetext
 
-    def transform_stdout(self, elem):
+    def transform_stdout(self, elem, number):
         text = elem.text.rstrip()
-        number = elem.get('number')
-        logid = elem.xpath("../@id")[0]
+        logid = elem.xpath("../../@id")[0]
         wholetext = ('<anchor id="%s-stdout%s"/>%s' % 
                         (logid, number, text))
         return wholetext
 
-    def transform_stderr(self, elem):
+    def transform_stderr(self, elem, number):
         text = elem.text.rstrip()
-        number = elem.get('number')
-        logid = elem.xpath("../@id")[0]
+        logid = elem.xpath("../../@id")[0]
         wholetext = ('<anchor id="%s-stderr%s"/>%s' % 
                         (logid, number, text))
         return wholetext
 
-    def transform_traceback(self, elem):
+    def transform_traceback(self, elem, number):
         text = elem.text.rstrip()
-        number = elem.get('number')
-        logid = elem.xpath("../@id")[0]
+        logid = elem.xpath("../../@id")[0]
         wholetext = ('<anchor id="%s-traceback%s"/>%s' % 
                         (logid, number, text))
         return wholetext
 
     def transform_figure(self, elem):
-        logid = elem.xpath("../@id")[0]
+        logid = elem.xpath("../../@id")[0]
         number = elem.get('number')
         dbfig = ET.Element('figure', label="%s-Fig%s"%(logid,number))
         dbmedia = ET.SubElement(dbfig, "mediaobject")
@@ -120,13 +115,13 @@ class DBFormatter(Formatter):
             type = cell.get('type')
             elem = self.notebook.get_from_log(type, number, logid=logid)
             if type in ('input', 'special-input'):
-                texts.append(self.transform_input(elem))
+                texts.append(self.transform_input(elem, number))
             else:
                 try:
                     xform = getattr(self, "transform_%s" % type)
                 except AttributeError:
                     raise NotImplementedError
-                texts.append(xform(elem))
+                texts.append(xform(elem, number))
 
         listing = ET.XML('<programlisting role="ipy_block">%s</programlisting>'
                     % '\n'.join(texts))
@@ -135,7 +130,7 @@ class DBFormatter(Formatter):
         listing.tail = block.tail
         return listing
 
-    def transform_sheet(self, sheet):
+    def transform_sheet(self, sheet, nodetype='article'):
         """Transform a <sheet> element to a <section> element.
         """
         # Good G-d! Is this *really* the only way to copy an element(tree)?
@@ -164,7 +159,7 @@ class DBFormatter(Formatter):
             img = self.transform_figure(elem)
             parent[idx] = img
 
-        sheet2.tag = 'article'
+        sheet2.tag = nodetype
         # get rid of 'type' attribute
         del sheet2.attrib['type']
         return sheet2

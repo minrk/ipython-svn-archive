@@ -10,25 +10,6 @@ class Formatter(object):
     """
     def __init__(self, notebook):
         self.notebook = notebook
-##        self.inputs = {}
-##        self.special_inputs = {}
-##        self.outputs = {}
-##        self.figures = {}
-##        for logid, log in notebook.logs.iteritems():
-##            inputs = notebook._get_tag_dict('input', logid=logid)
-##            for k, v in inputs.iteritems():
-##                self.inputs[logid, k] = v
-##            special_inputs = notebook._get_tag_dict('special-input',
-##                logid=logid)
-##            for k, v in special_inputs.iteritems():
-##                self.special_inputs[logid, k] = v
-##            outputs = notebook._get_tag_dict('output', logid=logid)
-##            for k, v in outputs.iteritems():
-##                self.outputs[logid, k] = v
-##            figures = notebook._get_tag_dict('figure', logid=logid)
-##            for k, v in figures.iteritems():
-##                self.figures[logid, k] = v
-##
 
     def indent(self, text, spaces):
         """Add a given number of spaces to the beginning of each line in text.
@@ -39,11 +20,10 @@ class Formatter(object):
         lines.append('')
         return '\n'.join(lines)
 
-    def format_input(self, elem):
+    def format_input(self, elem, number):
         """Format an <input> element.
         """
         text = elem.text
-        number = elem.attrib['number']
         PS1 = 'In [%s]: ' % number
         PS2 = '...: '.rjust(len(PS1))
         lines = text.strip().split('\n')
@@ -53,11 +33,10 @@ class Formatter(object):
         lines.append('')
         return '\n'.join(lines)
 
-    def format_output(self, elem):
+    def format_output(self, elem, number):
         """Format an <output> element.
         """
         text = elem.text.strip()
-        number = elem.attrib['number']
         PS3 = 'Out[%s]: ' % number
         lines = text.split('\n')
         if len(lines) == 1:
@@ -89,9 +68,9 @@ class Formatter(object):
             type = cell.get('type')
             elem = self.notebook.get_from_log(type, number, logid=logid)
             if type in ('input', 'special-input'):
-                texts.append(self.format_input(elem))
+                texts.append(self.format_input(elem, number))
             elif type in ('output',):
-                texts.append(self.format_output(elem))
+                texts.append(self.format_output(elem, number))
             else:
                 raise NotImplementedError
 

@@ -4,52 +4,48 @@ import pprint
 import string
 import os
 
-#try:
-#    from lxml import etree as ET
-#except ImportError:
-#    try:
-#        import cElementTree as ET
-#    except ImportError:
-#        from elementtree import ElementTree as ET
-
-# Okay, lxml's XPath support just wins handsdown here.
-# We still need elementtree for SimpleXMLWriter *if* we still want the slightly
-# prettier XML output...
 from lxml import etree as ET
 
-# ... which I'm nixing for the moment
-#from elementtree import SimpleXMLWriter as SXW
-#def _my_escape_cdata(s, encoding=None, replace=string.replace):
-#    if s.find('&') != -1 or s.find('<') != -1 or s.find('>') != -1:
-#        if s.find(']]>') == -1:
-#            s = '<!CDATA[[%s]]>' % s
-#        else:
-#            s = replace(s, '&', '&amp;')
-#            s = replace(s, '<', '&lt;')
-#            s = replace(s, '>', '&gt;')
-#    if encoding:
-#        try:
-#            return SXW.encode(s, encoding)
-#        except UnicodeError:
-#            return SXW.encode_entity(s)
-#    return s
-#
-#SXW.escape_cdata = _my_escape_cdata
-#
-#def write_element(elem, writer):
-#    writer.start(elem.tag, attrib=dict(elem.attrib))
-#    if elem.text is not None:
-#        writer.data(elem.text)
-#    writer.data('\n')
-#    for child in elem:
-#        write_element(child, writer)
-#        if child.tail is not None:
-#            writer.data(child.tail)
-#    if (elem.tag in ('input', 'output', 'special-input') 
-#        and not elem.text.endswith('\n')):
-#        writer.data('\n')
-#    writer.end(elem.tag)
-#    writer.data('\n')
+class Cell(object):
+    def __init__(self, element):
+        self.element = element
+        
+        self.tags = []
+
+        self.update()
+
+    def update(self, element=None):
+        if element is not None:
+            self.element = element
+        else:
+            element = self.element
+        self.number = int(element.get('number'))
+        for subelem in element:
+            setattr(self, subelem.tag, subelem.text)
+            self.tags.append(subelem.tag)
+
+        # this doesn't delete attributes that were there previously
+
+    def get_input(self, do_specials=False):
+        if do_specials and hasattr(self, 'special'):
+            return self.special
+        else:
+            return self.input
+
+    def get_sheet_tags(self, do_specials=False):
+        if do_specials and hasattr(self, 'special'):
+            yield ET.Element('ipython-cell', type='special',
+                number=str(self.number))
+        else:
+            yield ET.Element('ipython-cell', type='input',
+                number=str(self.number))
+        for tag in ('stdout', 'stderr', 'output'):
+            if hasattr(self, tag):
+                yield ET.Element('ipython-cell', type=tag,
+                    number=str(self.number))
+
+
+
 
 class Notebook(object):
     """The core notebook object.
@@ -74,7 +70,6 @@ class Notebook(object):
         self.pretty = pretty
         self.start_checkpointing(checkpoint)
 
-        ##self.logs = {}
         if root is None:
             self.root = ET.Element('notebook')
             self.head = ET.SubElement(self.root, 'head')
@@ -82,9 +77,6 @@ class Notebook(object):
         else:
             self.root = root
             self.head = root.find('head')
-
-            ##for log in self.root.findall('ipython-log'):
-            ##    self.logs[log.get('logid')] = log
 
     @classmethod
     def from_string(cls, name, data, pretty=True):
@@ -114,7 +106,6 @@ class Notebook(object):
         the same id.
         """
         log_element = ET.SubElement(self.root, 'ipython-log', id=id)
-        ##self.logs[id] = log_element
 
     def get_log(self, logid='default-log'):
         elems = self.root.xpath('./ipython-log[@id="%s"]' % logid)
@@ -123,14 +114,22 @@ class Notebook(object):
         else:
             raise ValueError('No log with id="%s"' % logid)
 
+    def get_cell(self, number, logid='default-log'):
+        log = self.get_log(logid)
+        cells = log.xpath('./cell[@number=%s]' % number)
+        if cells:
+            return cells[0]
+        else:
+            raise ValueError('No cell with number=%s' % number)
+
     def add_input(self, input, number, logid='default-log'):
         """Add an input element to a log.
 
         number is usually the integer corresponding to In[number].
         logid is the id of the log to add to.
         """
-        log = self.get_log(logid)
-        in_element = ET.SubElement(log, 'input', number=str(number))
+        cell = self.get_cell(number, logid)
+        in_element = ET.SubElement(cell, 'input')
         in_element.text = input
 
     def add_special_input(self, input, number, logid='default-log'):
@@ -138,41 +137,30 @@ class Notebook(object):
 
         number is usually the integer corresponding to In[number].
         """
-        log = self.get_log(logid)
-        in_element = ET.SubElement(log, 'special-input',
-            number=str(number))
+        cell = self.get_cell(number, logid)
+        in_element = ET.SubElement(cell, 'special')
         in_element.text = input
 
     def add_output(self, output, number, logid='default-log'):
         """Add an output element.
 
+        output is the string representation of the object, not the object
+            itself.
         number is usually the integer corresponding to Out[number].
         """
-        log = self.get_log(logid)
-        out_element = ET.SubElement(log, 'output', 
-            number=str(number))
-        out_element.text = self.get_str(output)
+        cell = self.get_cell(number, logid)
+        out_element = ET.SubElement(cell, 'output')
+        out_element.text = output
 
     def add_stdout(self, text, number, logid='default-log'):
-        log = self.get_log(logid)
-        stdout_element = ET.SubElement(log, 'stdout', number=str(number))
+        cell = self.get_cell(number, logid)
+        stdout_element = ET.SubElement(cell, 'stdout')
         stdout_element.text = text
 
     def add_stderr(self, text, number, logid='default-log'):
-        log = self.get_log(logid)
-        stderr_element = ET.SubElement(log, 'stderr', number=str(number))
+        cell = self.get_cell(number, logid)
+        stderr_element = ET.SubElement(cell, 'stderr')
         stderr_element.text = text
-
-    def add_all_in_out(self, inlist, outdict, logid='default-log'):
-        """Add all inputs and outputs from the In and Out variables in an
-        ipython environment.
-        """
-        for i in xrange(1, len(inlist)):
-            input = inlist[i]
-            output = outdict.get(i, None)
-            self.add_input(input, i, logid)
-            if output is not None:
-                self.add_output(output, i, logid)
 
     def add_meta(self, name, content, scheme=None):
         """Add metadata to the head element.
@@ -191,9 +179,8 @@ class Notebook(object):
     def add_figure(self, filename, number, caption=None, type='png', logid='default-log', **attribs):
         """Add a figure.
         """
-        log = self.get_log(logid)
-        fig = ET.SubElement(log, 'figure', filename=filename,
-            number=str(number), type=type)
+        cell = self.get_cell(number, logid)
+        fig = ET.SubElement(cell, 'figure', filename=filename, type=type)
         fig.attrib.update(attribs)
         if caption is not None:
             fig.text = caption
@@ -205,8 +192,6 @@ class Notebook(object):
         """
         if file is None:
             file = self.name + '.nbk'
-        #writer = SXW.XMLWriter(file)
-        #write_element(self.root, writer)
         ET.ElementTree(self.root).write(file)
 
     def get_code(self, logid='default-log', specials=False):
@@ -217,15 +202,8 @@ class Notebook(object):
         commands as their original IPython form.
         """
         log = self.get_log(logid)
-        inputs = list(log.findall('input'))
-        if specials:
-            special_elems = log.findall('special-input')
-            d = self._get_tag_dict('special-input')
-            for i, el in enumerate(inputs):
-                inputs[i] = d.get(e.number, e)
-
-        inputs.sort(lambda elem: int(elem.attrib['number']))
-        return '\n'.join(x.text for x in inputs)
+        cells = sorted((Cell(x) for x in log), key=lambda x: x.number)
+        return '\n'.join(cell.get_input(specials) for cell in cells)
 
     def start_checkpointing(self, checkpoint=10):
         """Start checkpointing.
@@ -380,54 +358,41 @@ class Notebook(object):
             d[elem.attrib['number']] = elem
         return d
 
-    def default_sheet(self, format='rest', specials=True, figures=True,
+    def default_sheet(self, specials=True, figures=True,
         logid='default-log'):
         """Generate a default sheet that has all inputs and outputs.
-
-        format is the name of the format of sheet. E.g. 'rest' or 'html'
 
         If specials is True, replace inputs that are ipython specials with their
             ipython form.
         If figures is True, include figures.
         """
         log = self.get_log(logid)
-        outputd = self._get_tag_dict('output', logid=logid)
-        figured = self._get_tag_dict('figure', logid=logid)
-        speciald = self._get_tag_dict('special-input', logid=logid)
-        stdoutd = self._get_tag_dict('stdout', logid=logid)
-        stderrd = self._get_tag_dict('stderr', logid=logid)
+        cells = sorted((Cell(x) for x in log), lambda x: x.number)
+        figured = dict((int(x.get('number')), x) for x in log.xpath('./figure'))
         
-        sheet = ET.Element('sheet', format=format)
+        sheet = ET.Element('sheet')
         block = ET.SubElement(sheet, 'ipython-block', logid=logid)
-        for inp in log.findall('input'):
-            num = inp.attrib['number']
-            if specials and num in speciald:
-                ET.SubElement(block, 'ipython-cell', type='special-input', number=num)
-            else:
-                ET.SubElement(block, 'ipython-cell', type='input', number=num)
-            if num in outputd:
-                ET.SubElement(block, 'ipython-cell', type='output', number=num)
-            if num in stdoutd:
-                ET.SubElement(block, 'ipython-cell', type='stdout', number=num)
-            if num in stderrd:
-                ET.SubElement(block, 'ipython-cell', type='stderr', number=num)
-            if num in figured:
+        for cell in cells:
+            for subcell in cell.get_sheet_tags(specials):
+                block.append(subcell)
+
+            if figures and cell.number in figured:
                 # add figures to the sheet, not the block
                 ET.SubElement(sheet, 'ipython-figure',
-                    ##filename=figured[num].attrib['filename'], 
-                    number=num, logid=logid)
+                    number=str(cell.number), logid=logid)
                 # start a new block
                 block = ET.SubElement(sheet, 'ipython-block', logid=logid)
 
         return sheet
 
     def get_from_log(self, tag, number, logid='default-log'):
-        xpath = './ipython-log[@id="%s"]/%s[@number="%s"]' % (logid, tag, number)
+        xpath = './ipython-log[@id="%s"]/cell[@number="%s"]/%s' % (logid,
+            number, tag)
         elems = self.root.xpath(xpath)
         if elems:
             return elems[0]
         else:
-            raise ValueError('No <%s number=%s> in log "%s"' % (tag, number,
+            raise ValueError('No <%s> with number=%s in log "%s"' % (tag, number,
                 logid))
 
 
@@ -457,27 +422,28 @@ def main():
     file = sys.argv[1]
     base = os.path.splitext(file)[0]
     nb = Notebook.from_file(file)
-    sheet = nb.root.find('sheet')
-    if sheet is None:
-        if len(sys.argv) >= 3:
-            format = sys.argv[2]
-        else:
-            format = 'html'
-        sheet = nb.default_sheet(format=format)
-    format = sheet.get('format', 'html')
+    sheet = nb.root.xpath('./sheet')
 
-    if format == 'rest':
-        from notabene import rest
-        formatter = rest.ReSTFormatter(nb)
-        outname = base + '.txt'
-    elif format == 'html':
-        from notabene import html
-        formatter = html.HTMLFormatter(nb)
-        outname = base + '.html'
+    extensions = {'latex': '.tex',
+                  'html': '.html',
+                 }
+    if len(sys.argv) >= 3:
+        format = sys.argv[2]
+    else:
+        format = 'html'
+    if not sheet:
+        sheet = nb.default_sheet()
+    else:
+        sheet = sheet[0]
 
-    text = formatter.format_sheet(sheet)
+    outname = base + extensions.get(format, '.txt')
+
+    from notabene import docbook
+    formatter = docbook.DBFormatter(nb)
+    text = formatter.to_text(sheet, format)
     f = open(outname, 'w')
     f.write(text)
+    f.close()
 
 if __name__ == '__main__':
     main()
