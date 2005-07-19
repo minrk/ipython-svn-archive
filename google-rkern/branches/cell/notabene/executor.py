@@ -29,7 +29,8 @@ class Executor(object):
         ##sys.excepthook = self.old_excepthook
 
     def displayhook(self, obj):
-        self.last_repr = pprint.pformat(obj)
+        if obj is not None:
+            self.last_repr = pprint.pformat(obj)
 
     def run_one(self, input):
         """Run one input and collect all forms of output.
