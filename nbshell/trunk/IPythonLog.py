@@ -14,7 +14,7 @@ from wx.py.pseudo import PseudoFileErr
 from notabene import notebook
 
 from lxml import etree
-class IPythonLog:
+class IPythonLog(object):
     def __init__(self, doc, notebook, logid, *args, **kwds):
         self.doc = doc
         self.notebook = notebook
@@ -120,9 +120,8 @@ class IPythonLog:
         if number == None:
             return self.__run(notebook.Cell(self.log[-1]))
         
-        cells = [Cell(x) for x in self.log.xpath('\\cell[@number>=%d'%(number,))]
-        cells.sort(key = lambda x:x.number) #That may not be necessary, since the cells are already sorted
-        
+        cells = sorted((Cell(x) for x in self.log.xpath('\\cell[@number>=%d'%(number,))), key = lambda x:x.number)
+                
         for cell in cells:
             if not self.__run(cell):
                 return False

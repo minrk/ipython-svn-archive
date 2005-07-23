@@ -23,7 +23,7 @@ class FileSyntaxError(Exception):
         return "Error loading file: " + repr(f)+" at line: "+self.lineno+". "+msg
     
     
-class ipnDocument:
+class ipnDocument(object):
     def __init__(self, app, notebookview):
         
         self.notebook = None # the notebook object
@@ -79,7 +79,7 @@ class ipnDocument:
         """Clears the document. Does not ask for confirmation."""
         self.fileinfo["init"] = False
         for cell in self.celllist:
-            cell.GetViewPlugin(self.view).Close(update=False)
+            cell.view.Close(update=False)
             self.delCell(cell.index)
         
         self.notebook = None
@@ -119,7 +119,7 @@ class ipnDocument:
                 #Start processing the cell
                 args = line[7:].lstrip().split()
                 cell = self.InsertCell(args[0], update=False)
-                t = self.app.plugin_dict[args[0]].GetType()
+                t = self.app.plugin_dict[args[0]].type
                 if t == "raw": #pass raw data to the cell
                     cnt = cell.LoadRaw(f, args)
                     lineno += cnt
@@ -180,7 +180,7 @@ class ipnDocument:
         f.write("#@ipn\n")
         for cell in self.celllist:
             factory = cell.GetFactory()
-            celltype = factory.GetType()
+            celltype = factory.type
             args = " ".join(cell.GetArgs()) #TODO: check if the argumens don't use bad symbols as EOL for example
             f.write("#@cell "+args + "\n") 
             if celltype == "raw":

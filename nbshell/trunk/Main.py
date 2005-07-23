@@ -35,7 +35,7 @@ class App(wx.App):
             else:
                 factory = dict["GetPluginFactory"]()
                 #print factory.GetString() #dbg
-                self.plugin_dict[factory.GetString()]=factory
+                self.plugin_dict[factory.string]=factory
 
     
     def OnInit(self):

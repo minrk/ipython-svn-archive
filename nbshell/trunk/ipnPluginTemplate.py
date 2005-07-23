@@ -8,7 +8,7 @@ def GetPluginFactory():
     """
     return GenericPluginFactory()
 
-class GenericPluginFactory:
+class GenericPluginFactory(object):
     """ This class is responsible for creating the document and view parts of 
     a plugin. Also it has some functions giving information about the plugin.
     The reason this class exists is because the document and view classes of
@@ -16,10 +16,12 @@ class GenericPluginFactory:
     the plain text in the notebook could be contained a single object which is 
     returned every time the document class wants to get a new one."""
     
-    def GetString(self):
-        """ Returns the type string of the plugin. This is used when a notebook
-        file is loaded. See notebookformat.txt for more info"""
-        return "generic"
+    string = "generic"
+    type = "encoded"
+    #def GetString(self):
+    #    """ Returns the type string of the plugin. This is used when a notebook
+    #    file is loaded. See notebookformat.txt for more info"""
+    #    return "generic"
     
     #TODO: remove this
     #def GetType(self):
@@ -54,7 +56,7 @@ class GenericPluginFactory:
 #end GenericPluginFactory
 
 #TODO: This class makes no sense with the xml file format. Remove it.
-class GenericDocumentPlugin:
+class GenericDocumentPlugin(object):
     """ objects of this class are responsible for storing data, serializing and
     loding data, and updating the view plugins"""
     def __init__(self, document, **kwds):
@@ -116,15 +118,15 @@ class GenericDocumentPlugin:
         #       encodefunc(text)
         pass
     
-    def SetView(self, view):
-        """Set the view for the plugin"""
-        self.view=view
+    #def SetView(self, view):
+    #    """Set the view for the plugin"""
+    #    self.view=view
 
     def GetFactory(self):
         """Returns a factory instance"""
         return GenericPluginFactory()
 
-class GenericNotebookViewPlugin:
+class GenericNotebookViewPlugin(object):
     """A generic view plugin. Used for handling data display."""
     def __init__(self, docplugin, view):
         """ Initialization"""

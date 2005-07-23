@@ -32,7 +32,7 @@ def GetPluginFactory():
     """
     return PythonPluginFactory()
 
-class PythonPluginFactory:
+class PythonPluginFactory(object):
     """ This class is responsible for creating the document and view parts of 
     a plugin. Also it has some functions giving information about the plugin.
     The reason this class exists is because the document and view classes of
@@ -40,16 +40,18 @@ class PythonPluginFactory:
     the plain text in the notebook could be contained a single object which is 
     returned every time the document class wants to get a new one."""
     
-    def GetString(self):
-        """ Returns the type string of the plugin. This is used when a notebook
-        file is loaded. See notebookformat.txt for more info"""
-        return "python"
+    string = "python"
+    #def GetString(self):
+    #    """ Returns the type string of the plugin. This is used when a notebook
+    #    file is loaded. See notebookformat.txt for more info"""
+    #    return "python"
     
-    def GetType(self):
-        """ Returns the way data should be passed to the plugin. Currently
-        supported types are "raw" and "encoded". See notebookformat.txt for 
-        more info"""
-        return "raw" #Probably only the python code plugin should be raw
+    type = "raw"
+    #def GetType(self):
+    #    """ Returns the way data should be passed to the plugin. Currently
+    #    supported types are "raw" and "encoded". See notebookformat.txt for 
+    #    more info"""
+    #    return "raw" #Probably only the python code plugin should be raw
         
     def CreateDocumentPlugin(self,document, ipython_block):
         """Creates the document part of the plugin. The returned object is 
@@ -77,7 +79,7 @@ class PythonPluginFactory:
 #end GenericPluginFactory
 
 
-class PythonDocumentPlugin:
+class PythonDocumentPlugin(object):
     def __init__(self, document, ipython_block):
         """Initialization. ipython-block is a Elemtent object holding a
         <ipython-block> tag"""
@@ -152,12 +154,12 @@ class PythonDocumentPlugin:
         #linecnt = self.data.GetLineCount()
         #[encodefunc(self.data.GetLine(x)) for x in range(0, linecnt-1)]
     
-    def SetView(self, view):
-        """Set the view for the plugin"""
-        self.view=view
+    #def SetView(self, view):
+    #"    """Set the view for the plugin"""
+    #    self.view=view
     
-    def GetViewPlugin(self, view):
-        return self.view
+    #def GetViewPlugin(self, view):
+    #    return self.view
 
     def GetFactory(self):
         return PlainTextPluginFactory()
@@ -168,12 +170,12 @@ class PythonDocumentPlugin:
 # class must not know about the document class and its internal structure. Thus maintaining
 # the code should be easier. Also the methods which should not be used outside the class start
 # with a lowercaps letter.
-class PythonNotebookViewPlugin:
+class PythonNotebookViewPlugin(object):
     def __init__(self, docplugin, view):
         """Initialization"""
         self.view = view
         self.doc = docplugin
-        self.doc.SetView(self)
+        self.doc.view = self
         self.window = None
         self.document = docplugin.document
 
@@ -204,7 +206,7 @@ class PythonNotebookViewPlugin:
         else:
             #print "adding cell" #dbg
             prevcell = self.document.GetCell(self.doc.index-1)
-            viewplugin = prevcell.GetViewPlugin(self.view)
+            viewplugin = prevcell.view
             #print self.doc.index #dbg
             #print viewplugin #dbg
             lastid = viewplugin.GetLastId()
@@ -400,7 +402,7 @@ class PythonNotebookViewPlugin:
         index = self.view.GetIndex(self.id)
         self.view.DeleteCell(index, update)
 
-class ShellFacade:
+class ShellFacade(object):
     """Simplified interface to all shell-related functionality.
 
     This is a semi-transparent facade, in that all attributes of other
