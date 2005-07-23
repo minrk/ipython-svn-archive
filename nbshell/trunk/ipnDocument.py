@@ -1,6 +1,10 @@
 import wx
+from lxml import etree
+
+from notabene import notebook 
 
 import IPythonLog
+import Sheet
 
 class FileSyntaxError(Exception):
     """Thrown in document.LoadFile when a syntax error ocurred while
@@ -20,9 +24,12 @@ class FileSyntaxError(Exception):
     
     
 class ipnDocument:
-    def __init__(self, app, notebook):
-        self.logs = {"default-log":IPythonLog.IPythonLog()} # here we store the ipython logs
-        self.view = notebook
+    def __init__(self, app, notebookview):
+        
+        self.notebook = None # the notebook object
+        self.logs = None # a dictionary of the logs
+        self.sheet = None # The sheet object
+        self.view = notebookview
         self.app = app
         self.factory = self.app.plugin_dict
         self.celllist = [] 
@@ -38,14 +45,15 @@ class ipnDocument:
                            # first line of the file to be copied when
                            # the file is saved
             "modified":False # If true the file has been modified after the last save
-            } 
-        
+            }
+        self.DefaultNotebook() #Initialize notebook, logs, sheet
 
-    def InsertCell(self, type, data = None, pos=-1, update = True):
+    def InsertCell(self, type, pos=-1, update = True, **kwds):
         """Inserts a cell of the given type with the given data at the given
-        pos. If pos=-1 insert at the end. Returns an instance to the cell"""
+        pos. If pos=-1 insert at the end. **kwds is passed to the
+        plugin.Returns an instance to the cell"""
         factory = self.factory[type]
-        cell = factory.CreateDocumentPlugin(self, data)
+        cell = factory.CreateDocumentPlugin(self, **kwds)
         view = factory.CreateViewPlugin(cell, self.view)
         if pos == -1:
             self.addCell(cell)
@@ -55,15 +63,28 @@ class ipnDocument:
         if update : self.view.Update()
         return cell
 
+    def DefaultNotebook(self):
+        """Create a default empty notebook"""
+        self.Clear()
+        self.notebook = notebook.Notebook('untitled.nbk')
+        self.logs = {'default-log':IPythonLog.IPythonLog(self, self.notebook, 'default-log')}
+        etree.SubElement(self.notebook.root, 'sheet', format='rest')
+        self.sheet = Sheet.Sheet(self, self.notebook)
+        self.fileinfo['init'] = True
+        self.fileinfo['name'] = 'untitled.nbk'
+        self.fileinfo['modified'] = False
+        self.view.Update()
+        
     def Clear(self):
-        """Clears the document. Does not ask for confirmation"""
+        """Clears the document. Does not ask for confirmation."""
         self.fileinfo["init"] = False
         for cell in self.celllist:
             cell.GetViewPlugin(self.view).Close(update=False)
             self.delCell(cell.index)
-        self.logs = {"default-log":self.logs["default-log"]}
-        self.logs["deafult-log"].Clear()
-        self.view.Update()
+        
+        self.notebook = None
+        self.logs = {}
+        self.sheet = None
         
     def _loadFile(self, f):
         """Clears the document then loads the given file. Does not ask

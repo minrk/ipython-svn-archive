@@ -9,14 +9,24 @@ import wx.py.frame
 from wx.py.pseudo import PseudoFileIn
 from wx.py.pseudo import PseudoFileOut
 from wx.py.pseudo import PseudoFileErr
-from wx.py.version import VERSION
+#from wx.py.version import VERSION
 
+from notabene import notebook
+
+from lxml import etree
 class IPythonLog:
-    def __init__(self, logid = "default-log", *args, **kwds):
-        self.log = list()
+    def __init__(self, doc, notebook, logid, *args, **kwds):
+        self.doc = doc
+        self.notebook = notebook
+        self.log = notebook.get_log(logid)
         self.logid = logid
         self.lastrun = -1 #the last input that is run
-        
+        #Here I will sort the cells, according to their numbers
+        tmp = [(int(x.attrib['number']), x) for x in self.log]
+        def cmpfunc(a,b):
+            return cmp(a[0], b[0])
+        tmp.sort(cmpfunc)
+        self.log[:] = [x[1] for x in tmp]
         #set up the interpreter. We use the PyCrust interpreter for now
         self.locals = {}
         # Grab these so they can be restored by self.redirect* methods.
@@ -53,63 +63,77 @@ class IPythonLog:
         return ""
     
     def writeOut(self, text):
-        id = self.currentid #this is set by __run to know which line we are processing
-        if self.log[id][1] is None:
-            self.log[id][1] = text
-        else:
-            self.log[id][1].append(text)
+        """Write to the output of the current cell"""
+        
+        elem = self.log[-1] # we always process the last cell
+        se = elem.find('stdout')
+        if se is None:
+            se = etree.SubElement(elem, 'stdout')
+            se.text = ""
+        se.text = se.text + text
         #TODO: Update the view
 
     def writeErr(self, text):
-        id = self.currentid #this is set by __run to know which line we are processing
-        if self.log[id][1] is None:
-            self.log[id][1] = text
-        else:
-            self.log[id][1].append(text)
+        elem = self.log[-1]
+        se = elem.find('stderr')
+        if se is None:
+            se = etree.SubElement(elem, 'stderr')
+            se.text = ""
+        se.text = se.text + text
         #TODO: Update the view
 
     
-    def Append(self, input, output = None):
-        """Adds a new input at the end of the list. Returns the index"""
-        self.log.append([input, output])
-        return len(self.log)-1
+    def Append(self, input, output = None, number = 0):
+        """Adds a new cell with the given input at the end of the list.
+        Returns the cell. Number is used only if the log is empty."""
+        l = len(self.log)
+        if l != 0 :
+            number = int(self.log[l-1].attrib['number'])+1
+        elem = etree.Element('cell', number=str(number))
+        self.log.append(elem)
+        se = etree.SubElement(elem, 'input')
+        se.text = str(input)
+        if output is not None:
+            se = etree.SubElement(elem, 'output')
+            se.text = str(output)
+        return notebook.Cell(elem)
     
     def Clear(self):
-        self.log = list()
+        
+        self.log.clear()
         self.__reset()
         
-    def Get(self, id):
-        return self.log[id]
+    def Get(self, number): #TODO: this method is slow, so don't use it
+        """Returns the cell with the given number"""
+        return notebook.Cell(self.notebook.get_cell(number = number, logid = self.logid))
     
-    def Set(self, id, input, output = None):
-        self.log[id] = [input, output]
+    
+    #def Set(self, id, input, output = None):
+    #    self.log[id] = [input, output]
         
-    def Run(self, id):
-        """ this method must run the code with the given number through the
-        interpreter. It must also rerun any other parts of the log if
-        needed. Internally it uses __run. Returns True, if the input is processed, False if
-        it needs more input."""
+    def Run(self, number = None):
+        """ This method will run the code in all cells with numbers larger or
+        equal to number. If number is None it will run only the last cell.
+        Internally it uses __run. Returns True, if the input is processed,
+        False if it needs more input."""
         
-        if id > self.lastrun:
-            for idd in range(self.lastrun+1, id+1):
-                if not self.__run(idd):
-                    self.lastrun = idd-1
-                    return False
-            self.lastrun = id
-        else: #We should start from the beginning here
-            self.__reset()
-            for idd in range(0, id+1):
-                if not self.__run(idd):
-                    self.lastrun = idd-1
-                    return False
-            self.lastrun - id
+        if number == None:
+            return self.__run(notebook.Cell(self.log[-1]))
+        
+        cells = [Cell(x) for x in self.log.xpath('\\cell[@number>=%d'%(number,))]
+        cells.sort(key = lambda x:x.number) #That may not be necessary, since the cells are already sorted
+        
+        for cell in cells:
+            if not self.__run(cell):
+                return False
         return True
-    
+
     def __reset(self):
         """ Resets the interpreter, namespace etc """
         pass
     
-    def __run(self, id):
+    def __run(self, cell):
         """ This methods runs the input lines. """
-        self.log[id][1] = "out: " + self.log[id][0] #TODO: fix this
+        output = etree.SubElement(cell.element, 'output')
+        output.text = '\nout: ' + cell.input #TODO: fix this
         return True

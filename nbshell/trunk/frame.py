@@ -1,6 +1,4 @@
 """ Contains the main frame of the application """
-import wxversion
-wxversion.select("2")
 import wx
 
 ID_NEW = wx.ID_NEW

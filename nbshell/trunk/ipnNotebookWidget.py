@@ -138,11 +138,11 @@ class ipnNotebook (wx.ScrolledWindow):
     def DeleteCell(self, index, update = True):
         self.celllist[index].Destroy()
         del (self.celllist[index])
-        print "del"
-        print self.id_dict
-        print "f"
+        #print "del" #dbg
+        #print self.id_dict #dbg
+        #print "f" #dbg
         def f(x):
-            print x.GetId()
+            #print x.GetId() #dbg
             self.id_dict[x.GetId()]-=1
             return None
         map(f, self.celllist[index:]) #TODO: test if this works when index=len(celllist)-1
@@ -172,7 +172,7 @@ class ipnNotebook (wx.ScrolledWindow):
     
     def GetIndex(self, id):
         """ Returns the index corresponding to a window id"""
-        print self.id_dict
+        #print self.id_dict #dbg
         return self.id_dict[id]
     def SetActiveCell (self, index):
         """ Sets the active cell """

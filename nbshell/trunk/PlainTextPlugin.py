@@ -26,12 +26,12 @@ class PlainTextPluginFactory:
         more info"""
         return "encoded" #Probably only the python code plugin should be raw
         
-    def CreateDocumentPlugin(self,document, data=None):
+    def CreateDocumentPlugin(self,document, element):
         """Creates the document part of the plugin. The returned object is 
         stored in ipgDocument.celllist and is responsible for storing and
         serialization of data. "data" contains initial data for the plugin.
         """
-        return PlainTextDocumentPlugin(document, data)
+        return PlainTextDocumentPlugin(document, element)
     
     def CreateViewPlugin(self,docplugin, view):
         """ Creates a view plugin connected to the given document plugin and 
@@ -52,22 +52,40 @@ class PlainTextPluginFactory:
 #end GenericPluginFactory
 
 class PlainTextDocumentPlugin:
-    def __init__(self, document, data=None):
-        """Initialization"""
+    def __init__(self, document, element):
+        """Initialization. If element is <sheet> then the text is
+        element.text. If the element is something else, then the text is
+        element.tail"""
         
         self.document = document
+        self.sheet = document.sheet
+        self.element = element
+        if element.tag == 'sheet':
+            self.start = True #self.start stores if the text block is the first in the sheet
+        else:
+            self.start = False
         self.index = None   #Set by AddCell, InsertCell, DeleteCell
-        self.text = None    #Used when the view is not yet created
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
-        self.LoadData(data)
+        #self.LoadData(data)
 
+    def GetText(self):
+        if self.start:
+            return self.element.text
+        else:
+            return self.element.tail
+
+    def SetText(self, text):
+        if self.start:
+            self.element.text = text
+        else:
+            self.element.tail = text
+        return text
+    
     def Clear(self):
         """Clears all data"""
-        if self.view is None:
-            self.text = None
-        else:
-            self.data.ClearAll()
+        self.SetText('')
+        if self.view is not None:
             self.view.Update()
         
     
@@ -132,7 +150,6 @@ class PlainTextNotebookViewPlugin:
         """Initialization"""
         self.view = view
         self.doc = docplugin
-        self.document=docplugin.document
         self.doc.SetView(self)
         self.window = None
         self.document = docplugin.document
@@ -146,6 +163,29 @@ class PlainTextNotebookViewPlugin:
         """See the description of GetFirstId"""
         return self.id
         
+    def createWindow(self):
+        """Creates the window. If it is already created returns it"""
+        if self.window is None: #create the window
+            #1. Create the window and set the document plugin
+            self.window = PlainTextCtrl(self.view, -1)
+            self.id = self.window.GetId()
+            #print "id:", self.id #dbg
+            self.window.view = self
+            #2. Add the window at the correct place in the notebook widget
+            if self.doc.index == 0: #put the window at the beginning of the document
+                self.view.InsertCell(self.window, 0, update=False)
+            else:
+                prevcell = self.document.GetCell(self.doc.index-1)
+                viewplugin = prevcell.GetViewPlugin(self.view)
+                #print self.doc.index #dbg
+                #print viewplugin #dbg
+                lastid = viewplugin.GetLastId()
+                #print lastid #dbg
+                index = self.view.GetIndex(lastid)+1
+                self.view.InsertCell(self.window, index, update = False)
+        return self.window
+
+        
     def Update(self):
         """ This method is required for all view implementations. It must
         update the view plugin.
@@ -158,29 +198,13 @@ class PlainTextNotebookViewPlugin:
         RelayoutCells in each update this would be really inefficient.
         """
         if self.window is None: #then this is the first time Update is called
-            #1. Create the window and set the document plugin
-            self.window = PlainTextCtrl(self.view, -1)
-            self.id = self.window.GetId()
-            print "id:", self.id
-            self.window.view = self
-            self.doc.data = self.window
-            if self.doc.text is not None:
-                self.doc.data.SetText(self.doc.text)
-            #2. Add the window at the correct place in the notebook widget
-            if self.doc.index == 0: #put the window at the beginning of the document
-                self.view.InsertCell(self.window, 0, update=False)
-            else:
-                prevcell = self.document.GetCell(self.doc.index-1)
-                viewplugin = prevcell.GetViewPlugin(self.view)
-                print self.doc.index
-                print viewplugin
-                lastid = viewplugin.GetLastId()
-                print lastid
-                index = self.view.GetIndex(lastid)+1
-                self.view.InsertCell(self.window, index, update = False)
-        else:
-            pass
+            self.createWindow()
+        self.window.SetText(self.doc.GetText())
 
+    def UpdateDoc(self):
+        """Update data in the document"""
+        self.doc.SetText(self.window.GetText())
+        
     def Close(self, update = True):
         index = self.view.GetIndex(self.id)
         self.view.DeleteCell(index, update)

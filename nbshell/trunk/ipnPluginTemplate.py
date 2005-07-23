@@ -21,18 +21,19 @@ class GenericPluginFactory:
         file is loaded. See notebookformat.txt for more info"""
         return "generic"
     
-    def GetType(self):
-        """ Returns the way data should be passed to the plugin. Currently
-        supported types are "raw" and "encoded". See notebookformat.txt for 
-        more info"""
-        return "encoded" #Probably only the python code plugin should be raw
+    #TODO: remove this
+    #def GetType(self):
+    #    """ Returns the way data should be passed to the plugin. Currently
+    #    supported types are "raw" and "encoded". See notebookformat.txt for 
+    #    more info"""
+    #    return "encoded" #Probably only the python code plugin should be raw
         
-    def CreateDocumentPlugin(self,document, data=None):
+    def CreateDocumentPlugin(self,document, **kwds):
         """Creates the document part of the plugin. The returned object is 
         stored in ipgDocument.celllist and is responsible for storing and
-        serialization of data. "data" contains initial data for the plugin.
+        serialization of data. "**kwds" contain additional arguments for the plugin.
         """
-        return GenericDocumentPlugin(document, data)
+        return GenericDocumentPlugin(document, **kwds)
     
     def CreateViewPlugin(self,docplugin, view):
         """ Creates a view plugin connected to the given document plugin and 
@@ -52,12 +53,13 @@ class GenericPluginFactory:
                         #not supposed to get to this line for a long long time
 #end GenericPluginFactory
 
+#TODO: This class makes no sense with the xml file format. Remove it.
 class GenericDocumentPlugin:
     """ objects of this class are responsible for storing data, serializing and
     loding data, and updating the view plugins"""
-    def __init__(self, document, data=None):
+    def __init__(self, document, **kwds):
         """Initialization"""
-        self.LoadData(data)
+        #self.LoadData(data)
         self.document = document
         self.view = None    #This plugin is designed for a single view. For
                             #multiple view there should be some modifications
@@ -135,6 +137,11 @@ class GenericNotebookViewPlugin:
         update the view."""
         pass
         
+    def UpdateDoc(self):
+        """ This method updates data in the document, from the user input in
+        the view """
+        pass
+    
     def Close(self, update=True):
         """ This method is called when the document cell is
         destroyed. It must close all windows. If update is false, do

@@ -1,8 +1,12 @@
 """ This module is used currently only for testing. """
 import os
 import re
-import wxversion
-wxversion.select('2')
+try:
+    import wxversion
+    wxversion.ensureMinimal('2.5.3')
+except:
+    pass #I will try to run it, but it might not work
+
 import wx
 from ipnNotebookWidget import * # in case you wonder ipn comes from Interactive Python Notebook 
 from ipnDocument import *
@@ -20,23 +24,17 @@ class App(wx.App):
         dirlist = os.listdir(self.plugin_dir)
         regexpr = re.compile('\.py$') #TODO: check if this works for Unicode
         modlist = filter(lambda x:regexpr.search(x)!=None,dirlist) 
-        print modlist
+        #print modlist #dbg
         for module in modlist:
             try:
                 dict = globals().copy()
-                print "BEFORE"
-                #print dict
-                print module[0:-3]
-                exec "from "+module[0:-3] +" import GetPluginFactory\nprint \"()()()()()()\"" in dict
-                print "AFTER"
-                #print dict
-    #            print "AAAFTER, module=",module
+                exec "from "+module[0:-3] +" import GetPluginFactory" in dict
             except:
                 if module[0:-3]=="PythonPlugin":
                     raise
             else:
                 factory = dict["GetPluginFactory"]()
-                print factory.GetString()
+                #print factory.GetString() #dbg
                 self.plugin_dict[factory.GetString()]=factory
 
     
@@ -62,8 +60,10 @@ class App(wx.App):
 
         log = self.document.logs["default-log"]
         log.Append("\n")
-        cell = self.document.InsertCell("python")
-        cell.data = [(0,0)]
+        print self.document.sheet.element
+        block = etree.SubElement(self.document.sheet.element, 'ipython-block', logid='default-log')
+        etree.SubElement(block, 'ipython-input', number='0')
+        cell = self.document.InsertCell("python", ipython_block=block)
         cell.view.Update()
         self.notebook.Update()
 
