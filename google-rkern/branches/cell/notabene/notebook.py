@@ -120,7 +120,7 @@ class Notebook(object):
         if cells:
             return cells[0]
         else:
-            raise ValueError('No cell with number=%s' % number)
+            return ET.SubElement(log, 'cell', number=str(number))
 
     def add_input(self, input, number, logid='default-log'):
         """Add an input element to a log.
@@ -296,7 +296,7 @@ class Notebook(object):
         IP.outputcache._update = IP.outputcache.update
         def update(arg):
             IP.outputcache._update(arg)
-            self.add_output(arg, IP.outputcache.prompt_count)
+            self.add_output(self.get_str(arg), IP.outputcache.prompt_count)
         IP.outputcache.update = update
 
         IP.esc_handlers = {IP.ESC_PAREN:handle_auto,
