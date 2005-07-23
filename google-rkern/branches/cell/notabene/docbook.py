@@ -170,12 +170,27 @@ class DBFormatter(Formatter):
         newsheet = self.transform_sheet(sheet)
         return ET.tostring(newsheet)
 
+    @staticmethod
+    def escape_latex(text):
+        return text.replace('\\', r'\\').replace('{', r'\{').replace('}', r'\}')
+
+    def prep_html(self, tree):
+        pass
+
+    def prep_latex(self, tree):
+        listings = tree.xpath('//programlisting')
+        listings.text = self.escape_latex(listings.text)
+        for sub in listings.getiterator():
+            sub.text = self.escape_latex(sub.text)
+            sub.tail = self.escape_latex(sub.tail)
+
     def to_text(self, sheet, kind='html', style=None):
         if style is None:
             from notabene.styles import LightBGStyle as style
         xsl = getattr(style, '%s_xsl'%kind)()
         xslt = ET.XSLT(xsl)
         article_tree = ET.ElementTree(self.transform_sheet(sheet))
+        getattr(self, 'prep_%s' % kind)(article_tree)
         newtree = xslt.apply(article_tree)
         return xslt.tostring(newtree)
 
