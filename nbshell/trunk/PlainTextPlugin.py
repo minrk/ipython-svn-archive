@@ -72,10 +72,12 @@ class PlainTextDocumentPlugin(object):
         #self.LoadData(data)
 
     def GetText(self):
+        text = self.element.text
         if self.start:
-            return self.element.text
+            text = self.element.text
         else:
-            return self.element.tail
+            text = self.element.tail
+        return (text is not None) and text or ''
 
     def SetText(self, text):
         """Sets the text in the document"""
@@ -203,6 +205,7 @@ class PlainTextNotebookViewPlugin(object):
         """
         if self.window is None: #then this is the first time Update is called
             self.createWindow()
+        print 'text -> %s'%self.doc.text #dbg
         self.window.SetText(self.doc.text)
 
     def UpdateDoc(self):

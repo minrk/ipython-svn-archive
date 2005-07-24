@@ -41,6 +41,7 @@ class ipnFrame(wx.Frame):
         filemenu.Append(ID_EXIT, "E&xit", "Terminate the program")
         wx.EVT_MENU(self, ID_EXIT, self.OnExit)
         wx.EVT_MENU(self, ID_OPEN, self.OnOpen)
+        wx.EVT_MENU(self, ID_SAVE, self.OnSave)
         menu = wx.MenuBar()
         menu.Append(filemenu, "&File")
         self.SetMenuBar(menu)
@@ -56,7 +57,7 @@ class ipnFrame(wx.Frame):
         self.app.document.SaveFile("test2.py")
 
     def OnOpen(self, evt):
-        if(self.app.document.IsModified):
+        if(self.app.document.IsModified()):
             dlg = wx.MessageDialog(self, "The document has been modified. Do you want to save your changes?",
                                    "IPN 0.1", style = wx.YES_NO|wx.CANCEL)
             val = dlg.ShowModal()
@@ -64,7 +65,8 @@ class ipnFrame(wx.Frame):
                 return None
             if val == wx.ID_YES:
                 self.OnSave(evt) #well, the parameter is unused
-        dlg = wx.FileDialog(self, "Choose a File", wildcard = "*.py",style = wx.OPEN)
+        dlg = wx.FileDialog(self, "Choose a File", \
+                            wildcard = "Notebook files (*.nbk)|*.nbk",style = wx.OPEN)
         val = dlg.ShowModal()
         if val == wx.ID_CANCEL:
             return None
@@ -73,10 +75,22 @@ class ipnFrame(wx.Frame):
             try:
                 self.app.document.LoadFile(filename, overwrite = True)
             except Exception, inst:
-                print repr(inst)
+                #print repr(inst)
                 dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
                 dlg.ShowModal()
-#                raise #used for debugging when a programming error pops up
+                #raise #dbg
                 return None
         
-        
+    def OnSave(self, evt):
+        if self.app.document.fileinfo['untitled'] == True:
+            self.OnSaveAs(self,evt)
+        else:
+            try:
+                self.app.document.SaveFile()
+            except Exception, inst:
+                print repr(inst) #dbg
+                dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
+                dlg.ShowModal()
+                raise #dbg
+    
+    

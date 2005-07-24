@@ -92,6 +92,8 @@ class PythonDocumentPlugin(object):
         self.index = None   #Set by AddCell, InsertCell, DeleteCell
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
+        print "block:"
+        etree.dump(self.block) #dbg
         self.cells = [notebook.Cell(self.notebook.get_cell(x.attrib['number'],self.logid))\
                       for x in self.block]
 
@@ -294,7 +296,7 @@ class PythonNotebookViewPlugin(object):
         else:
             return 0 #The other types of input don't have prompts for now
     
-    def updateDoc(self):
+    def UpdateDoc(self):
         """Updates the document to the current text in the widget. This method is
         run whenever the user presses Enter. We assume here that the only thing that might
         change is text inside the cells, so this is the only thing we change"""
@@ -321,7 +323,7 @@ class PythonNotebookViewPlugin(object):
         """Process the line of text at which the user hits Enter."""
         #Update the log
         #TODO: remove this, as currently only the last element can be edited
-        self.updateDoc()
+        self.UpdateDoc()
         #etree.dump(self.doc.block) #dbg
         linenum = self.window.GetCurrentLine()
         #print "linenum->", linenum #dbg

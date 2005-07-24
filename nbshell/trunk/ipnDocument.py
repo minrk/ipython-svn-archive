@@ -44,7 +44,8 @@ class ipnDocument(object):
             "script":None, # Is the file a script. If so here is the
                            # first line of the file to be copied when
                            # the file is saved
-            "modified":False # If true the file has been modified after the last save
+            "modified":False, # If true the file has been modified after the last save
+            "untitled":False # This is set True by DefaultNotebook() and False by LoadFile()
             }
         self.DefaultNotebook() #Initialize notebook, logs, sheet
 
@@ -73,6 +74,7 @@ class ipnDocument(object):
         self.fileinfo['init'] = True
         self.fileinfo['name'] = 'untitled.nbk'
         self.fileinfo['modified'] = False
+        self.fileinfo['untitled'] = True
         self.view.Update()
         
     def Clear(self):
@@ -86,85 +88,45 @@ class ipnDocument(object):
         self.logs = {}
         self.sheet = None
         
-    def _loadFile(self, f):
-        """Clears the document then loads the given file. Does not ask
-        for confirmation yet. "f" is a file object, not a filename. If error occurs throws FileSyntaxError"""
-        self.Clear()
-        #1. Confirm this is a ipn file
-        lineno = 0
-        line = f.readline()
-        lineno +=1
-        
-        if line[0:5] != "#@ipn":
-            if line[0:2] != "#!":
-                raise FileSyntaxError(f,lineno,"File is not ipn file")
-            else:
-                line = f.readline()
-                self.fileinfo["script"] = line
-                lineno += 1
-                if line[0:5] != "#@ipn":
-                    raise FileSyntaxError(f, lineno, "File is not ipn file")
-        
-        #2. Start reading lines
-        for line in f:
-            lineno +=1
-
-            if line.isspace():
-                continue
-            line = line.lstrip()
-            #Read commands. So far the only commands are #@# and #@cell
-            if line[0:3] == "#@#":
-                continue
-            elif line[0:7] == "#@cell ":
-                #Start processing the cell
-                args = line[7:].lstrip().split()
-                cell = self.InsertCell(args[0], update=False)
-                t = self.app.plugin_dict[args[0]].type
-                if t == "raw": #pass raw data to the cell
-                    cnt = cell.LoadRaw(f, args)
-                    lineno += cnt
-                elif t == "encoded": #pass encoded data
-                    def gener(param): #hack to be able to return the line count
-                        param[0] = 0
-                        for l in f:
-                            param[0]+=1
-                            l = l.lstrip()
-                            if l[0:9] == "#@endcell":
-                                break
-                            elif l[0:3] == "#% ":
-                                yield l[3:]
-                            elif l[0:3] == "#@#":
-                                continue
-                            else:
-                                raise FileSyntaxError(f,lineno,"Wrong syntax")
-                    p = [0,0]
-                    cell.LoadEncoded(gener(p), args)
-                    lineno+=p[0]
-                
-        self.view.Update()
 
     def LoadFile(self, filename, overwrite = False):
-        """Loads the file with the given filename. Internally uses
-        _loadFile, however, this is a more userfriendly version and
-        also sets the fileinfo structure. Does not check the system
-        path. If there is currently a modified file in the document
-        and overwrite is False, returns False and does nothing. If
-        some error ocurred throws the corresponding exception. If
+        """Loads the file with the given filename. If there is currently a
+        modified file in the document and overwrite is False, returns False
+        and does nothing. If some error ocurred throws an exception. If
         everything is OK returns True. The UI should call this method"""
 
+        #1. Is the previous document modified?
         if self.fileinfo["init"] and self.fileinfo["modified"] and not overwrite:
             return False
         self.Clear()
+        
+        #2. Create the notebook, log, sheet objects
         try:
+            self.notebook = notebook.Notebook.from_file(filename)
+            logids = self.notebook.root.xpath('//ipython-log/@id')
+            self.logs = dict((x, IPythonLog.IPythonLog(self,self.notebook,x)) for x in logids)
+            self.sheet = Sheet.Sheet(self, self.notebook)
             # Set up the fileinfo structure
+            import os #dbg
             self.fileinfo["init"] = True
             self.fileinfo["name"] = filename
-            f = file(filename, "r")
-            self._loadFile(f)
-            f.close()
+            self.fileinfo["modified"] = False
+            self.fileinfo['untitled'] = False
+            
         except:
             self.Clear()
             raise
+        
+        #3. Create the plugins that display the content. TODO: This should not be here
+        root = self.notebook.root
+        if root.text is not None:
+            self.InsertCell('plaintext',update=False,element = root)
+        for elem in self.sheet.element:
+            self.InsertCell('python', update=False, ipython_block = elem)
+            if elem.tail is None:
+                elem.tail = ''
+            self.InsertCell('plaintext', update=False, element = elem)
+        self.view.Update()
         return True
     
     def IsModified(self):
@@ -173,48 +135,34 @@ class ipnDocument(object):
         #here. When things are done fix it
         return True
         
-    def _saveFile(self, f):
-        """Saves data to the file object f"""
-        if self.fileinfo["init"] and (self.fileinfo["script"] is not None):
-            f.write(self.fileinfo["script"])
-        f.write("#@ipn\n")
-        for cell in self.celllist:
-            factory = cell.GetFactory()
-            celltype = factory.type
-            args = " ".join(cell.GetArgs()) #TODO: check if the argumens don't use bad symbols as EOL for example
-            f.write("#@cell "+args + "\n") 
-            if celltype == "raw":
-                cell.Serialize(file = f)
-            else:
-                def encode(f,x):
-                    f.write("#% "+x) #The newline is written by cell.Serialize
-                cell.Serialize(encodefunc = lambda x:encode(f,x)) 
-            f.write("#@endcell\n")
-        self.fileinfo["modified"] = False
-            
 
     def SaveFile(self, filename = None):
-        """Saves the file. If filename is given use this as a file
-name and change self.fileinfo['name']. If filename is None use
-self.fileinfo['name']. If self.fileinfo is not initialized return
-False. If the file is saved successfully return True. If there are
-problems opening the file throws an exception.
-"""
+        """Saves the file. If filename is given use this as a file name and
+        change self.fileinfo['name']. If filename is None use
+        self.fileinfo['name']. If the file is saved successfully return True.
+        If there are problems opening the file throws an exception. """
+
         if filename is None:
-            if (not self.fileinfo["init"]) or self.fileinfo["name"] is None:
-                return False
+            print 'fileinfo -> %s'%str(self.fileinfo) #dbg
+            if (not self.fileinfo['init']) or self.fileinfo['name'] is None:
+                raise Exception
             else:
-                filename = self.fileinfo["name"]
-        mod = self.fileinfo["modified"]
+                filename = self.fileinfo['name']
+        mod = self.fileinfo['modified']
         try:
-            f = file(filename,"w")
-            self._saveFile(f)
-            f.close()
+            #1. update the data from the views
+            for doccell in self.celllist:
+                doccell.view.UpdateDoc()
+            print 'root-> %s'%str(self.notebook.root)
+            etree.dump(self.notebook.root)
+            self.notebook.write(filename)
         except:
-            self.fileinfo["modified"] = mod
+            self.fileinfo['modified'] = mod
             raise
-        self.fileinfo["name"] = filename
-            
+        self.fileinfo['name'] = filename
+        self.fileinfo['modified'] = False
+        
+
     def addCell(self, cell):
         self.celllist.append(cell)
         cell.index = len(self.celllist) - 1
