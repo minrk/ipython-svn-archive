@@ -7,7 +7,6 @@ from wx import py
 
 from wx.py.buffer import Buffer
 import wx.py.dispatcher
-from wx.py import editwindow
 import wx.py.frame
 from wx.py.pseudo import PseudoFileIn
 from wx.py.pseudo import PseudoFileOut
@@ -17,6 +16,9 @@ from wx.py.pseudo import PseudoFileErr
 from lxml import etree
 
 from notabene import notebook
+
+import editwindow
+
 NAVKEYS = (wx.WXK_END, wx.WXK_LEFT, wx.WXK_RIGHT,
            wx.WXK_UP, wx.WXK_DOWN, wx.WXK_PRIOR, wx.WXK_NEXT)
 
@@ -245,7 +247,7 @@ class PythonNotebookViewPlugin(object):
         #print "log->", log.log #dbg
         self.window.ClearAll()
         self.line2log = []
-        oldlinecnt = 1 # = self.window.GetLineCount()
+        #oldlinecnt = 1 # = self.window.GetLineCount()
         last = len(cells) -1
         for i, cell in enumerate(cells):
             number =  cell.number
@@ -263,16 +265,29 @@ class PythonNotebookViewPlugin(object):
                 prompt = 'Out[%d] '%number
             else :
                 prompt = ""
-            
-            self.window.AddText('\n' + prompt + text)
-            linecnt =  self.window.GetLineCount() + tmp
+
+            print 'text -> %s'%text
+            print 'i -> %d, cell -> %s'%(i, str(cell))
+            lines = text.splitlines(True)
+            if lines == []:
+                lines = ['']
+            print 'lines -> %s'%str(lines)
+            self.window.AddText('\n' + prompt + lines[0])
+            #The second line of the input must be correctly indented
+            if type == 'input':
+                prompt = ' ' * len(prompt)
+            else:
+                prompt = ''
+            for line in lines[1:]:
+                self.window.AddText(prompt + line)
+            #linecnt =  
            
             #set up line2log. The first line is an empty one
             self.line2log.append(None)
-            for j in range(oldlinecnt+1, linecnt):
-                self.line2log.append((i, j - oldlinecnt))
+            for j in range(len(lines)):
+                self.line2log.append((i, j+1))
                 #print "i -> %s, id->%s, type->%s, text->%s"%(str(i), str(id), str(type), str(text))
-            oldlinecnt = linecnt
+            #oldlinecnt = linecnt
         #print "line2log->", self.window.line2log #dbg
 
     
@@ -283,15 +298,17 @@ class PythonNotebookViewPlugin(object):
         line = self.line2log[linenum]
         if line is None: #a separator line
             return 0
-        if line[1] != 1: #currently only the first line of a block is indented and has a prompt
-            return 0
+        
+        #if line[1] != 1: #currently only the first line of a block is indented and has a prompt
+        #    return 0
+        
         #get the number of digits of the number of the input
         item = self.doc.block[line[0]]
         type = self.doc.GetStuff(line[0])[0]
         strnumber = item.attrib['number']
         if type == 'input':
             return len(strnumber) + 5 #In[ ] - 5
-        elif type == 'output':
+        elif type == 'output' and line[1] == 1: #indent only the first line of output
             return len(strnumber) + 6 #Out[ ] - 6
         else:
             return 0 #The other types of input don't have prompts for now
@@ -340,7 +357,7 @@ class PythonNotebookViewPlugin(object):
             self.doc.block.append(elem)
             self.doc.cells.append(self.doc.cells[doc_id])
             #Create a new input and append it at the end of the block
-            cell = self.doc.log.Append("\n")
+            cell = self.doc.log.Append("\n\n") #each input starts and ends with a newline
             elem = etree.Element("ipython-input", number = str(cell.number))
             self.doc.block.append(elem)
             self.doc.cells.append(cell)
@@ -387,18 +404,19 @@ class PythonNotebookViewPlugin(object):
     
     def CanEdit(self, line):
         """Returns if the given line is editable"""
+        #TODO: Currently only the last element in the log is editable. fix this.
         #print "line -> %d"%(line,) #dbg
         #print 'line2log -> %s'%(str(self.line2log),) #dbg
         id = self.line2log[line]
         if id is None:
             return False
         id = id[0]
-        if id < len(self.doc.block) -1: #this is not the last element, so we cannot edit it
-            return False
-        elif self.doc.GetStuff(id)[0] != 'input':
-            return False
-        else:
+        #Check if the number of the current cell is the number of the last cell in the log.
+        if self.doc.cells[id].number == int(self.doc.log.log[-1].attrib['number']) \
+           and self.doc.GetStuff(id)[0] == 'input':
             return True
+        else:
+            return False
 
     def Close(self, update = True):
         index = self.view.GetIndex(self.id)

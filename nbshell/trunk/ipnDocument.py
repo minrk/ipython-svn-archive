@@ -1,3 +1,5 @@
+import os
+
 import wx
 from lxml import etree
 
@@ -37,10 +39,8 @@ class ipnDocument(object):
                            # currently being edited
             "init":False, # This must be True when the
                            # structure is initialized
-
-            "name":None,   # The name of the file. If None, it should be
-                           # assigned at first save
-
+            "path":None,   # The path to the file
+            "name":None,   # The name of the file.
             "script":None, # Is the file a script. If so here is the
                            # first line of the file to be copied when
                            # the file is saved
@@ -72,6 +72,7 @@ class ipnDocument(object):
         etree.SubElement(self.notebook.root, 'sheet', format='rest')
         self.sheet = Sheet.Sheet(self, self.notebook)
         self.fileinfo['init'] = True
+        self.fileinfo['path'] = os.getcwd()
         self.fileinfo['name'] = 'untitled.nbk'
         self.fileinfo['modified'] = False
         self.fileinfo['untitled'] = True
@@ -109,7 +110,9 @@ class ipnDocument(object):
             # Set up the fileinfo structure
             import os #dbg
             self.fileinfo["init"] = True
-            self.fileinfo["name"] = filename
+            self.fileinfo['path'], self.fileinfo["name"] = os.path.split(filename)
+            if self.fileinfo['path'] == '':
+                self.fileinfo['path'] = os.getcwd()
             self.fileinfo["modified"] = False
             self.fileinfo['untitled'] = False
             
@@ -118,9 +121,8 @@ class ipnDocument(object):
             raise
         
         #3. Create the plugins that display the content. TODO: This should not be here
-        root = self.notebook.root
-        if root.text is not None:
-            self.InsertCell('plaintext',update=False,element = root)
+        if self.sheet.element.text is not None:
+            self.InsertCell('plaintext',update=False,element = self.sheet.element)
         for elem in self.sheet.element:
             self.InsertCell('python', update=False, ipython_block = elem)
             if elem.tail is None:
@@ -147,7 +149,7 @@ class ipnDocument(object):
             if (not self.fileinfo['init']) or self.fileinfo['name'] is None:
                 raise Exception
             else:
-                filename = self.fileinfo['name']
+                filename = self.fileinfo['path'] + self.fileinfo['name']
         mod = self.fileinfo['modified']
         try:
             #1. update the data from the views
@@ -159,7 +161,9 @@ class ipnDocument(object):
         except:
             self.fileinfo['modified'] = mod
             raise
-        self.fileinfo['name'] = filename
+        self.fileinfo['path'], self.fileinfo['name'] = os.path.split(filename)
+        if self.fileinfo['path'] == '':
+            self.fileinfo['path'] = os.getcwd()
         self.fileinfo['modified'] = False
         
 

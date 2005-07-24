@@ -42,6 +42,7 @@ class ipnFrame(wx.Frame):
         wx.EVT_MENU(self, ID_EXIT, self.OnExit)
         wx.EVT_MENU(self, ID_OPEN, self.OnOpen)
         wx.EVT_MENU(self, ID_SAVE, self.OnSave)
+        wx.EVT_MENU(self, ID_SAVEAS, self.OnSaveAs)
         menu = wx.MenuBar()
         menu.Append(filemenu, "&File")
         self.SetMenuBar(menu)
@@ -75,12 +76,12 @@ class ipnFrame(wx.Frame):
             try:
                 self.app.document.LoadFile(filename, overwrite = True)
             except Exception, inst:
-                #print repr(inst)
+                #print repr(inst) #dbg
                 dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
                 dlg.ShowModal()
                 #raise #dbg
                 return None
-        
+
     def OnSave(self, evt):
         if self.app.document.fileinfo['untitled'] == True:
             self.OnSaveAs(self,evt)
@@ -88,9 +89,27 @@ class ipnFrame(wx.Frame):
             try:
                 self.app.document.SaveFile()
             except Exception, inst:
-                print repr(inst) #dbg
+                #print repr(inst) #dbg
                 dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
                 dlg.ShowModal()
-                raise #dbg
+                #raise #dbg
     
-    
+    def OnSaveAs(self, evt):
+        dlg = wx.FileDialog(self, "Choose a File", \
+                            defaultDir = self.app.document.fileinfo['path'],\
+                            defaultFile = self.app.document.fileinfo['name'],\
+                            wildcard = "Notebook files (*.nbk)|*.nbk",style = wx.SAVE)
+        val = dlg.ShowModal()
+        if val == wx.ID_CANCEL:
+            return None
+        else:
+            filename = dlg.GetPath()
+            try:
+                self.app.document.SaveFile(filename)
+            except Exception, inst:
+                #print repr(inst) #dbg
+                dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
+                dlg.ShowModal()
+                #raise #dbg
+                return None
+

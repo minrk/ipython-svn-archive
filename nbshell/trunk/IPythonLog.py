@@ -133,6 +133,8 @@ class IPythonLog(object):
     
     def __run(self, cell):
         """ This methods runs the input lines. """
-        output = etree.SubElement(cell.element, 'output')
+        output = cell.element.find('output')
+        if output is None:
+            output = etree.SubElement(cell.element, 'output')
         output.text = '\nout: ' + cell.input #TODO: fix this
         return True

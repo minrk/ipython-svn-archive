@@ -1,4 +1,5 @@
 """ This module is used currently only for testing. """
+import sys
 import os
 import re
 try:
@@ -40,7 +41,7 @@ class App(wx.App):
     
     def OnInit(self):
         self.RegisterPlugins()
-        self.frame = ipnFrame(None, -1, "wxNotebook Test Frame", size = (400, 300))
+        self.frame = ipnFrame(None, -1, "wxNotebook Test Frame", size = (640, 480))
         self.notebook = ipnNotebook(self.frame, -1, size = self.frame.GetClientSizeTuple(), style = wx.VSCROLL|wx.HSCROLL)
         self.document = ipnDocument(self, self.notebook)
         self.frame.OnInit(self)
@@ -58,15 +59,21 @@ class App(wx.App):
         #        self.document.InsertCell("plaintext", "Hooray!")
         #        print "updating"
 
-        log = self.document.logs["default-log"]
-        log.Append("\n")
-        print self.document.sheet.element
-        block = etree.SubElement(self.document.sheet.element, 'ipython-block', logid='default-log')
-        etree.SubElement(block, 'ipython-input', number='0')
-        cell = self.document.InsertCell("python", ipython_block=block)
-        cell.view.Update()
-        self.notebook.Update()
-
+        #        log = self.document.logs["default-log"]
+        #        log.Append("\n")
+        #        print self.document.sheet.element
+        #        block = etree.SubElement(self.document.sheet.element, 'ipython-block', logid='default-log')
+        #        etree.SubElement(block, 'ipython-input', number='0')
+        #        cell = self.document.InsertCell("python", ipython_block=block)
+        #        cell.view.Update()
+        #        self.notebook.Update()
+        
+        try:
+            file = sys.argv[1]
+        except:
+            file = 'test2.nbk'
+            
+        self.document.LoadFile(file)
 
 
 def main():
