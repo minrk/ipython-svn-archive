@@ -57,9 +57,6 @@ class IPShell:
         self.IP.mainloop(banner)
         if sys_exit:
             sys.exit()
-    
-    def runlines(self, source, displayhook, stdout, stderr):
-        self.IP.run(self, source, displayhook, stdout, stderr)
 
 #-----------------------------------------------------------------------------
 class IPShellEmbed:
