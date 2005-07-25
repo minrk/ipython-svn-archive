@@ -17,21 +17,17 @@ class ipnFrame(wx.Frame):
         self.app = app
         self.notebook = app.notebook
      
-        self.button = wx.Button(self, 123, label="Test")
-        wx.EVT_BUTTON(self, 123, self.Test)
-        
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer.Add(self.notebook, 1, wx.EXPAND)
+#        self.sizer = wx.BoxSizer(wx.VERTICAL)
+#        self.sizer.Add(self.notebook, 1, wx.EXPAND)
 
-        self.sizer.Add(self.button, 0,0)
-        
-        self.SetSizer(self.sizer)
+#        self.SetSizer(self.sizer)
         self.SetUpMenu()
-        self.sizer.Fit(self)
+#        self.sizer.Fit(self)
         wx.EVT_SIZE(self, self.OnSize)
 
     def SetUpMenu(self):
-        """ Sets up the menu. TODO: this is ugly, how can I make it better?"""
+        """ Sets up the menu. """
+        #TODO: this is ugly, how can I make it better?
         filemenu = wx.Menu()
         filemenu.Append(ID_NEW, "&New", "New file")
         filemenu.Append(ID_OPEN, "&Open...", "Opens file")
@@ -40,6 +36,7 @@ class ipnFrame(wx.Frame):
         filemenu.AppendSeparator()
         filemenu.Append(ID_EXIT, "E&xit", "Terminate the program")
         wx.EVT_MENU(self, ID_EXIT, self.OnExit)
+        wx.EVT_MENU(self, ID_NEW, self.OnNew)
         wx.EVT_MENU(self, ID_OPEN, self.OnOpen)
         wx.EVT_MENU(self, ID_SAVE, self.OnSave)
         wx.EVT_MENU(self, ID_SAVEAS, self.OnSaveAs)
@@ -53,10 +50,19 @@ class ipnFrame(wx.Frame):
     def OnSize (self, evt):
         self.Layout()
 
-    def Test(self, evt):
-        """ Used for testing"""
-        self.app.document.SaveFile("test2.py")
+    def OnNew(self, evt):
+        """Creates a new untitled document"""
+        if(self.app.document.IsModified()):
+            dlg = wx.MessageDialog(self, "The document has been modified. Do you want to save your changes?",
+                                   "IPN 0.1", style = wx.YES_NO|wx.CANCEL)
+            val = dlg.ShowModal()
+            if val == wx.ID_CANCEL:
+                return None
+            if val == wx.ID_YES:
+                self.OnSave(evt) #well, the parameter is unused
+        self.app.document.DefaultNotebook()
 
+        
     def OnOpen(self, evt):
         if(self.app.document.IsModified()):
             dlg = wx.MessageDialog(self, "The document has been modified. Do you want to save your changes?",

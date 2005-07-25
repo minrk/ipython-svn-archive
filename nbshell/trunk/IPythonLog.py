@@ -11,6 +11,7 @@ from wx.py.pseudo import PseudoFileOut
 from wx.py.pseudo import PseudoFileErr
 #from wx.py.version import VERSION
 
+from IPython import Shell
 from notabene import notebook
 
 from lxml import etree
@@ -22,31 +23,17 @@ class IPythonLog(object):
         self.logid = logid
         self.lastrun = -1 #the last input that is run
         #Here I will sort the cells, according to their numbers
-        tmp = [(int(x.attrib['number']), x) for x in self.log]
-        def cmpfunc(a,b):
-            return cmp(a[0], b[0])
-        tmp.sort(cmpfunc)
-        self.log[:] = [x[1] for x in tmp]
-        #set up the interpreter. We use the PyCrust interpreter for now
-        self.locals = {}
-        # Grab these so they can be restored by self.redirect* methods.
-        self.stdin = sys.stdin
-        self.stdout = sys.stdout
-        self.stderr = sys.stderr
-        # Import a default interpreter class if one isn't provided.
-        from wx.py.interpreter import Interpreter
-        # Create a replacement for stdin.
-        self.reader = PseudoFileIn(self.readline, self.readlines)
-        self.reader.input = ''
-        self.reader.isreading = False
-        # Set up the interpreter.
-        self.interp = Interpreter(locals=locals,
-                                  rawin=self.raw_input,
-                                  stdin=self.reader,
-                                  stdout=PseudoFileOut(self.writeOut),
-                                  stderr=PseudoFileErr(self.writeErr),
-                                  *args, **kwds)
-        
+        self.log[:] = sorted(self.log, key = lambda x:int(x.attrib['number']))
+
+        #Set up the interpreter
+        #For now we will keep our own excepthook
+        self.stdin_orig = sys.stdin
+        self.stdout_orig = sys.stdout
+        self.stderr_orig = sys.stderr
+        self.excepthook_orig = sys.excepthook
+        self.interp = Shell.IPShellGUI()
+        self.excepthook_IP = sys.excepthook
+        sys.excepthook = self.excepthook_orig
         import __builtin__
         __builtin__.close = __builtin__.exit = __builtin__.quit = \
                    'Click on the close button to leave the application.'
@@ -133,8 +120,22 @@ class IPythonLog(object):
     
     def __run(self, cell):
         """ This methods runs the input lines. """
-        output = cell.element.find('output')
-        if output is None:
-            output = etree.SubElement(cell.element, 'output')
-        output.text = '\nout: ' + cell.input #TODO: fix this
+        print 'running code...'
+        print 'input-> ',cell.input
+        self.output = cell.element.find('output')
+        if self.output is None:
+            self.output = etree.SubElement(cell.element, 'output')
+        self.output.text = ''
+        self.interp.runlines(cell.input, self.displayhook, None, None)
+        print 'output ->', self.output.text #dbg
+        if self.output.text is None:
+            cell.element.remove(self.output)
+        del self.output
         return True
+    
+    def displayhook(self, obj):
+        print >> self.stdout_orig,  'displayhook called' #dbg
+        if self.output.text is None:
+            self.output.text = '\n' + str(obj) + '\n'
+        else:
+            self.output.text += str(obj) + '\n'

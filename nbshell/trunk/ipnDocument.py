@@ -76,6 +76,16 @@ class ipnDocument(object):
         self.fileinfo['name'] = 'untitled.nbk'
         self.fileinfo['modified'] = False
         self.fileinfo['untitled'] = True
+        
+        log = self.logs['default-log']
+        log.Append('\n\n')
+        block = etree.XML("""
+<ipython-block id="default-log">
+    <ipython-input number="0"/>
+</ipython-block>
+""")
+        self.sheet.element.append(block)
+        self.InsertCell('python', ipython_block = block)
         self.view.Update()
         
     def Clear(self):
@@ -88,6 +98,7 @@ class ipnDocument(object):
         self.notebook = None
         self.logs = {}
         self.sheet = None
+        
         
 
     def LoadFile(self, filename, overwrite = False):

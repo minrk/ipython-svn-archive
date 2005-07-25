@@ -266,12 +266,12 @@ class PythonNotebookViewPlugin(object):
             else :
                 prompt = ""
 
-            print 'text -> %s'%text
-            print 'i -> %d, cell -> %s'%(i, str(cell))
+            #print 'text -> %s'%text #dbg
+            #print 'i -> %d, cell -> %s'%(i, str(cell)) #dbg
             lines = text.splitlines(True)
             if lines == []:
                 lines = ['']
-            print 'lines -> %s'%str(lines)
+            #print 'lines -> %s'%str(lines) #dbg
             self.window.AddText('\n' + prompt + lines[0])
             #The second line of the input must be correctly indented
             if type == 'input':
@@ -352,16 +352,17 @@ class PythonNotebookViewPlugin(object):
             return
         #try to run the current input. If it needs more, insert a line and continue editing
         if self.doc.log.Run(): # we have run the text and generated output
-            #append the output at the end of the block
-            elem = etree.Element("ipython-output", number = str(self.doc.cells[doc_id].number))
-            self.doc.block.append(elem)
-            self.doc.cells.append(self.doc.cells[doc_id])
+            #if there was output append it at the end of the block
+            if self.doc.cells[doc_id].element.find('output') is not None:
+                elem = etree.Element("ipython-output", number = str(self.doc.cells[doc_id].number))
+                self.doc.block.append(elem)
+                self.doc.cells.append(self.doc.cells[doc_id])
             #Create a new input and append it at the end of the block
             cell = self.doc.log.Append("\n\n") #each input starts and ends with a newline
             elem = etree.Element("ipython-input", number = str(cell.number))
             self.doc.block.append(elem)
             self.doc.cells.append(cell)
-            etree.dump(self.document.notebook.root) #dbg
+            #etree.dump(self.document.notebook.root) #dbg
             self.Update()
         else: #We need more input, simply insert a line
             self.window.InsertText(self.window.GetLineEndPosition(linenum), "\n")
@@ -536,7 +537,10 @@ class Shell(editwindow.EditWindow):
         self.wrap()
 
         # Find out for which keycodes the interpreter will autocomplete.
-        self.autoCompleteKeys = self.document.log.interp.getAutoCompleteKeys()
+        #self.autoCompleteKeys = self.document.log.interp.getAutoCompleteKeys()
+        #TODO: fix this. IPython must tell us which keys go here
+        self.autoCompleteKeys = []
+        
         # Keep track of the last non-continuation prompt positions.
         #self.promptPosStart = 0
         self.promptPosEnd = 0
@@ -825,11 +829,11 @@ class Shell(editwindow.EditWindow):
         #elif key == wx.WXK_F8:
         #    self.OnHistorySearch()
         # Don't backspace over the latest non-continuation prompt.
-        #elif key == wx.WXK_BACK:
-        #    if selecting and self.CanEdit():
-        #        event.Skip()
-        #    elif currpos > self.promptPosEnd:
-        #        event.Skip()
+        elif key == wx.WXK_BACK:
+            if selecting and self.CanEdit():
+                event.Skip()
+            elif self.CanEdit(1):
+                event.Skip()
         # Only allow these keys after the latest prompt.
         elif key in (wx.WXK_TAB, wx.WXK_DELETE):
             if self.CanEdit():
@@ -1262,8 +1266,9 @@ class Shell(editwindow.EditWindow):
             return False
 
 
-    def CanEdit(self):
-        """Return true if editing should succeed."""
+    def CanEdit(self, dir=0):
+        """Return true if editing should succeed. If dir==1 return if
+        BACKSPACE should succeed"""
         #TODO: why we need to know anythong about the selection here
         #if self.GetSelectionStart() != self.GetSelectionEnd():
         #    if self.GetSelectionStart() >= self.promptPosEnd \
@@ -1281,7 +1286,7 @@ class Shell(editwindow.EditWindow):
         #Check if the cursor is inside the prompt
         startpos = self.PositionFromLine(line)
         promptlen = self.view.PromptLen(line)
-        if startpos+promptlen > pos:
+        if startpos+promptlen + dir > pos:
             return False
         else:
             return True

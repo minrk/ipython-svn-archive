@@ -57,6 +57,9 @@ class IPShell:
         self.IP.mainloop(banner)
         if sys_exit:
             sys.exit()
+    
+    def runlines(self, source, displayhook, stdout, stderr):
+        self.IP.run(self, source, displayhook, stdout, stderr)
 
 #-----------------------------------------------------------------------------
 class IPShellEmbed:
@@ -240,6 +243,20 @@ class IPShellEmbed:
         shell is called. It is None by default. """
 
         self.exit_msg = exit_msg
+#-----------------------------------------------------------------------------
+class IPShellGUI:
+    """IPython instance used for the notebook GUI."""
+    
+    def __init__(self,argv=None,user_ns=None,debug=1,
+                 shell_class=InteractiveShell):
+        self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
+                               shell_class=shell_class)
+        
+    
+    def runlines(self, lines, displayhook, output, error):
+        old_displayhook, sys.displayhook = sys.displayhook, displayhook
+        self.IP.runlines(lines)
+        sys.displayhook = old_displayhook
 
 #-----------------------------------------------------------------------------
 def sigint_handler (signum,stack_frame):
