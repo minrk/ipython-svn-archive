@@ -86,7 +86,8 @@ from IPython import Debugger
 
 from IPython.Struct import Struct
 from IPython.ColorANSI import *
-from IPython.genutils import Term,uniq_stable,error,info
+from IPython.genutils import uniq_stable,error,info
+from IPython import genutils
 
 #---------------------------------------------------------------------------
 # Code begins
@@ -229,14 +230,17 @@ class TBTools:
 class ListTB(TBTools):
     """Print traceback information from a traceback list, with optional color.
         
-    Calling: requires 3 arguments:
-      (etype, evalue, elist)
+    Calling: requires 4 arguments:
+      (etype, evalue, elist, out = None)
     as would be obtained by:
       etype, evalue, tb = sys.exc_info()
       if tb:
         elist = traceback.extract_tb(tb)
       else:
         elist = None
+
+    If out is not None the traceback will be printed to out. By default it is
+    printed to genutils.Term.cerr
 
     It can thus be used by programs which need to process the traceback before
     printing (such as console replacements based on the code module from the
@@ -248,8 +252,9 @@ class ListTB(TBTools):
     def __init__(self,color_scheme = 'NoColor'):
         TBTools.__init__(self,color_scheme = color_scheme,call_pdb=0)
         
-    def __call__(self, etype, value, elist):
-        print >> Term.cerr, self.text(etype,value,elist)
+    def __call__(self, etype, value, elist, out = None):
+        out = out is not None and out or genutils.Term.cerr
+        print >> out, self.text(etype,value,elist)
 
     def text(self,etype, value, elist,context=5):
         """Return a color formatted string with the traceback info."""
@@ -445,7 +450,7 @@ class VerboseTB(TBTools):
             # So far, I haven't been able to find an isolated example to
             # reproduce the problem.
             inspect_error()
-            traceback.print_exc(file=Term.cerr)
+            traceback.print_exc(file=genutils.Term.cerr)
             info('\nUnfortunately, your original traceback can not be constructed.\n')
             return ''
 
@@ -482,7 +487,7 @@ class VerboseTB(TBTools):
                 # able to remove this try/except when 2.4 becomes a
                 # requirement.  Bug details at http://python.org/sf/1005466
                 inspect_error()
-                traceback.print_exc(file=Term.cerr)
+                traceback.print_exc(file=genutils.Term.cerr)
                 info("\nIPython's exception reporting continues...\n")
                 
             if func == '?':
@@ -503,7 +508,7 @@ class VerboseTB(TBTools):
                     # and barfs out. At some point I should dig into this one
                     # and file a bug report about it.
                     inspect_error()
-                    traceback.print_exc(file=Term.cerr)
+                    traceback.print_exc(file=genutils.Term.cerr)
                     info("\nIPython's exception reporting continues...\n")
                     call = tpl_call_fail % func
 
@@ -678,7 +683,7 @@ class VerboseTB(TBTools):
     def handler(self, info=None):
         (etype, evalue, etb) = info or sys.exc_info()
         self.tb = etb
-        print >> Term.cerr, self.text(etype, evalue, etb)
+        print >> genutils.Term.cerr, self.text(etype, evalue, etb)
 
     # Changed so an instance can just be called as VerboseTB_inst() and print
     # out the right info on its own.
@@ -794,7 +799,7 @@ class AutoFormattedTB(FormattedTB):
           given at initialization time.  """
         
         if out is None:
-            out = Term.cerr
+            out = genutils.Term.cerr
         if tb_offset is not None:
             tb_offset, self.tb_offset = self.tb_offset, tb_offset
             print >> out, self.text(etype, evalue, etb)

@@ -29,10 +29,11 @@ import signal
 import IPython
 from IPython.iplib import InteractiveShell
 from IPython.ipmaker import make_IPython
-from IPython.genutils import Term,warn,error,flag_calls
+from IPython.genutils import warn,error,flag_calls
 from IPython.Struct import Struct
 from IPython.Magic import Magic
 from IPython import ultraTB
+from IPython import genutils
 
 # global flag to pass around information about Ctrl-C without exceptions
 KBINT = False
@@ -250,10 +251,13 @@ class IPShellGUI:
                                shell_class=shell_class)
         
     
-    def runlines(self, lines, displayhook, output, error):
+    def runlines(self, lines, displayhook, stdout, stderr):
         old_displayhook, sys.displayhook = sys.displayhook, displayhook
-        self.IP.runlines(lines)
+        oldterm = genutils.Term #TODO: Do I need to restore this?
+        genutils.Term = genutils.IOTerm(cout = stdout, cerr = stderr)
+        retval = self.IP.runlines2(lines)
         sys.displayhook = old_displayhook
+        return retval
 
 #-----------------------------------------------------------------------------
 def sigint_handler (signum,stack_frame):
@@ -267,7 +271,7 @@ def sigint_handler (signum,stack_frame):
     global KBINT
     
     print '\nKeyboardInterrupt - Press <Enter> to continue.',
-    Term.cout.flush()
+    genutils.Term.cout.flush()
     # Set global flag so that runsource can know that Ctrl-C was hit
     KBINT = True
 
@@ -350,11 +354,11 @@ class MTInteractiveShell(InteractiveShell):
             pass
 
         if self._kill:
-            print >>Term.cout, 'Closing threads...',
-            Term.cout.flush()
+            print >>genutils.Term.cout, 'Closing threads...',
+            genutils.Term.cout.flush()
             for tokill in self.on_kill:
                 tokill()
-            print >>Term.cout, 'Done.'
+            print >>genutils.Term.cout, 'Done.'
 
         # Run pending code by calling parent class
         if self.code_to_run is not None:

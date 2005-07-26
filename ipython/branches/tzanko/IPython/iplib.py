@@ -62,6 +62,7 @@ from IPython.Itpl import Itpl,itpl,printpl,ItplNS,itplns
 from IPython.FakeModule import FakeModule
 from IPython.background_jobs import BackgroundJobManager
 from IPython.genutils import *
+from IPython import genutils
 
 # Global pointer to the running 
 
@@ -963,7 +964,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
             try:
                 raw_input("Please press <RETURN> to start IPython.")
             except EOFError:
-                print >> Term.cout
+                print >> genutils.Term.cout
             print '*'*70
 
         cwd = os.getcwd()  # remember where we started
@@ -1500,8 +1501,59 @@ want to merge them back into the new files.""" % locals()
         # actually does get executed
         if more:
             self.push('\n')
+            
+            
+    
+    def runlines2(self, lines):
+            """Run a string of one or more lines of source. If more input is
+            needed does not execute the code and returns 1, If the lines were
+            executed or returns 0. If some error occurred returns None"""
 
-    def runsource(self, source, filename="<input>", symbol="single"):
+            self.resetbuffer()
+            lines = lines.split('\n')
+            prefiltered = []
+            more = 0
+            for line in lines:
+                if line or more:
+                    prefiltered.append(self.prefilter(line, more))
+                    more = self.push(prefiltered[-1], simulate = True)
+                    if more is None:
+                        return more
+            if more : #more input is required, so do nothing
+                return more
+            else: #execute the code
+                source = '\n'.join(prefiltered)
+                return self.runsource(source, self.filename, simulate = False)
+            
+            
+            
+
+
+    def push(self, line, simulate = False):
+        """Push a line to the interpreter.
+
+        The line should not have a trailing newline; it may have
+        internal newlines.  The line is appended to a buffer and the
+        interpreter's runsource() method is called with the
+        concatenated contents of the buffer as source.  If this
+        indicates that the command was executed or invalid, the buffer
+        is reset; otherwise, the command is incomplete, and the buffer
+        is left as it was after the line was appended.  The return
+        value is 1 if more input is required, 0 if the line was dealt
+        with in some way (this is the same as runsource()).
+        
+        If simulate is True the code will not be executed
+        """
+        self.buffer.append(line)
+        source = "\n".join(self.buffer)
+        more = self.runsource(source, self.filename, simulate = simulate)
+        if not more:
+            self.resetbuffer()
+        return more
+
+
+
+    def runsource(self, source, filename="<input>", symbol="single", simulate = False):
         """Compile and run some source in the interpreter.
 
         Arguments are as for compile_command().
@@ -1528,7 +1580,11 @@ want to merge them back into the new files.""" % locals()
           know whether to continue feeding input or not.
 
         The return value can be used to decide whether to use sys.ps1 or
-        sys.ps2 to prompt the next line."""
+        sys.ps2 to prompt the next line.
+
+        If simulate is True runsource will behave as usual except it will not
+        call runcode to actually execute the code."""
+        
         try:
             code = self.compile(source, filename, symbol)
         except (OverflowError, SyntaxError, ValueError):
@@ -1546,7 +1602,7 @@ want to merge them back into the new files.""" % locals()
         self.code_to_run_src = source
         self.code_to_run = code
         # now actually execute the code object
-        if self.runcode(code) == 0:
+        if simulate or self.runcode(code) == 0:
             return False
         else:
             return None
@@ -1567,6 +1623,10 @@ want to merge them back into the new files.""" % locals()
         # Set our own excepthook in case the user code tries to call it
         # directly, so that the IPython crash handler doesn't get triggered
         old_excepthook,sys.excepthook = sys.excepthook, self.excepthook
+        # Set the standart input and output streams
+        old_stdin, sys.stdin = sys.stdin, genutils.Term.cin
+        old_stdout, sys.stdout = sys.stdout, genutils.Term.cout
+        old_stderr, sys.stderr = sys.stderr, genutils.Term.cerr
         outflag = 1  # happens in more places, so it's easier as default
         try:
             try:
@@ -1574,6 +1634,9 @@ want to merge them back into the new files.""" % locals()
             finally:
                 # Reset our crash handler in place
                 sys.excepthook = old_excepthook
+                sys.stdin = old_stdin #TODO: These might not be needed
+                sys.stdout = old_stdout
+                sys.stderr = old_stderr
         except SystemExit:
             self.resetbuffer()
             self.showtraceback()
@@ -1833,7 +1896,7 @@ want to merge them back into the new files.""" % locals()
             else:
                 newcmd = '%s(%s)\n' % (iFun.rstrip(),theRest)
 
-        print >>Term.cout, self.outputcache.prompt1.auto_rewrite() + newcmd,
+        print >>genutils.Term.cout, self.outputcache.prompt1.auto_rewrite() + newcmd,
         # log what is now valid Python, not the actual user input (without the
         # final newline)
         self.log(newcmd.strip(),continue_prompt)
@@ -1884,11 +1947,11 @@ want to merge them back into the new files.""" % locals()
 
     def write(self,data):
         """Write a string to the default output"""
-        Term.cout.write(data)
+        genutils.Term.cout.write(data)
 
     def write_err(self,data):
         """Write a string to the default error output"""
-        Term.cerr.write(data)
+        genutils.Term.cerr.write(data)
 
     def safe_execfile(self,fname,*where,**kw):
         fname = os.path.expanduser(fname)
@@ -1901,7 +1964,7 @@ want to merge them back into the new files.""" % locals()
         try:
             xfile = open(fname)
         except:
-            print >> Term.cerr, \
+            print >> genutils.Term.cerr, \
                   'Could not open file <%s> for safe execution.' % fname
             return None
 

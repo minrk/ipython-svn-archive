@@ -1,5 +1,6 @@
 import os
 import sys
+import StringIO
 
 import wx
 from wx import stc
@@ -245,10 +246,12 @@ class PythonNotebookViewPlugin(object):
         
         #log = self.doc.log
         #print "log->", log.log #dbg
-        self.window.ClearAll()
+        #self.window.ClearAll()
         self.line2log = []
         #oldlinecnt = 1 # = self.window.GetLineCount()
         last = len(cells) -1
+        # Here we set up the text which will be displayed in the window
+        outtext = StringIO.StringIO() 
         for i, cell in enumerate(cells):
             number =  cell.number
             #print 'i-> %d'%(i,) #dbg
@@ -272,14 +275,13 @@ class PythonNotebookViewPlugin(object):
             if lines == []:
                 lines = ['']
             #print 'lines -> %s'%str(lines) #dbg
-            self.window.AddText('\n' + prompt + lines[0])
-            #The second line of the input must be correctly indented
+            outtext.write('\n' + prompt + lines[0])
             if type == 'input':
-                prompt = ' ' * len(prompt)
+                prompt = '.' * (len(prompt)-1)+' ' #secondary prompt
             else:
                 prompt = ''
             for line in lines[1:]:
-                self.window.AddText(prompt + line)
+                outtext.write(prompt + line)
             #linecnt =  
            
             #set up line2log. The first line is an empty one
@@ -288,6 +290,8 @@ class PythonNotebookViewPlugin(object):
                 self.line2log.append((i, j+1))
                 #print "i -> %s, id->%s, type->%s, text->%s"%(str(i), str(id), str(type), str(text))
             #oldlinecnt = linecnt
+        self.window.SetText(outtext.getvalue())
+        self.window.GotoPos(self.window.GetTextLength())
         #print "line2log->", self.window.line2log #dbg
 
     
@@ -352,7 +356,17 @@ class PythonNotebookViewPlugin(object):
             return
         #try to run the current input. If it needs more, insert a line and continue editing
         if self.doc.log.Run(): # we have run the text and generated output
-            #if there was output append it at the end of the block
+            #1. append stderr
+            if self.doc.cells[doc_id].element.find('stderr') is not None:
+                elem = etree.Element("ipython-stderr", number = str(self.doc.cells[doc_id].number))
+                self.doc.block.append(elem)
+                self.doc.cells.append(self.doc.cells[doc_id])
+            #2. append stdout
+            if self.doc.cells[doc_id].element.find('stdout') is not None:
+                elem = etree.Element("ipython-stdout", number = str(self.doc.cells[doc_id].number))
+                self.doc.block.append(elem)
+                self.doc.cells.append(self.doc.cells[doc_id])
+            #3. append output
             if self.doc.cells[doc_id].element.find('output') is not None:
                 elem = etree.Element("ipython-output", number = str(self.doc.cells[doc_id].number))
                 self.doc.block.append(elem)
@@ -365,13 +379,25 @@ class PythonNotebookViewPlugin(object):
             #etree.dump(self.document.notebook.root) #dbg
             self.Update()
         else: #We need more input, simply insert a line
-            self.window.InsertText(self.window.GetLineEndPosition(linenum), "\n")
-            self.line2log.append(None)
-            for i in range(len(self.line2log)-1, linenum+1, -1):
-                self.line2log[i] = self.line2log[i-1]
-            self.line2log[linenum+1] = (item[0], item[1]+1)
-            #TODO: update the text in the log
-            #here we don't need an update in the view, I think
+
+            # We insert the line in the window. We could insert the line in the
+            # log and then call Update, but that will be slower
+
+            # 1. calculate the witespace characters we need to insert
+            promptlen = self.PromptLen(linenum)
+            line = self.window.GetLine(linenum)
+            i = promptlen
+            l = len(line)
+            while i<l and line[i].isspace():
+                i+=1
+            header = '\n' + '.'*(promptlen-1)+' ' + line[promptlen:i]
+            # 2. Insert the new line and set the cursor at its end
+            pos = self.window.GetLineEndPosition(linenum)
+            self.window.InsertText(pos, header)
+            self.window.GotoPos(pos + len(header)) 
+            self.line2log[linenum+1:linenum+1] = [(item[0], item[1]+1)]
+            #TODO: Do I need toupdate the text in the log here?
+            
 
 
     def setCurrentInput(self, id):
@@ -708,17 +734,17 @@ class Shell(editwindow.EditWindow):
             self.write(chr(key))
             if self.autoComplete:
                 self.autoCompleteShow(command)
-        elif key == ord('('):
-            # The left paren activates a call tip and cancels an
-            # active auto completion.
-            if self.AutoCompActive():
-                self.AutoCompCancel()
-            # Get the command between the prompt and the cursor.  Add
-            # the '(' to the end of the command.
-            self.ReplaceSelection('')
-            command = self.GetTextRange(stoppos, currpos) + '('
-            self.write('(')
-            self.autoCallTipShow(command)
+        #elif key == ord('('):
+        #    # The left paren activates a call tip and cancels an
+        #    # active auto completion.
+        #    if self.AutoCompActive():
+        #        self.AutoCompCancel()
+        #    # Get the command between the prompt and the cursor.  Add
+        #    # the '(' to the end of the command.
+        #    self.ReplaceSelection('')
+        #    command = self.GetTextRange(stoppos, currpos) + '('
+        #    self.write('(')
+        #    self.autoCallTipShow(command)
         else:
             # Allow the normal event handling to take place.
             event.Skip()

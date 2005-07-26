@@ -1,6 +1,7 @@
 """ IPythonLog.py Contains a IPythonLog class which holds the information of one log"""
 
 import sys
+import StringIO
 
 from wx.py.buffer import Buffer
 import wx.py.dispatcher
@@ -15,6 +16,15 @@ from IPython import Shell
 from notabene import notebook
 
 from lxml import etree
+
+def findnew(element, tag):
+    """Tries to find the tag in the element. If there is no such element,
+    creates one"""
+    el = element.find(tag)
+    if el is None:
+        el = etree.SubElement(element, tag)
+    return el
+
 class IPythonLog(object):
     def __init__(self, doc, notebook, logid, *args, **kwds):
         self.doc = doc
@@ -31,7 +41,7 @@ class IPythonLog(object):
         self.stdout_orig = sys.stdout
         self.stderr_orig = sys.stderr
         self.excepthook_orig = sys.excepthook
-        self.interp = Shell.IPShellGUI()
+        self.interp = Shell.IPShellGUI(argv=['-colors','NoColor'])
         self.excepthook_IP = sys.excepthook
         sys.excepthook = self.excepthook_orig
         import __builtin__
@@ -122,16 +132,52 @@ class IPythonLog(object):
         """ This methods runs the input lines. """
         print 'running code...'
         print 'input-> ',cell.input
-        self.output = cell.element.find('output')
-        if self.output is None:
-            self.output = etree.SubElement(cell.element, 'output')
-        self.output.text = ''
-        self.interp.runlines(cell.input, self.displayhook, None, None)
+        self.output = findnew(cell.element, 'output')
+        self.stdout = findnew(cell.element, 'stdout')
+        self.stderr = findnew(cell.element, 'stderr')
+        
+        cout = StringIO.StringIO()
+        cerr = StringIO.StringIO()
+        #The first and last characters of cell.input are '\n'
+        retval = self.interp.runlines(cell.input[1:-1],\
+                                      displayhook = self.displayhook,\
+                                      stdout = cout, stderr = cerr)
+        #Retrieve stdout
+        text = '\n' + cout.getvalue()
+        print 'unformatted stdout ->', text
+        if text != '\n':
+            if text[-1] != '\n':
+                text = text + '\n'
+            self.stdout.text = text
+        cout.close()
+        
+        #Retrieve stderr
+        text = '\n' + cerr.getvalue()
+        print 'unformatted stderr ->', text
+        if text != '\n':
+            if text[-1] != '\n':
+                text = text + '\n'
+            self.stderr.text = text
+        cerr.close()
+        
         print 'output ->', self.output.text #dbg
+        print 'stdout ->', self.stdout.text #dbg
+        print 'stderr ->', self.stderr.text #dbg
         if self.output.text is None:
             cell.element.remove(self.output)
         del self.output
-        return True
+        if self.stdout.text is None:
+            cell.element.remove(self.stdout)
+        del self.stdout
+        if self.stderr.text is None:
+            cell.element.remove(self.stderr)
+        del self.stderr
+        
+        #TODO: the return value of runlines should match the return value of __run
+        if retval: 
+            return False
+        else:
+            return True
     
     def displayhook(self, obj):
         print >> self.stdout_orig,  'displayhook called' #dbg

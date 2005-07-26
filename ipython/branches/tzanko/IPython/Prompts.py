@@ -24,6 +24,7 @@ import time
 from pprint import pprint,pformat
 
 # IPython's own
+from IPython import genutils
 from IPython.genutils import *
 from IPython.Struct import Struct
 from IPython.Magic import Macro
@@ -488,7 +489,7 @@ class CachedOutput:
             except KeyError:
                 pass
         if arg is not None:
-            cout_write = Term.cout.write # fast lookup
+            cout_write = genutils.Term.cout.write # fast lookup
             # first handle the cache and counters
             self.update(arg)
             # do not print output if input ends in ';'
@@ -502,14 +503,14 @@ class CachedOutput:
             if isinstance(arg,Macro):
                 print 'Executing Macro...'
                 # in case the macro takes a long time to execute
-                Term.cout.flush()
+                genutils.Term.cout.flush()
                 exec arg.value in self.user_ns
                 return None
 
             # and now call a possibly user-defined print mechanism
             self.display(arg)
             cout_write(self.output_sep2)
-            Term.cout.flush()
+            genutils.Term.cout.flush()
 
     def _display(self,arg):
         """Default printer method, uses pprint.
@@ -523,10 +524,10 @@ class CachedOutput:
                 # So that multi-line strings line up with the left column of
                 # the screen, instead of having the output prompt mess up
                 # their first line.                
-                Term.cout.write('\n')
-            print >>Term.cout, out
+                genutils.Term.cout.write('\n')
+            print >>genutils.Term.cout, out
         else:
-            print >>Term.cout, arg
+            print >>genutils.Term.cout, arg
 
     # Assign the default display method:
     display = _display

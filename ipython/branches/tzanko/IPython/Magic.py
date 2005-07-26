@@ -36,7 +36,7 @@ from IPython.Itpl import Itpl, itpl, printpl,itplns
 from IPython.FakeModule import FakeModule
 from IPython import OInspect
 from IPython.genutils import *
-
+from IPython import genutils #for genutils.Term
 # Globals to be set later by Magic constructor
 MAGIC_PREFIX = ''
 MAGIC_ESCAPE = ''
@@ -753,7 +753,7 @@ Currently the magic system has the following functions:\n"""
 
         varlist = self.magic_who_ls(parameter_s)
         if not varlist:
-            print 'Interactive namespace is empty.'
+            print >> genutils.Term.cout, 'Interactive namespace is empty.'
             return
 
         # if we have variables, move on...
@@ -761,18 +761,21 @@ Currently the magic system has the following functions:\n"""
         # stupid flushing problem: when prompts have no separators, stdout is
         # getting lost. I'm starting to think this is a python bug. I'm having
         # to force a flush with a print because even a sys.stdout.flush
-        # doesn't seem to do anything!
+        # doesn't seem to do anything! 
+
+        #(tzanko)UPDATE: changed sys.stdout to
+        # genutils.Term.cout. Don't know if the problem persists
 
         count = 0
         for i in varlist:
-            print i+'\t',
+            print >> genutils.Term.cout, i+'\t',
             count += 1
             if count > 8:
                 count = 0
-                print
-            sys.stdout.flush()  # FIXME. Why the hell isn't this flushing???
+                print >> genutils.Term.cout
+            genutils.Term.cout.flush()  # FIXME. Why the hell isn't this flushing???
             
-        print # well, this does force a flush at the expense of an extra \n
+        print >> genutils.Term.cout # well, this does force a flush at the expense of an extra \n
 
     def magic_whos(self, parameter_s=''):
         """Like %who, but gives some extra information about each variable.
@@ -2339,7 +2342,7 @@ Defaulting color scheme to 'NoColor'"""
         # If all looks ok, proceed
         out,err = self.shell.getoutputerror(cmd)
         if err:
-            print >> Term.cerr,err
+            print >> genutils.Term.cerr,err
         if opts.has_key('l'):
             out = SList(out.split('\n'))
         else:
@@ -2386,7 +2389,7 @@ Defaulting color scheme to 'NoColor'"""
         if parameter_s:
             out,err = self.shell.getoutputerror(parameter_s)
             if err:
-                print >> Term.cerr,err
+                print >> genutils.Term.cerr,err
             return SList(out.split('\n'))
 
     def magic_bg(self, parameter_s=''):

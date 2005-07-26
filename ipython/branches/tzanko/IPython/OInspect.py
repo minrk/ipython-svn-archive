@@ -27,9 +27,10 @@ import inspect,linecache,types,StringIO,string
 
 # IPython's own
 from IPython.Itpl import itpl
-from IPython.genutils import page,indent,Term
+from IPython.genutils import page,indent
 from IPython import PyColorize
 from IPython.ColorANSI import *
+from IPython import genutils
 
 #****************************************************************************
 # Builtin color schemes
@@ -175,7 +176,7 @@ class Inspector:
         if output is None:
             self.noinfo('definition header',oname)
         else:
-            print >>Term.cout, header,self.format(output),
+            print >>genutils.Term.cout, header,self.format(output),
 
     def pdoc(self,obj,oname='',formatter = None):
         """Print the docstring for any object.
