@@ -1,6 +1,18 @@
 """ Generic editing plugin. It does nothing. Should be used as a reference how
-to make editing plugins. Plugins having just output are a bit different
-"""
+to make editing plugins. TODO: The current plugin design deffers from the one
+shown here. """
+
+#*****************************************************************************
+#       Copyright (C) 2005 Tzanko Matev. <tsanko@gmail.com>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+from nbshell import Release
+__author__  = '%s <%s>' % Release.author
+__license__ = Release.license
+__version__ = Release.version
 
 def GetPluginFactory():
     """ Returns the factory object for the plugin. This function is called

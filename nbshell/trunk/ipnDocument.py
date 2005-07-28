@@ -1,3 +1,15 @@
+#*****************************************************************************
+#       Copyright (C) 2005 Tzanko Matev. <tsanko@gmail.com>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+from nbshell import Release
+__author__  = '%s <%s>' % Release.author
+__license__ = Release.license
+__version__ = Release.version
+
 import os
 
 import wx
@@ -5,8 +17,8 @@ from lxml import etree
 
 from notabene import notebook 
 
-import IPythonLog
-import Sheet
+from nbshell import IPythonLog
+from nbshell import Sheet
 
 class FileSyntaxError(Exception):
     """Thrown in document.LoadFile when a syntax error ocurred while
@@ -63,6 +75,7 @@ class ipnDocument(object):
         view.Update()
         if update : self.view.Update()
         return cell
+    
 
     def DefaultNotebook(self):
         """Create a default empty notebook"""
@@ -87,18 +100,22 @@ class ipnDocument(object):
         self.sheet.element.append(block)
         self.InsertCell('python', ipython_block = block)
         self.view.Update()
+        self.SetSavePoint()
         
     def Clear(self):
         """Clears the document. Does not ask for confirmation."""
         self.fileinfo["init"] = False
-        for cell in self.celllist:
+        l = len(self.celllist)
+        for i in range(l):
+            cell = self.celllist[-1]
             cell.view.Close(update=False)
             self.delCell(cell.index)
+        
         
         self.notebook = None
         self.logs = {}
         self.sheet = None
-        
+        self.view.Update()
         
 
     def LoadFile(self, filename, overwrite = False):
@@ -126,7 +143,6 @@ class ipnDocument(object):
                 self.fileinfo['path'] = os.getcwd()
             self.fileinfo["modified"] = False
             self.fileinfo['untitled'] = False
-            
         except:
             self.Clear()
             raise
@@ -140,14 +156,22 @@ class ipnDocument(object):
                 elem.tail = ''
             self.InsertCell('plaintext', update=False, element = elem)
         self.view.Update()
+        self.SetSavePoint() 
         return True
     
     def IsModified(self):
         """returns if the file has been modified since last save"""
-        #TODO: Right now there is no point in doing anything useful
-        #here. When things are done fix it
-        return True
-        
+        for cell in self.celllist:
+            if cell.modified:
+                return True
+        return False
+    
+    def SetSavePoint(self):
+        """ Sets the save point of the document. It is used to determine if
+        the document was modified after the last save"""
+        for cell in self.celllist:
+            cell.SetSavePoint()
+
 
     def SaveFile(self, filename = None):
         """Saves the file. If filename is given use this as a file name and
@@ -160,7 +184,7 @@ class ipnDocument(object):
             if (not self.fileinfo['init']) or self.fileinfo['name'] is None:
                 raise Exception
             else:
-                filename = self.fileinfo['path'] + self.fileinfo['name']
+                filename = self.fileinfo['path'] +'/' + self.fileinfo['name']
         mod = self.fileinfo['modified']
         try:
             #1. update the data from the views
@@ -176,7 +200,7 @@ class ipnDocument(object):
         if self.fileinfo['path'] == '':
             self.fileinfo['path'] = os.getcwd()
         self.fileinfo['modified'] = False
-        
+        self.SetSavePoint()
 
     def addCell(self, cell):
         self.celllist.append(cell)
@@ -189,7 +213,7 @@ class ipnDocument(object):
             self.celllist[x].index = x
             return None
         map(f, range(index, len(self.celllist))) # fix the indeces of the cells
-#        self.view.delCell(index) # delete the window at the end,
+        #self.view.delCell(index) # delete the window at the end,
                                  # because the windows might need to
                                  # know their new indeces while relaying out
 

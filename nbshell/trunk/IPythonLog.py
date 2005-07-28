@@ -1,7 +1,20 @@
 """ IPythonLog.py Contains a IPythonLog class which holds the information of one log"""
 
+#*****************************************************************************
+#       Copyright (C) 2005 Tzanko Matev. <tsanko@gmail.com>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+from nbshell import Release
+__author__  = '%s <%s>' % Release.author
+__license__ = Release.license
+__version__ = Release.version
+
 import sys
 import StringIO
+import textwrap
 
 from wx.py.buffer import Buffer
 import wx.py.dispatcher
@@ -41,14 +54,21 @@ class IPythonLog(object):
         self.stdout_orig = sys.stdout
         self.stderr_orig = sys.stderr
         self.excepthook_orig = sys.excepthook
-        self.interp = Shell.IPShellGUI(argv=['-colors','NoColor'])
-        self.excepthook_IP = sys.excepthook
-        sys.excepthook = self.excepthook_orig
         import __builtin__
         __builtin__.close = __builtin__.exit = __builtin__.quit = \
                    'Click on the close button to leave the application.'
+
+        user_ns =  {'__name__'     :'__main__',\
+                    '__builtins__' : __builtin__,\
+                    '__app':self.doc.app
+                    }
+        self.interp = Shell.IPShellGUI(argv=['-colors','NoColor'], user_ns=user_ns)
+        self.excepthook_IP = sys.excepthook
+        sys.excepthook = self.excepthook_orig
         del __builtin__
 
+        #set up wrapper to use for long output
+        self.wrapper = textwrap.TextWrapper()
         #end shell initialization
         
     #TODO: I should support interactive input. Fix this.
@@ -165,6 +185,9 @@ class IPythonLog(object):
         print 'stderr ->', self.stderr.text #dbg
         if self.output.text is None:
             cell.element.remove(self.output)
+        else:
+            self.output.text = self.wrapper.fill(self.output.text) + '\n'#wrap the output
+            print 'wrapped output ->', self.output.text #dbg
         del self.output
         if self.stdout.text is None:
             cell.element.remove(self.stdout)

@@ -1,4 +1,17 @@
 """ Contains the main frame of the application """
+
+#*****************************************************************************
+#       Copyright (C) 2005 Tzanko Matev. <tsanko@gmail.com>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+from nbshell import Release
+__author__  = '%s <%s>' % Release.author
+__license__ = Release.license
+__version__ = Release.version
+
 import wx
 
 ID_NEW = wx.ID_NEW
@@ -12,6 +25,10 @@ class ipnFrame(wx.Frame):
                   size=wx.DefaultSize, style=wx.DEFAULT_FRAME_STYLE, name="myframe"):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style, name)
+        
+    def SetTitle(self, filename):
+        """Adds the filename to the title"""
+        wx.Frame.SetTitle(self, " %s %s (%s)"%(Release.name, Release.version,filename))
 
     def OnInit(self, app):
         self.app = app
@@ -24,6 +41,7 @@ class ipnFrame(wx.Frame):
         self.SetUpMenu()
         #self.sizer.Fit(self)
         wx.EVT_SIZE(self, self.OnSize)
+        wx.EVT_CLOSE(self, self.OnClose)
 
     def SetUpMenu(self):
         """ Sets up the menu. """
@@ -44,29 +62,42 @@ class ipnFrame(wx.Frame):
         menu.Append(filemenu, "&File")
         self.SetMenuBar(menu)
 
+    def OnClose(self, evt):
+        """This method is called by self.Close(). Do not call it explicitly"""
+        if(self.app.document.IsModified()):
+            dlg = wx.MessageDialog(self, "The document has been modified. Do you want to save your changes?",
+                                   "%s %s"%(Release.name, Release.version), style = wx.YES_NO|wx.CANCEL)
+            val = dlg.ShowModal()
+            if val == wx.ID_CANCEL:
+                return None
+            if val == wx.ID_YES:
+                self.OnSave(evt) #well, the parameter is unused
+        self.Destroy()
+        
     def OnExit(self, evt):
         self.Close()
         
     def OnSize (self, evt):
         self.Layout()
 
-    def OnNew(self, evt):
+    def OnNew(self, evt = None):
         """Creates a new untitled document"""
         if(self.app.document.IsModified()):
             dlg = wx.MessageDialog(self, "The document has been modified. Do you want to save your changes?",
-                                   "IPN 0.1", style = wx.YES_NO|wx.CANCEL)
+                                   "%s %s"%(Release.name, Release.version), style = wx.YES_NO|wx.CANCEL)
             val = dlg.ShowModal()
             if val == wx.ID_CANCEL:
                 return None
             if val == wx.ID_YES:
                 self.OnSave(evt) #well, the parameter is unused
         self.app.document.DefaultNotebook()
+        self.SetTitle(self.app.document.fileinfo['name'])
 
         
-    def OnOpen(self, evt):
+    def OnOpen(self, evt = None):
         if(self.app.document.IsModified()):
             dlg = wx.MessageDialog(self, "The document has been modified. Do you want to save your changes?",
-                                   "IPN 0.1", style = wx.YES_NO|wx.CANCEL)
+                                   "%s %s"%(Release.name, Release.version), style = wx.YES_NO|wx.CANCEL)
             val = dlg.ShowModal()
             if val == wx.ID_CANCEL:
                 return None
@@ -87,10 +118,12 @@ class ipnFrame(wx.Frame):
                 dlg.ShowModal()
                 #raise #dbg
                 return None
+            else:
+                self.SetTitle(self.app.document.fileinfo['name'])
 
-    def OnSave(self, evt):
+    def OnSave(self, evt = None):
         if self.app.document.fileinfo['untitled'] == True:
-            self.OnSaveAs(self,evt)
+            self.OnSaveAs(evt)
         else:
             try:
                 self.app.document.SaveFile()
@@ -100,7 +133,7 @@ class ipnFrame(wx.Frame):
                 dlg.ShowModal()
                 #raise #dbg
     
-    def OnSaveAs(self, evt):
+    def OnSaveAs(self, evt = None):
         dlg = wx.FileDialog(self, "Choose a File", \
                             defaultDir = self.app.document.fileinfo['path'],\
                             defaultFile = self.app.document.fileinfo['name'],\
@@ -118,4 +151,8 @@ class ipnFrame(wx.Frame):
                 dlg.ShowModal()
                 #raise #dbg
                 return None
+            else:
+                self.SetTitle(self.app.document.fileinfo['name'])
+                self.app.document.fileinfo['untitled'] = False
+                
 

@@ -1,5 +1,13 @@
 """EditWindow class."""
 
+#*****************************************************************************
+# This class was copied with slight modifications from the PyCrust project, so
+# it is covered by the wxWidgets license which can be fouund at:
+#
+#           http://www.wxwidgets.org/newlicen.htm
+#
+#*****************************************************************************
+
 __author__ = "Patrick K. O'Brien <pobrien@orbtech.com>"
 __cvsid__ = "$Id: editwindow.py,v 1.10 2004/03/26 19:26:34 RD Exp $"
 __revision__ = "$Revision: 1.10 $"[11:-2]

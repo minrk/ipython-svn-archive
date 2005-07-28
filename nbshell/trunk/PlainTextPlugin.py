@@ -1,3 +1,16 @@
+
+#*****************************************************************************
+#       Copyright (C) 2005 Tzanko Matev. <tsanko@gmail.com>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+from nbshell import Release
+__author__  = '%s <%s>' % Release.author
+__license__ = Release.license
+__version__ = Release.version
+
 import wx
 from wx import stc
 
@@ -70,6 +83,12 @@ class PlainTextDocumentPlugin(object):
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
         #self.LoadData(data)
+
+    def SetSavePoint(self):
+        self.view.SetSavePoint()
+    def IsModified(self):
+        return self.view.modified
+    modified = property(fget = IsModified)
 
     def GetText(self):
         text = self.element.text
@@ -211,6 +230,17 @@ class PlainTextNotebookViewPlugin(object):
     def UpdateDoc(self):
         """Update data in the document"""
         self.doc.text = self.window.GetText()
+        
+    def SetSavePoint(self):
+        if self.window is not None:
+            self.window.SetSavePoint()
+    
+    def IsModified(self):
+        if self.window is not None:
+            return self.window.GetModify()
+        else:
+            return False
+    modified = property(fget = IsModified)
         
     def Close(self, update = True):
         index = self.view.GetIndex(self.id)

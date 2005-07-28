@@ -1,3 +1,18 @@
+#*****************************************************************************
+#       Copyright (C) 2005 Tzanko Matev. <tsanko@gmail.com>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#
+#  The Shell class was initially copied verbatim from the PyCrust project
+#*****************************************************************************
+
+from nbshell import Release
+__author__  = '%s <%s>' % Release.author
+__license__ = Release.license
+__version__ = Release.version
+
+
 import os
 import sys
 import StringIO
@@ -18,7 +33,7 @@ from lxml import etree
 
 from notabene import notebook
 
-import editwindow
+from nbshell import editwindow
 
 NAVKEYS = (wx.WXK_END, wx.WXK_LEFT, wx.WXK_RIGHT,
            wx.WXK_UP, wx.WXK_DOWN, wx.WXK_PRIOR, wx.WXK_NEXT)
@@ -108,6 +123,12 @@ class PythonDocumentPlugin(object):
         self.cells = []
         self.view.Update()
         
+    def SetSavePoint(self):
+        self.view.SetSavePoint()
+    def IsModified(self):
+        return self.view.modified
+    modified = property(fget = IsModified)
+
     
     def GetStuff(self, id): #TODO: a better name
         """Returns a tuple (type, elem) where type is the tag of the id'th
@@ -166,6 +187,8 @@ class PythonDocumentPlugin(object):
     #def GetViewPlugin(self, view):
     #    return self.view
 
+
+    
     def GetFactory(self):
         return PlainTextPluginFactory()
 
@@ -294,7 +317,16 @@ class PythonNotebookViewPlugin(object):
         self.window.GotoPos(self.window.GetTextLength())
         #print "line2log->", self.window.line2log #dbg
 
+    def SetSavePoint(self):
+        if self.window is not None:
+            self.window.SetSavePoint()
     
+    def IsModified(self):
+        if self.window is not None:
+            return self.window.GetModify()
+        else:
+            return False
+    modified = property(fget = IsModified)
 
     def PromptLen(self, linenum):
         """Returns the lenght of the prompt that is on the given line."""
@@ -448,90 +480,6 @@ class PythonNotebookViewPlugin(object):
     def Close(self, update = True):
         index = self.view.GetIndex(self.id)
         self.view.DeleteCell(index, update)
-
-class ShellFacade(object):
-    """Simplified interface to all shell-related functionality.
-
-    This is a semi-transparent facade, in that all attributes of other
-    are accessible, even though only some are visible to the user."""
-
-    name = 'Shell Interface'
-#    revision = __revision__ #TODO: fix
-
-    def __init__(self, other):
-        """Create a ShellFacade instance."""
-        d = self.__dict__
-        d['other'] = other
-        d['helpText'] = \
-"""
-* Key bindings:
-Home              Go to the beginning of the command or line.
-Shift+Home        Select to the beginning of the command or line.
-Shift+End         Select to the end of the line.
-End               Go to the end of the line.
-Ctrl+C            Copy selected text, removing prompts.
-Ctrl+Shift+C      Copy selected text, retaining prompts.
-Ctrl+X            Cut selected text.
-Ctrl+V            Paste from clipboard.
-Ctrl+Shift+V      Paste and run multiple commands from clipboard.
-Ctrl+Up Arrow     Retrieve Previous History item.
-Alt+P             Retrieve Previous History item.
-Ctrl+Down Arrow   Retrieve Next History item.
-Alt+N             Retrieve Next History item.
-Shift+Up Arrow    Insert Previous History item.
-Shift+Down Arrow  Insert Next History item.
-F8                Command-completion of History item.
-                  (Type a few characters of a previous command and press F8.)
-Ctrl+Enter        Insert new line into multiline command.
-Ctrl+]            Increase font size.
-Ctrl+[            Decrease font size.
-Ctrl+=            Default font size.
-"""
-
-    def help(self):
-        """Display some useful information about how to use the shell."""
-        self.write(self.helpText)
-
-    def __getattr__(self, name):
-        if hasattr(self.other, name):
-            return getattr(self.other, name)
-        else:
-            raise AttributeError, name
-
-    def __setattr__(self, name, value):
-        if self.__dict__.has_key(name):
-            self.__dict__[name] = value
-        elif hasattr(self.other, name):
-            setattr(self.other, name, value)
-        else:
-            raise AttributeError, name
-
-    def _getAttributeNames(self):
-        """Return list of magic attributes to extend introspection."""
-        list = [
-            'about',
-            'ask',
-            'autoCallTip',
-            'autoComplete',
-            'autoCompleteCaseInsensitive',
-            'autoCompleteIncludeDouble',
-            'autoCompleteIncludeMagic',
-            'autoCompleteIncludeSingle',
-            'clear',
-            'pause',
-            'prompt',
-            'quit',
-            'redirectStderr',
-            'redirectStdin',
-            'redirectStdout',
-            'run',
-            'runfile',
-            'wrap',
-            'zoom',
-            ]
-        list.sort()
-        return list
-
 
 class Shell(editwindow.EditWindow):
     """Shell based on StyledTextCtrl."""

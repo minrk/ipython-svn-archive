@@ -1,4 +1,19 @@
-""" This module is used currently only for testing. """
+""" Main nbshell module. To run nbshell simply type
+    > python2.4 Main.py 
+"""
+
+#*****************************************************************************
+#       Copyright (C) 2005 Tzanko Matev. <tsanko@gmail.com>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+from nbshell import Release
+__author__  = '%s <%s>' % Release.author
+__license__ = Release.license
+__version__ = Release.version
+
 import sys
 import os
 import re
@@ -9,6 +24,7 @@ except:
     pass #I will try to run it, but it might not work
 
 import wx
+from nbshell import ipnNotebookWidget,ipnDocument,frame
 from ipnNotebookWidget import * # in case you wonder ipn comes from Interactive Python Notebook 
 from ipnDocument import *
 from frame import ipnFrame
@@ -29,7 +45,7 @@ class App(wx.App):
         for module in modlist:
             try:
                 dict = globals().copy()
-                exec "from "+module[0:-3] +" import GetPluginFactory" in dict
+                exec "from nbshell."+module[0:-3] +" import GetPluginFactory" in dict
             except:
                 if module[0:-3]=="PythonPlugin":
                     raise
@@ -41,13 +57,14 @@ class App(wx.App):
     
     def OnInit(self):
         self.RegisterPlugins()
-        self.frame = ipnFrame(None, -1, "wxNotebook Test Frame", size = (640, 480))
+        self.frame = ipnFrame(None, -1, "", size = (640, 480))
         self.notebook = ipnNotebook(self.frame, -1, size = self.frame.GetClientSizeTuple(), style = wx.VSCROLL|wx.HSCROLL)
         self.document = ipnDocument(self, self.notebook)
         self.frame.OnInit(self)
         self.frame.Show()
         self.SetTopWindow(self.frame)
-        self.Demo()
+        self.frame.OnNew()
+        #self.Demo()
         return True
 
   
@@ -76,9 +93,9 @@ class App(wx.App):
         self.document.LoadFile(file)
 
 
-def main():
+def start():
     app = App()
     app.MainLoop()
 
 if __name__ == '__main__':
-    main()
+    start()

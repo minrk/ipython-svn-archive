@@ -1,3 +1,16 @@
+#*****************************************************************************
+#       Copyright (C) 2005 Tzanko Matev. <tsanko@gmail.com>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+from nbshell import Release
+__author__  = '%s <%s>' % Release.author
+__license__ = Release.license
+__version__ = Release.version
+
+
 import wx
 
 
@@ -27,7 +40,7 @@ class ipnNotebook (wx.ScrolledWindow):
 #        self.vscrollpos = 0
 #        self.hscrollpos = 0
         self.vsize = 0
-        self.hsize = 2000 # TODO this should be set somewhere, but where?
+        self.hsize = 2000 # TODO: This must not be set explicitly
         self.AdjustScrollbars()
         self.SetBackgroundColour(wx.WHITE)
         wx.EVT_SIZE(self, self.OnSize)
