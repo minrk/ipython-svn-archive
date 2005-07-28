@@ -38,21 +38,30 @@ class App(wx.App):
     plugin_dict = {0:0}
     def RegisterPlugins(self):
         """Seeks for plugins and gets their factory objects"""
-        dirlist = os.listdir(self.plugin_dir)
-        regexpr = re.compile('\.py$') #TODO: check if this works for Unicode
-        modlist = filter(lambda x:regexpr.search(x)!=None,dirlist) 
-        #print modlist #dbg
-        for module in modlist:
-            try:
-                dict = globals().copy()
-                exec "from nbshell."+module[0:-3] +" import GetPluginFactory" in dict
-            except:
-                if module[0:-3]=="PythonPlugin":
-                    raise
-            else:
-                factory = dict["GetPluginFactory"]()
-                #print factory.GetString() #dbg
-                self.plugin_dict[factory.string]=factory
+        #dirlist = os.listdir(self.plugin_dir)
+        #regexpr = re.compile('\.py$') #TODO: check if this works for Unicode
+        #modlist = filter(lambda x:regexpr.search(x)!=None,dirlist) 
+        ##print modlist #dbg
+        #for module in modlist:
+        #    try:
+        #        dict = globals().copy()
+        #        exec "from nbshell."+module[0:-3] +" import GetPluginFactory" in dict
+        #    except:
+        #        if module[0:-3]=="PythonPlugin":
+        #            raise
+        #    else:
+        #        factory = dict["GetPluginFactory"]()
+        #        #print factory.GetString() #dbg
+        #        self.plugin_dict[factory.string]=factory
+
+        # Currently there are only two plugins, so we simply add them
+        from nbshell.PythonPlugin import GetPluginFactory
+        factory = GetPluginFactory()
+        self.plugin_dict[factory.string] = factory
+        from nbshell.PlainTextPlugin import GetPluginFactory
+        factory = GetPluginFactory()
+        self.plugin_dict[factory.string] = factory
+        del(GetPluginFactory)
 
     
     def OnInit(self):
