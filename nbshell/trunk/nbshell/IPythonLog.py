@@ -45,9 +45,11 @@ class IPythonLog(object):
         self.log = notebook.get_log(logid)
         self.logid = logid
         self.lastrun = -1 #the last input that is run
+        self.last = False
         #Here I will sort the cells, according to their numbers
         self.log[:] = sorted(self.log, key = lambda x:int(x.attrib['number']))
-
+        #Append the empty element at the end
+        self.SetLastInput()
         #Set up the interpreter
         #For now we will keep our own excepthook
         self.stdin_orig = sys.stdin
@@ -70,7 +72,35 @@ class IPythonLog(object):
         #set up wrapper to use for long output
         self.wrapper = textwrap.TextWrapper()
         #end shell initialization
+    
+    # TODO:All logs have one cell with empty input. This is the cell where the
+    # user will insert an input. Since this cell should not be part of the
+    # notebook file it is deleted before the file is saved. The two methods
+    # below are used for inserting and deleting this cell. However, there is
+    # some spagetti code here, because ProcessLine() also appends a new empty
+    # input after it has run the current input. Fix this
+    def SetLastInput(self):
+        """Append a cell with an empty input at the end of the log. This is
+        called whenever a log is created."""
+        if not self.last:
+            self.Append(input = '\n\n')
+            self.last = True
         
+    def ClearLastInput(self):
+        """Clear the empty input at the end of the log."""
+        if self.last:
+            del(self.log[-1])
+            self.last = False
+    
+    def LastCell(self):
+        """Return the last number of the last cell"""
+        if self.last:
+            return notebook.Cell(self.log[-1])
+        else:
+            
+            raise Exception, "SetLastInput not called"
+    lastcell = property(fget = LastCell)
+            
     #TODO: I should support interactive input. Fix this.
     def readline(self, size):
         return ""
@@ -105,7 +135,7 @@ class IPythonLog(object):
         Returns the cell. Number is used only if the log is empty."""
         l = len(self.log)
         if l != 0 :
-            number = int(self.log[l-1].attrib['number'])+1
+            number = int(self.log[-1].attrib['number'])+1
         elem = etree.Element('cell', number=str(number))
         self.log.append(elem)
         se = etree.SubElement(elem, 'input')
@@ -136,16 +166,19 @@ class IPythonLog(object):
         
         if number == None:
             return self.__run(notebook.Cell(self.log[-1]))
-        
-        cells = sorted((Cell(x) for x in self.log.xpath('\\cell[@number>=%d'%(number,))), key = lambda x:x.number)
+        expr = '//cell[@number>=%d]'%(number,)
+        print expr #dbg
+        cells = sorted((notebook.Cell(x) for x in self.log.xpath(expr)), key =
+                       lambda x:x.number)
                 
         for cell in cells:
             if not self.__run(cell):
                 return False
         return True
 
-    def __reset(self):
+    def Reset(self):
         """ Resets the interpreter, namespace etc """
+        self.interp.reset()
         pass
     
     def __run(self, cell):
@@ -155,6 +188,9 @@ class IPythonLog(object):
         self.output = findnew(cell.element, 'output')
         self.stdout = findnew(cell.element, 'stdout')
         self.stderr = findnew(cell.element, 'stderr')
+        self.output.text = ''
+        self.stdout.text = ''
+        self.stderr.text = ''
         
         cout = StringIO.StringIO()
         cerr = StringIO.StringIO()
@@ -204,7 +240,5 @@ class IPythonLog(object):
     
     def displayhook(self, obj):
         print >> self.stdout_orig,  'displayhook called' #dbg
-        if self.output.text is None:
-            self.output.text = '\n' + str(obj) + '\n'
-        else:
-            self.output.text += str(obj) + '\n'
+        # We want to keep only the last output
+        self.output.text = '\n' + str(obj) + '\n'

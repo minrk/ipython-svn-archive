@@ -24,6 +24,8 @@ except:
     pass #I will try to run it, but it might not work
 
 import wx
+
+import utils
 from nbshell import ipnNotebookWidget,ipnDocument,frame
 from ipnNotebookWidget import * # in case you wonder ipn comes from Interactive Python Notebook 
 from ipnDocument import *

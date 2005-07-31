@@ -114,59 +114,6 @@ class PlainTextDocumentPlugin(object):
 
     text = property(GetText, SetText, Clear, doc = """The text contained in this instance""")
     
-    def LoadData(self, data=None):
-        """Loads data in the object. If "data" is None then clears all data"""
-        
-        #There is a philosophical problem with Scintilla here. All its 
-        #functionality is in the widget object. They do not have an object of
-        #a separate type handling data. Well, they actually do, but it can do
-        #nothing with the data it conatains. So that's why when the view is
-        #created it will add a member self.data which is simply a reference
-        #to the Scintilla widget. And I will pretend, that I don't know this
-        #and will only use its functionality for handling data.
-        if (self.view is None):
-            self.text = data #here self.data is not yet created
-        else:
-            if data is None:
-                self.data.ClearAll()
-            else:
-                self.data.SetText(data)
-            self.view.Update()
-
-    def LoadEncoded(self, itr, args):
-        
-        self.Clear()
-        if self.view is None:
-            for line in itr:
-                self.text = self.text+line
-        else:
-            for line in itr:
-                self.data.AddText(line)
-        self.view.Update()
-
-    def GetArgs(self):
-        return ("plaintext",)
-    
-    def Serialize(self, file=None, encodefunc = None):
-        """Stores data in file. If the type of the plugin is raw, then
-        the "file" parameter contains a file object where data should be
-        written. If the type is encoded then the encodefunc parameter contains
-        a function which should be called for each line of text which should 
-        be serialized
-        """
-        #Here I assume that noone uses the document plugin without creating a
-        #view plugin, which initializes self.data
-        #TODO: fix it someday (yeah right :)
-        linecnt = self.data.GetLineCount()
-        [encodefunc(self.data.GetLine(x)) for x in range(0, linecnt-1)]
-    
-    #def SetView(self, view):
-    #    """Set the view for the plugin"""
-    #    self.view=view
-    
-    #def GetViewPlugin(self, view):
-    #    return self.view
-
     def GetFactory(self):
         return PlainTextPluginFactory()
 
@@ -177,7 +124,8 @@ class PlainTextNotebookViewPlugin(object):
         self.doc = docplugin
         self.doc.view = self
         self.window = None
-        self.document = docplugin.document
+        #self.document = docplugin.document
+        self.sheet = docplugin.sheet
 
     def GetFirstId(self):
         """ This view is responsible for a list of consequent windows in the
@@ -200,7 +148,7 @@ class PlainTextNotebookViewPlugin(object):
             if self.doc.index == 0: #put the window at the beginning of the document
                 self.view.InsertCell(self.window, 0, update=False)
             else:
-                prevcell = self.document.GetCell(self.doc.index-1)
+                prevcell = self.sheet.GetCell(self.doc.index-1)
                 viewplugin = prevcell.view
                 #print self.doc.index #dbg
                 #print viewplugin #dbg

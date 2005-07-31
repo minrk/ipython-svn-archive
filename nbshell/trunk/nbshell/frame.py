@@ -14,12 +14,24 @@ __version__ = Release.version
 
 import wx
 
+def idgen():
+    id = wx.ID_HIGHEST
+    while True:
+        id +=1
+        yield id
+id_iter = idgen()
+
+#File menu identifiers
 ID_NEW = wx.ID_NEW
 ID_OPEN  = wx.ID_OPEN
 ID_SAVE = wx.ID_SAVE
 ID_SAVEAS = wx.ID_SAVEAS
 ID_EXIT = wx.ID_EXIT
 ID_ABOUT = wx.ID_ABOUT
+
+#NBShell menu identifiers
+ID_RERUN = id_iter.next()
+
 class ipnFrame(wx.Frame):
     def __init__ (self, parent, id, title, pos=wx.DefaultPosition,
                   size=wx.DefaultSize, style=wx.DEFAULT_FRAME_STYLE, name="myframe"):
@@ -58,8 +70,13 @@ class ipnFrame(wx.Frame):
         wx.EVT_MENU(self, ID_OPEN, self.OnOpen)
         wx.EVT_MENU(self, ID_SAVE, self.OnSave)
         wx.EVT_MENU(self, ID_SAVEAS, self.OnSaveAs)
+        
+        nbshellmenu = wx.Menu()
+        nbshellmenu.Append(ID_RERUN, "&Rerun", "Rerun the notebook")
+        wx.EVT_MENU(self, ID_RERUN, self.OnRerun)
         menu = wx.MenuBar()
         menu.Append(filemenu, "&File")
+        menu.Append(nbshellmenu, "&NBShell")
         self.SetMenuBar(menu)
 
     def OnClose(self, evt):
@@ -116,7 +133,7 @@ class ipnFrame(wx.Frame):
                 #print repr(inst) #dbg
                 dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
                 dlg.ShowModal()
-                #raise #dbg
+                raise #dbg
                 return None
             else:
                 self.SetTitle(self.app.document.fileinfo['name'])
@@ -131,7 +148,7 @@ class ipnFrame(wx.Frame):
                 #print repr(inst) #dbg
                 dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
                 dlg.ShowModal()
-                #raise #dbg
+                raise #dbg
     
     def OnSaveAs(self, evt = None):
         dlg = wx.FileDialog(self, "Choose a File", \
@@ -149,10 +166,11 @@ class ipnFrame(wx.Frame):
                 #print repr(inst) #dbg
                 dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
                 dlg.ShowModal()
-                #raise #dbg
+                raise #dbg
                 return None
             else:
                 self.SetTitle(self.app.document.fileinfo['name'])
                 self.app.document.fileinfo['untitled'] = False
                 
-
+    def OnRerun(self,evt):
+        self.app.document.Rerun()

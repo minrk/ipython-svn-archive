@@ -20,23 +20,6 @@ from notabene import notebook
 from nbshell import IPythonLog
 from nbshell import Sheet
 
-class FileSyntaxError(Exception):
-    """Thrown in document.LoadFile when a syntax error ocurred while
-    reading the file"""
-    def __init__(self, f, lineno, msg = ""):
-        """Initialization. "f" is the file object usually pointing
-        near the position where the error ocurred. "lineno" is the line
-        number of the file starting from 1. "msg" is an optional string
-        explaining the error.
-        """
-        self.file = f
-        self.line=lineno
-        self.msg = msg
-
-    def __str__(self):
-        return "Error loading file: " + repr(f)+" at line: "+self.lineno+". "+msg
-    
-    
 class ipnDocument(object):
     def __init__(self, app, notebookview):
         
@@ -46,7 +29,7 @@ class ipnDocument(object):
         self.view = notebookview
         self.app = app
         self.factory = self.app.plugin_dict
-        self.celllist = [] 
+        #self.celllist = [] 
         self.fileinfo = { # contains various information of the file
                            # currently being edited
             "init":False, # This must be True when the
@@ -61,62 +44,32 @@ class ipnDocument(object):
             }
         self.DefaultNotebook() #Initialize notebook, logs, sheet
 
-    def InsertCell(self, type, pos=-1, update = True, **kwds):
-        """Inserts a cell of the given type with the given data at the given
-        pos. If pos=-1 insert at the end. **kwds is passed to the
-        plugin.Returns an instance to the cell"""
-        factory = self.factory[type]
-        cell = factory.CreateDocumentPlugin(self, **kwds)
-        view = factory.CreateViewPlugin(cell, self.view)
-        if pos == -1:
-            self.addCell(cell)
-        else:
-            self.insertCell(cell, index)
-        view.Update()
-        if update : self.view.Update()
-        return cell
-    
-
     def DefaultNotebook(self):
         """Create a default empty notebook"""
         self.Clear()
         self.notebook = notebook.Notebook('untitled.nbk')
         self.logs = {'default-log':IPythonLog.IPythonLog(self, self.notebook, 'default-log')}
         etree.SubElement(self.notebook.root, 'sheet', format='rest')
-        self.sheet = Sheet.Sheet(self, self.notebook)
+        self.sheet = Sheet.Sheet(self, self.notebook, self.view, self.factory)
         self.fileinfo['init'] = True
         self.fileinfo['path'] = os.getcwd()
         self.fileinfo['name'] = 'untitled.nbk'
         self.fileinfo['modified'] = False
         self.fileinfo['untitled'] = True
-        
-        log = self.logs['default-log']
-        log.Append('\n\n')
-        block = etree.XML("""
-<ipython-block id="default-log">
-    <ipython-input number="0"/>
-</ipython-block>
-""")
-        self.sheet.element.append(block)
-        self.InsertCell('python', ipython_block = block)
-        self.view.Update()
+        self.sheet.DefaultSheet()
         self.SetSavePoint()
         
     def Clear(self):
-        """Clears the document. Does not ask for confirmation."""
+        """Clears the document. Does not ask for confirmation. Clear does not
+        create a viewable notebook. You should call DefaultNotebook instead"""
         self.fileinfo["init"] = False
-        l = len(self.celllist)
-        for i in range(l):
-            cell = self.celllist[-1]
-            cell.view.Close(update=False)
-            self.delCell(cell.index)
         
-        
+        #Call self.sheet.Clear to update the view
+        if self.sheet is not None:
+            self.sheet.Clear()
         self.notebook = None
         self.logs = {}
         self.sheet = None
-        self.view.Update()
-        
 
     def LoadFile(self, filename, overwrite = False):
         """Loads the file with the given filename. If there is currently a
@@ -134,7 +87,13 @@ class ipnDocument(object):
             self.notebook = notebook.Notebook.from_file(filename)
             logids = self.notebook.root.xpath('//ipython-log/@id')
             self.logs = dict((x, IPythonLog.IPythonLog(self,self.notebook,x)) for x in logids)
-            self.sheet = Sheet.Sheet(self, self.notebook)
+            # Append an empty cell at the end of each log
+            [self.logs[x].SetLastInput() for x in self.logs]
+            self.sheet = Sheet.Sheet(self, self.notebook, self.view, self.factory)
+            # append the empty inputs in the sheet
+            self.sheet.Update(update = False)
+            self.sheet.SetLastInputs(update = True)
+            etree.dump(self.notebook.root) #dbg
             # Set up the fileinfo structure
             import os #dbg
             self.fileinfo["init"] = True
@@ -147,31 +106,18 @@ class ipnDocument(object):
             self.Clear()
             raise
         
-        #3. Create the plugins that display the content. TODO: This should not be here
-        if self.sheet.element.text is not None:
-            self.InsertCell('plaintext',update=False,element = self.sheet.element)
-        for elem in self.sheet.element:
-            self.InsertCell('python', update=False, ipython_block = elem)
-            if elem.tail is None:
-                elem.tail = ''
-            self.InsertCell('plaintext', update=False, element = elem)
-        self.view.Update()
+        #3. Update the sheet. 
         self.SetSavePoint() 
         return True
     
     def IsModified(self):
         """returns if the file has been modified since last save"""
-        for cell in self.celllist:
-            if cell.modified:
-                return True
-        return False
+        return self.sheet.modified
     
     def SetSavePoint(self):
         """ Sets the save point of the document. It is used to determine if
         the document was modified after the last save"""
-        for cell in self.celllist:
-            cell.SetSavePoint()
-
+        self.sheet.SetSavePoint()
 
     def SaveFile(self, filename = None):
         """Saves the file. If filename is given use this as a file name and
@@ -188,11 +134,19 @@ class ipnDocument(object):
         mod = self.fileinfo['modified']
         try:
             #1. update the data from the views
-            for doccell in self.celllist:
-                doccell.view.UpdateDoc()
-            print 'root-> %s'%str(self.notebook.root)
-            etree.dump(self.notebook.root)
+            self.sheet.UpdateDoc()
+            #print 'root-> %s'%str(self.notebook.root) #dbg
+            etree.dump(self.notebook.root) #dbg
+
+            # delete the last inputs in the sheet
+            self.sheet.ClearLastInputs()
+            # delete the last empty cell in the logs
+            [self.logs[x].ClearLastInput() for x in self.logs]
+            #. write to the file
             self.notebook.write(filename)
+            #. set the last inputs again
+            [self.logs[x].SetLastInput() for x in self.logs]
+            self.sheet.SetLastInputs()
         except:
             self.fileinfo['modified'] = mod
             raise
@@ -202,30 +156,12 @@ class ipnDocument(object):
         self.fileinfo['modified'] = False
         self.SetSavePoint()
 
-    def addCell(self, cell):
-        self.celllist.append(cell)
-        cell.index = len(self.celllist) - 1
-        
-
-    def delCell(self, index):
-        del(self.celllist[index])
-        def f(x):
-            self.celllist[x].index = x
-            return None
-        map(f, range(index, len(self.celllist))) # fix the indeces of the cells
-        #self.view.delCell(index) # delete the window at the end,
-                                 # because the windows might need to
-                                 # know their new indeces while relaying out
-
-    def insertCell(self, cell, index):
-        cell.index = index
-        self.celllist.insert(cell, index)
-        def f(x):
-            self.cellist[x].index = x
-            return None
-        map(f, range(index, len(self.celllist))) # fix the indeces of the cells
-        #self.view.insertCell(cell.GetWindow()) # see the comment at delCell
-    
-    def GetCell(self, index):
-        return self.celllist[index]
-
+    def Rerun(self):
+        """Reruns all logs"""
+        for key in self.logs:
+            self.logs[key].Reset()
+            self.logs[key].Run(0)
+        #Update the sheet without recreating the celllist
+        print "The rerun notebook"
+        etree.dump(self.notebook.root) #dbg
+        self.sheet.Update(celllist = False)

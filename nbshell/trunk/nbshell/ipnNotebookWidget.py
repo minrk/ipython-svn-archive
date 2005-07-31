@@ -59,7 +59,7 @@ class ipnNotebook (wx.ScrolledWindow):
         """
         return  sum([self.celllist[i].GetSizeTuple()[1] for i in range(index)], 0)
         
-    def Update(self):
+    def Update(self, plugins = False):
         """Updates the view. Does not call the Update methods of the view
         plugins"""
         self.RelayoutCells(index=0)

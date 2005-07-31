@@ -102,6 +102,7 @@ class PythonDocumentPlugin(object):
         """Initialization. ipython-block is a Elemtent object holding a
         <ipython-block> tag"""
         self.document = document
+        self.sheet = document.sheet
         self.block = ipython_block #TODO: a better name?
         self.logid = self.block.get('logid', 'default-log') 
         self.log = document.logs[self.logid]
@@ -110,8 +111,8 @@ class PythonDocumentPlugin(object):
         self.index = None   #Set by AddCell, InsertCell, DeleteCell
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
-        print "block:"
-        etree.dump(self.block) #dbg
+        #print "block:"
+        #etree.dump(self.block) #dbg
         self.cells = [notebook.Cell(self.notebook.get_cell(x.attrib['number'],self.logid))\
                       for x in self.block]
 
@@ -140,55 +141,6 @@ class PythonDocumentPlugin(object):
         #print "type-> %s"%(type,) #dbg
         return (type, self.cells[id].element.find(type))
 
-    #def LoadData(self, data=None):
-    #    """Loads data in the object. If "data" is None then clears all data"""
-    #    return #well we do nothing here
-    #
-    #    if (self.view is None):
-    #        self.text = data #here self.data is not yet created
-    #    else:
-    #        if data is None:
-    #            self.data.ClearAll()
-    #        else:
-    #            self.data.SetText(data)
-    #        self.view.Update()
-
-    #def LoadEncoded(self, itr, args):
-    #    
-    #    self.Clear()
-    #    if self.view is None:
-    #        for line in itr:
-    #            self.text = self.text+line
-    #    else:
-    #        for line in itr:
-    #            self.data.AddText(line)
-    #    self.view.Update()
-
-    def GetArgs(self):
-        return ("python",)
-    
-    #def Serialize(self, file=None, encodefunc = None):
-        #"""Stores data in file. If the type of the plugin is raw, then
-        #the "file" parameter contains a file object where data should be
-        #written. If the type is encoded then the encodefunc parameter contains
-        #a function which should be called for each line of text which should 
-        #be serialized
-        #"""
-        ##Here I assume that noone uses the document plugin without creating a
-        ##view plugin, which initializes self.data
-        ##TODO: fix it someday (yeah right :)
-        #linecnt = self.data.GetLineCount()
-        #[encodefunc(self.data.GetLine(x)) for x in range(0, linecnt-1)]
-    
-    #def SetView(self, view):
-    #"    """Set the view for the plugin"""
-    #    self.view=view
-    
-    #def GetViewPlugin(self, view):
-    #    return self.view
-
-
-    
     def GetFactory(self):
         return PlainTextPluginFactory()
 
@@ -205,7 +157,8 @@ class PythonNotebookViewPlugin(object):
         self.doc = docplugin
         self.doc.view = self
         self.window = None
-        self.document = docplugin.document
+        #self.document = docplugin.document
+        self.sheet = docplugin.sheet
 
     def GetFirstId(self):
         """ This view is responsible for a list of consequent windows in the
@@ -233,7 +186,7 @@ class PythonNotebookViewPlugin(object):
             self.view.InsertCell(self.window, 0, update=False)
         else:
             #print "adding cell" #dbg
-            prevcell = self.document.GetCell(self.doc.index-1)
+            prevcell = self.sheet.GetCell(self.doc.index-1)
             viewplugin = prevcell.view
             #print self.doc.index #dbg
             #print viewplugin #dbg
@@ -277,9 +230,12 @@ class PythonNotebookViewPlugin(object):
         outtext = StringIO.StringIO() 
         for i, cell in enumerate(cells):
             number =  cell.number
-            #print 'i-> %d'%(i,) #dbg
+            print 'i-> %d'%(i,) #dbg
             type, elem = self.doc.GetStuff(i)
-            #print type #dbg
+            print 'Result form GetStuff' #dbg
+            print type #dbg
+            print elem #dbg
+            etree.dump(elem) #dbg
             text = elem.text[1:] #The first symbol is '\n'
             tmp = 0
             if i == last:
@@ -384,8 +340,11 @@ class PythonNotebookViewPlugin(object):
         if item is None:# we are in a empty separator line so do nothing
             return
         doc_id = item[0]
-        if doc_id < len(self.doc.block)-1: #This is not the last line, so do nothing
+        #check if the input belongs to the last cell in the log
+        if self.doc.cells[doc_id].element is not self.doc.log.log[-1]:
             return
+#        if doc_id < len(self.doc.block)-1: #This is not the last line, so do nothing
+#            return
         #try to run the current input. If it needs more, insert a line and continue editing
         if self.doc.log.Run(): # we have run the text and generated output
             #1. append stderr
@@ -495,8 +454,8 @@ class Shell(editwindow.EditWindow):
         self.id = self.GetId()
         self.parent = parent
         self.view = view
-        self.document = view.doc
-        self.log = self.document.log
+        #self.document = view.doc
+        #self.log = self.document.log
         self.line2log = [] # For each line in the window contains a tuple of
                            # the id of the corresponding part of the document and
                            # the corresponding line in the text in the log
