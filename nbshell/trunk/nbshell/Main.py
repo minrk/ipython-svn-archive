@@ -105,7 +105,7 @@ class App(wx.App):
 
 
 def start():
-    app = App()
+    app = App(redirect=False)
     app.MainLoop()
 
 if __name__ == '__main__':
