@@ -30,13 +30,8 @@ from notabene import notebook
 
 from lxml import etree
 
-def findnew(element, tag):
-    """Tries to find the tag in the element. If there is no such element,
-    creates one"""
-    el = element.find(tag)
-    if el is None:
-        el = etree.SubElement(element, tag)
-    return el
+from nbshell.utils import findnew
+
 
 class IPythonLog(object):
     def __init__(self, doc, notebook, logid, *args, **kwds):
@@ -44,7 +39,6 @@ class IPythonLog(object):
         self.notebook = notebook
         self.log = notebook.get_log(logid)
         self.logid = logid
-        self.lastrun = -1 #the last input that is run
         self.last = False
         #Here I will sort the cells, according to their numbers
         self.log[:] = sorted(self.log, key = lambda x:int(x.attrib['number']))
@@ -145,6 +139,11 @@ class IPythonLog(object):
             se.text = str(output)
         return notebook.Cell(elem)
     
+    def Remove(self, cell):
+        """Removes the given cell from the log. cell is an object of type
+        Cell"""
+        self.log.remove(cell.element)
+    
     def Clear(self):
         
         self.log.clear()
@@ -167,7 +166,7 @@ class IPythonLog(object):
         if number == None:
             return self.__run(notebook.Cell(self.log[-1]))
         expr = '//cell[@number>=%d]'%(number,)
-        print expr #dbg
+        #print expr #dbg
         cells = sorted((notebook.Cell(x) for x in self.log.xpath(expr)), key =
                        lambda x:x.number)
                 
@@ -223,7 +222,7 @@ class IPythonLog(object):
             cell.element.remove(self.output)
         else:
             self.output.text = self.wrapper.fill(self.output.text) + '\n'#wrap the output
-            print 'wrapped output ->', self.output.text #dbg
+            #print 'wrapped output ->', self.output.text #dbg
         del self.output
         if self.stdout.text is None:
             cell.element.remove(self.stdout)
@@ -239,6 +238,6 @@ class IPythonLog(object):
             return True
     
     def displayhook(self, obj):
-        print >> self.stdout_orig,  'displayhook called' #dbg
+        #print >> self.stdout_orig,  'displayhook called' #dbg
         # We want to keep only the last output
         self.output.text = '\n' + str(obj) + '\n'

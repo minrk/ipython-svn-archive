@@ -1,0 +1,17 @@
+08.01.2005:
+	* Changed behaviour to suport multiline inputs. Now when the user
+	presses Enter, we simply insert a new line at the place of the
+	cursor. Input is executed when the user presses Shift-Enter
+
+	* Added support for editing and execution of arbitrary input
+	cells.
+
+07.31.2005:
+	* Changed PythonPlugin to support the <ipython-cell type='...'>
+	format of elements in <ipython-block>
+
+	* Changed the algorithm by which outputs are displayed after a
+	cell is rerun
+
+	
+	

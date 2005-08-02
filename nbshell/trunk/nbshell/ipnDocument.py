@@ -91,8 +91,9 @@ class ipnDocument(object):
             [self.logs[x].SetLastInput() for x in self.logs]
             self.sheet = Sheet.Sheet(self, self.notebook, self.view, self.factory)
             # append the empty inputs in the sheet
-            self.sheet.Update(update = False)
-            self.sheet.SetLastInputs(update = True)
+            self.sheet.Update(update = False, cellist = True, dicts = True)
+            self.sheet.SetLastInputs(update = False)
+            self.sheet.Update(update = True)
             etree.dump(self.notebook.root) #dbg
             # Set up the fileinfo structure
             import os #dbg
@@ -164,4 +165,4 @@ class ipnDocument(object):
         #Update the sheet without recreating the celllist
         print "The rerun notebook"
         etree.dump(self.notebook.root) #dbg
-        self.sheet.Update(celllist = False)
+        self.sheet.Update(update = True, output = True)

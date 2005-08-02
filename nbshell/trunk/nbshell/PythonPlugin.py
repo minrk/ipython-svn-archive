@@ -34,6 +34,7 @@ from lxml import etree
 from notabene import notebook
 
 from nbshell import editwindow
+from nbshell.utils import findnew
 
 NAVKEYS = (wx.WXK_END, wx.WXK_LEFT, wx.WXK_RIGHT,
            wx.WXK_UP, wx.WXK_DOWN, wx.WXK_PRIOR, wx.WXK_NEXT)
@@ -113,8 +114,9 @@ class PythonDocumentPlugin(object):
                             #multiple views there should be some modifications
         #print "block:"
         #etree.dump(self.block) #dbg
-        self.cells = [notebook.Cell(self.notebook.get_cell(x.attrib['number'],self.logid))\
-                      for x in self.block]
+        self.cells = \
+        [notebook.Cell(self.notebook.get_cell(x.attrib['number'],self.logid))\
+         for x in self.block]
 
 
     def Clear(self):
@@ -132,12 +134,12 @@ class PythonDocumentPlugin(object):
 
     
     def GetStuff(self, id): #TODO: a better name
-        """Returns a tuple (type, elem) where type is the tag of the id'th
-        element in self.block with the 'ipython-' string stripped and elem is
-        the the corresponding element in the cell in the log"""
+        """Returns a tuple (type, elem) where type is the type of the id'th
+        element in self.block and elem is the the corresponding element in the
+        cell in the log"""
         
         #print "id -> %s"%(str(id),) #dbg
-        type = self.block[id].tag[8:]
+        type = self.block[id].attrib['type']
         #print "type-> %s"%(type,) #dbg
         return (type, self.cells[id].element.find(type))
 
@@ -230,12 +232,12 @@ class PythonNotebookViewPlugin(object):
         outtext = StringIO.StringIO() 
         for i, cell in enumerate(cells):
             number =  cell.number
-            print 'i-> %d'%(i,) #dbg
+            #print 'i-> %d'%(i,) #dbg
             type, elem = self.doc.GetStuff(i)
-            print 'Result form GetStuff' #dbg
-            print type #dbg
-            print elem #dbg
-            etree.dump(elem) #dbg
+            #print 'Result form GetStuff' #dbg
+            #print type #dbg
+            #print elem #dbg
+            #etree.dump(elem) #dbg
             text = elem.text[1:] #The first symbol is '\n'
             tmp = 0
             if i == last:
@@ -330,66 +332,81 @@ class PythonNotebookViewPlugin(object):
 
     def ProcessLine(self):
         """Process the line of text at which the user hits Enter."""
-        #Update the log
-        #TODO: remove this, as currently only the last element can be edited
-        self.UpdateDoc()
-        #etree.dump(self.doc.block) #dbg
         linenum = self.window.GetCurrentLine()
         #print "linenum->", linenum #dbg
         item = self.line2log[linenum]
         if item is None:# we are in a empty separator line so do nothing
             return
         doc_id = item[0]
-        #check if the input belongs to the last cell in the log
-        if self.doc.cells[doc_id].element is not self.doc.log.log[-1]:
+        (type, elem) = self.doc.GetStuff(doc_id)
+        if type not in ['input', 'special']:
+            #This is an output element so do nothing
             return
-#        if doc_id < len(self.doc.block)-1: #This is not the last line, so do nothing
-#            return
-        #try to run the current input. If it needs more, insert a line and continue editing
-        if self.doc.log.Run(): # we have run the text and generated output
-            #1. append stderr
-            if self.doc.cells[doc_id].element.find('stderr') is not None:
-                elem = etree.Element("ipython-stderr", number = str(self.doc.cells[doc_id].number))
-                self.doc.block.append(elem)
-                self.doc.cells.append(self.doc.cells[doc_id])
-            #2. append stdout
-            if self.doc.cells[doc_id].element.find('stdout') is not None:
-                elem = etree.Element("ipython-stdout", number = str(self.doc.cells[doc_id].number))
-                self.doc.block.append(elem)
-                self.doc.cells.append(self.doc.cells[doc_id])
-            #3. append output
-            if self.doc.cells[doc_id].element.find('output') is not None:
-                elem = etree.Element("ipython-output", number = str(self.doc.cells[doc_id].number))
-                self.doc.block.append(elem)
-                self.doc.cells.append(self.doc.cells[doc_id])
-            #Create a new input and append it at the end of the block
-            cell = self.doc.log.Append("\n\n") #each input starts and ends with a newline
-            elem = etree.Element("ipython-input", number = str(cell.number))
-            self.doc.block.append(elem)
-            self.doc.cells.append(cell)
-            #etree.dump(self.document.notebook.root) #dbg
-            self.Update()
-        else: #We need more input, simply insert a line
+        
+        #Retrieve the text of the input
+        startline = linenum - item[1] + 1 #the counting of lines starts from 1
+        #promptlen is the same for all lines in one input
+        promptlen = self.PromptLen(linenum) 
+        text = '\n'
+        i = startline
+        l = len(self.line2log)
+        while i<l and self.line2log[i] is not None and \
+              self.line2log[i][0] == item[0]:
+            linetext = self.window.GetLine(i)[promptlen:]
+            if linetext == '':
+                linetext = '\n'
+            elif linetext[-1]!='\n':
+                linetext = linetext + '\n'
+            text = text + linetext
+            i+=1
 
-            # We insert the line in the window. We could insert the line in the
-            # log and then call Update, but that will be slower
-
-            # 1. calculate the witespace characters we need to insert
-            promptlen = self.PromptLen(linenum)
-            line = self.window.GetLine(linenum)
-            i = promptlen
-            l = len(line)
-            while i<l and line[i].isspace():
-                i+=1
-            header = '\n' + '.'*(promptlen-1)+' ' + line[promptlen:i]
-            # 2. Insert the new line and set the cursor at its end
-            pos = self.window.GetLineEndPosition(linenum)
-            self.window.InsertText(pos, header)
-            self.window.GotoPos(pos + len(header)) 
-            self.line2log[linenum+1:linenum+1] = [(item[0], item[1]+1)]
-            #TODO: Do I need toupdate the text in the log here?
-            
-
+        #Get the cell corresponding to the element
+        oldcell = self.doc.cells[doc_id]
+        lastcell = self.doc.log.lastcell
+        if oldcell.element == lastcell.element:
+            #This is the last cell of the log
+            #write text to the log
+            elem = findnew(lastcell.element,type)
+            elem.text = text
+            #try to run the current input. If it needs more, insert a line and continue editing
+            if self.doc.log.Run(): # we have run the text and generated output
+                #Update the sheet
+                self.doc.sheet.UpdateOutput(self.doc.logid,
+                                            self.doc.cells[doc_id], update = True)
+                #Create a new input and append it at the end of the block
+                cell = self.doc.log.Append("\n\n") #each input starts and ends with a newline
+                self.doc.sheet.InsertElement(self.doc, 'input', cell, \
+                                             update = True)
+            else: #We need more input, do nothing
+                # Delete the input from lastcell
+                elem.text = '\n\n'
+        else:
+            #This cell is not the last one in the log
+            print self.line2log[linenum]
+            #1.1.1 Put the input in the last cell
+            elem = findnew(lastcell.element,type)
+            elem.text = text
+            #1.1.2. Run the last cell
+            if self.doc.log.Run(): # we have run the text and generated output
+                #Replace the old cell with the new one
+                lastcell = self.doc.log.lastcell #we do this to update the attributes of lastcell
+                self.doc.sheet.ReplaceCells(self.doc.logid,\
+                                            oldcell, lastcell, update = False)
+                #Delete oldcell
+                self.doc.log.Remove(oldcell)
+                #Make a new last input
+                cell = self.doc.log.Append("\n\n") #each input starts and ends with a newline
+                self.doc.sheet.ClearLastInputs(update = False)
+                self.doc.sheet.SetLastInputs(update = False)
+                #Update the sheet
+                self.doc.sheet.UpdateOutput(self.doc.logid,
+                                            self.doc.cells[doc_id], update = False)
+                self.doc.sheet.Update()
+                return
+            else:
+                #Remove the text from lastcell
+                elem.text = '\n\n'
+                    
 
     def setCurrentInput(self, id):
         """Moves the cursor to the start of the element with the given id.
@@ -422,7 +439,6 @@ class PythonNotebookViewPlugin(object):
     
     def CanEdit(self, line):
         """Returns if the given line is editable"""
-        #TODO: Currently only the last element in the log is editable. fix this.
         #print "line -> %d"%(line,) #dbg
         #print 'line2log -> %s'%(str(self.line2log),) #dbg
         id = self.line2log[line]
@@ -430,12 +446,61 @@ class PythonNotebookViewPlugin(object):
             return False
         id = id[0]
         #Check if the number of the current cell is the number of the last cell in the log.
-        if self.doc.cells[id].number == int(self.doc.log.log[-1].attrib['number']) \
-           and self.doc.GetStuff(id)[0] == 'input':
+        #if self.doc.cells[id].number == int(self.doc.log.log[-1].attrib['number']) \
+        #   and self.doc.GetStuff(id)[0] == 'input':
+        #    return True
+        #else:
+        #    return False
+        #Check if the current cell is an input cell
+        if self.doc.GetStuff(id)[0] in ['input', 'special']:
             return True
         else:
             return False
 
+    def InsertLineBreak(self, pos = None):
+        """Insert a new line break. Does not check if the current position is
+        editable, so you should call self.window.CanEdit() before calling this
+        method."""
+        
+        if pos is None:
+            pos = self.window.GetCurrentPos()
+        
+        linenum = self.window.LineFromPosition(pos)
+        item = self.line2log[linenum]
+        if item is None:
+            #This is a separator line. Insert a new separator line after it
+            self.window.InsertText(pos,'\n')
+            self.line2log[linenum:linenum] = [None]
+        else:
+            #Check if we are inside the prompt
+            promptlen = self.PromptLen(linenum)
+            startpos = self.window.PositionFromLine(linenum)
+            if pos - startpos < promptlen:
+                #Do nothing
+                return
+            #else:
+
+            #Insert a newline and update line2log
+            line = self.window.GetLine(linenum)
+            i = promptlen
+            l = len(line)
+            while i<l and line[i].isspace():
+                i+=1
+            header = '\n' + ' '*(promptlen-4)+'... ' + line[promptlen:i]
+            # Insert the new line and set the cursor at its beginning
+            self.window.InsertText(pos, header)
+            self.window.GotoPos(pos + len(header)) 
+            # Update line2log
+            self.line2log[linenum+1:linenum+1] = [(item[0], item[1]+1)]
+            i = linenum+2
+            l = len(self.line2log)
+            while i<l and self.line2log[i] is not None and\
+                  self.line2log[i][0] == item[0]:
+                self.line2log[i] = (item[0], self.line2log[i][1]+ 1)
+                i+=1
+
+
+            
     def Close(self, update = True):
         index = self.view.GetIndex(self.id)
         self.view.DeleteCell(index, update)
@@ -674,7 +739,10 @@ class Shell(editwindow.EditWindow):
         selecting = self.GetSelectionStart() != self.GetSelectionEnd()
         # Return (Enter) is used to submit a command to the
         # interpreter.
-        if not controlDown and key == wx.WXK_RETURN:
+        if not shiftDown and key == wx.WXK_RETURN:
+            if self.CanEdit():
+                self.view.InsertLineBreak()
+        elif shiftDown and key == wx.WXK_RETURN:
             if self.CallTipActive():
                 self.CallTipCancel()
             self.view.ProcessLine()
@@ -896,12 +964,7 @@ class Shell(editwindow.EditWindow):
         # do something more interesting, like write to a status bar.
         print text
 
-    def insertLineBreak(self):
-        """Insert a new line break."""
-        if self.CanEdit():
-            self.write(os.linesep)
-            self.more = True
-            self.prompt()
+
 
     def getMultilineCommand(self, rstrip=True):
         """Extract a multi-line command from the editor.
