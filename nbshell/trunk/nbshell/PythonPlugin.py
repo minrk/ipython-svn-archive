@@ -142,6 +142,20 @@ class PythonDocumentPlugin(object):
         type = self.block[id].attrib['type']
         #print "type-> %s"%(type,) #dbg
         return (type, self.cells[id].element.find(type))
+    
+    def Split(self, pos, update = True):
+        """Splits the block at the given position. Returns a <ipython-block>
+        element with the remaining data. If update is True, updates the view.
+        """
+        
+        root = etree.Element('ipython-block', logid = self.logid)
+        for elem in self.block[pos:]:
+            root.append(elem)
+        del self.block[pos:]
+        del self.cells[pos:]
+        #TODO: spagetti
+        self.sheet.Update(dicts = True, update = update)
+        return root
 
     def GetFactory(self):
         return PlainTextPluginFactory()
@@ -239,10 +253,6 @@ class PythonNotebookViewPlugin(object):
             #print elem #dbg
             #etree.dump(elem) #dbg
             text = elem.text[1:] #The first symbol is '\n'
-            tmp = 0
-            if i == last:
-                text = text[:-1] #without the last \n
-                tmp = 1
             if type == 'input':
                 prompt = 'In[%d] '%number
             elif type == 'output':
@@ -255,6 +265,12 @@ class PythonNotebookViewPlugin(object):
             lines = text.splitlines(True)
             if lines == []:
                 lines = ['']
+
+            tmp = 0
+            if i == last:
+                lines[-1] = lines[-1][:-1] #without the last \n
+                tmp = 1
+
             #print 'lines -> %s'%str(lines) #dbg
             outtext.write('\n' + prompt + lines[0])
             if type == 'input':
@@ -407,6 +423,23 @@ class PythonNotebookViewPlugin(object):
                 #Remove the text from lastcell
                 elem.text = '\n\n'
                     
+    def InsertText(self):
+        """Inserts a text cell after the current line"""
+        linenum = self.window.GetCurrentLine()
+        #find the last input we will keep in the old cell
+        while linenum>=0 and self.line2log[linenum] is None:
+            linenum -= 1
+        if linenum < 0 :
+            #we did not find a previous cell, so do nothing
+            return
+        else:
+            pos = self.line2log[linenum][0]
+            if pos == len(self.doc.block) -1:
+                #this block has only one cell, so do nothing
+                return
+            #call sheet.InsertText
+            self.doc.sheet.InsertText(self.doc, pos+1, update = True)
+
 
     def setCurrentInput(self, id):
         """Moves the cursor to the start of the element with the given id.
@@ -737,15 +770,18 @@ class Shell(editwindow.EditWindow):
         currpos = self.GetCurrentPos()
         endpos = self.GetTextLength()
         selecting = self.GetSelectionStart() != self.GetSelectionEnd()
-        # Return (Enter) is used to submit a command to the
-        # interpreter.
+        # Return (Enter) is used to insert a new line
         if not shiftDown and key == wx.WXK_RETURN:
             if self.CanEdit():
                 self.view.InsertLineBreak()
+        #Shift-Return, (Shift-Enter) is used to execute the current input
         elif shiftDown and key == wx.WXK_RETURN:
             if self.CallTipActive():
                 self.CallTipCancel()
             self.view.ProcessLine()
+        #Ctrl-i inserts a text cell
+        elif controlDown and key in (ord('i'),ord('I')):
+            self.view.InsertText()
         # Ctrl+Return (Cntrl+Enter) is used to insert a line break.
         #elif controlDown and key == wx.WXK_RETURN:
         #    if self.CallTipActive():

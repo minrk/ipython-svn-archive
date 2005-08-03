@@ -18,6 +18,7 @@ from lxml import etree
 from notabene import notebook
 
 from nbshell import PythonPlugin
+from nbshell.utils import getindex
 
 
 class Sheet(object):
@@ -54,7 +55,8 @@ class Sheet(object):
         if pos == -1:
             self.__add_cell(cell)
         else:
-            self.__insert_cell(cell, index)
+            print 'cell-> %s, pos->%s'%(str(cell),str(pos))
+            self.__insert_cell(cell, pos)
         if update:
             view.Update()
             self.view.Update()
@@ -147,9 +149,9 @@ class Sheet(object):
 
     def __insert_cell(self, cell, index):
         cell.index = index
-        self.celllist.insert(cell, index)
+        self.celllist.insert(index, cell)
         def f(x):
-            self.cellist[x].index = x
+            self.celllist[x].index = x
             return None
         map(f, range(index, len(self.celllist))) # fix the indeces of the cells
         #self.view.insertCell(cell.GetWindow()) # see the comment at delCell
@@ -181,8 +183,7 @@ class Sheet(object):
             if logid not in passedlogs: #then this is the last block for that log
                 lastcell = log.lastcell
                 self.InsertElement(cell,'input',lastcell, update = update)
-                if update:
-                    passedlogs.update({logid:True})
+                passedlogs.update({logid:True})
         #if update:
         #    self.view.Update()
             
@@ -201,8 +202,7 @@ class Sheet(object):
             logid = cell.logid
             if logid not in passedlogs: #then this is the last block for that log
                 self.DeleteElement(cell, -1,update)
-                if update:
-                    passedlogs.update({logid:True})
+                passedlogs.update({logid:True})
         #if update:
         #    self.view.Update()
 
@@ -343,15 +343,15 @@ to insert new lines and Shift-Return to execute inputs.
             del self.sheet2sheet[(block.index,p+1)]
             self.sheet2sheet[(block.index,p)] = val
 
-    def __update_blocks(self, blocklist):
-        """Updates the view of the given list of PythonDocumentPlugin object.
-        It is possible that one object is in more than one place in the
-        list. In that case we update it only once"""
+    def __update_list(self, clist):
+        """Updates the view of the given list of cells. It is possible that
+        one object is in more than one place in the list. In that case we
+        update it only once"""
         oldindex = -1
-        for block in sorted(blocklist, key = lambda x:x.index):
-            index = block.index
+        for cell in sorted(clist, key = lambda x:x.index):
+            index = cell.index
             if index > oldindex:
-                block.view.Update()
+                cell.view.Update()
                 oldindex = index
 
     def __update_type (self, block, cell, pos2add, type, update = False):
@@ -386,7 +386,7 @@ to insert new lines and Shift-Return to execute inputs.
             
             blocklist = (x[0] for x in oldelems)
             if update:
-                self.__update_blocks(self, blocklist)
+                self.__update_list(self, blocklist)
         else:
             #1.2 There are no such elements
             
@@ -402,7 +402,7 @@ to insert new lines and Shift-Return to execute inputs.
             #else:
                 #1.2.2 No. Do nothing
         return (pos2add, blocklist)
-
+    
     def UpdateOutput(self, logid, cell, update = True):
         """Updates the output elements of the sheet corresponding to the given cell
         element."""
@@ -435,7 +435,7 @@ to insert new lines and Shift-Return to execute inputs.
                 blocklist.extend(list)
 
         if update:
-            self.__update_blocks(blocklist)
+            self.__update_list(blocklist)
 
     def ReplaceCells(self, logid, oldcell, newcell, update = True):
         """Changes all the <ipython-cell type=..., number=oldcell.number> elements to
@@ -450,3 +450,25 @@ to insert new lines and Shift-Return to execute inputs.
                 block.block[pos].attrib['number'] = str(newcell.number)
                 block.cells[pos] = newcell
         self.Update(update, dicts = True)
+
+    def InsertText(self, block, pos, update = True):
+        """Splits the given block and inserts a text cell"""
+        index = getindex(self.element,block.block)
+        #Get the XML for the new ipython-block
+        nextblock = block.Split(pos)
+        #update the old text cell to point to the new block
+        oldtextcell = self.celllist[block.index+1]
+        nextblock.tail = oldtextcell.GetText()
+        oldtextcell.element = nextblock
+        #insert nextblock in the sheet
+        self.element[index+1:index+1] = [nextblock]
+        ind = oldtextcell.index
+        self.InsertCell('python',ind, update = False, \
+                        ipython_block = nextblock)
+        #insert a new text cell in the celllist
+        self.InsertCell('plaintext', ind, update = False, element = block.block)
+        #update
+        self.Update(dicts = True)
+        if update:
+            self.__update_list(self.celllist[ind-1:ind+2])
+            self.view.Update()

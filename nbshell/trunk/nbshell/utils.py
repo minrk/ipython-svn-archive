@@ -28,3 +28,15 @@ def findnew(element, tag):
     if el is None:
         el = etree.SubElement(element, tag)
     return el
+
+#TODO: ask the lxml guys if they can include the following functionality in
+#lxml
+def getindex(element,subelement):
+    """Searches subelement in element. If found returns its index, if not
+    returns None
+    """
+    
+    for (i, elem) in enumerate(element):
+        if elem is subelement:
+            return i
+    return None
