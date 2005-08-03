@@ -133,7 +133,7 @@ class ipnFrame(wx.Frame):
                 #print repr(inst) #dbg
                 dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
                 dlg.ShowModal()
-                #raise #dbg
+                raise #dbg
                 return None
             else:
                 self.SetTitle(self.app.document.fileinfo['name'])
@@ -148,7 +148,7 @@ class ipnFrame(wx.Frame):
                 #print repr(inst) #dbg
                 dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
                 dlg.ShowModal()
-                #raise #dbg
+                raise #dbg
     
     def OnSaveAs(self, evt = None):
         dlg = wx.FileDialog(self, "Choose a File", \
@@ -166,7 +166,7 @@ class ipnFrame(wx.Frame):
                 #print repr(inst) #dbg
                 dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
                 dlg.ShowModal()
-                #raise #dbg
+                raise #dbg
                 return None
             else:
                 self.SetTitle(self.app.document.fileinfo['name'])
