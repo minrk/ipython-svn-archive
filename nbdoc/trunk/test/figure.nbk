@@ -1,0 +1,31 @@
+<notebook>
+<head>
+</head>
+
+<sheet type="docbook">
+<title>Scipy Tutorial</title>
+
+<section>
+<title>Chapter 2</title>
+
+<para>There are two (interchangeable) ways to deal with 1-d polynomials in Scipy. The
+first is to use the <emphasis role="bold">poly1d</emphasis> class in
+<emphasis role="bold">scipy_base</emphasis>. This class accepts
+coefficients or polynomial roots to initialize a polynomial. The polynomial
+object can then be manipulated in algebraic expressions, integrated,
+differentiated, and evaluated. It even prints like a polynomial:
+</para>
+
+<ipython-figure number="1" caption="cool image" type="png" filename="/mnt/data2/workdata/kolorsmiler/warm/5_14/dic-548_pearlgrey-82_persimonorange-100_100.png"/>
+
+</section>
+
+</sheet>
+
+<ipython-log id="default-log"><cell number="3"><input>
+from scipy import *
+</input></cell>
+</ipython-log>
+
+
+</notebook>
