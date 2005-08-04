@@ -1,8 +1,17 @@
-
 # ain't no way I'm reimplementing that crap until we have to
 from matplotlib import colors
 
 from lxml import etree as ET
+
+#"/Users/kern/projects/notebook-xsl"
+#XSLDIR = "/home/antont/development/ipython/nbdoc/trunk/notabene/xsl" #"/home/antont/development/hacked-ipython/google-rkern/notebook-xsl"
+import sys #just for getting the path here
+XSLDIR = sys.path[0] + "/xsl" #this still not too nice 'cause the whole package is there
+
+print "using xsl from", XSLDIR
+f = XSLDIR+"/xhtml/docbook.xsl"
+open(f)
+print f, "opened ok"
 
 class TextStyle(object):
     weights_latex = {"bold": "bfseries",
@@ -104,10 +113,6 @@ div.ipy_output_bundle {
     padding: 0;
 }
 """
-
-#"/Users/kern/projects/notebook-xsl/latex/docbook.xsl"
-XSLDIR = "/home/antont/development/hacked-ipython/google-rkern/notebook-xsl"
-print "using xsl from", XSLDIR
 
 class Style(object):
     nsmap = {"xsl": "http://www.w3.org/1999/XSL/Transform",
