@@ -22,6 +22,10 @@ def dbify(text):
     if marker < len(text):
         yield escape(text[marker:])
 
+def transform_text(text):
+    """used by the different transforms in DBFormatter"""
+    return escape(text.rstrip())
+
 class DBFormatter(Formatter):
 
     @staticmethod
@@ -48,7 +52,7 @@ class DBFormatter(Formatter):
         return wholetext
 
     def transform_output(self, elem, number):
-        text = elem.text.rstrip()
+        text = transform_text(elem.text)
         logid = elem.xpath("../../@id")[0]
         PS3 = (('<anchor id="%s-Out%s"/>'
                 '<phrase role="ipy_out_prompt">Out[</phrase>'
@@ -66,21 +70,21 @@ class DBFormatter(Formatter):
         return wholetext
 
     def transform_stdout(self, elem, number):
-        text = elem.text.rstrip()
+        text = transform_text(elem.text)
         logid = elem.xpath("../../@id")[0]
         wholetext = ('<anchor id="%s-stdout%s"/>%s' % 
                         (logid, number, text))
         return wholetext
 
     def transform_stderr(self, elem, number):
-        text = elem.text.rstrip()
+        text = transform_text(elem.text)
         logid = elem.xpath("../../@id")[0]
         wholetext = ('<anchor id="%s-stderr%s"/>%s' % 
                         (logid, number, text))
         return wholetext
 
     def transform_traceback(self, elem, number):
-        text = elem.text.rstrip()
+        text = transform_text(elem.text)
         logid = elem.xpath("../../@id")[0]
         wholetext = ('<anchor id="%s-traceback%s"/>%s' % 
                         (logid, number, text))
@@ -190,23 +194,13 @@ class DBFormatter(Formatter):
         pass
 
     def prep_latex(self, tree):
-        listings = tree.xpath('//programlisting')
-        listings.text = self.escape_latex(listings.text)
-        for sub in listings.getiterator():
-            sub.text = self.escape_latex(sub.text)
-            sub.tail = self.escape_latex(sub.tail)
-
-    def to_html(self, sheet, style=None):
-        kind = 'html'
-        if style is None:
-            from notabene.styles import LightBGStyle as style
-        xsl = getattr(style, '%s_xsl'%kind)()
-        xslt = ET.XSLT(xsl)
-        article_tree = ET.ElementTree(self.transform_sheet(sheet))
-        getattr(self, 'prep_%s' % kind)(article_tree)
-        newtree = xslt.apply(article_tree)
-        ET.dump(newtree.getroot())
-        return newtree
+        #XXX was buggy, should this iterate an all listings?
+        pass
+        ## listings = tree.xpath('//programlisting') 
+##         listings.text = self.escape_latex(listings.text)
+##         for sub in listings.getiterator():
+##             sub.text = self.escape_latex(sub.text)
+##             sub.tail = self.escape_latex(sub.tail)
 
     def to_text(self, sheet, kind='html', style=None):
         if style is None:
@@ -216,5 +210,5 @@ class DBFormatter(Formatter):
         article_tree = ET.ElementTree(self.transform_sheet(sheet))
         getattr(self, 'prep_%s' % kind)(article_tree)
         newtree = xslt.apply(article_tree)
-        ET.dump(newtree.getroot())
-        return xslt.tostring(newtree)
+        #ET.dump(newtree.getroot())
+        return newtree

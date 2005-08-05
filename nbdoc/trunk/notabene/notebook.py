@@ -441,11 +441,9 @@ def main():
 
     from notabene import docbook
     formatter = docbook.DBFormatter(nb)
-    #text = formatter.to_text(sheet, format)
-    htmldoc = formatter.to_html(sheet)
-    #f = open(outname, 'w')
-    htmldoc.write(outname, 'utf-8')
-    #f.close()
+    doc = formatter.to_text(sheet, format)
+    doc.write(outname, 'utf-8') #docbook html xsl uses non-ascii chars
+
 
 if __name__ == '__main__':
     main()
