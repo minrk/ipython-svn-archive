@@ -66,21 +66,21 @@ class DBFormatter(Formatter):
         return wholetext
 
     def transform_stdout(self, elem, number):
-        text = elem.text.rstrip()
+        text = escape(elem.text.rstrip())
         logid = elem.xpath("../../@id")[0]
         wholetext = ('<anchor id="%s-stdout%s"/>%s' % 
                         (logid, number, text))
         return wholetext
 
     def transform_stderr(self, elem, number):
-        text = elem.text.rstrip()
+        text = escape(elem.text.rstrip())
         logid = elem.xpath("../../@id")[0]
         wholetext = ('<anchor id="%s-stderr%s"/>%s' % 
                         (logid, number, text))
         return wholetext
 
     def transform_traceback(self, elem, number):
-        text = elem.text.rstrip()
+        text = escape(elem.text.rstrip())
         logid = elem.xpath("../../@id")[0]
         wholetext = ('<anchor id="%s-traceback%s"/>%s' % 
                         (logid, number, text))
@@ -161,7 +161,7 @@ class DBFormatter(Formatter):
 
         sheet2.tag = nodetype
         # get rid of 'type' attribute
-        del sheet2.attrib['type']
+        #del sheet2.attrib['type']
         return sheet2
 
     def format_sheet(self, sheet):
