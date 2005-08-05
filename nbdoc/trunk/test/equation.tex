@@ -6,7 +6,7 @@
 \else
 \documentclass[pdftex,,letterpaper,10pt,twoside,]{article}
 \fi
-\label{id2471084}\usepackage{ifthen}
+\label{id2470919}\usepackage{ifthen}
 % --------------------------------------------
 % Check for PDFLaTeX/LaTeX 
 % --------------------------------------------
@@ -403,7 +403,7 @@
 \setcounter{tocdepth}{4}
 
 \setcounter{secnumdepth}{4}
-\title{\textbf{Scipy Tutorial}}
+\title{\textbf{Equation Test}}
 \author{}
 \begin{document}
 {\maketitle\pagestyle{empty}
@@ -412,31 +412,16 @@
 
 % ------------------------   
 % Section 
-\section{Chapter 2}
-\label{id2471054}\hypertarget{id2471054}{}%
+\section{Equation Test}
+\label{id2470890}\hypertarget{id2470890}{}%
 
-\subsection{2.3.5 Polynomials}
-\label{id2471029}\hypertarget{id2471029}{}%
+Here is an equation: 
+\begin{dbequation}
+\begin{center}
+\hypertarget{id2470854}{}%
+\$C = \textbackslash alpha + \textbackslash beta Y\textasciicircum{}\{\textbackslash gamma\} + \textbackslash epsilon\${{\caption{A TeX Equation}\label{id2470854}}}
+\end{center}
+\end{dbequation}
 
-There are two (interchangeable) ways to deal with 1-d polynomials in Scipy. The first is to use the {\bfseries{poly1d}} class in {\bfseries{scipy\_base}}. This class accepts coefficients or polynomial roots to initialize a polynomial. The polynomial object can then be manipulated in algebraic expressions, integrated, differentiated, and evaluated. It even prints like a polynomial:
-
-\begin{Verbatim}[,commandchars=\\\{\}]
-\ipyinprompt{In [}\ipyinnumber{3}\ipyinprompt{]:} \pykeyword{from} scipy \pykeyword{import} *
-\ipyinprompt{In [}\ipyinnumber{4}\ipyinprompt{]:} p = poly1d([3,4,5])
-\ipyinprompt{In [}\ipyinnumber{5}\ipyinprompt{]:} \pykeyword{print} p
-   2
-3 x + 4 x + 5
-\ipyinprompt{In [}\ipyinnumber{6}\ipyinprompt{]:} \pykeyword{print} p*p
-   4      3      2
-9 x + 24 x + 46 x + 40 x + 25
-\ipyinprompt{In [}\ipyinnumber{7}\ipyinprompt{]:} \pykeyword{print} p.integ(k=6)
- 3     2
-x + 2 x + 5 x + 6
-\ipyinprompt{In [}\ipyinnumber{8}\ipyinprompt{]:} p.deriv()
-\ipyoutprompt{Out[}\ipyoutnumber{8}\ipyoutprompt{]:} poly1d([6, 4])
-\ipyinprompt{In [}\ipyinnumber{9}\ipyinprompt{]:} p([4,5])
-\ipyoutprompt{Out[}\ipyoutnumber{9}\ipyoutprompt{]:} array([ 69, 100])
-\end{Verbatim}
-
-The {\em{other way}} to handle polynomials is an array of coefficients with the first element of the array giving the coefficient of the highest power. There are explicit functions to add, subtract, multiply, divide, integrate, differentiate, and evalute polynomials represented as sequences of coefficients.
+ nice?
 \end{document}
