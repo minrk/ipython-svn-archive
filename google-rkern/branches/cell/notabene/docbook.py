@@ -172,6 +172,8 @@ class DBFormatter(Formatter):
 
     @staticmethod
     def escape_latex(text):
+        if text is None:
+            return None
         return text.replace('\\', r'\\').replace('{', r'\{').replace('}', r'\}')
 
     def prep_html(self, tree):
@@ -179,10 +181,11 @@ class DBFormatter(Formatter):
 
     def prep_latex(self, tree):
         listings = tree.xpath('//programlisting')
-        listings.text = self.escape_latex(listings.text)
-        for sub in listings.getiterator():
-            sub.text = self.escape_latex(sub.text)
-            sub.tail = self.escape_latex(sub.tail)
+        for listing in listings:
+            listing.text = self.escape_latex(listing.text)
+            for sub in listing.getiterator():
+                sub.text = self.escape_latex(sub.text)
+                sub.tail = self.escape_latex(sub.tail)
 
     def to_text(self, sheet, kind='html', style=None):
         if style is None:
