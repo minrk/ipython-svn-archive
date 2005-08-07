@@ -56,11 +56,14 @@ class App(wx.App):
         #        #print factory.GetString() #dbg
         #        self.plugin_dict[factory.string]=factory
 
-        # Currently there are only two plugins, so we simply add them
+        # Currently there are only three plugins, so we simply add them
         from nbshell.PythonPlugin import GetPluginFactory
         factory = GetPluginFactory()
         self.plugin_dict[factory.string] = factory
         from nbshell.PlainTextPlugin import GetPluginFactory
+        factory = GetPluginFactory()
+        self.plugin_dict[factory.string] = factory
+        from nbshell.FigurePlugin import GetPluginFactory
         factory = GetPluginFactory()
         self.plugin_dict[factory.string] = factory
         del(GetPluginFactory)

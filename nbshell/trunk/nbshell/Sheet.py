@@ -29,7 +29,9 @@ class Sheet(object):
         self.view = view
         self.factory = factory
         self.celllist = []
-        self.last = False
+        #self.last stores if last input has been set. Used by SetLastInput,ClearLastInput
+        self.last = None
+        self.currentlog = 'default-log'
         # cell2sheet stores all elements in a sheet corresponding to a given
         # element in a given cell in a log. It is a dictionary with keys of
         # the type (log, cellnumber, type), where 'log' is the name of the
@@ -55,12 +57,41 @@ class Sheet(object):
         if pos == -1:
             self.__add_cell(cell)
         else:
-            print 'cell-> %s, pos->%s'%(str(cell),str(pos))
+            print 'cell-> %s, pos->%s'%(str(cell),str(pos)) #dbg
             self.__insert_cell(cell, pos)
         if update:
             view.Update()
             self.view.Update()
         return cell
+    
+    def DeleteCell(self, cell, update = True):
+        """Deletes a given element in celllist"""
+        if cell in [self.celllist[-1], self.celllist[0]]:
+            #This is the first or the last text cell and cannot be deleted.
+            #Just clear the text.
+            cell.SetText('')
+            if update:
+                cell.view.Update()
+            return
+        
+        try:
+            cell.log
+        except:
+            #This is a text cell
+            self.__del_text_cell(cell, update)
+        else:
+            #This is a python cell
+            self.__del_code_cell(cell,update)
+
+    def __del_text_cell(self,cell,update = False):
+        """Deletes the given text cell. Does not check if this is the first or
+        last text cell"""
+        #TODO: write this
+        return
+        
+    def __del_code_cell(self,cell,update = False):
+        #TODO: write this
+        return
 
     def Update(self, update = True, celllist = False, dicts = False, output = False):
         
@@ -111,10 +142,13 @@ class Sheet(object):
         update == True """
         if self.element.text is not None:
             self.InsertCell('plaintext',update=False,element = self.element)
-        for elem in self.element:
-            self.InsertCell('python', update=False, ipython_block = elem)
-            if elem.tail is None:
-                elem.tail = ''
+        l = len(self.element)
+        for i in range(l):
+            elem = self.element[i]
+            if elem.tag == 'ipython-block':
+                self.InsertCell('python', update=False, ipython_block = elem)
+            elif elem.tag == 'ipython-figure':
+                self.InsertCell('figure', update = False, element = elem)
             self.InsertCell('plaintext', update=False, element = elem)
         if update:
             self.view.Update()
@@ -164,47 +198,69 @@ class Sheet(object):
         self.element.text = None
         self.element.clear()
         self.__clear_celllist()
+        self.last = None
         if update:
             self.view.Update()
 
-
+    #The last cell for input of each log is not a part of the notebook. It is
+    #added after the notebook has loaded and is used to add append cells to
+    #the logs. Since it should not be a part of the notebook file I have two
+    #methods SetLastInputs and ClearLastInputs to handle the last cell.
     def SetLastInputs(self, update = True):
-        """Adds an empty input element at the last block of each log"""
-        if self.last:
-            return
-        self.last = True
-        passedlogs = {}
-        for cell in reversed(self.celllist):
-            try:
-                log = cell.log #Check if cell is a python plugin
-            except:
-                continue
-            logid = cell.logid
-            if logid not in passedlogs: #then this is the last block for that log
-                lastcell = log.lastcell
-                self.InsertElement(cell,'input',lastcell, update = update)
-                passedlogs.update({logid:True})
-        #if update:
-        #    self.view.Update()
-            
+        """Adds an empty input element at the last block of each log or
+        restores the last inputs from the previous ClearLastInputs. You should
+        not modify the sheet between the calls of SetLastInputs and
+        ClearLastInputs"""
+        if self.last is None: #We have not called ClearLastInputs before
+            self.last = True
+            passedlogs = {}
+            blocklist = []
+            for block in reversed(self.celllist):
+                try:
+                    log = block.log #Check if cell is a python plugin
+                except:
+                    continue
+                logid = block.logid
+                if logid not in passedlogs: #then this is the last block for that log
+                    lastcell = log.lastcell
+                    self.InsertElement(block,'input',lastcell, update = False)
+                    blocklist.append(block)
+                    passedlogs.update({logid:True})
+            if update:
+                self.__update_list(blocklist)
+                self.view.Update()
+        elif self.last: #We have called ClearLastInputs
+            #Restore the last inputs
+            self.last = True
+            blocklist = []
+            l = len(self.undostack)
+            for i in range(l):
+                (key,value) = self.undostack.pop()
+                log = self.doc.logs[key[0]]
+                cell = log.lastcell
+                self.InsertElement(value[0],key[2],cell,value[1],update = False)
+                blocklist.append(value[0])
+            if update:
+                self.__update_list(blocklist)
+                self.view.Update()
+
     def ClearLastInputs(self, update = True):
         """Clears the last inputs of each log. This should be called before
         the file is saved"""
         if not self.last:
             return
         self.last = False
-        passedlogs = {}
-        for cell in reversed(self.celllist):
-            try:
-                log = cell.log #Check if cell is a python plugin
-            except:
-                continue
-            logid = cell.logid
-            if logid not in passedlogs: #then this is the last block for that log
-                self.DeleteElement(cell, -1,update)
-                passedlogs.update({logid:True})
-        #if update:
-        #    self.view.Update()
+        self.undostack = []
+        for logid in self.doc.logs.keys():
+            log = self.doc.logs[logid]
+            lastcell = log.lastcell
+            #The last cells should only have inputs
+            key = (logid, lastcell.number, 'input')
+            inputs = self.cell2sheet[key]
+            while inputs != []:
+                input = inputs[0]
+                self.undostack.append((key,input))
+                self.DeleteElement(inputs[0][0],inputs[0][1])
 
     def __update_dicts(self):
         """Update self.cell2sheet and self.sheet2sheet, provided that for each
@@ -472,3 +528,52 @@ to insert new lines and Shift-Return to execute inputs.
         if update:
             self.__update_list(self.celllist[ind-1:ind+2])
             self.view.Update()
+            
+    def InsertCode(self, block, pos, update = True):
+        """Splits the given text block and inserts a code block. The logid
+        for the new block is set in self.currentlog"""
+        assert(self.last) #The last inputs must be set
+        newtext = block.Split(pos, update = False)
+        #Create the new code element
+        codeelement = etree.Element('ipython-block',logid=self.currentlog)
+        #Delete the last element of self.currentlog from the sheet 
+        log = self.doc.logs[self.currentlog]
+        key = (self.currentlog, log.lastcell.number, 'input')
+        value = self.cell2sheet[key]
+        while len(value)>0:
+            blk, position = value[0]
+            self.DeleteElement(blk,position,update = False)
+        #insert the last element in codeelement
+        codeelement.append(etree.Element('ipython-cell',type='input',\
+                                         number = str(key[1])))
+        #set newtext at the tail
+        codeelement.tail = newtext
+        #get the index in the <sheet> element where we must insert the new cell
+        id = block.index
+        l = len(self.celllist)
+        while id<l:
+            try:
+                self.celllist[id].log
+            except:
+                id+=1
+            else:
+                break
+        print 'new element:' #dbg
+        etree.dump(codeelement) #dbg
+        if id==l: #we must append the new element at the end of <sheet>
+            index = len(self.element)
+            self.element[index:index] = [codeelement]
+        else:
+            #insert the new code element 
+            index = getindex(self.element,self.celllist[id].block)
+            self.element[index:index] = [codeelement]
+        #insert the new cells in celllist
+        self.InsertCell('python',pos=block.index+1,update = False,\
+                        ipython_block = codeelement)
+        self.InsertCell('plaintext', pos = block.index+2, update = False,\
+                        element = codeelement)
+        print 'new sheet:' #dbg
+        etree.dump(self.element) #dbg
+        #update stuff. I could update only the modified cells, but I'm lazy
+        self.Update(update,dicts = True)
+        

@@ -247,17 +247,26 @@ class IPShellGUI:
     
     def __init__(self,argv=None,user_ns=None,debug=1,
                  shell_class=InteractiveShell):
-        self.IP = make_IPython(argv,user_ns=user_ns,debug=debug,
-                               shell_class=shell_class)
+        self.argv = argv
+        self.user_ns = user_ns
+        self.debug = debug
+        self.shell_class = shell_class
+        self.IP = make_IPython(self.argv,user_ns=self.user_ns.copy(),
+                               debug=self.debug, shell_class=self.shell_class)
         
     
     def runlines(self, lines, displayhook, stdout, stderr):
-        old_displayhook, sys.displayhook = sys.displayhook, displayhook
         oldterm = genutils.Term #TODO: Do I need to restore this?
-        genutils.Term = genutils.IOTerm(cout = stdout, cerr = stderr)
+        genutils.Term = genutils.IOTerm(cout = stdout, cerr = stderr,\
+                                        displayhook = displayhook)
         retval = self.IP.runlines2(lines)
-        sys.displayhook = old_displayhook
         return retval
+    
+    def reset(self):
+        """Resets the namespace"""
+        #TODO: fix this
+        self.IP = make_IPython(self.argv,user_ns=self.user_ns.copy(),
+                               debug=self.debug, shell_class=self.shell_class)
 
 #-----------------------------------------------------------------------------
 def sigint_handler (signum,stack_frame):

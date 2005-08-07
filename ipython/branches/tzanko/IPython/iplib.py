@@ -1513,20 +1513,47 @@ want to merge them back into the new files.""" % locals()
             lines = lines.split('\n')
             prefiltered = []
             more = 0
+            #There might be some empty lines at the end. l is the lenght of
+            #lines without them
+            l = len(lines)
+            while l>0 and lines[l-1] == '' or lines[l-1].isspace():
+                l-=1
+            i = 0
+            #lastexec will point to the end of the last complete input that
+            #will be run with runsource(symbol='exec') The last input will be
+            #run with runsource(symbol='single') to generate output
+            lastexec = -1 
             for line in lines:
+                # This is a hack. prefilter converts strings containing only 
+                # whitespace to empty strings. I don't want this, so I append a '#' 
+                # at the end of the string and then after prefilter is finished with it, 
+                # I remove it. TODO: fix this
+                if line.isspace():
+                    sp = True
+                    tline = line +'#'
+                else:
+                    sp = False
+                    tline = line
                 if line or more:
-                    prefiltered.append(self.prefilter(line, more))
+                    prefiltered.append(self.prefilter(tline, more))
+                    if sp:
+                        prefiltered[-1] = prefiltered[-1][:-1]
                     more = self.push(prefiltered[-1], simulate = True)
                     if more is None:
                         return more
-            if more : #more input is required, so do nothing
-                return more
-            else: #execute the code
-                source = '\n'.join(prefiltered)
-                return self.runsource(source, self.filename, simulate = False)
-            
-            
-            
+                    if more is False and i<l-1:
+                        lastexec = i
+                i+=1
+            if more : #more input is required, append '' at the end of prefiltered
+                prefiltered.append('')
+            #execute the code
+            source1 = '\n'.join(prefiltered[:lastexec+1])
+            if self.runsource(source1, self.filename, \
+                              symbol = 'exec',simulate = False):
+                return True
+            source2 = '\n'.join(prefiltered[lastexec+1:])
+            return self.runsource(source2, self.filename, \
+                                  symbol = 'single',simulate = False)
 
 
     def push(self, line, simulate = False):
@@ -1546,7 +1573,11 @@ want to merge them back into the new files.""" % locals()
         """
         self.buffer.append(line)
         source = "\n".join(self.buffer)
-        more = self.runsource(source, self.filename, simulate = simulate)
+        #hack to allow custom runsource implementations not to care about simulate
+        if simulate == False:
+            more = self.runsource(source, self.filename)
+        else:
+            more = self.runsource(source, self.filename, simulate = True)
         if not more:
             self.resetbuffer()
         return more
@@ -1623,16 +1654,19 @@ want to merge them back into the new files.""" % locals()
         # Set our own excepthook in case the user code tries to call it
         # directly, so that the IPython crash handler doesn't get triggered
         old_excepthook,sys.excepthook = sys.excepthook, self.excepthook
+        
         # Set the standart input and output streams
         old_stdin, sys.stdin = sys.stdin, genutils.Term.cin
         old_stdout, sys.stdout = sys.stdout, genutils.Term.cout
         old_stderr, sys.stderr = sys.stderr, genutils.Term.cerr
+        old_displayhook, sys.displayhook = sys.displayhook, genutils.Term.displayhook
         outflag = 1  # happens in more places, so it's easier as default
         try:
             try:
                 exec code_obj in self.locals
             finally:
                 # Reset our crash handler in place
+                sys.displayhook = old_displayhook
                 sys.excepthook = old_excepthook
                 sys.stdin = old_stdin #TODO: These might not be needed
                 sys.stdout = old_stdout

@@ -116,6 +116,14 @@ class PlainTextDocumentPlugin(object):
     
     def GetFactory(self):
         return PlainTextPluginFactory()
+    
+    def Split(self, pos, update = True):
+        """Removes the text after the given position and returns it"""
+        text = self.GetText()
+        self.SetText(text[:pos])
+        if update:
+            self.view.Update()
+        return text[pos:]
 
 class PlainTextNotebookViewPlugin(object):
     def __init__(self, docplugin, view):
@@ -193,6 +201,13 @@ class PlainTextNotebookViewPlugin(object):
     def Close(self, update = True):
         index = self.view.GetIndex(self.id)
         self.view.DeleteCell(index, update)
+    
+    def InsertCode(self):
+        #lazy document update. We update the document when it is needed
+        self.doc.SetText(self.window.GetText())
+        pos = self.window.GetCurrentPos()
+        self.doc.sheet.InsertCode(self.doc,pos, update = True)
+        
 
 class PlainTextCtrl(stc.StyledTextCtrl):
 
@@ -257,6 +272,7 @@ class PlainTextCtrl(stc.StyledTextCtrl):
         """ Called whenever a key is pressed. The keys which are not
         processed are skipped.
         """
+        controlDown = evt.ControlDown()
         keycode = evt.GetKeyCode()
         if keycode == wx.WXK_DOWN: 
             curline = self.LineFromPosition(self.GetCurrentPos())
@@ -282,5 +298,8 @@ class PlainTextCtrl(stc.StyledTextCtrl):
                     prev.SetTheFocus(pos, start = False)
             else:
                 evt.Skip()
+        elif keycode in [ord('i'),ord('I')] and controlDown:
+            #insert a code cell
+            self.view.InsertCode()
         else:
             evt.Skip()

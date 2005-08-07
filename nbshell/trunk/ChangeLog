@@ -1,3 +1,21 @@
+07.07.2005:
+	* Added support for insertion of cells. Now when you are in a text
+	cell and press Ctrl-I a code cell will be inserted at the place of
+	the cursor. When in a code cell, a text cell is inserted
+
+	* Fixed selection in code cells. Now only whole <ipython-cell>
+	elements can be selected.
+
+	* Added last inputs. Now for each log there is a cell with empty
+	input which is displayed in the sheet.This cell always has the
+	largest number in the log. It is added after the nbk file is
+	loaded and removed before it is saved. It is used to append code
+	to the log.
+
+	* Added support for figures in the sheet.
+
+	* Added directory tests for test notebooks
+	
 08.01.2005:
 	* Changed behaviour to suport multiline inputs. Now when the user
 	presses Enter, we simply insert a new line at the place of the

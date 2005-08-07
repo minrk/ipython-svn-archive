@@ -175,6 +175,10 @@ class PythonNotebookViewPlugin(object):
         self.window = None
         #self.document = docplugin.document
         self.sheet = docplugin.sheet
+        
+        #used for setting selection
+        self.start = -1
+        self.end = -1
 
     def GetFirstId(self):
         """ This view is responsible for a list of consequent windows in the
@@ -243,7 +247,7 @@ class PythonNotebookViewPlugin(object):
         #oldlinecnt = 1 # = self.window.GetLineCount()
         last = len(cells) -1
         # Here we set up the text which will be displayed in the window
-        outtext = StringIO.StringIO() 
+        outtext = StringIO.StringIO()
         for i, cell in enumerate(cells):
             number =  cell.number
             #print 'i-> %d'%(i,) #dbg
@@ -287,6 +291,9 @@ class PythonNotebookViewPlugin(object):
                 self.line2log.append((i, j+1))
                 #print "i -> %s, id->%s, type->%s, text->%s"%(str(i), str(id), str(type), str(text))
             #oldlinecnt = linecnt
+        #if we have no cells we must set line2log here
+        if len(self.line2log) == 0:
+            self.line2log.append(None) #the window always has at least one line
         self.window.SetText(outtext.getvalue())
         self.window.GotoPos(self.window.GetTextLength())
         #print "line2log->", self.window.line2log #dbg
@@ -327,7 +334,8 @@ class PythonNotebookViewPlugin(object):
         """Updates the document to the current text in the widget. This method is
         run whenever the user presses Enter. We assume here that the only thing that might
         change is text inside the cells, so this is the only thing we change"""
-        
+        #Do nothing. 
+        return
         for (i, cell)  in enumerate(self.doc.cells):
             type = self.doc.GetStuff(i)[0]
             cell.element.find(type).text = '\n'
@@ -404,16 +412,17 @@ class PythonNotebookViewPlugin(object):
             elem.text = text
             #1.1.2. Run the last cell
             if self.doc.log.Run(): # we have run the text and generated output
-                #Replace the old cell with the new one
-                lastcell = self.doc.log.lastcell #we do this to update the attributes of lastcell
+                #Make a new last input
+                cell = self.doc.log.Append("\n\n") #each input starts and ends with a newline
+                #replace the old last input with the new one
+                lastcell.update() #we do this to update the attributes of lastcell
+                self.doc.sheet.ReplaceCells(self.doc.logid, lastcell,\
+                                            self.doc.log.lastcell, update = False)
+                #Replace the old cell with the new one (the old lastcell)
                 self.doc.sheet.ReplaceCells(self.doc.logid,\
                                             oldcell, lastcell, update = False)
                 #Delete oldcell
                 self.doc.log.Remove(oldcell)
-                #Make a new last input
-                cell = self.doc.log.Append("\n\n") #each input starts and ends with a newline
-                self.doc.sheet.ClearLastInputs(update = False)
-                self.doc.sheet.SetLastInputs(update = False)
                 #Update the sheet
                 self.doc.sheet.UpdateOutput(self.doc.logid,
                                             self.doc.cells[doc_id], update = False)
@@ -532,8 +541,52 @@ class PythonNotebookViewPlugin(object):
                 self.line2log[i] = (item[0], self.line2log[i][1]+ 1)
                 i+=1
 
-
+    def SetSelection(self):
+        """If the user is trying to select anything SetSelection will move the
+        current anchor and position so that the user only selects whole
+        <ipython-cell> objects
+        """
+        (start, end) = self.window.GetSelection()
+        if start == end: #We have not selected anything
+            self.start = start
+            self.end = end
+            return
+        if (start, end) == (self.start, self.end):
+            #We have already set up the selection
+            return
+        #print '(start, end) -> (%d, %d)'%(start,end) #dbg
+        #print '(anchor, pos) -> (%d, %d)'%\
+        #      (self.window.GetAnchor(),self.window.GetCurrentPos()) #dbg
+        startline = self.window.LineFromPosition(start)
+        endline = self.window.LineFromPosition(end)
+        #if startline is None, we do nothing. If not, we move startline
+        #to be the first line of the current element
+        while self.line2log[startline] is not None and\
+              self.line2log[startline][1] > 1:
+            startline -= 1
+        self.start = self.window.PositionFromLine(startline)
+        #while we have not reached the end of the document, and the next line
+        #corresponds to the same element as the current line move forward
+        l = len(self.line2log)
+        while endline < l-1 and self.line2log[endline] is not None and\
+              self.line2log[endline+1] is not None:
+            endline += 1
+        self.end = self.window.GetLineEndPosition(endline)
+        if self.window.GetAnchor() == start:
+            self.window.SetAnchor(self.start)
+            self.window.SetCurrentPos(self.end)
+        else:
+            self.window.SetAnchor(self.end)
+            self.window.SetCurrentPos(self.start)
+        #print 'new'
+        #print '(start, end) -> (%d, %d)'%(self.start,self.end) #dbg
+        #print '(anchor, pos) -> (%d, %d)'%\
+        #      (self.window.GetAnchor(),self.window.GetCurrentPos()) #dbg
             
+    def DeleteSelf(self):
+        """Delete current cell"""
+        self.doc.sheet.DeleteCell(self.doc)
+        
     def Close(self, update = True):
         index = self.view.GetIndex(self.id)
         self.view.DeleteCell(index, update)
@@ -651,6 +704,8 @@ class Shell(editwindow.EditWindow):
         """Free the CPU to do other things."""
         if self.waiting:
             time.sleep(0.05)
+        
+        self.view.SetSelection()
         event.Skip()
 
 #    def showIntro(self, text=''):
@@ -779,9 +834,12 @@ class Shell(editwindow.EditWindow):
             if self.CallTipActive():
                 self.CallTipCancel()
             self.view.ProcessLine()
-        #Ctrl-i inserts a text cell
+        #Ctrl-I inserts a text cell
         elif controlDown and key in (ord('i'),ord('I')):
             self.view.InsertText()
+        #Ctrl-D deletes the current cell
+        elif controlDown and key in (ord('d'), ord('D')):
+            self.view.DeleteSelf()
         # Ctrl+Return (Cntrl+Enter) is used to insert a line break.
         #elif controlDown and key == wx.WXK_RETURN:
         #    if self.CallTipActive():

@@ -85,16 +85,6 @@ class ipnDocument(object):
         #2. Create the notebook, log, sheet objects
         try:
             self.notebook = notebook.Notebook.from_file(filename)
-            logids = self.notebook.root.xpath('//ipython-log/@id')
-            self.logs = dict((x, IPythonLog.IPythonLog(self,self.notebook,x)) for x in logids)
-            # Append an empty cell at the end of each log
-            [self.logs[x].SetLastInput() for x in self.logs]
-            self.sheet = Sheet.Sheet(self, self.notebook, self.view, self.factory)
-            # append the empty inputs in the sheet
-            self.sheet.Update(update = False, cellist = True, dicts = True)
-            self.sheet.SetLastInputs(update = False)
-            self.sheet.Update(update = True)
-            etree.dump(self.notebook.root) #dbg
             # Set up the fileinfo structure
             import os #dbg
             self.fileinfo["init"] = True
@@ -103,8 +93,19 @@ class ipnDocument(object):
                 self.fileinfo['path'] = os.getcwd()
             self.fileinfo["modified"] = False
             self.fileinfo['untitled'] = False
+
+            logids = self.notebook.root.xpath('//ipython-log/@id')
+            self.logs = dict((x, IPythonLog.IPythonLog(self,self.notebook,x)) for x in logids)
+            # Append an empty cell at the end of each log
+            [self.logs[x].SetLastInput() for x in self.logs]
+            self.sheet = Sheet.Sheet(self, self.notebook, self.view, self.factory)
+            # append the empty inputs in the sheet
+            self.sheet.Update(update = False, celllist = True, dicts = True)
+            self.sheet.SetLastInputs(update = False)
+            self.sheet.Update(update = True)
+            etree.dump(self.notebook.root) #dbg
         except:
-            self.Clear()
+            #self.Clear() #TODO: This does not work well if an exception occured. 
             raise
         
         #3. Update the sheet. 

@@ -1,0 +1,13 @@
+<notebook>
+<head/>
+<ipython-log id="default-log">
+<cell number="0"><input>
+print "Hello World!"
+</input></cell></ipython-log>
+<sheet>
+This notebook tests displaying of figures
+<ipython-block logid="default-log"><ipython-cell type="input" number="0"/></ipython-block>
+<ipython-figure filename="test1.png"/>
+</sheet>
+
+</notebook>

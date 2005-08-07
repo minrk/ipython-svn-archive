@@ -89,11 +89,15 @@ class IOTerm:
     # In the future, having IPython channel all its I/O operations through
     # this class will make it easier to embed it into other environments which
     # are not a normal terminal (such as a GUI-based shell)
-    def __init__(self,cin=None,cout=None,cerr=None, traceback = None):
+    def __init__(self,cin=None,cout=None,cerr=None, traceback = None, displayhook=None):
         self.cin  = IOStream(cin,sys.stdin)
         self.cout = IOStream(cout,sys.stdout)
         self.cerr = IOStream(cerr,sys.stderr)
         self.traceback = traceback #The file used for the traceback output
+        if displayhook is None:
+            self.displayhook = sys.displayhook
+        else:
+            self.displayhook = displayhook
         
 # Global variable to be used for all I/O
 Term = IOTerm()
