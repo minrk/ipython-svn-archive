@@ -9,49 +9,62 @@
 <section>
 <title>Equation Test</title>
 
-<para>Here is an equation:
+<para>Now here is a bit of displayed math
+  <informalequation>
+    <alt role="tex">
+      \[F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}\] 
+    </alt>
+    <graphic fileref="figures/fstat.png"/> 
+  </informalequation>
+
+So that was a equation for you.
 
 <equation>
-  <title>A TeX Equation</title>
-  <mediaobject>
-    <imageobject role="html">
-      <imagedata fileref="texmath.png" format="PNG"/>
-    </imageobject>
-    <textobject role="tex"><phrase>$C = \alpha + \beta Y^{\gamma} 
-    + \epsilon$</phrase></textobject>
-  </mediaobject>
+    <title>An equation.</title>
+    <alt role="tex">
+      \[F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}\] 
+    </alt>
+    <graphic fileref="figures/fstat.png"/> 
 </equation>
 
-nice? or:
-
-<inlineequation>
-<inlinemediaobject>
-<imageobject>
-<imagedata fileref="eq1.gif"/>
-</imageobject>
-<textobject><phrase>E=mc squared</phrase></textobject>
-<textobject role="tex"><phrase>$C = \alpha + \beta Y^{\gamma} 
-    + \epsilon$</phrase></textobject>
-</inlinemediaobject>
-</inlineequation>
-
 </para>
-
-<para>
-another:
-
-<informalequation>
--
-	<mml:math>
--
-	<mml:apply>
-<mml:divide/>
-</mml:apply>
-</mml:math>
-</informalequation>
-</para>
-
 </section>
+
+      <sect1 id="sect1.Mecke">
+        <title>
+          Formule de Mecke
+        </title>
+        <tm tex=" \begin{eqnarray*} \lambda \int\int_{\Omega \times \ 
+        R} v(\omega,t) P_N^0(dw)dt = \int\int_{\Omega \times \ R} 
+        v(\theta_t \omega,t) P(dw)N(w,dt) \\ \lambda \int\int_{\Omega 
+        \times \ R} f(t,Z_0(w)) P_N^0(dw)dt = \int\int_{\Omega \times \ 
+        R} f(t,Z_t) P(dw)N(w,dt) \\ \lambda \int\int_{\Omega \times \ 
+        R} f(t,Z_0(w)) P_N^0(dw)dt = \int\int_{\ R \times K} f(t,z) 
+        \lambda_Z(dt \times dz)\\ \lambda \int\int_{\Omega \times \ R} 
+        f(t,Z_0(w)) P(dw)N(w,dt) = E \left\{ \sum_{n \in \ Z} f(T_n, 
+        Z_0(\theta_{T_n}))\right\} \\ \lambda \int\int_{\Omega \times \ 
+        R} f(t,Z_0(w)) P(dw)N(w,dt) = E \left\{ \sum_{n \in \ Z} f(T_n, 
+        Z_n))\right\} \\ \end{eqnarray*} ">
+        </tm>
+        <para>
+          Cambell,
+        </para>
+        <tm tex="\[ E \left\{ \sum_{n \in \ Z} f(T_n, Z_n))\right\} = 
+        \int\int_{\ R \times K} f(t,z) \lambda_Z(dt \times dz) \]">
+        </tm>
+        <para>
+           Campbell-Little-Mecke (
+          <inlinetm tex="$\lambda_Z(dt \times dz) = \lambda dt 
+          P_N^0(Z_0 \in dz) $">)
+          </inlinetm>
+        </para>
+        <tm tex="\[ E \left\{ \sum_{n \in \ Z} f(T_n, Z_n))\right\} = 
+        \lambda \int\int_{\ R \times K} f(t,z) dt P_N^0(Z_0 \in dz)
+        \]">
+        </tm>
+      </sect1>
+
+
 </sheet>
 
 <ipython-log id="default-log"><cell number="3"><input>

@@ -6,7 +6,7 @@
 \else
 \documentclass[pdftex,,letterpaper,10pt,twoside,]{article}
 \fi
-\label{id2470919}\usepackage{ifthen}
+\label{id2470988}\usepackage{ifthen}
 % --------------------------------------------
 % Check for PDFLaTeX/LaTeX 
 % --------------------------------------------
@@ -413,15 +413,33 @@
 % ------------------------   
 % Section 
 \section{Equation Test}
-\label{id2470890}\hypertarget{id2470890}{}%
+\label{id2470958}\hypertarget{id2470958}{}%
 
-Here is an equation: 
+Now here is a bit of displayed math 
+\begin{displaymath}\label{id2470908}
+      \[F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}\] 
+    \end{displaymath}
+
+
+ So that was a equation for you. 
 \begin{dbequation}
 \begin{center}
-\hypertarget{id2470854}{}%
-\$C = \textbackslash alpha + \textbackslash beta Y\textasciicircum{}\{\textbackslash gamma\} + \textbackslash epsilon\${{\caption{A TeX Equation}\label{id2470854}}}
+\hypertarget{id2470690}{}%
+\begin{displaymath}\label{id2470665}
+      \[F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}\] 
+    \end{displaymath}
+{{\caption{An equation.}\label{id2470690}}}
 \end{center}
 \end{dbequation}
 
- nice?
-\end{document}
+
+
+% ------------------------   
+% Section 
+\section{Formule de Mecke}
+\label{sect1.Mecke}\hypertarget{sect1.Mecke}{}%
+ \begin{eqnarray*} \lambda \int\int_{\Omega \times \          R} v(\omega,t) P_N^0(dw)dt = \int\int_{\Omega \times \ R}          v(\theta_t \omega,t) P(dw)N(w,dt) \\ \lambda \int\int_{\Omega          \times \ R} f(t,Z_0(w)) P_N^0(dw)dt = \int\int_{\Omega \times \          R} f(t,Z_t) P(dw)N(w,dt) \\ \lambda \int\int_{\Omega \times \          R} f(t,Z_0(w)) P_N^0(dw)dt = \int\int_{\ R \times K} f(t,z)          \lambda_Z(dt \times dz)\\ \lambda \int\int_{\Omega \times \ R}          f(t,Z_0(w)) P(dw)N(w,dt) = E \left\{ \sum_{n \in \ Z} f(T_n,          Z_0(\theta_{T_n}))\right\} \\ \lambda \int\int_{\Omega \times \          R} f(t,Z_0(w)) P(dw)N(w,dt) = E \left\{ \sum_{n \in \ Z} f(T_n,          Z_n))\right\} \\ \end{eqnarray*} 
+Cambell,
+\[ E \left\{ \sum_{n \in \ Z} f(T_n, Z_n))\right\} =          \int\int_{\ R \times K} f(t,z) \lambda_Z(dt \times dz) \]
+Campbell-Little-Mecke ( $\lambda_Z(dt \times dz) = \lambda dt            P_N^0(Z_0 \in dz) $
+\[ E \left\{ \sum_{n \in \ Z} f(T_n, Z_n))\right\} =          \lambda \int\int_{\ R \times K} f(t,z) dt P_N^0(Z_0 \in dz)         \]\end{document}
