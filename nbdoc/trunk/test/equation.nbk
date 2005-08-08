@@ -1,0 +1,62 @@
+<notebook>
+<head>
+</head>
+
+<sheet>
+
+<title>Equation Test</title>
+
+<section>
+<title>Equation Test</title>
+
+<para>Here is an equation:
+
+<equation>
+  <title>A TeX Equation</title>
+  <mediaobject>
+    <imageobject role="html">
+      <imagedata fileref="texmath.png" format="PNG"/>
+    </imageobject>
+    <textobject role="tex"><phrase>$C = \alpha + \beta Y^{\gamma} 
+    + \epsilon$</phrase></textobject>
+  </mediaobject>
+</equation>
+
+nice? or:
+
+<inlineequation>
+<inlinemediaobject>
+<imageobject>
+<imagedata fileref="eq1.gif"/>
+</imageobject>
+<textobject><phrase>E=mc squared</phrase></textobject>
+<textobject role="tex"><phrase>$C = \alpha + \beta Y^{\gamma} 
+    + \epsilon$</phrase></textobject>
+</inlinemediaobject>
+</inlineequation>
+
+</para>
+
+<para>
+another:
+
+<informalequation>
+-
+	<mml:math>
+-
+	<mml:apply>
+<mml:divide/>
+</mml:apply>
+</mml:math>
+</informalequation>
+</para>
+
+</section>
+</sheet>
+
+<ipython-log id="default-log"><cell number="3"><input>
+from scipy import *
+</input></cell>
+</ipython-log>
+
+</notebook>
