@@ -111,6 +111,19 @@ class DBFormatter(Formatter):
         ET.dump(dbfig)
         return dbfig
 
+    def transform_equation(self, equ):
+        """This uses the old method that uses graphic for image. It is unfortunate because otherwise the graphic-element is not used for images anymore, but mediaobject imageobjects instead. Perhaps we should just fix db2latex to get this right?"""
+        dbeq = ET.Element('equation')
+        title = equ.get('title')
+        tex = equ.get('tex')
+        if title is not None:
+            dbtit = ET.SubElement(dbeq, 'title')
+            dbtit.text = title
+        dbmath = ET.SubElement(dbeq, 'alt', role="tex")
+        dbmath.text = tex
+        #XXX add image support (for html & nbshell) here .. somewhere
+        return dbeq
+
     def transform_block(self, block):
         """Transform an <ipython-block> element to a <programlisting> element.
         """
@@ -154,25 +167,34 @@ class DBFormatter(Formatter):
         # get all child->parent links
         cp = dict((c, p) for p in sheet2.getiterator() for c in p)
 
-        blocks = sheet2.xpath('.//ipython-block')
-        for block in blocks:
-            parent = cp[block]
-            idx = list(parent).index(block)
-            listing = self.transform_block(block)
-            parent[idx] = listing
+        def parent_and_index(elem):
+            parent = cp[elem]
+            index = list(parent).index(elem)
+            return parent, index
 
-        figs = sheet2.xpath('.//ipython-figure')
-        for fig in figs:
-            parent = cp[fig]
-            idx = list(parent).index(fig)
-            number = fig.get('number')
-            #logid = fig.get('logid', 'default-log')
-            #elem = self.notebook.get_from_log('figure', number, logid=logid)
-            img = self.transform_figure(fig)
-            parent[idx] = img
+        def transform_elements(elemtype, func):
+            elems = sheet2.xpath('.//ipython-%s' % elemtype)
+            for elem in elems:
+                parent, idx = parent_and_index(elem)
+                transformed = func(elem)
+                parent[idx] = transformed
+
+        transform_elements('block', self.transform_block)
+        transform_elements('figure', self.transform_figure)
+
+        ## figs = sheet2.xpath('.//ipython-figure')
+##         for fig in figs:
+##             parent, idx = parent_and_index(fig)
+##             number = fig.get('number')
+##             #logid = fig.get('logid', 'default-log')
+##             #elem = self.notebook.get_from_log('figure', number, logid=logid)
+##             img = self.transform_figure(fig)
+##             parent[idx] = img
+
+        transform_elements('equation', self.transform_equation)
 
         sheet2.tag = nodetype
-        # get rid of 'type' attribute
+        # get rid of 'type' attribute -- depracated
         try:
             del sheet2.attrib['type']
         except KeyError:
@@ -189,6 +211,8 @@ class DBFormatter(Formatter):
     @staticmethod
     def escape_latex(text):
         return text.replace('\\', r'\\').replace('{', r'\{').replace('}', r'\}')
+    def prep_fo(self, tree):
+        pass
 
     def prep_html(self, tree):
         pass

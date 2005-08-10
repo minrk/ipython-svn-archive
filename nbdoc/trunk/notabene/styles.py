@@ -8,6 +8,7 @@ from lxml import etree as ET
 import sys #just for getting the path here
 XSLDIR = sys.path[0] + "/xsl" #this still not too nice 'cause the whole package is there
 
+
 print "using xsl from", XSLDIR
 f = XSLDIR+"/xhtml/docbook.xsl"
 open(f)
@@ -194,6 +195,14 @@ class Style(object):
         for c in commands:
             text = text.replace(c, "\\" + c)
         return text
+
+    def fo_xsl(self):
+        sheet = ET.Element("xsl:stylesheet", version="1.0", nsmap=self.nsmap)
+        ET.SubElement(sheet, "xsl:import",
+            href = XSLDIR + "/fo/antont-docbook.xsl")
+        # lxml's namespace handling isn't *quite* as good as Robert was hoping
+        sheet = ET.ElementTree(ET.fromstring(ET.tostring(sheet)))
+        return sheet
 
 
 LightBGStyle = Style({

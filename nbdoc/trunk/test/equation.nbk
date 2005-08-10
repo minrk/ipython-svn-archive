@@ -12,28 +12,46 @@
 <para>Now here is a bit of displayed math
   <informalequation>
     <alt role="tex">
-      \[F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}\] 
+      F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}
     </alt>
     <graphic fileref="figures/fstat.png"/> 
   </informalequation>
 
-So that was a equation for you.
+That was a so-called informal equation for you.
+</para>
 
-<equation>
-    <title>An equation.</title>
-    <alt role="tex">
-      \[F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}\] 
-    </alt>
-    <graphic fileref="figures/fstat.png"/> 
+<para>
+Here a proper equation, with a title and all. This is the method nbdoc now uses. It is unfortunate because otherwise the graphic-element is not used for images anymore, but mediaobject imageobjects instead.
+
+<equation id="equation1">
+<title>An Equation</title>
+<alt role="tex">
+      F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}
+</alt>
+<graphic fileref="figures/eq"/>
+</equation>
+</para>
+
+<para>
+This tries to use the newer format, where math is inside a mediaobject. This does not work with the db2latex we are using, right?
+
+<equation id="equation2">
+<title>An Equation</title>
+<mediaobject>
+<imageobject><imagedata fileref="figures/eq"/></imageobject>
+<textobject role="tex"><phrase>e=mc^2</phrase></textobject>
+</mediaobject>
 </equation>
 
 </para>
 </section>
 
-      <sect1 id="sect1.Mecke">
+      <section id="Mecke">
         <title>
           Formule de Mecke
         </title>
+<para>This is using another variation, the short and simple tm (texmath) tag.</para>
+
         <tm tex=" \begin{eqnarray*} \lambda \int\int_{\Omega \times \ 
         R} v(\omega,t) P_N^0(dw)dt = \int\int_{\Omega \times \ R} 
         v(\theta_t \omega,t) P(dw)N(w,dt) \\ \lambda \int\int_{\Omega 
@@ -62,7 +80,7 @@ So that was a equation for you.
         \lambda \int\int_{\ R \times K} f(t,z) dt P_N^0(Z_0 \in dz)
         \]">
         </tm>
-      </sect1>
+      </section>
 
 
 </sheet>

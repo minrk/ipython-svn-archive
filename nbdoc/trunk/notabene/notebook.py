@@ -184,6 +184,11 @@ class Notebook(object):
         if caption is not None:
             fig.text = caption #hmn?
 
+    def add_equation(self, parent, tex, title=None):
+        """Add an equation (in tex). If given, a title is set."""
+        equ = ET.SubElement(parent, 'ipython-equation', title=title, tex=tex)
+       
+
     def write(self, file=None):
         """Write the notebook as XML out to a file.
 
@@ -396,11 +401,16 @@ class Notebook(object):
                 logid))
 
     def get_sheet(self):
-        return self.root.xpath('./sheet')[0]
+        return self.root.xpath('./sheet')[0] #assumes a single sheet
     sheet = property(get_sheet, None)
 
 
 def sheet_insert(sheet, elem, position):
+    """For adding an element based on the character-counted position.
+
+    Is this really useful? So far unused.
+    """
+    #and what does this actually do?
     texts = [sheet.text]
     texts.extend(x.tail for x in sheet)
     elements = [sheet]
@@ -437,7 +447,7 @@ def main():
     if not sheet:
         sheet = nb.default_sheet()
 
-    outname = base + extensions.get(format, '.txt')
+    outname = base + extensions.get(format, '.'+format)
 
     from notabene import docbook
     formatter = docbook.DBFormatter(nb)

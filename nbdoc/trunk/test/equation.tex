@@ -6,7 +6,7 @@
 \else
 \documentclass[pdftex,,letterpaper,10pt,twoside,]{article}
 \fi
-\label{id2470988}\usepackage{ifthen}
+\label{id2471033}\usepackage{ifthen}
 % --------------------------------------------
 % Check for PDFLaTeX/LaTeX 
 % --------------------------------------------
@@ -413,31 +413,46 @@
 % ------------------------   
 % Section 
 \section{Equation Test}
-\label{id2470958}\hypertarget{id2470958}{}%
+\label{id2471003}\hypertarget{id2471003}{}%
 
 Now here is a bit of displayed math 
-\begin{displaymath}\label{id2470908}
-      \[F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}\] 
+\begin{displaymath}\label{id2470953}
+      F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}
     \end{displaymath}
 
 
- So that was a equation for you. 
+ That was a so-called informal equation for you.
+
+Here a proper equation, with a title and all. This is the method nbdoc now uses. It is unfortunate because otherwise the graphic-element is not used for images anymore, but mediaobject imageobjects instead. 
 \begin{dbequation}
 \begin{center}
-\hypertarget{id2470690}{}%
-\begin{displaymath}\label{id2470665}
-      \[F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}\] 
-    \end{displaymath}
-{{\caption{An equation.}\label{id2470690}}}
+\hypertarget{equation1}{}%
+\begin{displaymath}\label{id2470695}
+      F_{2,T-k}=\frac{(ESS_r-ESS_u)/2}{ESS_u/(T-k)}
+\end{displaymath}
+{{\caption{}\label{equation1}}}
 \end{center}
 \end{dbequation}
+
+
+
+This tries to use the newer format, where math is inside a mediaobject. This does not work with the db2latex we are using, right? 
+\begin{dbequation}
+\begin{center}
+\hypertarget{equation2}{}%
+e=mc\textasciicircum{}2{{\caption{An Equation}\label{equation2}}}
+\end{center}
+\end{dbequation}
+
 
 
 
 % ------------------------   
 % Section 
 \section{Formule de Mecke}
-\label{sect1.Mecke}\hypertarget{sect1.Mecke}{}%
+\label{Mecke}\hypertarget{Mecke}{}%
+
+This is using another variation, the short and simple tm (texmath) tag.
  \begin{eqnarray*} \lambda \int\int_{\Omega \times \          R} v(\omega,t) P_N^0(dw)dt = \int\int_{\Omega \times \ R}          v(\theta_t \omega,t) P(dw)N(w,dt) \\ \lambda \int\int_{\Omega          \times \ R} f(t,Z_0(w)) P_N^0(dw)dt = \int\int_{\Omega \times \          R} f(t,Z_t) P(dw)N(w,dt) \\ \lambda \int\int_{\Omega \times \          R} f(t,Z_0(w)) P_N^0(dw)dt = \int\int_{\ R \times K} f(t,z)          \lambda_Z(dt \times dz)\\ \lambda \int\int_{\Omega \times \ R}          f(t,Z_0(w)) P(dw)N(w,dt) = E \left\{ \sum_{n \in \ Z} f(T_n,          Z_0(\theta_{T_n}))\right\} \\ \lambda \int\int_{\Omega \times \          R} f(t,Z_0(w)) P(dw)N(w,dt) = E \left\{ \sum_{n \in \ Z} f(T_n,          Z_n))\right\} \\ \end{eqnarray*} 
 Cambell,
 \[ E \left\{ \sum_{n \in \ Z} f(T_n, Z_n))\right\} =          \int\int_{\ R \times K} f(t,z) \lambda_Z(dt \times dz) \]
