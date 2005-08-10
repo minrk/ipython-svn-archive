@@ -32,18 +32,21 @@ from lxml import etree
 
 from nbshell.utils import findnew
 
+#TODO: Fix the plotting API
+from nbshell.plotting_backends import matplotlib_backend as backend
+
 
 class IPythonLog(object):
-    def __init__(self, doc, notebook, logid, *args, **kwds):
+    def __init__(self, doc, nbk, logid, *args, **kwds):
         self.doc = doc
-        self.notebook = notebook
-        self.log = notebook.get_log(logid)
+        self.notebook = nbk
+        self.log = nbk.get_log(logid)
         self.logid = logid
         self.last = False
         #Here I will sort the cells, according to their numbers
         self.log[:] = sorted(self.log, key = lambda x:int(x.attrib['number']))
-        #Append the empty element at the end
-        self.SetLastInput()
+        #Set up plotting
+        self.plot_api = backend.PlotLibraryInterface(self.filename_iter())
         #Set up the interpreter
         #For now we will keep our own excepthook
         self.stdin_orig = sys.stdin
@@ -58,15 +61,58 @@ class IPythonLog(object):
                     '__builtins__' : __builtin__,\
                     '__app':self.doc.app
                     }
+        user_ns['grab_figure'] = self.grab_figure
+        
         self.interp = Shell.IPShellGUI(argv=['-colors','NoColor'], user_ns=user_ns)
         self.excepthook_IP = sys.excepthook
         sys.excepthook = self.excepthook_orig
-        del __builtin__
+        
+        #Set up the number 0 cell. It is used for code which is not supposed to
+        #be edited
+        etree.dump(self.log)
+        
+        if len(self.log) == 0:
+            #This is a new log
+            self.Append(input="""############DO NOT EDIT THIS CELL############
+from pylab import *
+switch_backend('WXAgg')
+ion()
+""", number = 0)
+            self.Run()
+        elif self.log[0].attrib['number'] == '0':
+            self.__run(notebook.Cell(self.log[0]))
+
+        #Append the empty element at the end
+        self.SetLastInput()
+
 
         #set up wrapper to use for long output
         self.wrapper = textwrap.TextWrapper()
+        del __builtin__
+
         #end shell initialization
+        
+    def filename_iter(self):
+        """A generator function used for generating unique figure filenames"""
+        counter = 1
+        fn = self.doc.fileinfo['path'] + '/' + self.doc.fileinfo['name']
+        while True:
+            yield "%s_%d.png"%(fn,counter)
+            counter+=1
     
+    def grab_figure(self, caption = None):
+        """Call this to grab the figure currently being edited and put it in
+        the notebook"""
+        figurexml = self.plot_api.grab_png(caption)
+        #Append the new figure to the appropriate figure list in the log
+        #The figure lists will be dealt with in UpdateOutput
+        figuredict = getattr(self, 'figuredict', {})
+        figurelist = figuredict.get(self.currentcell.number, [])
+        figurelist.append(figurexml)
+        figuredict[self.currentcell.number] = figurelist
+        self.figuredict = figuredict
+        
+        
     # TODO:All logs have one cell with empty input. This is the cell where the
     # user will insert an input. Since this cell should not be part of the
     # notebook file it is deleted before the file is saved. The two methods
@@ -143,14 +189,21 @@ class IPythonLog(object):
         """Removes the given cell from the log. cell is an object of type
         Cell"""
         self.log.remove(cell.element)
-    
-    def Clear(self):
         
+    def Clear(self):
         self.log.clear()
-        self.__reset()
+        self.Reset()
+        self.Append(input="""############DO NOT EDIT THIS CELL############
+from pylab import *
+switch_backend('WXAgg')
+ion()
+""", number = 0)
+        self.Run()
+
         
     def Get(self, number): #TODO: this method is slow, so don't use it
         """Returns the cell with the given number"""
+        
         return notebook.Cell(self.notebook.get_cell(number = number, logid = self.logid))
     
     
@@ -174,12 +227,12 @@ class IPythonLog(object):
             if not self.__run(cell):
                 return False
         return True
-
+        
     def Reset(self):
         """ Resets the interpreter, namespace etc """
         self.interp.reset()
         pass
-    
+        
     def __run(self, cell):
         """ This methods runs the input lines. """
         print 'running code...'
@@ -193,10 +246,15 @@ class IPythonLog(object):
         
         cout = StringIO.StringIO()
         cerr = StringIO.StringIO()
+        #self.currentcell points to cell for grab_figure to use
+        #TODO:this could be prettier
+        self.currentcell = cell
+        self.currentcell.update()
         #The first and last characters of cell.input are '\n'
         retval = self.interp.runlines(cell.input[1:-1],\
                                       displayhook = self.displayhook,\
                                       stdout = cout, stderr = cerr)
+        
         #Retrieve stdout
         text = '\n' + cout.getvalue()
         print 'unformatted stdout ->', text
@@ -236,8 +294,9 @@ class IPythonLog(object):
             return False
         else:
             return True
-    
+        
     def displayhook(self, obj):
         #print >> self.stdout_orig,  'displayhook called' #dbg
         # We want to keep only the last output
-        self.output.text = '\n' + str(obj) + '\n'
+        if obj is not None:
+            self.output.text = '\n' + str(obj) + '\n'

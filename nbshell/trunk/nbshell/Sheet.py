@@ -31,6 +31,8 @@ class Sheet(object):
         self.celllist = []
         #self.last stores if last input has been set. Used by SetLastInput,ClearLastInput
         self.last = None
+        #self.currentlog stores the current log. It will be possible to change
+        #it in the future
         self.currentlog = 'default-log'
         # cell2sheet stores all elements in a sheet corresponding to a given
         # element in a given cell in a log. It is a dictionary with keys of
@@ -46,11 +48,23 @@ class Sheet(object):
         # id has the same meaning as in cell2sheet. The value is a tuple
         # (list, index)
         self.sheet2sheet = {}
+
+        #self.__currentcell stores the current cell. It is retrieved by the 
+        #self.currentcell property
+        self._currentcell = None
         
+    def __get_current_cell(self):
+        return self._currentcell
+    def __set_current_cell(self, cell):
+        self._currentcell = cell
+        cell.view.SetFocus()
+    currentcell = property(fget = __get_current_cell, fset = __set_current_cell)
+    
     def InsertCell(self, type, pos=-1, update = True, **kwds):
         """Inserts a cell of the given type with the given data at the given
         pos. If pos=-1 insert at the end. **kwds is passed to the
         plugin.Returns an instance to the cell"""
+        #TODO: Update the dicts here
         factory = self.factory[type]
         cell = factory.CreateDocumentPlugin(self.doc, **kwds)
         view = factory.CreateViewPlugin(cell, self.view)
@@ -229,7 +243,7 @@ class Sheet(object):
             if update:
                 self.__update_list(blocklist)
                 self.view.Update()
-        elif self.last: #We have called ClearLastInputs
+        elif not self.last: #We have called ClearLastInputs
             #Restore the last inputs
             self.last = True
             blocklist = []
@@ -420,7 +434,7 @@ to insert new lines and Shift-Return to execute inputs.
         logid = block.logid
         number = cell.number
         blocklist = []
-        #1. Are there stderr elements corresponding to the given input in the cell?
+        #1. Are there elements corresponding to the given input in the cell?
         oldelems = self.cell2sheet.get((logid,number,type),[])
         if len(oldelems) > 0:
             #1.1 There are such elements
@@ -459,15 +473,43 @@ to insert new lines and Shift-Return to execute inputs.
                 #1.2.2 No. Do nothing
         return (pos2add, blocklist)
     
-    def UpdateOutput(self, logid, cell, update = True):
-        """Updates the output elements of the sheet corresponding to the given cell
-        element."""
+    def __update_figures(self, figurelist, block, pos2add, update = False):
+        """Updates the figures which where created by running the cell. The
+        figures will be appended at pos2add and the block will be split in two
+        if necessary. Returns a tuple (numfig, blocklist) where numfig is the
+        number of figures inserted and blocklist is the same as in
+        __update_type"""
+        blocklist = []
+        numfig = 0
+        for figurexml in reversed(figurelist):
+            self.InsertFigure(block, pos2add,figurexml, update = False)
+            numfig +=1
+        if numfig>0:
+            #TODO: smarter update of blocks?
+            blocklist = self.celllist
+        return (numfig, blocklist)
+        
+    def UpdateOutput(self, logid, cell, update = True, block=None, pos = None):
+        """Updates the output elements of the sheet corresponding to the given
+        cell element. If block and pos are given they are regarded as the
+        <ipython-cell> element which was called to run the cell. They are used
+        to place any produced figures at a meaningful place. If block and pos
+        are not given the figures will be placed after the last input
+        <ipython-cell> element in the document corresponding to the given cell.
+        
+        The return value is None if no new code blocks were created or a new
+        code block. The new block must be used for appending the new input
+        element """
 
+        cell.update()
         # Get all the <ipython-cell type='special'> or <ipython-cell type='input'>
         # that correspond to the cell (usually there is only one)
         inputelems = self.cell2sheet.get((logid, cell.number, 'special'),[])
         if inputelems == []:
             inputelems = self.cell2sheet.get((logid, cell.number, 'input'),[])
+        if inputelems == []:
+            #There are no inputs in the sheet corresponding to the given cell
+            return None
         
         #for each input update the outputs calling __update_type. TODO:There
         #are some problems here if there are two or more input elements in the
@@ -475,9 +517,23 @@ to insert new lines and Shift-Return to execute inputs.
 
          
         blocklist = []
+        #Sort inputelems so that we may deal with the one after which
+        #to add the figures last
+        inputelems = sorted(inputelems, cmp = lambda x,y:\
+                            cmp((x[0].index,x[1]),(y[0].index,y[1])))
+        if block != None:
+            #A current block and position were given
+            index = 0
+            while inputelems[index][0] != block and inputelems[index][1] != pos:
+                index+=1
+            if index <= len(inputelems):
+                #A matching element was found. Swap it with the last element
+                inputelems[-1], inputelems[index] = inputelems[index],\
+                inputelems[-1]
 
-        #I cange the contents of the list here, so I use indexes
-        for i in range(len(inputelems)):
+        #I change the contents of the list here, so I use indexes
+        #We deal with the last element separately
+        for i in range(len(inputelems)-1):
             #pos2add is the position at which a new element will be inserted in
             #the log
             pos = inputelems[i][1]
@@ -489,9 +545,74 @@ to insert new lines and Shift-Return to execute inputs.
                 pos2add, list = self.__update_type(block, cell, pos2add, type,\
                                            False)
                 blocklist.extend(list)
-
+        #Deal with the last element
+        #pos2add is the position at which a new element will be inserted in
+        #the log
+        pos = inputelems[-1][1]
+        block = inputelems[-1][0]
+        pos2add = pos + 1
+        cell = block.cells[pos]
+        # TODO: Handle traceback
+        # Handle stderr
+        pos2add, list = self.__update_type(block, cell, pos2add, 'stderr',\
+                                           False)
+        blocklist.extend(list)
+        #Handle figures. We use flag to determine if we need to insert a new
+        #block after the figures
+        if pos2add >= len(block):
+            flag = True
+        else:
+            flag = False
+        figuredict = getattr(self.doc.logs[logid], 'figuredict', None)
+        if figuredict is not None:
+            figurelist = figuredict.get(cell.number, None)
+            if figurelist is not None:
+                numfig, list = self.__update_figures(figurelist, block, pos2add,\
+                                                     update = False)
+                del(figuredict[cell.number])
+            else:
+                numfig,list = 0,[]
+        else:
+            numfig,list=0,[]
+        blocklist.extend(list)
+        retvalue = None
+        if numfig > 0:
+            #We have added figures. Determine where the other output will go
+            if not flag:
+                #The figures were inserted inside a block. Get the rest
+                #of the block
+                block = self.celllist[block.index+numfig+1]
+                pos2add = 0
+            else:
+                #Insert a new code block after the figures
+                index = block.index + numfig
+                lastfig = self.celllist[index]
+                codeelem = etree.Element('ipython-block', logid = block.logid)
+                #Fix the text
+                if index < len(self.celllist)-1 and\
+                   self.celllist[index+1].type == 'plaintext':
+                    textblock = self.celllist[index+1]
+                    codeelem.tail = textblock.GetText()
+                    textblock.element = codeelem
+                    blocklist.append(textblock)
+                #Insert the new block
+                block = self.InsertCell('python', index+1, update = False,\
+                                        ipython_block = codeelem)
+                self.Update(update = False, dicts = True)
+                retvalue = block
+                blocklist.append(block)
+                pos2add = 0
+        #Deal with other output
+        for type in ['stdout', 'output']:
+            pos2add, list = self.__update_type(block, cell, pos2add, type,\
+                                               False)
+            blocklist.extend(list)
+            
         if update:
-            self.__update_list(blocklist)
+            self.Update(update = True)
+        return retvalue
+#            self.__update_list(blocklist)
+
 
     def ReplaceCells(self, logid, oldcell, newcell, update = True):
         """Changes all the <ipython-cell type=..., number=oldcell.number> elements to
@@ -577,3 +698,51 @@ to insert new lines and Shift-Return to execute inputs.
         #update stuff. I could update only the modified cells, but I'm lazy
         self.Update(update,dicts = True)
         
+    def InsertFigure(self, block, pos, figurexml, update = True):
+        """Inserts the given figure at the given position in the given block.
+        Returns the new block
+        """
+        
+        fig_elem = etree.XML(figurexml)
+        #Figure out where to insert the figure, according to the type of the
+        #block
+        
+        if block.type == 'python':
+            #This is a python block. Then if pos points to the position after
+            #the end of the block, insert the figure after the block. If not
+            #split the block and insert the figure at the given position.
+            index = getindex(self.element, block.block)
+            if pos >= len(block): # here we are using the __len__ method
+                #Insert the xml in the sheet
+                self.element[index+1:index+1] = [fig_elem]
+                #Fix the text after the given element
+                if self.celllist[block.index+1].type == 'plaintext':
+                    textblock = self.celllist[block.index+1]
+                    fig_elem.tail = textblock.GetText()
+                    textblock.element = fig_elem
+                #Insert in the view
+                figcell = self.InsertCell('figure', pos = block.index+1,\
+                                          update = False, element= fig_elem)
+                self.Update(update = update, dicts = True)
+            else: #We have to split the given block
+                #Get the XML for the new ipython-block
+                nextblock = block.Split(pos)
+                #update the old text cell to point to the new block
+                oldtextcell = self.celllist[block.index+1]
+                if oldtextcell.type == 'plaintext':
+                    nextblock.tail = oldtextcell.GetText()
+                    oldtextcell.element = nextblock
+                #insert nextblock in the sheet
+                self.element[index+1:index+1] = [nextblock]
+                self.InsertCell('python',pos = block.index+1, update = False, \
+                                ipython_block = nextblock)
+                #insert the figure
+                self.element[index+1:index+1] = [fig_elem]
+                figcell = self.InsertCell('figure', block.index+1,\
+                                          update = False, element = fig_elem)
+                #update
+                self.Update(update = update, dicts = True)
+            return figcell
+        else:
+            raise NotImplementedError
+

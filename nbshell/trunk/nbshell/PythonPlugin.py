@@ -117,8 +117,12 @@ class PythonDocumentPlugin(object):
         self.cells = \
         [notebook.Cell(self.notebook.get_cell(x.attrib['number'],self.logid))\
          for x in self.block]
-
-
+        
+    type = 'python'
+    
+    def __len__ (self):
+        return len(self.block)
+    
     def Clear(self):
         """Clears all data"""
         self.block.clear()
@@ -180,6 +184,10 @@ class PythonNotebookViewPlugin(object):
         self.start = -1
         self.end = -1
 
+    def SetFocus(self):
+        if self.window is not None:
+            self.window.SetFocus()
+            
     def GetFirstId(self):
         """ This view is responsible for a list of consequent windows in the
         #notebook widget. GetFirsId returns the id of the first window"""
@@ -189,6 +197,47 @@ class PythonNotebookViewPlugin(object):
         """See the description of GetFirstId"""
         return self.id
         
+    #self.position is a property which gives the index in self.soc.block of
+    #the ipython-cell on which the cursor currently is.
+    def __get_position(self):
+        linenum = self.window.GetCurrentLine()
+        if self.line2log[linenum] is not None:
+            return self.line2log[linenum][0]
+        else:
+            l = len(self.line2log)
+            while linenum<l and self.line2log[linenum] is None:
+                linenum +=1
+            if linenum == l:
+                return len(self.doc.block)
+            else:
+                return self.line2log[linenum][0]
+            
+    def __set_position(self, pos):
+        linenum = self.window.GetCurrentLine()
+        if self.line2log[linenum] is not None and\
+           self.line2log[linenum][0] == pos:
+            return
+        self.SetPosition(pos)
+        
+    position = property(fget = __get_position, fset = __set_position)
+
+    
+    def SetPosition(self, pos):
+        """Moves the cursor to the start of the element with the given id.
+        Should be used only for input cells, because the output cells cannot be edited"""
+        #TODO: this algorithm is slow. I check each line of the text if it is the start
+        # of the element I need to go to. There should be a faster way to do this
+        i = 0
+        for i in range(len(self.line2log)):
+            item = self.line2log[i]
+            if item is not None and item[0] == pos:
+                break
+        self.window.GotoPos(self.window.PositionFromLine(i)+self.PromptLen(i))
+
+    def __set_focus(self,event):
+        self.doc.sheet._currentcell = self.doc
+        event.Skip()
+
     def createWindow(self):
         """Creates the widget for displaying the code. Does nothing if it is
         already created"""
@@ -196,6 +245,7 @@ class PythonNotebookViewPlugin(object):
             return self.window
         #1. Create the window
         self.window = Shell(self, self.view, -1)
+        wx.EVT_SET_FOCUS(self.window, self.__set_focus)
         #print "getting id" #dbg
         self.id = self.window.GetId()
         #print "id:", self.id #dbg
@@ -395,11 +445,13 @@ class PythonNotebookViewPlugin(object):
             #try to run the current input. If it needs more, insert a line and continue editing
             if self.doc.log.Run(): # we have run the text and generated output
                 #Update the sheet
-                self.doc.sheet.UpdateOutput(self.doc.logid,
-                                            self.doc.cells[doc_id], update = True)
+                newblock = self.doc.sheet.UpdateOutput(self.doc.logid,\
+                                self.doc.cells[doc_id], update = True)
+                if newblock == None:
+                    newblock = self.doc
                 #Create a new input and append it at the end of the block
                 cell = self.doc.log.Append("\n\n") #each input starts and ends with a newline
-                self.doc.sheet.InsertElement(self.doc, 'input', cell, \
+                self.doc.sheet.InsertElement(newblock, 'input', cell, \
                                              update = True)
             else: #We need more input, do nothing
                 # Delete the input from lastcell
@@ -448,19 +500,6 @@ class PythonNotebookViewPlugin(object):
                 return
             #call sheet.InsertText
             self.doc.sheet.InsertText(self.doc, pos+1, update = True)
-
-
-    def setCurrentInput(self, id):
-        """Moves the cursor to the start of the element with the given id.
-        Should be used only for input cells, because the output cells cannot be edited"""
-        #TODO: this algorithm is slow. I check each line of the text if it is the start
-        # of the element I need to go to. There should be a faster way to do this
-        i = 0
-        for i in range(len(self.line2log)):
-            item = self.line2log[i]
-            if item is not None and item[0] == id:
-                break
-        self.window.GotoPos(self.window.PositionFromLine(i)+self.PromptLen(i))
 
     def GetLineType(self, linenum):
         """Returns the type of the line with number linenum.

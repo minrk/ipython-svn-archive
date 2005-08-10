@@ -16,6 +16,8 @@ import os.path
 
 import wx
 
+from lxml import etree
+
 def GetPluginFactory():
     """ Returns the factory object for the plugin. This function is called
     at the start of the program and should be called only once.
@@ -59,6 +61,8 @@ class FigureDocumentPlugin(object):
                             #multiple view there should be some modifications
         self.element = element #This stores the <ipython-figure> element
 
+    type = 'figure'
+    
     def Clear(self):
         """Clears all data"""
         return
@@ -86,7 +90,15 @@ class FigureNotebookViewPlugin(object):
         self.image = None   #a wx.Image object, storing the image
         #wx.Image.InsertHandler(wx.PNGHandler)
         self.bitmap = None
-    
+
+    def SetFocus(self):
+        if self.window is not None:
+            self.window.SetFocus()
+
+    def __set_focus(self,event):
+        self.doc.sheet._currentcell = self.doc
+        event.Skip()
+
     def createWindow(self):
         """Creates the widget for displaying the figure. Does nothing if it is
         already created"""
@@ -94,6 +106,7 @@ class FigureNotebookViewPlugin(object):
             return self.window
         #1. Create the window
         self.window = FigureCtrl(self.view, -1)
+        wx.EVT_SET_FOCUS(self.window, self.__set_focus)
         wx.EVT_PAINT(self.window, self.OnPaint)
         #print "getting id" #dbg
         self.id = self.window.GetId()
@@ -172,7 +185,8 @@ class FigureNotebookViewPlugin(object):
         """ This method is called when the document cell is
         destroyed. It must close all windows. If update is false, do
         not update the view"""
-        pass
+        index = self.view.GetIndex(self.id)
+        self.view.DeleteCell(index, update)
 
 class FigureCtrl(wx.Window):
     """Window used for displaying a figure"""

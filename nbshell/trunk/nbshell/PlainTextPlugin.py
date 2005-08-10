@@ -83,7 +83,12 @@ class PlainTextDocumentPlugin(object):
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
         #self.LoadData(data)
+    
+    type='plaintext'
 
+    def __len__(self):
+        return self.view.window.GetLenght()
+    
     def SetSavePoint(self):
         self.view.SetSavePoint()
     def IsModified(self):
@@ -134,6 +139,23 @@ class PlainTextNotebookViewPlugin(object):
         self.window = None
         #self.document = docplugin.document
         self.sheet = docplugin.sheet
+        
+    def SetFocus(self):
+        if self.window is not None:
+            self.window.SetFocus()
+            
+    #self.position is a property which can get and set the current position in
+    #the cell. It behaves differently in different types of cells
+    def __get_position(self):
+        if self.window is None:
+            return 0
+        else:
+            return self.window.GetCurrentPos()
+
+    def __set_position(self, pos):
+        if self.window is not None:
+            self.window.SetCurrentPos(pos)
+    position = property(fget = __get_position, fset = __set_position)
 
     def GetFirstId(self):
         """ This view is responsible for a list of consequent windows in the
@@ -143,12 +165,17 @@ class PlainTextNotebookViewPlugin(object):
     def GetLastId(self):
         """See the description of GetFirstId"""
         return self.id
+
+    def __set_focus(self,event):
+        self.doc.sheet._currentcell = self.doc
+        event.Skip()
         
     def createWindow(self):
         """Creates the window. If it is already created returns it"""
         if self.window is None: #create the window
             #1. Create the window and set the document plugin
             self.window = PlainTextCtrl(self.view, -1)
+            wx.EVT_SET_FOCUS(self.window, self.__set_focus)
             self.id = self.window.GetId()
             #print "id:", self.id #dbg
             self.window.view = self
@@ -254,6 +281,8 @@ class PlainTextCtrl(stc.StyledTextCtrl):
             self.GotoPos(min(self.PositionFromLine(lastline) + pos, self.GetLineEndPosition(lastline)))
     
     def OnModified (self, evt):
+        #TODO: This might be slow
+        self.view.doc.text = self.GetText()
         lineno = self.GetLineCount()
         if self.oldlineno != lineno :
             self.oldlineno = lineno

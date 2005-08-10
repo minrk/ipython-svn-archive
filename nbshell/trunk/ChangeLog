@@ -1,4 +1,26 @@
-07.07.2005:
+08.10.2005:
+	* Added a type variable in each XXXDocumnetPlugin class the
+	current types are 'python', 'plaintext' and 'figure'
+
+	* Added a property currentcell in the sheet, whichs points to the
+	active cell, and a property position in the python and plaintext
+	plugins which returns the current position in the plugin.
+
+	* Fixed a bug where the last input disappears after a save
+
+	* Changed bahaviour. Now the cell with number 0 contains code
+	which should not be displayed on the sheet. However the
+	default_sheet method in notabene.notebook.Notebook does display
+	this cell on the sheet.
+
+	* Added support for the Matplotlib plotting library. Currently a
+	function grab_figure(caption=None) is exposed in the user
+	namespace which will get the current figure and place it after the
+	input cell where grab_figure() was called. Check figuretest.nbk in
+	the tests dirrectory. The API for adding other plotting libraries is
+	not yet ready.
+	
+08.07.2005:
 	* Added support for insertion of cells. Now when you are in a text
 	cell and press Ctrl-I a code cell will be inserted at the place of
 	the cursor. When in a code cell, a text cell is inserted

@@ -48,6 +48,7 @@ class ipnDocument(object):
         """Create a default empty notebook"""
         self.Clear()
         self.notebook = notebook.Notebook('untitled.nbk')
+        etree.dump(self.notebook.root) #dbg
         self.logs = {'default-log':IPythonLog.IPythonLog(self, self.notebook, 'default-log')}
         etree.SubElement(self.notebook.root, 'sheet', format='rest')
         self.sheet = Sheet.Sheet(self, self.notebook, self.view, self.factory)

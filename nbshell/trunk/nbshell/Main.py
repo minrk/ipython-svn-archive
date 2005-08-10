@@ -38,6 +38,11 @@ class App(wx.App):
     
     plugin_dir = "." #this should be configured somewhere
     plugin_dict = {0:0}
+    
+    def __init__(self, *args, **kwds):
+        wx.App.__init__(self, *args, **kwds)
+        self.mainloop = False
+        
     def RegisterPlugins(self):
         """Seeks for plugins and gets their factory objects"""
         #dirlist = os.listdir(self.plugin_dir)
@@ -105,6 +110,15 @@ class App(wx.App):
             file = 'test2.nbk'
             
         self.document.LoadFile(file)
+        
+    def MainLoop(self):
+        """The main loop method of the application."""
+        #The matplotlib WX backend calls MainLoop() in the show() function.
+        #Since the main loop has already started this call is unwanted.
+        #So I make the main loop to be called only once
+        if not self.mainloop:
+            self.mainloop = True
+            wx.App.MainLoop(self)
 
 
 def start():

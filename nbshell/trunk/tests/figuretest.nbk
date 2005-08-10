@@ -1,13 +1,44 @@
-<notebook>
-<head/>
-<ipython-log id="default-log">
-<cell number="0"><input>
-print "Hello World!"
-</input></cell></ipython-log>
-<sheet>
-This notebook tests displaying of figures
-<ipython-block logid="default-log"><ipython-cell type="input" number="0"/></ipython-block>
-<ipython-figure filename="test1.png"/>
-</sheet>
+<notebook><head/><ipython-log id="default-log"><cell number="0"><input>############DO NOT EDIT THIS CELL############
+from pylab import *
+switch_backend('WXAgg')
+ion()
+</input></cell><cell number="1"><input>
+ioff()
+plot([1,2,3])
+title('A Simple Plot')
+</input></cell><cell number="2"><input>
+grab_figure()
+</input></cell><cell number="3"><input>
+ion()
+plot([1,1,2,2,3,3,4,4])
 
-</notebook>
+</input></cell><cell number="4"><input>
+title('Another plot')
+</input></cell><cell number="5"><input>
+grab_figure()
+</input></cell><cell number="6"><input>
+ioff()
+x = arange(0,2*pi, 0.05)
+y = sin(x)
+z = cos(x)
+plot(x,y)
+grab_figure()
+plot(x,z)
+grab_figure()
+</input></cell><cell number="7"><input>
+t = exp(x)
+plot(x,t)
+
+</input></cell><cell number="8"><input>
+show()
+</input></cell><cell number="9"><input>
+grab_figure()
+</input></cell></ipython-log><sheet>A notebook testing figures.
+
+Use Shift-Enter to execute each cell.
+
+
+Plotting with interactive mode turned off:<ipython-block logid="default-log"><ipython-cell type="input" number="1"/><ipython-cell type="input" number="2"/></ipython-block>
+Plotting with interactive mode turned on:<ipython-block logid="default-log"><ipython-cell type="input" number="3"/><ipython-cell type="input" number="4"/><ipython-cell type="input" number="5"/></ipython-block>
+More than one plots can be produced from one figure<ipython-block logid="default-log"><ipython-cell type="input" number="6"/></ipython-block>
+Displaying the plots with the show() method<ipython-block logid="default-log"><ipython-cell type="input" number="7"/><ipython-cell type="input" number="8"/><ipython-cell type="input" number="9"/></ipython-block></sheet></notebook>
