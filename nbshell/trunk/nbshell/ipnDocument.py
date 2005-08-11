@@ -19,6 +19,7 @@ from notabene import notebook
 
 from nbshell import IPythonLog
 from nbshell import Sheet
+from nbshell import utils
 
 class ipnDocument(object):
     def __init__(self, app, notebookview):

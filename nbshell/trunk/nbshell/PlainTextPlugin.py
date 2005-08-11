@@ -11,8 +11,12 @@ __author__  = '%s <%s>' % Release.author
 __license__ = Release.license
 __version__ = Release.version
 
+import StringIO
+
 import wx
 from wx import stc
+
+from nbshell.SimpleXMLWriter import XMLWriter
 
 def GetPluginFactory():
     """ Returns the factory object for the plugin. This function is called
@@ -41,12 +45,12 @@ class PlainTextPluginFactory(object):
     #    more info"""
     #    return "encoded" #Probably only the python code plugin should be raw
         
-    def CreateDocumentPlugin(self,document, element):
+    def CreateDocumentPlugin(self,document):
         """Creates the document part of the plugin. The returned object is 
         stored in ipgDocument.celllist and is responsible for storing and
         serialization of data. "data" contains initial data for the plugin.
         """
-        return PlainTextDocumentPlugin(document, element)
+        return PlainTextDocumentPlugin(document)
     
     def CreateViewPlugin(self,docplugin, view):
         """ Creates a view plugin connected to the given document plugin and 
@@ -67,25 +71,67 @@ class PlainTextPluginFactory(object):
 #end GenericPluginFactory
 
 class PlainTextDocumentPlugin(object):
-    def __init__(self, document, element):
+    def __init__(self, document):
         """Initialization. If element is <sheet> then the text is
         element.text. If the element is something else, then the text is
         element.tail"""
         
         self.document = document
         self.sheet = document.sheet
-        self.element = element
-        if element.tag == 'sheet':
-            self.start = True #self.start stores if the text block is the first in the sheet
-        else:
-            self.start = False
+        self.text = ''
         self.index = None   #Set by AddCell, InsertCell, DeleteCell
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
-        #self.LoadData(data)
-    
-    type='plaintext'
 
+    type='plaintext'
+    
+    def LoadXML(self, iterator, prevlist, elemlist, endtaglist):
+        """The LoadXML method gets text representing a part of the xml tree.
+        The first element in this part is 'elemlist[-1]', the next are
+        retrieved by 'iterator'. 'prevlist' and 'elemlist' are the previous two
+        results of calling 'iterator.next()'. The LoadXML method stops when the
+        'iterator' throws a 'StopIteration' exception, or it finds an element for
+        which there is a plugin to process it. Currently there are such
+        plugins for the <ipython-block> and <ipython-figure> elements. In that
+        case it returns the last 'elemlist'. The tags on which LoadXML
+        should exit are in 'endtaglist'"""
+        
+        text = StringIO.StringIO()
+        #TODO: what encoding should I choose?
+        writer = XMLWriter(text, encoding='utf-8')
+
+        l1 = len(prevlist)
+        i = l1-1
+        l2 = len(elemlist)
+        while i>=0 and (i>= l2 or prevlist[i] != elemlist[i]):
+            writer.end(prevlist[i].tag)
+            writer.data(prevlist[i].tail or '')
+            i-=1
+
+        while elemlist != () and elemlist[-1].tag not in endtaglist:
+            prevlist = elemlist
+            writer.start(elemlist[-1].tag, elemlist[-1].attrib)
+            writer.data(elemlist[-1].text or '')
+            try:
+                elemlist = iterator.next()
+            except StopIteration:
+                elemlist = ()
+            l1 = len(prevlist)
+            i = l1-1
+            l2 = len(elemlist)
+            while i>=0 and (i>= l2 or prevlist[i] != elemlist[i]):
+                writer.end(prevlist[i].tag)
+                writer.data(prevlist[i].tail or '')
+                i-=1
+            
+        writer.flush()
+        self.text = text.getvalue()
+        if elemlist == ():
+            raise StopIteration
+        else: #elemlist[-1].tag in endtaglist:
+            return elemlist
+        
+        
     def __len__(self):
         return self.view.window.GetLenght()
     
@@ -95,37 +141,37 @@ class PlainTextDocumentPlugin(object):
         return self.view.modified
     modified = property(fget = IsModified)
 
-    def GetText(self):
-        text = self.element.text
-        if self.start:
-            text = self.element.text
-        else:
-            text = self.element.tail
-        return (text is not None) and text or ''
+    #def GetText(self):
+    #    text = self.element.text
+    #    if self.start:
+    #        text = self.element.text
+    #    else:
+    #        text = self.element.tail
+    #    return (text is not None) and text or ''
 
-    def SetText(self, text):
-        """Sets the text in the document"""
-        if self.start:
-            self.element.text = text
-        else:
-            self.element.tail = text
-        return text
+    #def SetText(self, text):
+    #    """Sets the text in the document"""
+    #    if self.start:
+    #        self.element.text = text
+    #    else:
+    #        self.element.tail = text
+    #    return text
     
     def Clear(self):
         """Clears all data"""
-        self.SetText('')
+        self.text = ''
         if self.view is not None:
             self.view.Update()
 
-    text = property(GetText, SetText, Clear, doc = """The text contained in this instance""")
+    #text = property(GetText, SetText, Clear, doc = """The text contained in this instance""")
     
     def GetFactory(self):
         return PlainTextPluginFactory()
     
     def Split(self, pos, update = True):
         """Removes the text after the given position and returns it"""
-        text = self.GetText()
-        self.SetText(text[:pos])
+        text = self.text
+        self.text = text[:pos]
         if update:
             self.view.Update()
         return text[pos:]
@@ -231,7 +277,7 @@ class PlainTextNotebookViewPlugin(object):
     
     def InsertCode(self):
         #lazy document update. We update the document when it is needed
-        self.doc.SetText(self.window.GetText())
+        self.doc.text = self.window.GetText()
         pos = self.window.GetCurrentPos()
         self.doc.sheet.InsertCode(self.doc,pos, update = True)
         

@@ -18,7 +18,7 @@ from lxml import etree
 from notabene import notebook
 
 from nbshell import PythonPlugin
-from nbshell.utils import getindex
+from nbshell.utils import getindex, getiterator2
 
 
 class Sheet(object):
@@ -83,7 +83,7 @@ class Sheet(object):
         if cell in [self.celllist[-1], self.celllist[0]]:
             #This is the first or the last text cell and cannot be deleted.
             #Just clear the text.
-            cell.SetText('')
+            cell.text= ''
             if update:
                 cell.view.Update()
             return
@@ -150,22 +150,73 @@ class Sheet(object):
         """Updates data from the view"""
         for doccell in self.celllist:
             doccell.view.UpdateDoc()
+            
+    
+    def __append_plaintext_cell(self, iterator, prevlist, elemlist,\
+                                endtaglist, update = True):
+        """Append a plaintext cell at the end of the document. Plaintext cells
+        are cells which deal with yet unsupported parts of the notebook
+        format. They simply display the xml for these parts. The supported
+        tags are in endtaglist"""
+        factory = self.factory['plaintext']
+        cell = factory.CreateDocumentPlugin(self.doc)
+        try:
+            elemlist = cell.LoadXML(iterator, prevlist, elemlist,\
+                                    endtaglist)
+        finally:
+            if cell.text != '':
+                view = factory.CreateViewPlugin(cell, self.view)
+                self.__add_cell(cell)
+                if update:
+                    view.Update()
+                    self.view.Update()
+        return elemlist
+
 
     def __update_celllist(self, update = False):
         """Updates the celllist from self.element and updates the view if
         update == True """
-        if self.element.text is not None:
-            self.InsertCell('plaintext',update=False,element = self.element)
-        l = len(self.element)
-        for i in range(l):
-            elem = self.element[i]
-            if elem.tag == 'ipython-block':
-                self.InsertCell('python', update=False, ipython_block = elem)
-            elif elem.tag == 'ipython-figure':
-                self.InsertCell('figure', update = False, element = elem)
-            self.InsertCell('plaintext', update=False, element = elem)
+        
+        iter = getiterator2(self.element)
+        elemlist = iter.next()
+        tag2type = {'ipython-block':'python', 'ipython-figure':'figure'}
+        flag = False
+        while True:
+            try:
+                elem = elemlist[-1]
+                if elem.tag in tag2type.keys():
+                    self.InsertCell(tag2type[elem.tag], update = False, \
+                                    ipython_block = elem)
+                    l = len(elemlist)
+                    prevlist = elemlist[:-1]
+                    while len(elemlist)>=l and elemlist[l-1] == elem:
+                        flag = True
+                        elemlist = iter.next()
+                    flag = False
+                    elemlist = self.__append_plaintext_cell(iter, prevlist,\
+                                elemlist, update = False,\
+                                endtaglist = tuple(tag2type.keys()))
+                else:
+                    #plaintext cells will deal with all the elements we have not
+                    #dealt with yet
+                    prevlist = ()
+                    flag = False
+                    elemlist = self.__append_plaintext_cell(iter, prevlist,\
+                                elemlist, update = False,\
+                                endtaglist = ('ipython-block', 'ipython-figure'))
+            except StopIteration:
+                #Add any remaining tags
+                if flag:
+                    try:
+                        self.__append_plaintext_cell(iter,
+                            prevlist,(), update = False,\
+                            endtaglist = ('ipython-block', 'ipython-figure'))
+                    except StopIteration:
+                        pass
+                break
         if update:
             self.view.Update()
+
         
     def __clear_celllist(self, update = False):
         """Clears the celllist. if update = True, updates the view"""
@@ -305,11 +356,11 @@ class Sheet(object):
         #default_sheet will append the last input in the log here
         #We only need to set self.last
         self.element = self.notebook.default_sheet()
-        self.element.text = \
-""" This is a temporary message, until I write proper help. Please use Return
-to insert new lines and Shift-Return to execute inputs.
-"""
-        
+        textelem = etree.Element('para')
+        textelem.text =\
+""" This is a temporary message, until I write proper help.
+Please use Return to insert new lines and Shift-Return to execute inputs. """
+        self.element[0:0] = [textelem]
         # Now remove the old sheet and replace it with the new one
         oldsheet = self.notebook.root.find('sheet')
         if oldsheet is not None:
@@ -319,6 +370,7 @@ to insert new lines and Shift-Return to execute inputs.
         #etree.dump(self.element) #dbg
         #etree.dump(self.notebook.root) #dbg
         #Here we do not call InsertElement, so we must update the dictionaries
+        etree.dump(self.notebook.root)
         self.Update(update, celllist = True, dicts = True)
         
     def IsModified(self):

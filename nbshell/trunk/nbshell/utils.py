@@ -40,3 +40,15 @@ def getindex(element,subelement):
         if elem is subelement:
             return i
     return None
+
+def getiterator2(root):
+    """Returns an iterator which for each subelement yields a tuple of all
+    elements in the path from the root to the given subelement"""
+    
+    root_tup = (root,)
+    yield root_tup
+    #Recursive generators, yummy :)
+    for subelement in root:
+        iter = getiterator2(subelement)
+        for result in iter:
+            yield root_tup + result
