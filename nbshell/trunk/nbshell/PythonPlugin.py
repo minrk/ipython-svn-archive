@@ -72,12 +72,12 @@ class PythonPluginFactory(object):
     #    more info"""
     #    return "raw" #Probably only the python code plugin should be raw
         
-    def CreateDocumentPlugin(self,document, ipython_block):
+    def CreateDocumentPlugin(self,document, element):
         """Creates the document part of the plugin. The returned object is 
         stored in ipgDocument.celllist and is responsible for storing and
-        serialization of data. "data" contains initial data for the plugin.
+        serialization of data.
         """
-        return PythonDocumentPlugin(document, ipython_block)
+        return PythonDocumentPlugin(document, element)
     
     def CreateViewPlugin(self,docplugin, view):
         """ Creates a view plugin connected to the given document plugin and 
@@ -99,13 +99,13 @@ class PythonPluginFactory(object):
 
 
 class PythonDocumentPlugin(object):
-    def __init__(self, document, ipython_block):
+    def __init__(self, document, element):
         """Initialization. ipython-block is a Elemtent object holding a
         <ipython-block> tag"""
         self.document = document
         self.sheet = document.sheet
-        self.block = ipython_block #TODO: a better name?
-        self.logid = self.block.get('logid', 'default-log') 
+        self.element = element
+        self.logid = self.element.get('logid', 'default-log') 
         self.log = document.logs[self.logid]
         self.notebook = document.notebook
         
@@ -113,20 +113,20 @@ class PythonDocumentPlugin(object):
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
         #print "block:"
-        #etree.dump(self.block) #dbg
+        #etree.dump(self.element) #dbg
         self.cells = \
         [notebook.Cell(self.notebook.get_cell(x.attrib['number'],self.logid))\
-         for x in self.block]
+         for x in self.element]
         
     type = 'python'
     
     def __len__ (self):
-        return len(self.block)
+        return len(self.element)
     
     def Clear(self):
         """Clears all data"""
-        self.block.clear()
-        self.block.attrib['logid'] = self.logid
+        self.element.clear()
+        self.element.attrib['logid'] = self.logid
         self.cells = []
         self.view.Update()
         
@@ -139,11 +139,11 @@ class PythonDocumentPlugin(object):
     
     def GetStuff(self, id): #TODO: a better name
         """Returns a tuple (type, elem) where type is the type of the id'th
-        element in self.block and elem is the the corresponding element in the
+        element in self.element and elem is the the corresponding element in the
         cell in the log"""
         
         #print "id -> %s"%(str(id),) #dbg
-        type = self.block[id].attrib['type']
+        type = self.element[id].attrib['type']
         #print "type-> %s"%(type,) #dbg
         return (type, self.cells[id].element.find(type))
     
@@ -153,13 +153,14 @@ class PythonDocumentPlugin(object):
         """
         
         root = etree.Element('ipython-block', logid = self.logid)
-        for elem in self.block[pos:]:
+        for elem in self.element[pos:]:
             root.append(elem)
-        del self.block[pos:]
+        del self.element[pos:]
         del self.cells[pos:]
         #TODO: spagetti
         self.sheet.Update(dicts = True, update = update)
-        return root
+        return lambda p:\
+            self.sheet.InsertCell('python', p, update = False, element = root)
 
     def GetFactory(self):
         return PlainTextPluginFactory()
@@ -197,18 +198,21 @@ class PythonNotebookViewPlugin(object):
         """See the description of GetFirstId"""
         return self.id
         
-    #self.position is a property which gives the index in self.soc.block of
+    #self.position is a property which gives the index in self.doc.element of
     #the ipython-cell on which the cursor currently is.
     def __get_position(self):
-        linenum = self.window.GetCurrentLine()
-        if self.line2log[linenum] is not None:
-            return self.line2log[linenum][0]
+        pos = self.window.GetCurrentPos()
+        linenum = self.window.LineFromPosition(pos)
+        if pos == self.window.GetLength():
+            return len(self.line2log)
+        elif self.line2log[linenum] is not None:
+            return len(self.doc.element)
         else:
             l = len(self.line2log)
             while linenum<l and self.line2log[linenum] is None:
                 linenum +=1
             if linenum == l:
-                return len(self.doc.block)
+                return len(self.doc.element)
             else:
                 return self.line2log[linenum][0]
             
@@ -287,7 +291,7 @@ class PythonNotebookViewPlugin(object):
         #TODO: It is really stupid to rewrite the text for 
         #every little change that can occur. Think of a way to avoid this
         cells = self.doc.cells
-        block = self.doc.block
+        block = self.doc.element
         #print "data->", data #dbg
         
         #log = self.doc.log
@@ -370,7 +374,7 @@ class PythonNotebookViewPlugin(object):
         #    return 0
         
         #get the number of digits of the number of the input
-        item = self.doc.block[line[0]]
+        item = self.doc.element[line[0]]
         type = self.doc.GetStuff(line[0])[0]
         strnumber = item.attrib['number']
         if type == 'input':
@@ -495,7 +499,7 @@ class PythonNotebookViewPlugin(object):
             return
         else:
             pos = self.line2log[linenum][0]
-            if pos == len(self.doc.block) -1:
+            if pos == len(self.doc.element) -1:
                 #this block has only one cell, so do nothing
                 return
             #call sheet.InsertText

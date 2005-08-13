@@ -45,12 +45,12 @@ class PlainTextPluginFactory(object):
     #    more info"""
     #    return "encoded" #Probably only the python code plugin should be raw
         
-    def CreateDocumentPlugin(self,document):
+    def CreateDocumentPlugin(self,document, text = None):
         """Creates the document part of the plugin. The returned object is 
         stored in ipgDocument.celllist and is responsible for storing and
         serialization of data. "data" contains initial data for the plugin.
         """
-        return PlainTextDocumentPlugin(document)
+        return PlainTextDocumentPlugin(document, text)
     
     def CreateViewPlugin(self,docplugin, view):
         """ Creates a view plugin connected to the given document plugin and 
@@ -71,14 +71,14 @@ class PlainTextPluginFactory(object):
 #end GenericPluginFactory
 
 class PlainTextDocumentPlugin(object):
-    def __init__(self, document):
+    def __init__(self, document, text = None):
         """Initialization. If element is <sheet> then the text is
         element.text. If the element is something else, then the text is
         element.tail"""
         
         self.document = document
         self.sheet = document.sheet
-        self.text = ''
+        self.text = text or ''
         self.index = None   #Set by AddCell, InsertCell, DeleteCell
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
@@ -133,7 +133,7 @@ class PlainTextDocumentPlugin(object):
         
         
     def __len__(self):
-        return self.view.window.GetLenght()
+        return self.view.window.GetLength()
     
     def SetSavePoint(self):
         self.view.SetSavePoint()
@@ -174,7 +174,8 @@ class PlainTextDocumentPlugin(object):
         self.text = text[:pos]
         if update:
             self.view.Update()
-        return text[pos:]
+        return lambda p:\
+            self.sheet.InsertCell('plaintext', p, update = False, text = text[pos:])
 
 class PlainTextNotebookViewPlugin(object):
     def __init__(self, docplugin, view):

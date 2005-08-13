@@ -12,7 +12,11 @@ __author__  = '%s <%s>' % Release.author
 __license__ = Release.license
 __version__ = Release.version
 
+import StringIO
+
 import wx
+
+from nbshell import SimpleXMLWriter
 
 def idgen():
     id = wx.ID_HIGHEST
@@ -31,6 +35,11 @@ ID_ABOUT = wx.ID_ABOUT
 
 #NBShell menu identifiers
 ID_RERUN = id_iter.next()
+
+#Insert menu identifiers
+ID_INSERT_TEXT = id_iter.next()
+ID_INSERT_CODE = id_iter.next()
+ID_INSERT_FIGURE = id_iter.next()
 
 class ipnFrame(wx.Frame):
     def __init__ (self, parent, id, title, pos=wx.DefaultPosition,
@@ -74,8 +83,18 @@ class ipnFrame(wx.Frame):
         nbshellmenu = wx.Menu()
         nbshellmenu.Append(ID_RERUN, "&Rerun", "Rerun the notebook")
         wx.EVT_MENU(self, ID_RERUN, self.OnRerun)
+        
+        insertmenu = wx.Menu()
+        insertmenu.Append(ID_INSERT_TEXT, "Insert Text", "Inserts a text cell")
+        insertmenu.Append(ID_INSERT_CODE, "Insert Code", "Inserts a new empty code cell")
+        insertmenu.Append(ID_INSERT_FIGURE, "Insert Figure...", "Inserts a figure")
+        wx.EVT_MENU(self, ID_INSERT_CODE, self.OnInsertCode)
+        wx.EVT_MENU(self, ID_INSERT_TEXT, self.OnInsertText)
+        wx.EVT_MENU(self, ID_INSERT_FIGURE, self.OnInsertFigure)
+        
         menu = wx.MenuBar()
         menu.Append(filemenu, "&File")
+        menu.Append(insertmenu, "&Insert")
         menu.Append(nbshellmenu, "&NBShell")
         self.SetMenuBar(menu)
 
@@ -174,3 +193,34 @@ class ipnFrame(wx.Frame):
                 
     def OnRerun(self,evt):
         self.app.document.Rerun()
+    
+    def OnInsertText(self, evt):
+        sheet = self.app.document.sheet
+        block = sheet.currentcell
+        sheet.InsertText(block, block.view.position, update = True)
+    
+    def OnInsertCode(self, evt):
+        sheet = self.app.document.sheet
+        block = sheet.currentcell
+        sheet.InsertCode(block, block.view.position, update = True)
+        
+    def OnInsertFigure(self, evt = None):
+        dlg = wx.FileDialog(self, "Choose a Fifure", \
+                            wildcard = "PNG files (*.png)|*.png",style = wx.OPEN)
+        val = dlg.ShowModal()
+        if val == wx.ID_CANCEL:
+            return None
+        else:
+            filename = dlg.GetPath()
+            sheet = self.app.document.sheet
+            text = StringIO.StringIO()
+            #We use XMLWriter, to avoid problems with a filename with special symbols,
+            #for example: blah.png"/><some random xml code>.png
+            writer = SimpleXMLWriter.XMLWriter(text, encoding = 'utf-8')
+            writer.start('ipython-figure', type = "png", filename = filename)
+            writer.end()
+            
+            sheet.InsertFigure(sheet.currentcell, sheet.currentcell.view.position,
+               figurexml = text.getvalue())
+            text.close()
+

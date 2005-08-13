@@ -62,7 +62,12 @@ class FigureDocumentPlugin(object):
         self.element = element #This stores the <ipython-figure> element
 
     type = 'figure'
+    def __len__(self):
+        return 1
     
+    def Split(self, pos):
+        assert(0)
+        
     def Clear(self):
         """Clears all data"""
         return
@@ -187,6 +192,8 @@ class FigureNotebookViewPlugin(object):
         not update the view"""
         index = self.view.GetIndex(self.id)
         self.view.DeleteCell(index, update)
+        
+    position = property(fget = lambda :0, fset = lambda x:None)
 
 class FigureCtrl(wx.Window):
     """Window used for displaying a figure"""

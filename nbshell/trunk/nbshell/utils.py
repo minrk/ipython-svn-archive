@@ -43,12 +43,29 @@ def getindex(element,subelement):
 
 def getiterator2(root):
     """Returns an iterator which for each subelement yields a tuple of all
-    elements in the path from the root to the given subelement"""
+    elements in the path from the root to the given subelement, excluding the
+    root. The root element is not returned"""
     
-    root_tup = (root,)
-    yield root_tup
     #Recursive generators, yummy :)
     for subelement in root:
+        yield (subelement,)
         iter = getiterator2(subelement)
         for result in iter:
-            yield root_tup + result
+            yield (subelement,) + result
+            
+def default(func, default = None):
+    """If func throws an exception returns default, else returns the result of
+    the function"""
+    try:
+        res = func()
+    except:
+        res = default
+    return res
+
+def ifelse(expr1, expr2, expr3):
+    """If expr1 is True returns expr2(), else returns expr3(). expr2 and expr3
+    are functions. To use ifelse for regular expressions use:
+        ifelse(expr1, lambda:expr2, lambda:expr3)"""
+    #This ensures that ifelse(1, lambda:None, lambda:2) will return None, not 2
+    #expr2 and expr
+    return ((expr1) and (expr2(),) or (expr3(),))[0] 

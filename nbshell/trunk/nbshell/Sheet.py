@@ -12,13 +12,14 @@ __author__  = '%s <%s>' % Release.author
 __license__ = Release.license
 __version__ = Release.version
 
+import StringIO
 
 from lxml import etree
 
 from notabene import notebook
 
 from nbshell import PythonPlugin
-from nbshell.utils import getindex, getiterator2
+from nbshell.utils import *
 
 
 class Sheet(object):
@@ -40,7 +41,7 @@ class Sheet(object):
         # log, cellnumber is an integer, and type is one of 'input',
         # 'special', 'output', etc. The values of the dictionary are lists of
         # tuples of the type (block, id) where block is a PythonDocumentPlugin
-        # object and the corresponding element is block.block[id]
+        # object and the corresponding element is block.element[id]
         self.cell2sheet = {}
         # sheet2sheet is a dictionary. For each element in a block it returns
         # the list in cell2sheet in which this element belongs and the index
@@ -54,7 +55,10 @@ class Sheet(object):
         self._currentcell = None
         
     def __get_current_cell(self):
+        if self._currentcell is None:
+            self.__set_current_cell(self.celllist[0])
         return self._currentcell
+
     def __set_current_cell(self, cell):
         self._currentcell = cell
         cell.view.SetFocus()
@@ -64,7 +68,6 @@ class Sheet(object):
         """Inserts a cell of the given type with the given data at the given
         pos. If pos=-1 insert at the end. **kwds is passed to the
         plugin.Returns an instance to the cell"""
-        #TODO: Update the dicts here
         factory = self.factory[type]
         cell = factory.CreateDocumentPlugin(self.doc, **kwds)
         view = factory.CreateViewPlugin(cell, self.view)
@@ -73,6 +76,9 @@ class Sheet(object):
         else:
             print 'cell-> %s, pos->%s'%(str(cell),str(pos)) #dbg
             self.__insert_cell(cell, pos)
+
+        #TODO: Smarter update of the dicts here
+        self.Update(update = False, dicts = True)
         if update:
             view.Update()
             self.view.Update()
@@ -147,11 +153,46 @@ class Sheet(object):
             self.view.Update()
     
     def UpdateDoc(self):
-        """Updates data from the view"""
+        """Updates data from the view. Then updates self.element, from the
+        internal representation of data. If there was some error, throws an
+        exception"""
         for doccell in self.celllist:
             doccell.view.UpdateDoc()
             
-    
+            #Get the xml from the document
+            text = StringIO.StringIO()
+            text.write('<sheet>')
+            for doccell in self.celllist:
+                if doccell.type == 'plaintext':
+                    text.write(doccell.text)
+                elif doccell.type == 'python':
+                    etr = etree.ElementTree(doccell.element)
+                    etr.write(text, encoding='utf-8')
+                elif doccell.type == 'figure':
+                    etr = etree.ElementTree(doccell.element)
+                    etr.write(text, encoding = 'utf-8')
+            text.write('</sheet>')
+            text.flush()
+            text = StringIO.StringIO(text.getvalue())
+            #Convert to etree.Element
+            etr = etree.ElementTree()
+            try:
+                etr.parse(text)
+            except:
+                #TODO: Handle syntax errors here 
+                
+                #NBDOC: The notebook should check the documents for syntax
+                #errors and be able to give meanigful description of errors to
+                #the user
+                
+                raise #dbg
+            self.element = etr.getroot()
+            # Now remove the old sheet and replace it with the new one
+            oldsheet = self.notebook.root.find('sheet')
+            if oldsheet is not None:
+                self.notebook.root.remove(oldsheet)
+            self.notebook.root.append(self.element)
+
     def __append_plaintext_cell(self, iterator, prevlist, elemlist,\
                                 endtaglist, update = True):
         """Append a plaintext cell at the end of the document. Plaintext cells
@@ -186,7 +227,7 @@ class Sheet(object):
                 elem = elemlist[-1]
                 if elem.tag in tag2type.keys():
                     self.InsertCell(tag2type[elem.tag], update = False, \
-                                    ipython_block = elem)
+                                    element = elem)
                     l = len(elemlist)
                     prevlist = elemlist[:-1]
                     while len(elemlist)>=l and elemlist[l-1] == elem:
@@ -334,14 +375,10 @@ class Sheet(object):
         
         self.cell2sheet = {}
         self.sheet2sheet = {}
-        for block in self.celllist:
-            # check if block is a PythonDocumentPlugin object
-            try:
-                logid = block.logid
-            except:
-                continue
+        for block in filter(lambda x:x.type=='python', self.celllist):
+            logid = block.logid
             for (i, cell) in enumerate(block.cells):
-                key = (logid, cell.number, block.block[i].attrib['type'])
+                key = (logid, cell.number, block.element[i].attrib['type'])
                 val = self.cell2sheet.get(key,[])
                 val.append((block, i))
                 self.cell2sheet[key] = val
@@ -396,7 +433,7 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
         a Cell object from the log. If update is true update the block"""
         
         #1. Add the element
-        l = len(block.block)
+        l = len(block.element)
         if pos is None:
             pos = l
         elif pos < 0:
@@ -404,7 +441,7 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
         number = cell.number
 
         element = etree.Element('ipython-cell',type = type, number = str(number))
-        block.block[pos:pos] = [element]
+        block.element[pos:pos] = [element]
         block.cells[pos:pos] = [cell]
         
         if update:
@@ -436,11 +473,11 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
         be negative"""
         
         #1. Delete the element
-        l = len(block.block)
+        l = len(block.element)
         if pos < 0:
             pos = l + pos
-        elem = block.block[pos]
-        del(block.block[pos])
+        elem = block.element[pos]
+        del(block.element[pos])
         del(block.cells[pos])
         if update:
             block.view.Update()
@@ -495,9 +532,9 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
             if cell.element.find(type) is not None:
                 #1.1.1 Yes. Check if one of the elements is on the insert
                 #position.
-                if len(block.block)>pos2add and \
+                if len(block.element)>pos2add and \
                    block.cells[pos2add] == cell and \
-                   block.block[pos2add].attrib['type'] == type :
+                   block.element[pos2add].attrib['type'] == type :
                     #Increment the insert position
                     pos2add += 1
                 #Else do nothing
@@ -640,16 +677,9 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
                 index = block.index + numfig
                 lastfig = self.celllist[index]
                 codeelem = etree.Element('ipython-block', logid = block.logid)
-                #Fix the text
-                if index < len(self.celllist)-1 and\
-                   self.celllist[index+1].type == 'plaintext':
-                    textblock = self.celllist[index+1]
-                    codeelem.tail = textblock.GetText()
-                    textblock.element = codeelem
-                    blocklist.append(textblock)
                 #Insert the new block
                 block = self.InsertCell('python', index+1, update = False,\
-                                        ipython_block = codeelem)
+                                        element = codeelem)
                 self.Update(update = False, dicts = True)
                 retvalue = block
                 blocklist.append(block)
@@ -665,7 +695,6 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
         return retvalue
 #            self.__update_list(blocklist)
 
-
     def ReplaceCells(self, logid, oldcell, newcell, update = True):
         """Changes all the <ipython-cell type=..., number=oldcell.number> elements to
         elements with number=newcell.number. """
@@ -676,125 +705,85 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
         for type in types:
             val = self.cell2sheet.get((logid, oldcell.number, type),[])
             for (block,pos) in val:
-                block.block[pos].attrib['number'] = str(newcell.number)
+                block.element[pos].attrib['number'] = str(newcell.number)
                 block.cells[pos] = newcell
         self.Update(update, dicts = True)
 
     def InsertText(self, block, pos, update = True):
-        """Splits the given block and inserts a text cell"""
-        index = getindex(self.element,block.block)
-        #Get the XML for the new ipython-block
-        nextblock = block.Split(pos)
-        #update the old text cell to point to the new block
-        oldtextcell = self.celllist[block.index+1]
-        nextblock.tail = oldtextcell.GetText()
-        oldtextcell.element = nextblock
-        #insert nextblock in the sheet
-        self.element[index+1:index+1] = [nextblock]
-        ind = oldtextcell.index
-        self.InsertCell('python',ind, update = False, \
-                        ipython_block = nextblock)
-        #insert a new text cell in the celllist
-        self.InsertCell('plaintext', ind, update = False, element = block.block)
-        #update
-        self.Update(dicts = True)
-        if update:
-            self.__update_list(self.celllist[ind-1:ind+2])
-            self.view.Update()
-            
-    def InsertCode(self, block, pos, update = True):
-        """Splits the given text block and inserts a code block. The logid
-        for the new block is set in self.currentlog"""
+        """Splits the given block and inserts an empty text cell"""
+        self.Insert(block, pos,\
+                    check = lambda block, prev, next, pos:\
+                        (block.type != 'plaintext') and
+                        (pos > 0 or prev == None or prev.type != 'plaintext') and\
+                        (pos < len(block) or next == None or next.type != 'plaintext'),\
+                    insert = lambda pos: 
+                        self.InsertCell('plaintext', pos, update = False, text = ''),\
+                    update = update)
+    
+    def InsertCode(self, block, pos, logid = None, update = True):
+        """Splits the given text block and inserts an empty code block. If
+        logid is None self.currentlog is used"""
+        if logid is None:
+            logid = self.currentlog
         assert(self.last) #The last inputs must be set
-        newtext = block.Split(pos, update = False)
-        #Create the new code element
-        codeelement = etree.Element('ipython-block',logid=self.currentlog)
-        #Delete the last element of self.currentlog from the sheet 
-        log = self.doc.logs[self.currentlog]
-        key = (self.currentlog, log.lastcell.number, 'input')
-        value = self.cell2sheet[key]
-        while len(value)>0:
-            blk, position = value[0]
-            self.DeleteElement(blk,position,update = False)
-        #insert the last element in codeelement
-        codeelement.append(etree.Element('ipython-cell',type='input',\
-                                         number = str(key[1])))
-        #set newtext at the tail
-        codeelement.tail = newtext
-        #get the index in the <sheet> element where we must insert the new cell
-        id = block.index
-        l = len(self.celllist)
-        while id<l:
-            try:
-                self.celllist[id].log
-            except:
-                id+=1
-            else:
-                break
-        print 'new element:' #dbg
-        etree.dump(codeelement) #dbg
-        if id==l: #we must append the new element at the end of <sheet>
-            index = len(self.element)
-            self.element[index:index] = [codeelement]
-        else:
-            #insert the new code element 
-            index = getindex(self.element,self.celllist[id].block)
-            self.element[index:index] = [codeelement]
-        #insert the new cells in celllist
-        self.InsertCell('python',pos=block.index+1,update = False,\
-                        ipython_block = codeelement)
-        self.InsertCell('plaintext', pos = block.index+2, update = False,\
-                        element = codeelement)
-        print 'new sheet:' #dbg
-        etree.dump(self.element) #dbg
-        #update stuff. I could update only the modified cells, but I'm lazy
-        self.Update(update,dicts = True)
         
+        def insert(p):
+            #Delete the last element of self.currentlog from the sheet 
+            log = self.doc.logs[logid]
+            key = (logid, log.lastcell.number, 'input')
+            value = self.cell2sheet[key]
+            while len(value)>0:
+                blk, position = value[0]
+                self.DeleteElement(blk,position,update = False)
+            #insert the last element in codeelement
+            codeelement = etree.Element('ipython-block', logid = logid)
+            etree.SubElement(codeelement, 'ipython-cell',type='input',\
+                             number = str(key[1]))
+            return self.InsertCell('python', p, update = False,\
+                                   element = codeelement)
+
+
+        self.Insert(block, pos,
+                    check = lambda block, prev, next, pos:\
+                        (block.type != 'python' or block.logid != logid) and\
+                        (pos > 0 or prev == None or prev.type != 'python' or\
+                         prev.logid != logid) and\
+                        (pos < len(block) or next == None or next.type != 'python'\
+                         or next.logid != logid),\
+                    insert = insert, update = False)
+        self.Update(update)
+
     def InsertFigure(self, block, pos, figurexml, update = True):
         """Inserts the given figure at the given position in the given block.
         Returns the new block
         """
-        
-        fig_elem = etree.XML(figurexml)
-        #Figure out where to insert the figure, according to the type of the
-        #block
-        
-        if block.type == 'python':
-            #This is a python block. Then if pos points to the position after
-            #the end of the block, insert the figure after the block. If not
-            #split the block and insert the figure at the given position.
-            index = getindex(self.element, block.block)
-            if pos >= len(block): # here we are using the __len__ method
-                #Insert the xml in the sheet
-                self.element[index+1:index+1] = [fig_elem]
-                #Fix the text after the given element
-                if self.celllist[block.index+1].type == 'plaintext':
-                    textblock = self.celllist[block.index+1]
-                    fig_elem.tail = textblock.GetText()
-                    textblock.element = fig_elem
-                #Insert in the view
-                figcell = self.InsertCell('figure', pos = block.index+1,\
-                                          update = False, element= fig_elem)
-                self.Update(update = update, dicts = True)
-            else: #We have to split the given block
-                #Get the XML for the new ipython-block
-                nextblock = block.Split(pos)
-                #update the old text cell to point to the new block
-                oldtextcell = self.celllist[block.index+1]
-                if oldtextcell.type == 'plaintext':
-                    nextblock.tail = oldtextcell.GetText()
-                    oldtextcell.element = nextblock
-                #insert nextblock in the sheet
-                self.element[index+1:index+1] = [nextblock]
-                self.InsertCell('python',pos = block.index+1, update = False, \
-                                ipython_block = nextblock)
-                #insert the figure
-                self.element[index+1:index+1] = [fig_elem]
-                figcell = self.InsertCell('figure', block.index+1,\
-                                          update = False, element = fig_elem)
-                #update
-                self.Update(update = update, dicts = True)
-            return figcell
-        else:
-            raise NotImplementedError
-
+        self.Insert(block, pos,\
+                    check = lambda cur, prev, next, pos:True,\
+                    insert = lambda pos:\
+                        self.InsertCell('figure', pos, update = False, 
+                                        element = etree.XML(figurexml)),
+                    update = update)
+    
+    def Insert(self, block, pos, check = lambda cur, prev, next, pos:True,
+               insert = lambda pos:None, update = True):
+        """Inserts something in the given block at the given position. The
+        block is inserted if the check function returns True. The actual
+        insertion is done by the insert function, which is given one
+        parameter, the index in the celllist where the new block must be
+        inserted. The insert function must return the new block"""
+        print 'block.index ->', block.index
+        if check(block,\
+                 ifelse(block.index>0,\
+                        lambda:self.celllist[block.index-1], lambda:None),\
+                 ifelse(block.index < len(self.celllist)-1,\
+                        lambda:self.celllist[block.index+1], lambda:None),pos):
+            if pos == 0:
+                list = [insert(block.index)]
+            elif pos == len(block):
+                list = [insert(block.index+1)]
+            else:
+                newinsert = block.Split(pos)
+                list = [insert(block.index+1), newinsert(block.index+2)]
+            if update:
+                self.__update_list(list)
+                self.view.Update()

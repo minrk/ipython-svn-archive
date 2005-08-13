@@ -1,3 +1,10 @@
+08.13.2005:
+	* Changed format of notebook files. Now nbshell supports the
+	docbook format.
+
+	* Refactored methods for inserting cells in the notebook and added
+	UI to use them
+
 08.10.2005:
 	* Added a type variable in each XXXDocumnetPlugin class the
 	current types are 'python', 'plaintext' and 'figure'

@@ -106,6 +106,7 @@ class ipnDocument(object):
             self.sheet.SetLastInputs(update = False)
             self.sheet.Update(update = True)
             etree.dump(self.notebook.root) #dbg
+            #Set the current cell and position
         except:
             #self.Clear() #TODO: This does not work well if an exception occured. 
             raise
