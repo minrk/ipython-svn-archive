@@ -401,7 +401,10 @@ class Notebook(object):
                 logid))
 
     def get_sheet(self):
-        return self.root.xpath('./sheet')[0] #assumes a single sheet
+        try:
+            return self.root.xpath('./sheet')[0] #assumes a single sheet
+        except IndexError:
+            return None #has no sheet
     sheet = property(get_sheet, None)
 
 
