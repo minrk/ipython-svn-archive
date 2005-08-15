@@ -138,6 +138,8 @@ class Sheet(object):
             #it corresponds to the contents in self.element and if not change
             #it.
 
+            #NBDOC: add that facility to notebook.Cell?
+
             self.__clear_celllist(update = False)
             self.__update_celllist(update = False)
         if dicts:
@@ -440,7 +442,7 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
             pos = l + pos
         number = cell.number
 
-        element = etree.Element('ipython-cell',type = type, number = str(number))
+        element = etree.Element('ipython-cell',type = type, number = str(number)) #NBDOC: notebook.Cell() to handle this?
         block.element[pos:pos] = [element]
         block.cells[pos:pos] = [cell]
         
