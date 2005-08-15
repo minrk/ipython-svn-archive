@@ -210,6 +210,8 @@ class DBFormatter(Formatter):
 
     @staticmethod
     def escape_latex(text):
+        if text is None:
+            return None
         return text.replace('\\', r'\\').replace('{', r'\{').replace('}', r'\}')
     def prep_fo(self, tree):
         pass
@@ -218,13 +220,12 @@ class DBFormatter(Formatter):
         pass
 
     def prep_latex(self, tree):
-        #XXX was buggy, should this iterate an all listings?
-        pass
-        ## listings = tree.xpath('//programlisting') 
-##         listings.text = self.escape_latex(listings.text)
-##         for sub in listings.getiterator():
-##             sub.text = self.escape_latex(sub.text)
-##             sub.tail = self.escape_latex(sub.tail)
+        listings = tree.xpath('//programlisting') 
+        for listing in listings:  
+            listing.text = self.escape_latex(listing.text)  
+            for sub in listing.getiterator():  
+                sub.text = self.escape_latex(sub.text)
+                sub.tail = self.escape_latex(sub.tail)  
 
     def to_text(self, sheet, kind='html', style=None):
         if style is None:
@@ -234,5 +235,4 @@ class DBFormatter(Formatter):
         article_tree = ET.ElementTree(self.transform_sheet(sheet))
         getattr(self, 'prep_%s' % kind)(article_tree)
         newtree = xslt.apply(article_tree)
-        #ET.dump(newtree.getroot())
         return newtree

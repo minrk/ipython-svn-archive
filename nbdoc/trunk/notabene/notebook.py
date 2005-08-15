@@ -373,10 +373,7 @@ class Notebook(object):
         If figures is True, include figures.
         """
         log = self.get_log(logid)
-
-        def comparenum(a, b):
-            return a.number < b.number
-        cells = sorted((Cell(x) for x in log), comparenum) #lambda x: x.number)
+        cells = sorted((Cell(x) for x in log), key=lambda x: x.number)
         figured = dict((int(x.get('number')), x) for x in log.xpath('./figure'))
         
         sheet = ET.Element('sheet')
