@@ -51,17 +51,21 @@ class Sheet(object):
         self.sheet2sheet = {}
 
         #self.__currentcell stores the current cell. It is retrieved by the 
-        #self.currentcell property
+        #self.currentcell property.
         self._currentcell = None
         
     def __get_current_cell(self):
-        if self._currentcell is None:
+        """The get method for self.currentcell. If there are no cells in the
+        document, returns None"""
+
+        if self._currentcell is None and len(self.celllist)>0:
             self.__set_current_cell(self.celllist[0])
         return self._currentcell
 
     def __set_current_cell(self, cell):
         self._currentcell = cell
-        cell.view.SetFocus()
+        if cell is not None:
+            cell.view.SetFocus()
     currentcell = property(fget = __get_current_cell, fset = __set_current_cell)
     
     def InsertCell(self, type, pos=-1, update = True, **kwds):
@@ -74,7 +78,7 @@ class Sheet(object):
         if pos == -1:
             self.__add_cell(cell)
         else:
-            print 'cell-> %s, pos->%s'%(str(cell),str(pos)) #dbg
+            #print 'cell-> %s, pos->%s'%(str(cell),str(pos)) #dbg
             self.__insert_cell(cell, pos)
 
         #TODO: Smarter update of the dicts here
@@ -86,22 +90,20 @@ class Sheet(object):
     
     def DeleteCell(self, cell, update = True):
         """Deletes a given element in celllist"""
-        if cell in [self.celllist[-1], self.celllist[0]]:
-            #This is the first or the last text cell and cannot be deleted.
-            #Just clear the text.
-            cell.text= ''
-            if update:
-                cell.view.Update()
-            return
+        #Change the current cell if necessary
+        if self.currentcell == cell:
+            if cell.index < len(self.celllist) -1:
+                self.currentcell = self.celllist[cell.index+1]
+            elif cell.index>0:
+                self.currentcell = self.celllist[cell.index-1]
+            else:
+                self.currentcell = None
+                                      
         
-        try:
-            cell.log
-        except:
-            #This is a text cell
-            self.__del_text_cell(cell, update)
-        else:
-            #This is a python cell
-            self.__del_code_cell(cell,update)
+        cell.view.Close(update = False)
+        self.__del_cell(cell.index)
+        self.Update(update, dicts = True)
+        
 
     def __del_text_cell(self,cell,update = False):
         """Deletes the given text cell. Does not check if this is the first or
@@ -715,9 +717,10 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
         """Splits the given block and inserts an empty text cell"""
         self.Insert(block, pos,\
                     check = lambda block, prev, next, pos:\
-                        (block.type != 'plaintext') and
-                        (pos > 0 or prev == None or prev.type != 'plaintext') and\
-                        (pos < len(block) or next == None or next.type != 'plaintext'),\
+                        (block is None) or (\
+                            (block.type != 'plaintext') and\
+                            (pos > 0 or prev == None or prev.type != 'plaintext') and\
+                            (pos < len(block) or next == None or next.type != 'plaintext')),\
                     insert = lambda pos: 
                         self.InsertCell('plaintext', pos, update = False, text = ''),\
                     update = update)
@@ -733,7 +736,7 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
             #Delete the last element of self.currentlog from the sheet 
             log = self.doc.logs[logid]
             key = (logid, log.lastcell.number, 'input')
-            value = self.cell2sheet[key]
+            value = self.cell2sheet.get(key,[])
             while len(value)>0:
                 blk, position = value[0]
                 self.DeleteElement(blk,position,update = False)
@@ -747,11 +750,12 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
 
         self.Insert(block, pos,
                     check = lambda block, prev, next, pos:\
-                        (block.type != 'python' or block.logid != logid) and\
-                        (pos > 0 or prev == None or prev.type != 'python' or\
-                         prev.logid != logid) and\
-                        (pos < len(block) or next == None or next.type != 'python'\
-                         or next.logid != logid),\
+                        (block is None) or (\
+                            (block.type != 'python' or block.logid != logid) and\
+                            (pos > 0 or prev is None or prev.type != 'python' or\
+                             prev.logid != logid) and\
+                            (pos < len(block) or next is None or next.type != 'python'\
+                             or next.logid != logid)),\
                     insert = insert, update = False)
         self.Update(update)
 
@@ -768,18 +772,22 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
     
     def Insert(self, block, pos, check = lambda cur, prev, next, pos:True,
                insert = lambda pos:None, update = True):
-        """Inserts something in the given block at the given position. The
-        block is inserted if the check function returns True. The actual
-        insertion is done by the insert function, which is given one
-        parameter, the index in the celllist where the new block must be
-        inserted. The insert function must return the new block"""
-        print 'block.index ->', block.index
+        """Inserts something in the given block at the given position. If the
+        document is empty, block is None. The new block is inserted if the
+        check function returns True. The actual insertion is done by the
+        insert function, which is given one parameter, the index in the
+        celllist where the new block must be inserted. The insert function
+        must return the new block"""
+
+        index = default(lambda:block.index, 0)
         if check(block,\
-                 ifelse(block.index>0,\
-                        lambda:self.celllist[block.index-1], lambda:None),\
-                 ifelse(block.index < len(self.celllist)-1,\
-                        lambda:self.celllist[block.index+1], lambda:None),pos):
-            if pos == 0:
+                 ifelse(index>0,\
+                        lambda:self.celllist[index-1], lambda:None),\
+                 ifelse(index < len(self.celllist)-1,\
+                        lambda:self.celllist[index+1], lambda:None),pos):
+            if block is None:
+                list = [insert(0)]
+            elif pos == 0:
                 list = [insert(block.index)]
             elif pos == len(block):
                 list = [insert(block.index+1)]

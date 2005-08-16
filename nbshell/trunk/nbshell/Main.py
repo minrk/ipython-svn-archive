@@ -17,6 +17,9 @@ __version__ = Release.version
 import sys
 import os
 import re
+from optparse import OptionParser
+import unittest
+
 try:
     import wxversion
     wxversion.ensureMinimal('2.5.3')
@@ -25,11 +28,12 @@ except:
 
 import wx
 
-import utils
-from nbshell import ipnNotebookWidget,ipnDocument,frame
+from nbshell.utils import *
+from nbshell import ipnNotebookWidget,ipnDocument,frame,tester
 from ipnNotebookWidget import * # in case you wonder ipn comes from Interactive Python Notebook 
 from ipnDocument import *
 from frame import ipnFrame
+
 
 
         
@@ -42,6 +46,7 @@ class App(wx.App):
     def __init__(self, *args, **kwds):
         wx.App.__init__(self, *args, **kwds)
         self.mainloop = False
+        self.test = False
         
     def RegisterPlugins(self):
         """Seeks for plugins and gets their factory objects"""
@@ -83,46 +88,42 @@ class App(wx.App):
         self.frame.Show()
         self.SetTopWindow(self.frame)
         self.frame.OnNew()
-        #self.Demo()
         return True
 
   
-    def Demo(self):
-        #         self.document.LoadFile("./test.py")
-        #        print "inserting 0"
-        #        self.document.InsertCell("plaintext", "The new and improved plugin system works")
-        #        print "inserting 1"
-        #        self.document.InsertCell("plaintext", "Hooray!")
-        #        print "updating"
+    def Test(self):
+        suite = unittest.TestSuite()
+        suite.addTest(tester.TestCase())
+        unittest.TextTestRunner().run(suite)
 
-        #        log = self.document.logs["default-log"]
-        #        log.Append("\n")
-        #        print self.document.sheet.element
-        #        block = etree.SubElement(self.document.sheet.element, 'ipython-block', logid='default-log')
-        #        etree.SubElement(block, 'ipython-input', number='0')
-        #        cell = self.document.InsertCell("python", ipython_block=block)
-        #        cell.view.Update()
-        #        self.notebook.Update()
+        self.frame.Close()
+        print 'testing'
+        return True
+
         
-        try:
-            file = sys.argv[1]
-        except:
-            file = 'test2.nbk'
-            
-        self.document.LoadFile(file)
         
     def MainLoop(self):
         """The main loop method of the application."""
         #The matplotlib WX backend calls MainLoop() in the show() function.
         #Since the main loop has already started this call is unwanted.
         #So I make the main loop to be called only once
+
+        if self.test:
+            self.Test()
         if not self.mainloop:
             self.mainloop = True
             wx.App.MainLoop(self)
 
 
 def start():
+    #Parse options
+    parser = OptionParser()
+    parser.add_option('-t', '--test', action = 'store_true', dest = 'test')
+    (options, args) = parser.parse_args()
     app = App(redirect=False)
+    #If test option is set, we test the application
+    app.test = default(lambda:options.test,False)
+
     app.MainLoop()
 
 if __name__ == '__main__':

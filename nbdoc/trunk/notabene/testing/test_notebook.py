@@ -17,6 +17,10 @@ def test_comparison():
     nb2 = test_new() #test_fromstring('eq2')
     assert nb1 == nb2
 
+    #Tzanko:This fails
+    nb1 = Notebook.from_string('nb1.nbk','<notebook><sheet></sheet></notebook>')
+    nb2 = Notebook.from_string('nb1.nbk','<notebook>\n<sheet></sheet>\n</notebook>')
+    assert nb1 == nb2
     #add inequalite test here
 
 def test_sheet():

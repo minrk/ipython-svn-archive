@@ -49,7 +49,7 @@ class ipnDocument(object):
         """Create a default empty notebook"""
         self.Clear()
         self.notebook = notebook.Notebook('untitled.nbk')
-        etree.dump(self.notebook.root) #dbg
+        #etree.dump(self.notebook.root) #dbg
         self.logs = {'default-log':IPythonLog.IPythonLog(self, self.notebook, 'default-log')}
         etree.SubElement(self.notebook.root, 'sheet', format='rest')
         self.sheet = Sheet.Sheet(self, self.notebook, self.view, self.factory)
@@ -88,7 +88,7 @@ class ipnDocument(object):
         try:
             self.notebook = notebook.Notebook.from_file(filename)
             # Set up the fileinfo structure
-            import os #dbg
+            import os
             self.fileinfo["init"] = True
             self.fileinfo['path'], self.fileinfo["name"] = os.path.split(filename)
             if self.fileinfo['path'] == '':
@@ -105,7 +105,7 @@ class ipnDocument(object):
             self.sheet.Update(update = False, celllist = True, dicts = True)
             self.sheet.SetLastInputs(update = False)
             self.sheet.Update(update = True)
-            etree.dump(self.notebook.root) #dbg
+            #etree.dump(self.notebook.root) #dbg
             #Set the current cell and position
         except:
             #self.Clear() #TODO: This does not work well if an exception occured. 
@@ -131,7 +131,7 @@ class ipnDocument(object):
         If there are problems opening the file throws an exception. """
 
         if filename is None:
-            print 'fileinfo -> %s'%str(self.fileinfo) #dbg
+            #print 'fileinfo -> %s'%str(self.fileinfo) #dbg
             if (not self.fileinfo['init']) or self.fileinfo['name'] is None:
                 raise Exception
             else:
@@ -141,7 +141,7 @@ class ipnDocument(object):
             #1. update the data from the views
             self.sheet.UpdateDoc()
             #print 'root-> %s'%str(self.notebook.root) #dbg
-            etree.dump(self.notebook.root) #dbg
+            #etree.dump(self.notebook.root) #dbg
 
             # delete the last inputs in the sheet
             self.sheet.ClearLastInputs()
@@ -168,5 +168,5 @@ class ipnDocument(object):
             self.logs[key].Run(0)
         #Update the sheet without recreating the celllist
         print "The rerun notebook"
-        etree.dump(self.notebook.root) #dbg
+        #etree.dump(self.notebook.root) #dbg
         self.sheet.Update(update = True, output = True)

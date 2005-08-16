@@ -235,8 +235,8 @@ ion()
         
     def __run(self, cell):
         """ This methods runs the input lines. """
-        print 'running code...'
-        print 'input-> ',cell.input
+        #print 'running code...' #dbg
+        #print 'input-> ',cell.input #dbg
         self.output = findnew(cell.element, 'output')
         self.stdout = findnew(cell.element, 'stdout')
         self.stderr = findnew(cell.element, 'stderr')
@@ -257,7 +257,7 @@ ion()
         
         #Retrieve stdout
         text = '\n' + cout.getvalue()
-        print 'unformatted stdout ->', text
+        #print 'unformatted stdout ->', text #dbg
         if text != '\n':
             if text[-1] != '\n':
                 text = text + '\n'
@@ -266,16 +266,16 @@ ion()
         
         #Retrieve stderr
         text = '\n' + cerr.getvalue()
-        print 'unformatted stderr ->', text
+        #print 'unformatted stderr ->', text #dbg
         if text != '\n':
             if text[-1] != '\n':
                 text = text + '\n'
             self.stderr.text = text
         cerr.close()
         
-        print 'output ->', self.output.text #dbg
-        print 'stdout ->', self.stdout.text #dbg
-        print 'stderr ->', self.stderr.text #dbg
+        #print 'output ->', self.output.text #dbg
+        #print 'stdout ->', self.stdout.text #dbg
+        #print 'stderr ->', self.stderr.text #dbg
         if self.output.text is None:
             cell.element.remove(self.output)
         else:

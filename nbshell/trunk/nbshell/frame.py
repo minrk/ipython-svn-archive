@@ -16,7 +16,9 @@ import StringIO
 
 import wx
 
+from nbshell.utils import *
 from nbshell import SimpleXMLWriter
+
 
 def idgen():
     id = wx.ID_HIGHEST
@@ -40,6 +42,7 @@ ID_RERUN = id_iter.next()
 ID_INSERT_TEXT = id_iter.next()
 ID_INSERT_CODE = id_iter.next()
 ID_INSERT_FIGURE = id_iter.next()
+ID_DELETE_CELL = id_iter.next()
 
 class ipnFrame(wx.Frame):
     def __init__ (self, parent, id, title, pos=wx.DefaultPosition,
@@ -88,9 +91,11 @@ class ipnFrame(wx.Frame):
         insertmenu.Append(ID_INSERT_TEXT, "Insert Text", "Inserts a text cell")
         insertmenu.Append(ID_INSERT_CODE, "Insert Code", "Inserts a new empty code cell")
         insertmenu.Append(ID_INSERT_FIGURE, "Insert Figure...", "Inserts a figure")
+        insertmenu.Append(ID_DELETE_CELL, "Delete cell", "Deletes the currnet cell")
         wx.EVT_MENU(self, ID_INSERT_CODE, self.OnInsertCode)
         wx.EVT_MENU(self, ID_INSERT_TEXT, self.OnInsertText)
         wx.EVT_MENU(self, ID_INSERT_FIGURE, self.OnInsertFigure)
+        wx.EVT_MENU(self, ID_DELETE_CELL, self.OnDeleteCell)
         
         menu = wx.MenuBar()
         menu.Append(filemenu, "&File")
@@ -197,12 +202,12 @@ class ipnFrame(wx.Frame):
     def OnInsertText(self, evt):
         sheet = self.app.document.sheet
         block = sheet.currentcell
-        sheet.InsertText(block, block.view.position, update = True)
+        sheet.InsertText(block, default(lambda:block.view.position,0), update = True)
     
     def OnInsertCode(self, evt):
         sheet = self.app.document.sheet
         block = sheet.currentcell
-        sheet.InsertCode(block, block.view.position, update = True)
+        sheet.InsertCode(block, default(lambda:block.view.position,0), update = True)
         
     def OnInsertFigure(self, evt = None):
         dlg = wx.FileDialog(self, "Choose a Fifure", \
@@ -219,8 +224,12 @@ class ipnFrame(wx.Frame):
             writer = SimpleXMLWriter.XMLWriter(text, encoding = 'utf-8')
             writer.start('ipython-figure', type = "png", filename = filename)
             writer.end()
-            
-            sheet.InsertFigure(sheet.currentcell, sheet.currentcell.view.position,
+            block = sheet.currentcell
+            sheet.InsertFigure(block, default(lambda:block.view.position,0),
                figurexml = text.getvalue())
             text.close()
+            
+    def OnDeleteCell(self, evt = None):
+        sheet = self.app.document.sheet
+        sheet.DeleteCell(sheet.currentcell)
 

@@ -1437,12 +1437,12 @@ class Shell(editwindow.EditWindow):
     def Copy(self):
         """Copy selection and place it on the clipboard."""
         if self.CanCopy():
-            ps1 = str(sys.ps1)
-            ps2 = str(sys.ps2)
+            #ps1 = str(sys.ps1)
+            #ps2 = str(sys.ps2)
             command = self.GetSelectedText()
-            command = command.replace(os.linesep + ps2, os.linesep)
-            command = command.replace(os.linesep + ps1, os.linesep)
-            command = self.lstripPrompt(text=command)
+            #command = command.replace(os.linesep + ps2, os.linesep)
+            #command = command.replace(os.linesep + ps1, os.linesep)
+            #command = self.lstripPrompt(text=command)
             data = wx.TextDataObject(command)
             self._clip(data)
 

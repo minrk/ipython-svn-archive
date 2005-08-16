@@ -46,11 +46,11 @@ $ su
 3. notabene - This is a package used for procesing notebook files. You can get it 
 from the following Subversion repository:
 
-   http://ipython.scipy.org/svn/ipython/google-rkern/branches/cell,
+   http://ipython.scipy.org/svn/ipython/nbdoc/trunk,
 
 so the commands for downloading and installing notabene are:
 
-$ svn co    http://ipython.scipy.org/svn/ipython/google-rkern/branches/cell notabene
+$ svn co    http://ipython.scipy.org/svn/ipython/nbdoc/trunk notabene
 $ cd notabene
 $ su
 # python2.4 setup.py install

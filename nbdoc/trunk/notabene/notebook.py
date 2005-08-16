@@ -91,8 +91,8 @@ class Notebook(object):
 
     @classmethod
     def from_string(cls, name, data, pretty=True):
-        tree = ET.fromstring(data)
-        return cls(name, pretty=pretty, root=tree.getroot())
+        root = ET.fromstring(data)
+        return cls(name, pretty=pretty, root=root)
 
     @classmethod
     def from_file(cls, source, name=None, pretty=True):
@@ -406,11 +406,11 @@ class Notebook(object):
             for subcell in cell.get_sheet_tags(specials):
                 block.append(subcell)
 
-            if figures: #and cell.number in figured:
+            #if figures: #and cell.number in figured:
                 # add figures to the sheet, not the block
                 #ET.SubElement(sheet, 'ipython-figure') #XXX why this?
                 # start a new block
-                block = ET.SubElement(sheet, 'ipython-block', logid=logid)
+                #block = ET.SubElement(sheet, 'ipython-block', logid=logid)
 
         return sheet
 

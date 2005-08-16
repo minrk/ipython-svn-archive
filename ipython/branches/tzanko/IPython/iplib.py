@@ -1548,9 +1548,10 @@ want to merge them back into the new files.""" % locals()
                 prefiltered.append('')
             #execute the code
             source1 = '\n'.join(prefiltered[:lastexec+1])
-            if self.runsource(source1, self.filename, \
-                              symbol = 'exec',simulate = False):
-                return True
+            retval = self.runsource(source1, self.filename, \
+                              symbol = 'exec',simulate = False)
+            if retval in (True, None):
+                return retval
             source2 = '\n'.join(prefiltered[lastexec+1:])
             return self.runsource(source2, self.filename, \
                                   symbol = 'single',simulate = False)
