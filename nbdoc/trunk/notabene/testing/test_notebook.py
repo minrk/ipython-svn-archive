@@ -14,7 +14,7 @@ def test_fromstring(name='test'):
 
 def test_comparison():
     nb1 = test_fromstring('eq1')
-    nb2 = test_fromsrting('eq2')
+    nb2 = test_fromstring('eq2')
     assert nb1 == nb2
 
 def test_sheet():
