@@ -25,9 +25,10 @@ def test_comparison():
     assert not nb1 == nb3
 
     #Tzanko:This fails
+    #antont:not anymore! but what does, that i do not know..
     nb1 = Notebook.from_string('nb1.nbk','<notebook><sheet></sheet></notebook>')
     nb2 = Notebook.from_string('nb1.nbk','<notebook>\n<sheet></sheet>\n</notebook>')
-    #assert nb1 == nb2
+    assert nb1 == nb2
 
 def test_sheet():
     nb = test_new()

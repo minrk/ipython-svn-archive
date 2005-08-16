@@ -87,10 +87,10 @@ class Notebook(object):
         [ET.ElementTree(tree.root).write_c14n(f)
          for tree, f in [(self, self_f),
                          (other, other_f)]]
-        result = self_f.getvalue() == other_f.getvalue()
-        #dbg
-        print result, self_f.getvalue(), other_f.getvalue()
-        return result
+        def normal(canonal):
+            """an attempt to strip whitespace, linefeeds etc."""
+            return "".join(canonal.getvalue().split())
+        return normal(self_f) == normal(other_f)
 
     def __ne__(self, other):
         #caught me too, http://www.thescripts.com/forum/thread19678.html
