@@ -69,11 +69,12 @@ class IPythonLog(object):
         
         #Set up the number 0 cell. It is used for code which is not supposed to
         #be edited
-        etree.dump(self.log)
+        #etree.dump(self.log) #dbg
         
         if len(self.log) == 0:
             #This is a new log
-            self.Append(input="""############DO NOT EDIT THIS CELL############
+            self.Append(input="""
+############DO NOT EDIT THIS CELL############
 from pylab import *
 switch_backend('WXAgg')
 ion()
@@ -236,7 +237,8 @@ ion()
     def __run(self, cell):
         """ This methods runs the input lines. """
         #print 'running code...' #dbg
-        #print 'input-> ',cell.input #dbg
+        
+        print 'In[%d]: '%cell.number,cell.input #dbg
         self.output = findnew(cell.element, 'output')
         self.stdout = findnew(cell.element, 'stdout')
         self.stderr = findnew(cell.element, 'stderr')
@@ -273,14 +275,16 @@ ion()
             self.stderr.text = text
         cerr.close()
         
-        #print 'output ->', self.output.text #dbg
-        #print 'stdout ->', self.stdout.text #dbg
-        #print 'stderr ->', self.stderr.text #dbg
         if self.output.text is None:
             cell.element.remove(self.output)
         else:
             self.output.text = self.wrapper.fill(self.output.text) + '\n'#wrap the output
             #print 'wrapped output ->', self.output.text #dbg
+
+        print 'Out[%d]: '%cell.number, self.output.text #dbg
+        print 'Stdout[%d]: '%cell.number, self.stdout.text #dbg
+        print 'Stderr[%d]: '%cell.number, self.stderr.text #dbg
+
         del self.output
         if self.stdout.text is None:
             cell.element.remove(self.stdout)

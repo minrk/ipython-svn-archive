@@ -411,7 +411,7 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
         #etree.dump(self.element) #dbg
         #etree.dump(self.notebook.root) #dbg
         #Here we do not call InsertElement, so we must update the dictionaries
-        etree.dump(self.notebook.root)
+        #etree.dump(self.notebook.root) #dbg
         self.Update(update, celllist = True, dicts = True)
         
     def IsModified(self):

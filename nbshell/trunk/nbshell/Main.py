@@ -92,12 +92,10 @@ class App(wx.App):
 
   
     def Test(self):
-        suite = unittest.TestSuite()
-        suite.addTest(tester.TestCase())
+        suite = tester.suite
         unittest.TextTestRunner().run(suite)
 
         self.frame.Close()
-        print 'testing'
         return True
 
         

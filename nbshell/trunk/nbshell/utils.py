@@ -68,4 +68,69 @@ def ifelse(expr1, expr2, expr3):
         ifelse(expr1, lambda:expr2, lambda:expr3)"""
     #This ensures that ifelse(1, lambda:None, lambda:2) will return None, not 2
     #expr2 and expr
-    return ((expr1) and (expr2(),) or (expr3(),))[0] 
+    return ((expr1) and (expr2(),) or (expr3(),))[0]
+
+def accumulate(function, sequence, start = None, end = None):
+    """'function' is a two parameter function. Returns
+
+    func(func(...func(seq[0],seq[1]),seq[2])...) 
+    
+    or
+
+    func(func(...func(start, seq[0]),seq[1]),...)
+
+    if start is not None. If end is not None stops calling the function when
+    its result equals end and returns end"""
+    
+    it = iter(sequence)
+    if start is None:
+        start = it.next()
+        
+    result = function(start, it.next())
+    for elem in it:
+        if end is not None and result == end:
+            return result
+        result = function(result, elem)
+    return result
+
+
+#functions for testing
+def match_all(function, sequence):
+    """Applies function on each element in the list. Returns True if all the
+    results were True"""
+    return len(filter(lambda x: not function(x), sequence)) == 0
+
+def match_equal(function, sequence, number):
+    """Returns True if exactly number matches occured"""
+    return len(filter(function, sequence)) == number
+
+def match_less_than(function, sequence, number):
+    """Returns True if less than number matches occured"""
+    return len(filter(function, sequence)) < number
+
+def match_more_than(function, sequence, number):
+    """Returns True if more than number matches occured"""
+    return len(filter(function, sequence)) > number
+
+#def multiple_match(functions, sequence):
+#    """ 'functions' is a list. Returns True if each element in the sequence was ma
+#Functions for testing lxml Elements
+def match_subelement(element, function):
+    """Returns true if the function applied to a child of the element returns
+    True for some element"""
+    return match_more_than(function, element.getchildren(), 0)
+
+def match_one_subelement(element, function):
+    """Returns True if there is exactly one subelement which is matched by the
+    function"""
+    return match_equal(function, element.getchildren(), 1)
+
+def test_subelements(element, dict, default = lambda x:False):
+    """Returns True if for each subelement x of element, either the tag is in
+    dict.keys() and dict[x.tag](x) == True or the tag is not in dict.keys()
+    and default(x) returns True"""
+    
+    return match_all(lambda x: ifelse(x.tag in dict.keys(),
+                                      lambda:dict[x.tag](x),
+                                      lambda:default(x)),
+                   element.getchildren())

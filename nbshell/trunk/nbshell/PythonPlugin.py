@@ -462,7 +462,7 @@ class PythonNotebookViewPlugin(object):
                 elem.text = '\n\n'
         else:
             #This cell is not the last one in the log
-            print self.line2log[linenum]
+            #print self.line2log[linenum] #dbg
             #1.1.1 Put the input in the last cell
             elem = findnew(lastcell.element,type)
             elem.text = text

@@ -19,7 +19,7 @@ from notabene import notebook
 
 from nbshell import IPythonLog
 from nbshell import Sheet
-from nbshell import utils
+from nbshell.utils import *
 
 class ipnDocument(object):
     def __init__(self, app, notebookview):
@@ -43,7 +43,7 @@ class ipnDocument(object):
             "modified":False, # If true the file has been modified after the last save
             "untitled":False # This is set True by DefaultNotebook() and False by LoadFile()
             }
-        self.DefaultNotebook() #Initialize notebook, logs, sheet
+        self.Clear() #Sets logs, sheet
 
     def DefaultNotebook(self):
         """Create a default empty notebook"""
@@ -117,7 +117,7 @@ class ipnDocument(object):
     
     def IsModified(self):
         """returns if the file has been modified since last save"""
-        return self.sheet.modified
+        return default(lambda:self.sheet.modified,False)
     
     def SetSavePoint(self):
         """ Sets the save point of the document. It is used to determine if
@@ -167,6 +167,6 @@ class ipnDocument(object):
             self.logs[key].Reset()
             self.logs[key].Run(0)
         #Update the sheet without recreating the celllist
-        print "The rerun notebook"
+        #print "The rerun notebook" #dbg
         #etree.dump(self.notebook.root) #dbg
         self.sheet.Update(update = True, output = True)

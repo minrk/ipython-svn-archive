@@ -1,7 +1,10 @@
 08.16.2005:
 	* Added deletion of cells
 
-	* Added some testing framework. The tests are still to come
+	* Added some testing framework and one test
+
+	* Added some methods for testing the notebook format
+	
 08.13.2005:
 	* Changed format of notebook files. Now nbshell supports the
 	docbook format.
