@@ -6,22 +6,28 @@ def test_new():
     return nb
 
 def FAILStest_fromfile():
-    nb = Notebook.from_file('../../test/tut-2.3.5-db.nbk') #how to deal with paths?
+    nb = Notebook.from_file('../../test/tut-2.3.5-db.nbk') #how to deal with paths? perhaps with the ways to get relative to this
 
-def FAILStest_fromstring(name='test', string='<a><b/></a>'):
-    nb = Notebook.from_string(name, )
+def test_fromstring(name='test', string='<a><b/></a>'):
+    nb = Notebook.from_string(name, string)
     return nb
 
 def test_comparison():
-    nb1 = test_new() #test_fromstring('eq1')
-    nb2 = test_new() #test_fromstring('eq2')
+    #are equal
+    nb1 = test_fromstring('eq1') #, '<a><b></b></a>')
+    nb2 = test_fromstring('eq2') #, '<a><b/></a>')
     assert nb1 == nb2
+    assert not nb1 != nb2
+
+    #inequality
+    nb3 = test_fromstring('eq3', '<b><a/></b>')
+    assert nb1 != nb3
+    assert nb1 == nb3
 
     #Tzanko:This fails
     nb1 = Notebook.from_string('nb1.nbk','<notebook><sheet></sheet></notebook>')
     nb2 = Notebook.from_string('nb1.nbk','<notebook>\n<sheet></sheet>\n</notebook>')
     assert nb1 == nb2
-    #add inequalite test here
 
 def test_sheet():
     nb = test_new()
