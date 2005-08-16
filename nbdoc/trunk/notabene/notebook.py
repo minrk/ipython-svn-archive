@@ -207,6 +207,18 @@ class Notebook(object):
             file = self.name + '.nbk'
         ET.ElementTree(self.root).write(file)
 
+    def write_formatted(self, name=self.name, format='html'):
+        extensions = {'latex': '.tex',
+                      'html': '.html',
+                      }
+        filename = name + extensions.get(format, '.'+format)
+
+        from notabene import docbook
+        formatter = docbook.DBFormatter(self)
+        doc = formatter.to_text(self.sheet, format)
+
+        doc.write(outname, 'utf-8') #docbook html xsl uses non-ascii chars
+
     def get_code(self, logid='default-log', specials=False):
         """Strip all non-input tags and format the inputs as text that could be
         executed in ipython.
@@ -447,25 +459,15 @@ def main():
     file = sys.argv[1]
     base = os.path.splitext(file)[0]
     nb = Notebook.from_file(file)
-    sheet = nb.sheet
 
-    extensions = {'latex': '.tex',
-                  'html': '.html',
-                 }
     if len(sys.argv) >= 3:
         format = sys.argv[2]
     else:
         format = 'html'
-    if not sheet:
+    if not sheet: #is this needed? not used now anymore.
         sheet = nb.default_sheet()
 
-    outname = base + extensions.get(format, '.'+format)
-
-    from notabene import docbook
-    formatter = docbook.DBFormatter(nb)
-    doc = formatter.to_text(sheet, format)
-    doc.write(outname, 'utf-8') #docbook html xsl uses non-ascii chars
-
+    nb.write_formatted(base, format)
 
 if __name__ == '__main__':
     main()
