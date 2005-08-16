@@ -6,7 +6,16 @@ def test_new():
     return nb
 
 ## def test_fromfile():
-##     nb = Notebook.from_file('../../test/tut-2.3.5-db.nbk') #how to deal with paths? from string would of course be nice here..
+##     nb = Notebook.from_file('../../test/tut-2.3.5-db.nbk') #how to deal with paths?
+
+def test_fromstring(name='test'):
+    nb = Notebook.from_string(name, '<a><b/></a>')
+    return nb
+
+def test_comparison():
+    nb1 = test_fromstring('eq1')
+    nb2 = test_fromsrting('eq2')
+    assert nb1 == nb2
 
 def test_sheet():
     nb = test_new()

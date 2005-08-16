@@ -78,6 +78,15 @@ class Notebook(object):
             self.root = root
             self.head = root.find('head')
 
+    def __eq__(self, other):
+        """As an answer to http://projects.scipy.org/ipython/ipython/ticket/3"""
+        self_f = StringIO()
+        other_f = StringIO()
+        [ET.ElementTree(tree.root).write_c14n(f)
+         for tree, f in [(self, self_f),
+                         (other, other_f)]]
+        return self_f.getvalue() == other_f.getvalue()
+
     @classmethod
     def from_string(cls, name, data, pretty=True):
         tree = ET.fromstring(data)
