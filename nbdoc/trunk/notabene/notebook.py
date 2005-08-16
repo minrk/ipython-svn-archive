@@ -92,6 +92,10 @@ class Notebook(object):
         print result, self_f.getvalue(), other_f.getvalue()
         return result
 
+    def __ne__(self, other):
+        #caught me too, http://www.thescripts.com/forum/thread19678.html
+        return not self.__eq__(other)
+
     @classmethod
     def from_string(cls, name, data, pretty=True):
         root = ET.fromstring(data)
