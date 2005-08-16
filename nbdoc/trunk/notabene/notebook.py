@@ -3,10 +3,11 @@
 import pprint
 import string
 import os
-
 from StringIO import StringIO #to do (e.g.) write_c14n for nb.__eq__ .
 
 from lxml import etree as ET
+
+from validate import check_errors #for Notebook.check_errors
 
 class Cell(object):
     def __init__(self, element):
@@ -116,6 +117,10 @@ class Notebook(object):
             return pprint.pformat(obj)
         else:
             return str(obj)
+
+    def check_errors(self):
+        """Checks the notebook for syntax errors, returns (user-friendly) reports"""
+        return check_errors(ET.tostring(self.root))
 
     def add_log(self, id='default-log'):
         """Add a log element.

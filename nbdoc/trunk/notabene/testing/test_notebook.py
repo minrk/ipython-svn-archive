@@ -30,6 +30,15 @@ def test_comparison():
     nb2 = Notebook.from_string('nb1.nbk','<notebook>\n<sheet></sheet>\n</notebook>')
     assert nb1 == nb2
 
+def test_errcheck():
+    nb = test_fromstring()
+    assert nb.check_errors() is None
+
+    #nb_err = test_fromstring('err', '<notebook>') #urgh of course already this fails
+    from notabene.validate import check_errors
+    print check_errors('<notebook>')
+
+
 def test_sheet():
     nb = test_new()
 
