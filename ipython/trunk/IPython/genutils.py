@@ -14,6 +14,8 @@ $Id$"""
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
+from __future__ import generators # 2.2 compatibility
+
 from IPython import Release
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
@@ -23,7 +25,6 @@ __license__ = Release.license
 import __main__
 import types,commands,time,sys,os,re,shutil
 import tempfile
-import codecs
 from IPython.Itpl import Itpl,itpl,printpl
 from IPython import DPyGetOpt
 

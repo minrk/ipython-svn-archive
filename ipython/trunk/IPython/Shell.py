@@ -312,7 +312,6 @@ class MTInteractiveShell(InteractiveShell):
         # Case 3
         # Store code in self, so the execution thread can handle it
         self.thread_ready.acquire()
-        self.code_to_run_src = source
         self.code_to_run = code
         self.thread_ready.wait()  # Wait until processed in timeout interval
         self.thread_ready.release()

@@ -639,7 +639,8 @@ class VerboseTB(TBTools):
         exception = ['%s%s%s: %s' % (Colors.excName, etype_str,
                                      ColorsNormal, evalue_str)]
         if type(evalue) is types.InstanceType:
-            for name in dir(evalue):
+            names = [w for w in dir(evalue) if isinstance(w, basestring)]
+            for name in names:
                 value = text_repr(getattr(evalue, name))
                 exception.append('\n%s%s = %s' % (indent, name, value))
         # return all our info assembled as a single string
