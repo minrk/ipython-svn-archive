@@ -4,6 +4,8 @@ import pprint
 import string
 import os
 
+from StringIO import StringIO #to do (e.g.) write_c14n for nb.__eq__
+
 from lxml import etree as ET
 
 class Cell(object):
@@ -207,7 +209,8 @@ class Notebook(object):
             file = self.name + '.nbk'
         ET.ElementTree(self.root).write(file)
 
-    def write_formatted(self, name=self.name, format='html'):
+    def write_formatted(self, name=None, format='html'):
+        name = name or self.name
         extensions = {'latex': '.tex',
                       'html': '.html',
                       }
