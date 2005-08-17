@@ -82,7 +82,13 @@ class Notebook(object):
             self.head = root.find('head')
 
     def __eq__(self, other):
-        """As an answer to http://projects.scipy.org/ipython/ipython/ticket/3"""
+        """As an answer to http://projects.scipy.org/ipython/ipython/ticket/3
+
+        note that 'equivalence' here means semantical(?) equivalence,
+        i.e. not that the xml source is the same, but the notebook it describes.
+        in addition to the standard canoninalization,
+        white space & newlines are ignored (and that may have a bad bug).
+        """
         self_f = StringIO()
         other_f = StringIO()
         [ET.ElementTree(tree.root).write_c14n(f)
@@ -95,6 +101,10 @@ class Notebook(object):
 
     def __ne__(self, other):
         #caught me too, http://www.thescripts.com/forum/thread19678.html
+        #whould it have been the same to use plain old __cmp__?
+        #understood that this is preferred from http://docs.python.org/ref/customization.html
+        #but was that just a bad reading of
+        #"comparison operators in preference to __cmp__()"?
         return not self.__eq__(other)
 
     @classmethod

@@ -10,6 +10,7 @@ def FAILStest_fromfile():
     nb = Notebook.from_file('../../test/tut-2.3.5-db.nbk') #how to deal with paths? perhaps with the ways to get relative to this
 
 def test_fromstring(name='test', string='<a><b/></a>'):
+    """Besides being a test, this is used by other test methods to hide possible api changes in Notebook.from_string."""
     nb = Notebook.from_string(name, string)
     return nb
 
@@ -27,9 +28,14 @@ def test_comparison():
 
     #Tzanko:This fails
     #antont:not anymore! but what does, that i do not know..
-    nb1 = Notebook.from_string('nb1.nbk','<notebook><sheet></sheet></notebook>')
-    nb2 = Notebook.from_string('nb1.nbk','<notebook>\n<sheet></sheet>\n</notebook>')
-    assert nb1 == nb2
+    nb4 = test_fromstring('nb4.nbk','<notebook><sheet></sheet></notebook>')
+    nb5 = test.fromstring('nb5.nbk','<notebook>\n<sheet></sheet>\n</notebook>')
+    assert nb4 == nb5
+
+    #but this seems bad, no?
+    nb6 = test_fromstring('nb6.nbk', '<notebook><sheet>a b c</sheet></notebook>')
+    nb7 = test_fromstring('nb7.nbk', '<notebook><sheet>abc</sheet></notebook>')
+    assert not nb6 == nb7
 
 def test_errcheck():
     nb = test_fromstring()
