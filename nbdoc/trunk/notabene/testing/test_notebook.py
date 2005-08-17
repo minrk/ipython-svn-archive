@@ -1,3 +1,4 @@
+import py.test
 from lxml import etree #as the API does not hide xml (yet?)
 from notabene.notebook import Notebook, Cell
 
@@ -108,33 +109,34 @@ def test_log():
     #todo: cell.get_input(do_specials=True)
     #also get_sheet_tags seems to be unused by nbshell
 
-    #XXX modifications that require update coming here
+    #modifications that require update.
+    #at this point, the cell has an output, but no stdout nor stderr
+    assert cell.element.find('stdout') is None
+    assert cell.element.find('stderr') is None
+
+    #so this code, from nbshell IPythonLog, creates those latter two
+    #from nbshell.util import findnew #ZipImportError: bad local file header in /usr/lib/python2.4/site-packages/nbshell-0.1-py2.4.egg
+    def findnew(element, tag):
+        """Tries to find the tag in the element. If there is no such element,
+        creates one"""
+        el = element.find(tag)
+        if el is None:
+            el = etree.SubElement(element, tag)
+        return el
+    stdout = findnew(cell.element, 'stdout')
+    stderr = findnew(cell.element, 'stderr')
+    #now the cell has these new elements:
+    assert cell.element.find('stdout') is not None
+    assert cell.element.find('stderr') is not None
+
+    #and must therefore be updated:
+    #py.test.raises(AttributeError, cell.stdout)
+    #py.test.raises(AttributeError, cell.stderr)
+    assert not hasattr(cell, 'stdout')
+    assert not hasattr(cell, 'stderr')
     cell.update() #used in nbshell IPythonLog __run
-    
-    
-    
-
-    
-
-    
-    
-
-
-    
-    
-    
-    
-    
-
-    
-    
-    
-    
-    
-    
-
-    
-
-    
-
+    #assert cell.stdout is stdout
+    #assert cell.stderr is stderr
+    assert hasattr(cell, 'stdout') #these are None. what's the use?
+    assert hasattr(cell, 'stderr')
     
