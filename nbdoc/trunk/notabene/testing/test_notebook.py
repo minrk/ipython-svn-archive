@@ -38,10 +38,15 @@ def test_comparison():
     nb7 = test_fromstring('nb7.nbk', '<notebook><sheet>abc</sheet></notebook>')
     assert not nb6 == nb7
 
-    #but this fail
+    #and now this too
     nb8 = test_fromstring('nb8.nbk', '<notebook><sheet><para><ipython-equation tex="e=mc^2"/></para></sheet></notebook>')
     nb9 = test_fromstring('nb9.nbk', '<notebook><sheet><para><ipython-equation tex="e=mc^3"/></para></sheet></notebook>')
     assert not nb8 == nb9
+
+    #there may still be other cases,
+    #but when adding failing tests
+    #please consider the relevance to how
+    #this feature is used.. (by nbshell)
 
 def test_errcheck():
     nb = test_fromstring()
