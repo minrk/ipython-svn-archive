@@ -3,7 +3,7 @@
 import pprint
 import string
 import os
-from StringIO import StringIO #to do (e.g.) write_c14n for nb.__eq__ .
+from cStringIO import StringIO #to do (e.g.) write_c14n for nb.__eq__ .
 
 from lxml import etree as ET
 

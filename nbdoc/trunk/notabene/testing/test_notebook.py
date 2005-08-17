@@ -29,10 +29,10 @@ def test_comparison():
     #Tzanko:This fails
     #antont:not anymore! but what does, that i do not know..
     nb4 = test_fromstring('nb4.nbk','<notebook><sheet></sheet></notebook>')
-    nb5 = test.fromstring('nb5.nbk','<notebook>\n<sheet></sheet>\n</notebook>')
+    nb5 = test_fromstring('nb5.nbk','<notebook>\n<sheet></sheet>\n</notebook>')
     assert nb4 == nb5
 
-    #but this seems bad, no?
+    #but this is bad:
     nb6 = test_fromstring('nb6.nbk', '<notebook><sheet>a b c</sheet></notebook>')
     nb7 = test_fromstring('nb7.nbk', '<notebook><sheet>abc</sheet></notebook>')
     assert not nb6 == nb7

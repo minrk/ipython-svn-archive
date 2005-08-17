@@ -1,0 +1,282 @@
+13:57 -!- antont [i=[U2FsdGV@pallas.utanet.fi] has joined #ipython
+13:57 -!- ServerMode/#ipython [+ns] by adams.freenode.net
+13:57 [Users #ipython]
+13:57 [@antont]
+13:57 -!- Irssi: #ipython: Total of 1 nicks [1 ops, 0 halfops, 0 voices, 0
+          normal]
+13:57 -!- Channel #ipython created Wed Aug 17 13:57:32 2005
+13:57 -!- Irssi: Join to #ipython was synced in 0 secs
+15:31 -!- tzanko [n=tz@vpn-pppoe-213-240-243-206.megalan.bg] has joined #ipython
+15:31 < tzanko> hi
+15:36 <@antont> hi
+15:36 -!- mode/#ipython [+o tzanko] by antont
+15:37 <@antont> would you have good time now for a talk on the structure?
+15:37 <@antont> am now back to studying Sheet
+15:39 <@tzanko> yes, go on
+15:39 <@tzanko> btw i'll be usually online in the afternoons and evenings
+15:40 <@antont> well basically there seem to be at least these two classes that
+                encapsulate (partly) xml: Cell with .element, Notebook with
+                .root (and .sheet..) and on the nbshell side, Sheet
+15:40 <@antont> s/two/tree
+15:40 <@antont> then there's also IPythonLog, but also get.log() in Notebook
+15:41 <@antont> it definitely makes sense to have wrappers in nbshell for the
+                ui operations
+15:41 <@antont> but still i think something is wrong
+15:41 <@antont> do you have some ideas?-o
+15:42 <@antont> hm it seems that Sheet.InsertCell does
+                factory.CreateDocumentPlugin(self.doc, **kwds) to create a cell
+                .. gotta look there next i guess
+15:43 <@tzanko> well, IPythonLog should probably be part of nbdoc
+15:43 <@antont> right
+15:43 <@antont> and should there perhaps be a Sheet class there too?
+15:43 <@tzanko> The Sheet is a different matter.
+15:43 <@antont> ok
+15:44 <@tzanko> right now, as you have probably seen, I directly edit xml in
+                nbshell
+15:44 <@antont> it's still a bit unclear for me .. was just planning to draw a
+                diagram with document, notebook, sheet, log(s), cells etc
+15:44 <@antont> yep and that makes sense too.. especially 'cause we allow the
+                users to write xml there too
+15:45 <@tzanko> so this means that I cannot use the Notebook class to store info
+15:45 <@tzanko> I use the sheet part of Notebook only when I load and save files
+15:45 <@antont> hm ok
+15:46 <@antont> btw the functionality to create html/latex should be properly
+                exposed now, so you add those to the UI at some point
+15:46 <@antont> +could
+15:47 <@tzanko> Also I have somewhat abused the word 'cell'. When I started
+                writing the application, a cell was simply a window in the view
+                along with the info it contains
+15:47 <@antont> ah yes
+15:47 <@tzanko> So Sheet.celllist does not store <cell> objects
+15:47 <@antont> well that was sure confusing me at some point
+15:48 <@tzanko> and Sheet.InsertCell has also nothing to do with them
+15:48 <@tzanko> yes
+15:48 <@tzanko> I will rename these parts, will use 'block' instead
+15:48 <@antont> so perhaps i just ignore the sheet 'cell' things
+15:48 <@antont> is there anything in Sheet i should know about, then?
+15:48 <@tzanko> yes
+15:49 <@antont> this seems to be about cells:
+15:49 <@antont>
+15:49 <@antont>     def InsertElement(self, block, type, cell, pos = None,
+                update = True):
+15:49 <@antont>         """Inserts an element of type <ipython-cell> in a
+                ipython block. block
+15:49 <@tzanko> yes
+15:49 <@antont> ah there's even a note, element =
+                etree.Element('ipython-cell',type = type, number = str(number))
+                #NBDOC: notebook.Cell() to handle this?
+15:49 <@antont> (perhaps i added that :)
+15:50 <@antont> hmhm
+15:50 <@tzanko> yes, you did :)
+15:50 <@tzanko> well in the sheet i store a dictionary Sheet.cell2sheet
+15:50 <@antont> yes i just read the info on those
+15:51 <@tzanko> and I need to update it whenever a ipython-block is changed
+15:51 <@antont> would it be good if Sheet.InsertElement used
+                self.notebook.InsertCell() (after i add one :) or something
+15:52 <@tzanko> I need the dictionary, because I need a fast way to get all the
+                <ipython-cell> elements, that correspond to a given cell in a
+                log
+15:52 <@antont> are ipython-blocks .. hm now i lost track of our dtd, gotta
+                check an example .nbk :)
+15:52 <@antont> tzanko: yes that's good. i'm thinking where that dictionary
+                should be, and where it's good to keep track of the changes
+15:53 <@tzanko> It probably should go to nbdoc
+15:53 <@tzanko> but I'm not sure how, because as I said I don't use Notebook
+                for now
+15:54 <@antont> so, are the changes in an ipython-block always changes of
+                ipython-cells? i guess the common one is the addition of a new
+                cell, right?
+15:54 <@tzanko> yes
+15:54 <@antont> oh that i didn't get either: do you have a different version
+                locally? 'cause the version in the repository does seem to use
+                Notebook
+15:55 <@tzanko> no, I don't
+15:55 <@antont> oh but not manipulating the data, like you said
+15:55 <@antont> for, even
+15:56 <@antont> and the logs are always in a notebook .. am thinking about
+                having some method in the notebook as the way to add cells, so
+                that could keep track of the changes too
+15:57 <@antont> and then having right attributes, properties and methods for
+                cell objects for manipulation too..
+16:04 <@tzanko> You can try to move all the document manipulation parts of
+                Sheet in nbdoc.
+16:05 <@tzanko> make an array blocks[], which has three types of elements,
+16:05 <@antont> .. am drawing a diagram, do go on
+16:06 <@tzanko> 1. Unsuported xml , for which blocks[i] would simply return the
+                text
+16:07 <@tzanko> 2. <ipython-block> elements, for which blocks[i] would be
+                either an Element object or some object encapsulating all
+                functionality needed for <ipython-block>
+16:08 <@tzanko> 3. <ipython-figure> - the same as for <ipython-block>
+16:08 <@tzanko> Then add methods for converting this array from and to an
+                ELement <notebook> object
+16:09 <@tzanko> and methods for manipulating the Notebook, which I will use
+16:10 <@antont> ..
+16:10 <@antont> hmhm
+16:10 <@tzanko> On my part, I will simply display the result returned from
+                blocks[] in a list of windows and use Notebook to manipulate
+                them
+16:11 <@antont> ok
+16:11 <@antont> so this will be Notebook.blocks
+16:11 <@tzanko> On the other hand, In the future I will come up with some
+                editing component which does automatic xml validation,
+16:12 <@tzanko> so I will be able to use the Notebook without blocks[] again
+16:12 <@tzanko> I don't know
+16:12 <@antont> well Robert is making the schema so we get the validation
+16:12 <@antont> but i don't see how it is related to this
+16:15 <@antont> in that 'blocks' solution, would the 'log' be the collection of
+                ipython-blocks in that array/list?
+16:15 <@antont> and sheet .. is nonexistent on the nbdoc side
+16:15 <@antont> and cells .. uh
+16:16 <@tzanko> no, the 'blocks' should have the same info as <sheet>
+16:16 <@antont> ah
+16:16 <@antont> right
+16:17 <@tzanko> I pretty much described my Sheet class, just replace blocks
+                with Sheet.celllist
+16:17 <@antont> yup .. so
+16:18 <@antont> (btw i still don't see how validation is related to this)
+16:19 <@tzanko> If I want to use Notebook to store info, since Notebook can
+                only store valid xml, I must be sure that the text in the text
+                editing components of nbshell is valid xml
+16:22 <@antont> btw what was the problem again with using Notebook.add_*
+                methods, like input special_input output stdout stderr figure
+                etc. placing?
+16:24 <@antont> (will test writing text in nbshell now to understand that
+                problem .. surely you can add any text within a <para> in
+                notebook)
+16:28 <@tzanko> I would only use them  in IPythonLog.__run,  instead of lines
+                242-244 and also they use Notebook.get_cell which uses XPath
+                and that is slow
+16:29 <@antont> -- just tested invalid xml in nbshell .. so i got an error when
+                tried to save when it was invalid, i see
+16:30 <@antont> yah i was thinking that Notebook would keep a list or a
+                dictionary of cells, and get_cell would return those based on
+                index/key .. so no XPath. would that work?
+16:33 <@tzanko> yes
+16:34 <@antont> regarding Notebook.add_input: why don't/wouldn't you use that
+                for adding input cells?
+16:35 <@antont> with add_figure i remember the talk about placing
+16:36 <@tzanko> I think that the proper place for these methods is in Cell.
+16:36 <@antont> yes i was thinking too that those should be there
+16:37 <@antont> adding a new Cell in Notebook, and adding/manipulating
+                input/output via Cell
+16:38 <@antont> any ideas on how we should proceed with this?
+16:38 <@antont> feel free to write failing tests for the API you'd like to have
+                .. i'll then implement it. or else i try to write them myself
+16:39 <@tzanko> ok.
+16:39 <@antont> do you think it'd be good to show this talk to the mentors?
+16:39 <@antont> i'm not sure if it'd be a good read for them
+16:40 <@tzanko> it isn't secret or something, but I don't think it would
+                interest them
+16:40 <@antont> true
+16:40 <@antont> let's just implement it
+16:41 <@antont> will you write the tests? i could start with the impl.. or
+                should i do tests too?
+16:42 <@tzanko> what exacly do you want to implement? we talked about a lot of
+                stuff
+16:43 <@antont> basically what you need .. but
+16:43 <@antont> i guess the method to Notebook to add cells, and then the
+                functionality to Cell
+16:44 <@antont> (checking back the log what there was earlier)
+16:44 <@tzanko> first I need a better __eq__ method.
+16:44 <@antont> or would that blocks[] be good?
+16:44 <@antont> what do you need from it?
+16:44 <@antont> (__eq__)
+16:44 <@tzanko> The current one removes all whitespace and in the case of
+                <para> some words </para> that is not desired
+16:45 <@antont> yes i committed a test that demonstrates that, also realized
+                that today
+16:45 <@tzanko> you need to remove only the text and tail of the elements which
+                should not have any
+16:46 <@antont> yup i'll fix that first
+16:46 <@antont> so perhaps you can write failing tests as a wishlist for the
+                API, or are there more urgent things for you?
+16:46 <@tzanko> I need that to make tests, making tests with my validating
+                functions is a bitch
+16:47 <@antont> i think those validating functions replicate functionality that
+                is there in xml validating tools
+16:47 <@tzanko> Probably, I'm not much into xml
+16:48 <@antont> the schema describe the required & allowed parts etc
+16:48 <@antont> so we'll get that
+16:48 <@antont> but the __eq__ thing is different
+16:49 <@tzanko> I want to do the folowing until September 1st: tests, proper
+                copy-pasting and better ways of reruning parts of the document
+16:49 <@tzanko> I also need to refine some parts of the UI and add some
+                keybindings
+16:50 <@antont> __eq__ is for seeing if there's been significant changes in the
+                notebook, so that you know it somewhere in nbshell, right? not
+                related to validation at all?
+16:50 <@tzanko> yes
+16:51 <@antont> so what did 'it' refer to here, blocks[]?: 16:46 <@tzanko> I
+                need that to make tests, making tests with my validating
+16:51 <@antont> i first thought that __eq__ so was confused
+16:53 <@tzanko> I did one test using my validating functions, see testNew. in
+                tester.py
+16:54 <@antont> my list for Sep 1 (haven't thought of it much): a) polishing
+                the already semi-working figures & equations b) (related to
+                that) making sure that html & latex generation, and preview
+16:54 <@tzanko> A better way would be simply to write the proper output in a
+                file and compare the two
+16:56 <@antont> tzanko: well with the nbk schema existing we just say something
+                like: validate(doc, nbkschema) .. and it checks for the things
+                those functions do
+16:56 <@antont> i didn't get your last comment
+16:58 <@tzanko> It was connected to my prevoius comment. we might write like
+                talking on a radio. Tzanko out :)
+16:59 <@antont> but if the current state of __eq__ i.e. the bug with whitespace
+                is fatal to you (i.e. how nbshell uses it fails), i make the
+                test there fail and fix it.
+16:59 <@antont> i understood that it was connected to testNew but i still don't
+                get it. basically i ignore validation testing probs 'cause
+                expect the schema and existing validation tools to solve them.
+17:01 <@antont> so either i fix the __eq__ thing or start with the new API,
+                based on what you need first
+17:01 <@tzanko> do __eq__ first
+17:02 <@antont> ok. and i guess i don't need to remind you that failing tests
+                as wishes for the new API would be cool to have ;)
+17:02 <@tzanko> ok
+17:03 <@antont> but do what you need ..
+17:03 <@tzanko> before refactoring we must first make tests to ensure that
+                nothing will break
+17:03 <@antont> or just make the new API so that it breaks nbshell
+17:04 <@antont> the tests i've now made use ndboc in the ways that i found out
+                nbshell supposes
+17:04 <@antont> so those help in getting nbshell working while chanding nbdoc
+17:05 <@antont> but i think at this point we could just break it for a while
+                (like two days) to get a better structure in place
+17:05 <@antont> .. if it's better to get the new one that way
+17:08 <@antont> argh pressed wrong button, sent a bogus update, ohwell .. at
+                least the __eq__ test fails for others now too
+17:10 <@tzanko> I doubt that two days will be enough. Also I at least have to
+                make tests because only nbshell's internals will change and I
+                want to be sure that all the current features will not break
+17:11 <@antont> hm
+17:11 <@antont> well i was thinking that it would be incremental
+17:11 <@antont> doing one thing at a time..
+17:12 <@antont> for example, just changing how cells are created, and how input
+                & output to them is added etc
+17:12 <@antont> i think doing such a change wouldn't be an awful lot of work
+17:13 <@tzanko> yes, these things are incremental, but moving IPythonLog and
+                large parts of Sheet to nbdoc is not
+17:13 <@antont> so let's not do those at the same time
+17:14 <@antont> but see about them later..
+17:14 <@tzanko> I agree. If you want we can postpone them after the deadline.
+17:15 <@antont> i hope it happens before, but after the deadline is fine too
+17:16 <@antont> i think we should have this discussion as a note somewhere
+17:18 <@tzanko> We can add irc logs in the tracker wiki and make tickets out of
+                them
+17:21 <@tzanko> do you have anything else to ask? I want to logout now, because
+                I can't concentrate on coding while chatting
+17:21 <@antont> what will you do next?
+17:22 <@tzanko> I'll make tests using the buggy __eq__
+17:22 <@antont> you mean more tests that show the bugs?
+17:22 <@antont> there is one failing already
+17:22 <@tzanko> no, nbshell tests
+17:22 <@antont> oh ok
+17:22 <@antont> i guess that's all then for now
+17:23 <@antont> do tell if you start making failing tests for the new cell API
+                at some point
+17:23 <@tzanko> ok, that will probably be tomorrow
+17:24 <@tzanko> bye for now
+17:24 <@antont> ok. i may or may not do some before that
+17:24 <@antont> bye
