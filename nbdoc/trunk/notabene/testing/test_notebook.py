@@ -27,15 +27,21 @@ def test_comparison():
     assert not nb1 == nb3
 
     #Tzanko:This fails
-    #antont:not anymore! but what does, that i do not know..
+    #antont:not anymore!
+    #and now also while the next passes, too
     nb4 = test_fromstring('nb4.nbk','<notebook><sheet></sheet></notebook>')
     nb5 = test_fromstring('nb5.nbk','<notebook>\n<sheet></sheet>\n</notebook>')
     assert nb4 == nb5
 
-    #but this is bad:
+    #a hack makes this work..
     nb6 = test_fromstring('nb6.nbk', '<notebook><sheet>a b c</sheet></notebook>')
     nb7 = test_fromstring('nb7.nbk', '<notebook><sheet>abc</sheet></notebook>')
     assert not nb6 == nb7
+
+    #but this fail
+    nb8 = test_fromstring('nb8.nbk', '<notebook><sheet><para><ipython-equation tex="e=mc^2"/></para></sheet></notebook>')
+    nb9 = test_fromstring('nb9.nbk', '<notebook><sheet><para><ipython-equation tex="e=mc^3"/></para></sheet></notebook>')
+    assert not nb8 == nb9
 
 def test_errcheck():
     nb = test_fromstring()

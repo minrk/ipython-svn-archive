@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import copy #for the insanity in Notebook.__eq__
 import pprint
 import string
 import os
@@ -89,15 +90,30 @@ class Notebook(object):
         in addition to the standard canoninalization,
         white space & newlines are ignored (and that may have a bad bug).
         """
+
+        def normal(tree):
+            """removes whitespace between xml elements, but not in them."""
+            #only way i've found so far is to reconstruct the xml.. :o
+            norm = ET.Element(tree.tag) #looses attrs
+            def copyelem(to, elem): #this is recursive
+                sub = ET.SubElement(to, elem.tag)
+                sub.text = elem.text
+                #sub.attrib = copy.deepcopy(elem.attrib) #attrib not writeable
+                [sub.set(key, value) for key,value in elem.attrib.items()]
+                [copyelem(sub, further) for further in elem] 
+            [copyelem(norm, elem) for elem in tree]
+            return norm
+        norm_self  = normal(self.root)
+        norm_other = normal(other.root)
+
+        #after that, the final strings to compare by the canonalization.
         self_f = StringIO()
         other_f = StringIO()
-        [ET.ElementTree(tree.root).write_c14n(f)
-         for tree, f in [(self, self_f),
-                         (other, other_f)]]
-        def normal(canonal):
-            """an attempt to strip whitespace, linefeeds etc."""
-            return "".join(canonal.getvalue().split())
-        return normal(self_f) == normal(other_f)
+        [ET.ElementTree(norm).write_c14n(f)
+         for norm, f in [(norm_self, self_f),
+                         (norm_other, other_f)]]
+        
+        return self_f.getvalue() == other_f.getvalue()
 
     def __ne__(self, other):
         #caught me too, http://www.thescripts.com/forum/thread19678.html
