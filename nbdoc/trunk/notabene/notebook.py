@@ -88,7 +88,7 @@ class Notebook(object):
         note that 'equivalence' here means semantical(?) equivalence,
         i.e. not that the xml source is the same, but the notebook it describes.
         in addition to the standard canoninalization,
-        white space & newlines are ignored (and that may have a bad bug).
+        white space & newlines are ignored.
         """
 
         def normal(tree):
