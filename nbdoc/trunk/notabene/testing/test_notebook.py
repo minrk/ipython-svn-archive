@@ -174,4 +174,38 @@ def test_log():
     #assert cell.stderr is stderr
     assert hasattr(cell, 'stdout') #these are None. what's the use?
     assert hasattr(cell, 'stderr')
+
+def test_newapi():
+    """to test how the new api will handle things"""
+    pass #done in the functions that follow
+
+def test_newcell(): #are not created directly anymore (?)
+    pass
+
+def test_newlog():
+    nb = test_new()
+    log = nb.get_log()
+
+    cell = nb.newget_cell(1) #should create a new Cell, with xml elem
+    assert cell is nb.newget_cell(1) #this should be the same one
+    assert cell.input is None
+    assert cell.output is None
+
+    python_in = "3 // 2"
+    python_out = "1"
+
+    cell.input = python_in
+    cell.output = python_out
+    assert cell.input == python_in
+    assert cell.output == python_out
+    #those must be the same in the underlying xml too:
+    assert cell.element.find('input').text == python_in
+    assert cell.element.find('output').text == python_out
+    
+    #note: the do-specials in original Cell not there
+
+    #should be standard elements too?
+    assert cell.stdout is None
+    assert cell.stdin is None
+
     

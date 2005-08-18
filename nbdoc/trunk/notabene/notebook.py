@@ -48,6 +48,38 @@ class Cell(object):
                 yield ET.Element('ipython-cell', type=tag,
                     number=str(self.number))
 
+class SubelemWrapper:
+    """abstract superclass for getter and setter"""
+    def __init__(self, propname):
+        self.propname = propname #the name of the subelement in ob.element
+
+class SubelemGetter(SubelemWrapper):
+    """a template for getter functions to wrap an xml element"""
+    def __call__(self, ob):
+        in_element = ob.element.find(self.propname)
+        if in_element is not None:
+            return in_element.text
+        else:
+            return None
+
+class SubelemSetter(SubelemWrapper):
+    """a template for setter functions to wrap an xml element"""
+    def __call__(self, ob, text): #now only works for setting text
+        in_element = ob.element.find(self.propname)
+        if in_element is None:
+            in_element = ET.SubElement(ob.element, self.propname)
+        in_element.text = text
+
+
+class NewCell(object):
+    def __init__(self, element):
+        #this could/should also create the element?
+        self.element = element
+        self.stdout = None
+        self.stdin = None
+
+    input  = property(SubelemGetter('input'),  SubelemSetter('input'))
+    output = property(SubelemGetter('output'), SubelemSetter('output'))
 
 
 
@@ -81,6 +113,10 @@ class Notebook(object):
         else:
             self.root = root
             self.head = root.find('head')
+
+        self.cells = [] #a numbered index of cells in this book
+                        #(for fast access)
+        #XXX now made for one log only. perhaps add a Log class for several?
 
     def __eq__(self, other):
         """As an answer to http://projects.scipy.org/ipython/ipython/ticket/3
@@ -164,6 +200,7 @@ class Notebook(object):
             raise ValueError('No log with id="%s"' % logid)
 
     def get_cell(self, number, logid='default-log'):
+        #note: Tzanko considers this too slow for nbshell
         log = self.get_log(logid)
         cells = log.xpath('./cell[@number=%s]' % number)
         if cells:
@@ -171,6 +208,17 @@ class Notebook(object):
         else:
             return ET.SubElement(log, 'cell', number=str(number))
 
+    def newget_cell(self, number, logid='default-log'):
+        log = self.get_log(logid)
+        index = number - 1 
+        try:
+            return self.cells[index]
+        except IndexError:
+            cell_elem = ET.SubElement(log, 'cell', number=str(number))
+            cell = NewCell(cell_elem)
+            self.cells.append(cell)
+            return cell
+ 
     def add_input(self, input, number, logid='default-log'):
         """Add an input element to a log.
 
