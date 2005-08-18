@@ -72,6 +72,7 @@ class ipnDocument(object):
         self.notebook = None
         self.logs = {}
         self.sheet = None
+        self.fileinfo['untitled'] = True
 
     def LoadFile(self, filename, overwrite = False):
         """Loads the file with the given filename. If there is currently a
@@ -138,15 +139,15 @@ class ipnDocument(object):
                 filename = self.fileinfo['path'] +'/' + self.fileinfo['name']
         mod = self.fileinfo['modified']
         try:
-            #1. update the data from the views
-            self.sheet.UpdateDoc()
-            #print 'root-> %s'%str(self.notebook.root) #dbg
-            #etree.dump(self.notebook.root) #dbg
-
             # delete the last inputs in the sheet
             self.sheet.ClearLastInputs()
             # delete the last empty cell in the logs
             [self.logs[x].ClearLastInput() for x in self.logs]
+
+            #update the data from the views and create the <sheet> element
+            self.sheet.UpdateDoc()
+            #print 'root-> %s'%str(self.notebook.root) #dbg
+            #etree.dump(self.notebook.root) #dbg
             #. write to the file
             self.notebook.write(filename)
             #. set the last inputs again

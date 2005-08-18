@@ -16,7 +16,7 @@ import StringIO
 
 from lxml import etree
 
-from notabene import notebook
+from notabene import notebook,validate
 
 from nbshell import PythonPlugin
 from nbshell.utils import *
@@ -63,6 +63,8 @@ class Sheet(object):
         return self._currentcell
 
     def __set_current_cell(self, cell):
+        if type(cell) == type(0):
+            cell = self.celllist[cell]
         self._currentcell = cell
         if cell is not None:
             cell.view.SetFocus()
@@ -156,10 +158,10 @@ class Sheet(object):
                 cell.view.Update()
             self.view.Update()
     
-    def UpdateDoc(self):
-        """Updates data from the view. Then updates self.element, from the
-        internal representation of data. If there was some error, throws an
-        exception"""
+    def UpdateDoc(self, element = True):
+        """Updates data from the view. If element is True also updates
+        self.element, from the internal representation of data. If there was
+        some error, throws an exception"""
         for doccell in self.celllist:
             doccell.view.UpdateDoc()
             
@@ -177,25 +179,24 @@ class Sheet(object):
                     etr.write(text, encoding = 'utf-8')
             text.write('</sheet>')
             text.flush()
-            text = StringIO.StringIO(text.getvalue())
+            xmldata = text.getvalue()
+            text.close()
             #Convert to etree.Element
-            etr = etree.ElementTree()
-            try:
-                etr.parse(text)
-            except:
-                #TODO: Handle syntax errors here 
-                
-                #NBDOC: The notebook should check the documents for syntax
-                #errors and be able to give meanigful description of errors to
-                #the user
-                
-                raise #dbg
-            self.element = etr.getroot()
+            errors = validate.check_errors(xmldata)
+            if errors is not None:
+                print >>sys.stderr, errors
+                raise NotImplementedError #dbg
+            self.element = etree.fromstring(xmldata)
             # Now remove the old sheet and replace it with the new one
             oldsheet = self.notebook.root.find('sheet')
             if oldsheet is not None:
                 self.notebook.root.remove(oldsheet)
             self.notebook.root.append(self.element)
+            #Test the notebook format
+            errors = self.notebook.check_errors()
+            if errors is not None:
+                print >>sys.stderr, errors
+                raise NotImplementedError #dbg
 
     def __append_plaintext_cell(self, iterator, prevlist, elemlist,\
                                 endtaglist, update = True):
@@ -366,7 +367,7 @@ class Sheet(object):
             lastcell = log.lastcell
             #The last cells should only have inputs
             key = (logid, lastcell.number, 'input')
-            inputs = self.cell2sheet[key]
+            inputs = self.cell2sheet.get(key,[])
             while inputs != []:
                 input = inputs[0]
                 self.undostack.append((key,input))

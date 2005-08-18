@@ -3,8 +3,11 @@
 import os
 import sys
 import unittest
+from StringIO import StringIO
 
 import wx
+
+from notabene import notebook
 
 from nbshell.utils import *
 
@@ -108,35 +111,76 @@ class SimpleTests(unittest.TestCase):
     def setUp(self):
         self.app = wx.GetApp()
         self.document = self.app.document
-        self.logs = self.document.logs
-        self.sheet = self.document.sheet
         self.frame = self.app.frame
+        self.cwd = os.getcwd()
+        os.chdir('nbshell/test')
         
     def tearDown(self):
         self.document.Clear()
-        pass
+        os.chdir(self.cwd)
     
     def testNew(self):
         """Tests the new method in the frame"""
         self.frame.OnNew()
-        self.sheet.UpdateDoc()
-        root = self.document.notebook.root
-        #This is a notebook
-        self.failUnless(test_notebook(root))
-        #There is only one log
-        self.failUnless(match_one_subelement(root, lambda x: x.tag =='ipython-log'))
-        log = root.find('ipython-log')
-        #The log has id='default-log'
-        self.failUnless(log.attrib.get('id',None) == 'default-log')
-        #The log has two cells, one with number == 0 and one with number == 1
-        cells = log.findall('cell')
-        self.failUnless(len(cells) == 2)
-        self.failUnless(match_all(lambda x: x.attrib['number'] in ['0', '1'],\
-                                  cells))
-        #And so on. Testing stuff like this is very annoying
+        self.document.sheet.ClearLastInputs()
+        [self.document.logs[x].ClearLastInput() for x in self.document.logs.keys()]
+        self.document.sheet.UpdateDoc()
+        
+        ref_notebook = notebook.Notebook.from_file('testNew.nbk')
+        self.assert_(self.document.notebook == ref_notebook)
+        
+    def testInsert(self):
+        """Tests the Insert Text and Insert Code menu items"""
+        self.frame.OnNew()
+        sheet = self.document.sheet
+        #Insert at the beginning
+        sheet.currentcell = sheet.celllist[0]
+        sheet.currentcell.view.position = 0
+        self.frame.OnInsertCode()
+        sheet.currentcell = sheet.celllist[0]
+        sheet.currentcell.view.position = 0
+        self.frame.OnInsertText()
+        sheet.celllist[0].text = '<para> some text </para>'
+        
+        self.document.sheet.ClearLastInputs()
+        [self.document.logs[x].ClearLastInput() for x in self.document.logs.keys()]
+        self.document.sheet.UpdateDoc()
+        
+        ref_notebook = notebook.Notebook.from_file('testInsert.nbk')
+        if self.document.notebook != ref_notebook:
+            ref_out, out = StringIO(), StringIO()
+            ref_notebook.write(ref_out)
+            self.document.notebook.write(out)
+            print >>sys.stderr, 'ref output: %s'%ref_out.getvalue() #dbg
+            print >>sys.stderr, 'output: %s'%out.getvalue() #dbg
+            self.assert_(False)
+
+    def testDeleteCell(self):
+        """Tests the Delete Cell menu item"""
+        self.document.LoadFile('testDeleteCell_in.nbk', True)
+        sheet = self.document.sheet
+        sheet.currentcell = 1
+        self.frame.OnDeleteCell()
+        sheet.currentcell = 2
+        self.frame.OnDeleteCell()
+        
+        self.document.sheet.ClearLastInputs()
+        [self.document.logs[x].ClearLastInput() for x in self.document.logs.keys()]
+        self.document.sheet.UpdateDoc()
+        
+        ref_notebook = notebook.Notebook.from_file('testDeleteCell.nbk')
+        if self.document.notebook != ref_notebook:
+            ref_out, out = StringIO(), StringIO()
+            ref_notebook.write(ref_out)
+            self.document.notebook.write(out)
+            print >>sys.stderr, 'ref output: %s'%ref_out.getvalue() #dbg
+            print >>sys.stderr, 'output: %s'%out.getvalue() #dbg
+        
+        #This fails.
+        self.assert_(len(sheet.celllist) == 1)
 
 suite = unittest.TestSuite()
-suite.addTest(SimpleTests('testNew'))
+suite.addTests([SimpleTests(x) for x in ['testNew', 'testInsert', 'testDeleteCell']])
 
 #class TestCase(unittest.TestCase):
     #"""Class TestCase. Used for testing nbshell"""

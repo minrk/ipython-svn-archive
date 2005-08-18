@@ -78,12 +78,20 @@ class PlainTextDocumentPlugin(object):
         
         self.document = document
         self.sheet = document.sheet
-        self.text = text or ''
+        self._text = text or ''
         self.index = None   #Set by AddCell, InsertCell, DeleteCell
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
 
     type='plaintext'
+    
+    def SetText(self, text):
+        try:
+            self.view.window.SetText(text)
+        except:
+            pass
+        self._text = text
+    text = property(fget = lambda self:self._text,fset = SetText)
     
     def LoadXML(self, iterator, prevlist, elemlist, endtaglist):
         """The LoadXML method gets text representing a part of the xml tree.

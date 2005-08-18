@@ -204,9 +204,9 @@ class PythonNotebookViewPlugin(object):
         pos = self.window.GetCurrentPos()
         linenum = self.window.LineFromPosition(pos)
         if pos == self.window.GetLength():
-            return len(self.line2log)
-        elif self.line2log[linenum] is not None:
             return len(self.doc.element)
+        elif self.line2log[linenum] is not None:
+            return self.line2log[linenum][0]
         else:
             l = len(self.line2log)
             while linenum<l and self.line2log[linenum] is None:
@@ -217,9 +217,7 @@ class PythonNotebookViewPlugin(object):
                 return self.line2log[linenum][0]
             
     def __set_position(self, pos):
-        linenum = self.window.GetCurrentLine()
-        if self.line2log[linenum] is not None and\
-           self.line2log[linenum][0] == pos:
+        if pos == self.position:
             return
         self.SetPosition(pos)
         
@@ -231,11 +229,15 @@ class PythonNotebookViewPlugin(object):
         Should be used only for input cells, because the output cells cannot be edited"""
         #TODO: this algorithm is slow. I check each line of the text if it is the start
         # of the element I need to go to. There should be a faster way to do this
+        if pos == 0:
+            self.window.GotoPos(self.PromptLen(0))
+            return
         i = 0
         for i in range(len(self.line2log)):
             item = self.line2log[i]
             if item is not None and item[0] == pos:
                 break
+        
         self.window.GotoPos(self.window.PositionFromLine(i)+self.PromptLen(i))
 
     def __set_focus(self,event):

@@ -1,3 +1,7 @@
+08.17.2005:
+	* Added tests for deleting and inserting blocks
+
+	* Fixed some bugs
 08.16.2005:
 	* Added deletion of cells
 

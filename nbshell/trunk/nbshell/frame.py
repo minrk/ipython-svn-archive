@@ -196,15 +196,15 @@ class ipnFrame(wx.Frame):
                 self.SetTitle(self.app.document.fileinfo['name'])
                 self.app.document.fileinfo['untitled'] = False
                 
-    def OnRerun(self,evt):
+    def OnRerun(self,evt = None):
         self.app.document.Rerun()
     
-    def OnInsertText(self, evt):
+    def OnInsertText(self, evt = None):
         sheet = self.app.document.sheet
         block = sheet.currentcell
         sheet.InsertText(block, default(lambda:block.view.position,0), update = True)
     
-    def OnInsertCode(self, evt):
+    def OnInsertCode(self, evt = None):
         sheet = self.app.document.sheet
         block = sheet.currentcell
         sheet.InsertCode(block, default(lambda:block.view.position,0), update = True)
