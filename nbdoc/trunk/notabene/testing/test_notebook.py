@@ -175,6 +175,9 @@ def test_log():
     assert hasattr(cell, 'stdout') #these are None. what's the use?
     assert hasattr(cell, 'stderr')
 
+    sheet = nb.default_sheet()
+    print etree.tostring(sheet)
+
 def test_newapi():
     """to test how the new api will handle things"""
     pass #done in the functions that follow
@@ -217,6 +220,10 @@ def test_newlog():
     assert cell.stderr == stderrtext
     assert cell.element.find('stdout').text == stdouttext
     assert cell.element.find('stderr').text == stderrtext
+
+    sheet = nb.newdefault_sheet()
+    #print etree.tostring(sheet)
+    #assert False
 
     
     

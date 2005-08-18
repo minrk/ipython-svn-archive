@@ -72,14 +72,25 @@ class SubelemSetter(SubelemWrapper):
 
 
 class NewCell(object):
-    def __init__(self, element):
+    def __init__(self, element, number):
         #this could/should also create the element?
         self.element = element
+        self.number = number
 
     input  = property(SubelemGetter('input'),  SubelemSetter('input'))
     output = property(SubelemGetter('output'), SubelemSetter('output'))
     stdout = property(SubelemGetter('stdout'), SubelemSetter('stdout'))
     stderr = property(SubelemGetter('stderr'), SubelemSetter('stderr'))
+    traceback = property(SubelemGetter('traceback'), SubelemSetter('traceback'))
+    #number needs to be added but is different
+
+    def get_sheet_tags(self): #the special system is missing yet
+        yield ET.Element('ipython-cell', type='input',
+                         number=str(self.number))
+        for tag in ('traceback', 'stdout', 'stderr', 'output'):
+            if getattr(self, tag) is not None:
+                yield ET.Element('ipython-cell', type=tag,
+                                 number=str(self.number))
 
 
 
@@ -215,7 +226,7 @@ class Notebook(object):
             return self.cells[index]
         except IndexError:
             cell_elem = ET.SubElement(log, 'cell', number=str(number))
-            cell = NewCell(cell_elem)
+            cell = NewCell(cell_elem, number)
             self.cells.append(cell)
             return cell
  
@@ -484,12 +495,13 @@ class Notebook(object):
         """
         log = self.get_log(logid)
         cells = sorted((Cell(x) for x in log), key=lambda x: x.number)
-        figured = dict((int(x.get('number')), x) for x in log.xpath('./figure'))
+        figures = dict((int(x.get('number')), x) for x in log.xpath('./figure'))
         
         sheet = ET.Element('sheet')
         block = ET.SubElement(sheet, 'ipython-block', logid=logid)
         for cell in cells:
-            for subcell in cell.get_sheet_tags(specials):
+            for subcell in  cell.get_sheet_tags(specials):
+                print "DEFAULT SHEET: appending", subcell
                 block.append(subcell)
 
             #if figures: #and cell.number in figured:
@@ -499,6 +511,17 @@ class Notebook(object):
                 #block = ET.SubElement(sheet, 'ipython-block', logid=logid)
 
         return sheet
+
+    def newdefault_sheet(self):
+        logid='default-log'
+        sheet = ET.Element('sheet')
+        block = ET.SubElement(sheet, 'ipython-block', logid=logid)
+        for cell in self.cells:
+            print "DEFAULT SHEET: cell", cell
+            for subcell in cell.get_sheet_tags():
+                block.append(subcell)
+        return sheet
+            
 
     def get_from_log(self, tag, number, logid='default-log'):
         xpath = './ipython-log[@id="%s"]/cell[@number="%s"]/%s' % (logid,
