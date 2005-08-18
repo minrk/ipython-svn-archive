@@ -51,7 +51,20 @@ def test_comparison():
     #based on additional comments in the ticket..
     str10 = "<notebook>\n<sheet>\n<para>&lt;para&gt; elements can have <emphasis>mixed</emphasis> content.</para>\n</sheet>\n</notebook>"
     nb10 = test_fromstring('nb10.nbk', str10)
-    assert not nb10 == nb9
+    assert not nb10 == nb9 #sorry, didn't get the point here yet
+
+    #nb11 may come to accompany nb10
+    
+    #newlines in xml source for readability.
+    #tho: this particular case can not happen with nbshell,
+    #'cause it does not expose the input & output cell source, right?
+    #and when editing .nbk source directly, equivalence check is not used?
+    #surely with other tags (e.g. notebook-xml ones) it can happen w/ nbshell.
+    str12 = "<input>\nfor i in range(10):\n    print i\n</input>"
+    str13 = "<input>for i in range(10):\n    print i</input>"
+    assert test_fromstring('nb12.nbk', str12) == test_fromstring('nb13', str13)
+    #passed without changes to existing __eq__
+
 
 def test_errcheck():
     nb = test_fromstring()
