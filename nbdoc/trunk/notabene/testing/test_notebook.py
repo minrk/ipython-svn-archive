@@ -48,13 +48,13 @@ def test_comparison():
     #please consider the relevance to how
     #this feature is used.. (by nbshell)
 
-    #based on additional comments in the ticket..
+    #based on additional comments in the ticket.. what should this be about?
     str10 = "<notebook>\n<sheet>\n<para>&lt;para&gt; elements can have <emphasis>mixed</emphasis> content.</para>\n</sheet>\n</notebook>"
     nb10 = test_fromstring('nb10.nbk', str10)
-    assert not nb10 == nb9 #sorry, didn't get the point here yet
+    str11 = "<notebook>\n<sheet>\n<para>&lt;para&gt; elements can have mixed content.</para>\n</sheet>\n</notebook>" #just -<emphasis>, as didn't get the point
+    nb11 = test_fromstring('nb11.nbk', str11)
+    assert nb10 != nb11
 
-    #nb11 may come to accompany nb10
-    
     #newlines in xml source for readability.
     #tho: this particular case can not happen with nbshell,
     #'cause it does not expose the input & output cell source, right?
