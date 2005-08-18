@@ -48,6 +48,11 @@ def test_comparison():
     #please consider the relevance to how
     #this feature is used.. (by nbshell)
 
+    #based on additional comments in the ticket..
+    str10 = "<notebook>\n<sheet>\n<para>&lt;para&gt; elements can have <emphasis>mixed</emphasis> content.</para>\n</sheet>\n</notebook>"
+    nb10 = test_fromstring('nb10.nbk', str10)
+    assert not nb10 == nb9
+
 def test_errcheck():
     nb = test_fromstring()
     assert nb.check_errors() is None
