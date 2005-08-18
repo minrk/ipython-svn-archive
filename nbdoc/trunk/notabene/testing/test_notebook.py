@@ -206,6 +206,19 @@ def test_newlog():
 
     #should be standard elements too?
     assert cell.stdout is None
-    assert cell.stdin is None
+    assert cell.stderr is None
+
+    #nbshell IPythonLog seems to use them as normal text elements
+    stdouttext = "A printed thing came to stdout"
+    stderrtext = "TestException came to stderr"
+    cell.stdout = stdouttext
+    cell.stderr = stderrtext
+    assert cell.stdout == stdouttext
+    assert cell.stderr == stderrtext
+    assert cell.element.find('stdout').text == stdouttext
+    assert cell.element.find('stderr').text == stderrtext
+
+    
+    
 
     

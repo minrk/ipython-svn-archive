@@ -75,11 +75,11 @@ class NewCell(object):
     def __init__(self, element):
         #this could/should also create the element?
         self.element = element
-        self.stdout = None
-        self.stdin = None
 
     input  = property(SubelemGetter('input'),  SubelemSetter('input'))
     output = property(SubelemGetter('output'), SubelemSetter('output'))
+    stdout = property(SubelemGetter('stdout'), SubelemSetter('stdout'))
+    stderr = property(SubelemGetter('stderr'), SubelemSetter('stderr'))
 
 
 
