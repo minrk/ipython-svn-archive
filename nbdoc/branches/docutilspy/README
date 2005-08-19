@@ -1,0 +1,19 @@
+This is a first take at implementing the notebooks as Python,
+as was originally envisioned in the Google/SoC proposal.
+
+The idea for the API was presented in
+http://www.scipy.net/pipermail/ipython-dev/2005-June/000481.html and
+this experiment also for the docutils folks in
+http://comments.gmane.org/gmane.text.docutils.devel/3032 , resulting
+in a patch even (has not been applied (yet)).
+
+As the development has progressed with the xml backed solution, this
+code is obsolete and added to here mostly for historical reasons.  But
+this kind of a frontend could be well implemented to the main backend
+too .. say if someone likes to write notebooks as Python instead of
+using an editor or XML. This is still similar to mr. de Ridder's work,
+from where the idea for using singleton classes to describe content
+entities came, as he's been also using Python as a better way to write XML.
+
+putting branch this aside to continue with the trunk,
+Toni Alatalo <antont>
