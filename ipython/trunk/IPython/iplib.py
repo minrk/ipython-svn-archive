@@ -688,6 +688,9 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         # temporary files used for various purposes.  Deleted at exit.
         self.tempfiles = []
 
+        # Keep track of readline usage (later set by init_readline)
+        self.has_readline = 0
+
         # for pushd/popd management
         try:
             self.home_dir = get_home_dir()
