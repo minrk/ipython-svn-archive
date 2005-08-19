@@ -82,7 +82,6 @@ class NewCell(object):
     stdout = property(SubelemGetter('stdout'), SubelemSetter('stdout'))
     stderr = property(SubelemGetter('stderr'), SubelemSetter('stderr'))
     traceback = property(SubelemGetter('traceback'), SubelemSetter('traceback'))
-    #number needs to be added but is different
     
     def get_number(self):
         return int(self.element.attrib['number'])
@@ -229,16 +228,38 @@ class Notebook(object):
         else:
             return ET.SubElement(log, 'cell', number=str(number))
 
+    def add_cell(self, number,  logid='default-log'):
+        log = self.get_log(logid)
+        index = number - 1
+        try:
+            self.cells[index] #is this a sane way to check?
+            #this is the normal case.. not an error
+        except IndexError: #as expected
+            cell_elem = ET.SubElement(log, 'cell', number=str(number))
+            #that would probably be better in Cell constructor,
+            #but not sure if can move it there (yet)
+            cell = NewCell(cell_elem)
+            self.cells.append(cell) #always adds to end
+            log.append(cell.element)
+            #this changes when is changed to dict, if that really needed
+            return cell
+        else:
+            raise ValueError, 'a cell with that number exists.'
+
+    def get_cell2(self, number, logid='default-log'):
+        #log = self.get_log(logid)
+        index = number - 1
+        return self.cells[index]
+        
     def newget_cell(self, number, logid='default-log'):
         log = self.get_log(logid)
         index = number - 1 
         try:
             return self.cells[index]
         except IndexError:
-            cell_elem = ET.SubElement(log, 'cell', number=str(number))
-            cell = NewCell(cell_elem, number)
-            self.cells.append(cell)
-            return cell
+            #dbg
+            print "NOTEBOOK: new cell with num", number
+            return self.add_cell(number)
  
     def add_input(self, input, number, logid='default-log'):
         """Add an input element to a log.
@@ -527,7 +548,7 @@ class Notebook(object):
         sheet = ET.Element('sheet')
         block = ET.SubElement(sheet, 'ipython-block', logid=logid)
         for cell in self.cells:
-            print "DEFAULT SHEET: cell", cell
+            print "*NEW*DEFAULT SHEET: cell", cell
             for subcell in cell.get_sheet_tags():
                 block.append(subcell)
         return sheet

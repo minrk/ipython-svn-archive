@@ -179,8 +179,13 @@ ion()
             number = int(self.log[-1].attrib['number'])+1
         
         #elem = etree.Element('cell', number=str(number))
-        cell = self.notebook.newget_cell(number)
-        self.log.append(cell.element)
+        try:
+            cell = self.notebook.add_cell(number)
+        except ValueError:
+            print "IPyLog: kludging cell num from", number
+            number += 1
+            cell = self.notebook.add_cell(number)
+        #self.log.append(cell.element)
         #se = etree.SubElement(elem, 'input')
         #se.text = str(input)
         cell.input = str(input)

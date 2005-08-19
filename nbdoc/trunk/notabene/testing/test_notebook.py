@@ -128,6 +128,7 @@ def test_log():
     number = 1
     cellelem = etree.Element('cell', number=str(number)) 
     log.append(cellelem)
+    assert len(log) == 1
 
     python_in = "3 // 2"
     python_out = "1"
@@ -176,7 +177,13 @@ def test_log():
     assert hasattr(cell, 'stderr')
 
     sheet = nb.default_sheet()
-    print etree.tostring(sheet)
+    #assert nb.sheet is sheet #eek?
+    ipblock = sheet.find('ipython-block') #above only one has been added(?)
+    found = set()
+    for ic in ipblock:
+        if ic.tag == 'ipython-cell':
+            found.add(ic.attrib['type'])
+    assert found == set(['input', 'stdout', 'stderr', 'output'])
 
 def test_newapi():
     """to test how the new api will handle things"""
@@ -222,6 +229,12 @@ def test_newlog():
     assert cell.element.find('stderr').text == stderrtext
 
     sheet = nb.newdefault_sheet()
+    ipblock = sheet.find('ipython-block')
+    found = set()
+    for ic in ipblock:
+        if ic.tag == 'ipython-cell':
+            found.add(ic.attrib['type'])
+    assert found == set(['input', 'stdout', 'stderr', 'output'])
     #print etree.tostring(sheet)
     #assert False
 

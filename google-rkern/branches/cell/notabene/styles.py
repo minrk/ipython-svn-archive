@@ -1,8 +1,17 @@
-
 # ain't no way I'm reimplementing that crap until we have to
 from matplotlib import colors
 
 from lxml import etree as ET
+
+#"/Users/kern/projects/notebook-xsl"
+#XSLDIR = "/home/antont/development/ipython/nbdoc/trunk/notabene/xsl" #"/home/antont/development/hacked-ipython/google-rkern/notebook-xsl"
+import sys #just for getting the path here
+XSLDIR = sys.path[0] + "/xsl" #this still not too nice 'cause the whole package is there
+
+print "using xsl from", XSLDIR
+f = XSLDIR+"/xhtml/docbook.xsl"
+open(f)
+print f, "opened ok"
 
 class TextStyle(object):
     weights_latex = {"bold": "bfseries",
@@ -116,7 +125,7 @@ class Style(object):
 
         # configure this later
         ET.SubElement(sheet, "xsl:import",
-            href="/Users/kern/projects/notebook-xsl/latex/docbook.xsl")
+                      href=XSLDIR+"/latex/docbook.xsl")
 
         # turn on fancyvrb
         fancyvrb = ET.SubElement(sheet, "xsl:param", name="latex.use.fancyvrb")
@@ -169,7 +178,7 @@ class Style(object):
         sheet = ET.Element("xsl:stylesheet", version="1.0", nsmap=self.nsmap)
 
         ET.SubElement(sheet, "xsl:import",
-            href="/Users/kern/projects/notebook-xsl/html/docbook.xsl")
+            href = XSLDIR + "/xhtml/docbook.xsl")
 
         css = ET.SubElement(sheet, "xsl:template", name="user.head.content")
         css_style = ET.SubElement(css, "style", type="text/css")

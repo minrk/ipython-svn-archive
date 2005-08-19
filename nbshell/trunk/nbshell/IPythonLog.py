@@ -40,7 +40,7 @@ class IPythonLog(object):
     def __init__(self, doc, nbk, logid, *args, **kwds):
         self.doc = doc
         self.notebook = nbk
-        self.log = nbk.get_log(logid)
+        self.log = nbk.get_log(logid) 
         self.logid = logid
         self.last = False
         self._lastcell = None #used by self.lastcell
