@@ -6,7 +6,8 @@ from lxml import etree as ET
 #"/Users/kern/projects/notebook-xsl"
 #XSLDIR = "/home/antont/development/ipython/nbdoc/trunk/notabene/xsl" #"/home/antont/development/hacked-ipython/google-rkern/notebook-xsl"
 import sys #just for getting the path here
-XSLDIR = sys.path[0] + "/xsl" #this still not too nice 'cause the whole package is there
+#XSLDIR = sys.path[0] + "/xsl" #this still not too nice 'cause the whole package is there
+XSLDIR = "/Users/kern/projects/notebook-xsl/"
 
 print "using xsl from", XSLDIR
 f = XSLDIR+"/xhtml/docbook.xsl"
