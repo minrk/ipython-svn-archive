@@ -1,0 +1,19 @@
+<notebook>
+<head/>
+<ipython-log id="default-log">
+   <cell number="0">
+      <input>
+############DO NOT EDIT THIS CELL############
+from pylab import *
+switch_backend('WXAgg')
+ion()
+</input>
+   </cell>
+</ipython-log>
+
+<sheet><para> some text </para>
+   <para> This is a temporary message, until I write proper help.
+Please use Return to insert new lines and Shift-Return to execute inputs. </para>
+</sheet>
+
+</notebook>

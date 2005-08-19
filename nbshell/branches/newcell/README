@@ -1,0 +1,108 @@
+
+NBShell - A Notebook Interface for IPython
+===========================================
+
+NBShell is a Graphical User Interface for the Interactive Python project. It
+will be capable of editing so-called notebook files that will contain
+formatted text, Python code and figures. The idea was taken from the
+commercial scientific applications Mathematica and Maple
+
+
+Dependencies
+-------------
+
+NBShell requires Python 2.4. In the commands below I will use 'python2.4' as
+the name of the Python 2.4 interpreter. If your Python interpreter has a
+different name you should replace 'python2.4' with your intepreter's name
+
+ In order to use NBShell you will need to download and install the
+following Python packages:
+
+
+1. WxPython, version >= 2.5.3
+
+2. The latest development version of lxml. The latest stable version 0.7 has
+some bugs, so you will need to download it from their Subversion repository,
+at
+
+   http://codespeak.net/svn/lxml/trunk
+
+lxml needs the Pyrex (0.9.3) to compile. Pyrex can be found at
+
+http://www.cosc.canterbury.ac.nz/~greg/python/Pyrex/
+
+If you are using Debian, you can install Pyrex by typing
+
+# apt-get install python2.4-pyrex
+
+If you have Linux with Subversion installed, you will need to run the
+following commands to install lxml (provided you have Pyrex):
+
+$ svn co http://codespeak.net/svn/lxml/trunk lxml
+$ cd lxml
+$ su
+# python2.4 setup.py install
+
+3. notabene - This is a package used for procesing notebook files. You can get it 
+from the following Subversion repository:
+
+   http://ipython.scipy.org/svn/ipython/nbdoc/trunk,
+
+so the commands for downloading and installing notabene are:
+
+$ svn co    http://ipython.scipy.org/svn/ipython/nbdoc/trunk notabene
+$ cd notabene
+$ su
+# python2.4 setup.py install
+
+The current version of notabene requires you to install setuptools. For Debian
+users the command is:
+
+apt-get install python2.4-setuptools
+
+In the future this requirement will be dropped.
+
+4. IPython. You will need a modified version of IPython which can be downloaded from
+
+   http://ipython.scipy.org/svn/ipython/ipython/branches/tzanko/
+   
+The commands for downloading and installing IPython are:
+
+$ svn co http://ipython.scipy.org/svn/ipython/ipython/branches/tzanko IPython
+$ cd IPython
+$ su
+# python2.4 setup.py install
+
+
+Installation
+------------
+
+Use the following commands to install NBShell
+
+1. Download the source from the SVN repository at:
+
+   http://ipython.scipy.org/svn/ipython/nbshell/trunk
+   
+On Linux you can type
+
+$ svn co http://ipython.scipy.org/svn/ipython/nbshell/trunk nbshell
+
+2. Install the package
+
+$ cd nbshell
+$ su
+# python2.4 setup.py install
+
+
+Running
+-------
+
+You can run NBShell with the following python script
+
+>>> import nbshell
+>>> nbshell.start()
+
+or you can run the file start.py which is in the directory where you
+downloaded the source like this
+
+python2.4 start.py
