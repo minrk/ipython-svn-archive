@@ -43,6 +43,7 @@ class IPythonLog(object):
         self.log = nbk.get_log(logid)
         self.logid = logid
         self.last = False
+        self._lastcell = None #used by self.lastcell
         #Here I will sort the cells, according to their numbers
         self.log[:] = sorted(self.log, key = lambda x:int(x.attrib['number']))
         #Set up plotting
@@ -81,7 +82,7 @@ ion()
 """, number = 0)
             self.Run()
         elif self.log[0].attrib['number'] == '0':
-            self.__run(notebook.Cell(self.log[0]))
+            self.__run(notebook.NewCell(self.log[0]))
 
         #Append the empty element at the end
         self.SetLastInput()
@@ -133,14 +134,13 @@ ion()
             del(self.log[-1])
             self.last = False
     
-    def LastCell(self):
-        """Return the last number of the last cell"""
-        if self.last:
-            return notebook.Cell(self.log[-1])
-        else:
-            
-            raise Exception, "SetLastInput not called"
-    lastcell = property(fget = LastCell)
+    def GetLastCell(self):
+        """Returns the last cell"""
+        if self._lastcell is None or self._lastcell.element is not self.log[-1]:
+            self._lastcell = notebook.NewCell(self.log[-1])
+        return self._lastcell
+
+    lastcell = property(fget = GetLastCell)
             
     #TODO: I should support interactive input. Fix this.
     def readline(self, size):
@@ -152,23 +152,12 @@ ion()
     
     def writeOut(self, text):
         """Write to the output of the current cell"""
-        
-        elem = self.log[-1] # we always process the last cell
-        se = elem.find('stdout')
-        if se is None:
-            se = etree.SubElement(elem, 'stdout')
-            se.text = ""
-        se.text = se.text + text
-        #TODO: Update the view
+        oldtext = self.lastcell.stdout or ''
+        self.lastcell.stdout = oldtext + text
 
     def writeErr(self, text):
-        elem = self.log[-1]
-        se = elem.find('stderr')
-        if se is None:
-            se = etree.SubElement(elem, 'stderr')
-            se.text = ""
-        se.text = se.text + text
-        #TODO: Update the view
+        oldtext = self.lastcell.stderr or ''
+        self.lastcell.stderr = oldtext + text
 
     
     def Append(self, input, output = None, number = 0):
@@ -176,19 +165,18 @@ ion()
         Returns the cell. Number is used only if the log is empty."""
         l = len(self.log)
         if l != 0 :
-            number = int(self.log[-1].attrib['number'])+1
+            number = self.lastcell.number+1
         elem = etree.Element('cell', number=str(number))
         self.log.append(elem)
-        se = etree.SubElement(elem, 'input')
-        se.text = str(input)
+        #Now self.lastcell points to the new cell
+        self.lastcell.input = input
         if output is not None:
-            se = etree.SubElement(elem, 'output')
-            se.text = str(output)
-        return notebook.Cell(elem)
+            self.lastcell.output = output
+        return self.lastcell
     
     def Remove(self, cell):
         """Removes the given cell from the log. cell is an object of type
-        Cell"""
+        NewCell"""
         self.log.remove(cell.element)
         
     def Clear(self):
@@ -202,14 +190,9 @@ ion()
         self.Run()
 
         
-    def Get(self, number): #TODO: this method is slow, so don't use it
+    def Get(self, number): 
         """Returns the cell with the given number"""
-        
-        return notebook.Cell(self.notebook.get_cell(number = number, logid = self.logid))
-    
-    
-    #def Set(self, id, input, output = None):
-    #    self.log[id] = [input, output]
+        return notebook.NewCell(self.notebook.get_cell(number = number, logid = self.logid))
         
     def Run(self, number = None):
         """ This method will run the code in all cells with numbers larger or
@@ -218,10 +201,10 @@ ion()
         False if it needs more input."""
         
         if number == None:
-            return self.__run(notebook.Cell(self.log[-1]))
+            return self.__run(self.lastcell)
         expr = '//cell[@number>=%d]'%(number,)
         #print expr #dbg
-        cells = sorted((notebook.Cell(x) for x in self.log.xpath(expr)), key =
+        cells = sorted((notebook.NewCell(x) for x in self.log.xpath(expr)), key =
                        lambda x:x.number)
                 
         for cell in cells:
@@ -239,19 +222,12 @@ ion()
         #print 'running code...' #dbg
         
         print 'In[%d]: '%cell.number,cell.input #dbg
-        self.output = findnew(cell.element, 'output')
-        self.stdout = findnew(cell.element, 'stdout')
-        self.stderr = findnew(cell.element, 'stderr')
-        self.output.text = ''
-        self.stdout.text = ''
-        self.stderr.text = ''
-        
+        self.output = '' #used by displayhook to store output
         cout = StringIO.StringIO()
         cerr = StringIO.StringIO()
         #self.currentcell points to cell for grab_figure to use
         #TODO:this could be prettier
         self.currentcell = cell
-        self.currentcell.update()
         #The first and last characters of cell.input are '\n'
         retval = self.interp.runlines(cell.input[1:-1],\
                                       displayhook = self.displayhook,\
@@ -263,7 +239,7 @@ ion()
         if text != '\n':
             if text[-1] != '\n':
                 text = text + '\n'
-            self.stdout.text = text
+            cell.stdout = text
         cout.close()
         
         #Retrieve stderr
@@ -272,27 +248,17 @@ ion()
         if text != '\n':
             if text[-1] != '\n':
                 text = text + '\n'
-            self.stderr.text = text
+            cell.stderr = text
         cerr.close()
         
-        if self.output.text is None:
-            cell.element.remove(self.output)
-        else:
-            self.output.text = self.wrapper.fill(self.output.text) + '\n'#wrap the output
+        if self.output != '':
+            cell.output = self.wrapper.fill(self.output) + '\n'#wrap the output
             #print 'wrapped output ->', self.output.text #dbg
 
-        print 'Out[%d]: '%cell.number, self.output.text #dbg
-        print 'Stdout[%d]: '%cell.number, self.stdout.text #dbg
-        print 'Stderr[%d]: '%cell.number, self.stderr.text #dbg
+        print 'Out[%d]: '%cell.number, cell.output #dbg
+        print 'Stdout[%d]: '%cell.number, cell.stdout #dbg
+        print 'Stderr[%d]: '%cell.number, cell.stderr #dbg
 
-        del self.output
-        if self.stdout.text is None:
-            cell.element.remove(self.stdout)
-        del self.stdout
-        if self.stderr.text is None:
-            cell.element.remove(self.stderr)
-        del self.stderr
-        
         #TODO: the return value of runlines should match the return value of __run
         if retval: 
             return False
@@ -303,4 +269,4 @@ ion()
         #print >> self.stdout_orig,  'displayhook called' #dbg
         # We want to keep only the last output
         if obj is not None:
-            self.output.text = '\n' + str(obj) + '\n'
+            self.output = '\n' + str(obj) + '\n'

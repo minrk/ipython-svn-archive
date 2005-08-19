@@ -91,7 +91,14 @@ class PlainTextDocumentPlugin(object):
         except:
             pass
         self._text = text
-    text = property(fget = lambda self:self._text,fset = SetText)
+    
+    def GetText(self):
+        try:
+            return self.view.window.GetText()
+        except:
+            return self._text
+
+    text = property(fget = GetText,fset = SetText)
     
     def LoadXML(self, iterator, prevlist, elemlist, endtaglist):
         """The LoadXML method gets text representing a part of the xml tree.
@@ -184,6 +191,14 @@ class PlainTextDocumentPlugin(object):
             self.view.Update()
         return lambda p:\
             self.sheet.InsertCell('plaintext', p, update = False, text = text[pos:])
+    
+    def Concat(self, block, update = True):
+        """ Appends the data in the given text at the end of the this block
+        """
+        assert block.type == 'plaintext'
+        self.text = self.text + block.text
+        return True
+        #update is automatic
 
 class PlainTextNotebookViewPlugin(object):
     def __init__(self, docplugin, view):
@@ -263,11 +278,12 @@ class PlainTextNotebookViewPlugin(object):
         if self.window is None: #then this is the first time Update is called
             self.createWindow()
         #print 'text -> %s'%self.doc.text #dbg
-        self.window.SetText(self.doc.text)
+        self.window.SetText(self.doc._text)
 
     def UpdateDoc(self):
         """Update data in the document"""
-        self.doc.text = self.window.GetText()
+        pass
+        #self.doc.text = self.window.GetText()
         
     def SetSavePoint(self):
         if self.window is not None:
@@ -285,8 +301,7 @@ class PlainTextNotebookViewPlugin(object):
         self.view.DeleteCell(index, update)
     
     def InsertCode(self):
-        #lazy document update. We update the document when it is needed
-        self.doc.text = self.window.GetText()
+        #self.doc.text = self.window.GetText()
         pos = self.window.GetCurrentPos()
         self.doc.sheet.InsertCode(self.doc,pos, update = True)
         
@@ -336,8 +351,7 @@ class PlainTextCtrl(stc.StyledTextCtrl):
             self.GotoPos(min(self.PositionFromLine(lastline) + pos, self.GetLineEndPosition(lastline)))
     
     def OnModified (self, evt):
-        #TODO: This might be slow
-        self.view.doc.text = self.GetText()
+        #self.view.doc.text = self.GetText()
         lineno = self.GetLineCount()
         if self.oldlineno != lineno :
             self.oldlineno = lineno

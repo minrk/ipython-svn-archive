@@ -161,7 +161,7 @@ class SimpleTests(unittest.TestCase):
         sheet = self.document.sheet
         sheet.currentcell = 1
         self.frame.OnDeleteCell()
-        sheet.currentcell = 2
+        sheet.currentcell = 1
         self.frame.OnDeleteCell()
         
         self.document.sheet.ClearLastInputs()

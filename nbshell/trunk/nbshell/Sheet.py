@@ -103,9 +103,18 @@ class Sheet(object):
                                       
         
         cell.view.Close(update = False)
+        index = cell.index
         self.__del_cell(cell.index)
-        self.Update(update, dicts = True)
+        self.Update(update = False, dicts = True)
+
+        #Concatenate the prevoius and the next cells if they are of the same
+        #type
+        if index > 0 and index < len(self.celllist) and\
+           self.celllist[index-1].type == self.celllist[index].type:
+            if self.celllist[index-1].Concat(self.celllist[index]):
+                self.DeleteCell(self.celllist[index], update =False)
         
+        self.Update(update)
 
     def __del_text_cell(self,cell,update = False):
         """Deletes the given text cell. Does not check if this is the first or
@@ -151,7 +160,7 @@ class Sheet(object):
         if output:
             logs = self.doc.logs
             for logid in logs.keys():
-                for cell in (notebook.Cell(x) for x in logs[logid].log):
+                for cell in (notebook.NewCell(x) for x in logs[logid].log):
                     self.UpdateOutput(logid, cell, update = False)
         if update:
             for cell in self.celllist:
@@ -445,7 +454,7 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
             pos = l + pos
         number = cell.number
 
-        element = etree.Element('ipython-cell',type = type, number = str(number)) #NBDOC: notebook.Cell() to handle this?
+        element = etree.Element('ipython-cell',type = type, number = str(number))
         block.element[pos:pos] = [element]
         block.cells[pos:pos] = [cell]
         
@@ -534,7 +543,7 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
             #1.1 There are such elements
             
             #Has the input produced output of given type?
-            if cell.element.find(type) is not None:
+            if getattr(cell, type) is not None:
                 #1.1.1 Yes. Check if one of the elements is on the insert
                 #position.
                 if len(block.element)>pos2add and \
@@ -555,7 +564,7 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
             #1.2 There are no such elements
             
             #Has the input produced given output?
-            if cell.element.find(type) is not None:
+            if getattr(cell, type) is not None:
                 #1.2.1 Yes. Insert the element at the insert position and
                 #increment it
                 self.InsertElement(block,type,cell,pos2add,update = False)
@@ -595,7 +604,6 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
         code block. The new block must be used for appending the new input
         element """
 
-        cell.update()
         # Get all the <ipython-cell type='special'> or <ipython-cell type='input'>
         # that correspond to the cell (usually there is only one)
         inputelems = self.cell2sheet.get((logid, cell.number, 'special'),[])
@@ -609,6 +617,8 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
         #are some problems here if there are two or more input elements in the
         #sheet coresponding to one cell.
 
+        #Turn off processing last inputs
+        self.last = False
          
         blocklist = []
         #Sort inputelems so that we may deal with the one after which
@@ -680,12 +690,9 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
             else:
                 #Insert a new code block after the figures
                 index = block.index + numfig
-                lastfig = self.celllist[index]
-                codeelem = etree.Element('ipython-block', logid = block.logid)
                 #Insert the new block
-                block = self.InsertCell('python', index+1, update = False,\
-                                        element = codeelem)
-                self.Update(update = False, dicts = True)
+                block = self.InsertCode(self.celllist[index],len(self.celllist[index]),logid = block.logid,\
+                                        update = False)
                 retvalue = block
                 blocklist.append(block)
                 pos2add = 0
@@ -694,7 +701,10 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
             pos2add, list = self.__update_type(block, cell, pos2add, type,\
                                                False)
             blocklist.extend(list)
-            
+
+        #Turn on processing last inputs
+        self.last = True
+
         if update:
             self.Update(update = True)
         return retvalue
@@ -716,7 +726,7 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
 
     def InsertText(self, block, pos, update = True):
         """Splits the given block and inserts an empty text cell"""
-        self.Insert(block, pos,\
+        return self.Insert(block, pos,\
                     check = lambda block, prev, next, pos:\
                         (block is None) or (\
                             (block.type != 'plaintext') and\
@@ -731,25 +741,26 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
         logid is None self.currentlog is used"""
         if logid is None:
             logid = self.currentlog
-        assert(self.last) #The last inputs must be set
         
         def insert(p):
             #Delete the last element of self.currentlog from the sheet 
-            log = self.doc.logs[logid]
-            key = (logid, log.lastcell.number, 'input')
-            value = self.cell2sheet.get(key,[])
-            while len(value)>0:
-                blk, position = value[0]
-                self.DeleteElement(blk,position,update = False)
-            #insert the last element in codeelement
             codeelement = etree.Element('ipython-block', logid = logid)
-            etree.SubElement(codeelement, 'ipython-cell',type='input',\
-                             number = str(key[1]))
+
+            if self.last:
+                log = self.doc.logs[logid]
+                key = (logid, log.lastcell.number, 'input')
+                value = self.cell2sheet.get(key,[])
+                while len(value)>0:
+                    blk, position = value[0]
+                    self.DeleteElement(blk,position,update = False)
+                #insert the last element in codeelement
+                etree.SubElement(codeelement, 'ipython-cell',type='input',\
+                                 number = str(key[1]))
             return self.InsertCell('python', p, update = False,\
                                    element = codeelement)
 
 
-        self.Insert(block, pos,
+        retval = self.Insert(block, pos,
                     check = lambda block, prev, next, pos:\
                         (block is None) or (\
                             (block.type != 'python' or block.logid != logid) and\
@@ -759,12 +770,13 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
                              or next.logid != logid)),\
                     insert = insert, update = False)
         self.Update(update)
+        return retval
 
     def InsertFigure(self, block, pos, figurexml, update = True):
         """Inserts the given figure at the given position in the given block.
         Returns the new block
         """
-        self.Insert(block, pos,\
+        return self.Insert(block, pos,\
                     check = lambda cur, prev, next, pos:True,\
                     insert = lambda pos:\
                         self.InsertCell('figure', pos, update = False, 
@@ -798,3 +810,6 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
             if update:
                 self.__update_list(list)
                 self.view.Update()
+            return list[0]
+        else:
+            return None

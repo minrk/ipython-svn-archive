@@ -115,7 +115,7 @@ class PythonDocumentPlugin(object):
         #print "block:"
         #etree.dump(self.element) #dbg
         self.cells = \
-        [notebook.Cell(self.notebook.get_cell(x.attrib['number'],self.logid))\
+        [notebook.NewCell(self.notebook.get_cell(int(x.attrib['number']),self.logid))
          for x in self.element]
         
     type = 'python'
@@ -161,16 +161,23 @@ class PythonDocumentPlugin(object):
         self.sheet.Update(dicts = True, update = update)
         return lambda p:\
             self.sheet.InsertCell('python', p, update = False, element = root)
+    
+    def Concat(self, block, update = True):
+        """Appends data in 'block' in the current block. If the operation was
+        successful, return True, else return False"""
+        assert block.type == 'python'
+        if self.logid == block.logid:
+            l = len(self.element)
+            self.element[l:l] = block.element
+            self.cells.extend(block.cells)
+            if update:
+                self.view.Update()
+            return True
+        return False
 
     def GetFactory(self):
         return PlainTextPluginFactory()
 
-#TODO:I don't know if I really need to have both the PythonNotebookViewPlugin and
-# Shell classes. I have split the functionality of the plugin between these two.
-# The rule to decide in which class should a method go, is this: the methods in the Shell
-# class must not know about the document class and its internal structure. Thus maintaining
-# the code should be easier. Also the methods which should not be used outside the class start
-# with a lowercaps letter.
 class PythonNotebookViewPlugin(object):
     def __init__(self, docplugin, view):
         """Initialization"""
@@ -473,7 +480,6 @@ class PythonNotebookViewPlugin(object):
                 #Make a new last input
                 cell = self.doc.log.Append("\n\n") #each input starts and ends with a newline
                 #replace the old last input with the new one
-                lastcell.update() #we do this to update the attributes of lastcell
                 self.doc.sheet.ReplaceCells(self.doc.logid, lastcell,\
                                             self.doc.log.lastcell, update = False)
                 #Replace the old cell with the new one (the old lastcell)
@@ -585,6 +591,7 @@ class PythonNotebookViewPlugin(object):
                   self.line2log[i][0] == item[0]:
                 self.line2log[i] = (item[0], self.line2log[i][1]+ 1)
                 i+=1
+
 
     def SetSelection(self):
         """If the user is trying to select anything SetSelection will move the
@@ -972,7 +979,7 @@ class Shell(editwindow.EditWindow):
         elif key == wx.WXK_BACK:
             if selecting and self.CanEdit():
                 event.Skip()
-            elif self.CanEdit(1):
+            elif self.CanEdit('backspace'):
                 event.Skip()
         # Only allow these keys after the latest prompt.
         elif key in (wx.WXK_TAB, wx.WXK_DELETE):
@@ -1401,9 +1408,9 @@ class Shell(editwindow.EditWindow):
             return False
 
 
-    def CanEdit(self, dir=0):
-        """Return true if editing should succeed. If dir==1 return if
-        BACKSPACE should succeed"""
+    def CanEdit(self, oper = 'insert'):
+        """Return true if the given editing operation should succeed. oper can
+        be one of: 'insert', 'delete', and 'backspace'"""
         #TODO: why we need to know anythong about the selection here
         #if self.GetSelectionStart() != self.GetSelectionEnd():
         #    if self.GetSelectionStart() >= self.promptPosEnd \
@@ -1413,15 +1420,30 @@ class Shell(editwindow.EditWindow):
         #        return False
         #else:
         #    return self.GetCurrentPos() >= self.promptPosEnd
+        
         pos = self.GetCurrentPos()
         line = self.LineFromPosition(pos)
+        
+        i = 1
+        if oper == 'insert':
+            i = 0
+        elif oper == 'delete':
+            #Delete is the same as backspace on the next character
+            nextpos = pos +1
+            nextline = self.PositionFromLine(nextpos)
+            if nextline > line:
+                nextpos += self.view.Promptlen(nextline)
+                pos = nextpos
+                line = nextline
+
         if not self.view.CanEdit(line):
             return False
         
         #Check if the cursor is inside the prompt
         startpos = self.PositionFromLine(line)
         promptlen = self.view.PromptLen(line)
-        if startpos+promptlen + dir > pos:
+        
+        if startpos+promptlen + i > pos:
             return False
         else:
             return True

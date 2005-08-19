@@ -68,6 +68,10 @@ class FigureDocumentPlugin(object):
     def Split(self, pos):
         assert(0)
         
+    def Concat(self, block, update = True):
+        """See PythonDocumentPlugin.Concat"""
+        return False
+
     def Clear(self):
         """Clears all data"""
         return

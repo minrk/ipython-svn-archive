@@ -72,10 +72,10 @@ class SubelemSetter(SubelemWrapper):
 
 
 class NewCell(object):
-    def __init__(self, element, number):
+    def __init__(self, element):
         #this could/should also create the element?
         self.element = element
-        self.number = number
+        self.number = int(element.attrib['number'])
 
     input  = property(SubelemGetter('input'),  SubelemSetter('input'))
     output = property(SubelemGetter('output'), SubelemSetter('output'))
@@ -83,7 +83,17 @@ class NewCell(object):
     stderr = property(SubelemGetter('stderr'), SubelemSetter('stderr'))
     traceback = property(SubelemGetter('traceback'), SubelemSetter('traceback'))
     #number needs to be added but is different
-
+    
+    def get_number(self):
+        return int(self.element.attrib['number'])
+    
+    def set_number(self, num):
+        s = str(num)
+        assert s.isdigit()
+        self.element.attrib['number'] = s
+    
+    number = property(get_number, set_number)
+    
     def get_sheet_tags(self): #the special system is missing yet
         yield ET.Element('ipython-cell', type='input',
                          number=str(self.number))
