@@ -48,6 +48,11 @@ stripnewline_batch = [
 <input>x</input>
 <output>1</output>
 </cell>
+<cell number="4">
+<input>for i in range(10):
+    print i
+print 'How many times does this print?'</input>
+</cell>
 </ipython-log>
 </notebook>
 """,
@@ -73,12 +78,42 @@ x
 1
 </output>
 </cell>
+<cell number="4">
+<input>
+for i in range(10):
+    print i
+print 'How many times does this print?'
+</input>
+</cell>
 </ipython-log>
 </notebook>
 """,
 ]
 
-anti_stripnewline_batch = []
+anti_stripnewline_batch = [
+"""<notebook>
+<ipython-log id="default-log">
+<cell number="1">
+<input>x = 1</input>
+</cell>
+<cell number="2">
+<input>print x</input>
+<stdout>1
+</stdout>
+</cell>
+<cell number="3">
+<input>x</input>
+<output>1</output>
+</cell>
+<cell number="4">
+<input>for i in range(10):
+    print i
+    print 'How many times does this print?'</input>
+</cell>
+</ipython-log>
+</notebook>
+""",
+]
 
 mixed_batch = [
 """<notebook>
