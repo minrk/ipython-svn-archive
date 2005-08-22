@@ -227,7 +227,7 @@ class DBFormatter(Formatter):
                 sub.text = self.escape_latex(sub.text)
                 sub.tail = self.escape_latex(sub.tail)  
 
-    def to_text(self, sheet, kind='html', style=None):
+    def to_formatted(self, sheet, kind='html', style=None):
         if style is None:
             from notabene.styles import LightBGStyle as style
         xsl = getattr(style, '%s_xsl'%kind)()

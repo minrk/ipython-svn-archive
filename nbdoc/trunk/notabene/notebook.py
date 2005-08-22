@@ -236,8 +236,7 @@ class Notebook(object):
 
     def add_cell(self, number,  logid='default-log'):
         log = self.get_log(logid)
-        index = number #- 1 #argh nbshell starts from 0 and not from 1 like thought
-        if index == len(self.cells): #is to be put at the end
+        if number == len(self.cells): #is to be put at the end
             cell_elem = ET.SubElement(log, 'cell', number=str(number))
             #that would probably be better in Cell constructor,
             #but not sure if can move it there (yet)
@@ -250,21 +249,25 @@ class Notebook(object):
             return cell
         else:
             try:
-                self.cells[index]
+                self.cells[number]
                 raise ValueError, 'a cell with number %d exists. note: multiple logs not implemented now.' % number
             except IndexError:
-                if index > len(self.cells):
+                if number > len(self.cells):
                     raise ValueError, "can only add at the end now. that will be fixed if needed."
                 else:
                     raise RuntimeError, "unknown error when adding cell with number %d" % number
 
     def get_cell(self, number, logid='default-log'):
         #log = self.get_log(logid)
-        index = number #- 1
-        return self.cells[index]
+        return self.cells[number]
 
     def get_last_cell(self):
         return self.cells[-1]
+
+    def remove_cell(self, number, logid='default-log'):
+        log = self.get_log(logid)
+        cell = self.cells[number] = None
+        log.remove(cell.element)
         
 # These are Cell operations now.
 # Would they still be useful as Notebook methods too?
@@ -349,14 +352,27 @@ class Notebook(object):
         name = name or self.name
         extensions = {'latex': '.tex',
                       'html': '.html',
+                      'pdf': '.pdf',
                       }
         filename = name + extensions.get(format, '.'+format)
 
         from notabene import docbook
         formatter = docbook.DBFormatter(self)
-        doc = formatter.to_text(self.sheet, format)
 
-        doc.write(filename, 'utf-8') #docbook html xsl uses non-ascii chars
+        toPDF = False
+        if format == 'pdf':
+            format = 'latex' #we get pdf via latex for now
+            toPDF = True
+        doc = formatter.to_formatted(self.sheet, format)
+
+        if toPDF:
+            doc.write('/tmp/' + name + '.tex')
+            print os.popen("texi2pdf /tmp/%s" % (name+'.tex')).read()
+
+        else:
+            doc.write(filename, 'utf-8') #docbook html xsl uses non-ascii chars
+
+        return filename
 
     def oldget_code(self, logid='default-log', specials=False):
         """Strip all non-input tags and format the inputs as text that could be
@@ -620,7 +636,8 @@ def main():
     else:
         format = 'html'
 
-    nb.write_formatted(base, format)
+    filename = nb.write_formatted(base, format)
+    print "Wrote result to", filename
 
 if __name__ == '__main__':
     main()
