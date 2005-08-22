@@ -112,11 +112,11 @@ class PythonDocumentPlugin(object):
         self.index = None   #Set by AddCell, InsertCell, DeleteCell
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
-        #print "block:"
-        #etree.dump(self.element) #dbg
-        self.cells = \
-        [notebook.Cell(self.notebook.get_cell(int(x.attrib['number']),self.logid))
-         for x in self.element]
+        print "block:"
+        etree.dump(self.element) #dbg
+        self.cells = self.notebook.cells #ok?
+        #[self.notebook.add_cell(int(x.attrib['number']),self.logid)
+        #for x in self.element]
         
     type = 'python'
     

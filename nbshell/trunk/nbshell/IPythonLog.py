@@ -137,7 +137,7 @@ ion()
     def GetLastCell(self):
         """Returns the last cell"""
         if self._lastcell is None or self._lastcell.element is not self.log[-1]:
-            self._lastcell = notebook.Cell(self.log[-1])
+            self._lastcell = self.notebook.get_last_cell()
         return self._lastcell
 
     lastcell = property(fget = GetLastCell)
@@ -166,8 +166,12 @@ ion()
         l = len(self.log)
         if l != 0 :
             number = self.lastcell.number+1
-        elem = etree.Element('cell', number=str(number))
-        self.log.append(elem)
+        try:
+            self.notebook.add_cell(number)
+        except ValueError:
+            print "Warning: IPythonLog tried to recreate cell num", number
+            number += 1
+            self.notebook.add_cell(number)
         #Now self.lastcell points to the new cell
         self.lastcell.input = input
         if output is not None:
