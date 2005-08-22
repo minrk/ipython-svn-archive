@@ -96,7 +96,7 @@ class Cell(object):
     def get_input(self, do_specials=False):
         raise RuntimeError, "unimplemented"
     
-    def get_sheet_tags(self): #the special system is missing yet
+    def get_sheet_tags(self, do_specials=False): #the special system is missing yet
         yield ET.Element('ipython-cell', type='input',
                          number=str(self.number))
         for tag in ('traceback', 'stdout', 'stderr', 'output'):
@@ -236,7 +236,7 @@ class Notebook(object):
 
     def add_cell(self, number,  logid='default-log'):
         log = self.get_log(logid)
-        index = number - 1
+        index = number #- 1 #argh nbshell starts from 0 and not from 1 like thought
         if index == len(self.cells): #is to be put at the end
             cell_elem = ET.SubElement(log, 'cell', number=str(number))
             #that would probably be better in Cell constructor,
@@ -245,21 +245,26 @@ class Notebook(object):
             self.cells.append(cell) #always adds to end
             #this changes when is changed to dict, if that really needed
             log.append(cell.element) #refactor..
+            #dbg
+            print "NOTEBOOK: added cell number", number, "with number", cell.number
             return cell
         else:
             try:
                 self.cells[index]
-                raise ValueError, 'a cell with that number exists. note: multiple logs not implemented now.'
+                raise ValueError, 'a cell with number %d exists. note: multiple logs not implemented now.' % number
             except IndexError:
                 if index > len(self.cells):
                     raise ValueError, "can only add at the end now. that will be fixed if needed."
                 else:
-                    raise RuntimeError, "unknown error when adding cell with numer %n" % number
+                    raise RuntimeError, "unknown error when adding cell with number %d" % number
 
     def get_cell(self, number, logid='default-log'):
         #log = self.get_log(logid)
-        index = number - 1
+        index = number #- 1
         return self.cells[index]
+
+    def get_last_cell(self):
+        return self.cells[-1]
         
 # These are Cell operations now.
 # Would they still be useful as Notebook methods too?
