@@ -114,7 +114,7 @@ class PythonDocumentPlugin(object):
                             #multiple views there should be some modifications
         print "block:"
         etree.dump(self.element) #dbg
-        self.cells = self.notebook.cells #ok?
+        self.cells = self.notebook.cells[:] #ok?
         #[self.notebook.add_cell(int(x.attrib['number']),self.logid)
         #for x in self.element]
         
@@ -142,9 +142,9 @@ class PythonDocumentPlugin(object):
         element in self.element and elem is the the corresponding element in the
         cell in the log"""
         
-        #print "id -> %s"%(str(id),) #dbg
+        print "id -> %s"%(str(id),) #dbg
         type = self.element[id].attrib['type']
-        #print "type-> %s"%(type,) #dbg
+        print "type-> %s"%(type,) #dbg
         return (type, self.cells[id].element.find(type))
     
     def Split(self, pos, update = True):

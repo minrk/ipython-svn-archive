@@ -168,10 +168,12 @@ ion()
             number = self.lastcell.number+1
         try:
             self.notebook.add_cell(number)
-        except ValueError:
-            print "Warning: IPythonLog tried to recreate cell num", number
-            number += 1
-            self.notebook.add_cell(number)
+        except ValueError: #happened due to my (antont) bug in PythonPlugin
+            #i guess still ok to leave here to be sure?
+            print "Warning: IPythonLog tried to recreate cell num", number, "- ignoring the append"
+            #number += 1
+            #self.notebook.add_cell(number)
+            return self.lastcell
         #Now self.lastcell points to the new cell
         self.lastcell.input = input
         if output is not None:
