@@ -11,7 +11,7 @@ from lxml import etree as ET
 from normalization import normal
 import validate #for Notebook.check_errors
 
-class Cell(object):
+class OldCell(object):
     def __init__(self, element):
         self.element = element
         
@@ -72,7 +72,7 @@ class SubelemSetter(SubelemWrapper):
         in_element.text = text
 
 
-class NewCell(object):
+class Cell(object):
     def __init__(self, element):
         #this could/should also create the element?
         self.element = element
@@ -82,8 +82,7 @@ class NewCell(object):
     output = property(SubelemGetter('output'), SubelemSetter('output'))
     stdout = property(SubelemGetter('stdout'), SubelemSetter('stdout'))
     stderr = property(SubelemGetter('stderr'), SubelemSetter('stderr'))
-    traceback = property(SubelemGetter('traceback'), SubelemSetter('traceback'))
-    
+    traceback = property(SubelemGetter('traceback'), SubelemSetter('traceback'))    
     def get_number(self):
         return int(self.element.attrib['number'])
     
@@ -93,6 +92,9 @@ class NewCell(object):
         self.element.attrib['number'] = s
     
     number = property(get_number, set_number)
+
+    def get_input(self, do_specials=False):
+        raise RuntimeError, "unimplemented"
     
     def get_sheet_tags(self): #the special system is missing yet
         yield ET.Element('ipython-cell', type='input',
@@ -223,7 +225,7 @@ class Notebook(object):
         else:
             raise ValueError('No log with id="%s"' % logid)
 
-    def get_cell(self, number, logid='default-log'):
+    def oldget_cell(self, number, logid='default-log'):
         #note: Tzanko considers this too slow for nbshell
         log = self.get_log(logid)
         cells = log.xpath('./cell[@number=%s]' % number)
@@ -235,75 +237,72 @@ class Notebook(object):
     def add_cell(self, number,  logid='default-log'):
         log = self.get_log(logid)
         index = number - 1
-        try:
-            self.cells[index] #is this a sane way to check?
-            #this is the normal case.. not an error
-        except IndexError: #as expected
+        if index == len(self.cells): #is to be put at the end
             cell_elem = ET.SubElement(log, 'cell', number=str(number))
             #that would probably be better in Cell constructor,
             #but not sure if can move it there (yet)
-            cell = NewCell(cell_elem)
+            cell = Cell(cell_elem)
             self.cells.append(cell) #always adds to end
-            log.append(cell.element)
             #this changes when is changed to dict, if that really needed
+            log.append(cell.element) #refactor..
             return cell
         else:
-            raise ValueError, 'a cell with that number exists.'
+            try:
+                self.cells[index]
+                raise ValueError, 'a cell with that number exists. note: multiple logs not implemented now.'
+            except IndexError:
+                if index > len(self.cells):
+                    raise ValueError, "can only add at the end now. that will be fixed if needed."
+                else:
+                    raise RuntimeError, "unknown error when adding cell with numer %n" % number
 
-    def get_cell2(self, number, logid='default-log'):
+    def get_cell(self, number, logid='default-log'):
         #log = self.get_log(logid)
         index = number - 1
         return self.cells[index]
         
-    def newget_cell(self, number, logid='default-log'):
-        log = self.get_log(logid)
-        index = number - 1 
-        try:
-            return self.cells[index]
-        except IndexError:
-            #dbg
-            print "NOTEBOOK: new cell with num", number
-            return self.add_cell(number)
- 
-    def add_input(self, input, number, logid='default-log'):
-        """Add an input element to a log.
+# These are Cell operations now.
+# Would they still be useful as Notebook methods too?
+# Can be easily changed to work with the new Cell if needed.
+##     def add_input(self, input, number, logid='default-log'):
+##         """Add an input element to a log.
 
-        number is usually the integer corresponding to In[number].
-        logid is the id of the log to add to.
-        """
-        cell = self.get_cell(number, logid)
-        in_element = ET.SubElement(cell, 'input')
-        in_element.text = input
+##         number is usually the integer corresponding to In[number].
+##         logid is the id of the log to add to.
+##         """
+##         cell = self.get_cell(number, logid)
+##         in_element = ET.SubElement(cell, 'input')
+##         in_element.text = input
 
-    def add_special_input(self, input, number, logid='default-log'):
-        """Add an IPython special command like %magics and aliases.
+##     def add_special_input(self, input, number, logid='default-log'):
+##         """Add an IPython special command like %magics and aliases.
 
-        number is usually the integer corresponding to In[number].
-        """
-        cell = self.get_cell(number, logid)
-        in_element = ET.SubElement(cell, 'special')
-        in_element.text = input
+##         number is usually the integer corresponding to In[number].
+##         """
+##         cell = self.get_cell(number, logid)
+##         in_element = ET.SubElement(cell, 'special')
+##         in_element.text = input
 
-    def add_output(self, output, number, logid='default-log'):
-        """Add an output element.
+##     def add_output(self, output, number, logid='default-log'):
+##         """Add an output element.
 
-        output is the string representation of the object, not the object
-            itself.
-        number is usually the integer corresponding to Out[number].
-        """
-        cell = self.get_cell(number, logid)
-        out_element = ET.SubElement(cell, 'output')
-        out_element.text = output
+##         output is the string representation of the object, not the object
+##             itself.
+##         number is usually the integer corresponding to Out[number].
+##         """
+##         cell = self.get_cell(number, logid)
+##         out_element = ET.SubElement(cell, 'output')
+##         out_element.text = output
 
-    def add_stdout(self, text, number, logid='default-log'):
-        cell = self.get_cell(number, logid)
-        stdout_element = ET.SubElement(cell, 'stdout')
-        stdout_element.text = text
+##     def add_stdout(self, text, number, logid='default-log'):
+##         cell = self.get_cell(number, logid)
+##         stdout_element = ET.SubElement(cell, 'stdout')
+##         stdout_element.text = text
 
-    def add_stderr(self, text, number, logid='default-log'):
-        cell = self.get_cell(number, logid)
-        stderr_element = ET.SubElement(cell, 'stderr')
-        stderr_element.text = text
+##     def add_stderr(self, text, number, logid='default-log'):
+##         cell = self.get_cell(number, logid)
+##         stderr_element = ET.SubElement(cell, 'stderr')
+##         stderr_element.text = text
 
     def add_meta(self, name, content, scheme=None):
         """Add metadata to the head element.
@@ -352,9 +351,9 @@ class Notebook(object):
         formatter = docbook.DBFormatter(self)
         doc = formatter.to_text(self.sheet, format)
 
-        doc.write(outname, 'utf-8') #docbook html xsl uses non-ascii chars
+        doc.write(filename, 'utf-8') #docbook html xsl uses non-ascii chars
 
-    def get_code(self, logid='default-log', specials=False):
+    def oldget_code(self, logid='default-log', specials=False):
         """Strip all non-input tags and format the inputs as text that could be
         executed in ipython.
 
@@ -364,6 +363,10 @@ class Notebook(object):
         log = self.get_log(logid)
         cells = sorted((Cell(x) for x in log), key=lambda x: x.number)
         return '\n'.join(cell.get_input(specials) for cell in cells)
+
+    def get_code(self, logid='default-log', specials=False):
+        #XXX new for the new cell system, untested
+        return '\n'.join(cell.get_input(specials) for cell in self.cells)
 
     def start_checkpointing(self, checkpoint=10):
         """Start checkpointing.
@@ -520,7 +523,7 @@ class Notebook(object):
             d[elem.attrib['number']] = elem
         return d
 
-    def default_sheet(self, specials=True, figures=True,
+    def olddefault_sheet(self, specials=True, figures=True,
         logid='default-log'):
         """Generate a default sheet that has all inputs and outputs.
 
@@ -547,7 +550,7 @@ class Notebook(object):
 
         return sheet
 
-    def newdefault_sheet(self):
+    def default_sheet(self):
         logid='default-log'
         sheet = ET.Element('sheet')
         block = ET.SubElement(sheet, 'ipython-block', logid=logid)
@@ -559,6 +562,7 @@ class Notebook(object):
             
 
     def get_from_log(self, tag, number, logid='default-log'):
+        #docbook.py and formatter.py use this. XXX check if works after changes
         xpath = './ipython-log[@id="%s"]/cell[@number="%s"]/%s' % (logid,
             number, tag)
         elems = self.root.xpath(xpath)
@@ -581,7 +585,6 @@ def sheet_insert(sheet, elem, position):
 
     Is this really useful? So far unused.
     """
-    #and what does this actually do?
     texts = [sheet.text]
     texts.extend(x.tail for x in sheet)
     elements = [sheet]
@@ -611,8 +614,6 @@ def main():
         format = sys.argv[2]
     else:
         format = 'html'
-    if not sheet: #is this needed? not used now anymore.
-        sheet = nb.default_sheet()
 
     nb.write_formatted(base, format)
 

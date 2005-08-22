@@ -103,7 +103,7 @@ def test_cell(elem=None, number=1):
     cell = Cell(elem)
     return cell
     
-def test_log():
+def OLDtest_log():
     """
     in nbshell ipnDocument:
     self.logs = {'default-log':IPythonLog.IPythonLog(self, self.notebook, 'default-log')}
@@ -193,19 +193,13 @@ def test_log():
             found.add(ic.attrib['type'])
     assert found == set(['input', 'stdout', 'stderr', 'output'])
 
-def test_newapi():
-    """to test how the new api will handle things"""
-    pass #done in the functions that follow
-
-def test_newcell(): #are not created directly anymore (?)
-    pass
-
-def test_newlog():
+def test_log():
     nb = test_new()
-    log = nb.get_log()
+    #log = nb.get_log()
 
-    cell = nb.newget_cell(1) #should create a new Cell, with xml elem
-    assert cell is nb.newget_cell(1) #this should be the same one
+    py.test.raises(IndexError, "nb.get_cell(1)") #should not create anymore
+    cell = nb.add_cell(1)
+    assert cell is nb.get_cell(1) #this should be the same one
     assert cell.input is None
     assert cell.output is None
 
@@ -236,15 +230,14 @@ def test_newlog():
     assert cell.element.find('stdout').text == stdouttext
     assert cell.element.find('stderr').text == stderrtext
 
-    sheet = nb.newdefault_sheet()
+    sheet = nb.default_sheet()
     ipblock = sheet.find('ipython-block')
     found = set()
     for ic in ipblock:
         if ic.tag == 'ipython-cell':
             found.add(ic.attrib['type'])
     assert found == set(['input', 'stdout', 'stderr', 'output'])
-    #print etree.tostring(sheet)
-    #assert False
+
 
     
     

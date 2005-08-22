@@ -1,3 +1,6 @@
+08.22.2005
+	* Changed NewCell to Cell to match the cleanup in nbdoc --antont
+
 08.18.2005:
 	* Fixed a bug in DeleteCell
 
