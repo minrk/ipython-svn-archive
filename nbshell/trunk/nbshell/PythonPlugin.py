@@ -35,6 +35,7 @@ from notabene import notebook
 
 from nbshell import editwindow
 from nbshell.utils import findnew
+from nbshell.ipnNotebookWidget import CellCtrlBase
 
 NAVKEYS = (wx.WXK_END, wx.WXK_LEFT, wx.WXK_RIGHT,
            wx.WXK_UP, wx.WXK_DOWN, wx.WXK_PRIOR, wx.WXK_NEXT)
@@ -114,7 +115,8 @@ class PythonDocumentPlugin(object):
                             #multiple views there should be some modifications
         print "block:"
         etree.dump(self.element) #dbg
-        self.cells = self.notebook.cells[:] #ok?
+        self.cells = [self.notebook.get_cell(int(x.attrib['number']), logid =
+                                            'default-log') for x in element]
         #[self.notebook.add_cell(int(x.attrib['number']),self.logid)
         #for x in self.element]
         
@@ -142,9 +144,9 @@ class PythonDocumentPlugin(object):
         element in self.element and elem is the the corresponding element in the
         cell in the log"""
         
-        print "id -> %s"%(str(id),) #dbg
+        #print "id -> %s"%(str(id),) #dbg
         type = self.element[id].attrib['type']
-        print "type-> %s"%(type,) #dbg
+        #print "type-> %s"%(type,) #dbg
         return (type, self.cells[id].element.find(type))
     
     def Split(self, pos, update = True):
@@ -229,8 +231,8 @@ class PythonNotebookViewPlugin(object):
         self.SetPosition(pos)
         
     position = property(fget = __get_position, fset = __set_position)
+    length = property(fget = lambda self:len(self.doc))
 
-    
     def SetPosition(self, pos):
         """Moves the cursor to the start of the element with the given id.
         Should be used only for input cells, because the output cells cannot be edited"""
@@ -530,7 +532,7 @@ class PythonNotebookViewPlugin(object):
         else:
             return self.doc.data[item[0]][1]
     
-    def CanEdit(self, line):
+    def CanEditLine(self, line):
         """Returns if the given line is editable"""
         #print "line -> %d"%(line,) #dbg
         #print 'line2log -> %s'%(str(self.line2log),) #dbg
@@ -549,6 +551,46 @@ class PythonNotebookViewPlugin(object):
             return True
         else:
             return False
+    
+    def CanEdit(self, oper = 'insert', pos = None):
+        """Return true if the given editing operation should succeed at the
+        given position if pos is None use the current position. oper can be
+        one of: 'insert', 'delete', and 'backspace'"""
+        #TODO: why we need to know anythong about the selection here
+        #if self.GetSelectionStart() != self.GetSelectionEnd():
+        #    if self.GetSelectionStart() >= self.promptPosEnd \
+        #           and self.GetSelectionEnd() >= self.promptPosEnd:
+        #        return True
+        #    else:
+        #        return False
+        #else:
+        #    return self.GetCurrentPos() >= self.promptPosEnd
+        
+        pos = pos or self.window.GetCurrentPos()
+        line = self.window.LineFromPosition(pos)
+
+        #Check if the current line is editable
+        if not self.CanEditLine(line):
+            return False
+
+        #Check if the cursor is in the prompt
+        startpos = self.window.PositionFromLine(line)
+        promptlen = self.PromptLen(line)
+        if startpos + promptlen > pos:
+            return False
+        
+        #If the operation is delete and the cursor is at the end of the line 
+        if oper == 'delete' and self.window.GetCharAt(pos) == ord('\n'):
+            #Check if the next line belongs to the same input
+            l = len(self.line2log)
+            return (line +1 < l and self.line2log[line+1] is not None and
+                self.line2log[line+1][0] == self.line2log[line][0])
+        elif oper == 'backspace':
+            #Check if this is the first line
+            return pos > startpos + promptlen or self.line2log[line][1] > 1
+        else:
+            return True
+
 
     def InsertLineBreak(self, pos = None):
         """Insert a new line break. Does not check if the current position is
@@ -592,6 +634,65 @@ class PythonNotebookViewPlugin(object):
                 self.line2log[i] = (item[0], self.line2log[i][1]+ 1)
                 i+=1
 
+    def _next_pos(self, pos, dir =1):
+        """The pos must be editable. If dir=1 returns the next editable
+        position, or None if pos is the last editable position. If dir = -1.
+        returns the prevous editable position or None
+        """
+        
+        assert self.CanEdit(pos = pos)
+        line = self.window.LineFromPosition(pos)
+        if dir == 1:
+            #get the next position
+
+            if self.window.GetCharAt(pos) != ord('\n'):
+                return pos+1
+            l = len(self.line2log)
+            #if this is not the last line of the input
+            if (line + 1 < l and self.line2log[line+1] is not None and
+                self.line2log[line+1][0] == self.line2log[line][0]):
+                return pos + 1 +self.PromptLen(line+1)
+            else:
+                #This is the last line
+                return None
+        else:
+            #get the previous position
+            startpos = self.window.PositionFromLine(line)
+            promptlen = self.PromptLen(line)
+            return ifelse(pos>startpos + promptlen,\
+                          pos-1,#we are not at the start of the line
+                          ifelse(self.line2log[line][1]>1,\
+                                 startpos -1,#we are at the start and this is not the first line
+                                 None))#we are at the start and this is the first line
+
+    def Delete(self, pos = None, forward = True):
+        """Called when the user wants to delete a character at the current
+        position. If forward is true deletes the character at the current
+        position. If forward is False deletes the character before the position"""
+        
+        pos = pos or self.window.GetCurrentPos()
+        oper = ifelse(forward, 'delete', 'backspace')
+        if not self.CanEdit(oper, pos = pos):
+            return
+        dir = ifelse(forward, 1, -1)
+        
+        nextpos = self._next_pos(pos, dir)
+        if nextpos is None:
+            return None
+        pos, nextpos = min(pos, nextpos), max(pos, nextpos)
+        #Delete the characters
+        self.window.SetTargetStart(pos)
+        self.window.SetTargetEnd(nextpos)
+        self.window.ReplaceTarget('')
+        #If we deleted a line update self.line2log
+        if pos+1<nextpos:
+            i = self.window.LineFromPosition(pos) +1
+            del(self.line2log[i])
+            l = len(self.line2log)
+            while (l<l and self.line2log[i] is not None and
+                   self.line2log[i][0] == self.line2log[linenum][0]):
+                i+=1
+                self.line2log[i][1] -= 1
 
     def SetSelection(self):
         """If the user is trying to select anything SetSelection will move the
@@ -643,7 +744,7 @@ class PythonNotebookViewPlugin(object):
         index = self.view.GetIndex(self.id)
         self.view.DeleteCell(index, update)
 
-class Shell(editwindow.EditWindow):
+class Shell(editwindow.EditWindow, CellCtrlBase):
     """Shell based on StyledTextCtrl."""
 
     name = 'Shell'
@@ -653,18 +754,10 @@ class Shell(editwindow.EditWindow):
                  size=wx.DefaultSize, style=wx.CLIP_CHILDREN):
         """Create Shell instance."""
         editwindow.EditWindow.__init__(self, parent, id, pos, size, style)
-
-        self.id = self.GetId()
-        self.parent = parent
+        CellCtrlBase.__init__(self, parent, id, pos, size, style)
         self.view = view
         #self.document = view.doc
         #self.log = self.document.log
-        self.line2log = [] # For each line in the window contains a tuple of
-                           # the id of the corresponding part of the document and
-                           # the corresponding line in the text in the log
-                           #
-                           # (id, n) -> the n'th line of document.data[id] 
-        
         self.oldlineno = 1 # used by OnModified. Is there a way to
                            # declare this inside the method? Like a
                            # C++ static variable
@@ -693,7 +786,8 @@ class Shell(editwindow.EditWindow):
         #self.historyIndex = -1
         # Assign handlers for keyboard events.
         wx.EVT_CHAR(self, self.OnChar)
-        wx.EVT_KEY_DOWN(self, self.OnKeyDown)
+        #This is unnecessary. The method is called by CellCtrlBase.KeyDown
+        #wx.EVT_KEY_DOWN(self, self.OnKeyDown) 
         # Assign handler for idle time.
         self.waiting = False
         wx.EVT_IDLE(self, self.OnIdle)
@@ -709,6 +803,20 @@ class Shell(editwindow.EditWindow):
         # environment.  They can override anything they want.
         #self.execStartupScript(self.interp.startupScript) #TODO: what does this button do?
         #wx.CallAfter(self.ScrollToLine, 0)
+
+    def _get_position(self):
+        pos = self.GetCurrentPos()
+        line = self.LineFromPosition(pos)
+        return (self.view.position, line , pos - self.PositionFromLine(line))
+    
+    def _get_length(self):
+        pos = self.GetCurrentPos()
+        line = self.LineFromPosition(pos)
+        line_length = self.GetLineEndPosition(line) - self.PositionFromLine(line)
+        return (self.view.length, self.GetLineCount(), line_length)
+    
+    position = property(_get_position)
+    length = property(_get_length)
 
     def Resize (self, width = None):
         """ See StaticTextPlugin.Resize """
@@ -828,7 +936,7 @@ class Shell(editwindow.EditWindow):
 
         # Prevent modification of previously submitted
         # commands/responses.
-        if not self.CanEdit():
+        if not self.view.CanEdit():
             return
         key = event.KeyCode()
         currpos = self.GetCurrentPos()
@@ -879,7 +987,7 @@ class Shell(editwindow.EditWindow):
         selecting = self.GetSelectionStart() != self.GetSelectionEnd()
         # Return (Enter) is used to insert a new line
         if not shiftDown and key == wx.WXK_RETURN:
-            if self.CanEdit():
+            if self.view.CanEdit():
                 self.view.InsertLineBreak()
         #Shift-Return, (Shift-Enter) is used to execute the current input
         elif shiftDown and key == wx.WXK_RETURN:
@@ -949,7 +1057,7 @@ class Shell(editwindow.EditWindow):
         # there is a selection that includes text prior to the prompt.
         #
         # Don't modify a selection with text prior to the prompt.
-        elif selecting and key not in NAVKEYS and not self.CanEdit():
+        elif selecting and key not in NAVKEYS and not self.view.CanEdit():
             pass
         # Paste from the clipboard.
         #elif (controlDown and not shiftDown and key in (ord('V'), ord('v'))) \
@@ -967,23 +1075,28 @@ class Shell(editwindow.EditWindow):
         #         or (altDown and key in (ord('N'), ord('n'))):
         #    self.OnHistoryReplace(step=-1)
         # Insert the previous command from the history buffer.
-        #elif (shiftDown and key == wx.WXK_UP) and self.CanEdit():
+        #elif (shiftDown and key == wx.WXK_UP) and self.view.CanEdit():
         #    self.OnHistoryInsert(step=+1)
         # Insert the next command from the history buffer.
-        #elif (shiftDown and key == wx.WXK_DOWN) and self.CanEdit():
+        #elif (shiftDown and key == wx.WXK_DOWN) and self.view.CanEdit():
         #    self.OnHistoryInsert(step=-1)
         # Search up the history for the text in front of the cursor.
         #elif key == wx.WXK_F8:
         #    self.OnHistorySearch()
         # Don't backspace over the latest non-continuation prompt.
         elif key == wx.WXK_BACK:
-            if selecting and self.CanEdit():
+            if selecting and self.view.CanEdit():
                 event.Skip()
-            elif self.CanEdit('backspace'):
+            else:
+                self.view.Delete(forward = False)
+        #TODO: add different handlers for Shift-Delete, Control-Delete, etc
+        elif key == wx.WXK_DELETE:
+            if selecting and self.view.CanEdit():
                 event.Skip()
-        # Only allow these keys after the latest prompt.
-        elif key in (wx.WXK_TAB, wx.WXK_DELETE):
-            if self.CanEdit():
+            else:
+                self.view.Delete(forward = True)
+        elif key == wx.WXK_TAB:
+            if self.view.CanEdit():
                 event.Skip()
         # Don't toggle between insert mode and overwrite mode.
         elif key == wx.WXK_INSERT:
@@ -994,38 +1107,10 @@ class Shell(editwindow.EditWindow):
         # Don't allow line transposition.
         elif controlDown and key in (ord('T'), ord('t')):
             pass
-
-        # Basic navigation keys should work anywhere.
-        #If we pressed WXK_DOWN on the last line, or WXK_UP on the first line 
-        #of the cell we should go to the next (previous) cell
-        elif key == wx.WXK_DOWN:
-            curline = self.LineFromPosition(self.GetCurrentPos())
-            linecnt = self.GetLineCount()
-            if curline == linecnt - 1: #Go to the next cell
-                next = self.parent.GetNext(id = self.id)
-                if next is None:
-                    event.Skip()
-                else:
-                    pos = self.GetCurrentPos() - self.PositionFromLine(curline)
-                    next.SetTheFocus(pos, start = True)
-            else:
-                event.Skip()
-        elif key == wx.WXK_UP:
-            curline = self.LineFromPosition(self.GetCurrentPos())
-            #linecnt = self.GetLineCount()
-            if curline == 0: #Go to the next cell
-                prev = self.parent.GetPrev(id = self.id)
-                if prev is None:
-                    event.Skip()
-                else:    
-                    pos = self.GetCurrentPos() - self.PositionFromLine(curline)
-                    prev.SetTheFocus(pos, start = False)
-            else:
-                event.Skip()
         elif key in NAVKEYS:
             event.Skip()
         # Protect the readonly portion of the shell.
-        elif not self.CanEdit():
+        elif not self.view.CanEdit():
             pass
         else:
             event.Skip()
@@ -1065,7 +1150,7 @@ class Shell(editwindow.EditWindow):
 
     def OnHistoryInsert(self, step):
         """Insert the previous/next command from the history buffer."""
-        if not self.CanEdit():
+        if not self.view.CanEdit():
             return
         startpos = self.GetCurrentPos()
         self.replaceFromHistory(step)
@@ -1074,7 +1159,7 @@ class Shell(editwindow.EditWindow):
 
     def OnHistorySearch(self):
         """Search up the history buffer for the text in front of the cursor."""
-        if not self.CanEdit():
+        if not self.view.CanEdit():
             return
         startpos = self.GetCurrentPos()
         # The text up to the cursor is what we search for.
@@ -1402,51 +1487,10 @@ class Shell(editwindow.EditWindow):
 
     def CanPaste(self):
         """Return true if a paste should succeed."""
-        if self.CanEdit() and editwindow.EditWindow.CanPaste(self):
+        if self.view.CanEdit() and editwindow.EditWindow.CanPaste(self):
             return True
         else:
             return False
-
-
-    def CanEdit(self, oper = 'insert'):
-        """Return true if the given editing operation should succeed. oper can
-        be one of: 'insert', 'delete', and 'backspace'"""
-        #TODO: why we need to know anythong about the selection here
-        #if self.GetSelectionStart() != self.GetSelectionEnd():
-        #    if self.GetSelectionStart() >= self.promptPosEnd \
-        #           and self.GetSelectionEnd() >= self.promptPosEnd:
-        #        return True
-        #    else:
-        #        return False
-        #else:
-        #    return self.GetCurrentPos() >= self.promptPosEnd
-        
-        pos = self.GetCurrentPos()
-        line = self.LineFromPosition(pos)
-        
-        i = 1
-        if oper == 'insert':
-            i = 0
-        elif oper == 'delete':
-            #Delete is the same as backspace on the next character
-            nextpos = pos +1
-            nextline = self.PositionFromLine(nextpos)
-            if nextline > line:
-                nextpos += self.view.Promptlen(nextline)
-                pos = nextpos
-                line = nextline
-
-        if not self.view.CanEdit(line):
-            return False
-        
-        #Check if the cursor is inside the prompt
-        startpos = self.PositionFromLine(line)
-        promptlen = self.view.PromptLen(line)
-        
-        if startpos+promptlen + i > pos:
-            return False
-        else:
-            return True
 
     def Cut(self):
         """Remove selection and place it on the clipboard."""

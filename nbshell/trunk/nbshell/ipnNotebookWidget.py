@@ -13,6 +13,80 @@ __version__ = Release.version
 
 import wx
 
+class CellCtrlBase(wx.Window):
+    """ A widget having all basic functionality for a cell. All other widgets
+    should derive from this one"""
+    
+
+    def __init__ (self, parent, id, pos = wx.DefaultPosition, size =
+                  wx.DefaultSize, style=0, name=''):
+        """ Initialize the control."""
+        
+        #Check if the window is already created. If so don't create it again
+        try:
+            self.Enable()
+        except:
+            wx.Window.__init__(self, parent, id, pos, size, style, name)
+        self.id = self.GetId()
+        self.parent = parent
+        wx.EVT_KEY_DOWN(self, lambda evt:CellCtrlBase.KeyDown(self,evt))
+
+    #Overwrite the following properties to match the desired behaviour in the
+    #control
+    
+    position = property(lambda self:(0,0,0), doc = 
+        """ Returns a tuple describing the current position. The tuple has
+        format (pos,line,pos_in_line) where pos is the current position in the
+        control, line is the current line number and pos_in_line is the
+        position in the current line of the cursor. The default implementation
+        always returns (0,0,0)""")
+    
+    length = property(lambda self:(1,1,1), doc = 
+        """ Returns a tuple of the form (length, number_of_lines,
+        length_of_current_line) describing the length of the control. The
+        default implementation returns (1,1,1)""")
+
+    def Resize (self, width = None):
+        """ Called when the width of the window needs to be resized. It is
+        used for widgets to resize the height accordingly"""
+        return #The default implementation does nothing
+
+    def SetTheFocus(self, pos, start):
+        """ Sets the focus to this cell """
+        self.SetFocus()
+    
+    def KeyDown(self, evt):
+        """ Called whenever a key is pressed. If a key is not processed in the
+        method, calls self.OnKeyDown with the given event as a parameter. So
+        if you want to add more key bindings overwrite the OnKeyDown method"""
+        keycode = evt.GetKeyCode()
+        #Get the values of the properties here, because I'll use them many
+        #times
+        position = self.position
+        length = self.length
+        if keycode == wx.WXK_DOWN: 
+            if position[1] == length[1] -1: #this is the last line
+                next = self.parent.GetNext(id = self.id)
+                if next is None:
+                    self.OnKeyDown(evt)
+                else:
+                    next.SetTheFocus(position[2], start = True)
+            else:
+                self.OnKeyDown(evt)
+        elif keycode == wx.WXK_UP:
+            if position[1] == 0: #Go to the previous
+                prev = self.parent.GetPrev(id = self.id)
+                if prev is None:
+                    self.OnKeyDown(evt)
+                else:    
+                    prev.SetTheFocus(position[2], start = False)
+            else:
+                self.OnKeyDown(evt)
+        else:
+            self.OnKeyDown(evt)
+            
+        def OnKeyDown(self,evt):
+            evt.Skip()
 
 class ipnNotebook (wx.ScrolledWindow):
     """
@@ -44,6 +118,12 @@ class ipnNotebook (wx.ScrolledWindow):
         self.AdjustScrollbars()
         self.SetBackgroundColour(wx.WHITE)
         wx.EVT_SIZE(self, self.OnSize)
+        wx.EVT_MOUSEWHEEL(self, self.OnWheel)
+
+    def OnWheel(self, evt):
+        """Processes the mouse wheel events"""
+        pos = self.GetScrollPos(wx.VERTICAL)
+        self.Scroll(-1, max((pos - evt.m_wheelRotation/evt.m_wheelDelta*evt.m_linesPerAction,0)))
 
     def AdjustScrollbars(self, vpos = -1, hpos = -1):
         self.SetVirtualSize((self.hsize, self.vsize))
@@ -123,6 +203,10 @@ class ipnNotebook (wx.ScrolledWindow):
         of the list. If update is False, RelayoutCells is not called. This 
         is done, so if you need to add or delete more than one cell you will only
         need to call RelayoutCells once, via self.Update"""
+
+        #Add the needed event handlers
+        wx.EVT_MOUSEWHEEL(cell, self.OnWheel)
+
         self.celllist.append(cell);
         index = len(self.celllist) - 1
         if update: 
@@ -135,6 +219,10 @@ class ipnNotebook (wx.ScrolledWindow):
         less than or equal to zero insert at the begining. If the
         index is too large, insert at the end
         """
+
+        #Add the event handlers
+        wx.EVT_MOUSEWHEEL(cell, self.OnWheel)
+        
         index = max(0, index)
         index = min(len(self.celllist), index)
         

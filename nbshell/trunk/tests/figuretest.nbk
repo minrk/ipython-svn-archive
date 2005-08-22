@@ -1,22 +1,32 @@
-<notebook><head/><ipython-log id="default-log"><cell number="0"><input>############DO NOT EDIT THIS CELL############
+<notebook>
+<head/>
+<ipython-log id="default-log">
+<cell number="0"><input>
+############DO NOT EDIT THIS CELL############
 from pylab import *
 switch_backend('WXAgg')
 ion()
-</input></cell><cell number="1"><input>
+</input>
+</cell>
+<cell number="1"><input>
 ioff()
 plot([1,2,3])
 title('A Simple Plot')
-</input></cell><cell number="2"><input>
+</input></cell>
+<cell number="2"><input>
 grab_figure()
-</input></cell><cell number="3"><input>
+</input></cell>
+<cell number="3"><input>
 ion()
 plot([1,1,2,2,3,3,4,4])
-
-</input></cell><cell number="4"><input>
+</input></cell>
+<cell number="4"><input>
 title('Another plot')
-</input></cell><cell number="5"><input>
+</input></cell>
+<cell number="5"><input>
 grab_figure()
-</input></cell><cell number="6"><input>
+</input></cell>
+<cell number="6"><input>
 ioff()
 x = arange(0,2*pi, 0.05)
 y = sin(x)
@@ -25,20 +35,42 @@ plot(x,y)
 grab_figure()
 plot(x,z)
 grab_figure()
-</input></cell><cell number="7"><input>
+</input></cell>
+<cell number="7"><input>
 t = exp(x)
 plot(x,t)
-
-</input></cell><cell number="8"><input>
+</input></cell>
+<cell number="8"><input>
 show()
-</input></cell><cell number="9"><input>
+</input></cell>
+<cell number="9"><input>
 grab_figure()
-</input></cell></ipython-log><sheet>A notebook testing figures.
+</input></cell></ipython-log>
 
-Use Shift-Enter to execute each cell.
+<sheet>
+<para>A notebook testing figures.
 
-
-Plotting with interactive mode turned off:<ipython-block logid="default-log"><ipython-cell type="input" number="1"/><ipython-cell type="input" number="2"/></ipython-block>
-Plotting with interactive mode turned on:<ipython-block logid="default-log"><ipython-cell type="input" number="3"/><ipython-cell type="input" number="4"/><ipython-cell type="input" number="5"/></ipython-block>
-More than one plots can be produced from one figure<ipython-block logid="default-log"><ipython-cell type="input" number="6"/></ipython-block>
-Displaying the plots with the show() method<ipython-block logid="default-log"><ipython-cell type="input" number="7"/><ipython-cell type="input" number="8"/><ipython-cell type="input" number="9"/></ipython-block></sheet></notebook>
+Use Shift-Enter to execute each cell.</para>
+<para>Plotting with interactive mode turned off:</para>
+<ipython-block logid="default-log">
+	<ipython-cell type="input" number="1"/>
+	<ipython-cell type="input" number="2"/>
+</ipython-block>
+<para>Plotting with interactive mode turned on:</para>
+<ipython-block logid="default-log">
+	<ipython-cell type="input" number="3"/>
+	<ipython-cell type="input" number="4"/>
+	<ipython-cell type="input" number="5"/>
+</ipython-block>
+<para>More than one plots can be produced from one figure</para>
+<ipython-block logid="default-log">
+	<ipython-cell type="input" number="6"/>
+</ipython-block>
+<para>Displaying the plots with the show() method</para>
+<ipython-block logid="default-log">
+	<ipython-cell type="input" number="7"/>
+	<ipython-cell type="input" number="8"/>
+	<ipython-cell type="input" number="9"/>
+</ipython-block>
+</sheet>
+</notebook>

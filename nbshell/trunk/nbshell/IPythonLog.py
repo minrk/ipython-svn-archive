@@ -134,13 +134,7 @@ ion()
             del(self.log[-1])
             self.last = False
     
-    def GetLastCell(self):
-        """Returns the last cell"""
-        if self._lastcell is None or self._lastcell.element is not self.log[-1]:
-            self._lastcell = self.notebook.get_last_cell()
-        return self._lastcell
-
-    lastcell = property(fget = GetLastCell)
+    lastcell = property(fget = lambda self:self.notebook.get_last_cell(self.logid))
             
     #TODO: I should support interactive input. Fix this.
     def readline(self, size):

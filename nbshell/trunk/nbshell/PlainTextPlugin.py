@@ -17,6 +17,7 @@ import wx
 from wx import stc
 
 from nbshell.SimpleXMLWriter import XMLWriter
+from nbshell.ipnNotebookWidget import CellCtrlBase
 
 def GetPluginFactory():
     """ Returns the factory object for the plugin. This function is called
@@ -306,7 +307,7 @@ class PlainTextNotebookViewPlugin(object):
         self.doc.sheet.InsertCode(self.doc,pos, update = True)
         
 
-class PlainTextCtrl(stc.StyledTextCtrl):
+class PlainTextCtrl(stc.StyledTextCtrl, CellCtrlBase):
 
     """ PlainTextCtrl - the widget responsible for displaying and
     editing plain text. It has only basic functionality and can be
@@ -317,27 +318,38 @@ class PlainTextCtrl(stc.StyledTextCtrl):
     def __init__ (self, parent, id, pos = wx.DefaultPosition, size = wx.DefaultSize, style=0, name="plaintext"):
 
         """ Standard __init__ function."""
-
         stc.StyledTextCtrl.__init__(self, parent, id, pos, size, style, name)
-        self.id = self.GetId()
-        self.parent = parent
+        CellCtrlBase.__init__(self,parent, id, pos, size, style, name)
         self.oldlineno = 1 # used by OnModified. Is there a way to
                            # declare this inside the method? Like a
                            # C++ static variable
         self.oldpos = (0,0)
         self.SetUseHorizontalScrollBar(0)
+        
         stc.EVT_STC_MODIFIED(self, id, self.OnModified)
         stc.EVT_STC_UPDATEUI(self, id, self.OnUpdateUI)
-        wx.EVT_KEY_DOWN(self, self.OnKeyDown)
 
-        
+    def _get_position(self):
+        pos = self.GetCurrentPos()
+        line = self.LineFromPosition(pos)
+        return (pos, line , pos - self.PositionFromLine(line))
+    
+    def _get_length(self):
+        pos = self.GetCurrentPos()
+        line = self.LineFromPosition(pos)
+        line_length = self.GetLineEndPosition(line) - self.PositionFromLine(line)
+        return (self.GetLength(), self.GetLineCount(), line_length)
+    
+    position = property(_get_position)
+    length = property(_get_length)
+    
     def Resize (self, width = None):
-        """ See StaticTextPlugin.Resize """
+        """ See CellCtrlBase.Resize """
         if width is None:
             width = self.GetClientSizeTuple()[0]
-
         height = self.TextHeight(0)*self.GetLineCount() #works, because all lines have the same height
         self.SetClientSizeWH(width, height)
+        
 
     def SetTheFocus(self, pos, start):
         """ Sets the focus to this cell """
@@ -372,31 +384,7 @@ class PlainTextCtrl(stc.StyledTextCtrl):
         """
         controlDown = evt.ControlDown()
         keycode = evt.GetKeyCode()
-        if keycode == wx.WXK_DOWN: 
-            curline = self.LineFromPosition(self.GetCurrentPos())
-            linecount = self.GetLineCount()
-            if curline == linecount - 1: #Go to the next cell
-                next = self.parent.GetNext(id = self.id)
-                if next is None:
-                    evt.Skip()
-                else:
-                    pos = self.GetCurrentPos() - self.PositionFromLine(curline)
-                    next.SetTheFocus(pos, start = True)
-            else:
-                evt.Skip()
-        elif keycode == wx.WXK_UP:
-            curline = self.LineFromPosition(self.GetCurrentPos())
-            linecount = self.GetLineCount()
-            if curline == 0: #Go to the next cell
-                prev = self.parent.GetPrev(id = self.id)
-                if prev is None:
-                    evt.Skip()
-                else:    
-                    pos = self.GetCurrentPos() - self.PositionFromLine(curline)
-                    prev.SetTheFocus(pos, start = False)
-            else:
-                evt.Skip()
-        elif keycode in [ord('i'),ord('I')] and controlDown:
+        if keycode in [ord('i'),ord('I')] and controlDown:
             #insert a code cell
             self.view.InsertCode()
         else:

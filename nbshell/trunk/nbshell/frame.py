@@ -58,10 +58,10 @@ class ipnFrame(wx.Frame):
         self.app = app
         self.notebook = app.notebook
      
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.sizer.Add(self.notebook, 1, wx.EXPAND)
+#        self.sizer = wx.BoxSizer(wx.VERTICAL)
+#        self.sizer.Add(self.notebook, 1, wx.EXPAND)
 
-        self.SetSizer(self.sizer)
+#        self.SetSizer(self.sizer)
         self.SetUpMenu()
         #self.sizer.Fit(self)
         wx.EVT_SIZE(self, self.OnSize)
@@ -119,7 +119,8 @@ class ipnFrame(wx.Frame):
         self.Close()
         
     def OnSize (self, evt):
-        self.Layout()
+        self.notebook.SetSize(self.GetClientSizeTuple())
+        #self.Layout()
 
     def OnNew(self, evt = None):
         """Creates a new untitled document"""

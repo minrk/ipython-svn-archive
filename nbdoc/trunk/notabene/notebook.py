@@ -8,8 +8,8 @@ from cStringIO import StringIO #to do (e.g.) write_c14n for nb.__eq__ .
 
 from lxml import etree as ET
 
-from normalization import normal
-import validate #for Notebook.check_errors
+from notabene.normalization import normal
+from notabene import validate #for Notebook.check_errors
 
 class OldCell(object):
     def __init__(self, element):
@@ -261,7 +261,7 @@ class Notebook(object):
         #log = self.get_log(logid)
         return self.cells[number]
 
-    def get_last_cell(self):
+    def get_last_cell(self,logid='default-log'):
         return self.cells[-1]
 
     def remove_cell(self, number, logid='default-log'):

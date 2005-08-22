@@ -163,9 +163,11 @@ class Sheet(object):
                 for cell in (notebook.Cell(x) for x in logs[logid].log):
                     self.UpdateOutput(logid, cell, update = False)
         if update:
+            self.view.Freeze()
             for cell in self.celllist:
                 cell.view.Update()
             self.view.Update()
+            self.view.Thaw()
     
     def UpdateDoc(self, element = True):
         """Updates data from the view. If element is True also updates

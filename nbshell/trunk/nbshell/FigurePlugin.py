@@ -18,6 +18,8 @@ import wx
 
 from lxml import etree
 
+from nbshell.ipnNotebookWidget import CellCtrlBase
+
 def GetPluginFactory():
     """ Returns the factory object for the plugin. This function is called
     at the start of the program and should be called only once.
@@ -168,7 +170,7 @@ class FigureNotebookViewPlugin(object):
         dc.EndDrawing()
         
     def OnPaint(self, event):
-        """Repaints the window"""
+        """Ratepaints the window"""
         if self.bitmap is not None:
             dc = wx.PaintDC(self.window)
             dc.BeginDrawing()
@@ -199,71 +201,10 @@ class FigureNotebookViewPlugin(object):
         
     position = property(fget = lambda :0, fset = lambda x:None)
 
-class FigureCtrl(wx.Window):
+class FigureCtrl(CellCtrlBase):
     """Window used for displaying a figure"""
 
-    def __init__ (self, parent, id, pos = wx.DefaultPosition, size = wx.DefaultSize, style=0, name="figure"):
-
+    def __init__ (self, parent, id, pos = wx.DefaultPosition, size =
+                  wx.DefaultSize, style=0, name="figure"):
         """ Standard __init__ function."""
-
-        wx.Window.__init__(self, parent, id, pos, size, style, name)
-        self.id = self.GetId()
-        self.parent = parent
-        self.oldpos = (0,0)
-        wx.EVT_KEY_DOWN(self, self.OnKeyDown)
-        wx.EVT_PAINT(self, self.OnPaint)
-
-        
-    def Resize (self, width = None):
-        """ See StaticTextPlugin.Resize """
-        return
-        if width is None:
-            width = self.GetClientSizeTuple()[0]
-
-        height = self.TextHeight(0)*self.GetLineCount() #works, because all lines have the same height
-        self.SetClientSizeWH(width, height)
-
-    def SetTheFocus(self, pos, start):
-        """ Sets the focus to this cell """
-        self.SetFocus()
-    
-    def OnKeyDown(self, evt):
-        """ Called whenever a key is pressed. The keys which are not
-        processed are skipped.
-        """
-        return
-        controlDown = evt.ControlDown()
-        keycode = evt.GetKeyCode()
-        if keycode == wx.WXK_DOWN: 
-            curline = self.LineFromPosition(self.GetCurrentPos())
-            linecount = self.GetLineCount()
-            if curline == linecount - 1: #Go to the next cell
-                next = self.parent.GetNext(id = self.id)
-                if next is None:
-                    evt.Skip()
-                else:
-                    pos = self.GetCurrentPos() - self.PositionFromLine(curline)
-                    next.SetTheFocus(pos, start = True)
-            else:
-                evt.Skip()
-        elif keycode == wx.WXK_UP:
-            curline = self.LineFromPosition(self.GetCurrentPos())
-            linecount = self.GetLineCount()
-            if curline == 0: #Go to the next cell
-                prev = self.parent.GetPrev(id = self.id)
-                if prev is None:
-                    evt.Skip()
-                else:    
-                    pos = self.GetCurrentPos() - self.PositionFromLine(curline)
-                    prev.SetTheFocus(pos, start = False)
-            else:
-                evt.Skip()
-        elif keycode in [ord('i'),ord('I')] and controlDown:
-            #insert a code cell
-            self.view.InsertCode()
-        else:
-            evt.Skip()
-            
-    def OnPaint(self, event):
-        """Repaints the window"""
-        
+        CellCtrlBase.__init__(self, parent, id, pos, size, style, name)
