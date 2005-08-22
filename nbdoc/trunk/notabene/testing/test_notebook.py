@@ -33,12 +33,13 @@ def test_comparison():
     nb5 = test_fromstring('nb5.nbk','<notebook>\n<sheet></sheet>\n</notebook>')
     assert nb4 == nb5
 
-    #a hack makes this work..
+    #this was made to work with the old __eq__,
+    #but now fails with the new normalization module.
+    #based on the info by Tzanko recorded in Ticker 3, it's ok for this to fail
     nb6 = test_fromstring('nb6.nbk', '<notebook><sheet>a b c</sheet></notebook>')
     nb7 = test_fromstring('nb7.nbk', '<notebook><sheet>abc</sheet></notebook>')
-    assert not nb6 == nb7
+    #FAILS assert not nb6 == nb7
 
-    #and now this too
     nb8 = test_fromstring('nb8.nbk', '<notebook><sheet><para><ipython-equation tex="e=mc^2"/></para></sheet></notebook>')
     nb9 = test_fromstring('nb9.nbk', '<notebook><sheet><para><ipython-equation tex="e=mc^3"/></para></sheet></notebook>')
     assert not nb8 == nb9
@@ -62,8 +63,15 @@ def test_comparison():
     #surely with other tags (e.g. notebook-xml ones) it can happen w/ nbshell.
     str12 = "<input>\nfor i in range(10):\n    print i\n</input>"
     str13 = "<input>for i in range(10):\n    print i</input>"
-    assert test_fromstring('nb12.nbk', str12) == test_fromstring('nb13', str13)
-    #passed without changes to existing __eq__
+    assert test_fromstring('nb12.nbk', str12) == test_fromstring('nb13.nbk', str13)
+    #passed without changes to old __eq__
+    #and also with the new normalization module
+
+    #new from ticket3
+    #fails with the new normalization module :/
+    str14 = "<sheet>\n<para>text</para></sheet>"
+    str15 = "<sheet><para>text</para></sheet>"
+    assert test_fromstring('nb14.nbk', str14) == test_fromstring('nb15.nbk', str15)
 
 
 def test_errcheck():
