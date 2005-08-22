@@ -160,7 +160,7 @@ class Sheet(object):
         if output:
             logs = self.doc.logs
             for logid in logs.keys():
-                for cell in (notebook.NewCell(x) for x in logs[logid].log):
+                for cell in (notebook.Cell(x) for x in logs[logid].log):
                     self.UpdateOutput(logid, cell, update = False)
         if update:
             for cell in self.celllist:

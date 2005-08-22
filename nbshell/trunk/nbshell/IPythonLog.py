@@ -82,7 +82,7 @@ ion()
 """, number = 0)
             self.Run()
         elif self.log[0].attrib['number'] == '0':
-            self.__run(notebook.NewCell(self.log[0]))
+            self.__run(notebook.Cell(self.log[0]))
 
         #Append the empty element at the end
         self.SetLastInput()
@@ -137,7 +137,7 @@ ion()
     def GetLastCell(self):
         """Returns the last cell"""
         if self._lastcell is None or self._lastcell.element is not self.log[-1]:
-            self._lastcell = notebook.NewCell(self.log[-1])
+            self._lastcell = notebook.Cell(self.log[-1])
         return self._lastcell
 
     lastcell = property(fget = GetLastCell)
@@ -176,7 +176,7 @@ ion()
     
     def Remove(self, cell):
         """Removes the given cell from the log. cell is an object of type
-        NewCell"""
+        Cell"""
         self.log.remove(cell.element)
         
     def Clear(self):
@@ -192,7 +192,7 @@ ion()
         
     def Get(self, number): 
         """Returns the cell with the given number"""
-        return notebook.NewCell(self.notebook.get_cell(number = number, logid = self.logid))
+        return notebook.Cell(self.notebook.get_cell(number = number, logid = self.logid))
         
     def Run(self, number = None):
         """ This method will run the code in all cells with numbers larger or
@@ -204,7 +204,7 @@ ion()
             return self.__run(self.lastcell)
         expr = '//cell[@number>=%d]'%(number,)
         #print expr #dbg
-        cells = sorted((notebook.NewCell(x) for x in self.log.xpath(expr)), key =
+        cells = sorted((notebook.Cell(x) for x in self.log.xpath(expr)), key =
                        lambda x:x.number)
                 
         for cell in cells:

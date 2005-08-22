@@ -115,7 +115,7 @@ class PythonDocumentPlugin(object):
         #print "block:"
         #etree.dump(self.element) #dbg
         self.cells = \
-        [notebook.NewCell(self.notebook.get_cell(int(x.attrib['number']),self.logid))
+        [notebook.Cell(self.notebook.get_cell(int(x.attrib['number']),self.logid))
          for x in self.element]
         
     type = 'python'
