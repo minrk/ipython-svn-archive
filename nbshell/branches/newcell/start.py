@@ -1,3 +1,0 @@
-import nbshell
-
-nbshell.start()
