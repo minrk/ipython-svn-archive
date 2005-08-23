@@ -333,12 +333,28 @@ class Notebook(object):
         ET.ElementTree(self.root).write(file)
 
     def write_formatted(self, name=None, format='html'):
-        name = name or self.name
-        extensions = {'latex': '.tex',
+        extensions = {'latex': '.tex', #should .latex be allowed like .htm is?
                       'html': '.html',
+                      'doshtml': '.htm', #to allow specifying it explicitly
                       'pdf': '.pdf',
                       }
-        filename = name + extensions.get(format, '.'+format)
+
+        if name is not None:
+            base, ext = os.path.splitext(name) #allows giving also ext in name
+            if ext not in extensions.values():
+                #probably the name has a dot in it, like 'tut-2.3.5-db'
+                base = name
+                ext = False
+
+        else:
+            base = self.name
+            ext = False #os.path.splitext may have put '' which is False
+
+        if not ext:
+            ext = extensions.get(format, '.'+format)
+
+        filename = base + ext
+        #could check if the given extension makes sense for the format
 
         from notabene import docbook
         formatter = docbook.DBFormatter(self)

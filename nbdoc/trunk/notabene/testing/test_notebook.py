@@ -196,8 +196,9 @@ def OLDtest_log():
 def test_log():
     nb = test_new()
     log = nb.get_log()
-
+    
     py.test.raises(IndexError, "nb.get_cell(1)") #should not create anymore
+    py.test.raises(ValueError, "nb.add_cell(15)") #can only add to end now
     cell = nb.add_cell(0)
     assert cell is nb.get_cell(0) #this should be the same one
     assert cell.input is None
