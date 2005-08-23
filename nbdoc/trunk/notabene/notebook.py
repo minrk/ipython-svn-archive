@@ -84,6 +84,43 @@ class Cell(object):
                 yield ET.Element('ipython-cell', type=tag,
                                  number=str(self.number))
 
+class Log(object):
+    def __init__(self, root, logid):
+        self.id = logid
+        self.element = ET.SubElement(root, 'ipython-log', id=logid)
+        self.cells = []
+
+    def add(self, number):
+        if number == len(self.cells): #is to be put at the end
+            cell_elem = ET.SubElement(self.element, 'cell', number=str(number))
+            #that would probably be better in Cell constructor,
+            #but can't move it there yet (see nbshell IPythonLog and Sheet)
+            cell = Cell(cell_elem)
+            self.cells.append(cell) #always adds to end
+            #this changes when is changed to dict, if that really needed
+            self.element.append(cell.element) #refactor..
+            #dbg
+            print "NOTEBOOK Log: added cell number", number, "with number", cell.number
+            return cell
+                
+        else:
+            try:
+                self.cells[number]
+                raise ValueError, 'a cell with number %d exists. note: multiple logs not implemented now.' % number
+            except IndexError:
+                if number > len(self.cells):
+                    raise ValueError, "can only add at the end now. that will be fixed if needed."
+                else:
+                    raise RuntimeError, "unknown error when adding cell with number %d to log %s" % (number, self.id)
+
+    def __getitem__(self, number):
+        return self.cells[number]
+        #should None i.e. removed cells be handles specially already here?
+
+    def remove(self, number):
+        cell = self.cells[number]
+        self.cells[number] = None #XXX probably not handled properly elsewhere
+        self.element.remove(cell.element)
 
 
 class Notebook(object):
@@ -109,6 +146,16 @@ class Notebook(object):
         self.pretty = pretty
         self.start_checkpointing(checkpoint)
 
+        self.logs = {} #maps log-ids (strings) to logs,
+                       #which are now lists of cells.
+                       #(for fast access)
+        #there probably should be a Log class, but as there already is
+        #one on the nbshell side (IPythonLog) we've agreed to do one here
+        #only by moving that class over.
+        #well, now i disagree on that decision, 'cause need to couple
+        #the cell lists and the wrapped xml element. so created Log,
+        #lets see how this goes..
+
         if root is None:
             self.root = ET.Element('notebook')
             self.head = ET.SubElement(self.root, 'head')
@@ -116,10 +163,6 @@ class Notebook(object):
         else:
             self.root = root
             self.head = root.find('head')
-
-        self.cells = [] #a numbered index of cells in this book
-                        #(for fast access)
-        #XXX now made for one log only. perhaps add a Log class for several?
 
     def __eq__(self, other):
         """As an answer to http://projects.scipy.org/ipython/ipython/ticket/3
@@ -136,6 +179,9 @@ class Notebook(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    #how do the from* methods actually behave w.r.t to Cells and self.logs?
+    #perhaps some initial processing is needed now, when
+    #the objects here don't just access xml but are used as structure too..
     @classmethod
     def from_string(cls, name, data, pretty=True):
         root = ET.fromstring(data)
@@ -167,12 +213,17 @@ class Notebook(object):
         id is a unique identifier. No other XML element in this file should have
         the same id.
         """
-        log_element = ET.SubElement(self.root, 'ipython-log', id=id)
+        self.logs[id] = Log(self.root, id)
 
     def get_log(self, logid='default-log'):
-        elems = self.root.xpath('./ipython-log[@id="%s"]' % logid)
-        if elems:
-            return elems[0]
+        #elems = self.root.xpath('./ipython-log[@id="%s"]' % logid)
+        #if elems:
+        #    return elems[0]
+        if logid in self.logs:
+            #return self.logs[logid]
+            return self.logs[logid].element #callers probably expect that now
+        #this is not used by the internal methods that use the Log class,
+        #but only from external (in nbshell) that don't know that class yet.
         else:
             raise ValueError('No log with id="%s"' % logid)
 
@@ -186,39 +237,21 @@ class Notebook(object):
             return ET.SubElement(log, 'cell', number=str(number))
 
     def add_cell(self, number,  logid='default-log'):
-        log = self.get_log(logid)
-        if number == len(self.cells): #is to be put at the end
-            cell_elem = ET.SubElement(log, 'cell', number=str(number))
-            #that would probably be better in Cell constructor,
-            #but not sure if can move it there (yet)
-            cell = Cell(cell_elem)
-            self.cells.append(cell) #always adds to end
-            #this changes when is changed to dict, if that really needed
-            log.append(cell.element) #refactor..
-            #dbg
-            print "NOTEBOOK: added cell number", number, "with number", cell.number
-            return cell
-        else:
-            try:
-                self.cells[number]
-                raise ValueError, 'a cell with number %d exists. note: multiple logs not implemented now.' % number
-            except IndexError:
-                if number > len(self.cells):
-                    raise ValueError, "can only add at the end now. that will be fixed if needed."
-                else:
-                    raise RuntimeError, "unknown error when adding cell with number %d" % number
+        log = self.logs[logid]
+        cell = log.add(number)
+        return cell
 
     def get_cell(self, number, logid='default-log'):
-        #log = self.get_log(logid)
-        return self.cells[number]
+        log = self.logs[logid]
+        return log[number]
 
     def get_last_cell(self,logid='default-log'):
-        return self.cells[-1]
+        log = self.logs[logid]
+        return log[-1]
 
     def remove_cell(self, number, logid='default-log'):
-        log = self.get_log(logid)
-        cell = self.cells[number] = None
-        log.remove(cell.element)
+        log = self.logs[logid]
+        log.remove(number) #now a method of the Log class
         
 # These are Cell operations now.
 # Would they still be useful as Notebook methods too?
@@ -338,8 +371,9 @@ class Notebook(object):
         return '\n'.join(cell.get_input(specials) for cell in cells)
 
     def get_code(self, logid='default-log', specials=False):
-        #XXX new for the new cell system, untested
-        return '\n'.join(cell.get_input(specials) for cell in self.cells)
+        #XXX new for the new cell and log system, untested
+        log = self.logs[logid]
+        return '\n'.join(cell.get_input(specials) for cell in log.cells)
 
     def start_checkpointing(self, checkpoint=10):
         """Start checkpointing.
@@ -352,6 +386,10 @@ class Notebook(object):
         self.checkpoint = None
 
     def ipython_monkeypatch(self, IP):
+        #not maintained since moving over from google-rkern,
+        #where there probably still is a working version.
+        #nbshell does not use it, but perpaps this would be
+        #still nice to have for using straight from normal ipython shell?
         """Abandon all sanity, ye who enter here.
 
         In [1]: import notabene; nb = notabene.Notebook()
@@ -489,9 +527,10 @@ class Notebook(object):
         self.add_figure(parent, os.path.split(filename)[-1], caption=caption, **attribs)
 
     def _get_tag_dict(self, tag, logid='default-log'):
-        log = self.get_log(logid)
+        #is this used? fixing for the new system..
+        log = self.logs[logid]
         d = {}
-        elems = log.findall(tag)
+        elems = log.element.findall(tag)
         for elem in elems:
             d[elem.attrib['number']] = elem
         return d
@@ -525,9 +564,11 @@ class Notebook(object):
 
     def default_sheet(self):
         logid='default-log'
+        log = self.logs[logid]
         sheet = ET.Element('sheet')
         block = ET.SubElement(sheet, 'ipython-block', logid=logid)
-        for cell in self.cells:
+        for cell in log.cells:
+            #dbg
             print "*NEW*DEFAULT SHEET: cell", cell
             for subcell in cell.get_sheet_tags():
                 block.append(subcell)
