@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import copy #for the insanity in Notebook.__eq__
 import pprint
 import string
 import os
@@ -11,43 +10,24 @@ from lxml import etree as ET
 from notabene.normalization import normal
 from notabene import validate #for Notebook.check_errors
 
-class OldCell(object):
-    def __init__(self, element):
-        self.element = element
-        
-        self.tags = []
+#this specials system that was in the (unused) cell not reimplemented yet
+##     def get_input(self, do_specials=False):
+##         if do_specials and hasattr(self, 'special'):
+##             return self.special
+##         else:
+##             return self.input
 
-        self.update()
-
-    def update(self, element=None):
-        if element is not None:
-            self.element = element
-        else:
-            element = self.element
-        self.number = int(element.get('number'))
-        for subelem in element:
-            setattr(self, subelem.tag, subelem.text)
-            self.tags.append(subelem.tag)
-
-        # this doesn't delete attributes that were there previously
-
-    def get_input(self, do_specials=False):
-        if do_specials and hasattr(self, 'special'):
-            return self.special
-        else:
-            return self.input
-
-    def get_sheet_tags(self, do_specials=False):
-        if do_specials and hasattr(self, 'special'):
-            yield ET.Element('ipython-cell', type='special',
-                number=str(self.number))
-        else:
-            yield ET.Element('ipython-cell', type='input',
-                number=str(self.number))
-        for tag in ('traceback', 'stdout', 'stderr', 'output'):
-            if hasattr(self, tag):
-                yield ET.Element('ipython-cell', type=tag,
-                    number=str(self.number))
+##     def get_sheet_tags(self, do_specials=False):
+##         if do_specials and hasattr(self, 'special'):
+##             yield ET.Element('ipython-cell', type='special',
+##                 number=str(self.number))
+##         else:
+##             yield ET.Element('ipython-cell', type='input',
+##                 number=str(self.number))
+##         for tag in ('traceback', 'stdout', 'stderr', 'output'):
+##             if hasattr(self, tag):
+##                 yield ET.Element('ipython-cell', type=tag,
+##                     number=str(self.number))
 
 class SubelemWrapper:
     """abstract superclass for getter and setter"""
@@ -153,36 +133,7 @@ class Notebook(object):
         return normal.c14n(self.root) == normal.c14n(other.root)
         #preprocesses several cases before doing standard canoninalization
 
-        ## def normal(tree):
-##             """removes whitespace between xml elements, but not in them."""
-##             #only way i've found so far is to reconstruct the xml.. :o
-##             norm = ET.Element(tree.tag) #looses attrs
-##             def copyelem(to, elem): #this is recursive
-##                 sub = ET.SubElement(to, elem.tag)
-##                 sub.text = elem.text
-##                 #sub.attrib = copy.deepcopy(elem.attrib) #attrib not writeable
-##                 [sub.set(key, value) for key,value in elem.attrib.items()]
-##                 [copyelem(sub, further) for further in elem] 
-##             [copyelem(norm, elem) for elem in tree]
-##             return norm
-##         norm_self  = normal(self.root)
-##         norm_other = normal(other.root)
-
-##         #after that, the final strings to compare by the canonalization.
-##         self_f = StringIO()
-##         other_f = StringIO()
-##         [ET.ElementTree(norm).write_c14n(f)
-##          for norm, f in [(norm_self, self_f),
-##                          (norm_other, other_f)]]
-        
-##         return self_f.getvalue() == other_f.getvalue()
-
     def __ne__(self, other):
-        #caught me too, http://www.thescripts.com/forum/thread19678.html
-        #whould it have been the same to use plain old __cmp__?
-        #understood that this is preferred from http://docs.python.org/ref/customization.html
-        #but was that just a bad reading of
-        #"comparison operators in preference to __cmp__()"?
         return not self.__eq__(other)
 
     @classmethod
@@ -367,12 +318,13 @@ class Notebook(object):
 
         if toPDF:
             doc.write('/tmp/' + name + '.tex')
-            print os.popen("texi2pdf /tmp/%s" % (name+'.tex')).read()
+            print os.popen("pdflatex /tmp/%s" % (name+'.tex')).read()
+            return name+'.pdf' #in cwd, no option to change in pdflatex (?)
+            #XXX
 
         else:
             doc.write(filename, 'utf-8') #docbook html xsl uses non-ascii chars
-
-        return filename
+            return filename
 
     def oldget_code(self, logid='default-log', specials=False):
         """Strip all non-input tags and format the inputs as text that could be
