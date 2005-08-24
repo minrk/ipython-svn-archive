@@ -54,7 +54,10 @@ class SubelemSetter(SubelemWrapper):
 
 class Cell(object):
     def __init__(self, element):
-        #this could/should also create the element?
+        #this should also create the element, and recive the root,
+        #like Log already does. then this would be the only place
+        #where cell elements are created, and what's better for that
+        #than the Cell constructor? 
         self.element = element
         self.number = int(element.attrib['number'])
 
@@ -85,6 +88,8 @@ class Cell(object):
                                  number=str(self.number))
 
 class Log(object):
+    #one on the nbshell side there's IPythonLog
+    #and we've talked about moving (parts of it) here
     def __init__(self, root, logid):
         self.id = logid
         self.element = ET.SubElement(root, 'ipython-log', id=logid)
@@ -122,6 +127,13 @@ class Log(object):
         self.cells[number] = None #XXX probably not handled properly elsewhere
         self.element.remove(cell.element)
 
+#from notes, regarding Sheet.InsertElement and related dict
+# <@tzanko> well in the sheet i store a dictionary Sheet.cell2sheet
+# <@tzanko> I need the dictionary, because I need a fast way to get all the
+#           <ipython-cell> elements, that correspond to a given cell in a
+#           log
+#so what kind of method is needed? probably here in log, returning cells or cell elements or their contents..?
+
 
 class Notebook(object):
     """The core notebook object.
@@ -147,14 +159,8 @@ class Notebook(object):
         self.start_checkpointing(checkpoint)
 
         self.logs = {} #maps log-ids (strings) to logs,
-                       #which are now lists of cells.
+                       #which now contain lists of cells.
                        #(for fast access)
-        #there probably should be a Log class, but as there already is
-        #one on the nbshell side (IPythonLog) we've agreed to do one here
-        #only by moving that class over.
-        #well, now i disagree on that decision, 'cause need to couple
-        #the cell lists and the wrapped xml element. so created Log,
-        #lets see how this goes..
 
         if root is None:
             self.root = ET.Element('notebook')
