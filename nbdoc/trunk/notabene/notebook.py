@@ -54,12 +54,17 @@ class SubelemSetter(SubelemWrapper):
 
 class Cell(object):
     def __init__(self, element):
-        #this should also create the element, and recive the root,
-        #like Log already does. then this would be the only place
-        #where cell elements are created, and what's better for that
-        #than the Cell constructor? 
+        #to be replaced by newinit
         self.element = element
         self.number = int(element.attrib['number'])
+
+    @classmethod
+    def newinit(cls, parent, number):
+        #__init__ will have this signature
+        #(if/)when nbshell does not suppose the current anymore,
+        #note: parent is a Log object, which has the 'root' as .element
+        element = ET.SubElement(parent.element, 'cell', number=str(number))
+        return cls(element)
 
     input  = property(SubelemGetter('input'),  SubelemSetter('input'))
     output = property(SubelemGetter('output'), SubelemSetter('output'))
@@ -90,20 +95,19 @@ class Cell(object):
 class Log(object):
     #one on the nbshell side there's IPythonLog
     #and we've talked about moving (parts of it) here
-    def __init__(self, root, logid):
+    def __init__(self, parent, logid):
+        #note: parent is a Notebook object, which has the 'root' as .root
         self.id = logid
-        self.element = ET.SubElement(root, 'ipython-log', id=logid)
+        self.element = ET.SubElement(parent.root, 'ipython-log', id=logid)
         self.cells = []
 
     def add(self, number):
         if number == len(self.cells): #is to be put at the end
-            cell_elem = ET.SubElement(self.element, 'cell', number=str(number))
-            #that would probably be better in Cell constructor,
-            #but can't move it there yet (see nbshell IPythonLog and Sheet)
-            cell = Cell(cell_elem)
+            #cell = Cell(self, number) #use this when nbshell is refactored
+            cell = Cell.newinit(self, number) #temporary for transition
             self.cells.append(cell) #always adds to end
-            #this changes when is changed to dict, if that really needed
-            self.element.append(cell.element) #refactor..
+            self.element.append(cell.element) #XXX already became a subelement!
+            #should cells be a property that wraps the list and xml?
             #dbg
             print "NOTEBOOK Log: added cell number", number, "with number", cell.number
             return cell
@@ -219,7 +223,7 @@ class Notebook(object):
         id is a unique identifier. No other XML element in this file should have
         the same id.
         """
-        self.logs[id] = Log(self.root, id)
+        self.logs[id] = Log(self, id)
 
     def get_log(self, logid='default-log'):
         #elems = self.root.xpath('./ipython-log[@id="%s"]' % logid)
