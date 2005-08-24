@@ -296,6 +296,23 @@ def test_log():
     nb.remove_cell(cell4.number)
     assert nb.get_last_cell() is not None
 
+    """
+    16:16 < tzanko> I'm going to add additional rerunning fuctionality today and i
+                need a fast way to get all the cells with a number larger than
+                a given number. Probably the best way would be to implement
+                list-like functionality for the log where log[5:10] would give
+                me all the cells with 5<=cell.number<10
+    """
+    for _ in range(10):
+        nb.add_cell()
+    log[3:8] #sanity of the tampered slicing not really checked (yet)
+
+    #filtering out Nones
+    nb.remove_cell(5)
+    for cell in log[3:8]:
+        assert cell is not None
+
+
     
 
     

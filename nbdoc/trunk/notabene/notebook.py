@@ -94,6 +94,12 @@ class Cell(object):
                 yield ET.Element('ipython-cell', type=tag,
                                  number=str(self.number))
 
+def slicerange(s):
+    #from http://inamidst.com/code/listdict.py for Log.__getitem
+    if (not isinstance(s, slice)) or (s.start == s.stop): 
+        raise ValueError("Expected non-zero sized slice object")
+    return xrange(s.start, s.stop, s.step or 1)
+
 class Log(object):
     #one on the nbshell side there's IPythonLog
     #and we've talked about moving (parts of it) here
@@ -102,6 +108,8 @@ class Log(object):
         self.id = logid
         self.element = ET.SubElement(parent.root, 'ipython-log', id=logid)
         self._cells = [] #it is not safe to manipulate this from outside
+        #'cause of removals, this may end up sparse - might make sense to use
+        #something like http://inamidst.com/code/listdict.py
 
     def add(self, number):
         if number == len(self._cells): #is to be put at the end
@@ -122,12 +130,18 @@ class Log(object):
                 else:
                     raise RuntimeError, "unknown error when adding cell with number %d to log %s" % (number, self.id)
 
-    def __getitem__(self, number):
-        return self._cells[number]
-        #should None i.e. removed cells be handled specially already here?
+    def __getitem__(self, position):
+        if isinstance(position, slice):
+            if position.start != position.stop:
+                """Filters out None cells"""
+                return [self._cells[i] for i in slicerange(position)
+                        if self._cells[i] is not None]
+                #retrieves _cells[i] twice but probably still pretty fast
+            #if this is bad or slow can be also removed and let users filter
+        return self._cells[position]
 
     def __len__(self):
-        return len(self._cells)
+        return len(self._cells) #includes Nones i.e. is not the actual amount of cells. Notebook.add_cell uses this currently to check if addition is to the end of the list, so this can't be just changed to filter Nones out
 
     def __iter__(self):
         """for iterating cells in the log. filters out Nones."""
