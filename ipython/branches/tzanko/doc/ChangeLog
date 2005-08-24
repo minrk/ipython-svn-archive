@@ -1,3 +1,9 @@
+2005-08-14  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/genutils.py (IOStream.__getattr__): add delegated
+	getattr so that we don't break apps which expect sys.stdin/out/err
+	to have certain attributes.
+
 2005-07-18  Fernando Perez  <fperez@colorado.edu>
 
 	* IPython/genutils.py (get_home_dir): fix to help users with

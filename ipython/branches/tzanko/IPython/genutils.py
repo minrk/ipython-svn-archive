@@ -78,7 +78,11 @@ class IOStream:
                 # if we get here, something is seriously broken.
                 print >> sys.stderr, \
                       'ERROR - failed to write data to stream:', stream
-        
+
+    def __getattr__(self,attr):
+        """Delegate all attribute access to the stream object we're covering"""
+        return getattr(self.stream,attr)
+    
 class IOTerm:
     """ Term holds the file or file-like objects for handling I/O operations.
 
