@@ -38,6 +38,7 @@ from nbshell.plotting_backends import matplotlib_backend as backend
 
 class IPythonLog(object):
     def __init__(self, doc, nbk, logid, *args, **kwds):
+        print 'sys.path[0] ->',sys.path[0] #dbg
         self.doc = doc
         self.notebook = nbk
         self.log = nbk.get_log(logid) 
@@ -93,6 +94,7 @@ ion()
         del __builtin__
 
         #end shell initialization
+
         
     def filename_iter(self):
         """A generator function used for generating unique figure filenames"""

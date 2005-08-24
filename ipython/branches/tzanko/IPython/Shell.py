@@ -251,9 +251,12 @@ class IPShellGUI:
         self.user_ns = user_ns
         self.debug = debug
         self.shell_class = shell_class
+        #Save sys.path
+        oldpath = sys.path[:] #oldpath=sys.path would only make a reference, not copy the list
         self.IP = make_IPython(self.argv,user_ns=self.user_ns.copy(),
                                debug=self.debug, shell_class=self.shell_class)
-        
+        #restore sys.path
+        sys.path = oldpath
     
     def runlines(self, lines, displayhook, stdout, stderr):
         oldterm = genutils.Term #TODO: Do I need to restore this?
@@ -265,8 +268,10 @@ class IPShellGUI:
     def reset(self):
         """Resets the namespace"""
         #TODO: fix this
+        oldpath = sys.path[:]
         self.IP = make_IPython(self.argv,user_ns=self.user_ns.copy(),
                                debug=self.debug, shell_class=self.shell_class)
+        sys.path = oldpath
 
 #-----------------------------------------------------------------------------
 def sigint_handler (signum,stack_frame):

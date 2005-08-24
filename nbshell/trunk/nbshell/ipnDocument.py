@@ -171,3 +171,13 @@ class ipnDocument(object):
         #print "The rerun notebook" #dbg
         #etree.dump(self.notebook.root) #dbg
         self.sheet.Update(update = True, output = True)
+        
+    def Export(self, filename = None, format = 'html'):
+        """Exports the notebook to a file of the given format. If filename is
+        None use the notebook filename. Returns the exported filename"""
+        self.sheet.UpdateDoc()
+        self.sheet.ClearLastInputs()
+        result = self.notebook.write_formatted(filename, format)
+        self.sheet.SetLastInputs()
+        return result
+        

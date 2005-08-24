@@ -12,9 +12,11 @@ __author__  = '%s <%s>' % Release.author
 __license__ = Release.license
 __version__ = Release.version
 
+import os.path
 import StringIO
 
 import wx
+import wx.html
 
 from nbshell.utils import *
 from nbshell import SimpleXMLWriter
@@ -34,6 +36,8 @@ ID_SAVE = wx.ID_SAVE
 ID_SAVEAS = wx.ID_SAVEAS
 ID_EXIT = wx.ID_EXIT
 ID_ABOUT = wx.ID_ABOUT
+ID_EXPORT = id_iter.next()
+ID_PRINT_PREVIEW = id_iter.next()
 
 #NBShell menu identifiers
 ID_RERUN = id_iter.next()
@@ -76,13 +80,19 @@ class ipnFrame(wx.Frame):
         filemenu.Append(ID_SAVE, "&Save", "Save file")
         filemenu.Append(ID_SAVEAS, "Save &As...", "Save file with new name")
         filemenu.AppendSeparator()
+        filemenu.Append(ID_EXPORT, "&Export...", "Export the notebook in a printeble format")
+        filemenu.AppendSeparator()
+        filemenu.Append(ID_PRINT_PREVIEW, "Print P&review...", "Preview the notebook")
+        filemenu.AppendSeparator()
         filemenu.Append(ID_EXIT, "E&xit", "Terminate the program")
         wx.EVT_MENU(self, ID_EXIT, self.OnExit)
         wx.EVT_MENU(self, ID_NEW, self.OnNew)
         wx.EVT_MENU(self, ID_OPEN, self.OnOpen)
         wx.EVT_MENU(self, ID_SAVE, self.OnSave)
         wx.EVT_MENU(self, ID_SAVEAS, self.OnSaveAs)
-        
+        wx.EVT_MENU(self, ID_EXPORT, self.OnExport)
+        wx.EVT_MENU(self, ID_PRINT_PREVIEW, self.OnPreview)
+                    
         nbshellmenu = wx.Menu()
         nbshellmenu.Append(ID_RERUN, "&Rerun", "Rerun the notebook")
         wx.EVT_MENU(self, ID_RERUN, self.OnRerun)
@@ -197,6 +207,45 @@ class ipnFrame(wx.Frame):
                 self.SetTitle(self.app.document.fileinfo['name'])
                 self.app.document.fileinfo['untitled'] = False
                 
+    def OnExport(self, evt = None):
+        name = self.app.document.fileinfo['name']
+        path = self.app.document.fileinfo['path']
+        defaultname = os.path.splitext(name)[0] + '.html'
+        dlg = wx.FileDialog(self, "Choose a file",\
+                            wildcard ='HTML files (*.htm[l])|*.htm;*html|'+
+                            'LaTeX files (*.tex)|*.tex|PDF files (*.pdf)|*.pdf',
+                            defaultDir = self.app.document.fileinfo['path'],
+                            defaultFile = defaultname,
+                            style = wx.SAVE|wx.OVERWRITE_PROMPT|wx.CHANGE_DIR)
+        dlg.SetFilterIndex(0) #Set .html files to be default
+
+        if dlg.ShowModal() == wx.ID_OK:
+            filename = dlg.GetPath()
+            index = dlg.GetFilterIndex()
+            type = {0:'html', 1:'latex', 2:'pdf'}[index]
+            try:
+                self.app.document.Export(filename, type)
+            except Exception, inst:
+                #TODO: better error handling
+                dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
+                dlg.ShowModal()
+                raise #dbg
+
+    def OnPreview(self,evt = None):
+        try:
+            self.app.document.Export('tmp','html')
+        except Exception, inst:
+            dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
+            dlg.ShowModal()
+            raise #dbg
+        
+        printout = wx.html.HtmlPrintout()
+        printout.SetHtmlFile('tmp.html')
+        preview = wx.PrintPreview(printout, printout)
+        frame = wx.PreviewFrame(preview, self, 'Print Preview')
+        frame.Initialize()
+        frame.Show()
+        
     def OnRerun(self,evt = None):
         self.app.document.Rerun()
     
@@ -211,7 +260,7 @@ class ipnFrame(wx.Frame):
         sheet.InsertCode(block, default(lambda:block.view.position,0), update = True)
         
     def OnInsertFigure(self, evt = None):
-        dlg = wx.FileDialog(self, "Choose a Fifure", \
+        dlg = wx.FileDialog(self, "Choose a Figure", \
                             wildcard = "PNG files (*.png)|*.png",style = wx.OPEN)
         val = dlg.ShowModal()
         if val == wx.ID_CANCEL:

@@ -20,13 +20,16 @@ import re
 from optparse import OptionParser
 import unittest
 
+#wxversion messes up with the sys.path. so I have to fix it
+oldpath = sys.path[0]
 try:
     import wxversion
     wxversion.ensureMinimal('2.5.3')
 except:
     pass #I will try to run it, but it might not work
-
+sys.path[0:0] = [oldpath]
 import wx
+print sys.path
 
 from nbshell.utils import *
 from nbshell import ipnNotebookWidget,ipnDocument,frame,tester
