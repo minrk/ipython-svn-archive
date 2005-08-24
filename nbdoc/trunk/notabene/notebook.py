@@ -404,8 +404,9 @@ class Notebook(object):
         doc = formatter.to_formatted(self.sheet, format)
 
         if toPDF:
-            doc.write('/tmp/' + name + '.tex')
-            print os.popen("pdflatex /tmp/%s" % (name+'.tex')).read()
+            tmpnam = os.tmpnam() #not nice on windows (uses root dir)
+            doc.write(tmpnam) #'/tmp/' + name + '.tex')
+            print os.popen("pdflatex --jobname=%s %s" % (name, tmpnam)).read()
             return name+'.pdf' #in cwd, no option to change in pdflatex (?)
             #XXX
 
