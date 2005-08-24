@@ -194,16 +194,32 @@ def OLDtest_log():
     assert found == set(['input', 'stdout', 'stderr', 'output'])
 
 def test_log():
-    nb = test_new()
-    log = nb.get_log()
-    
+    nb = test_new() #adds a default log
+    logelement = nb.get_log() #old way, to be removed?
+    log = nb.newget_log()
+
+    #using the default log via notebook methods
     py.test.raises(IndexError, "nb.get_cell(1)") #should not create anymore
     py.test.raises(ValueError, "nb.add_cell(15)") #can only add to end now
-    cell = nb.add_cell(0)
+    cell = nb.add_cell(0) #is added to default log
     assert cell is nb.get_cell(0) #this should be the same one
     assert cell.input is None
     assert cell.output is None
 
+    #multiple log support
+    assert py.test.raises(ValueError, "nb.get_log('log2')") #nonexisting
+    log2 = nb.add_log('log2')
+    assert log2.element is nb.get_log('log2') #backwards compat. for nbshell
+    assert log2 is nb.logs['log2'] #this is how Notebook does internally.
+                                   #ok to expose to outside too?
+    cell20 = nb.add_cell(0, 'log2')
+    cell21 = log2.add(1) #also this is possible. ok?
+    assert cell20 is nb.get_cell(0, 'log2')
+    assert cell21 is nb.get_cell(1, 'log2')
+    assert cell21.number == 1
+    assert cell20 is log2[0] #again: Notebook does this. ok from outside?
+
+    #back to default log, to test cell functionality
     python_in = "3 // 2"
     python_out = "1"
 
@@ -214,8 +230,15 @@ def test_log():
     #those must be the same in the underlying xml too:
     assert cell.element.find('input').text == python_in
     assert cell.element.find('output').text == python_out
+    #nbshell also calls methods of xml elements
+    #so they need to be exposed like this,
+    #but at least in some cases the use should be limited to querying
+    #.. altough manipulating some attributes is safe,
+    #but e.g. changing the number attribute of a cell is not,
+    #even though it is a property that wraps xml,
+    #because Logs also have an index of them too.
     
-    #note: the do-specials in original Cell not there
+    #note: the do-specials in original Cell not in the new system (yet)
 
     #should be standard elements too?
     assert cell.stdout is None
@@ -231,6 +254,7 @@ def test_log():
     assert cell.element.find('stdout').text == stdouttext
     assert cell.element.find('stderr').text == stderrtext
 
+    #(default) sheet test
     sheet = nb.default_sheet()
     ipblock = sheet.find('ipython-block')
     found = set()
@@ -238,7 +262,41 @@ def test_log():
         if ic.tag == 'ipython-cell':
             found.add(ic.attrib['type'])
     assert found == set(['input', 'stdout', 'stderr', 'output'])
+    #cell.get_sheet_tags lacks tests
 
+    #cell removal/deletion
+    cell2 = nb.add_cell()
+    cell3 = nb.add_cell()
+    for number, cell in enumerate(log):
+        assert number == cell.number
+    number = cell2.number
+    log.remove(number)
+    assert log[number] is None #is not removed 'cause is in the middle
+    numcells = log.element.xpath('./cell[@number=%s]' % number)
+    assert len(numcells) == 0 #the cell was actually removed from xml
+
+    #so far so good, but then all kinds of strange things start to happen:
+    assert nb.get_cell(number) is None #does this make sense?
+    #assert nb.get_last_cell() is None #this certainly does not!
+    #so log.remove is fixed to handle it:
+    lastcell = nb.get_last_cell()
+    assert lastcell is log[-1] #nice, no? this also public..
+    nb.remove_cell(lastcell.number)
+    assert nb.get_last_cell() is not None
+    for cell in log:
+        print etree.tostring(cell.element)
+
+    #should all trailing Nones be removed?
+    #probably so, to make this succeed:
+    cell2 = nb.add_cell()
+    cell3 = nb.add_cell()
+    cell4 = nb.add_cell()
+    nb.remove_cell(cell2.number)
+    nb.remove_cell(cell3.number)
+    nb.remove_cell(cell4.number)
+    assert nb.get_last_cell() is not None
+
+    
 
     
     

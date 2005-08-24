@@ -56,15 +56,16 @@ class Cell(object):
     def __init__(self, element):
         #to be replaced by newinit
         self.element = element
-        self.number = int(element.attrib['number'])
 
     @classmethod
     def newinit(cls, parent, number):
         #__init__ will have this signature
         #(if/)when nbshell does not suppose the current anymore,
         #note: parent is a Log object, which has the 'root' as .element
-        element = ET.SubElement(parent.element, 'cell', number=str(number))
-        return cls(element)
+        element = ET.SubElement(parent.element, 'cell')
+        instance = cls(element)
+        instance.number = number #sets the xml too via the property
+        return instance
 
     input  = property(SubelemGetter('input'),  SubelemSetter('input'))
     output = property(SubelemGetter('output'), SubelemSetter('output'))
@@ -73,12 +74,13 @@ class Cell(object):
     traceback = property(SubelemGetter('traceback'), SubelemSetter('traceback'))    
     def get_number(self):
         return int(self.element.attrib['number'])
-    
     def set_number(self, num):
         s = str(num)
         assert s.isdigit()
         self.element.attrib['number'] = s
-    
+        #note: this does not update the cell index in the log!
+        #so probably currently is safe only in the constructor, which is
+        #given the index number by the Log.add <- Notebook.add_cell methods
     number = property(get_number, set_number)
 
     def get_input(self, do_specials=False):
@@ -99,36 +101,47 @@ class Log(object):
         #note: parent is a Notebook object, which has the 'root' as .root
         self.id = logid
         self.element = ET.SubElement(parent.root, 'ipython-log', id=logid)
-        self.cells = []
+        self._cells = [] #it is not safe to manipulate this from outside
 
     def add(self, number):
-        if number == len(self.cells): #is to be put at the end
+        if number == len(self._cells): #is to be put at the end
             #cell = Cell(self, number) #use this when nbshell is refactored
             cell = Cell.newinit(self, number) #temporary for transition
-            self.cells.append(cell) #always adds to end
-            self.element.append(cell.element) #XXX already became a subelement!
-            #should cells be a property that wraps the list and xml?
-            #dbg
-            print "NOTEBOOK Log: added cell number", number, "with number", cell.number
+            self._cells.append(cell) #always adds to end
+            #self.element.append(cell.element) #already became a subelement
+            #seems that that append call would have no effect.
             return cell
                 
         else:
             try:
-                self.cells[number]
-                raise ValueError, 'a cell with number %d exists. note: multiple logs not implemented now.' % number
+                self._cells[number]
+                raise ValueError, 'a cell with number %d exists in log id %s' % (number, self.id)
             except IndexError:
-                if number > len(self.cells):
+                if number > len(self._cells):
                     raise ValueError, "can only add at the end now. that will be fixed if needed."
                 else:
                     raise RuntimeError, "unknown error when adding cell with number %d to log %s" % (number, self.id)
 
     def __getitem__(self, number):
-        return self.cells[number]
-        #should None i.e. removed cells be handles specially already here?
+        return self._cells[number]
+        #should None i.e. removed cells be handled specially already here?
+
+    def __len__(self):
+        return len(self._cells)
+
+    def __iter__(self):
+        """for iterating cells in the log. filters out Nones."""
+        cells = [cell for cell in self._cells if cell is not None]
+        return iter(cells)
 
     def remove(self, number):
-        cell = self.cells[number]
-        self.cells[number] = None #XXX probably not handled properly elsewhere
+        cell = self._cells[number]
+        if cell is self._cells[-1]: #if is last element
+            self._cells.pop() #remove
+            while self._cells[-1] is None: #if the previous, next. prev etc
+                self._cells.pop() #remove all Nones at the end
+        else:
+            self._cells[number] = None #XXX these gaps not handled everywhere
         self.element.remove(cell.element)
 
 #from notes, regarding Sheet.InsertElement and related dict
@@ -220,10 +233,12 @@ class Notebook(object):
     def add_log(self, id='default-log'):
         """Add a log element.
 
-        id is a unique identifier. No other XML element in this file should have
-        the same id.
+        id is a unique identifier. No other XML element in this file should have        the same id.
         """
-        self.logs[id] = Log(self, id)
+        #should the uniqueness of the id be checked here?
+        log = Log(self, id) #this creates a subelement to self.root
+        self.logs[id] = log
+        return log
 
     def get_log(self, logid='default-log'):
         #elems = self.root.xpath('./ipython-log[@id="%s"]' % logid)
@@ -237,6 +252,15 @@ class Notebook(object):
         else:
             raise ValueError('No log with id="%s"' % logid)
 
+    def newget_log(self, logid='default-log'):
+        #useful for getting a default log without id,
+        #even if/when self.logs is exposed for id-using getting of logs.
+        #to replace current get_log when that is not used anymore
+        if logid in self.logs:
+            return self.logs[logid]
+        else:
+            raise ValueError('No log with id="%s"' % logid)
+
     def oldget_cell(self, number, logid='default-log'):
         #note: Tzanko considers this too slow for nbshell
         log = self.get_log(logid)
@@ -246,8 +270,12 @@ class Notebook(object):
         else:
             return ET.SubElement(log, 'cell', number=str(number))
 
-    def add_cell(self, number,  logid='default-log'):
+    def add_cell(self, number=None,  logid='default-log'):
         log = self.logs[logid]
+        if number is None: #add to end by default
+            #not used by nbshell currently,
+            #but handy for at least tests..
+            number = len(log)
         cell = log.add(number)
         return cell
 
@@ -255,7 +283,7 @@ class Notebook(object):
         log = self.logs[logid]
         return log[number]
 
-    def get_last_cell(self,logid='default-log'):
+    def get_last_cell(self, logid='default-log'):
         log = self.logs[logid]
         return log[-1]
 
@@ -399,7 +427,7 @@ class Notebook(object):
     def get_code(self, logid='default-log', specials=False):
         #XXX new for the new cell and log system, untested
         log = self.logs[logid]
-        return '\n'.join(cell.get_input(specials) for cell in log.cells)
+        return '\n'.join(cell.get_input(specials) for cell in log)
 
     def start_checkpointing(self, checkpoint=10):
         """Start checkpointing.
@@ -593,7 +621,7 @@ class Notebook(object):
         log = self.logs[logid]
         sheet = ET.Element('sheet')
         block = ET.SubElement(sheet, 'ipython-block', logid=logid)
-        for cell in log.cells:
+        for cell in log:
             #dbg
             print "*NEW*DEFAULT SHEET: cell", cell
             for subcell in cell.get_sheet_tags():
