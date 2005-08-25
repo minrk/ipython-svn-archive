@@ -474,7 +474,7 @@ class PythonNotebookViewPlugin(object):
             #write text to the log
             oldcell.input = text #TODO: add special input support
             if flag:
-                cellstorun = self.doc.log.newlog[oldcell.number:-1] #omit the last cell
+                cellstorun = self.doc.log.log[oldcell.number:-1] #omit the last cell
             else:
                 cellstorun = [oldcell]
             self.doc.sheet.RerunCells(self.doc.log.logid, cellstorun, update = True)

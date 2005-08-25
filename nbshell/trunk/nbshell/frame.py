@@ -20,7 +20,7 @@ import wx.html
 
 from nbshell.utils import *
 from nbshell import SimpleXMLWriter
-
+from nbshell import RerunDlg
 
 def idgen():
     id = wx.ID_HIGHEST
@@ -103,7 +103,7 @@ class ipnFrame(wx.Frame):
         wx.EVT_MENU(self, ID_PRINT_PREVIEW, lambda evt:self.OnPrint(evt,1))
                     
         nbshellmenu = wx.Menu()
-        nbshellmenu.Append(ID_RERUN, "&Rerun", "Rerun the notebook")
+        nbshellmenu.Append(ID_RERUN, "&Rerun...", "Rerun parts of the notebook")
         wx.EVT_MENU(self, ID_RERUN, self.OnRerun)
         
         insertmenu = wx.Menu()
@@ -262,7 +262,9 @@ class ipnFrame(wx.Frame):
         os.remove(tmpfile)
 
     def OnRerun(self,evt = None):
-        self.app.document.Rerun()
+        dlg = RerunDlg.RerunDialog(self, -1, 'Choose what to rerun')
+        dlg.ShowModal()
+        #self.app.document.Rerun()
     
     def OnInsertText(self, evt = None):
         sheet = self.app.document.sheet
@@ -297,4 +299,5 @@ class ipnFrame(wx.Frame):
     def OnDeleteCell(self, evt = None):
         sheet = self.app.document.sheet
         sheet.DeleteCell(sheet.currentcell)
+
 

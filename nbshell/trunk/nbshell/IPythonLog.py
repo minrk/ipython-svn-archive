@@ -46,7 +46,7 @@ class IPythonLog(object):
         self._lastcell = None #used by self.lastcell
 
         #Here I will sort the cells, according to their numbers
-        self.log.element[:] = sorted(self.log, key = lambda x:int(x.attrib['number']))
+        #self.log.element[:] = sorted(self.log, key = lambda x:int(x.attrib['number']))
         #XXX modifies the xml element(tree) that nb Log wraps so it may be bad
         #then again, as log.cells is a list (array),
         #as far as i can see the elements are always sorted already
@@ -87,7 +87,7 @@ switch_backend('WXAgg')
 ion()
 """, number = 0)
             self.Run()
-        elif self.log[0].number == '0':
+        elif self.log[0] is not None:
             self.__run(self.Get(0))
 
         #Append the empty element at the end
@@ -168,7 +168,7 @@ ion()
         if l != 0 :
             number = self.lastcell.number+1
         try:
-            self.notebook.add_cell(number)
+            newcell = self.log.add(number)
         except ValueError: #happened due to my (antont) bug in PythonPlugin
             #i guess still ok to leave here to be sure?
             print "Warning: IPythonLog tried to recreate cell num", number, "- ignoring the append"
@@ -176,10 +176,10 @@ ion()
             #self.notebook.add_cell(number)
             return self.lastcell
         #Now self.lastcell points to the new cell
-        self.lastcell.input = input
+        newcell.input = input
         if output is not None:
-            self.lastcell.output = output
-        return self.lastcell
+            newcell.output = output
+        return newcell #newcell == self.lastcell
     
     def Remove(self, number):
         """Removes the cell with the given number from the log."""
@@ -198,7 +198,7 @@ ion()
         
     def Get(self, number): 
         """Returns the cell with the given number"""
-        return self.notebook.get_cell(number = number, logid = self.logid)
+        return self.log[number]
         
     def Run(self, number = None):
         """ This method will run the code in all cells with numbers larger or

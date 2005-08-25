@@ -160,7 +160,7 @@ class Sheet(object):
         if output:
             logs = self.doc.logs
             for logid in logs.keys():
-                for cell in logs[logid].newlog:
+                for cell in logs[logid].log:
                     self.UpdateOutput(logid, cell, update = False)
         if update:
             self.view.Freeze()
@@ -724,7 +724,7 @@ reexecute an input and all inputs that follow. """
             val = self.cell2sheet.get((logid, oldnum, type),[])
             for (block,pos) in val:
                 block.element[pos].attrib['number'] = str(newnum)
-                block.cells[pos] = self.doc.logs[logid].newlog[newnum]
+                block.cells[pos] = self.doc.logs[logid].Get(newnum)
         self.Update(update, dicts = True)
 
     def InsertText(self, block, pos, update = True):
@@ -818,6 +818,7 @@ reexecute an input and all inputs that follow. """
             return None
         
     def RerunCells(self, logid, cells, update = True):
+        #TODO: fix behaviour when one of the cells has incomplete input
         """This method reruns the list of cells 'cells' from the log with id =
         'logid'. The order of which cells are rerun is the order they are in
         the list, not the order of their numbers.The numbers of each cell are
@@ -850,7 +851,7 @@ reexecute an input and all inputs that follow. """
             #Replace this cell with the new one
             self.ReplaceCells(logid, cell.number, newcells[i].number, update = False)
             #Remove the old cell
-            log.newlog.remove(cell.number)
+            log.Remove(cell.number)
             #Update the sheet's outputs
             self.UpdateOutput(logid, newcells[i], update = False)
         

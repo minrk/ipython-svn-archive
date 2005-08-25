@@ -29,7 +29,6 @@ except:
     pass #I will try to run it, but it might not work
 sys.path[0:0] = [oldpath]
 import wx
-print sys.path
 
 from nbshell.utils import *
 from nbshell import ipnNotebookWidget,ipnDocument,frame,tester
