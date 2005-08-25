@@ -419,7 +419,7 @@ class PythonNotebookViewPlugin(object):
             elem = self.doc.GetStuff(line[0])[1]
             elem.text += linetext
 
-    def ProcessLine(self):
+    def ProcessLine(self, flag = False):
         """Process the line of text at which the user hits Enter."""
         linenum = self.window.GetCurrentLine()
         #print "linenum->", linenum #dbg
@@ -442,9 +442,7 @@ class PythonNotebookViewPlugin(object):
         while i<l and self.line2log[i] is not None and \
               self.line2log[i][0] == item[0]:
             linetext = self.window.GetLine(i)[promptlen:]
-            if linetext == '':
-                linetext = '\n'
-            elif linetext[-1]!='\n':
+            if linetext == '' or linetext[-1] !='\n':
                 linetext = linetext + '\n'
             text = text + linetext
             i+=1
@@ -452,11 +450,12 @@ class PythonNotebookViewPlugin(object):
         #Get the cell corresponding to the element
         oldcell = self.doc.cells[doc_id]
         lastcell = self.doc.log.lastcell
+        
         if oldcell.element == lastcell.element:
-            #This is the last cell of the log
             #write text to the log
-            elem = findnew(lastcell.element,type)
-            elem.text = text
+            lastcell.input = text #TODO: add special input support
+
+            #This is the last cell of the log
             #try to run the current input. If it needs more, insert a line and continue editing
             if self.doc.log.Run(): # we have run the text and generated output
                 #Update the sheet
@@ -466,37 +465,19 @@ class PythonNotebookViewPlugin(object):
                     newblock = self.doc
                 #Create a new input and append it at the end of the block
                 cell = self.doc.log.Append("\n\n") #each input starts and ends with a newline
-                self.doc.sheet.InsertElement(newblock, 'input', cell, \
-                                             update = True)
+                self.doc.sheet.InsertElement(newblock, 'input', cell, update = True)
             else: #We need more input, do nothing
                 # Delete the input from lastcell
-                elem.text = '\n\n'
+                lastcell.input = '\n\n' #TODO: special input
         else:
             #This cell is not the last one in the log
-            #print self.line2log[linenum] #dbg
-            #1.1.1 Put the input in the last cell
-            elem = findnew(lastcell.element,type)
-            elem.text = text
-            #1.1.2. Run the last cell
-            if self.doc.log.Run(): # we have run the text and generated output
-                #Make a new last input
-                cell = self.doc.log.Append("\n\n") #each input starts and ends with a newline
-                #replace the old last input with the new one
-                self.doc.sheet.ReplaceCells(self.doc.logid, lastcell,\
-                                            self.doc.log.lastcell, update = False)
-                #Replace the old cell with the new one (the old lastcell)
-                self.doc.sheet.ReplaceCells(self.doc.logid,\
-                                            oldcell, lastcell, update = False)
-                #Delete oldcell
-                self.doc.log.Remove(oldcell)
-                #Update the sheet
-                self.doc.sheet.UpdateOutput(self.doc.logid,
-                                            self.doc.cells[doc_id], update = False)
-                self.doc.sheet.Update()
-                return
+            #write text to the log
+            oldcell.input = text #TODO: add special input support
+            if flag:
+                cellstorun = self.doc.log.newlog[oldcell.number:-1] #omit the last cell
             else:
-                #Remove the text from lastcell
-                elem.text = '\n\n'
+                cellstorun = [oldcell]
+            self.doc.sheet.RerunCells(self.doc.log.logid, cellstorun, update = True)
                     
     def InsertText(self):
         """Inserts a text cell after the current line"""
@@ -986,7 +967,7 @@ class Shell(editwindow.EditWindow, CellCtrlBase):
         endpos = self.GetTextLength()
         selecting = self.GetSelectionStart() != self.GetSelectionEnd()
         # Return (Enter) is used to insert a new line
-        if not shiftDown and key == wx.WXK_RETURN:
+        if not shiftDown and not controlDown and key == wx.WXK_RETURN:
             if self.view.CanEdit():
                 self.view.InsertLineBreak()
         #Shift-Return, (Shift-Enter) is used to execute the current input
@@ -994,6 +975,12 @@ class Shell(editwindow.EditWindow, CellCtrlBase):
             if self.CallTipActive():
                 self.CallTipCancel()
             self.view.ProcessLine()
+        #Ctrl-Return will reexecute the current input and all cells after it
+        elif controlDown and key == wx.WXK_RETURN:
+            if self.CallTipActive():
+                self.CallTipCancel()
+            self.view.ProcessLine(flag = True)
+
         #Ctrl-I inserts a text cell
         elif controlDown and key in (ord('i'),ord('I')):
             self.view.InsertText()

@@ -38,6 +38,9 @@ ID_EXIT = wx.ID_EXIT
 ID_ABOUT = wx.ID_ABOUT
 ID_EXPORT = id_iter.next()
 ID_PRINT_PREVIEW = id_iter.next()
+ID_PRINT = id_iter.next()
+ID_PAGE_SETUP = id_iter.next()
+
 
 #NBShell menu identifiers
 ID_RERUN = id_iter.next()
@@ -53,6 +56,8 @@ class ipnFrame(wx.Frame):
                   size=wx.DefaultSize, style=wx.DEFAULT_FRAME_STYLE, name="myframe"):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style, name)
+        self.easyprinting = wx.html.HtmlEasyPrinting() #used for printing
+
         
     def SetTitle(self, filename):
         """Adds the filename to the title"""
@@ -82,6 +87,8 @@ class ipnFrame(wx.Frame):
         filemenu.AppendSeparator()
         filemenu.Append(ID_EXPORT, "&Export...", "Export the notebook in a printeble format")
         filemenu.AppendSeparator()
+        filemenu.Append(ID_PAGE_SETUP, "Page Setup...")
+        filemenu.Append(ID_PRINT, "&Print...", "Print the document")
         filemenu.Append(ID_PRINT_PREVIEW, "Print P&review...", "Preview the notebook")
         filemenu.AppendSeparator()
         filemenu.Append(ID_EXIT, "E&xit", "Terminate the program")
@@ -91,7 +98,9 @@ class ipnFrame(wx.Frame):
         wx.EVT_MENU(self, ID_SAVE, self.OnSave)
         wx.EVT_MENU(self, ID_SAVEAS, self.OnSaveAs)
         wx.EVT_MENU(self, ID_EXPORT, self.OnExport)
-        wx.EVT_MENU(self, ID_PRINT_PREVIEW, self.OnPreview)
+        wx.EVT_MENU(self, ID_PAGE_SETUP, lambda evt:self.OnPrint(evt,2))
+        wx.EVT_MENU(self, ID_PRINT, lambda evt:self.OnPrint(evt,0))
+        wx.EVT_MENU(self, ID_PRINT_PREVIEW, lambda evt:self.OnPrint(evt,1))
                     
         nbshellmenu = wx.Menu()
         nbshellmenu.Append(ID_RERUN, "&Rerun", "Rerun the notebook")
@@ -230,22 +239,28 @@ class ipnFrame(wx.Frame):
                 dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
                 dlg.ShowModal()
                 raise #dbg
-
-    def OnPreview(self,evt = None):
+            
+    def OnPrint(self, evt = None, type = 0):
+        
+        tmpfile = os.tmpnam()+'.html'
         try:
-            self.app.document.Export('tmp','html')
+            self.app.document.Export(tmpfile,'html')
         except Exception, inst:
             dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
             dlg.ShowModal()
             raise #dbg
-        
-        printout = wx.html.HtmlPrintout()
-        printout.SetHtmlFile('tmp.html')
-        preview = wx.PrintPreview(printout, printout)
-        frame = wx.PreviewFrame(preview, self, 'Print Preview')
-        frame.Initialize()
-        frame.Show()
-        
+
+        if type == 0:
+            self.easyprinting.PrintFile(tmpfile)
+        elif type == 1:
+            self.easyprinting.PreviewFile(tmpfile)
+        elif type == 2:
+            self.easyprinting.PageSetup()
+        else:
+            os.remove(tmpfile)
+            raise NotImplementedError
+        os.remove(tmpfile)
+
     def OnRerun(self,evt = None):
         self.app.document.Rerun()
     

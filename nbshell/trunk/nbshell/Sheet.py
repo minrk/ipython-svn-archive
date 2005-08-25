@@ -160,7 +160,7 @@ class Sheet(object):
         if output:
             logs = self.doc.logs
             for logid in logs.keys():
-                for cell in (notebook.Cell(x) for x in logs[logid].log):
+                for cell in logs[logid].newlog:
                     self.UpdateOutput(logid, cell, update = False)
         if update:
             self.view.Freeze()
@@ -410,9 +410,10 @@ class Sheet(object):
         #We only need to set self.last
         self.element = self.notebook.default_sheet()
         textelem = etree.Element('para')
-        textelem.text =\
+        textelem.text =\ 
 """ This is a temporary message, until I write proper help.
-Please use Return to insert new lines and Shift-Return to execute inputs. """
+Please use Return to insert, Shift-Return to execute inputs and Ctrl-Return to
+reexecute an input and all inputs that follow. """
         self.element[0:0] = [textelem]
         # Now remove the old sheet and replace it with the new one
         oldsheet = self.notebook.root.find('sheet')
@@ -712,18 +713,18 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
         return retvalue
 #            self.__update_list(blocklist)
 
-    def ReplaceCells(self, logid, oldcell, newcell, update = True):
-        """Changes all the <ipython-cell type=..., number=oldcell.number> elements to
-        elements with number=newcell.number. """
+    def ReplaceCells(self, logid, oldnum, newnum, update = True):
+        """Changes all the <ipython-cell type=..., number=oldnum> elements to
+        elements with number=newnum. """
         
         #TODO: The algorithm here could be faster.
         
         types = ['input', 'special', 'stdout', 'stderr', 'output','traceback']
         for type in types:
-            val = self.cell2sheet.get((logid, oldcell.number, type),[])
+            val = self.cell2sheet.get((logid, oldnum, type),[])
             for (block,pos) in val:
-                block.element[pos].attrib['number'] = str(newcell.number)
-                block.cells[pos] = newcell
+                block.element[pos].attrib['number'] = str(newnum)
+                block.cells[pos] = self.doc.logs[logid].newlog[newnum]
         self.Update(update, dicts = True)
 
     def InsertText(self, block, pos, update = True):
@@ -815,3 +816,43 @@ Please use Return to insert new lines and Shift-Return to execute inputs. """
             return list[0]
         else:
             return None
+        
+    def RerunCells(self, logid, cells, update = True):
+        """This method reruns the list of cells 'cells' from the log with id =
+        'logid'. The order of which cells are rerun is the order they are in
+        the list, not the order of their numbers.The numbers of each cell are
+        changed to be larger than the last number in the log before the method
+        is run."""
+
+        log = self.doc.logs[logid]
+        oldlast = log.last
+        #Delete the last input in the log. We'll add it again later
+        log.ClearLastInput()
+
+        newcells = []
+        number = default(lambda:log.lastcell.number, -1) + 1
+        #Make the new cells
+        for cell in cells:
+            #TODO: Add special input support here
+            log.Append(input=cell.input)
+            newcells.append(log.lastcell)
+            
+        #Now run them
+        log.Run(number = number)
+        
+        #Replace the cells in the sheet with the new ones
+        #Restore the last cell and replace the last cell in the sheet
+        if oldlast:
+            log.SetLastInput()
+            if self.last:
+                self.ReplaceCells(logid,number, log.lastcell.number, update = False)
+        for (i, cell) in enumerate(cells):
+            #Replace this cell with the new one
+            self.ReplaceCells(logid, cell.number, newcells[i].number, update = False)
+            #Remove the old cell
+            log.newlog.remove(cell.number)
+            #Update the sheet's outputs
+            self.UpdateOutput(logid, newcells[i], update = False)
+        
+        self.Update(update)
+

@@ -81,7 +81,7 @@ class Cell(object):
         #note: this does not update the cell index in the log!
         #so probably currently is safe only in the constructor, which is
         #given the index number by the Log.add <- Notebook.add_cell methods
-    number = property(get_number, set_number)
+    number = property(get_number,set_number)
 
     def get_input(self, do_specials=False):
         raise RuntimeError, "unimplemented"
@@ -134,8 +134,7 @@ class Log(object):
         if isinstance(position, slice):
             if position.start != position.stop:
                 """Filters out None cells"""
-                return [self._cells[i] for i in slicerange(position)
-                        if self._cells[i] is not None]
+                return [x for x in self._cells[position] if x is not None]
                 #retrieves _cells[i] twice but probably still pretty fast
             #if this is bad or slow can be also removed and let users filter
         return self._cells[position]

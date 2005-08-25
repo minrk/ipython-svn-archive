@@ -1,4 +1,10 @@
+08.25.2005
+	* Added printing support
 
+	* Added support for exporting notebooks using nbdoc
+
+	* Ctrl-Enter now reruns the current cell and all cells after it
+	
 08.22.2005
 	* Changed NewCell to Cell to match the cleanup in nbdoc --antont
 

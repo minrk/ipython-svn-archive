@@ -38,10 +38,10 @@ from nbshell.plotting_backends import matplotlib_backend as backend
 
 class IPythonLog(object):
     def __init__(self, doc, nbk, logid, *args, **kwds):
-        print 'sys.path[0] ->',sys.path[0] #dbg
         self.doc = doc
         self.notebook = nbk
         self.log = nbk.get_log(logid) 
+        self.newlog = nbk.newget_log(logid)
         self.logid = logid
         self.last = False
         self._lastcell = None #used by self.lastcell
@@ -83,7 +83,7 @@ ion()
 """, number = 0)
             self.Run()
         elif self.log[0].attrib['number'] == '0':
-            self.__run(notebook.Cell(self.log[0]))
+            self.__run(self.Get(0))
 
         #Append the empty element at the end
         self.SetLastInput()
@@ -133,7 +133,7 @@ ion()
     def ClearLastInput(self):
         """Clear the empty input at the end of the log."""
         if self.last:
-            del(self.log[-1])
+            self.newlog.remove(self.newlog[-1].number)
             self.last = False
     
     lastcell = property(fget = lambda self:self.notebook.get_last_cell(self.logid))
@@ -176,10 +176,9 @@ ion()
             self.lastcell.output = output
         return self.lastcell
     
-    def Remove(self, cell):
-        """Removes the given cell from the log. cell is an object of type
-        Cell"""
-        self.log.remove(cell.element)
+    def Remove(self, number):
+        """Removes the cell with the given number from the log."""
+        self.newlog.remove(number)
         
     def Clear(self):
         self.log.clear()
@@ -194,7 +193,7 @@ ion()
         
     def Get(self, number): 
         """Returns the cell with the given number"""
-        return notebook.Cell(self.notebook.get_cell(number = number, logid = self.logid))
+        return self.notebook.get_cell(number = number, logid = self.logid)
         
     def Run(self, number = None):
         """ This method will run the code in all cells with numbers larger or
@@ -204,11 +203,7 @@ ion()
         
         if number == None:
             return self.__run(self.lastcell)
-        expr = '//cell[@number>=%d]'%(number,)
-        #print expr #dbg
-        cells = sorted((notebook.Cell(x) for x in self.log.xpath(expr)), key =
-                       lambda x:x.number)
-                
+        cells = self.newlog[int(number):]
         for cell in cells:
             if not self.__run(cell):
                 return False

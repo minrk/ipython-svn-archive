@@ -56,6 +56,7 @@ def getiterator2(root):
 def default(func, default = None):
     """If func throws an exception returns default, else returns the result of
     the function"""
+    assert callable(func)
     try:
         res = func()
     except:
