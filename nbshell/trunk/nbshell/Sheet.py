@@ -410,7 +410,7 @@ class Sheet(object):
         #We only need to set self.last
         self.element = self.notebook.default_sheet()
         textelem = etree.Element('para')
-        textelem.text =\ 
+        textelem.text =\
 """ This is a temporary message, until I write proper help.
 Please use Return to insert, Shift-Return to execute inputs and Ctrl-Return to
 reexecute an input and all inputs that follow. """

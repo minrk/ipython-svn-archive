@@ -15,7 +15,7 @@ def _decorate(lines, startlineno, errlineno, errcolumn, errmsg):
     declines.insert(errlineno, ' '*(7+errcolumn-1) + ('^- %s\n' % errmsg)) 
     return ''.join(declines)
 
-def _report(e):
+def _report(e, lines):
     errlines = lines[e.lineno-3:e.lineno+2]
     return _decorate(errlines, e.lineno-2, 3, e.offset,
                     expat.ErrorString(e.code))
@@ -36,7 +36,7 @@ def iscleanFile(filename):
     try:
         parser.ParseFile(f)
     except expat.ExpatError, e:
-        print _report(e)
+        print _report(e, lines)
         return False
 
     print "No syntax errors found!"
@@ -48,7 +48,7 @@ def check_errors(xmldata):
     try:
         parser.Parse(xmldata)
     except expat.ExpatError, e:
-        return _report(e)
+        return _report(e, xmldata) #should be lines somehow
     else:
         return None #no errors
     

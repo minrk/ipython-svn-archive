@@ -41,12 +41,17 @@ class IPythonLog(object):
         self.doc = doc
         self.notebook = nbk
         self.log = nbk.get_log(logid) 
-        self.newlog = nbk.newget_log(logid)
-        self.logid = logid
+        self.logid = logid #this is also self.log.id
         self.last = False
         self._lastcell = None #used by self.lastcell
+
         #Here I will sort the cells, according to their numbers
-        self.log[:] = sorted(self.log, key = lambda x:int(x.attrib['number']))
+        self.log.element[:] = sorted(self.log, key = lambda x:int(x.attrib['number']))
+        #XXX modifies the xml element(tree) that nb Log wraps so it may be bad
+        #then again, as log.cells is a list (array),
+        #as far as i can see the elements are always sorted already
+        #(so that sorting never does anything in the current impl, right?)
+        
         #Set up plotting
         self.plot_api = backend.PlotLibraryInterface(self.filename_iter())
         #Set up the interpreter
@@ -82,7 +87,7 @@ switch_backend('WXAgg')
 ion()
 """, number = 0)
             self.Run()
-        elif self.log[0].attrib['number'] == '0':
+        elif self.log[0].number == '0':
             self.__run(self.Get(0))
 
         #Append the empty element at the end
@@ -133,7 +138,7 @@ ion()
     def ClearLastInput(self):
         """Clear the empty input at the end of the log."""
         if self.last:
-            self.newlog.remove(self.newlog[-1].number)
+            self.log.remove(self.log[-1].number)
             self.last = False
     
     lastcell = property(fget = lambda self:self.notebook.get_last_cell(self.logid))
@@ -178,7 +183,7 @@ ion()
     
     def Remove(self, number):
         """Removes the cell with the given number from the log."""
-        self.newlog.remove(number)
+        self.log.remove(number)
         
     def Clear(self):
         self.log.clear()
@@ -203,7 +208,7 @@ ion()
         
         if number == None:
             return self.__run(self.lastcell)
-        cells = self.newlog[int(number):]
+        cells = self.log[int(number):]
         for cell in cells:
             if not self.__run(cell):
                 return False

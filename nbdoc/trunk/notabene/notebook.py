@@ -53,19 +53,10 @@ class SubelemSetter(SubelemWrapper):
 
 
 class Cell(object):
-    def __init__(self, element):
-        #to be replaced by newinit
-        self.element = element
-
-    @classmethod
-    def newinit(cls, parent, number):
-        #__init__ will have this signature
-        #(if/)when nbshell does not suppose the current anymore,
+    def __init__(self, parent, number):
         #note: parent is a Log object, which has the 'root' as .element
-        element = ET.SubElement(parent.element, 'cell')
-        instance = cls(element)
-        instance.number = number #sets the xml too via the property
-        return instance
+        self.element = ET.SubElement(parent.element, 'cell')
+        self.number = number #sets the xml too via the property
 
     input  = property(SubelemGetter('input'),  SubelemSetter('input'))
     output = property(SubelemGetter('output'), SubelemSetter('output'))
@@ -94,12 +85,6 @@ class Cell(object):
                 yield ET.Element('ipython-cell', type=tag,
                                  number=str(self.number))
 
-def slicerange(s):
-    #from http://inamidst.com/code/listdict.py for Log.__getitem
-    if (not isinstance(s, slice)) or (s.start == s.stop): 
-        raise ValueError("Expected non-zero sized slice object")
-    return xrange(s.start, s.stop, s.step or 1)
-
 class Log(object):
     #one on the nbshell side there's IPythonLog
     #and we've talked about moving (parts of it) here
@@ -113,8 +98,7 @@ class Log(object):
 
     def add(self, number):
         if number == len(self._cells): #is to be put at the end
-            #cell = Cell(self, number) #use this when nbshell is refactored
-            cell = Cell.newinit(self, number) #temporary for transition
+            cell = Cell(self, number) #use this when nbshell is refactored
             self._cells.append(cell) #always adds to end
             #self.element.append(cell.element) #already became a subelement
             #seems that that append call would have no effect.
@@ -132,11 +116,8 @@ class Log(object):
 
     def __getitem__(self, position):
         if isinstance(position, slice):
-            if position.start != position.stop:
-                """Filters out None cells"""
-                return [x for x in self._cells[position] if x is not None]
-                #retrieves _cells[i] twice but probably still pretty fast
-            #if this is bad or slow can be also removed and let users filter
+            """Filters out None cells"""
+            return [cell for cell in self._cells[position] if cell is not None]
         return self._cells[position]
 
     def __len__(self):
@@ -156,6 +137,10 @@ class Log(object):
         else:
             self._cells[number] = None #XXX these gaps not handled everywhere
         self.element.remove(cell.element)
+
+    def clear(self):
+        self.element.clear()
+        self._cells = []
 
 #from notes, regarding Sheet.InsertElement and related dict
 # <@tzanko> well in the sheet i store a dictionary Sheet.cell2sheet
@@ -253,7 +238,7 @@ class Notebook(object):
         self.logs[id] = log
         return log
 
-    def get_log(self, logid='default-log'):
+    def oldget_log(self, logid='default-log'):
         #elems = self.root.xpath('./ipython-log[@id="%s"]' % logid)
         #if elems:
         #    return elems[0]
@@ -265,7 +250,7 @@ class Notebook(object):
         else:
             raise ValueError('No log with id="%s"' % logid)
 
-    def newget_log(self, logid='default-log'):
+    def get_log(self, logid='default-log'):
         #useful for getting a default log without id,
         #even if/when self.logs is exposed for id-using getting of logs.
         #to replace current get_log when that is not used anymore

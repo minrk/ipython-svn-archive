@@ -94,13 +94,10 @@ def test_sheet():
     """Now the newly created sheet should be the current one:"""
     assert nb.sheet is sheet
 
-def test_cell(elem=None, number=1):
-    #should the Cell constructor take care of the xml too?
-    #or perhaps make an add_cell to notebook?
-    if elem is None:
-        elem = etree.Element('cell', number=str(number))
-        
-    cell = Cell(elem)
+def test_cell(notebook=None):
+    if notebook is None:
+        notebook = test_new()
+    cell = notebook.add_cell()
     return cell
     
 def OLDtest_log():
@@ -195,8 +192,8 @@ def OLDtest_log():
 
 def test_log():
     nb = test_new() #adds a default log
-    logelement = nb.get_log() #old way, to be removed?
-    log = nb.newget_log()
+    #logelement = nb.get_log() #old way, to be removed?
+    log = nb.get_log()
 
     #using the default log via notebook methods
     py.test.raises(IndexError, "nb.get_cell(1)") #should not create anymore
@@ -209,7 +206,6 @@ def test_log():
     #multiple log support
     assert py.test.raises(ValueError, "nb.get_log('log2')") #nonexisting
     log2 = nb.add_log('log2')
-    assert log2.element is nb.get_log('log2') #backwards compat. for nbshell
     assert log2 is nb.logs['log2'] #this is how Notebook does internally.
                                    #ok to expose to outside too?
     cell20 = nb.add_cell(0, 'log2')
