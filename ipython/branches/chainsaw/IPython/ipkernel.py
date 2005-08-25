@@ -1,8 +1,10 @@
 import cPickle as pickle
 
-from twisted.internet import protocol, reactor, threads
+from twisted.internet import protocol, reactor, threads, defer
 from twisted.protocols import basic
 from twisted.mail.imap4 import LiteralString
+from twisted.python import log
+import sys
 
 from ipic import QueuedInteractiveConsole
 
@@ -14,6 +16,9 @@ class LiteralString:
         self.defer = defered
 
     def write(self, data):
+        print "writing", data, len(data), type(data)
+        for d in data:
+            print d
         self.size -= len(data)
         passon = None
         if self.size > 0:
@@ -25,19 +30,19 @@ class LiteralString:
                 passon = ''
             if data:
                 self.data.append(data)
-            if passon:
+            if passon == '':
                 self.defer.callback(''.join(self.data))
         return passon
 
 class IPythonTCPProtocol(basic.LineReceiver):
 
     def connectionMade(self):
-        print "Connection Made..."
+        log.msg("Connection Made...")
         self.state = 'init'
         self.work_vars = {}
         
     def lineReceived(self, line):
-        print "Line Received: ", line
+        print "Line Received: ", line, self.state
         split_line = line.split(" ", 1)
         if len(split_line) == 1:
             cmd = split_line[0]
@@ -68,13 +73,17 @@ class IPythonTCPProtocol(basic.LineReceiver):
                     f(line)
                 else:
                     # No handler resolved
-                    pass
+                    self.sendLine("BAD")
+                    self.state = 'init'
+                    self.reset_work_vars()
 
     # Copied from twisted.mail.imap4
     def rawDataReceived(self, data):
+        print "In rawDataReceived"
         passon = self._pendingLiteral.write(data)
+        print "passon = ", passon
         if passon is not None:
-            self.setLineMode(passon)
+            self.setLineMode(passon) # should I reset the state here?
         
     def reset_work_vars(self):
         self.work_vars = {}
@@ -94,34 +103,44 @@ class IPythonTCPProtocol(basic.LineReceiver):
             self.work_vars['current_ticket'] = self.factory.get_ticket()
         else:
             self.push_finish('FAIL')
-    
-    def handle_pushing_PICKLE(self, size):
+
+    def setup_literal(self, size):
+        """Called by data command handlers."""
         d = defer.Deferred()
         self.state = 'pending'
         self._pendingLiteral = LiteralString(size, d)
         self.setRawMode()
-        d.addCallback()
+        return d        
 
     def push_finish(self,msg):
         self.sendLine("PUSH %s" % msg)
         self.state = 'init'
         self.reset_work_vars()
-                        
-    def process_pickling(self, package):
+    
+    def handle_pushing_PICKLE(self, size_str):
+        print "Handling pushing PICKLE", size_str
+
         try:
-            data = pickle.loads(package)
-        except pickle.PickleError:
+            size = int(size_str)
+        except (ValueError, TypeError):
             self.push_finish("FAIL")
         else:
-            # Queue the data using self.push_name
-            print "Received data: ", data
-            self.factory.push(self.work_vars['push_name'],
-                data, self.work_vars['current_ticket'])
-            # forward the data on if self.push_forward
-            if self.work_vars['push_forward']:
-                pass
-                    
-            self.push_finish("OK")
+            d = self.setup_literal(size)
+        
+            def process_pickle(package):
+                try:
+                    data = pickle.loads(package)
+                except pickle.PickleError:
+                    self.push_finish("FAIL")
+                else:
+                    print "Received data: ", data
+                    # What if this fails?
+                    self.factory.push(self.work_vars['push_name'],
+                        data, self.work_vars['current_ticket'])
+                     
+                    self.push_finish("OK")
+       
+            d.addCallback(process_pickle)
 
     ##### The PULL command
 
@@ -130,15 +149,12 @@ class IPythonTCPProtocol(basic.LineReceiver):
         if args:
             split_args = args.split(" ")
             pull_name = split_args[0]
-            if pull_name == "STDOUT":
+            if pull_name == "COMMAND":
                 # Handle an STDOUT request
-                self.sendLine("STDOUT stdout")
+                self.sendLine("COMMAND stdout")
+                self.transport.write("pickled tuple")
                 self.sendLine("PULL OK")
-            elif pull_name == "STDERR":
-                # Handle an STDERR request
-                self.sendLine("STDERR stderr")
-                self.sendLine("PULL OK")
-            else:
+             else:
                 # All other pull request are from the kernel's namespace
                 self.work_vars['current_ticket'] = self.factory.get_ticket()
                 d = self.factory.pull(pull_name, 
@@ -146,8 +162,9 @@ class IPythonTCPProtocol(basic.LineReceiver):
 
                 def pull_ok(result):
                     # Add error code here and chain the callbacks
-                    presult = pickle.dumps(result, 1)
-                    self.sendLine("PICKLE %s" % presult)
+                    presult = pickle.dumps(result, 2)
+                    self.sendLine("PICKLE %s" % len(presult))
+                    self.transport.write(presult)
                     self.sendLine("PULL OK")
                                         
                 def pull_fail(failure):
@@ -187,7 +204,7 @@ class IPythonTCPProtocol(basic.LineReceiver):
         self.sendLine('EXECUTE OK')
         
         # These callbacks are used to return stdout and stderr
-        # on a different channel if needed
+        # on a different channel.
         def execute_ok(result):
             pass     
         def execute_fail(failure):
@@ -241,6 +258,7 @@ class IPythonTCPFactory(protocol.ServerFactory):
         return self.qic.get_ticket()
         
     def push(self, key, value, ticket=None):
+        print "Pushing into the namespace"
         self.qic.push(key, value, ticket)
         
     def pull(self, key, ticket):
@@ -256,6 +274,8 @@ class IPythonTCPFactory(protocol.ServerFactory):
         
     def reset(self):
         self.qic.reset()
+        
+log.startLogging(sys.stdout)
         
 reactor.listenTCP(10104, IPythonTCPFactory())
 reactor.run()
