@@ -63,9 +63,19 @@ only the communications that absolutely need to be secure.
     the client with a disconnect command.  A UDP session consists of a single
     client command and server response.  
     
-    All interactions transmitted by the client and server consist of strings
-    prefixed with a binary encoded 32 bit integer that specifies the length of
-    the string.  The integer is encoded in network byte order.
+    Most interactions transmitted by the client and server consist of strings
+    terminated by CR LF.  The exception is when a data command has been given.
+    Raw data can be sent after a data command has been given and the data
+    command will determine the size and format of the raw data.
+    
+    Client commands must be completed before the client initiates a new
+    command.  If, for some reason, the server does not respond to a client
+    command, the client should issue a STATUS command and have the server
+    change the state back to init.  Then the client can proceed with a new
+    command.
+    
+    If a command cannot be parsed by the server, the server should give a
+    response of BAD and reset its state.
 
 2.      Server States
 
@@ -105,6 +115,10 @@ only the communications that absolutely need to be secure.
     an integer specifying the length of the data.  The data, in whatever
     format, is sent after the line giving the data command.
     
+    If the data command is being issued over a UDP port, the must
+    arrive on the same line as the command and the receiver must reply
+    with an OK.  
+    
 3.1.    PICKLE Command
 
     Arguments: number of bytes to be send
@@ -131,19 +145,32 @@ only the communications that absolutely need to be secure.
 
     Arguments: number of bytes
 
-        The STDOUT command is used to send the standard output of a command
-        executed by the kernel.  Currently STDOUT is just a string.
+        The COMMAND command is used to transmit the stdin, stdout and stderr 
+        of a command executed by the kernel.  These strings should be sent
+        in a pickled 3-tuple (stdin, stdout, stderr).
+        
+        The COMMAND command is always given by the server and can be issued
+        in two contexts.  First, COMMAND can be given to a client over a
+        connected TCP channel in response to a PULL COMMAND command.  This
+        is for the client to request a specific command's results.
+        
+        Second, COMMAND will be issued by the server when the kernel complete's
+        executing python code in its namespace.  These commands can come
+        at any time and must arrive on a second communications channel.  This
+        is done so that frontends can monitor the progress of a group of 
+        kernel's without being connected to them.  It also makes it possible
+        to write both blocking and non-blocking frontends.
+        
+        The server will send these commands to all client added via the
+        NOTIFYIP command.
+        
+        This channel will probably be a UDP channel because it is fast!  
+        
+    Examples:
         
         S: COMMAND 10 ip:port
         S: rawdaya
         
-3.4.    STDERR Command
-
-    Arguments: number of bytes
-
-        The STDERR command is used to send the standard output of a command
-        executed by the kernel.  Currently STDERR is just a string.  Eventually
-        the string will contain markup tags that can be used for colorization.
                     
 4.      Client Commands
 
@@ -179,7 +206,8 @@ only the communications that absolutely need to be secure.
         S: PUSH OK
         
         C: PUSH b
-        C: ARRAY asdf[2j4[09j8sd;lkm209
+        C: ARRAY 30
+        C: asdf[2j4[09j8sd;lkm209
         S: PUSH OK
     
         
