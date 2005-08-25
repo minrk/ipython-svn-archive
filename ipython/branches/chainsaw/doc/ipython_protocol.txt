@@ -1,0 +1,270 @@
+IPython Protocol
+
+This document describes the network protocol used by IPython to communicate
+with  instances of the IPython kernel over a network.  The IPython kernel is
+a multithreaded and queued python interpreter that gets commands from network
+ports rather than from a local interactive prompt.  This network protocol 
+enables python objects and python commands to be sent to and from instances of the IPython kernel.  The protocol also provides capabilities for remote 
+debugging command completion in the kernel's namespace and other kernel
+management functions.
+
+In many ways the IPython kernel is a network server in the classic sense.  
+It listens on network ports and responds to commands that come from clients 
+on those ports.  On the other hand, the kernel can also act as the "client" 
+for other instances of the kernel.  That is, in addition to listening on network
+ports, the kernel can also initiate network connections with other listening 
+kernels.  Because of this, some care must be used when talking about the
+"server" and the "client."  In this document, the client is always the party
+initiating the connection, and could itself be an IPython kernel instance.
+Likewise, the server is the passive party listening for and responds to the
+client's connection.
+
+It is worth mentioning why a custom protocol is being designed for this purpose
+when there are a number of other general protocols such as XML-RPC that could be 
+used.  Probably the most important reason is flexibility.  When the kernel is
+being run over the network it is often necessary to transmit python objects 
+back and forth to the kernel.  While much of this can be done by pickling 
+the objects and sending them as strings, we would like to have the option to
+send objects in other formats, including raw binary data.  Additionally, when
+the objects being send are large, we wish to avoid the overhead of copying them
+into an XML structure.  Designing a custom protocol gives the flexibility to
+deal with all of these issues.  Another reason to design a custom protocol is 
+the need to optimize simultaneous communications with multiple kernels.  This
+functionality is needed to perform efficient parallel computations with
+multiple instances of the IPython kernel.  Having a custom network protocol
+enables us to exploring many ways of optimizing these types of communications.
+One option is to have certain commands send using UDP, so that multicasting and
+broadcasting can by used.  Finally, there are security reasons to design a 
+custom protocol.  While it would be possible to encrypt all communications with
+the kernel this solution is not acceptable for performance reasons.
+The idea is to provide multiple communication channels, some of which are secure
+and some of which are insecure.  This will give us the flexibility to lock down 
+only the communications that absolutely need to be secure.
+
+1.      Protocol Overview
+
+1.1.    Link Level
+
+    The IPython kernel protocol uses both TCP and UDP sockets.  Communications
+    with the kernel are organized into channels.  These channels represent
+    either TCP connections or connectionless UDP sockets.  The kernel will 
+    typically have multiple channels running at a given time.  For example
+    python objects might be sent over a TCP connection, while small strings
+    representing python commands could be send over UDP.
+    
+    This model of multiple channels is used to provide the maximum flexibility
+    in optimizing performance and security.  
+    
+1.2.    Commands and Responses
+
+    Communications between a client and server over a given channel
+    are organized into sessions.  A TCP based session consists of one or more 
+    client commands and server responses.  A TCP based session is terminated by
+    the client with a disconnect command.  A UDP session consists of a single
+    client command and server response.  
+    
+    All interactions transmitted by the client and server consist of strings
+    prefixed with a binary encoded 32 bit integer that specifies the length of
+    the string.  The integer is encoded in network byte order.
+
+2.      Server States
+
+    The server can be in a number of different states.  These states
+    determine what client commands can be issued.
+    
+2.1.    The init state
+
+    When a session begins the server is in the init state.  This state
+    signifies that the server is ready to receive a client command.  When
+    a client command/server response is completed, the server returns to
+    the init state.
+
+2.2.    Command related states
+
+    The following server states are associated with client commands:
+    
+    pulling
+    pushing
+    executing
+    moving
+    completing
+    debugging
+
+    The server enters one of these states upon receiving the associated 
+    command from the client.  The server remains in that state until the server
+    has sent its final response.
+
+3.      Data Commands
+
+    When the server is in certain states, data commands can be issued by the 
+    server or client.  These commands are used to send data back and forth
+    in various formats.
+    
+    In all cases a data command consists of the command (like PICKLE) and 
+    the actual data.  Typically there is one arguement to a data command,
+    an integer specifying the length of the data.  The data, in whatever
+    format, is sent after the line giving the data command.
+    
+3.1.    PICKLE Command
+
+    Arguments: number of bytes to be send
+
+        The PICKLE command is used to send a pickled python object.  It is the
+        most commonly used data command.
+     
+    Examples:
+                C: PICKLE 10
+                C: datastring
+                    
+3.2.    ARRAY Command
+
+    Arguments: number of bytes
+
+        The ARRAY command is used to send a numeric array.  Currently, ARRAY
+        just pickles the array.
+        
+    Examples:
+                C: ARRAY 10
+                C: 10 bytes of binary data
+                      
+3.3.    COMMAND Command
+
+    Arguments: number of bytes
+
+        The STDOUT command is used to send the standard output of a command
+        executed by the kernel.  Currently STDOUT is just a string.
+        
+        S: COMMAND 10 ip:port
+        S: rawdaya
+        
+3.4.    STDERR Command
+
+    Arguments: number of bytes
+
+        The STDERR command is used to send the standard output of a command
+        executed by the kernel.  Currently STDERR is just a string.  Eventually
+        the string will contain markup tags that can be used for colorization.
+                    
+4.      Client Commands
+
+4.1.    PUSH Command
+
+    Arguments:  name
+                FORWARD
+
+    Responses:  none
+                
+    Result:     OK - push completed
+                FAIL - object could not be handled or insufficient memory
+                
+        Sends a python object to a server.  The data sent is loaded into the
+        namespace of the server with the name given in the name argument.  After
+        the client sends the PUSH command, the client must then send the data
+        using a data command.
+        
+        If the FORWARD argument is given, the data will be forwarded to
+        the server's list of forwarders as well.  The forwarders are other
+        instances of the IPython kernel.  These are given to the server using
+        the FORWARDTO command.  This capability can be used to optimize
+        communications with large numbers of kernels.
+        
+        Server responses to PUSH commands are sent back to the client once 
+        the data has been received, handled (unpickled for example) and 
+        placed into the kernel's queue.    
+             
+    Examples:
+        C: PUSH a FORWARD 
+        C: PICKLE 25
+        C: asdf098u42oijasr09j234f'ljf
+        S: PUSH OK
+        
+        C: PUSH b
+        C: ARRAY asdf[2j4[09j8sd;lkm209
+        S: PUSH OK
+    
+        
+4.2.    PULL Command
+
+    Arguments:  variable name
+                COMMAND command#
+    
+    Responses:  none
+    
+    Result:     OK - data did exist and was sent
+                FAIL - data did not exist or could not be handled
+    
+        Gets data from the kernel.  Pull commands are always blocking.
+        The argument to PULL specifies what data is being requested.  After
+        the PULL command is given, the kernel replies with a data command and
+        then gives its final response.
+    
+    Examples:
+    
+        C: PULL a
+        S: PICKLE
+        S: send a back
+        S: PULL OK 
+        
+        C: PULL b
+        S: PULL FAIL
+        
+        C: PULL STDOUT 4
+        S: STDOUT send -it- back
+        S: PULL OK
+        
+        C: PULL STDERR 5
+        S: STDERR
+        S: send it back
+        S: PULL OK        
+
+4.3.    EXECUTE Command
+
+    Arguments:  PRINT
+                command
+    
+    Reponses:   OK
+                FAIL
+    
+    Result:
+    
+        Send a python command to the server to be executed in its namespace.
+        The server reponse is given once the command has been received and
+        placed in the server's queue.  The PRINT argument specifies if the
+        stdout of the command should be returned to the client on a different
+        or the same channel.  The important thing is that the server will
+        give the OK or FAIL response after the command is queued, but BEFORE
+        the command is executed by the kernel.
+                    
+    Examples:
+    
+        C: EXEC a = 5 + 3  
+        S: EXEC OK
+        
+        C: EXEC PRINT scipy.test()
+        
+4.4.    MOVE Commmand
+
+    The MOVE command has the server initiate a PUSH command with another IPython
+    kernel instance.  This is used to have one kernel send a python object
+    to another kernel.
+
+4.5.    COMPLETE Command
+    
+4.5.    VALIDATEIP Command
+
+4.6.    FORWARDTO Command
+
+4.7.    STATUS Command
+    
+4.8.    RESET Command
+    
+4.9.    KILL Command
+    
+4.10.   DISCONNECT Command
+
+5. Server Responses
+
+    On certain communications channels, the server can issue commands.  These
+    commands will typically be to send the stdout or stderr of a kernel executed
+    command to the client.  This needs to be filled in.
+
