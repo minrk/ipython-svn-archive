@@ -59,7 +59,11 @@ class IPythonTCPProtocol(basic.LineReceiver):
         log.msg("Connection Made...")
         self.state = 'init'
         self.work_vars = {}
-        
+        peer = self.transport.getPeer()
+        if not self.factory.is_validated(peer.host):
+            log.msg("Invalidated Client: %s" % peer.host)
+            self.transport.loseConnection()
+            
     def lineReceived(self, line):
         print "Line Received: ", line, self.state
         split_line = line.split(" ", 1)
@@ -302,11 +306,11 @@ class IPythonTCPProtocol(basic.LineReceiver):
 class IPythonTCPFactory(protocol.ServerFactory):
     protocol = IPythonTCPProtocol
     
-    def __init__(self):
+    def __init__(self, validate=[], notify=[]):
         self.qic = QueuedInteractiveConsole()
         self.qic.start_work()
-        self._notifiers = []
-        self._validated_clients = []
+        self._notifiers = notify
+        self._validated_clients = validate
         
     def notifiers(self):
         return self._notifiers
@@ -358,5 +362,5 @@ class IPythonTCPFactory(protocol.ServerFactory):
         
 log.startLogging(sys.stdout)
         
-reactor.listenTCP(10104, IPythonTCPFactory())
+reactor.listenTCP(10104, IPythonTCPFactory(validate=['127.0.0.1']))
 reactor.run()
