@@ -64,12 +64,16 @@ def default(func, default = None):
     return res
 
 def ifelse(expr1, expr2, expr3):
-    """If expr1 is True returns expr2(), else returns expr3(). expr2 and expr3
-    are functions. To use ifelse for regular expressions use:
-        ifelse(expr1, lambda:expr2, lambda:expr3)"""
-    #This ensures that ifelse(1, lambda:None, lambda:2) will return None, not 2
-    #expr2 and expr
-    return ((expr1) and (expr2(),) or (expr3(),))[0]
+    """If expr1 is True returns expr2, else returns expr3. If expr2 and expr3
+    are callables, calculates expr2() and expr3() and returns their values
+    instead. The advantage of the second type of parameters is than only one of expr2() and expr3()
+    will be evaluated, so for example:
+    ifelse(len(a)>0, lambda:a[0], -1) will not throw an exception"""
+    if expr1:
+        #This ensures that ifelse(1, lambda:None, lambda:2) will return None, not 2
+        return (callable(expr2) and (expr2(),) or (expr2,))[0]
+    else:
+        return (callable(expr3) and (expr3(),) or (expr3,))[0]
 
 def accumulate(function, sequence, start = None, end = None):
     """'function' is a two parameter function. Returns

@@ -263,7 +263,22 @@ class ipnFrame(wx.Frame):
 
     def OnRerun(self,evt = None):
         dlg = RerunDlg.RerunDialog(self, -1, 'Choose what to rerun')
-        dlg.ShowModal()
+        if dlg.ShowModal() == wx.ID_CANCEL:
+            return
+        choice = dlg.choice
+        log = self.app.document.logs[dlg.logid]
+        sheet = self.app.document.sheet
+        if choice == 0: #Rerun all cells
+            log.Reset()
+            log.Run(0)
+            sheet.Update(update = True, output = True)
+        elif choice == 1: #Rerun a slice of cells
+            print dlg.slice
+            sheet.RerunCells(dlg.logid, log.log[dlg.slice], update = True)
+        else: #Rerun a list of cells
+            sheet.RerunCells(dlg.logid, 
+                             filter(lambda x:x is not None,[log.log[i] for i in dlg.list]),
+                             update = True)
         #self.app.document.Rerun()
     
     def OnInsertText(self, evt = None):

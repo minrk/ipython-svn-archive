@@ -828,7 +828,11 @@ reexecute an input and all inputs that follow. """
         log = self.doc.logs[logid]
         oldlast = log.last
         #Delete the last input in the log. We'll add it again later
-        log.ClearLastInput()
+        if oldlast:
+            #if the last cell is in cells, remove it
+            lastcell = log.lastcell
+            cells = [x for x in cells if x != lastcell]
+            log.ClearLastInput()
 
         newcells = []
         number = default(lambda:log.lastcell.number, -1) + 1
@@ -851,7 +855,10 @@ reexecute an input and all inputs that follow. """
             #Replace this cell with the new one
             self.ReplaceCells(logid, cell.number, newcells[i].number, update = False)
             #Remove the old cell
-            log.Remove(cell.number)
+            try:
+                log.Remove(cell.number)
+            except:
+                pass #If a cell wal alreafy removed we don't mind
             #Update the sheet's outputs
             self.UpdateOutput(logid, newcells[i], update = False)
         

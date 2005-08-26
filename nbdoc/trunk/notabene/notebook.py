@@ -54,6 +54,8 @@ class SubelemSetter(SubelemWrapper):
                 raise
             else:
                 element.text = text
+        else:
+            element.text = text
 
 
 class Cell(object):
@@ -126,7 +128,10 @@ class Log(object):
         if isinstance(position, slice):
             """Filters out None cells"""
             return [cell for cell in self._cells[position] if cell is not None]
-        return self._cells[position] #may return None. perhaps useful (to nbshell) like that.
+        try:
+            return self._cells[position]
+        except:
+            return None
 
     def __len__(self):
         return len(self._cells) #includes Nones i.e. is not the actual amount of cells. Notebook.add_cell uses this currently to check if addition is to the end of the list, so this can't be just changed to filter Nones out
@@ -138,6 +143,9 @@ class Log(object):
 
     def remove(self, number):
         cell = self._cells[number]
+        if cell is None:
+            raise IndexError
+        
         if cell is self._cells[-1]: #if is last element
             self._cells.pop() #remove
             while self._cells[-1] is None: #if the previous, next. prev etc
