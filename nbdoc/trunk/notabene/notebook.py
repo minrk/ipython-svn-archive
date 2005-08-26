@@ -37,22 +37,29 @@ class SubelemWrapper:
 class SubelemGetter(SubelemWrapper):
     """a template for getter functions to wrap an xml element"""
     def __call__(self, ob):
-        in_element = ob.element.find(self.propname)
-        if in_element is not None:
-            return in_element.text
+        element = ob.element.find(self.propname)
+        if element is not None:
+            return element.text
         else:
             return None
 
 class SubelemSetter(SubelemWrapper):
     """a template for setter functions to wrap an xml element"""
     def __call__(self, ob, text): #now only works for setting text
-        in_element = ob.element.find(self.propname)
-        if in_element is None:
-            in_element = ET.SubElement(ob.element, self.propname)
-        in_element.text = text
+        element = ob.element.find(self.propname)
+        if element is None:
+            try:
+                element = ET.SubElement(ob.element, self.propname)
+            except XMLSyntaxError:
+                raise
+            else:
+                element.text = text
 
 
 class Cell(object):
+    #def __new__(
+    #to check from logid & number if already exists
+    
     def __init__(self, parent, number):
         #note: parent is a Log object, which has the 'root' as .element
         self.element = ET.SubElement(parent.element, 'cell')
@@ -75,6 +82,7 @@ class Cell(object):
     number = property(get_number,set_number)
 
     def get_input(self, do_specials=False):
+        #note: this is not used as the input property getter, which is a SubelemGetter instance
         raise RuntimeError, "unimplemented"
     
     def get_sheet_tags(self, do_specials=False): #the special system is missing yet
@@ -98,7 +106,7 @@ class Log(object):
 
     def add(self, number):
         if number == len(self._cells): #is to be put at the end
-            cell = Cell(self, number) #use this when nbshell is refactored
+            cell = Cell(self, number)
             self._cells.append(cell) #always adds to end
             #self.element.append(cell.element) #already became a subelement
             #seems that that append call would have no effect.
@@ -118,7 +126,7 @@ class Log(object):
         if isinstance(position, slice):
             """Filters out None cells"""
             return [cell for cell in self._cells[position] if cell is not None]
-        return self._cells[position]
+        return self._cells[position] #may return None. perhaps useful (to nbshell) like that.
 
     def __len__(self):
         return len(self._cells) #includes Nones i.e. is not the actual amount of cells. Notebook.add_cell uses this currently to check if addition is to the end of the list, so this can't be just changed to filter Nones out
@@ -184,6 +192,8 @@ class Notebook(object):
         else:
             self.root = root
             self.head = root.find('head')
+
+        self._sheet = None
 
     def __eq__(self, other):
         """As an answer to http://projects.scipy.org/ipython/ipython/ticket/3
@@ -617,7 +627,7 @@ class Notebook(object):
 
     def default_sheet(self):
         logid='default-log'
-        log = self.logs[logid]
+        log = self.logs[logid] #is this always?
         sheet = ET.Element('sheet')
         block = ET.SubElement(sheet, 'ipython-block', logid=logid)
         for cell in log:
@@ -643,8 +653,37 @@ class Notebook(object):
         try:
             return self.root.xpath('./sheet')[0] #assumes a single sheet
         except IndexError:
-            return None #has no sheet
+            return None or self._sheet #has no sheet
+    def set_sheet(self, sheetelem):
+        sheet = self.get_sheet()
+        if sheet is None:
+            sheet = self.default_sheet()
+            self._sheet = ET.SubElement(self.root, 'sheet')
     sheet = property(get_sheet, None)
+
+    def get_title(self):
+        if self.sheet is not None:
+            print "sheet in get_title:", self.sheet, ET.tostring(self.sheet)
+            try:
+                title = self.sheet.xpath('./title')[0] #single title per file
+                print ".. title:", title.text
+                return title.text
+            except IndexError:
+                print "no title"
+                return None
+        else:
+            print "no sheet in:", self, ET.tostring(self.root)
+            return None
+    title = property(get_title) #+setter
+
+    def get_contents(self):
+        if self.sheet is not None:
+            print "sheet in get_contents:", self.sheet, ET.tostring(self.sheet)
+            sections = self.sheet.xpath('./section')
+            print "sections:", sections
+            return sections
+
+    contents = property(get_contents)
 
 
 def sheet_insert(sheet, elem, position):

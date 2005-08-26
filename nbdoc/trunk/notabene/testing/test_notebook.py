@@ -1,6 +1,8 @@
 import py.test
 from lxml import etree #as the API does not hide xml (yet?)
+from notabene import notebook
 from notabene.notebook import Notebook, Cell
+from notabene.format import rest
 
 def test_new():
     nb = Notebook('test.nbk')
@@ -308,10 +310,49 @@ def test_log():
     for cell in log[3:8]:
         assert cell is not None
 
+def FAILStest_rest():
+    nb = test_new()
 
-    
+    nb.XXX(rest("""\
+    =====
+    Title
+    =====
 
-    
-    
+    Heading 1
+    =========
 
+    Heading 2
+    ---------
+
+    * bullet
+
+    * bullet
+
+    * .. etc."""))
+
+
+from notabene.document import Title, Subtitle, Paragraph, Section, notebook
+
+def test_python():
+    #note: this is from the docutilspy branch
+    #but here ported to docbook-xml
+
+    title = Title("This is the title")
+    subtitle = Subtitle(".. with a subtitle")
+
+    introduction = Section("Introduction")
+    introduction += Paragraph("The introduction starts with this.")
+
+    background = Section("Background") #same here
+    #background += Paragraph("This paragraph starts the second section, background.")
+
+    nb = notebook #is this actually a sheet?
+
+    assert title.text == nb.title
+    #assert subtitle is nb.subtitle
+    #assert introduction is nb.contents['Introduction']
+    #assert introduction is nb.contents[0]
+    assert background.element is nb.contents[1] #sections to be autonumbered? index = num - 1
+    #assert False
+    
     
