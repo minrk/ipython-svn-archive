@@ -19,7 +19,14 @@ class CommandGatherer(object):
     The current implementation simply prints the stdin, stdout and stderr
     of each kernel command to standard out in colorized form.
     
-    The IPython.ColorANSI module is used to colorize the output. 
+    The IPython.ColorANSI module is used to colorize the output.
+    
+    Currently I use diconnected UDP.  There could be a benefit in going over
+    to connected mode.
+    
+    Also, currently, I don't report the port that the kernel is listening on.
+    This information will be useful when multiple kernel's are running on
+    a single interface. 
     """
     
     def __init__(self, addr):
@@ -81,15 +88,16 @@ class CommandGatherer(object):
                         fail = True
                     else:
                         fail = False
-                        print "\n%s[%s:%i]%s In [%i]:%s %s" % \
-                            (green, client_addr[0], client_addr[1],
+                        print "\n%s[%s]%s In [%i]:%s %s" % \
+                            (green, client_addr[0],
                             blue, cmd_num, normal, cmd_tuple[0])
-                        print "%s[%s:%i]%s Out[%i]:%s %s" % \
-                            (green, client_addr[0], client_addr[1],
-                            red, cmd_num, normal, cmd_tuple[1])
+                        if cmd_tuple[1]:
+                            print "%s[%s]%s Out[%i]:%s %s" % \
+                                (green, client_addr[0],
+                                red, cmd_num, normal, cmd_tuple[1])
                         if cmd_tuple[2]:
-                            print "%s[%s:%i]%s Err[%i]:%s %s" % \
-                                (green, client_addr[0], client_addr[1],
+                            print "%s[%s]%s Err[%i]:\n%s %s" % \
+                                (green, client_addr[0],
                                 red, cmd_num, normal, cmd_tuple[2])
             else:
                 fail = True
