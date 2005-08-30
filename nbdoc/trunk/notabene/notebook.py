@@ -131,7 +131,8 @@ class Log(object):
         try:
             return self._cells[position]
         except:
-            return None
+            return None #to be consistent with slots
+                        #where cells've been removed -- right?
 
     def __len__(self):
         return len(self._cells) #includes Nones i.e. is not the actual amount of cells. Notebook.add_cell uses this currently to check if addition is to the end of the list, so this can't be just changed to filter Nones out
@@ -151,7 +152,7 @@ class Log(object):
             while self._cells[-1] is None: #if the previous, next. prev etc
                 self._cells.pop() #remove all Nones at the end
         else:
-            self._cells[number] = None #XXX these gaps not handled everywhere
+            self._cells[number] = None #note: these gaps not handled everywhere
         self.element.remove(cell.element)
 
     def clear(self):
@@ -200,8 +201,6 @@ class Notebook(object):
         else:
             self.root = root
             self.head = root.find('head')
-
-        self._sheet = None
 
     def __eq__(self, other):
         """As an answer to http://projects.scipy.org/ipython/ipython/ticket/3
@@ -647,7 +646,7 @@ class Notebook(object):
             
 
     def get_from_log(self, tag, number, logid='default-log'):
-        #docbook.py and formatter.py use this. XXX check if works after changes
+        #docbook.py and formatter.py use this. there is no unit test (yet)
         xpath = './ipython-log[@id="%s"]/cell[@number="%s"]/%s' % (logid,
             number, tag)
         elems = self.root.xpath(xpath)
@@ -661,12 +660,13 @@ class Notebook(object):
         try:
             return self.root.xpath('./sheet')[0] #assumes a single sheet
         except IndexError:
-            return None or self._sheet #has no sheet
+            return None #has no sheet
     def set_sheet(self, sheetelem):
         sheet = self.get_sheet()
-        if sheet is None:
-            sheet = self.default_sheet()
-            self._sheet = ET.SubElement(self.root, 'sheet')
+        #XXX
+        #remove old if different?
+        #self.root.append(sheet)
+
     sheet = property(get_sheet, None)
 
     def get_title(self):

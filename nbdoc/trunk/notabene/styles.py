@@ -5,14 +5,32 @@ from lxml import etree as ET
 
 #"/Users/kern/projects/notebook-xsl"
 #XSLDIR = "/home/antont/development/ipython/nbdoc/trunk/notabene/xsl" #"/home/antont/development/hacked-ipython/google-rkern/notebook-xsl"
-import sys #just for getting the path here
-XSLDIR = sys.path[0] + "/xsl" #this still not too nice 'cause the whole package is there
+"""
+where to find the XSLs?
 
+http://www.sagehill.net/docbookxsl/InstallingAProcessor.html
+seems to use /usr/docbook-xsl/ and c:\docbook-xsl\ (only as example)
+but that probably does not work by default anywhere
+"""
+XSLDIRS = ['/usr/docbook-xsl/',
+           '/usr/local/docbook-xsl',
+          'c:\\docbook-xsl\\' ]
+print "finding docbook-xsl from", XSLDIRS
+success = False
+for d in XSLDIRS:
+    f = d+"/xhtml/docbook.xsl"
+    try:
+        open(f)
+        success = True
+        XSLDIR = d
+        break
+    except IOError:
+        pass
 
-print "using xsl from", XSLDIR
-f = XSLDIR+"/xhtml/docbook.xsl"
-open(f)
-print f, "opened ok"
+if not success:
+    print "ERROR: could not open the xsl for docbook processing from any of these locations:", XSLDIRS
+    #XXX where to get an optional location from?
+    
 
 class TextStyle(object):
     weights_latex = {"bold": "bfseries",
