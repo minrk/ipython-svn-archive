@@ -278,8 +278,9 @@ class PlainTextNotebookViewPlugin(object):
         """
         if self.window is None: #then this is the first time Update is called
             self.createWindow()
+            self.window.SetText(self.doc._text)
         #print 'text -> %s'%self.doc.text #dbg
-        self.window.SetText(self.doc._text)
+        
 
     def UpdateDoc(self):
         """Update data in the document"""
