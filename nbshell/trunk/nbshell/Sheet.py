@@ -12,6 +12,7 @@ __author__  = '%s <%s>' % Release.author
 __license__ = Release.license
 __version__ = Release.version
 
+import sys
 import StringIO
 
 from lxml import etree
@@ -196,7 +197,7 @@ class Sheet(object):
             errors = validate.check_errors(xmldata)
             if errors is not None:
                 print >>sys.stderr, errors
-                raise NotImplementedError #dbg
+                raise Exception, errors #dbg
             self.element = etree.fromstring(xmldata)
             # Now remove the old sheet and replace it with the new one
             oldsheet = self.notebook.root.find('sheet')
@@ -207,7 +208,7 @@ class Sheet(object):
             errors = self.notebook.check_errors()
             if errors is not None:
                 print >>sys.stderr, errors
-                raise NotImplementedError #dbg
+                raise Exception, errors #dbg
 
     def __append_plaintext_cell(self, iterator, prevlist, elemlist,\
                                 endtaglist, update = True):

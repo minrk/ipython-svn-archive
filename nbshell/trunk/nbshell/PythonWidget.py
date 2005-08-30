@@ -248,9 +248,9 @@ class Shell(editwindow.EditWindow, CellCtrlBase):
 
         key = event.KeyCode()
         # If the auto-complete window is up let it do its thing.
-        if self.AutoCompActive():
-            event.Skip()
-            return
+        #if self.AutoCompActive():
+        #    event.Skip()
+        #    return
         # Prevent modification of previously submitted
         # commands/responses.
         controlDown = event.ControlDown()
@@ -307,9 +307,9 @@ class Shell(editwindow.EditWindow, CellCtrlBase):
         elif controlDown and key in (ord('='),):
             dispatcher.send(signal='FontDefault')
         # Cut to the clipboard.
-        #elif (controlDown and key in (ord('X'), ord('x'))) \
-        #or (shiftDown and key == wx.WXK_DELETE):
-        #    self.Cut()
+        elif (controlDown and key in (ord('X'), ord('x'))) \
+        or (shiftDown and key == wx.WXK_DELETE):
+            self.Cut()
         # Copy to the clipboard.
         elif controlDown and not shiftDown \
             and key in (ord('C'), ord('c'), wx.WXK_INSERT):
@@ -337,8 +337,8 @@ class Shell(editwindow.EditWindow, CellCtrlBase):
         # there is a selection that includes text prior to the prompt.
         #
         # Don't modify a selection with text prior to the prompt.
-        elif selecting and key not in NAVKEYS and not self.view.CanEdit():
-            pass
+        #elif selecting and key not in NAVKEYS and not self.view.CanEdit():
+        #    pass
         #Paste from the clipboard.
         elif (controlDown and not shiftDown and key in (ord('V'), ord('v'))) \
              or (shiftDown and not controlDown and key == wx.WXK_INSERT):
@@ -371,8 +371,8 @@ class Shell(editwindow.EditWindow, CellCtrlBase):
                 self.view.Delete(forward = False)
         #TODO: add different handlers for Shift-Delete, Control-Delete, etc
         elif key == wx.WXK_DELETE:
-            if selecting and self.view.CanEdit():
-                event.Skip()
+            if selecting:
+                self.view.DeleteSelection()
             else:
                 self.view.Delete(forward = True)
         elif key == wx.WXK_TAB:
@@ -775,12 +775,9 @@ class Shell(editwindow.EditWindow, CellCtrlBase):
     def Cut(self):
         """Remove selection and place it on the clipboard."""
         if self.CanCut() and self.CanCopy():
-            if self.AutoCompActive():
-                self.AutoCompCancel()
-            if self.CallTipActive():
-                self.CallTipCancel()
-            self.Copy()
-            self.ReplaceSelection('')
+            self.view.Copy()
+            self.view.DeleteSelection()
+
 
     def Copy(self):
         """Copy selection and place it on the clipboard."""

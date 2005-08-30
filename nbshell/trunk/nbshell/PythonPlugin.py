@@ -176,6 +176,10 @@ class PythonNotebookViewPlugin(object):
         #used for setting selection
         self.start = -1
         self.end = -1
+        #If self.sel_incell is True then the selection is part of one cell. If False, then
+        #the selection consists of several cells
+        self.sel_incell = False 
+        
 
     def SetFocus(self):
         if self.window is not None:
@@ -693,6 +697,7 @@ class PythonNotebookViewPlugin(object):
         if (self.line2log[startline] is not None and self.line2log[endline] is not None and
             self.line2log[startline][0] == self.line2log[endline][0]):
             (self.start, self.end) = (start,end)
+            self.sel_incell = True
             return
         
         #if startline is None, we do nothing. If not, we move startline
@@ -714,6 +719,7 @@ class PythonNotebookViewPlugin(object):
         else:
             self.window.SetAnchor(self.end)
             self.window.SetCurrentPos(self.start)
+        self.sel_incell = False
         #print 'new'
         #print '(start, end) -> (%d, %d)'%(self.start,self.end) #dbg
         #print '(anchor, pos) -> (%d, %d)'%\
@@ -864,7 +870,7 @@ class PythonNotebookViewPlugin(object):
                 cell = self.doc.log.Get(number)
                 self.doc.sheet.InsertElement(self.doc, tp, cell, pos, update = False)
                 pos+=1
-            self.doc.sheet.Update()
+            self.Update()
         else:
             return
                 
@@ -889,3 +895,65 @@ class PythonNotebookViewPlugin(object):
             if i<l-1 or last_newline: #The last line may not finish with '\n'
                 self.InsertLineBreak(pos)
             pos += 1 + promptlen
+            
+    def DeleteSelection(self):
+        """Deletes the code or cells in the selection"""
+        
+        #Currently can delete only whole cells
+        
+        #Get the selection
+        (start, end) = self.window.GetSelection()
+        if (start, end) != (self.start, self.end):
+            self.SetSelection()
+            
+        (start, end) = min(self.start, self.end), max(self.start, self.end)
+        startline = self.window.LineFromPosition(start)
+        endline = self.window.LineFromPosition(end)
+
+        #If the start and end line are not in the same cell
+        if ((self.line2log[startline] is None or self.line2log[endline] is None or
+             self.line2log[startline][0] != self.line2log[endline][0]) or\
+            #or the selection covers one whole cell
+            (self.line2log[startline][1] == 1 and 
+             start == self.window.PositionFromLine(startline) and 
+             (endline == len(self.line2log) - 1 or 
+              (self.line2log[endline+1] is None or 
+               self.line2log[endline+1][1] == 1 and
+               end == self.window.LineLength(endline) +\
+               self.window.PositionFromLine(endline))))):
+            #Get all the selected cells and delete them
+            while self.line2log[startline] is None:
+                startline +=1
+            while self.line2log[endline] is None:
+                endline -= 1
+            startpos = self.line2log[startline][0]
+            endpos = self.line2log[endline][0]
+            
+            for pos in reversed(range(startpos, endpos+1)):
+                self.doc.sheet.DeleteElement(self.doc, pos, update = False)
+            self.Update()
+        else: #Delete a part of a cell
+            #If start is in the prompt move it after the prompt
+            ls = self.window.PositionFromLine(startline)
+            promptlen = self.PromptLen(startline)
+            if ls+promptlen >= start:
+                start = ls+promptlen
+            #Make the same for end
+            le = self.window.PositionFromLine(endline)
+            if le+promptlen >= end:
+                end = le + promptlen
+                
+            #Get the text and count the newlines
+            nlcount = self.window.GetTextRange(start, end).count('\n')
+            #Remove the text 
+            self.window.SetTargetStart(start)
+            self.window.SetTargetEnd(end)
+            self.window.ReplaceTarget('')
+            #fix line2log by removing the last nlcount lines for the current cell
+            it = self.line2log[startline][0]
+            lastline = startline
+            l = len(self.line2log)
+            while (lastline<l and self.line2log[lastline] is not None and
+                   self.line2log[lastline][0] == it):
+                lastline +=1
+            del self.line2log[lastline-nlcount:lastline]

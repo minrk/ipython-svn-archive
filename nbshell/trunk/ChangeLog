@@ -1,7 +1,10 @@
 08.30.2005:
 
 	* Added copy/pasting. Currently you can only make selections
-	inside one block. Also cutting doesn't work yet
+	inside one block. 
+
+	* Added cutting and deleting parts of a cell and a list of cells
+	inside a block
 	
 08.26.2005:
 
