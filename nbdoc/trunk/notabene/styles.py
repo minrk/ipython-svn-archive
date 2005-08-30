@@ -3,34 +3,12 @@ from matplotlib import colors
 
 from lxml import etree as ET
 
-#"/Users/kern/projects/notebook-xsl"
-#XSLDIR = "/home/antont/development/ipython/nbdoc/trunk/notabene/xsl" #"/home/antont/development/hacked-ipython/google-rkern/notebook-xsl"
-"""
-where to find the XSLs?
+import os
+XSLDIR = os.path.join(os.path.split(__file__)[0], 'xsl')
 
-http://www.sagehill.net/docbookxsl/InstallingAProcessor.html
-seems to use /usr/docbook-xsl/ and c:\docbook-xsl\ (only as example)
-but that probably does not work by default anywhere
-"""
-XSLDIRS = ['/usr/docbook-xsl/',
-           '/usr/local/docbook-xsl',
-          'c:\\docbook-xsl\\' ]
-print "finding docbook-xsl from", XSLDIRS
-success = False
-for d in XSLDIRS:
-    f = d+"/xhtml/docbook.xsl"
-    try:
-        open(f)
-        success = True
-        XSLDIR = d
-        break
-    except IOError:
-        pass
+if not os.path.exists(os.path.join(XSLDIR, 'xhtml', 'docbook.xsl')):
+    raise RuntimeError("XSLT files not in the right location")
 
-if not success:
-    print "ERROR: could not open the xsl for docbook processing from any of these locations:", XSLDIRS
-    #XXX where to get an optional location from?
-    
 
 class TextStyle(object):
     weights_latex = {"bold": "bfseries",
