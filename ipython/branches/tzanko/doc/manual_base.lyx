@@ -8001,6 +8001,70 @@ at the IPython prompt.
  to view them.
 \layout Section
 
+IPython GUI Interface
+\layout Standard
+
+Nbshell is a graphical user interface for IPython which somewhat resembles
+ the interface of Mathematica It is still in a very early development stage
+ and there are a lot missing features, but if you want to try it you can
+ get the source at the SVN repository at 
+\begin_inset LatexCommand \htmlurl{http://ipython.scipy.org/svn/ipython/nbshell/trunk/}
+
+\end_inset 
+
+.
+ The README file there explains how to install nbshell.
+\layout Standard
+
+The files Nbshell works with are called notebooks.
+ A notebook can contain python code, text and figures.
+ It is stored as a xml file which includes two types of data: one or more
+ logs and one sheet.
+\layout Standard
+
+A log is simply a list of cells each of which contains a python expression.
+ Each cell has a number showing the order in which those cells are executed.
+ A cell can also contain the output the python expression produces.
+ The cells in different logs are executed in different namespaces.
+ By default a notebook has only one log
+\layout Standard
+
+The sheet holds all the text of the notebook, external references to figures
+ and the places where cells should be displayed.
+ The format of the sheet is similar to the Docbook format.
+ Currently everything except code and figures is displayed as raw xml so
+ even though nbshell won't display it properly, you can use the full power
+ of Docbook to typeset your documents.
+\layout Standard
+
+When you open a notebook file or create a new one, an empty input will be
+ displayed for each log.
+ You can write your python expression there, or you can modify one of the
+ other existing inputs.
+ The expressions can consist of more than one line, you can insert new lines
+ by pressing Enter.
+ When you are done modifying the cell you must execute it.
+ This can be done by pressing either Shift-Enter, or Ctrl-Enter while the
+ cursor is inside the modified inputl.
+ When you press Shift-Enter only the cell you have modified will be executed.
+ When you press Ctrl-Enter all cells with numbers larger or equal to the
+ number of the modified cells will be executed.
+ Please note that the input you enter is recorded in the log when you press
+ Shift-Enter, or Ctrl-Enter.
+ If you modify more than one input only the one the cursor is on will be
+ saved, and the other modifications will be discarded.
+ 
+\layout Standard
+
+Nbshell can include figures, and has support for using Matplotlib.
+ When you open a notebook all the symbols from the Matplotlib module pylab
+ are automatically included so you can start making plots right away.
+ You can use both the interactive and noninteractive mode which are turned
+ on and off via the ion() and ioff() functions.
+ When you are ready with a plot using the function grab_figure() you can
+ include it in the notebook.
+\layout Section
+
 Reporting bugs
 \layout Subsection*
 

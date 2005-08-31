@@ -84,7 +84,7 @@ class PythonPluginFactory(object):
 
 class PythonDocumentPlugin(object):
     def __init__(self, document, element):
-        """Initialization. ipython-block is a Elemtent object holding a
+        """Initialization. element is a Elemtent object holding a
         <ipython-block> tag"""
         self.document = document
         self.sheet = document.sheet
@@ -98,8 +98,7 @@ class PythonDocumentPlugin(object):
                             #multiple views there should be some modifications
         print "block:"
         etree.dump(self.element) #dbg
-        self.cells = [self.notebook.get_cell(int(x.attrib['number']), logid =
-                                            'default-log') for x in element]
+        self.cells = [self.log.log[int(x.attrib['number'])] for x in element]
         #[self.notebook.add_cell(int(x.attrib['number']),self.logid)
         #for x in self.element]
         

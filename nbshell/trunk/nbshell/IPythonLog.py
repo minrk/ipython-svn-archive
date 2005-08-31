@@ -45,6 +45,9 @@ class IPythonLog(object):
         self.last = False
         self._lastcell = None #used by self.lastcell
 
+        #set up wrapper to use for long output
+        self.wrapper = textwrap.TextWrapper()
+
         #Here I will sort the cells, according to their numbers
         #self.log.element[:] = sorted(self.log, key = lambda x:int(x.attrib['number']))
         #XXX modifies the xml element(tree) that nb Log wraps so it may be bad
@@ -94,8 +97,6 @@ ion()
         self.SetLastInput()
 
 
-        #set up wrapper to use for long output
-        self.wrapper = textwrap.TextWrapper()
         del __builtin__
 
         #end shell initialization
