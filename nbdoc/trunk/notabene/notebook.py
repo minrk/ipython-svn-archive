@@ -62,10 +62,14 @@ class Cell(object):
     #def __new__(
     #to check from logid & number if already exists
     
-    def __init__(self, parent, number):
+    def __init__(self, parent, number, element=None):
         #note: parent is a Log object, which has the 'root' as .element
-        self.element = ET.SubElement(parent.element, 'cell')
-        self.number = number #sets the xml too via the property
+        if element is None:
+            self.element = ET.SubElement(parent.element, 'cell')
+            self.number = number #sets the xml too via the property
+        else:
+            self.element = element
+            assert self.number == number
 
     input  = property(SubelemGetter('input'),  SubelemSetter('input'))
     output = property(SubelemGetter('output'), SubelemSetter('output'))
@@ -98,17 +102,24 @@ class Cell(object):
 class Log(object):
     #one on the nbshell side there's IPythonLog
     #and we've talked about moving (parts of it) here
-    def __init__(self, parent, logid):
+    def __init__(self, parent, logid, element=None):
         #note: parent is a Notebook object, which has the 'root' as .root
         self.id = logid
-        self.element = ET.SubElement(parent.root, 'ipython-log', id=logid)
         self._cells = [] #it is not safe to manipulate this from outside
-        #'cause of removals, this may end up sparse - might make sense to use
+        #'cause of removals, may end up sparse - might make sense to use
         #something like http://inamidst.com/code/listdict.py
+        if element is None:
+            self.element = ET.SubElement(parent.root, 'ipython-log', id=logid)
 
-    def add(self, number):
+        else:
+            self.element = element
+            for cellelem in self.element:
+                self.add(int(cellelem.get('number')), cellelem)
+
+            
+    def add(self, number, element=None):
         if number == len(self._cells): #is to be put at the end
-            cell = Cell(self, number)
+            cell = Cell(self, number, element)
             self._cells.append(cell) #always adds to end
             #self.element.append(cell.element) #already became a subelement
             #seems that that append call would have no effect.
@@ -198,9 +209,17 @@ class Notebook(object):
             self.root = ET.Element('notebook')
             self.head = ET.SubElement(self.root, 'head')
             self.add_log()
-        else:
+        else: #reconstruct object structure from given xml
             self.root = root
             self.head = root.find('head')
+            logelem = root.find('ipython-log')
+            #dbg
+            print logelem, logelem.get('id', 'noid?-o')
+            logid = logelem.get('id')
+            self.logs[logid] = Log(self, logid, logelem) 
+            for cellelem in logelem:
+                #dbg
+                print cellelem, ET.tostring(cellelem)
 
     def __eq__(self, other):
         """As an answer to http://projects.scipy.org/ipython/ipython/ticket/3
@@ -217,6 +236,7 @@ class Notebook(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    #XXX
     #how do the from* methods actually behave w.r.t to Cells and self.logs?
     #perhaps some initial processing is needed now, when
     #the objects here don't just access xml but are used as structure too..
