@@ -888,6 +888,40 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
                                      self.Completer.__class__)
         self.Completer.matchers.insert(pos,newcomp)
 
+    def complete(self,text):
+        """Return a sorted list of all possible completions on text.
+
+        Inputs:
+
+          - text: a string of text to be completed on.
+
+        This is a wrapper around the completion mechanism, similar to what
+        readline does at the command line when the TAB key is hit.  By
+        exposing it as a method, it can be used by other non-readline
+        environments (such as GUIs) for text completion.
+
+        Simple usage example:
+
+        In [1]: x = 'hello'
+
+        In [2]: __IP.complete('x.l')
+        Out[2]: ['x.ljust', 'x.lower', 'x.lstrip']"""
+        
+        complete = self.Completer.complete
+        state = 0
+        # use a dict so we get unique keys, since ipyhton's multiple
+        # completers can return duplicates.
+        comps = {}
+        while True:
+            newcomp = complete(text,state)
+            if newcomp is None:
+                break
+            comps[newcomp] = 1
+            state += 1
+        outcomps = comps.keys()
+        outcomps.sort()
+        return outcomps
+
     def post_config_initialization(self):
         """Post configuration init method
 
