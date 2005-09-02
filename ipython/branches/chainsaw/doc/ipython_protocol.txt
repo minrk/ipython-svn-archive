@@ -263,7 +263,7 @@ only the communications that absolutely need to be secure.
         placed into the kernel's queue.    
              
     Examples (must have TCP_NODELAY = 1):
-        C: PUSH a FORWARD 
+        C: PUSH FORWARD BLOCK 
         C: PICKLE 25
         C: asdf098u42oijasr09j234f'ljf
         S: PUSH OK
@@ -359,6 +359,13 @@ only the communications that absolutely need to be secure.
     
         C: EXECUTE a = 5 + 3  
         S: EXECUTE OK
+        
+    Example:
+        
+        C: EXECUTE BLOCK a = 5 + 3
+        S: COMMAND 10
+        S: rawdata
+        S: EXCUTE OK     
 
     Performance Considerations:
     

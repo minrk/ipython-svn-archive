@@ -229,13 +229,36 @@ class IPythonTCPProtocol(basic.LineReceiver):
                 
         execute_cmd = args
         self.work_vars['current_ticket'] = self.factory.get_ticket()
-        # The deferToThread in this call costs 2 ms currently :(
-        d = self.factory.execute(execute_cmd, 
-            self.work_vars['current_ticket'])
-        self.sendLine('EXECUTE OK')   
-        self._reset()
-        d.addCallback(self.execute_ok)
-        d.addErrback(self.execute_fail)
+
+        # Parse the args string
+        if "BLOCK" in args:
+            self.work_vars['execute_block'] = True
+            execute_cmd = args[6:]
+        else:
+            self.work_vars['execute_block'] = False        
+            execute_cmd = args
+                    
+        if self.work_vars['execute_block']:
+            cmd_num, result = self.factory.execute_block(execute_cmd,
+                self.work_vars['current_ticket'])
+            try:
+                package = pickle.dumps(result, 2)
+            except pickle.PickleError:
+                send.sendLine("EXECUTE FAIL")
+            else:
+                self.sendLine("COMMAND %s" % cmd_num)
+                self.transport.write(package)
+                self.sendLine("EXECUTE OK")
+                
+            self._reset() # In either case call _reset
+        else:                    
+            # The deferToThread in this call costs 2 ms currently :(
+            d = self.factory.execute(execute_cmd, 
+                self.work_vars['current_ticket'])
+            self.sendLine('EXECUTE OK')   
+            self._reset()
+            d.addCallback(self.execute_ok)
+            d.addErrback(self.execute_fail)
         
     def execute_ok(self, result):
         for tonotify in self.factory.notifiers():
@@ -507,20 +530,11 @@ class IPythonTCPFactory(protocol.ServerFactory):
         d = threads.deferToThread(self.qic.execute, source, ticket)
         return d
         
+    def execute_block(self, key, ticket):
+        return self.qic.execute(source, ticket, block=True)
+        
     def status(self):
         return self.qic.status()
         
     def reset(self):
         self.qic.reset()
-        
-def main(port):
-    log.startLogging(sys.stdout)
-        
-    reactor.suggestThreadPoolSize(5)
-        
-    d = reactor.listenTCP(port, IPythonTCPFactory(validate=['127.0.0.1']))
-    reactor.run()
-    
-if __name__ == "__main__":
-    port = int(sys.argv[1])
-    main(port)
