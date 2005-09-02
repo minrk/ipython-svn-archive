@@ -144,10 +144,17 @@ class RemoteKernel(object):
         # Turn of Nagle's algorithm to prevent the 200 ms delay :)
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
         
-    def execute(self, source):
+    def execute(self, source, block=False):
         self._check_connection()
-        self.es.write_line("EXECUTE %s" % source)
-        line, self.extra = self.es.read_line(self.extra)
+        if block:
+            self.es.write_line("EXECITE BLOCK %s" % source)
+            line, self.extra = self.es.read_line(self.extra)
+            data, self.extra = self.es.read_bytes(self.extra)
+            line, self.extra = self.es.read_line(self.extra)
+        else:
+            self.es.write_line("EXECUTE %s" % source)
+            line, self.extra = self.es.read_line(self.extra)
+            
         if line == "EXECUTE OK":
             return True
         else:

@@ -351,21 +351,23 @@ only the communications that absolutely need to be secure.
     Result:
     
         Send a python command to the server to be executed in its namespace.
-        The server reponse is given once the command has been received and
-        placed in the server's queue.  The important thing is that the server
-        will give the OK or FAIL response after the command is queued, but
-        BEFORE the command is executed by the kernel.
+        The EXECUTE command is carried out in one of two mode: nonblocking
+        (the default) or blocking. 
         
-        With the BLOCK argument, the EXECUTE command does not return until
-        the command has been executed.  Then the server will reply with
-        a COMMAND command before giving OK or FAIL.
+        In nonblocking mode the server reponse is given once the command has 
+        been received and placed in the server's queue.  The important thing 
+        is that the server will give the OK or FAIL response after the command 
+        is queued, but BEFORE the command is executed by the kernel.
+        
+        With the BLOCK argument, the EXECUTE command is run in blocking more.
+        In this mode, the server does not reply until the command has been 
+        executed.  Then the server will reply with a COMMAND command before 
+        giving OK or FAIL.
                     
     Examples:
     
         C: EXECUTE a = 5 + 3  
         S: EXECUTE OK
-        
-    Example:
         
         C: EXECUTE BLOCK a = 5 + 3
         S: COMMAND 10
