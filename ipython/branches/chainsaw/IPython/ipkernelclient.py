@@ -1,11 +1,13 @@
 import socket
 import threading
 import pickle
-
+import time
 from twisted.internet import reactor, protocol
 from twisted.protocols import basic
 
 from IPython.ColorANSI import *
+
+from esocket import LineSocket
 
 class IPythonTCPClientProtocol(basic.Int32StringReceiver):
     pass
@@ -107,3 +109,211 @@ class CommandGatherer(object):
             else:
                 s.sendto("COMMAND OK", client_addr)
                 
+class RemoteKernel(object):
+    
+    def __init__(self, addr):
+        self.addr = addr
+        self.extra = ''
+        
+    def _check_connection(self):
+        if hasattr(self, 's'):
+            try:
+                self.fd = self.s.fileno()
+            except socket.error:
+                self.connect()
+            else:
+                return
+        else:
+            self.connect()
+            
+    def connect(self):
+        print "Connecting to kernel: ", self.addr
+        try:
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        except socket.error, e:
+            print "Strange error creating socket: %s" % e
+            
+        try:
+            self.s.connect(self.addr)
+        except socket.gaierror, e:
+            print "Address related error connecting to sever: %s" % e
+        except socket.error, e:
+            print "Connection error: %s" % e
+                
+        self.es = LineSocket(self.s)
+        # Turn of Nagle's algorithm to prevent the 200 ms delay :)
+        self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
+        
+    def execute(self, source):
+        self._check_connection()
+        self.es.write_line("EXECUTE %s" % source)
+        line, self.extra = self.es.read_line(self.extra)
+        if line == "EXECUTE OK":
+            return True
+        else:
+            return False
+        
+    def push(self, value, key, forward=False):
+        self._check_connection()
+        try:
+            package = pickle.dumps(value, 2)
+        except picket.PickleError, e:
+            print "Object cannot be pickled: ", e
+            return False
+        if forward:
+            self.es.write_line("PUSH %s FORWARD" % key)
+        else:
+            self.es.write_line("PUSH %s" % key )
+        self.es.write_line("PICKLE %i" % len(package))
+        self.es.write_bytes(package)
+        line, self.extra = self.es.read_line(self.extra)
+        if line == "PUSH OK":
+            return True
+        if line == "PUSH FAIL":
+            return False
+        
+    def pull(self, key):
+        self._check_connection()    
+    
+        self.es.write_line("PULL %s" % key)
+        line, self.extra = self.es.read_line(self.extra)
+        line_split = line.split(" ", 1)
+        if line_split[0] == "PICKLE":
+            try:
+                nbytes = int(line_split[1])
+            except (ValueError, TypeError):
+                raise
+            else:
+                package, self.extra = self.es.read_bytes(nbytes, self.extra)
+                line, self.extra = self.es.read_line(self.extra)
+                try:
+                    data = pickle.loads(package)
+                except pickle.PickleError, e:
+                    print "Error unpickling object: ", e
+                    return None
+                else:
+                    if line == "PULL OK":
+                        return data
+                    else:
+                        return None
+        else:
+            # For other data types
+            pass
+
+    
+    def move(keya, keyb, target):
+        self._check_connection()
+        
+        #write_line("MOVE %s %s %" % (keya, keyb, target))
+        #read_line()
+
+    def status(self):
+        self._check_connection()
+
+        self.es.write_line("STATUS")
+        line, self.extra = self.es.read_line(self.extra)
+        line_split = line.split(" ")
+        if len(line_split) == 4:
+            if line_split[0] == "STATUS" and line_split[1] == "OK":
+                return (int(line_split[2]), line_split[3])
+            else:
+                return None
+        else:
+            return None
+
+    def validate(self, ip, flag=True):
+        self._check_connection()
+        
+        if flag:
+            self.es.write_line("VALIDATE TRUE %s" % ip)
+        else:
+            self.es.write_line("VALIDATE FALSE %s" % ip)
+        line, self.extra = self.es.read_line(self.extra)
+        if line == "VALIDATE OK":
+            return True
+        else:
+            return False      
+
+    def notify(self, addr, flag=True):
+        self._check_connection()
+        
+        host, port = addr
+        if flag:
+            self.es.write_line("NOTIFY TRUE %s %s" % (host, port))
+        else:
+            self.es.write_line("NOTIFY FALSE %s %s" % (host, port))
+        line, self.extra = self.es.read_line(self.extra)
+        if line == "NOTIFY OK":
+            return True
+        else:
+            return False        
+       
+    def cluster(self, addrs=None):
+        self._check_connection()
+        if addrs is None:
+            self.es.write_line("CLUSTER CLEAR")
+            line, self.extra = self.es.read_line(self.extra)
+            if line == "CLUSTER OK":
+                return True
+            if line == "CLUSTER FAIL":
+                return False
+        else:
+            try:
+                package = pickle.dumps(addrs, 2)
+            except picket.PickleError, e:
+                print "Pass a valid python list of addresses: ", e
+                return False
+            else:
+                self.es.write_line("CLUSTER CREATE")
+                self.es.write_line("PICKLE %i" % len(package))
+                self.es.write_bytes(package)
+                line, self.extra = self.es.read_line(self.extra)
+                if line == "CLUSTER OK":
+                    return True
+                if line == "CLUSTER FAIL":
+                    return False
+
+    def reset(self):
+        self._check_connection()
+            
+        self.es.write_line("RESET")
+        line, self.extra = self.es.read_line(self.extra)
+        if line == "RESET OK":
+            return True
+        else:
+            return False      
+                           
+    def kill(self):
+        self._check_connection()    
+    
+        self.es.write_line("KILL")
+        self.s.close()
+        del self.s
+        del self.es
+        return True   
+
+    def disconnect(self):
+        self._check_connection()
+            
+        self.es.write_line("DISCONNECT")
+        line, self.extra = self.es.read_line(self.extra)
+        if line == "DISCONNECT OK":
+            self.s.close()
+            del self.s
+            del self.es
+            return True
+        else:
+            return False
+            
+class InteractiveCluster(object):
+    
+    def __init__(self):
+        self.count = 0
+        self.workers = []
+        
+    def start(self, addr_list):
+        for a in addr_list:
+            self.workers.append(RemoteKernel(a))
+        self.count = len(self.workers)
+        return True
+                  

@@ -127,7 +127,7 @@ class QueuedInteractiveConsole:
     def _work(self):
         while True:
             action = self.workq.get()
-            print "Action: ", action
+            #print "Action: ", action
             if action[0] == 'STOP':
                 break
             f = getattr(self,'_handle_%s' % action[0], None)
@@ -135,22 +135,22 @@ class QueuedInteractiveConsole:
                 f(action[1])
                              
     def _handle_PUSH(self, (dict_of_data, notifier)):
-        print "Handling PUSH..."
+        #print "Handling PUSH..."
         self.tic.update(dict_of_data)
-        print "Pushed:", dict_of_data
+        #print "Pushed:", dict_of_data
 
     def _handle_PULL(self, (key, notifier)):
-        print "Handling PULL..."             
+        #print "Handling PULL..."             
         data = self.tic.get(key)
-        notifier.put({key:data})
-        print "Pulled data:", key, data
+        notifier.put(data)
+        #print "Pulled data:", key, data
                 
     def _handle_EXECUTE(self, (source, notifier)):
-        print "Handling EXECUTE..."
+        #print "Handling EXECUTE..."
         self.tic.runsource(source)
         if notifier:
             notifier.put(self.tic.get_last_command())
-        print "Executed:", self.tic.get_last_command()
+        #print "Executed:", self.tic.get_last_command()
                                
     def get_ticket(self):
         return self.workq.get_ticket()

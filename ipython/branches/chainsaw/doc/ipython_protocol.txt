@@ -77,6 +77,69 @@ only the communications that absolutely need to be secure.
     If a command cannot be parsed by the server, the server should give a
     response of BAD and reset its state.
 
+1.2.1   Performance
+
+    This section is to describe the performance considerations that are relevant
+    in the design of this protocol.  Because this protocol involves many small
+    messages being transmitted between the client and server, the latency of
+    the protocol is extremely important.  Moreover, it is important to have
+    a protocol that prpperly deals with the 200 ms Nagle delays.
+    
+    To quantify these issues, I have done some benchmarking.  It these 
+    benchmarks, I have used twisted for the server and the socket module
+    for the client.  In all cases, the socket setup time is factored out by
+    trasmitting many (typically 100) client commands over a single TCP 
+    connection.  So far I have done tests using a line based approach, but
+    I suspect that similar things would be found for an int32 prefixed
+    approach.  All these test were performed on the loopback interface of
+    a 100Mb connection with a ping time of 0.1 ms.
+    
+    I now outline some of the results.  Oh, I have also seen that writing
+    to a log each time there is a client command takes 1-2 ms.  Thus, per
+    command logging should be off in a production server.
+    
+    First, I tried a basic command/response:
+        
+        C: msg1
+        S: reply1
+        
+    This type of interaction tool about 1 ms per request.
+    
+    Having multiple client messages, followed by a single esrver reply:
+    
+        C: msg1
+        C: msg2
+        S: reply12
+        
+    Took 200 ms with TCP_NODELAY off and 1 ms with TCP_NODELAY on.  Having
+    this flag on disables Nagle's algorithm.
+    
+    For PUSH commands, the implementation:
+    
+        C: PUSH b
+        C: ARRAY 30
+        C: asdf[2j4[09j8sd;lkm209
+        S: PUSH OK
+        
+    Took 200 ms with nagling on and 2 ms with nagling off.  This is consistent
+    with each command/response taking 1 ms.
+    
+    The more verbose implementation:
+    
+        C: PUSH a
+        S: PUSH READY
+        C: PICKLE 25
+        S: PICKLE READY
+        C: asdfasdf
+        S: PUSH OK
+
+    Does not require that nagling be turned off and took 3 ms.  
+    
+    Thus it appears that each pair of client/server transmissions takes about
+    1 ms on a 100Mb connection.  When nagling is on, it is critical that all
+    data is sent in a single sendall command.  
+
+
 2.      Server States
 
     The server can be in a number of different states.  These states
@@ -199,17 +262,39 @@ only the communications that absolutely need to be secure.
         the data has been received, handled (unpickled for example) and 
         placed into the kernel's queue.    
              
-    Examples:
+    Examples (must have TCP_NODELAY = 1):
         C: PUSH a FORWARD 
         C: PICKLE 25
         C: asdf098u42oijasr09j234f'ljf
         S: PUSH OK
         
-        C: PUSH b
-        C: ARRAY 30
-        C: asdf[2j4[09j8sd;lkm209
+        This should take 2 ms over 100Mb.
+                
+    Verbose Example:
+        C: PUSH a
+        S: PUSH READY
+        C: PICKLE 25
+        S: PICKLE READY
+        C: asdfasdf
         S: PUSH OK
+        
+        This would take 3 ms over 100Mb.
+        
+    Int32 Based Version (must have TCP_NODELAY = 1):
+        C: PUSH a FORWARE PICKLE
+        C: asdfasdf
+        S: PUSH OK
+        
+        This would take 1.5 ms over 100Mb
     
+    Performance Considerations:
+    
+        PUSH does not use deferToThread to submit the data to the interactive
+        console, so almost all the overhead is from the network side of things.
+        
+        For now I am going to use the first approach and require that
+        TCP_NODELAY is set on client sockets.
+        
         
 4.2.    PULL Command
 
@@ -219,12 +304,15 @@ only the communications that absolutely need to be secure.
     Responses:  none
     
     Result:     OK - data did exist and was sent
-                FAIL - data did not exist or could not be handled
+                FAIL - data could not be handled
     
         Gets data from the kernel.  Pull commands are always blocking.
         The argument to PULL specifies what data is being requested.  After
         the PULL command is given, the kernel replies with a data command and
         then gives its final response.
+        
+        If the data does not exist, the object None will be returned.  Thus
+        PUSH FAIL should only occur if the data could not be handled (pickled).
     
     Examples:
     
@@ -245,10 +333,16 @@ only the communications that absolutely need to be secure.
         S: send it back
         S: PULL OK        
 
+    Performance Considerations:
+    
+        The performance characteristics of PULL should be similar to those
+        of PUSH.  In my tests, they are similar, but PULL takes about an
+        additional 1 ms as it has to get the data back.  This is, of course
+        if the queue is empty already.
+
 4.3.    EXECUTE Command
 
-    Arguments:  PRINT
-                command
+    Arguments:  command
     
     Reponses:   OK
                 FAIL
@@ -257,18 +351,26 @@ only the communications that absolutely need to be secure.
     
         Send a python command to the server to be executed in its namespace.
         The server reponse is given once the command has been received and
-        placed in the server's queue.  The PRINT argument specifies if the
-        stdout of the command should be returned to the client on a different
-        or the same channel.  The important thing is that the server will
-        give the OK or FAIL response after the command is queued, but BEFORE
-        the command is executed by the kernel.
+        placed in the server's queue.  The important thing is that the server
+        will give the OK or FAIL response after the command is queued, but
+        BEFORE the command is executed by the kernel.
                     
     Examples:
     
-        C: EXEC a = 5 + 3  
-        S: EXEC OK
+        C: EXECUTE a = 5 + 3  
+        S: EXECUTE OK
+
+    Performance Considerations:
+    
+        Because EXECUTE involves a single command/response, it should take
+        1 ms per EXECUTE command on a 100Mb connection.  This is fast and
+        should not depend on having nagling on/off.  The same performance
+        should be possible when using an int32 prefixed transmission approach.
         
-        C: EXEC PRINT scipy.test()
+        Currently, the factory function that actually submits the code to
+        the interactive console to be run uses deferToThread.  This method
+        takes about 2 ms to return, so that the total time for an execute
+        command is 3 ms.  I would _love_ to get rid of this extra time!!!!
         
 4.4.    MOVE Commmand
 
@@ -278,17 +380,19 @@ only the communications that absolutely need to be secure.
 
 4.5.    COMPLETE Command
     
-4.5.    VALIDATEIP Command
+4.5.    VALIDATE Command
 
-4.6.    FORWARDTO Command
+4.6.    NOTIFY Command
 
-4.7.    STATUS Command
+4.7.    FORWARDTO Command
+
+4.8.    STATUS Command
     
-4.8.    RESET Command
+4.9.    RESET Command
     
-4.9.    KILL Command
+4.10.    KILL Command
     
-4.10.   DISCONNECT Command
+4.11.   DISCONNECT Command
 
 5. Server Responses
 
