@@ -130,10 +130,13 @@ class Log(object):
                 self._cells[number]
                 raise ValueError, 'a cell with number %d exists in log id %s' % (number, self.id)
             except IndexError:
-                if number > len(self._cells):
-                    raise ValueError, "can only add at the end now. that will be fixed if needed."
-                else:
-                    raise RuntimeError, "unknown error when adding cell with number %d to log %s" % (number, self.id)
+                while number > len(self._cells):
+                    self._cells.append(None) #hackish reconstruction
+                                             #of sparse array
+                    self.add(number, element)#just a 'goto' to first line
+                    #raise ValueError, "can only add at the end now. that will be fixed if needed."
+                #else:
+                #    raise RuntimeError, "unknown error when adding cell with number %d to log %s" % (number, self.id)
 
     def __getitem__(self, position):
         if isinstance(position, slice):
