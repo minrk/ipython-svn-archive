@@ -230,7 +230,7 @@ class IPythonTCPProtocol(basic.LineReceiver):
         execute_cmd = args
         self.work_vars['current_ticket'] = self.factory.get_ticket()
 
-        # Parse the args string
+        # Parse the args
         if "BLOCK" in args:
             self.work_vars['execute_block'] = True
             execute_cmd = args[6:]
@@ -530,7 +530,7 @@ class IPythonTCPFactory(protocol.ServerFactory):
         d = threads.deferToThread(self.qic.execute, source, ticket)
         return d
         
-    def execute_block(self, key, ticket):
+    def execute_block(self, source, ticket):
         return self.qic.execute(source, ticket, block=True)
         
     def status(self):

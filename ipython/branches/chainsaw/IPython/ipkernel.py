@@ -1,14 +1,10 @@
 import cPickle as pickle
-
-from twisted.internet import protocol, reactor, threads, defer
-from twisted.protocols import basic
-from twisted.python.runtime import seconds
-from twisted.python import log
-from twisted.python import failure
 import sys
 
-from ipic import QueuedInteractiveConsole
-from ipkernelcore import *
+from twisted.internet import reactor
+from twisted.python import log
+
+from ipkernelcore import IPythonTCPFactory
 
 def main(port):
     log.startLogging(sys.stdout)

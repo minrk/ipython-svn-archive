@@ -1,35 +1,19 @@
 # Copyright (c) 2001-2004 Twisted Matrix Laboratories.
 # See LICENSE for details.
 
+import sys
 
 from wxPython.wx import *
 
 from twisted.internet import threadedselectreactor, protocol, defer
 threadedselectreactor.install()
 from twisted.internet import reactor
-from twisted.protocols import basic
+from twisted.python import log
 
-# set up so that "hello, world" is printed once a second
-def helloWorld():
-    print "hello, world"
-    reactor.callLater(1, helloWorld)
-reactor.callLater(1, helloWorld)
+from ipkernelcore import IPythonTCPFactory
 
-def twoSecondsPassed():
-    print "two seconds passed"
+# Here are the classes for wxPython
 
-reactor.callLater(2, twoSecondsPassed)
-
-class IPKernelGUIProtocol(basic.LineReceiver):
-
-    def connectionMade(self):
-        self.sendLine("Hi there")
-        self.transport.loseConnection()
-        
-f = protocol.ServerFactory()
-f.protocol = IPKernelGUIProtocol
-
-reactor.listenTCP(10104,f)
 ID_EXIT  = 101
 
 class MyFrame(wxFrame):
@@ -58,10 +42,16 @@ class MyApp(wxApp):
         return true
 
 
-def demo():
+def main(port):
+    # Setp the twisted server
+    log.startLogging(sys.stdout)
+    reactor.suggestThreadPoolSize(5)
+    reactor.listenTCP(port, IPythonTCPFactory(validate=['127.0.0.1']))
+    # Start wx, which start the reactor using reactor.interleave
     app = MyApp(0)
     app.MainLoop()
 
 
 if __name__ == '__main__':
-    demo()
+    port = int(sys.argv[1])
+    main(port)
