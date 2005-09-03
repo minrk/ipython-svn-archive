@@ -7,7 +7,7 @@ from twisted.python import log
 from twisted.python import failure
 import sys
 
-from ipic import QueuedInteractiveConsole
+from console import QueuedInteractiveConsole, TrappingInteractiveConsole
 
 # modified from twisted.mail.imap4.LiteralString
 class LiteralString:
@@ -32,23 +32,21 @@ class LiteralString:
                 self.defer.callback(''.join(self.data))
         return passon
 
-class CommandReporter(protocol.DatagramProtocol):
+class ResultReporterProtocol(protocol.DatagramProtocol):
 
-    def __init__(self, cmd_num, cmd_tuple, addr):
-        self.cmd_num = cmd_num
-        self.cmd_tuple = cmd_tuple
+    def __init__(self, result, addr):
+        self.result = result
         self.addr = addr
         
     def startProtocol(self):
-        print "Protocol running: ", self.cmd_num, self.cmd_tuple, self.addr
-        package = pickle.dumps(self.cmd_tuple,2)
-        self.transport.write("COMMAND %i %s" % (self.cmd_num, package), 
+        package = pickle.dumps(self.result, 2)
+        self.transport.write("RESULT %i %s" % (len(package), package), 
             self.addr)
         self.tried = True
         
     def datagramReceived(self,data, sending_addr):
         print "Datagram Received: ", data, sending_addr
-        if sending_addr == self.addr and data == "COMMAND OK":
+        if sending_addr == self.addr and data == "RESULT OK":
             self.transport.stopListening()
 
 class Mover(basic.LineReceiver):
@@ -73,7 +71,7 @@ class Mover(basic.LineReceiver):
             self.d.callback(False)
         self.transport.loseConnection()
             
-class IPythonTCPProtocol(basic.LineReceiver):
+class KernelTCPProtocol(basic.LineReceiver):
 
     def connectionMade(self):
         log.msg("Connection Made...")
@@ -227,47 +225,55 @@ class IPythonTCPProtocol(basic.LineReceiver):
     def handle_init_EXECUTE(self, args):
         """Handle the EXECUTE command."""
                 
-        execute_cmd = args
-        self.work_vars['current_ticket'] = self.factory.get_ticket()
-
         # Parse the args
+        if not args:
+            self.execute_finish("FAIL")
+            return
+            
         if "BLOCK" in args:
             self.work_vars['execute_block'] = True
             execute_cmd = args[6:]
         else:
             self.work_vars['execute_block'] = False        
             execute_cmd = args
-                    
+                 
+        if not execute_cmd:
+            self.execute_finish("FAIL")
+            return
+        
         if self.work_vars['execute_block']:
-            cmd_num, result = self.factory.execute_block(execute_cmd,
+            self.work_vars['current_ticket'] = self.factory.get_ticket()        
+            result = self.factory.execute_block(execute_cmd,
                 self.work_vars['current_ticket'])
             try:
                 package = pickle.dumps(result, 2)
             except pickle.PickleError:
-                send.sendLine("EXECUTE FAIL")
+                self.execute_finish("FAIL")
             else:
-                self.sendLine("COMMAND %s" % cmd_num)
+                self.sendLine("RESULT %i" % len(package))
                 self.transport.write(package)
-                self.sendLine("EXECUTE OK")
-                
-            self._reset() # In either case call _reset
-        else:                    
+                self.execute_finish("OK")
+                self.execute_ok(result)
+        else:                   
             # The deferToThread in this call costs 2 ms currently :(
+            self.work_vars['current_ticket'] = self.factory.get_ticket()
             d = self.factory.execute(execute_cmd, 
                 self.work_vars['current_ticket'])
-            self.sendLine('EXECUTE OK')   
-            self._reset()
+            self.execute_finish("OK")   
             d.addCallback(self.execute_ok)
             d.addErrback(self.execute_fail)
         
     def execute_ok(self, result):
         for tonotify in self.factory.notifiers():
-            reactor.listenUDP(0,CommandReporter(result[0], 
-                result[1], tonotify) )
+            reactor.listenUDP(0,ResultReporterProtocol(result, tonotify) )
                 
     def execute_fail(self, f):
         pass
         
+    def execute_finish(self, msg):
+        self.sendLine("EXECUTE %s" % msg)
+        self._reset()
+
     #####
     ##### The MOVE command
     #####
@@ -442,14 +448,10 @@ class IPythonTCPProtocol(basic.LineReceiver):
         log.msg("Disconnecting client...")
         self.sendLine("DISCONNECT OK")
         self.transport.loseConnection()
-    
    
-class IPythonTCPFactory(protocol.ServerFactory):
-    protocol = IPythonTCPProtocol
-    
+class KernelFactoryBase:
+
     def __init__(self, validate=[], notify=[]):
-        self.qic = QueuedInteractiveConsole()
-        self.qic.start_work()
         self._notifiers = notify
         self._validated_clients = validate
         self._cluster_addrs = []
@@ -513,7 +515,16 @@ class IPythonTCPFactory(protocol.ServerFactory):
             
     def cluster_count(self):
         return len(self._cluster_addrs)
-            
+
+   
+class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
+    protocol = KernelTCPProtocol
+    
+    def __init__(self, validate=[], notify=[]):
+        self.qic = QueuedInteractiveConsole()
+        self.qic.start_work()
+        KernelFactoryBase.__init__(self, validate, notify)
+
     # Kernel methods
             
     def get_ticket(self):
@@ -538,3 +549,37 @@ class IPythonTCPFactory(protocol.ServerFactory):
         
     def reset(self):
         self.qic.reset()
+        
+class KernelTCPFactoryGUI(protocol.ServerFactory, KernelFactoryBase):
+    protocol = KernelTCPProtocol
+
+    def __init__(self, validate=[], notify=[]):
+        self.tic = TrappingInteractiveConsole()
+        KernelFactoryBase.__init__(self, validate, notify)
+
+    # Kernel methods
+            
+    def get_ticket(self):
+        return 0
+        
+    def push(self, key, value, ticket=None):
+        self.tic.update({key:value})
+        
+    def pull(self, key, ticket=None):
+        value = self.tic.get(key)
+        return defer.succeed(value)
+
+    def execute(self, source, ticket=None):
+        return self.execute_block(source)
+                
+    def execute_block(self, source, ticket=None):
+        self.tic.runsource(source)
+        result = self.tic.get_last_command()
+        return defer.succeed(result)
+        
+    def status(self):
+        return 0
+        
+    def reset(self):
+        self.tic.locals = {}
+        

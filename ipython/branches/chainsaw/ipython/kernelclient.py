@@ -15,7 +15,7 @@ class IPythonTCPClientProtocol(basic.Int32StringReceiver):
 class IPythonTCPClientFactory(protocol.ClientFactory):
     pass
     
-class CommandGatherer(object):
+class ResultGatherer(object):
     """This class listens on a UDP port for kernels reporting stdout and stderr.
     
     The current implementation simply prints the stdin, stdout and stderr
@@ -78,9 +78,9 @@ class CommandGatherer(object):
             # Get and print a message
             message, client_addr = s.recvfrom(8192)
             msg_split = message.split(" ", 2)
-            if msg_split[0] == "COMMAND" and len(msg_split) == 3:
+            if msg_split[0] == "RESULT" and len(msg_split) == 3:
                 try:
-                    cmd_num = int(msg_split[1])
+                    nbytes = int(msg_split[1])
                 except  (ValueError, TypeError):
                     fail = True
                 else:
@@ -90,24 +90,28 @@ class CommandGatherer(object):
                         fail = True
                     else:
                         fail = False
+                        cmd_num = cmd_tuple[0]
+                        cmd_stdin = cmd_tuple[1]
+                        cmd_stdout = cmd_tuple[2]
+                        cmd_stderr = cmd_tuple[3]
                         print "\n%s[%s]%s In [%i]:%s %s" % \
                             (green, client_addr[0],
-                            blue, cmd_num, normal, cmd_tuple[0])
-                        if cmd_tuple[1]:
+                            blue, cmd_num, normal, cmd_stdin)
+                        if cmd_stdout:
                             print "%s[%s]%s Out[%i]:%s %s" % \
                                 (green, client_addr[0],
-                                red, cmd_num, normal, cmd_tuple[1])
-                        if cmd_tuple[2]:
+                                red, cmd_num, normal, cmd_stdout)
+                        if cmd_stderr:
                             print "%s[%s]%s Err[%i]:\n%s %s" % \
                                 (green, client_addr[0],
-                                red, cmd_num, normal, cmd_tuple[2])
+                                red, cmd_num, normal, cmd_stderr)
             else:
                 fail = True
                 
             if fail:
-                s.sendto("COMMAND FAIL", client_addr)
+                s.sendto("RESULT FAIL", client_addr)
             else:
-                s.sendto("COMMAND OK", client_addr)
+                s.sendto("RESULT OK", client_addr)
                 
 class RemoteKernel(object):
     
@@ -147,16 +151,28 @@ class RemoteKernel(object):
     def execute(self, source, block=False):
         self._check_connection()
         if block:
-            self.es.write_line("EXECITE BLOCK %s" % source)
+            self.es.write_line("EXECUTE BLOCK %s" % source)
             line, self.extra = self.es.read_line(self.extra)
-            data, self.extra = self.es.read_bytes(self.extra)
-            line, self.extra = self.es.read_line(self.extra)
+            line_split = line.split(" ")
+            if line_split[0] == "RESULT" and len(line_split) == 2:
+                try:
+                    nbytes = int(line_split[1])
+                except:
+                    print "Server did not return the length of data."
+                    return False
+                package, self.extra = self.es.read_bytes(nbytes, self.extra)
+                data = pickle.loads(package)
+                line, self.extra = self.es.read_line(self.extra)
+            else:
+                data = None
+                line = ""
         else:
             self.es.write_line("EXECUTE %s" % source)
             line, self.extra = self.es.read_line(self.extra)
+            data = None
             
         if line == "EXECUTE OK":
-            return True
+            return data
         else:
             return False
         

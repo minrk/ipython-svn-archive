@@ -10,7 +10,7 @@ threadedselectreactor.install()
 from twisted.internet import reactor
 from twisted.python import log
 
-from ipkernelcore import IPythonTCPFactory
+from kernelcore import KernelTCPFactoryGUI
 
 # Here are the classes for wxPython
 
@@ -46,7 +46,7 @@ def main(port):
     # Setp the twisted server
     log.startLogging(sys.stdout)
     reactor.suggestThreadPoolSize(5)
-    reactor.listenTCP(port, IPythonTCPFactory(validate=['127.0.0.1']))
+    reactor.listenTCP(port, KernelTCPFactoryGUI(validate=['127.0.0.1']))
     # Start wx, which start the reactor using reactor.interleave
     app = MyApp(0)
     app.MainLoop()

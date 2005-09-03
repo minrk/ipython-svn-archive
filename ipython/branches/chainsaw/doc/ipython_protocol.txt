@@ -4,7 +4,8 @@ This document describes the network protocol used by IPython to communicate
 with  instances of the IPython kernel over a network.  The IPython kernel is
 a multithreaded and queued python interpreter that gets commands from network
 ports rather than from a local interactive prompt.  This network protocol 
-enables python objects and python commands to be sent to and from instances of the IPython kernel.  The protocol also provides capabilities for remote 
+enables python objects and python commands to be sent to and from instances of 
+the IPython kernel.  The protocol also provides capabilities for remote 
 debugging command completion in the kernel's namespace and other kernel
 management functions.
 
@@ -42,13 +43,19 @@ and some of which are insecure.  This will give us the flexibility to lock down
 only the communications that absolutely need to be secure.
 
 1.      Protocol Overview
+1.1.    Link Level
+1.2.    Commands and Responses
+1.2.1   Performance
+
+
+1.      Protocol Overview
 
 1.1.    Link Level
 
     The IPython kernel protocol uses both TCP and UDP sockets.  Communications
     with the kernel are organized into channels.  These channels represent
     either TCP connections or connectionless UDP sockets.  The kernel will 
-    typically have multiple channels running at a given time.  For example
+    typicaly have multiple channels running at a given time.  For example
     python objects might be sent over a TCP connection, while small strings
     representing python commands could be send over UDP.
     
@@ -70,12 +77,19 @@ only the communications that absolutely need to be secure.
     
     Client commands must be completed before the client initiates a new
     command.  If, for some reason, the server does not respond to a client
-    command, the client should issue a STATUS command and have the server
-    change the state back to init.  Then the client can proceed with a new
+    command, the client should issue a STATUS command which should reset
+    the server state.  Then the client can proceed with a new
     command.
     
     If a command cannot be parsed by the server, the server should give a
-    response of BAD and reset its state.
+    response of FAIL and reset its state.
+    
+    Commands can be blocking or nonblocking.  In a blocking command, the server
+    gives its final response only after it is completely done processing the
+    command.  In a nonblocking command, the server gives its final response
+    after it has received the command, but before it has fully processed it.
+    Some command can either blocking or nonblocking, but others can only be
+    blocking.
 
 1.2.1   Performance
 
@@ -154,7 +168,8 @@ only the communications that absolutely need to be secure.
 
 2.2.    Command related states
 
-    The following server states are associated with client commands:
+    The server can define states that are associated with specific 
+    client commands:
     
     pulling
     pushing
@@ -165,7 +180,7 @@ only the communications that absolutely need to be secure.
 
     The server enters one of these states upon receiving the associated 
     command from the client.  The server remains in that state until the server
-    has sent its final response.
+    has sent its final response, after which it changes back to the init state.
 
 3.      Data Commands
 
@@ -174,11 +189,11 @@ only the communications that absolutely need to be secure.
     in various formats.
     
     In all cases a data command consists of the command (like PICKLE) and 
-    the actual data.  Typically there is one arguement to a data command,
+    the actual data.  Typically there is one argument to a data command,
     an integer specifying the length of the data.  The data, in whatever
     format, is sent after the line giving the data command.
     
-    If the data command is being issued over a UDP port, the must
+    If the data command is being issued over a UDP port, the data must
     arrive on the same line as the command and the receiver must reply
     with an OK.  
     
@@ -191,56 +206,51 @@ only the communications that absolutely need to be secure.
      
     Examples:
                 C: PICKLE 10
-                C: datastring
-                    
-3.2.    ARRAY Command
+                C: stringofpickleddata
+                                          
+3.3.    RESULT Command
 
-    Arguments: number of bytes
+    Arguments:  number of bytes
 
-        The ARRAY command is used to send a numeric array.  Currently, ARRAY
-        just pickles the array.
-        
-    Examples:
-                C: ARRAY 10
-                C: 10 bytes of binary data
-                      
-3.3.    COMMAND Command
-
-    Arguments: number of bytes
-
-        The COMMAND command is used to transmit the stdin, stdout and stderr 
+        The RESULT command is used to transmit the stdin, stdout and stderr 
         of a command executed by the kernel.  These strings should be sent
-        in a pickled 3-tuple (stdin, stdout, stderr).
+        in a pickled 4-tuple (command_number, stdin, stdout, stderr).
         
-        The COMMAND command is always given by the server and can be issued
-        in two contexts.  First, COMMAND can be given to a client over a
-        connected TCP channel in response to a PULL COMMAND command.  This
+        The RESULT command is always given by the server and can be issued
+        in two contexts.  First, RESULT can be given to a client over a
+        connected TCP channel in response to a PULL RESULT command.  This
         is for the client to request a specific command's results.
         
-        Second, COMMAND will be issued by the server when the kernel complete's
+        Second, RESULT can be issued by the server when the kernel complete's
         executing python code in its namespace.  These commands can come
         at any time and must arrive on a second communications channel.  This
         is done so that frontends can monitor the progress of a group of 
         kernel's without being connected to them.  It also makes it possible
-        to write both blocking and non-blocking frontends.
+        to easily write both blocking and non-blocking frontends.
         
         The server will send these commands to all client added via the
-        NOTIFYIP command.
+        NOTIFY command.
         
         This channel will probably be a UDP channel because it is fast!  
         
+        Eventually we should have the RESULT command send more information,
+        such as the ip and port of the kernel's TCP channel.
+        
     Examples:
         
-        S: COMMAND 10 ip:port
-        S: rawdaya
+        S: RESULT 7
+        S: rawdata
         
-                    
+        S: RESULT 7 rawdata
+        C: RESULT OK
+        
 4.      Client Commands
 
 4.1.    PUSH Command
 
     Arguments:  name
                 FORWARD
+                BLOCK
 
     Responses:  none
                 
@@ -258,14 +268,23 @@ only the communications that absolutely need to be secure.
         the FORWARDTO command.  This capability can be used to optimize
         communications with large numbers of kernels.
         
-        Server responses to PUSH commands are sent back to the client once 
-        the data has been received, handled (unpickled for example) and 
-        placed into the kernel's queue.    
-             
+        If the BLOCK arguement is given, the PUSH command is handled in blocking
+        more.  In this mode the server does not give its final reply until
+        the pushed data has been placed in the kernels namespace.  PUSH
+        commands are, by default, nonblocking.  In this mode, the server
+        gives its final response immediately after receiving the data from 
+        the client and placing the data on the queue.
+        
+               
     Examples (must have TCP_NODELAY = 1):
-        C: PUSH FORWARD BLOCK 
+        C: PUSH a
         C: PICKLE 25
         C: asdf098u42oijasr09j234f'ljf
+        S: PUSH OK
+        
+        C: PUSH FORWARD BLOCK b
+        C: PICKLE 20
+        C: asdfasdfasdfasdfasdfasf
         S: PUSH OK
         
         This should take 2 ms over 100Mb.
@@ -299,7 +318,7 @@ only the communications that absolutely need to be secure.
 4.2.    PULL Command
 
     Arguments:  variable name
-                COMMAND command#
+                RESULT command#
     
     Responses:  none
     
@@ -313,26 +332,32 @@ only the communications that absolutely need to be secure.
         
         If the data does not exist, the object None will be returned.  Thus
         PUSH FAIL should only occur if the data could not be handled (pickled).
+        
+        The RESULT argument requests the stdin, stdout and stderr of a executed
+        command.  The RESULT argument can optionally be followed by an integer
+        that specifies what command should be pulled.  If no command number is
+        specified, the most recent command executed will be pulled.
     
     Examples:
     
         C: PULL a
-        S: PICKLE
+        S: PICKLE 10
         S: send a back
         S: PULL OK 
         
         C: PULL b
         S: PULL FAIL
         
-        C: PULL STDOUT 4
-        S: STDOUT send -it- back
+        C: PULL RESULT
+        S: RESULT 10
+        S: mostrecentresult
         S: PULL OK
         
-        C: PULL STDERR 5
-        S: STDERR
-        S: send it back
+        C: PULL RESULT 30
+        S: RESULT 10
+        S: result30
         S: PULL OK        
-
+  
     Performance Considerations:
     
         The performance characteristics of PULL should be similar to those
@@ -404,13 +429,21 @@ only the communications that absolutely need to be secure.
     
 4.9.    RESET Command
     
-4.10.    KILL Command
+4.10.   KILL Command
     
 4.11.   DISCONNECT Command
 
-5. Server Responses
+5.      Notes, Questions and Unresolved Issues
 
-    On certain communications channels, the server can issue commands.  These
-    commands will typically be to send the stdout or stderr of a kernel executed
-    command to the client.  This needs to be filled in.
+5.1.    Asynchronous stdout and stderr.  
 
+    It is possible that the stdout or stderr of some commands will pop up 
+    when the command is not being trapped.  This would be the case if the user 
+    creates a second thread which writes to stdout or stderr.  How should this 
+    output be captured and reported to the user?
+    
+5.2.    What type of source code should EXECUTE accept?
+
+    Currently, EXECUTE is written to accept code that can already be compiled
+    in the python code.  This will be more difficult to test for when the 
+    kernel starts to accept ipython input with magics, etc.  

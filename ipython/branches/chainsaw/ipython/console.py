@@ -106,7 +106,7 @@ class TrappingInteractiveConsole(InteractiveConsole):
         err_result = self._stderr[-1]
         cmd_num = len(self._stdin) - 1
         self._datalock.release()
-        return (cmd_num, (in_result, out_result, err_result))
+        return (cmd_num, in_result, out_result, err_result)
         
 class QueuedInteractiveConsole:
 
