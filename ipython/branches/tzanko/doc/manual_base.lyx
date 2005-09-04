@@ -8013,28 +8013,30 @@ Nbshell is a graphical user interface for IPython which somewhat resembles
 \end_inset 
 
 .
- The README file there explains how to install nbshell.
+ The README file there explains how to install it.
 \layout Standard
 
 The files Nbshell works with are called notebooks.
- A notebook can contain python code, text and figures.
- It is stored as a xml file which includes two types of data: one or more
+ A notebook can contain Python code, text and figures.
+ It is stored as a xml file which includes two major sections: one or more
  logs and one sheet.
 \layout Standard
 
-A log is simply a list of cells each of which contains a python expression.
+A log is simply a list of cells each of which contains a Python expression.
  Each cell has a number showing the order in which those cells are executed.
- A cell can also contain the output the python expression produces.
+ A cell can also contain the output the Python expression produces.
  The cells in different logs are executed in different namespaces.
- By default a notebook has only one log
+ By default a notebook has only one log.
 \layout Standard
 
 The sheet holds all the text of the notebook, external references to figures
  and the places where cells should be displayed.
  The format of the sheet is similar to the Docbook format.
  Currently everything except code and figures is displayed as raw xml so
- even though nbshell won't display it properly, you can use the full power
+ even though Nbshell won't display it properly, you can use the full power
  of Docbook to typeset your documents.
+ Unfortunately that means that for the moment all text that you enter must
+ be valid xml.
 \layout Standard
 
 When you open a notebook file or create a new one, an empty input will be
@@ -8045,10 +8047,10 @@ When you open a notebook file or create a new one, an empty input will be
  by pressing Enter.
  When you are done modifying the cell you must execute it.
  This can be done by pressing either Shift-Enter, or Ctrl-Enter while the
- cursor is inside the modified inputl.
+ cursor is inside the modified input.
  When you press Shift-Enter only the cell you have modified will be executed.
  When you press Ctrl-Enter all cells with numbers larger or equal to the
- number of the modified cells will be executed.
+ number of the modified cell will be executed.
  Please note that the input you enter is recorded in the log when you press
  Shift-Enter, or Ctrl-Enter.
  If you modify more than one input only the one the cursor is on will be
@@ -8061,8 +8063,69 @@ Nbshell can include figures, and has support for using Matplotlib.
  are automatically included so you can start making plots right away.
  You can use both the interactive and noninteractive mode which are turned
  on and off via the ion() and ioff() functions.
- When you are ready with a plot using the function grab_figure() you can
- include it in the notebook.
+ When you are ready with a plot you can include it in the notebook using
+ the function grab_figure().
+\layout Standard
+
+A notebook consists of blocks.
+ Each block can display text, Python code and its output or a figure.
+ You can insert blocks of different type using the Insert menu.
+ The new block will be inserted at the place of the cursor.
+ When you try to insert a figure a dialog will show to set the path to the
+ image file that will be displayed in the block.
+ Sometimes inserting a block of a certain type at the given position makes
+ no sense, then Nbshell does nothing.
+ For example you cannot insert a text block inside another text block.
+ The Insert->Delete Block menu item will delete the block that the cursor
+ is currently on.
+ If you delete a block of Python code the corresponding cells in the log
+ will not be deleted.
+ Also if you delete a figure the corresponding image file will remain.
+\layout Standard
+
+Using the NBShell->Rerun menu item you can re-execute parts of the logs.
+ You can choose to re-execute all cells of a log, a range of cells given
+ with the number of the first and the last cell, or a list of cells given
+ by their numbers separated by commas.
+ In the first case the namespace of the log will be reset and the cell numbers
+ will not change.
+ In the second and third cases the namespace won't reset, the old cells
+ in the log will be deleted and new cells will be appended at the end of
+ the log having the input of the old cells.
+ In the third case the order in which the cells were executed is the same
+ order by which they were given in the list.
+ So the list 
+\begin_inset Quotes eld
+\end_inset 
+
+2,1
+\begin_inset Quotes erd
+\end_inset 
+
+ will first execute cell number two and then cell number one.
+ Also a cell can be in the list more than once so the list 
+\begin_inset Quotes eld
+\end_inset 
+
+2,2
+\begin_inset Quotes erd
+\end_inset 
+
+ will execute cell number two twice, appending two new cells at the end
+ of the log.
+\layout Standard
+
+You can export the notebook to HTML, LaTeX or PDF files using the File->Export
+ menu item.
+ For the moment the PDF file is generated using the generated LaTeX source
+ so you in order to use that function you need to have a LaTeX distribution
+ with the pdflatex program installed on your computer.
+ In order to print a notebook you can either export it to one of the formats
+ above and then print it, or you can print it directly using File->Print.
+ The second option wxWidgets' HTML printing functionality and the output
+ it generates is worse than optimal.
+ The recommnended way to print a notebook is to export it either to LaTeX
+ or to PDF and then print it.
 \layout Section
 
 Reporting bugs

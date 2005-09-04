@@ -24,6 +24,8 @@ name = 'ipython'
 
 version = '0.6.16.tzanko'
 
+revision = '$Revision$'
+
 description = "An enhanced interactive Python shell."
 
 long_description = \

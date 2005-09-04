@@ -1,8 +1,41 @@
+2005-08-31  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* IPython/iplib.py (InteractiveShell.complete): Added new
+	top-level completion method to expose the completion mechanism
+	beyond readline-based environments.
+
+2005-08-19  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* tools/ipsvnc (svnversion): fix svnversion capture.
+
+	* IPython/iplib.py (InteractiveShell.__init__): Add has_readline
+	attribute to self, which was missing.  Before, it was set by a
+	routine which in certain cases wasn't being called, so the
+	instance could end up missing the attribute.  This caused a crash.
+	Closes http://www.scipy.net/roundup/ipython/issue40.
+
+2005-08-16  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/ultraTB.py (VerboseTB.text): don't crash if object
+	contains non-string attribute.  Closes
+	http://www.scipy.net/roundup/ipython/issue38.
+
 2005-08-14  Fernando Perez  <fperez@colorado.edu>
 
-	* IPython/genutils.py (IOStream.__getattr__): add delegated
-	getattr so that we don't break apps which expect sys.stdin/out/err
-	to have certain attributes.
+	* tools/ipsvnc: Minor improvements, to add changeset info.
+
+2005-08-12  Fernando Perez  <fperez@colorado.edu>
+
+	* IPython/iplib.py (runsource): remove self.code_to_run_src
+	attribute.  I realized this is nothing more than
+	'\n'.join(self.buffer), and having the same data in two different
+	places is just asking for synchronization bugs.  This may impact
+	people who have custom exception handlers, so I need to warn
+	ipython-dev about it (F. Mantegazza may use them).
+
+2005-07-29  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* IPython/genutils.py: fix 2.2 compatibility (generators)
 
 2005-07-18  Fernando Perez  <fperez@colorado.edu>
 
