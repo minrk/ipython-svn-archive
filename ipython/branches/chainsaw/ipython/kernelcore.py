@@ -134,17 +134,25 @@ class KernelTCPProtocol(basic.LineReceiver):
     #####
     
     def handle_init_PUSH(self, args):
-        if args:
-            split_args = args.split(" ")
-            self.work_vars['push_name'] = split_args[0]
-            if 'FORWARD' in split_args:
-                self.work_vars['push_forward'] = True
-            else:
-                self.work_vars['push_forward'] = False
-            self.state = 'pushing'
-            self.work_vars['current_ticket'] = self.factory.get_ticket()
+    
+        # Parse the args
+        if not args:
+            self.push_finish("FAIL")
+            return
         else:
-            self.push_finish('FAIL')
+            args_str = args
+                                            
+        if 'FORWARD' in args_str:
+            self.work_vars['push_forward'] = True
+            args_str.replace("FORWARD ","")
+        else:
+            self.work_vars['push_forward'] = False
+
+        self.work_vars['push_name'] = args_str
+
+        # Setup to process the command
+        self.state = 'pushing'
+        self.work_vars['current_ticket'] = self.factory.get_ticket()
 
     def setup_literal(self, size):
         """Called by data command handlers."""
@@ -182,32 +190,51 @@ class KernelTCPProtocol(basic.LineReceiver):
     #####
     
     def handle_init_PULL(self, args):
-        if args:
-            split_args = args.split(" ")
-            pull_name = split_args[0]
-            if pull_name == "COMMAND":
-                # Handle an STDOUT request
-                self.sendLine("COMMAND stdout")
-                self.transport.write("pickled tuple")
-                self.pull_finish("OK")
-            else:
-                # All other pull request are from the kernel's namespace
-                self.work_vars['current_ticket'] = self.factory.get_ticket()
-                d = self.factory.pull(pull_name, 
-                    self.work_vars['current_ticket'])                   
-                d.addCallback(self.pull_ok)
-                d.addErrback(self.pull_fail)
+
+        # Parse the args
+        if not args:
+            self.push_finish("FAIL")
+            return
         else:
-            self.pull_finish("FAIL")
+            args_list = args.split(" ")
+
+        if "RESULT" == args_list[0]:
+            self.work_vars['pull_type'] = 'RESULT'
+            if len(args_list) == 1:
+                d = self.factory.get_last_result()
+            elif len(args_list) == 2:
+                try:
+                    cmd_num = int(args_list[1])
+                except (ValueError, TypeError):
+                    self.pull_finish("FAIL")
+                    return
+                else:
+                    d = self.factory.get_result(cmd_num)
+        else:
+            # All other pull request are from the kernel's namespace
+            pull_name = args_list[0]
+            self.work_vars['pull_type'] = 'PICKLE'
+            self.work_vars['current_ticket'] = self.factory.get_ticket()
+            d = self.factory.pull(pull_name, 
+                self.work_vars['current_ticket'])
+                
+        # In either case, d is a deferred we need to handle.
+        d.addCallback(self.pull_ok)
+        d.addErrback(self.pull_fail)
      
     def pull_ok(self, result):
-        # Add error code here and chain the callbacks
+        # Add error code here and chain the callbacksPIU
         try:
             presult = pickle.dumps(result, 2)
         except pickle.PickleError:
             self.pull_finish("FAIL")
         else:
-            self.sendLine("PICKLE %s" % len(presult))
+            # What are we sending back?
+            if self.work_vars['pull_type'] == "PICKLE":
+                self.sendLine("PICKLE %s" % len(presult))
+            elif self.work_vars['pull_type'] == "RESULT":
+                self.sendLine("RESULT %s" % len(presult))
+            # Send it off and finish up.
             self.transport.write(presult)
             self.pull_finish("OK")
            
@@ -550,6 +577,14 @@ class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
     def reset(self):
         self.qic.reset()
         
+    def get_result(self, i):
+        d = threads.deferToThread(self.qic.get_result, i)
+        return d
+        
+    def get_last_result(self):
+        d = threads.deferToThread(self.qic.get_last_result)
+        return d
+        
 class KernelTCPFactoryGUI(protocol.ServerFactory, KernelFactoryBase):
     protocol = KernelTCPProtocol
 
@@ -574,7 +609,7 @@ class KernelTCPFactoryGUI(protocol.ServerFactory, KernelFactoryBase):
                 
     def execute_block(self, source, ticket=None):
         self.tic.runsource(source)
-        result = self.tic.get_last_command()
+        result = self.tic.get_last_result()
         return defer.succeed(result)
         
     def status(self):
@@ -582,4 +617,10 @@ class KernelTCPFactoryGUI(protocol.ServerFactory, KernelFactoryBase):
         
     def reset(self):
         self.tic.locals = {}
+        
+    def get_result(self, i):
+        return self.tic.get_result(i)
+        
+    def get_last_result(self):
+        return self.tic.get_last_result()
         

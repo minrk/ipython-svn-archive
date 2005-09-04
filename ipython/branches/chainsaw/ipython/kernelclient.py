@@ -119,15 +119,17 @@ class RemoteKernel(object):
         self.addr = addr
         self.extra = ''
         
-    def _check_connection(self):
+    def is_connected(self):
         if hasattr(self, 's'):
             try:
                 self.fd = self.s.fileno()
             except socket.error:
-                self.connect()
+                return False
             else:
-                return
-        else:
+                return True
+                
+    def _check_connection(self):
+        if not self.is_connected():
             self.connect()
             
     def connect(self):
@@ -184,7 +186,7 @@ class RemoteKernel(object):
             print "Object cannot be pickled: ", e
             return False
         if forward:
-            self.es.write_line("PUSH %s FORWARD" % key)
+            self.es.write_line("PUSH FORWARD %s" % key)
         else:
             self.es.write_line("PUSH %s" % key )
         self.es.write_line("PICKLE %i" % len(package))
@@ -194,6 +196,9 @@ class RemoteKernel(object):
             return True
         if line == "PUSH FAIL":
             return False
+        
+    def __setitem__(self, key, value):
+        self.push(value, key)
         
     def pull(self, key):
         self._check_connection()    
@@ -223,10 +228,43 @@ class RemoteKernel(object):
             # For other data types
             pass
 
+    def __getitem__(self, key):
+        return self.pull(key)
+
+    def result(self, number=None):
+        self._check_connection()    
     
+        if number is None:
+            self.es.write_line("PULL RESULT")
+        else:
+            self.es.write_line("PULL RESULT %i" % number)
+        line, self.extra = self.es.read_line(self.extra)
+        line_split = line.split(" ", 1)
+        if line_split[0] == "RESULT":
+            try:
+                nbytes = int(line_split[1])
+            except (ValueError, TypeError):
+                raise
+            else:
+                package, self.extra = self.es.read_bytes(nbytes, self.extra)
+                line, self.extra = self.es.read_line(self.extra)
+                try:
+                    data = pickle.loads(package)
+                except pickle.PickleError, e:
+                    print "Error unpickling object: ", e
+                    return None
+                else:
+                    if line == "PULL OK":
+                        return data
+                    else:
+                        return None
+        else:
+            # For other data types
+            return False
+        
     def move(keya, keyb, target):
         self._check_connection()
-        
+        print "Mpve is not implemented yet."
         #write_line("MOVE %s %s %" % (keya, keyb, target))
         #read_line()
 
@@ -316,27 +354,87 @@ class RemoteKernel(object):
         return True   
 
     def disconnect(self):
-        self._check_connection()
-            
-        self.es.write_line("DISCONNECT")
-        line, self.extra = self.es.read_line(self.extra)
-        if line == "DISCONNECT OK":
-            self.s.close()
-            del self.s
-            del self.es
-            return True
+        if self.is_connected():
+            self.es.write_line("DISCONNECT")
+            line, self.extra = self.es.read_line(self.extra)
+            if line == "DISCONNECT OK":
+                self.s.close()
+                del self.s
+                del self.es
+                return True
+            else:
+                return False
         else:
-            return False
+            return True
             
 class InteractiveCluster(object):
     
     def __init__(self):
         self.count = 0
         self.workers = []
+        self.worker_addrs = []
         
     def start(self, addr_list):
         for a in addr_list:
+            self.worker_addrs.append(a)
             self.workers.append(RemoteKernel(a))
         self.count = len(self.workers)
+        
+        # Let everyone know about each other
+        for w in self.workers:
+            w.cluster(self.worker_addrs)
+            
         return True
+        
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self.workers[key]
+        elif isinstance(key, str):
+            return self.pull(key)
+            
+    def __len__(self):
+        return selr.count
+        
+    def stop(self):
+        for w in workers:
+            w.kill()
+            
+    def push(self, value, key, workers=None):
+        if workers is None:
+            for w in self.workers:
+                w.push(value, key)
+        else:
+            for w_num in workers:
+                self.workers[w_num].push(value, key)
+                
+    def __setitem__(self, key, value):
+        self.push(value, key)
+        
+    def pull(self, key, workers=None):
+        results = []
+        if workers is None:
+            for w in self.workers:
+                results.append(w.pull(key))
+        else:
+            for w_num in workers:
+                results.append(self.workers[w_num].pull(key))
+        return results
+                
+    def execute(self, source, workers=None):
+        if workers is None:
+            for w in self.workers:
+                w.execute(source)
+        else:
+            for w_num in workers:
+                self.workers[w_num].execute(source)
+            
+    def notify(self, addr):
+        for w in self.workers:
+            w.notify(addr)
+            
+    def reset(self):
+        for w in self.workers:
+            w.reset()
+            
+    
                   

@@ -29,6 +29,7 @@ class TrappingInteractiveConsole(InteractiveConsole):
         self._stdout = []
         self._stderr = []
         self._datalock = threading.Lock()
+        self._inouterr_lock = threading.Lock()
 
     def runsource(self, source, filename="<input>", symbol="single"):
         """
@@ -38,15 +39,21 @@ class TrappingInteractiveConsole(InteractiveConsole):
         stdout and stderr for the last executed command only.
         """
         
+        # Execute the code
         self._datalock.acquire()
         self._trap.flush()
         self._trap.trap()
         result = InteractiveConsole.runsource(self,source,filename,symbol)
         self._trap.release()
+        self._datalock.release()
+                
+        # Save stdin, stdout and stderr to lists
+        self._inouterr_lock.acquire()
         self._stdin.append(source)
         self._stdout.append(self._trap.out.getvalue())
         self._stderr.append(self._trap.err.getvalue())
-        self._datalock.release()
+        self._inouterr_lock.release()
+
         return result
         
     def update(self,dict_of_data):
@@ -65,25 +72,25 @@ class TrappingInteractiveConsole(InteractiveConsole):
         return result
         
     def get_stdin(self):
-        self._datalock.acquire()
+        self._inouterr_lock.acquire()
         result = self._stdin
-        self._datalock.release()
+        self._inouterr_lock.release()
         return result
         
     def get_stdout(self):
-        self._datalock.acquire()
+        self._inouterr_lock.acquire()
         result = self._stdout
-        self._datalock.release()
+        self._inouterr_lock.release()
         return result
                 
     def get_stderr(self):
-        self._datalock.acquire()
+        self._inouterr_lock.acquire()
         result = self._stderr
-        self._datalock.release()
+        self._inouterr_lock.release()
         return result
         
-    def get_command(self,i):
-        self._datalock.acquire()
+    def get_result(self,i):
+        self._inouterr_lock.acquire()
         if i in range(len(self._stdin)):
             in_result = self._stdin[i]
             out_result = self._stdout[i]
@@ -92,20 +99,20 @@ class TrappingInteractiveConsole(InteractiveConsole):
             in_result = None
             out_result = None
             err_result = None
-        self._datalock.release()
+        self._inouterr_lock.release()
         
         if in_result:
             return (in_result, out_result, err_result)
         else:
             return None
             
-    def get_last_command(self):
-        self._datalock.acquire()
+    def get_last_result(self):
+        self._inouterr_lock.acquire()
         in_result = self._stdin[-1]
         out_result = self._stdout[-1]
         err_result = self._stderr[-1]
         cmd_num = len(self._stdin) - 1
-        self._datalock.release()
+        self._inouterr_lock.release()
         return (cmd_num, in_result, out_result, err_result)
         
 class QueuedInteractiveConsole:
@@ -149,8 +156,7 @@ class QueuedInteractiveConsole:
         #print "Handling EXECUTE..."
         self.tic.runsource(source)
         if notifier:
-            notifier.put(self.tic.get_last_command())
-        #print "Executed:", self.tic.get_last_command()
+            notifier.put(self.tic.get_last_result())
                                
     def get_ticket(self):
         return self.workq.get_ticket()
@@ -211,3 +217,18 @@ class QueuedInteractiveConsole:
         self.tic = TrappingInteractiveConsole()
         self.start_work()
                     
+    def get_stdin(self):
+        return self.tic.get_stdin()
+        
+    def get_stdout(self):
+        return self.tic.get_stdout()
+                
+    def get_stderr(self):
+        return self.tic.get_stderr()
+        
+    def get_result(self,i):
+        return self.tic.get_result(i)
+        
+    def get_last_result(self):
+        return self.tic.get_last_result()
+

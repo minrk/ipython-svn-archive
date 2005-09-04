@@ -248,10 +248,9 @@ only the communications that absolutely need to be secure.
 
 4.1.    PUSH Command
 
-    Arguments:  name
-                FORWARD
-                BLOCK
-
+    Arguments:  FORWARD
+                name
+                
     Responses:  none
                 
     Result:     OK - push completed
@@ -268,12 +267,11 @@ only the communications that absolutely need to be secure.
         the FORWARDTO command.  This capability can be used to optimize
         communications with large numbers of kernels.
         
-        If the BLOCK arguement is given, the PUSH command is handled in blocking
-        more.  In this mode the server does not give its final reply until
-        the pushed data has been placed in the kernels namespace.  PUSH
-        commands are, by default, nonblocking.  In this mode, the server
+        PUSH commands are, at this point, nonblocking.  In this mode, the server
         gives its final response immediately after receiving the data from 
-        the client and placing the data on the queue.
+        the client and placing the data on the queue.  But in GUI kernels, 
+        there is not queue, so on GUI kernels PUSH is basically blocks until
+        the data in in the kernel's namespace.
         
                
     Examples (must have TCP_NODELAY = 1):
