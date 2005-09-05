@@ -66,12 +66,10 @@ class ipnFrame(wx.Frame):
     def OnInit(self, app):
         self.app = app
         self.notebook = app.notebook
-     
-#        self.sizer = wx.BoxSizer(wx.VERTICAL)
-#        self.sizer.Add(self.notebook, 1, wx.EXPAND)
-
-#        self.SetSizer(self.sizer)
+        
+        self.CreateStatusBar()
         self.SetUpMenu()
+        
         #self.sizer.Fit(self)
         wx.EVT_SIZE(self, self.OnSize)
         wx.EVT_CLOSE(self, self.OnClose)

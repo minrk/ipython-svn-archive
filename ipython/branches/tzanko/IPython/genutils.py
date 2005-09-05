@@ -283,12 +283,13 @@ def shell(cmd,verbose=0,debug=0,header=''):
     be conveniently used in interactive loops without getting the return value
     (typically 0) printed many times."""
 
-    stat = 0
-    if verbose or debug: print header+cmd
     # flush stdout so we don't mangle python's buffering
     sys.stdout.flush()
+    #TODO: this does not allow running of interactive programs
+    out, err = getoutputerror(cmd, verbose, debug, header)
     if not debug:
-        os.system(cmd)
+        sys.stdout.write(out)
+        sys.stderr.write(err)
 
 def getoutput(cmd,verbose=0,debug=0,header='',split=0):
     """Dummy substitute for perl's backquotes.
@@ -329,9 +330,9 @@ def getoutputerror(cmd,verbose=0,debug=0,header='',split=0):
             return '',''
     if not debug:
         pin,pout,perr = os.popen3(cmd)
+        pin.close() #If the program is interactive, this will make it print the output and exit
         tout = pout.read().rstrip()
         terr = perr.read().rstrip()
-        pin.close()
         pout.close()
         perr.close()
         if split:

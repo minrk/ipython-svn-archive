@@ -1,3 +1,24 @@
+09.05.2005:
+
+	* Added status bar
+
+	* Fixed a bug in grab_figure which threw an exception when called
+	without an active figure
+
+	* Now stdout and stderr are also wrapped as the output. Before
+	when one of these were too long, the window displaying the block
+	would not change its size properly so scrolling inside a block
+	would occur. As a result parts of the text would be hidden.
+
+	* Fixed a bug that the caret would not show automatically when a
+	document is created or loaded
+
+	* Fixed a bug in scrolling, the current line would be
+	partially hidden if at the bottom at the window
+
+	* Changed genutils.shell in IPython to put the output of a command
+	in sys.stdout and sys.stderr
+	
 08.30.2005:
 
 	* Added copy/pasting. Currently you can only make selections

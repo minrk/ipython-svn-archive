@@ -116,11 +116,12 @@ ion()
         figurexml = self.plot_api.grab_png(caption)
         #Append the new figure to the appropriate figure list in the log
         #The figure lists will be dealt with in UpdateOutput
-        figuredict = getattr(self, 'figuredict', {})
-        figurelist = figuredict.get(self.currentcell.number, [])
-        figurelist.append(figurexml)
-        figuredict[self.currentcell.number] = figurelist
-        self.figuredict = figuredict
+        if figurexml is not None:
+            figuredict = getattr(self, 'figuredict', {})
+            figurelist = figuredict.get(self.currentcell.number, [])
+            figurelist.append(figurexml)
+            figuredict[self.currentcell.number] = figurelist
+            self.figuredict = figuredict
         
         
     # TODO:All logs have one cell with empty input. This is the cell where the
@@ -240,22 +241,25 @@ ion()
         text = '\n' + cout.getvalue()
         #print 'unformatted stdout ->', text #dbg
         if text != '\n':
-            if text[-1] != '\n':
-                text = text + '\n'
-            cell.stdout = text
+            #if text[-1] != '\n':
+            #    text = text + '\n'
+            cell.stdout =''.join(['\n'.join(self.wrapper.wrap(x))+'\n'\
+                                  for x in text.splitlines(False)]) #wrap stdout
         cout.close()
         
         #Retrieve stderr
         text = '\n' + cerr.getvalue()
         #print 'unformatted stderr ->', text #dbg
         if text != '\n':
-            if text[-1] != '\n':
-                text = text + '\n'
-            cell.stderr = text
+            #if text[-1] != '\n':
+            #    text = text + '\n'
+            cell.stderr = ''.join(['\n'.join(self.wrapper.wrap(x))+'\n'\
+                                  for x in text.splitlines(False)]) #wrap stderr
         cerr.close()
         
         if self.output != '':
-            cell.output = self.wrapper.fill(self.output) + '\n'#wrap the output
+            cell.output = ''.join(['\n'.join(self.wrapper.wrap(x))+'\n'\
+                                  for x in self.output.splitlines(False)]) #wrap the output
             #print 'wrapped output ->', self.output.text #dbg
 
         print 'Out[%d]: '%cell.number, cell.output #dbg

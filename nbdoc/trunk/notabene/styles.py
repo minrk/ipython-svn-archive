@@ -7,7 +7,7 @@ import os
 XSLDIR = os.path.join(os.path.split(__file__)[0], 'xsl')
 
 if not os.path.exists(os.path.join(XSLDIR, 'xhtml', 'docbook.xsl')):
-    raise RuntimeError("XSLT files not in the right location")
+    raise RuntimeError("XSLT files not in the right location. Expected location: %s"%str(XSLDIR))
 
 
 class TextStyle(object):

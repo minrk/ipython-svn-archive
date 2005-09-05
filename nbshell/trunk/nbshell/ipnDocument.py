@@ -60,6 +60,8 @@ class ipnDocument(object):
         self.fileinfo['untitled'] = True
         self.sheet.DefaultSheet()
         self.SetSavePoint()
+        #Set the cursor
+        self.sheet.currentcell = 0
         
     def Clear(self):
         """Clears the document. Does not ask for confirmation. Clear does not
@@ -106,8 +108,8 @@ class ipnDocument(object):
             self.sheet.Update(update = False, celllist = True, dicts = True)
             self.sheet.SetLastInputs(update = False)
             self.sheet.Update(update = True)
-            #etree.dump(self.notebook.root) #dbg
             #Set the current cell and position
+            self.sheet.currentcell = 0
         except:
             #self.Clear() #TODO: This does not work well if an exception occured. 
             raise

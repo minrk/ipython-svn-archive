@@ -326,9 +326,14 @@ class PlainTextCtrl(stc.StyledTextCtrl, CellCtrlBase):
                            # C++ static variable
         self.oldpos = (0,0)
         self.SetUseHorizontalScrollBar(0)
+        self.SetLexer(stc.STC_LEX_XML)
+        self.StyleSetSpec(stc.STC_H_TAG,"fore:#0000FF")
+        self.SetKeyWords(0,'para title section')
         
         stc.EVT_STC_MODIFIED(self, id, self.OnModified)
         stc.EVT_STC_UPDATEUI(self, id, self.OnUpdateUI)
+        
+        
 
     def _get_position(self):
         pos = self.GetCurrentPos()
@@ -374,7 +379,7 @@ class PlainTextCtrl(stc.StyledTextCtrl, CellCtrlBase):
         pos = tuple(self.PointFromPosition(self.GetCurrentPos()))
         if (pos != self.oldpos):
             self.parent.ScrollTo(self.view.doc.index, pos) # show the highest pixel of the caret
-#            self.view.ScrollTo(self.cell.index, (pos[0], pos[1]+self.TextHeight(0))) # now show the lowest pixel.
+            self.parent.ScrollTo(self.view.doc.index, (pos[0], pos[1]+self.TextHeight(0))) # now show the lowest pixel.
             #TODO: If there is a way to make scrolling slower, I can't
             #think of it right now :)
             self.oldpos = pos

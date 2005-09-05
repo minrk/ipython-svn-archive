@@ -121,8 +121,10 @@ class Shell(editwindow.EditWindow, CellCtrlBase):
         editwindow.EditWindow.OnUpdateUI(self, evt)
         pos = tuple(self.PointFromPosition(self.GetCurrentPos()))
         if (pos != self.oldpos):
-            self.parent.ScrollTo(self.view.doc.index, pos) # show the highest pixel of the caret
-#            self.view.ScrollTo(self.cell.index, (pos[0], pos[1]+self.TextHeight(0))) # now show the lowest pixel.
+            # show the highest pixel of the caret
+            self.parent.ScrollTo(self.view.doc.index, pos) 
+            # now show the lowest pixel.
+            self.parent.ScrollTo(self.view.doc.index, (pos[0], pos[1]+self.TextHeight(0))) 
             #TODO: If there is a way to make scrolling slower, I can't
             #think of it right now :)
             self.oldpos = pos
