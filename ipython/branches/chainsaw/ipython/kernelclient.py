@@ -285,15 +285,22 @@ class RemoteKernel(object):
         else:
             return None
 
-    def validate(self, ip, flag=True):
+    def allow(self, ip):
         self._check_connection()
         
-        if flag:
-            self.es.write_line("VALIDATE TRUE %s" % ip)
-        else:
-            self.es.write_line("VALIDATE FALSE %s" % ip)
+        self.es.write_line("ALLOW TRUE %s" % ip)
         line, self.extra = self.es.read_line(self.extra)
-        if line == "VALIDATE OK":
+        if line == "ALLOW OK":
+            return True
+        else:
+            return False      
+
+    def deny(self, ip):
+        self._check_connection()
+        
+        self.es.write_line("ALLOW FALSE %s" % ip)
+        line, self.extra = self.es.read_line(self.extra)
+        if line == "ALLOW OK":
             return True
         else:
             return False      
@@ -478,7 +485,17 @@ class InteractiveCluster(object):
         worker_numbers = self._parse_workers_arg(workers)
         for w in worker_numbers:
             self.workers[w].notify(addr)
-                        
+
+    def allow(self, ip, workers=None):
+        worker_numbers = self._parse_workers_arg(workers)
+        for w in worker_numbers:
+            self.workers[w].allow(ip)
+
+    def deny(self, ip, workers=None):
+        worker_numbers = self._parse_workers_arg(workers)
+        for w in worker_numbers:
+            self.workers[w].deny(ip)
+
     def reset(self, workers=None):
         worker_numbers = self._parse_workers_arg(workers)
         for w in worker_numbers:

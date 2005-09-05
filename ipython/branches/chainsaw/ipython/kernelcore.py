@@ -45,7 +45,6 @@ class ResultReporterProtocol(protocol.DatagramProtocol):
         self.tried = True
         
     def datagramReceived(self,data, sending_addr):
-        print "Datagram Received: ", data, sending_addr
         if sending_addr == self.addr and data == "RESULT OK":
             self.transport.stopListening()
 
@@ -75,12 +74,12 @@ class KernelTCPProtocol(basic.LineReceiver):
 
     def connectionMade(self):
         log.msg("Connection Made...")
-        #self.transport.setTcpNoDelay(True)
+        self.transport.setTcpNoDelay(True)
         self.state = 'init'
         self.work_vars = {}
         peer = self.transport.getPeer()
-        if not self.factory.is_validated(peer.host):
-            log.msg("Invalidated Client: %s" % peer.host)
+        if not self.factory.is_allowed(peer.host):
+            log.msg("Denied Client: %s" % peer.host)
             self.transport.loseConnection()
             
     def lineReceived(self, line):
@@ -391,20 +390,20 @@ class KernelTCPProtocol(basic.LineReceiver):
         status = self.factory.status()
         self.sendLine('STATUS OK %s %s' % (status, self.state))
         
-    def handle_init_VALIDATE(self, args):
+    def handle_init_ALLOW(self, args):
         args_split = args.split(" ")
         if len(args_split) == 2:
             action, host = args_split
             if action == "TRUE":
-                self.factory.validate_client(host)
-                self.sendLine('VALIDATE OK')
+                self.factory.allow_client(host)
+                self.sendLine('ALLOW OK')
             elif action == "FALSE":
-                self.factory.invalidate_client(host)
-                self.sendLine('VALIDATE OK')
+                self.factory.deny_client(host)
+                self.sendLine('ALLOW OK')
             else:
-                self.sendLine('VALIDATE FAIL')
+                self.sendLine('ALLOW FAIL')
         else:
-            self.sendLine('VALIDATE FAIL')
+            self.sendLine('ALLOW FAIL')
         
     def handle_init_NOTIFY(self, args):
         args_split = args.split(" ")
@@ -478,9 +477,9 @@ class KernelTCPProtocol(basic.LineReceiver):
    
 class KernelFactoryBase:
 
-    def __init__(self, validate=[], notify=[]):
+    def __init__(self, allow=[], notify=[]):
         self._notifiers = notify
-        self._validated_clients = validate
+        self._allowed_clients = allow
         self._cluster_addrs = []
         
     # Command notification addresses
@@ -500,18 +499,18 @@ class KernelFactoryBase:
             
     # Client validation addresses
             
-    def validate_client(self, c):
-        if c not in self._validated_clients:
-            self._validated_clients.append(c)
-        print "Validated: ", self._validated_clients
+    def allow_client(self, c):
+        if c not in self._allowed_clients:
+            self._allowed_clients.append(c)
+        print "Allowed: ", self._allowed_clients
             
-    def invalidate_client(self, c):
-        if c in self._validated_clients:
-            del self._validated_clients[self._validated_clients.index(c)]
-        print "Validated: ", self._validated_clients
+    def deny_client(self, c):
+        if c in self._allowed_clients:
+            del self._allowed_clients[self._allowed_clients.index(c)]
+        print "Allowed: ", self._allowed_clients
             
-    def is_validated(self, c):
-        if c in self._validated_clients:
+    def is_allowed(self, c):
+        if c in self._allowed_clients:
             return True
         else:
             return False
@@ -521,12 +520,12 @@ class KernelFactoryBase:
     def create_cluster(self, ca_list):
         self._cluster_addrs = ca_list
         for ca in self._cluster_addrs:
-            self.validate_client(ca[0]) # Just the ip address
+            self.allow_client(ca[0]) # Just the ip address
         print "Cluster: ", self._cluster_addrs
 
     def clear_cluster(self):
         for ca in self._cluster_addrs:
-            self.invalidate_client(ca[0])
+            self.deny_client(ca[0])
         self._cluster_addrs = []
             
     def cluster_addrs(self):
@@ -547,10 +546,10 @@ class KernelFactoryBase:
 class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
     protocol = KernelTCPProtocol
     
-    def __init__(self, validate=[], notify=[]):
+    def __init__(self, allow=[], notify=[]):
         self.qic = QueuedInteractiveConsole()
         self.qic.start_work()
-        KernelFactoryBase.__init__(self, validate, notify)
+        KernelFactoryBase.__init__(self, allow, notify)
 
     # Kernel methods
             
@@ -588,9 +587,9 @@ class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
 class KernelTCPFactoryGUI(protocol.ServerFactory, KernelFactoryBase):
     protocol = KernelTCPProtocol
 
-    def __init__(self, validate=[], notify=[]):
+    def __init__(self, allow=[], notify=[]):
         self.tic = TrappingInteractiveConsole()
-        KernelFactoryBase.__init__(self, validate, notify)
+        KernelFactoryBase.__init__(self, allow, notify)
 
     # Kernel methods
             

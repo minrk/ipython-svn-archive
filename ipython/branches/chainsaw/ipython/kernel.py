@@ -11,7 +11,7 @@ def main(port):
         
     reactor.suggestThreadPoolSize(5)
         
-    d = reactor.listenTCP(port, KernelTCPFactory(validate=['127.0.0.1']))
+    d = reactor.listenTCP(port, KernelTCPFactory(allow=['127.0.0.1']))
     reactor.run()
     
 if __name__ == "__main__":
