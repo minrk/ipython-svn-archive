@@ -2,8 +2,6 @@ import socket
 import threading
 import pickle
 import time, os
-from twisted.internet import reactor, protocol
-from twisted.protocols import basic
 from scatter import Scatter
 from vectorfunction import VectorFunction
 
@@ -11,12 +9,6 @@ from IPython.ColorANSI import *
 
 from esocket import LineSocket
 import kernel_magic
-
-class IPythonTCPClientProtocol(basic.Int32StringReceiver):
-    pass
-
-class IPythonTCPClientFactory(protocol.ClientFactory):
-    pass
     
 class ResultGatherer(object):
     """This class listens on a UDP port for kernels reporting stdout and stderr.
