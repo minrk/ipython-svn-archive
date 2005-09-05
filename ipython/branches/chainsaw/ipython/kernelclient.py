@@ -8,6 +8,7 @@ from twisted.protocols import basic
 from IPython.ColorANSI import *
 
 from esocket import LineSocket
+import kernel_magic
 
 class IPythonTCPClientProtocol(basic.Int32StringReceiver):
     pass
@@ -421,8 +422,12 @@ class InteractiveCluster(object):
         
         # Let everyone know about each other
         self._cluster()
+        self.activate()
                     
         return True
+        
+    def activate(self):
+        __IPYTHON__.active_cluster = self
         
     def save(self, cluster_name):
         path_base = os.path.expanduser("~/.ipython")
