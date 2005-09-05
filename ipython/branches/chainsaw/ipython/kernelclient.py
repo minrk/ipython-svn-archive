@@ -1,7 +1,7 @@
 import socket
 import threading
 import pickle
-import time
+import time, os
 from twisted.internet import reactor, protocol
 from twisted.protocols import basic
 
@@ -119,7 +119,10 @@ class RemoteKernel(object):
         self.addr = addr
         self.extra = ''
         
-    def is_connected(self):
+    def __del__(self):
+        self.disconnect()
+        
+    def is_connected(self): 
         if hasattr(self, 's'):
             try:
                 self.fd = self.s.fileno()
@@ -374,6 +377,35 @@ class InteractiveCluster(object):
         self.workers = []
         self.worker_addrs = []
         
+    def __add__(first, second):
+        """Add two clusters together.
+        
+        Currently, this addition does not eliminate duplicates.
+        """
+        # Don't simple call start() as I want references to the RemoteKernel
+        # objects and not copies.  This preserves connections.
+        ic = InteractiveCluster()
+        for w in first.workers:
+            ic.workers.append(w)
+        for w in second.workers:
+            ic.workers.append(w)
+        ic.worker_addrs = first.worker_addrs + second.worker_addrs
+        ic.count = len(ic.workers)
+        ic._cluster()
+        return ic
+        
+    def _parse_workers_arg(self, workers):
+        if workers is None:
+            return range(self.count)
+        elif isinstance(workers, list) or isinstance(workers, tuple):
+            return workers
+        elif isinstance(workers, int):
+            return [workers]
+     
+    def _cluster(self):
+        for w in self.workers:
+            w.cluster(self.worker_addrs)
+              
     def start(self, addr_list):
         for a in addr_list:
             self.worker_addrs.append(a)
@@ -381,10 +413,30 @@ class InteractiveCluster(object):
         self.count = len(self.workers)
         
         # Let everyone know about each other
-        for w in self.workers:
-            w.cluster(self.worker_addrs)
-            
+        self._cluster()
+                    
         return True
+        
+    def save(self, cluster_name):
+        path_base = os.path.expanduser("~/.ipython")
+        file_path = path_base + "/" + cluster_name
+        f = open(file_path,'w')
+        print "Saving to: ", file_path
+        pickle.dump(self.worker_addrs, f, 1)
+        f.close()
+        
+    def load(self, cluster_name):
+        path_base = os.path.expanduser("~/.ipython")
+        file_path = path_base + "/" + cluster_name
+        try:
+            f = open(file_path,'r')
+        except IOError:
+            print "Saved cluster not found"
+        else:
+            print "Loading from: ", file_path
+            addrs = pickle.load(f)
+            f.close()
+            self.start(addrs)        
         
     def __getitem__(self, key):
         if isinstance(key, int):
@@ -393,48 +445,48 @@ class InteractiveCluster(object):
             return self.pull(key)
             
     def __len__(self):
-        return selr.count
+        return self.count
         
     def stop(self):
         for w in workers:
             w.kill()
             
     def push(self, value, key, workers=None):
-        if workers is None:
-            for w in self.workers:
-                w.push(value, key)
-        else:
-            for w_num in workers:
-                self.workers[w_num].push(value, key)
+        worker_numbers = self._parse_workers_arg(workers)
+        for w in worker_numbers:
+            self.workers[w].push(value, key)
                 
     def __setitem__(self, key, value):
-        self.push(value, key)
-        
+        if isinstance(key, str):
+            self.push(value, key)
+        else:
+            raise ValueError
+            
     def pull(self, key, workers=None):
         results = []
-        if workers is None:
-            for w in self.workers:
-                results.append(w.pull(key))
-        else:
-            for w_num in workers:
-                results.append(self.workers[w_num].pull(key))
+        worker_numbers = self._parse_workers_arg(workers)
+        for w in worker_numbers:
+            results.append(self.workers[w].pull(key))
         return results
                 
     def execute(self, source, workers=None):
-        if workers is None:
-            for w in self.workers:
-                w.execute(source)
-        else:
-            for w_num in workers:
-                self.workers[w_num].execute(source)
+        worker_numbers = self._parse_workers_arg(workers)
+        for w in worker_numbers:
+            self.workers[w].execute(source)
             
-    def notify(self, addr):
-        for w in self.workers:
-            w.notify(addr)
+    def notify(self, addr, workers=None):
+        worker_numbers = self._parse_workers_arg(workers)
+        for w in worker_numbers:
+            self.workers[w].notify(addr)
+                        
+    def reset(self, workers=None):
+        worker_numbers = self._parse_workers_arg(workers)
+        for w in worker_numbers:
+            self.workers[w].reset()
             
-    def reset(self):
-        for w in self.workers:
-            w.reset()
-            
+    def disconnect(self, workers=None):
+        worker_numbers = self._parse_workers_arg(workers)
+        for w in worker_numbers:
+            self.workers[w].disconnect()    
     
                   
