@@ -7,7 +7,7 @@ from code import InteractiveConsole
 from StringIO import StringIO
 
 from IPython.OutputTrap import OutputTrap
-from TicketedQueue import TicketedQueue
+from ticketedqueue import TicketedQueue
 
 class TrappingInteractiveConsole(InteractiveConsole):
     """This class subclasses code.InteractiveConsole to

@@ -25,6 +25,8 @@ IPython environment, import this file in your configuration file with an
 execfile = this_file.py statement. See the details at the end of the sample
 ipythonrc file.  """
 
+import new
+
 from IPython.iplib import InteractiveShell
 
 # fisrt define a function with the proper form:
@@ -48,7 +50,7 @@ def magic_px(self,parameter_s=''):
         print "Error: No active IPython cluster.  Use activate()."
     
 def pxrunsource(self, source, filename="<input>", symbol="single"):
-    print "In pxrunsource: ", source
+
     try:
         code = self.compile(source, filename, symbol)
     except (OverflowError, SyntaxError, ValueError):
@@ -67,29 +69,33 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
     # buffer attribute as '\n'.join(self.buffer).
     self.code_to_run = code
     # now actually execute the code object
-    self.active_cluster.execute(source)
-    return False
-    #if self.runcode(code) == 0:
-    #    return False
-    #else:
-    #    return None
+    if 'ipmagic("%autopx' in source:
+        if self.runcode(code) == 0:
+            return False
+        else:
+            return None
+    else:
+        self.active_cluster.execute(source)
+        return False
     
 def magic_autopx(self, parameter_s=''):
-    print self, "autopx"
+
     if hasattr(self, 'autopx'):
-        print "I have autopx"
         if self.autopx == True:
-            print "autopx is True"
-            self.set_hook('runsource',InteractiveShell.runsource)
-            self.autopx = False 
+            self.runsource = new.instancemethod(InteractiveShell.runsource,
+                self, self.__class__)
+            self.autopx = False
+            print "Auto Parallel Disabled" 
         else:
-            print "autopx is False"
-            self.set_hook('runsource',pxrunsource)
+            self.runsource = new.instancemethod(pxrunsource, self,
+                self.__class__)
             self.autopx = True
+            print "Auto Parallel Enabled"
     else:
-        print "autopx is False"
-        self.set_hook('runsource',pxrunsource)
+        self.runsource = new.instancemethod(pxrunsource, self,
+                self.__class__)
         self.autopx = True
+        print "Auto Parallel Enabled"
 
             
 # Add the new magic function to the class dict:

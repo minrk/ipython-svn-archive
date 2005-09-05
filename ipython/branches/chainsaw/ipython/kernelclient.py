@@ -4,8 +4,8 @@ import pickle
 import time, os
 from twisted.internet import reactor, protocol
 from twisted.protocols import basic
-from Scatter import Scatter
-from VectorFunction import VectorFunction
+from scatter import Scatter
+from vectorfunction import VectorFunction
 
 from IPython.ColorANSI import *
 
