@@ -4,6 +4,8 @@ import pickle
 import time, os
 from twisted.internet import reactor, protocol
 from twisted.protocols import basic
+from Scatter import Scatter
+from VectorFunction import VectorFunction
 
 from IPython.ColorANSI import *
 
@@ -465,8 +467,14 @@ class InteractiveCluster(object):
             
     def push(self, value, key, workers=None):
         worker_numbers = self._parse_workers_arg(workers)
-        for w in worker_numbers:
-            self.workers[w].push(value, key)
+        n_workers = len(worker_numbers)
+        
+        if isinstance(value, Scatter):
+            for index, item in enumerate(worker_numbers):
+                self.workers[item].push(value.partition(index,n_workers), key)
+        else:
+            for w in worker_numbers:
+                self.workers[w].push(value, key)
                 
     def __setitem__(self, key, value):
         if isinstance(key, str):
@@ -474,11 +482,13 @@ class InteractiveCluster(object):
         else:
             raise ValueError
             
-    def pull(self, key, workers=None):
+    def pull(self, key, workers=None, flatten=False):
         results = []
         worker_numbers = self._parse_workers_arg(workers)
         for w in worker_numbers:
             results.append(self.workers[w].pull(key))
+        if flatten:
+            print "Flattening is not implemented"
         return results
                 
     def execute(self, source, workers=None):
@@ -510,5 +520,16 @@ class InteractiveCluster(object):
         worker_numbers = self._parse_workers_arg(workers)
         for w in worker_numbers:
             self.workers[w].disconnect()    
+    
+    def map(self, func_code, seq):
+        self.push(Scatter(seq), '_ipython_map_seq')
+        source_to_run = \
+            '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
+            func_code
+        self.execute(source_to_run)
+        return self.pull('_ipython_map_seq_result')
+        
+    def vectorize(self, func_name):
+        return VectorFunction(func_name, self)
     
                   
