@@ -1,0 +1,8 @@
+Date:  9/5/2005
+Author:  Brian E. Granger (bgranger@scu.edu)
+
+This file will contain a description of the steps required to install the 
+ipython kernel.  For now, the kernel works with the ipython trunk.  It should
+also work with older version of ipython, but I am not sure how far back.
+
+Eventually, the kernel -will be- ipython itself.  

@@ -1,0 +1,6 @@
+Date:  9/5/2005
+Author:  Brian E. Granger (bgranger@scu.edu)
+
+This file gives an overview of the ipython kernel and the ipython kernel
+interface layer.  Eventually, this README will contain basic information
+and a tutorial describing to use the kernel.
