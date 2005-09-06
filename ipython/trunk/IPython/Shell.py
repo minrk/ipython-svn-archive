@@ -561,9 +561,6 @@ def hijack_gtk():
     """Modifies pyGTK's mainloop with a dummy so user code does not
     block IPython.  This function returns the original `gtk.mainloop`
     function that has been hijacked.
-
-    NOTE: Make sure you import this *AFTER* you call
-    pygtk.require(...).
     """    
     def dummy_mainloop(*args, **kw):
         pass
@@ -592,8 +589,6 @@ class IPShellGTK(threading.Thread):
     def __init__(self,argv=None,user_ns=None,debug=1,
                  shell_class=MTInteractiveShell):
 
-        import pygtk
-        pygtk.require("2.0")
         import gtk
         
         self.gtk = gtk
