@@ -185,23 +185,21 @@ class Notebook(object):
     """The core notebook object.
 
     Constructors:
-    Notebook(name, pretty=True, root=None, checkpoint=None)
+    Notebook(name, root=None, checkpoint=None)
         name -- default base name for files
-        pretty -- boolean switch for pretty-formatting of output elements
         root -- initialize from a properly formed root 'notebook' Element
         checkpoint -- save notebook every checkpoint times during an IPython
             session or None
 
-    Notebook.from_string(name, data, pretty=True, checkpoint=None)
+    Notebook.from_string(name, data, checkpoint=None)
         data -- properly formed XML string
 
-    Notebook.from_file(source, name=None, pretty=True, checkpoint=None)
+    Notebook.from_file(source, name=None, checkpoint=None)
         source -- filename or filelike object containing properly formed XML
             data
     """
-    def __init__(self, name, pretty=True, root=None, checkpoint=None):
+    def __init__(self, name, root=None, checkpoint=None):
         self.name = name
-        self.pretty = pretty
         self.start_checkpointing(checkpoint)
 
         self.logs = {} #maps log-ids (strings) to logs,
@@ -244,25 +242,16 @@ class Notebook(object):
     #perhaps some initial processing is needed now, when
     #the objects here don't just access xml but are used as structure too..
     @classmethod
-    def from_string(cls, name, data, pretty=True):
+    def from_string(cls, name, data):
         root = ET.fromstring(data)
-        return cls(name, pretty=pretty, root=root)
+        return cls(name, root=root)
 
     @classmethod
-    def from_file(cls, source, name=None, pretty=True):
+    def from_file(cls, source, name=None):
         if type(source) is str and name is None:
             name, ext = os.path.splitext(os.path.split(source)[-1])
         tree = ET.parse(source)
-        return cls(name, pretty=pretty, root=tree.getroot())
-
-    def get_str(self, obj):
-        """Format string representation of object according to current
-        preferences.
-        """
-        if self.pretty:
-            return pprint.pformat(obj)
-        else:
-            return str(obj)
+        return cls(name, root=tree.getroot())
 
     def check_errors(self):
         """Checks the notebook for syntax errors, returns (user-friendly) reports"""
@@ -477,127 +466,6 @@ class Notebook(object):
         """Stop checkpointing.
         """
         self.checkpoint = None
-
-    def ipython_monkeypatch(self, IP):
-        #not maintained since moving over from google-rkern,
-        #where there probably still is a working version.
-        #nbshell does not use it, but perpaps this would be
-        #still nice to have for using straight from normal ipython shell?
-        """Abandon all sanity, ye who enter here.
-
-        In [1]: import notabene; nb = notabene.Notebook()
-        In [2]: nb.ipython_monkeypatch(__IP)
-        """
-
-        # new input hook for Python source
-        # also, trap stdout, stderr
-        IP._runsource = IP.runsource
-        def runsource(source, filename="<input>", symbol="single"):
-            code = IP._runsource(source, filename=filename, symbol=symbol)
-            if code == False:
-                # it's complete
-                number = IP.outputcache.prompt_count
-                self.add_input(source, number)
-                if (self.checkpoint is not None and 
-                    not IP.outputcache.prompt_count % self.checkpoint):
-                    self.write()
-            return code
-        IP.runsource = runsource
-
-        # new input hook for aliases
-        IP._handle_alias = IP.handle_alias
-        def handle_alias(line,continue_prompt=None,
-             pre=None,iFun=None,theRest=None):
-             line_out = IP._handle_alias(line, continue_prompt, pre, iFun,
-                 theRest)
-             number = IP.outputcache.prompt_count
-             self.add_special_input(line, number)
-             return line_out
-        IP.handle_alias = handle_alias
-
-        # new input hook for shell escapes
-        IP._handle_shell_escape = IP.handle_shell_escape
-        def handle_shell_escape(line, continue_prompt=None,
-            pre=None,iFun=None,theRest=None):
-            line_out = IP._handle_shell_escape(line, continue_prompt, pre, 
-                iFun, theRest)
-            number = IP.outputcache.prompt_count
-            self.add_special_input(line, number)
-            return line_out
-        IP.handle_shell_escape = handle_shell_escape
-
-        # new input hook for magics
-        IP._handle_magic = IP.handle_magic
-        def handle_magic(line, continue_prompt=None,
-            pre=None,iFun=None,theRest=None):
-            line_out = IP._handle_magic(line, continue_prompt, pre, 
-                iFun, theRest)
-            number = IP.outputcache.prompt_count
-            self.add_special_input(line, number)
-            return line_out
-        IP.handle_magic = handle_magic
-
-        # new input hook for autocall lines
-        IP._handle_auto = IP.handle_auto
-        def handle_auto(line, continue_prompt=None,
-            pre=None,iFun=None,theRest=None):
-            line_out = IP._handle_auto(line, continue_prompt, pre, 
-                iFun, theRest)
-            number = IP.outputcache.prompt_count
-            self.add_special_input(line, number)
-            return line_out
-        IP.handle_auto = handle_auto
-
-        # new input hook for helps
-        IP._handle_help = IP.handle_help
-        def handle_help(line, continue_prompt=None,
-            pre=None,iFun=None,theRest=None):
-            line_out = IP._handle_help(line, continue_prompt, pre, 
-                iFun, theRest)
-            number = IP.outputcache.prompt_count
-            self.add_special_input(line, number)
-            return line_out
-        IP.handle_help = handle_help
-
-        # new output hook
-        IP.outputcache._update = IP.outputcache.update
-        def update(arg):
-            IP.outputcache._update(arg)
-            self.add_output(self.get_str(arg), IP.outputcache.prompt_count)
-        IP.outputcache.update = update
-
-        IP.esc_handlers = {IP.ESC_PAREN:handle_auto,
-                           IP.ESC_QUOTE:handle_auto,
-                           IP.ESC_QUOTE2:handle_auto,
-                           IP.ESC_MAGIC:handle_magic,
-                           IP.ESC_HELP:handle_help,
-                           IP.ESC_SHELL:handle_shell_escape,
-                          }
-
-        self.IP = IP
-
-        # I'm *so* going to Hell for this.
-
-    def ipython_unmonkey(self):
-        """Undo the evil hacks perpetrated by ipython_monkeypatch().
-        """
-        IP = self.IP
-        if hasattr(IP, '_runsource'):
-            IP.runsource = IP._runsource
-            IP.handle_alias = IP._handle_alias
-            IP.handle_help = IP._handle_help
-            IP.handle_auto = IP._handle_auto
-            IP.handle_magic = IP._handle_magic
-            IP.handle_shell_escape = IP._handle_shell_escape
-            IP.outputcache.update = IP.outputcache._update
-
-            IP.esc_handlers = {IP.ESC_PAREN:IP._handle_auto,
-                               IP.ESC_QUOTE:IP._handle_auto,
-                               IP.ESC_QUOTE2:IP._handle_auto,
-                               IP.ESC_MAGIC:IP._handle_magic,
-                               IP.ESC_HELP:IP._handle_help,
-                               IP.ESC_SHELL:IP._handle_shell_escape,
-                              }
 
     def ipython_current_number(self):
         """Get the current prompt number.
