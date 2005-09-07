@@ -9,6 +9,7 @@ from IPython.ColorANSI import *
 
 from esocket import LineSocket
 import kernel_magic
+from kernelerror import NotDefined
     
 class ResultGatherer(object):
     """This class listens on a UDP port for kernels reporting stdout and stderr.
@@ -113,6 +114,7 @@ class RemoteKernel(object):
     def __init__(self, addr):
         self.addr = addr
         self.extra = ''
+        self.block = False
         
     def __del__(self):
         self.disconnect()
@@ -148,9 +150,10 @@ class RemoteKernel(object):
         # Turn of Nagle's algorithm to prevent the 200 ms delay :)
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
         
-    def execute(self, source, block=False):
+    def execute(self, source):
+        
         self._check_connection()
-        if block:
+        if self.block:
             self.es.write_line("EXECUTE BLOCK %s" % source)
             line, self.extra = self.es.read_line(self.extra)
             line_split = line.split(" ")

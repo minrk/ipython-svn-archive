@@ -269,17 +269,10 @@ class KernelTCPProtocol(basic.LineReceiver):
         
         if self.work_vars['execute_block']:
             self.work_vars['current_ticket'] = self.factory.get_ticket()        
-            result = self.factory.execute_block(execute_cmd,
+            d = self.factory.execute_block(execute_cmd,
                 self.work_vars['current_ticket'])
-            try:
-                package = pickle.dumps(result, 2)
-            except pickle.PickleError:
-                self.execute_finish("FAIL")
-            else:
-                self.sendLine("RESULT %i" % len(package))
-                self.transport.write(package)
-                self.execute_finish("OK")
-                self.execute_ok(result)
+            d.addCallback(self.execute_ok_block)
+            d.addErrback(self.execute_fail)
         else:                   
             # The deferToThread in this call costs 2 ms currently :(
             self.work_vars['current_ticket'] = self.factory.get_ticket()
@@ -293,6 +286,17 @@ class KernelTCPProtocol(basic.LineReceiver):
         for tonotify in self.factory.notifiers():
             reactor.listenUDP(0,ResultReporterProtocol(result, tonotify) )
                 
+    def execute_ok_block(self, result):
+        try:
+            package = pickle.dumps(result, 2)
+        except pickle.PickleError:
+            self.execute_finish("FAIL")
+        else:
+            self.sendLine("RESULT %i" % len(package))
+            self.transport.write(package)
+            self.execute_finish("OK")
+            self.execute_ok(result)
+        
     def execute_fail(self, f):
         pass
         
@@ -568,7 +572,8 @@ class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
         return d
         
     def execute_block(self, source, ticket):
-        return self.qic.execute(source, ticket, block=True)
+        result = self.qic.execute(source, ticket, block=True)
+        return defer.succeed(result)
         
     def status(self):
         return self.qic.status()

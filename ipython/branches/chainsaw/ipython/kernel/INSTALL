@@ -1,8 +1,45 @@
 Date:  9/5/2005
 Author:  Brian E. Granger (bgranger@scu.edu)
 
-This file will contain a description of the steps required to install the 
-ipython kernel.  For now, the kernel works with the ipython trunk.  It should
-also work with older version of ipython, but I am not sure how far back.
+This file describes the steps required to install the ipython kernel.  
+For now, the kernel works with the current ipython release or the current 
+SVN trunk.  It should also work with older version of ipython, but I am not 
+sure how far back.
+
+For a description of the kernel, see the README file in this directory.
 
 Eventually, the kernel -will be- ipython itself.  
+
+= Installation Instructions =
+
+1.  Download and install the current version of ipython
+
+2.  Download and install the zope.interface package
+
+    See the Zope 3 interface web site for instuctions.  
+
+    http://www.zope.org/Products/ZopeInterface
+
+3.  Download and install the latest SVN version of Twisted
+
+    You can check out the SVN trunk using the subversion command:
+
+    svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted
+    
+    Then cd into the Twisted directory and issue the following at the command
+    line:
+    
+    python setup.py build
+    
+    followed by:
+    
+    python setup.py install
+    
+    Run the second of these as an admin user.
+    
+4.  Place the kernel related files somewhere in your python path
+
+    The easiest thing to do is simply put them in your current working 
+    directory.  Currently there is no setup.py script for the kernel.
+    
+

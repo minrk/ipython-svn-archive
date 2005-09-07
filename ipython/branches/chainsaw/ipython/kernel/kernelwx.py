@@ -47,7 +47,7 @@ def main(port):
     log.startLogging(sys.stdout)
     reactor.suggestThreadPoolSize(5)
     reactor.listenTCP(port, 
-        KernelTCPFactoryGUI(allow=['127.0.0.1','129.210.112.34']))
+        KernelTCPFactoryGUI(allow=['127.0.0.1']))
     # Start wx, which start the reactor using reactor.interleave
     app = MyApp(0)
     app.MainLoop()

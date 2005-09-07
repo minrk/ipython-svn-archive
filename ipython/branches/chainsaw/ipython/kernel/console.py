@@ -8,6 +8,7 @@ from StringIO import StringIO
 
 from IPython.OutputTrap import OutputTrap
 from ticketedqueue import TicketedQueue
+from kernelerror import NotDefined
 
 class TrappingInteractiveConsole(InteractiveConsole):
     """This class subclasses code.InteractiveConsole to
@@ -67,7 +68,7 @@ class TrappingInteractiveConsole(InteractiveConsole):
     def get(self,key):
         """Gets an item out of the self.locals dict by key."""
         self._datalock.acquire()
-        result = self.locals.get(key)
+        result = self.locals.get(key, NotDefined(key))
         self._datalock.release()
         return result
         
