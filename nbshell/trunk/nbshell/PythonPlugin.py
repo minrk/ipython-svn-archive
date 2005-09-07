@@ -345,6 +345,9 @@ class PythonNotebookViewPlugin(object):
         #if we have no cells we must set line2log here
         if len(self.line2log) == 0:
             self.line2log.append(None) #the window always has at least one line
+        else:
+            self.line2log.append(None) #append ane empty line at the end
+            outtext.write('\n')
         self.window.SetText(outtext.getvalue())
         self.window.GotoPos(self.window.GetTextLength())
         #print "line2log->", self.window.line2log #dbg
@@ -831,16 +834,28 @@ class PythonNotebookViewPlugin(object):
         #Get the data
         if not wx.TheClipboard.Open():
             return
-        if self.line2log[linenum] is None:
+        if self.line2log[linenum] is None: 
+            #we are between cells
             if wx.TheClipboard.IsSupported(wx.CustomDataFormat('nbCell')):
                 codecell = True
                 wx.TheClipboard.GetData(cellobj)
         else:
+            #we are inside a cell. 
             if wx.TheClipboard.IsSupported(wx.CustomDataFormat('nbCode')):
                 codetext = True
                 wx.TheClipboard.GetData(codeobj)
+            #if we are at the last character in the cell and there is a nbCell object
+            elif ((len(self.line2log) -1 == linenum or #if linenum is the last line in the cell
+                   self.line2log[linenum+1] is None or
+                   self.line2log[linenum+1][0] != self.line2log[linenum][0]) and
+                  #and caret is at the end of the line
+                  pos == self.window.PositionFromLine(linenum) +\
+                         self.window.LineLength(linenum)):
+                linenum += 1 #this will be the place where we paste the cells
+                wx.TheClipboard.GetData(cellobj)
+                codecell = True
             elif (wx.TheClipboard.IsSupported(wx.DataFormat(wx.DF_TEXT)) or
-                  wx.TheClipboard.IsSupported(wx.DataFormat(DF_UNICODETEXT))):
+                  wx.TheClipboard.IsSupported(wx.DataFormat(wx.DF_UNICODETEXT))):
                 rawtext = True
                 wx.TheClipboard.GetData(textobj)
         wx.TheClipboard.Close()
