@@ -30,7 +30,7 @@ class NamedElement(object):
 
 class TextElement(object):
     def __init__(self, text): #python objects automatically have id
-        print "text: ", self, text
+        #print "text: ", self, text
         self.text = self.element.text = text #is a sheet
     #def get_text(self):
     #    return self.element.text
@@ -61,7 +61,7 @@ class Section(NamedElement, DocbookElement, StructureElement):
         NamedElement.__init__(self, name)
         #self.elements = []
         #dbg
-        print ET.tostring(self.element)
+        #print ET.tostring(self.element)
 
     def __add__(self, item):
         #self.elements.extend([item])

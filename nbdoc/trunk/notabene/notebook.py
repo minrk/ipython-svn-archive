@@ -217,12 +217,12 @@ class Notebook(object):
             self.head = root.find('head')
             logelem = root.find('ipython-log')
             #dbg
-            print logelem, logelem.get('id', 'noid?-o')
+            #print logelem, logelem.get('id', 'noid?-o')
             logid = logelem.get('id')
             self.logs[logid] = Log(self, logid, logelem) 
-            for cellelem in logelem:
-                #dbg
-                print cellelem, ET.tostring(cellelem)
+            #for cellelem in logelem:
+            #    #dbg
+            #    print cellelem, ET.tostring(cellelem)
 
     def __eq__(self, other):
         """As an answer to http://projects.scipy.org/ipython/ipython/ticket/3
@@ -616,7 +616,7 @@ class Notebook(object):
             filename = '%s.%s' % (self.name, type)
 
         savefig(filename)
-        print "saved", filename
+        #print "saved", filename
         self.add_figure(parent, os.path.split(filename)[-1], caption=caption, **attribs)
 
     def _get_tag_dict(self, tag, logid='default-log'):
@@ -644,7 +644,7 @@ class Notebook(object):
         block = ET.SubElement(sheet, 'ipython-block', logid=logid)
         for cell in cells:
             for subcell in  cell.get_sheet_tags(specials):
-                print "DEFAULT SHEET: appending", subcell
+                #print "DEFAULT SHEET: appending", subcell
                 block.append(subcell)
 
             #if figures: #and cell.number in figured:
@@ -662,7 +662,7 @@ class Notebook(object):
         block = ET.SubElement(sheet, 'ipython-block', logid=logid)
         for cell in log:
             #dbg
-            print "*NEW*DEFAULT SHEET: cell", cell
+            #print "*NEW*DEFAULT SHEET: cell", cell
             for subcell in cell.get_sheet_tags():
                 block.append(subcell)
         return sheet
@@ -694,24 +694,24 @@ class Notebook(object):
 
     def get_title(self):
         if self.sheet is not None:
-            print "sheet in get_title:", self.sheet, ET.tostring(self.sheet)
+            #print "sheet in get_title:", self.sheet, ET.tostring(self.sheet)
             try:
                 title = self.sheet.xpath('./title')[0] #single title per file
-                print ".. title:", title.text
+                #print ".. title:", title.text
                 return title.text
             except IndexError:
-                print "no title"
+                #print "no title"
                 return None
         else:
-            print "no sheet in:", self, ET.tostring(self.root)
+            #print "no sheet in:", self, ET.tostring(self.root)
             return None
     title = property(get_title) #+setter
 
     def get_contents(self):
         if self.sheet is not None:
-            print "sheet in get_contents:", self.sheet, ET.tostring(self.sheet)
+            #print "sheet in get_contents:", self.sheet, ET.tostring(self.sheet)
             sections = self.sheet.xpath('./section')
-            print "sections:", sections
+            #print "sections:", sections
             return sections
 
     contents = property(get_contents)
