@@ -1,6 +1,6 @@
 from lxml import etree as ET
 
-import normal
+from notabene import normal
 
 # These should all compare equal after normalization/c14n
 notext_batch = [

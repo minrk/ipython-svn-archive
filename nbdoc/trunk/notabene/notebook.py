@@ -7,7 +7,7 @@ from cStringIO import StringIO #to do (e.g.) write_c14n for nb.__eq__ .
 
 from lxml import etree as ET
 
-from notabene.normalization import normal
+from notabene import normal
 from notabene import validate #for Notebook.check_errors
 
 #this specials system that was in the (unused) cell not reimplemented yet
