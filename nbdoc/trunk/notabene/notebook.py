@@ -329,15 +329,22 @@ class Notebook(object):
         doc = formatter.to_formatted(self.sheet, format)
 
         if toPDF:
-            tmpf = tempfile.NamedTemporaryFile(suffix='.tex')
-            doc.write(tmpf)
-            tmpf.close()
+            tmpfid, tmpfn = tempfile.mkstemp(suffix='.tex')
+            tmpf = os.fdopen(tmpfid, 'w+b')
+            try:
+                doc.write(tmpf)
+            finally:
+                tmpf.close()
             dir, basename = os.path.split(filename)
             args = ['pdflatex', '-jobname="%s"' % base]
             if dir:
                 args.append('-outputdir="%s"' % dir)
-            p = subprocess.Popen(args+[tmpf.name])
+            p = subprocess.Popen(args+[tmpfn])
             p.wait()
+            # Do it a second time to make sure the references are right.
+            p = subprocess.Popen(args+[tmpfn])
+            p.wait()
+            os.unlink(tmpfn)
             return filename
 
         else:
@@ -412,17 +419,27 @@ class Notebook(object):
 def main():
     import sys
     import os
-    file = sys.argv[1]
-    base = os.path.splitext(file)[0]
-    nb = Notebook.from_file(file)
+    import optparse
 
-    if len(sys.argv) >= 3:
-        format = sys.argv[2]
+    parser = optparse.OptionParser()
+    parser.add_option('-f', '--format', dest='format', 
+        help='output format', default='html', metavar='FORMAT')
+    parser.add_option('-l', '--list-formats', dest='list_formats',
+        help='list available formats', default=False, action='store_true')
+    options, args = parser.parse_args()
+
+    if options.list_formats:
+        print """Available formats:
+    html:  XHTML
+    latex: LaTeX
+    pdf:   PDF (via LaTeX, requires pdflatex(1))"""
+
     else:
-        format = 'html'
-
-    filename = nb.write_formatted(base, format)
-    print "Wrote result to", filename
+        for file in args:
+            base = os.path.splitext(file)[0]
+            nb = Notebook.from_file(file)
+            newfile = nb.write_formatted(base, options.format)
+            print "%s -> %s" % (file, newfile)
 
 if __name__ == '__main__':
     main()
