@@ -1,9 +1,8 @@
-#!/usr/local/bin/python2.4
-"""in answer to http://projects.scipy.org/ipython/ipython/ticket/2
+#!/usr/bin/env python
+"""Validate notebook files for correct XML syntax.
 
-first the simple cleaning function from
-http://projects.scipy.org/ipython/ipython/attachment/ticket/2/niceerrs.py
-, but later actual validation components could come here too."""
+TODO: Implement a RelaxNG schema to validate notebook files for their content.
+"""
 
 from xml.parsers import expat
 from cStringIO import StringIO
@@ -20,8 +19,9 @@ def _report(e, lines):
     return _decorate(errlines, e.lineno-2, 3, e.offset,
                     expat.ErrorString(e.code))
 
-def iscleanFile(filename):
-    """used when this is run as an executable utility"""
+def isclean_file(filename):
+    """Test if a file is valid XML.
+    """
     f = open(filename)
     try:
         text = f.read()
@@ -39,21 +39,27 @@ def iscleanFile(filename):
         print _report(e, lines)
         return False
 
-    print "No syntax errors found!"
+    print 'No syntax errors.'
     return True
 
 def check_errors(xmldata):
-    """to be used by notebook objects to report usefully up to nbshell"""
+    """Check if a given string is valid XML.
+
+    If invalid:
+      Returns a string displaying the error.
+    If valid:
+      Returns None.
+    """
     parser = expat.ParserCreate()
     try:
         parser.Parse(xmldata)
     except expat.ExpatError, e:
-        return _report(e, xmldata) #should be lines somehow
+        return _report(e, xmldata.splitlines()) #should be lines somehow
     else:
         return None #no errors
     
         
 if __name__ == '__main__':
     import sys
-    iscleanFile(sys.argv[1])
+    isclean_file(sys.argv[1])
 

@@ -205,9 +205,7 @@ def test_log():
     log = nb.get_log()
 
     #using the default log via notebook methods
-    #py.test.raises(IndexError, "nb.get_cell(1)") #should not create anymore
     assert nb.get_cell(1) is None
-    py.test.raises(ValueError, "nb.add_cell(15)") #can only add to end now
     cell = nb.add_cell(0) #is added to default log
     assert cell is nb.get_cell(0) #this should be the same one
     assert cell.input is None
@@ -317,6 +315,10 @@ def test_log():
     nb.remove_cell(5)
     for cell in log[3:8]:
         assert cell is not None
+
+def test_add_log():
+    nb = test_new()
+    assert py.test.raises(ValueError, "nb.add_log()")
 
 # What is this?
 #def FAILStest_rest():
