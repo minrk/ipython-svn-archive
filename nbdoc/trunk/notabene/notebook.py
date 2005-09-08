@@ -335,10 +335,7 @@ class Notebook(object):
                 doc.write(tmpf)
             finally:
                 tmpf.close()
-            dir, basename = os.path.split(filename)
             args = ['pdflatex', '-jobname="%s"' % base]
-            if dir:
-                args.append('-outputdir="%s"' % dir)
             p = subprocess.Popen(args+[tmpfn])
             p.wait()
             # Do it a second time to make sure the references are right.

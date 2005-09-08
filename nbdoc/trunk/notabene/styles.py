@@ -1,14 +1,29 @@
-# ain't no way I'm reimplementing that crap until we have to
-from matplotlib import colors
+import os
+import re
 
 from lxml import etree as ET
 
-import os
 XSLDIR = os.path.join(os.path.split(__file__)[0], 'xsl')
 
 if not os.path.exists(os.path.join(XSLDIR, 'xhtml', 'docbook.xsl')):
     raise RuntimeError("XSLT files not in the right location. Expected location: %s"%str(XSLDIR))
 
+
+def convert_color(rgb):
+    if (type(rgb) is tuple 
+        and len(rgb) == 3):
+        return rgb
+    elif (type(rgb) is str 
+          and len(rgb) == 7
+          and rgb[0] == '#'):
+        return (int(rgb[1:3], 16)/255.,
+                int(rgb[3:5], 16)/255.,
+                int(rgb[5:7], 16)/255.)
+    else:
+        raise ValueError("Can't interpret %s" % (rgb,))
+
+def rgb2hex(rgb):
+    return '#%02x%02x%02x' % tuple(int(round(x*255.)) for x in rgb)
 
 class TextStyle(object):
     weights_latex = {"bold": "bfseries",
@@ -17,7 +32,7 @@ class TextStyle(object):
         self.name = name
         
         if color is not None:
-            self.color = colors.colorConverter.to_rgb(color)
+            self.color = convert_color(color)
         else:
             self.color = None
 
@@ -26,7 +41,7 @@ class TextStyle(object):
     def as_css(self):
         lines = []
         if self.color is not None:
-            lines.append("    color: %s;" % colors.rgb2hex(self.color))
+            lines.append("    color: %s;" % rgb2hex(self.color))
         if self.weight is not None:
             lines.append("    font-weight: %s;" % self.weight)
 
@@ -195,7 +210,7 @@ class Style(object):
     def fo_xsl(self):
         sheet = ET.Element(_xsl("stylesheet"), version="1.0", nsmap=self.nsmap)
         ET.SubElement(sheet, _xsl("import"),
-            href=os.path.join(XSLDIR, "fo", "antont-docbook.xsl"))
+            href=os.path.join(XSLDIR, "fo", "docbook.xsl"))
         return ET.ElementTree(sheet)
 
 
