@@ -177,8 +177,10 @@ class PythonNotebookViewPlugin(object):
         self.end = -1
         #If self.sel_incell is True then the selection is part of one cell. If False, then
         #the selection consists of several cells
-        self.sel_incell = False 
-        
+        self.sel_incell = False
+
+        self.prompt_in_tpl = 'In [%s]: '
+        self.prompt_out_tpl = 'Out[%s]: '
 
     def SetFocus(self):
         if self.window is not None:
@@ -295,6 +297,8 @@ class PythonNotebookViewPlugin(object):
         #print "log->", log.log #dbg
         #self.window.ClearAll()
         self.line2log = []
+        # local optimization
+        l2l_append = self.line2log.append
         #oldlinecnt = 1 # = self.window.GetLineCount()
         last = len(cells) -1
         # Here we set up the text which will be displayed in the window
@@ -309,16 +313,16 @@ class PythonNotebookViewPlugin(object):
             #etree.dump(elem) #dbg
             text = elem.text[1:] #The first symbol is '\n'
             if type == 'input':
-                prompt = 'In[%d] '%number
+                prompt = self.prompt_in_tpl % number
             elif type == 'output':
-                prompt = 'Out[%d] '%number
+                prompt = self.prompt_out_tpl % number
             else :
                 prompt = ""
 
             #print 'text -> %s'%text #dbg
             #print 'i -> %d, cell -> %s'%(i, str(cell)) #dbg
             lines = text.splitlines(True)
-            if lines == []:
+            if not lines:
                 lines = ['']
 
             tmp = 0
@@ -337,17 +341,11 @@ class PythonNotebookViewPlugin(object):
             #linecnt =  
            
             #set up line2log. The first line is an empty one
-            self.line2log.append(None)
+            l2l_append(None)
             for j in range(len(lines)):
-                self.line2log.append((i, j+1))
+                l2l_append((i, j+1))
                 #print "i -> %s, id->%s, type->%s, text->%s"%(str(i), str(id), str(type), str(text))
             #oldlinecnt = linecnt
-        #if we have no cells we must set line2log here
-        if len(self.line2log) == 0:
-            self.line2log.append(None) #the window always has at least one line
-        else:
-            self.line2log.append(None) #append ane empty line at the end
-            outtext.write('\n')
         self.window.SetText(outtext.getvalue())
         self.window.GotoPos(self.window.GetTextLength())
         #print "line2log->", self.window.line2log #dbg
@@ -366,13 +364,14 @@ class PythonNotebookViewPlugin(object):
     def GetPrompt(self, type, number, first = True):
         """Returns the prompt string for a cell with the given type and
         number. If first is True returns the prompt for the first line."""
-        
+
+        #print 'GetPrompt!'  # dbg
         if type not in ['input', 'output']:
             return ''
         if type == 'input':
-            text = 'In[%s] '%str(number)
+            text = self.prompt_in_tpl % number
         else:
-            text = 'Out[%s] '%str(number)
+            text = self.prompt_out_tpl % number
         if not first:
             text = '.'*(len(text)-1)+' '
         return text

@@ -1,3 +1,27 @@
+2005-09-10  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* nbshell/PythonPlugin.py (PythonNotebookViewPlugin.Update):
+	Removed code which was causing the spurious newline problem.  I
+	cut out a whole section which seemed a no-op to me.  Tzanko: please
+	double check that I didn't screw up (I'm just starting to learn
+	the code).
+
+2005-09-09  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* nbshell/PythonPlugin.py (PythonNotebookViewPlugin.__init__): Set
+	the in/out prompt templates to an instance variable.  Eventually
+	we'll need to support the dynamic ipython prompts, but only once
+	they've been abstracted out from their current tangled mess.  At
+	least now this gives slightly cleaner code which is consistent
+	with previous (default) ipython.
+
+	* nbshell/IPythonLog.py (IPythonLog.__init__): Added a formatted
+	traceback printer into sys.excepthook for easier debugging.
+	Removed the In[0] cell with the visible mpl hack, now that hack is
+	tucked inside.  We'll need to clean this up later, once we support
+	ipython profiles (matplotlib should NOT be a dependency, in case
+	people want to use this for non-plotting work).
+
 09.07.2005:
 
 	* Fixed a bug in copy/paste according to ticket #13

@@ -26,6 +26,7 @@ from wx.py.pseudo import PseudoFileErr
 #from wx.py.version import VERSION
 
 from IPython import Shell
+from IPython import ultraTB
 from notabene import notebook
 
 from lxml import etree
@@ -73,29 +74,35 @@ class IPythonLog(object):
                     }
         user_ns['grab_figure'] = self.grab_figure
         
+        # XXX Hack to preload matptlotlib.  This will be moved out once we
+        # have restored ipython's profile support
+
+        mplstart = """
+from pylab import *
+switch_backend('WXAgg')
+ion()
+"""
+        exec mplstart in user_ns
+
         self.interp = Shell.IPShellGUI(argv=['-colors','NoColor'], user_ns=user_ns)
         self.excepthook_IP = sys.excepthook
-        sys.excepthook = self.excepthook_orig
+
+        # For developer use: let's park a nice formatted traceback printer in
+        # here.  Once this becomes more stable we can use a CrashHandler, but
+        # for now this will be nice to get feedback.
+        sys.excepthook = ultraTB.FormattedTB(mode='Context',color_scheme='Linux')
         
         #Set up the number 0 cell. It is used for code which is not supposed to
         #be edited
         #etree.dump(self.log) #dbg
-        
-        if len(self.log) == 0:
-            #This is a new log
-            self.Append(input="""
-############DO NOT EDIT THIS CELL############
-from pylab import *
-switch_backend('WXAgg')
-ion()
-""", number = 0)
-            self.Run()
-        elif self.log[0] is not None:
-            self.__run(self.Get(0))
 
+        # XXX - fperez: how can we display the input numbers starting at 1
+        # instead of 0?  Traditional ipython sticks an empty input into In[0]
+        # which is never shown to deal with this.  I'm not exactly sure what
+        # should be done here, since I don't yet know the architecture well.
+            
         #Append the empty element at the end
         self.SetLastInput()
-
 
         del __builtin__
 
@@ -166,8 +173,7 @@ ion()
     def Append(self, input, output = None, number = 0):
         """Adds a new cell with the given input at the end of the list.
         Returns the cell. Number is used only if the log is empty."""
-        l = len(self.log)
-        if l != 0 :
+        if self.log:
             number = self.lastcell.number+1
         try:
             newcell = self.log.add(number)
