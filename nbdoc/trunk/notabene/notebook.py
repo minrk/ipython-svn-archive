@@ -358,8 +358,10 @@ class Notebook(object):
         sheet = ET.Element('sheet')
         block = ET.SubElement(sheet, 'ipython-block', logid=logid)
         for cell in log:
-            for subcell in cell.get_sheet_tags():
-                block.append(subcell)
+            #tzanko: This hides the 0 cell
+            if cell.number > 0:
+                for subcell in cell.get_sheet_tags():
+                    block.append(subcell)
         return sheet
 
     def get_from_log(self, tag, number, logid='default-log'):

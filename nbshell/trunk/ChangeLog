@@ -1,3 +1,19 @@
+2005-09-10  Tzanko Matev  <tsanko at gmail dot com>
+
+	* nbdoc/notebook.py (Notebook.default_sheet): Changed behaviour so
+	it doesn't put the zero cell in the default sheet.
+
+	* nbshell/IPythonLog.py (IPythonLog.__init__): Reverted Fernando's
+	changes about the In[0] cell. We need to allow the user to choose
+	if they need plotting turned on, and which library to use by
+	default, maybe through an additional File->New menu. Also we
+	should store the default settings in a configuration file. But the
+	actual initialization code must be in the notebook.
+
+	* nbshell/PythonPlugin.py (PythonNotebookViewPlugin.Update):
+	Reverted part of Fernando's changes and added a comment why the
+	strange code was needed.
+	
 2005-09-10  Fernando Perez  <Fernando.Perez@colorado.edu>
 
 	* nbshell/plotting_backends/matplotlib_backend.py

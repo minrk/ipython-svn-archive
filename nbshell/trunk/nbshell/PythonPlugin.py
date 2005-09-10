@@ -346,6 +346,19 @@ class PythonNotebookViewPlugin(object):
                 l2l_append((i, j+1))
                 #print "i -> %s, id->%s, type->%s, text->%s"%(str(i), str(id), str(type), str(text))
             #oldlinecnt = linecnt
+        #if we have no cells we must set line2log here
+        if not self.line2log:
+            #StyledTextCtrl always has at least one line. If we added no
+            #cells, self.line2log would be empty, so it would be inconsistant
+            #with the displayed window. That's why we append None here
+            l2l_append(None) #the window always has at least one line
+
+        #TODO: uncomment this when I fix the problems with
+        #updating the cursor position 
+        #else:
+            #self.line2log.append(None) #append ane
+            #empty line at the end outtext.write('\n')
+
         self.window.SetText(outtext.getvalue())
         self.window.GotoPos(self.window.GetTextLength())
         #print "line2log->", self.window.line2log #dbg

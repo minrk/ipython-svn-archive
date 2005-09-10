@@ -74,15 +74,16 @@ class IPythonLog(object):
                     }
         user_ns['grab_figure'] = self.grab_figure
         
-        # XXX Hack to preload matptlotlib.  This will be moved out once we
-        # have restored ipython's profile support
-
-        mplstart = """
-from pylab import *
-switch_backend('WXAgg')
-ion()
-"""
-        exec mplstart in user_ns
+        #I'll keep that for now, if we decide to go with initialization in profiles
+        #        # XXX Hack to preload matptlotlib.  This will be moved out once we
+        #        # have restored ipython's profile support
+        #
+        #        mplstart = """
+        #from pylab import *
+        #switch_backend('WXAgg')
+        #ion()
+        #"""
+        #        exec mplstart in user_ns
 
         self.interp = Shell.IPShellGUI(argv=['-colors','NoColor'], user_ns=user_ns)
         self.excepthook_IP = sys.excepthook
@@ -93,13 +94,19 @@ ion()
         sys.excepthook = ultraTB.FormattedTB(mode='Context',color_scheme='Linux')
         
         #Set up the number 0 cell. It is used for code which is not supposed to
-        #be edited
+        #be edited. And it has to be hidden
         #etree.dump(self.log) #dbg
-
-        # XXX - fperez: how can we display the input numbers starting at 1
-        # instead of 0?  Traditional ipython sticks an empty input into In[0]
-        # which is never shown to deal with this.  I'm not exactly sure what
-        # should be done here, since I don't yet know the architecture well.
+        if not self.log:  
+            #This is a new log  
+            self.Append(input="""  
+############DO NOT EDIT THIS CELL############  
+from pylab import *  
+switch_backend('WXAgg')  
+ion()  
+""", number = 0)  
+            self.Run()  
+        elif self.log[0] is not None:
+            self.__run(self.Get(0))
             
         #Append the empty element at the end
         self.SetLastInput()
