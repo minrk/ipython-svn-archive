@@ -1,24 +1,7 @@
 """ Utility functions and classes """
 
-#This method is temporary until notebook.py is fixed
-
-#from notabene import notebook
-#from notabene.notebook import *
-
-#def get_sheet_tags(self, do_specials=False):
-#    if do_specials and hasattr(self, 'special'):
-#        yield ET.Element('ipython-special',
-#            number=str(self.number))
-#    else:
-#        yield ET.Element('ipython-input',
-#            number=str(self.number))
-#    for tag in ('traceback', 'stdout', 'stderr', 'output'):
-#        if hasattr(self, tag):
-#            yield ET.Element('ipython-%s'%tag,
-#                number=str(self.number))
-#notebook.Cell.get_sheet_tags = get_sheet_tags
-#del notebook
-
+import sys
+import time
 from lxml import etree 
 
 def findnew(element, tag):
@@ -139,3 +122,18 @@ def test_subelements(element, dict, default = lambda x:False):
                                       lambda:dict[x.tag](x),
                                       lambda:default(x)),
                    element.getchildren())
+
+#simple profiling functions. Used for debugging
+t0 = 0
+def delta_time(msg, stream = sys.stderr):
+    """Prints to stream msg with the elapsed time between the last call of
+    delta_time or reset_timer"""
+    global t0
+    t = time.clock()
+    print >>stream, msg, t - t0
+    t0 = t
+
+def reset_timer():
+    """See delta_time"""
+    global oldtime
+    t0 = 0

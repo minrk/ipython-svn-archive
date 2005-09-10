@@ -259,10 +259,11 @@ class IPShellGUI:
         sys.path = oldpath
     
     def runlines(self, lines, displayhook, stdout, stderr):
-        oldterm = genutils.Term #TODO: Do I need to restore this?
+        oldterm = genutils.Term #I need to restore this, because the FormattedTB uses it
         genutils.Term = genutils.IOTerm(cout = stdout, cerr = stderr,\
                                         displayhook = displayhook)
         retval = self.IP.runlines2(lines)
+        genutils.Term = oldterm
         return retval
     
     def reset(self):

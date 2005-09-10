@@ -14,12 +14,15 @@ __author__  = '%s <%s>' % Release.author
 __license__ = Release.license
 __version__ = Release.version
 
+from nbshell.utils import delta_time
+
 import sys
 import os
 import re
 from optparse import OptionParser
 import unittest
 
+delta_time('standard modules loaded') #dbg
 #wxversion messes up with the sys.path. so I have to fix it
 oldpath = sys.path[0]
 try:
@@ -29,16 +32,21 @@ except:
     pass #I will try to run it, but it might not work
 sys.path[0:0] = [oldpath]
 import wx
+delta_time('wx loaded') #dbg
 
 from nbshell.utils import *
 from nbshell import ipnNotebookWidget,ipnDocument,frame,tester
 from ipnNotebookWidget import * # in case you wonder ipn comes from Interactive Python Notebook 
 from ipnDocument import *
 from frame import ipnFrame
+delta_time('nbshell modules loaded') #dbg
 
-
-
-        
+from IPython import ultraTB
+# For developer use: let's park a nice formatted traceback printer in
+# here.  Once this becomes more stable we can use a CrashHandler, but
+# for now this will be nice to get feedback.
+sys.excepthook = ultraTB.FormattedTB(mode='Context',color_scheme='Linux')
+#test the excepthook
 class App(wx.App):
     """Application class."""
     
@@ -82,6 +90,7 @@ class App(wx.App):
 
     
     def OnInit(self):
+        
         self.RegisterPlugins()
         self.frame = ipnFrame(None, -1, "", size = (640, 480))
         self.notebook = ipnNotebook(self.frame, -1, size = self.frame.GetClientSizeTuple(), style = wx.VSCROLL|wx.HSCROLL)
@@ -123,7 +132,6 @@ def start():
     app = App(redirect=False)
     #If test option is set, we test the application
     app.test = default(lambda:options.test,False)
-
     app.MainLoop()
 
 if __name__ == '__main__':

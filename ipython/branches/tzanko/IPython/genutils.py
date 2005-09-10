@@ -77,7 +77,7 @@ class IOStream:
             except:
                 # if we get here, something is seriously broken.
                 print >> sys.stderr, \
-                      'ERROR - failed to write data to stream:', stream
+                      'ERROR - failed to write data to stream:', self.stream
 
     def __getattr__(self,attr):
         """Delegate all attribute access to the stream object we're covering"""

@@ -51,7 +51,6 @@ class ipnDocument(object):
         self.notebook = notebook.Notebook('untitled.nbk')
         #etree.dump(self.notebook.root) #dbg
         self.logs = {'default-log':IPythonLog.IPythonLog(self, self.notebook, 'default-log')}
-        etree.SubElement(self.notebook.root, 'sheet', format='rest')
         self.sheet = Sheet.Sheet(self, self.notebook, self.view, self.factory)
         self.fileinfo['init'] = True
         self.fileinfo['path'] = os.getcwd()
@@ -70,7 +69,7 @@ class ipnDocument(object):
         
         #Call self.sheet.Clear to update the view
         if self.sheet is not None:
-            self.sheet.Clear()
+            self.sheet.Clear(update = False)
         self.notebook = None
         self.logs = {}
         self.sheet = None

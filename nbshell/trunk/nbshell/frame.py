@@ -56,8 +56,15 @@ class ipnFrame(wx.Frame):
                   size=wx.DefaultSize, style=wx.DEFAULT_FRAME_STYLE, name="myframe"):
 
         wx.Frame.__init__(self, parent, id, title, pos, size, style, name)
-        self.easyprinting = wx.html.HtmlEasyPrinting() #used for printing
-
+        #Here I used to set up printing like this: 
+        #
+        #self.easyprinting = wx.html.HtmlEasyPrinting() 
+        #
+        #Unfortunately this gives me stange warnings in my python2.4 (probably
+        #haveing something to do with the fact that I don't have a printer ;)
+        #So now I set self.easyprinting the first time I use it in one of the
+        #printing or previewing methods. --tzanko
+        self.easyprinting = None
         
     def SetTitle(self, filename):
         """Adds the filename to the title"""
@@ -247,7 +254,9 @@ class ipnFrame(wx.Frame):
             dlg = wx.MessageDialog(self, "Error: "+str(inst), style = wx.OK)
             dlg.ShowModal()
             raise #dbg
-
+        #check the comment in __init__
+        if self.easyprinting is None:
+            self.easyprinting = wx.html.HtmlEasyPrinting()
         if type == 0:
             self.easyprinting.PrintFile(tmpfile)
         elif type == 1:

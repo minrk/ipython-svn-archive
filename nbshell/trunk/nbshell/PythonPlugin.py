@@ -358,7 +358,6 @@ class PythonNotebookViewPlugin(object):
         #else:
             #self.line2log.append(None) #append ane
             #empty line at the end outtext.write('\n')
-
         self.window.SetText(outtext.getvalue())
         self.window.GotoPos(self.window.GetTextLength())
         #print "line2log->", self.window.line2log #dbg
@@ -612,6 +611,8 @@ class PythonNotebookViewPlugin(object):
 
             #Insert a newline and update line2log
             line = self.window.GetLine(linenum)
+            if line[-1] == '\n':
+                line = line[:-1]
             i = promptlen
             l = len(line)
             while i<l and line[i].isspace():
@@ -765,22 +766,20 @@ class PythonNotebookViewPlugin(object):
         #      for pasting code in a code cell
         #    * a list of cells - used for pasting cells in a code block
         rawtext, codetext, codecell = True, False, False
-        
+        codetext = True #We always make this object now
         
         if (self.line2log[startline] is None or self.line2log[endline] is None or
             self.line2log[startline][0] != self.line2log[endline][0]):
             #Don't include code 
             codecell = True
-        else:
-            codetext = True
-            if (self.line2log[startline][1] == 1 and 
-                start == self.window.PositionFromLine(startline) and 
-                (endline == len(self.line2log) - 1 or 
-                 (self.line2log[endline+1] is None or 
-                  self.line2log[endline+1][1] == 1 and
-                  end == self.window.LineLength(endline) +\
-                      self.window.PositionFromLine(endline)))):
-                codecell = True
+        elif (self.line2log[startline][1] == 1 and 
+              start == self.window.PositionFromLine(startline) and 
+              (endline == len(self.line2log) - 1 or 
+               (self.line2log[endline+1] is None or 
+                self.line2log[endline+1][1] == 1 and
+                end == self.window.LineLength(endline) +\
+                self.window.PositionFromLine(endline)))):
+            codecell = True
         
         #Now get the data
         #rawtext is always true,
@@ -790,7 +789,8 @@ class PythonNotebookViewPlugin(object):
         dataobj.Add(rawobj, True)
 
         if codetext:
-            #Strip text from prompts
+            #Strip text from prompts. We handle the first line separately, because
+            #we don't know if the whole one is selected
             s = self.window.PositionFromLine(startline)
             s += self.PromptLen(startline)
             if s > start: #start is inside the prompt
@@ -857,15 +857,15 @@ class PythonNotebookViewPlugin(object):
                 codetext = True
                 wx.TheClipboard.GetData(codeobj)
             #if we are at the last character in the cell and there is a nbCell object
-            elif ((len(self.line2log) -1 == linenum or #if linenum is the last line in the cell
-                   self.line2log[linenum+1] is None or
-                   self.line2log[linenum+1][0] != self.line2log[linenum][0]) and
-                  #and caret is at the end of the line
-                  pos == self.window.PositionFromLine(linenum) +\
-                         self.window.LineLength(linenum)):
-                linenum += 1 #this will be the place where we paste the cells
-                wx.TheClipboard.GetData(cellobj)
-                codecell = True
+            #elif ((len(self.line2log) -1 == linenum or #if linenum is the last line in the cell
+            #       self.line2log[linenum+1] is None or
+            #       self.line2log[linenum+1][0] != self.line2log[linenum][0]) and
+            #      #and caret is at the end of the line
+            #      pos == self.window.PositionFromLine(linenum) +\
+            #             self.window.LineLength(linenum)):
+            #    linenum += 1 #this will be the place where we paste the cells
+            #    wx.TheClipboard.GetData(cellobj)
+            #    codecell = True
             elif (wx.TheClipboard.IsSupported(wx.DataFormat(wx.DF_TEXT)) or
                   wx.TheClipboard.IsSupported(wx.DataFormat(wx.DF_UNICODETEXT))):
                 rawtext = True

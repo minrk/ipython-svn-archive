@@ -27,7 +27,7 @@ class Sheet(object):
     def __init__(self, doc, notebook, view, factory):
         self.doc = doc
         self.notebook = notebook
-        self.element = self.notebook.root.xpath('//sheet')[0]
+        self.element = default(lambda:self.notebook.root.xpath('//sheet')[0], None)
         self.view = view
         self.factory = factory
         self.celllist = []
@@ -145,7 +145,6 @@ class Sheet(object):
         this when you rerun parts of the log to add all the new outputs to the
         sheet and delete the ones which don't exist after the rerun.
         """
-        
         if celllist:
             #TODO: Here I clear the celllist and then recreate it. This is
             #slow and causes flicker. What I should do is check every cell if
@@ -169,6 +168,8 @@ class Sheet(object):
                 cell.view.Update()
             self.view.Update()
             self.view.Thaw()
+
+
     
     def UpdateDoc(self, element = True):
         """Updates data from the view. If element is True also updates
@@ -285,7 +286,7 @@ class Sheet(object):
         for i in range(l):
             cell = self.celllist[-1]
             cell.view.Close(update=False)
-            self.__del_cell(cell.index)
+        self.celllist = []
         if update:
             self.view.Update()
 
@@ -318,9 +319,9 @@ class Sheet(object):
 
     def Clear(self, update = True):
         """Clears the sheet"""
-        self.element.text = None
-        self.element.clear()
-        self.__clear_celllist()
+        if self.element is not None:
+            self.element.clear()
+        self.__clear_celllist(update = False)
         self.last = None
         if update:
             self.view.Update()
@@ -410,12 +411,6 @@ class Sheet(object):
         #default_sheet will append the last input in the log here
         #We only need to set self.last
         self.element = self.notebook.default_sheet()
-        #textelem = etree.Element('para')
-        #textelem.text =\
-#""" This is a temporary message, until I write proper help.
-#Please use Return to insert, Shift-Return to execute inputs and Ctrl-Return to
-#reexecute an input and all inputs that follow. """
-#        self.element[0:0] = [textelem]
         # Now remove the old sheet and replace it with the new one
         oldsheet = self.notebook.root.find('sheet')
         if oldsheet is not None:

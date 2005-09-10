@@ -26,7 +26,6 @@ from wx.py.pseudo import PseudoFileErr
 #from wx.py.version import VERSION
 
 from IPython import Shell
-from IPython import ultraTB
 from notabene import notebook
 
 from lxml import etree
@@ -84,15 +83,10 @@ class IPythonLog(object):
         #ion()
         #"""
         #        exec mplstart in user_ns
-
+        excepthook_orig = sys.excepthook
         self.interp = Shell.IPShellGUI(argv=['-colors','NoColor'], user_ns=user_ns)
         self.excepthook_IP = sys.excepthook
-
-        # For developer use: let's park a nice formatted traceback printer in
-        # here.  Once this becomes more stable we can use a CrashHandler, but
-        # for now this will be nice to get feedback.
-        sys.excepthook = ultraTB.FormattedTB(mode='Context',color_scheme='Linux')
-        
+        sys.excepthook = excepthook_orig
         #Set up the number 0 cell. It is used for code which is not supposed to
         #be edited. And it has to be hidden
         #etree.dump(self.log) #dbg

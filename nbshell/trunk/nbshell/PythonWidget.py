@@ -14,6 +14,7 @@ from wx.py.pseudo import PseudoFileErr
 
 from nbshell import editwindow
 from nbshell.ipnNotebookWidget import CellCtrlBase
+from nbshell.utils import *
 
 NAVKEYS = (wx.WXK_END, wx.WXK_LEFT, wx.WXK_RIGHT,
            wx.WXK_UP, wx.WXK_DOWN, wx.WXK_PRIOR, wx.WXK_NEXT)

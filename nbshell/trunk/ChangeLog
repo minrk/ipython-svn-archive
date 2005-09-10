@@ -1,3 +1,44 @@
+2005-09-11  Tzanko Matev  <tsanko at gmail dot com>
+
+	* nbshell/frame.py (ipnFrame.__init__): Moved printing
+	initialization to ipnFrame.OnPrint to avoid a strange warning
+	message	python gave me
+
+	* nbshell/IPythonLog.py (IPythonLog.__init__):
+	* nbshell/Main.py: Moved the code that sets the excepthook to
+	Main.py.
+	
+	* IPython/tzanko/Shell.py (IPShellGUI.runlines): Also fixed
+	runlines to restore genutils.Term when done, because FormattedTB
+	uses it.
+
+	* nbshell/PythonPlugin.py
+	(PythonNotebookViewPlugin.InsertLineBreak): Fixed a bug where an
+	additional newline would be added if the current line was empty.
+
+	* nbshell/PythonPlugin.py (PythonNotebookViewPlugin.Copy): Changed
+	behaviour. Now a codetext object (text of cells without the
+	prompts) is always created and is used when user tries to paste
+	within a cell. This mostly fixes ticket #13 but now there is no
+	direct way to paste a list of cells after the last cell. I wanted
+	to fix this by adding an additional empty line after the last
+	cell, but this introduced more problems than it solved. For the
+	moment, I'll consider the ticket closed.
+		
+	* nbshell/utils.py: Added functions delta_time() and reset_timer()
+	which can be used for very simple profiling. I use them in Main to
+	see how fast nbshell loads.
+
+	* nbshell/Sheet.py:
+	* nbshell/ipnDocument.py: Deleted some unnecessary code and
+	changed Sheet.Clear() a little, which slightly decreased loading
+	time.
+
+	* IPython/tzanko/genutils.py (IOStream.write): Managed to reach
+	code which noone has run before in write(), and found and fixed a
+	small bug there.
+	
+
 2005-09-10  Tzanko Matev  <tsanko at gmail dot com>
 
 	* nbdoc/notebook.py (Notebook.default_sheet): Changed behaviour so

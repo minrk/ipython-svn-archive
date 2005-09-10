@@ -23,6 +23,7 @@ import time
 from wx.py import dispatcher
 from wx.py.version import VERSION
 
+from nbshell.utils import *
 
 if 'wxMSW' in wx.PlatformInfo:
     FACES = { 'times'     : 'Times New Roman',
