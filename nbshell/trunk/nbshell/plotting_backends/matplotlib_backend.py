@@ -15,19 +15,29 @@ __version__ = Release.version
 from nbshell.plotting_backends import backend_base
 
 class PlotLibraryInterface(backend_base.PlotLibraryInterface):
+
     def __init__(self, filename_iter):
         self.filename_iter = filename_iter
-    def grab_png(self, caption = None):
+
+    def grab_png(self, number=None,caption = None,dpi=None):
         """Exports a png figure"""
+
+        import matplotlib
         from matplotlib import _pylab_helpers as __pylab_helpers
-        figmanager = __pylab_helpers.Gcf.get_active()
+
+        if number is None:
+            figmanager = __pylab_helpers.Gcf.get_active()
+        else:
+            figmanager = __pylab_helpers.Gcf.get_fig_manager(number)
         if figmanager is None:
             del(__pylab_helpers)
             return None
         else:
             from matplotlib import pylab as __pylab
             filename = self.filename_iter.next()
-            __pylab.savefig(filename, dpi=50)
+            if dpi is None:
+                dpi = matplotlib.rcParams['savefig.dpi']
+            __pylab.savefig(filename, dpi=dpi)
             __pylab.close()
             del(__pylab_helpers)
             del(__pylab)

@@ -1,5 +1,9 @@
 2005-09-10  Fernando Perez  <Fernando.Perez@colorado.edu>
 
+	* nbshell/plotting_backends/matplotlib_backend.py
+	(PlotLibraryInterface.grab_png): Added dpi and number options to
+	grab_png and grab_figure.
+
 	* nbshell/PythonPlugin.py (PythonNotebookViewPlugin.Update):
 	Removed code which was causing the spurious newline problem.  I
 	cut out a whole section which seemed a no-op to me.  Tzanko: please

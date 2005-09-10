@@ -117,10 +117,10 @@ ion()
             yield "%s_%d.png"%(fn,counter)
             counter+=1
     
-    def grab_figure(self, caption = None):
+    def grab_figure(self,number=None,caption=None,dpi=None):
         """Call this to grab the figure currently being edited and put it in
         the notebook"""
-        figurexml = self.plot_api.grab_png(caption)
+        figurexml = self.plot_api.grab_png(number,caption,dpi)
         #Append the new figure to the appropriate figure list in the log
         #The figure lists will be dealt with in UpdateOutput
         if figurexml is not None:
@@ -265,7 +265,7 @@ ion()
         
         if self.output != '':
             cell.output = ''.join(['\n'.join(self.wrapper.wrap(x))+'\n'\
-                                  for x in self.output.splitlines(False)]) #wrap the output
+                                   for x in self.output.splitlines(False)]) #wrap the output
             #print 'wrapped output ->', self.output.text #dbg
 
         print 'Out[%d]: '%cell.number, cell.output #dbg
@@ -282,4 +282,4 @@ ion()
         #print >> self.stdout_orig,  'displayhook called' #dbg
         # We want to keep only the last output
         if obj is not None:
-            self.output = '\n' + str(obj) + '\n'
+            self.output = '\n%s\n' % obj
