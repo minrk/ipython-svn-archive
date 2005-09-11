@@ -39,6 +39,12 @@
 	small bug there.
 	
 
+2005-09-10  Robert Kern  <rkern@enthought.com>
+
+	* README:
+	* ez_setup.py:
+	* setup.py: Removed ez_setup stuff.
+
 2005-09-10  Tzanko Matev  <tsanko at gmail dot com>
 
 	* nbdoc/notebook.py (Notebook.default_sheet): Changed behaviour so

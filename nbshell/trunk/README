@@ -55,13 +55,6 @@ $ cd notabene
 $ su
 # python2.4 setup.py install
 
-The current version of notabene requires you to install setuptools. For Debian
-users the command is:
-
-apt-get install python2.4-setuptools
-
-In the future this requirement will be dropped.
-
 4. IPython. You will need a modified version of IPython which can be downloaded from
 
    http://ipython.scipy.org/svn/ipython/ipython/branches/tzanko/
