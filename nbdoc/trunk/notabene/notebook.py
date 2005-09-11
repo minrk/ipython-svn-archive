@@ -330,21 +330,39 @@ class Notebook(object):
         doc = formatter.to_formatted(self.sheet, format)
 
         if toPDF:
+            env = os.environ.copy()
             tmpfid, tmpfn = tempfile.mkstemp(suffix='.tex')
             tmpf = os.fdopen(tmpfid, 'w+b')
             try:
                 doc.write(tmpf)
             finally:
                 tmpf.close()
-            dir, fn = os.path.split(filename)
-            base = os.path.splitext(fn)[0]
-            args = ['pdflatex', '-output-directory=%s'%dir, '-jobname=%s'%base]
-            p = subprocess.Popen(args+[tmpfn])
-            p.wait()
-            # Do it a second time to make sure the references are right.
-            p = subprocess.Popen(args+[tmpfn])
-            p.wait()
-            os.unlink(tmpfn)
+            try:
+                # Try as hard as we can to output the PDF in the same directory
+                # as the notebook file.
+                dir, fn = os.path.split(filename)
+                base = os.path.splitext(fn)[0]
+
+                # Abusing TEXMFOUTPUT like this is a hideous hack that we need
+                # to use for compatibility with teTeX < 3.0 and other older TeX
+                # distributions. pdflatex only recently grew a nice
+                # -output-directory option. This current strategy might be
+                # unreliable; TEXMFOUTPUT only kicks in when "the current
+                # directory is unwritable." We try to force that condition by
+                # giving the full pathname as the jobname. That works on OS X at
+                # least.
+                env['TEXMFOUTPUT'] = dir
+
+                #args = ['pdflatex', '-output-directory=%s'%dir, '-jobname=%s'%base]
+                args = ['pdflatex', '-jobname=%s'%os.path.join(dir,base)]
+                p = subprocess.Popen(args+[tmpfn], env=env)
+                p.wait()
+                # Do it a second time to make sure the references are right.
+                p = subprocess.Popen(args+[tmpfn], env=env)
+                p.wait()
+            finally:
+                os.unlink(tmpfn)
+                
             return filename
 
         else:
