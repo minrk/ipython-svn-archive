@@ -252,16 +252,26 @@ class Sheet(object):
                         lst.append(elem)
                         #run the iterator until we get outside of the current tag
                         while len(elemlist)>=l and elemlist[l-1] == elem:
-                            elemlist = iter.next()
-                            flag = True #what does this button do?
-                        flag = False
-                        if len(elemlist) < l:
+                            try:
+                                elemlist = iter.next()
+                                flag = False #This tells us if we have reached the last element
+                            except:
+                                flag = True
+                                break
+
+                        if flag or len(elemlist) < l:
                             #We are on another level, so break
                             break
                         elem = elemlist[-1] #This is the next tag
                     #Create the plugin with the given list of tags
                     self.InsertCell(plugin_string, update = False, element_list = lst)
-                    #add a cell of unsupported tags
+                    #add a cell of unsupported tags 
+
+                    #If we have reached the last cell (flag is True) raise an
+                    #exception and let the except clause deal with the rest of
+                    #the document
+                    if flag:
+                        raise StopIteration
                     elemlist = self.__append_plaintext_cell(iter, prevlist,\
                                 elemlist, update = False, endtaglist = tags)
                 elif elem.tag in tag2type.keys():

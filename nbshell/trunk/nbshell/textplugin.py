@@ -109,19 +109,23 @@ class TextDocumentPlugin(object):
         #replace each sequence of whitespace in each line with a single space
         lt = [' '.join(x.split()) for x in lt]
         outxml = StringIO.StringIO()
-        outxml.write('<para>')
+        writer = XMLWriter(outxml,encoding = 'utf-8')
+        writer.start('para')
         flag = True #are we inside <para>
         flag2 = False #have we read a nonempty line at all
         for line in lt:
             if line:
-                outxml.write(ifelse(flag,'','<para>')+line+' ')
-                flag = True
+                if not flag:
+                    writer.start('para')
+                    flag = True
+                writer.data(line+' ')
                 flag2 = True
             elif flag and flag2:
-                outxml.write('</para>')
+                writer.end()
                 flag = False
         if flag:
-            outxml.write('</para>')
+            writer.end()
+        writer.flush()
         t = outxml.getvalue()
         outxml.close()
         return t
@@ -319,9 +323,6 @@ class TextCtrl(stc.StyledTextCtrl, CellCtrlBase):
                            # C++ static variable
         self.oldpos = (0,0)
         self.SetUseHorizontalScrollBar(0)
-        self.SetLexer(stc.STC_LEX_XML)
-        self.StyleSetSpec(stc.STC_H_TAG,"fore:#0000FF")
-        self.SetKeyWords(0,'para title section')
         
         stc.EVT_STC_MODIFIED(self, id, self.OnModified)
         stc.EVT_STC_UPDATEUI(self, id, self.OnUpdateUI)

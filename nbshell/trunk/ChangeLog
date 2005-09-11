@@ -1,5 +1,19 @@
 2005-09-12  Tzanko Matev  <tsanko@gmail.com>
 
+	* Sheet.py (Sheet.__update_celllist): Fixed a bug where a text
+	window would not be created if the list of <para> elements was at
+	the end of the document
+
+	* textplugin.py (TextDocumentPlugin.get_xml_text): Fixed escaping
+	of the test string.
+
+	* PlainTextPlugin.py (PlainTextCtrl.__init__): Changed the colour
+	of the margin to pale red. Windows of this type cannot be created
+	by nbshell interface at the moment, however they will be shown if
+	a tag in the notebook document is unsupported.
+
+2005-09-12  Tzanko Matev  <tsanko@gmail.com>
+
 	* textplugin.py: 
 	* Main.py (App.RegisterPlugins): Added a text plugin which
 	converts plain text to a list of <para> elements in the xml

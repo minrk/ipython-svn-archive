@@ -332,6 +332,8 @@ class PlainTextCtrl(stc.StyledTextCtrl, CellCtrlBase):
         self.SetUseHorizontalScrollBar(0)
         self.SetLexer(stc.STC_LEX_XML)
         self.StyleSetSpec(stc.STC_H_TAG,"fore:#0000FF")
+        self.StyleSetSpec(stc.STC_STYLE_LINENUMBER, "back:#E0C0C0")
+
         self.SetKeyWords(0,'para title section')
         
         stc.EVT_STC_MODIFIED(self, id, self.OnModified)
