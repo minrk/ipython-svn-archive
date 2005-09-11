@@ -335,7 +335,7 @@ class Notebook(object):
                 doc.write(tmpf)
             finally:
                 tmpf.close()
-            args = ['pdflatex', '-jobname="%s"' % base]
+            args = ['pdflatex', '-jobname=%s' % base]
             p = subprocess.Popen(args+[tmpfn])
             p.wait()
             # Do it a second time to make sure the references are right.
