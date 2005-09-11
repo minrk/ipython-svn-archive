@@ -8,6 +8,7 @@ from lxml import etree as ET
 
 from notabene import normal
 from notabene import validate
+from notabene.xmlutils import rdf, dc
 
 class SubelemWrapper:
     """Abstract superclass for Cell getter and setter."""
@@ -179,13 +180,13 @@ class Notebook(object):
             self.root = root
             self.head = root.find('head')
             logelem = root.find('ipython-log')
-            #dbg
-            #print logelem, logelem.get('id', 'noid?-o')
             logid = logelem.get('id')
             self.logs[logid] = Log(self, logid, logelem) 
-            #for cellelem in logelem:
-            #    #dbg
-            #    print cellelem, ET.tostring(cellelem)
+
+        self.tree = ET.ElementTree(self.root)
+        self.xpath = ET.XPathEvaluator(self.tree)
+        self.xpath.registerNamespace(rdf._prefix, rdf._url)
+
 
     def __eq__(self, other):
         """Determines if two Notebooks are equivalent to each other (more or

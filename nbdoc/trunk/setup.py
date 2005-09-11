@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(name = "nbdoc",
       version = "0.1",
-      packages = ['notabene', 'notabene.testing', 'notabene.normalization'],
+      packages = ['notabene', 'notabene.testing'],
       package_data = {'notabene': ['xsl/VERSION',
                                    'xsl/README*',
                                    'xsl/*/*.*',

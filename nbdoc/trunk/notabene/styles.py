@@ -3,6 +3,8 @@ import re
 
 from lxml import etree as ET
 
+from notabene.xmlutils import xsl, nsmap
+
 XSLDIR = os.path.join(os.path.split(__file__)[0], 'xsl')
 
 if not os.path.exists(os.path.join(XSLDIR, 'xhtml', 'docbook.xsl')):
@@ -126,60 +128,53 @@ div.ipy_output_bundle {
 }
 """
 
-def _xsl(tag):
-    """Add the XSL prefix to a tag name.
-    """
-    return '{http://www.w3.org/1999/XSL/Transform}%s' % tag
-
 class Style(object):
-    nsmap = {"xsl": "http://www.w3.org/1999/XSL/Transform",
-            }
     def __init__(self, styles_dict):
         self.styles_dict = styles_dict
 
     def latex_xsl(self):
-        sheet = ET.Element(_xsl("stylesheet"), version="1.0", nsmap=self.nsmap)
+        sheet = ET.Element(xsl.stylesheet, version="1.0", nsmap=nsmap(xsl))
 
         # configure this later
-        ET.SubElement(sheet, _xsl("import"),
+        ET.SubElement(sheet, xsl['import'],
                       href=os.path.join(XSLDIR, "latex", "docbook.xsl"))
 
         # turn on fancyvrb
-        fancyvrb = ET.SubElement(sheet, _xsl("param"), name="latex.use.fancyvrb")
+        fancyvrb = ET.SubElement(sheet, xsl.param, name="latex.use.fancyvrb")
         fancyvrb.text = "1"
-        fvopt = ET.SubElement(sheet, _xsl("template"), name="latex.fancyvrb.options")
+        fvopt = ET.SubElement(sheet, xsl.template, name="latex.fancyvrb.options")
         fvopt.text = r",commandchars=\\\{\}"
 
-        docclass = ET.SubElement(sheet, _xsl("param"),
+        docclass = ET.SubElement(sheet, xsl.param,
             name="latex.documentclass.article")
         docclass.text = "letterpaper,10pt,twoside"
 
-        amble = ET.SubElement(sheet, _xsl("param"),
+        amble = ET.SubElement(sheet, xsl.param,
             name="latex.article.preamble.post")
         amble.text = '\n'.join(x.as_latex() for x in self.styles_dict.itervalues())
         amble.text = '\n%s\n' % amble.text
 
         # and again for book
-        amble = ET.SubElement(sheet, _xsl("param"),
+        amble = ET.SubElement(sheet, xsl.param,
             name="latex.book.preamble.post")
         amble.text = '\n'.join(x.as_latex() for x in self.styles_dict.itervalues())
         amble.text = '\n%s\n' % amble.text
 
         # change to English and UTF-8
-        lang = ET.SubElement(sheet, _xsl("variable"), name="l10n.gentext.default.language")
+        lang = ET.SubElement(sheet, xsl.variable, name="l10n.gentext.default.language")
         lang.text = "en"
-        ET.SubElement(sheet, _xsl("variable"), name="latex.documentclass.common")
-        ET.SubElement(sheet, _xsl("variable"), name="latex.babel.language")
-        encoding = ET.SubElement(sheet, _xsl("output"), method="text",
+        ET.SubElement(sheet, xsl.variable, name="latex.documentclass.common")
+        ET.SubElement(sheet, xsl.variable, name="latex.babel.language")
+        encoding = ET.SubElement(sheet, xsl.output, method="text",
             encoding="UTF-8", indent="yes")
 
         # add the templates for syntax-highlighting
         for textstyle in self.styles_dict.itervalues():
-            template = ET.SubElement(sheet, _xsl("template"),
+            template = ET.SubElement(sheet, xsl.template,
                 match='phrase[@role="%s"]' % textstyle.name,
                 mode="latex.verbatim")
             template.text = '\\%s{' % textstyle.cmd_name()
-            value = ET.SubElement(template, _xsl("value-of"), select="./text()")
+            value = ET.SubElement(template, xsl["value-of"], select="./text()")
             value.tail = '}'
 
         return ET.ElementTree(sheet)
@@ -189,14 +184,14 @@ class Style(object):
         return "\n".join((base_css, newcss))
 
     def html_xsl(self):
-        sheet = ET.Element(_xsl("stylesheet"), version="1.0", nsmap=self.nsmap)
+        sheet = ET.Element(xsl.stylesheet, version="1.0", nsmap=nsmap(xsl))
 
-        ET.SubElement(sheet, _xsl("import"),
+        ET.SubElement(sheet, xsl['import'],
             href=os.path.join(XSLDIR, "xhtml", "docbook.xsl"))
 
-        css = ET.SubElement(sheet, _xsl("template"), name="user.head.content")
+        css = ET.SubElement(sheet, xsl.template, name="user.head.content")
         css_style = ET.SubElement(css, "style", type="text/css")
-        comment = ET.SubElement(css_style, _xsl("comment"))
+        comment = ET.SubElement(css_style, xsl.comment)
         comment.text = self.html_css()
 
         return ET.ElementTree(sheet)
@@ -208,8 +203,8 @@ class Style(object):
         return text
 
     def fo_xsl(self):
-        sheet = ET.Element(_xsl("stylesheet"), version="1.0", nsmap=self.nsmap)
-        ET.SubElement(sheet, _xsl("import"),
+        sheet = ET.Element(xsl.stylesheet, version="1.0", nsmap=nsmap(xsl))
+        ET.SubElement(sheet, xsl['import'],
             href=os.path.join(XSLDIR, "fo", "docbook.xsl"))
         return ET.ElementTree(sheet)
 
