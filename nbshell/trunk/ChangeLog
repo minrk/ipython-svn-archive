@@ -1,3 +1,27 @@
+2005-09-12  Tzanko Matev  <tsanko@gmail.com>
+
+	* textplugin.py: 
+	* Main.py (App.RegisterPlugins): Added a text plugin which
+	converts plain text to a list of <para> elements in the xml
+	code. It is used instead of the old plaintext plugin, which will
+	soon be renamed. This resolves ticket #9
+
+	* Sheet.py (Sheet.UpdateDoc):
+	* PlainTextPlugin.py (PlainTextDocumentPlugin.get_xml_text):
+	* PythonPlugin.py (PythonDocumentPlugin.get_xml_text):
+	* FigurePlugin.py (FigureDocumentPlugin.get_xml_text):
+	* textplugin.py (TextDocumentPlugin.get_xml_text): Moved the code
+	that generates xml from plugin data to the
+	plugins. Sheet.UpdateDoc does not depend on the specific plugins
+	anymore.
+
+	* Sheet.py (Sheet.__update_celllist): Changed to create instance
+	of the new text plugin when encounters a list of <para> elements
+	in a sheet
+	
+	* Sheet.py (Sheet.InsertText): Changed method to create an
+	instance ot the new text plugin
+	
 2005-09-11  Tzanko Matev  <tsanko at gmail dot com>
 
 	* nbshell/frame.py (ipnFrame.__init__): Moved printing

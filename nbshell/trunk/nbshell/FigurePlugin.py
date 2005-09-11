@@ -64,6 +64,10 @@ class FigureDocumentPlugin(object):
         self.element = element #This stores the <ipython-figure> element
 
     type = 'figure'
+
+    def get_xml_text(self):
+        return etree.tostring(self.element, encoding = 'utf-8')
+
     def __len__(self):
         return 1
     

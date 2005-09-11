@@ -46,6 +46,7 @@ from IPython import ultraTB
 # here.  Once this becomes more stable we can use a CrashHandler, but
 # for now this will be nice to get feedback.
 sys.excepthook = ultraTB.FormattedTB(mode='Context',color_scheme='Linux')
+
 #test the excepthook
 class App(wx.App):
     """Application class."""
@@ -76,7 +77,7 @@ class App(wx.App):
         #        #print factory.GetString() #dbg
         #        self.plugin_dict[factory.string]=factory
 
-        # Currently there are only three plugins, so we simply add them
+        # Currently there are only four plugins, so we simply add them
         from nbshell.PythonPlugin import GetPluginFactory
         factory = GetPluginFactory()
         self.plugin_dict[factory.string] = factory
@@ -86,6 +87,10 @@ class App(wx.App):
         from nbshell.FigurePlugin import GetPluginFactory
         factory = GetPluginFactory()
         self.plugin_dict[factory.string] = factory
+        from nbshell.textplugin import GetPluginFactory
+        factory = GetPluginFactory()
+        self.plugin_dict[factory.string] = factory
+        
         del(GetPluginFactory)
 
     

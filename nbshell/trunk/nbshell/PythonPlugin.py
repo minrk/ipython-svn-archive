@@ -104,6 +104,9 @@ class PythonDocumentPlugin(object):
         
     type = 'python'
     
+    def get_xml_text(self):
+        return etree.tostring(self.element, encoding = 'utf-8')
+
     def __len__ (self):
         return len(self.element)
     
@@ -160,7 +163,7 @@ class PythonDocumentPlugin(object):
         return False
 
     def GetFactory(self):
-        return PlainTextPluginFactory()
+        return PythonPluginFactory()
 
 class PythonNotebookViewPlugin(object):
     def __init__(self, docplugin, view):

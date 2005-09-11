@@ -182,14 +182,7 @@ class Sheet(object):
             text = StringIO.StringIO()
             text.write('<sheet>')
             for doccell in self.celllist:
-                if doccell.type == 'plaintext':
-                    text.write(doccell.text)
-                elif doccell.type == 'python':
-                    etr = etree.ElementTree(doccell.element)
-                    etr.write(text, encoding='utf-8')
-                elif doccell.type == 'figure':
-                    etr = etree.ElementTree(doccell.element)
-                    etr.write(text, encoding = 'utf-8')
+                text.write(doccell.get_xml_text())
             text.write('</sheet>')
             text.flush()
             xmldata = text.getvalue()
@@ -238,12 +231,40 @@ class Sheet(object):
         
         iter = getiterator2(self.element)
         elemlist = iter.next()
+        #For each tag in this dictionary we make a different plugin
         tag2type = {'ipython-block':'python', 'ipython-figure':'figure'}
+        #For a consecutive list of tags matching the tags in this dictionary
+        #we create one plugin
+        list2type = {'para' : 'text'}
+        #tags is used in __append_plaintext_cell
+        tags = tuple(tag2type.keys() + list2type.keys())
         flag = False
         while True:
             try:
                 elem = elemlist[-1]
-                if elem.tag in tag2type.keys():
+                if elem.tag in list2type.keys():
+                    lst = []
+                    plugin_string = list2type[elem.tag]
+                    #retrieve the next tags on the same level
+                    prevlist = elemlist[:-1]
+                    l = len(elemlist)
+                    while list2type.get(elem.tag,None) == plugin_string:
+                        lst.append(elem)
+                        #run the iterator until we get outside of the current tag
+                        while len(elemlist)>=l and elemlist[l-1] == elem:
+                            elemlist = iter.next()
+                            flag = True #what does this button do?
+                        flag = False
+                        if len(elemlist) < l:
+                            #We are on another level, so break
+                            break
+                        elem = elemlist[-1] #This is the next tag
+                    #Create the plugin with the given list of tags
+                    self.InsertCell(plugin_string, update = False, element_list = lst)
+                    #add a cell of unsupported tags
+                    elemlist = self.__append_plaintext_cell(iter, prevlist,\
+                                elemlist, update = False, endtaglist = tags)
+                elif elem.tag in tag2type.keys():
                     self.InsertCell(tag2type[elem.tag], update = False, \
                                     element = elem)
                     l = len(elemlist)
@@ -254,7 +275,7 @@ class Sheet(object):
                     flag = False
                     elemlist = self.__append_plaintext_cell(iter, prevlist,\
                                 elemlist, update = False,\
-                                endtaglist = tuple(tag2type.keys()))
+                                endtaglist = tags)
                 else:
                     #plaintext cells will deal with all the elements we have not
                     #dealt with yet
@@ -262,14 +283,14 @@ class Sheet(object):
                     flag = False
                     elemlist = self.__append_plaintext_cell(iter, prevlist,\
                                 elemlist, update = False,\
-                                endtaglist = ('ipython-block', 'ipython-figure'))
+                                endtaglist = tags)
             except StopIteration:
                 #Add any remaining tags
                 if flag:
                     try:
                         self.__append_plaintext_cell(iter,
                             prevlist,(), update = False,\
-                            endtaglist = ('ipython-block', 'ipython-figure'))
+                            endtaglist = tags)
                     except StopIteration:
                         pass
                 break
@@ -728,11 +749,11 @@ class Sheet(object):
         return self.Insert(block, pos,\
                     check = lambda block, prev, next, pos:\
                         (block is None) or (\
-                            (block.type != 'plaintext') and\
-                            (pos > 0 or prev == None or prev.type != 'plaintext') and\
-                            (pos < len(block) or next == None or next.type != 'plaintext')),\
+                            (block.type != 'text') and\
+                            (pos > 0 or prev == None or prev.type != 'text') and\
+                            (pos < len(block) or next == None or next.type != 'text')),\
                     insert = lambda pos: 
-                        self.InsertCell('plaintext', pos, update = False, text = ''),\
+                        self.InsertCell('text', pos, update = False, text = ''),\
                     update = update)
     
     def InsertCode(self, block, pos, logid = None, update = True):

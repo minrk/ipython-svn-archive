@@ -12,32 +12,34 @@ __license__ = Release.license
 __version__ = Release.version
 
 import StringIO
+import textwrap
 
 import wx
 from wx import stc
 
 from nbshell.SimpleXMLWriter import XMLWriter
 from nbshell.ipnNotebookWidget import CellCtrlBase
+from nbshell.utils import *
 
 def GetPluginFactory():
     """ Returns the factory object for the plugin. This function is called
     at the start of the program and should be called only once.
     """
-    return PlainTextPluginFactory()
+    return TextPluginFactory()
 
-class PlainTextPluginFactory(object):
+class TextPluginFactory(object):
     """ This class is responsible for creating the document and view parts of 
     a plugin. Also it has some functions giving information about the plugin.
     The reason this class exists is because the document and view classes of
     the program shouldn't care how plugin objects are created. For example all
-    the plain text in the notebook could be contained a single object which is 
+    the text in the notebook could be contained a single object which is 
     returned every time the document class wants to get a new one."""
     
-    string = "plaintext"
+    string = "text"
     #def GetString(self):
     #    """ Returns the type string of the plugin. This is used when a notebook
     #    file is loaded. See notebookformat.txt for more info"""
-    #    return "plaintext"
+    #    return "text"
     
     type = "encoded"
     #def GetType(self):
@@ -46,12 +48,12 @@ class PlainTextPluginFactory(object):
     #    more info"""
     #    return "encoded" #Probably only the python code plugin should be raw
         
-    def CreateDocumentPlugin(self,document, text = None):
+    def CreateDocumentPlugin(self,document, element_list = None, text = None):
         """Creates the document part of the plugin. The returned object is 
         stored in ipgDocument.celllist and is responsible for storing and
         serialization of data. "data" contains initial data for the plugin.
         """
-        return PlainTextDocumentPlugin(document, text)
+        return TextDocumentPlugin(document, element_list, text)
     
     def CreateViewPlugin(self,docplugin, view):
         """ Creates a view plugin connected to the given document plugin and 
@@ -65,26 +67,64 @@ class PlainTextPluginFactory(object):
         #for previewing in the notebook widget and a view for editing the LaTeX
         #code in a separate window
         if view.type=="notebook":
-            return PlainTextNotebookViewPlugin(docplugin, view)
+            return TextNotebookViewPlugin(docplugin, view)
         else:
             return None #Well here I should throw an exception, however I am 
                         #not supposed to get to this line for a long long time
 #end GenericPluginFactory
 
-class PlainTextDocumentPlugin(object):
-    def __init__(self, document, text = None):
-        """Initialization. If element is <sheet> then the text is
-        element.text. If the element is something else, then the text is
-        element.tail"""
-        
+class TextDocumentPlugin(object):
+    def __init__(self, document, element_list = None, text = None):
+        """Initialization. If element_list must be a list of consequtive tags
+        in a same level which will be displayed. Currently only <para> tags
+        are supported. If text is given it is used instead ot element_list"""
+        self.wrapper = textwrap.TextWrapper() #use this to wrap text in each paragraph
+
         self.document = document
         self.sheet = document.sheet
-        self._text = text or ''
+        self._text = ''
+        if text is not None:
+            self._text = text
+        elif element_list != None:
+            for element in element_list:
+                assert(element.tag == 'para')
+                #Replace all whitespace with a single ' ', wrap the paragraph
+                #and add it to the text
+                self._text += '\n\n' + self.wrapper.fill(' '.join(element.text.split()))
+            self._text = self._text[2:] #strip the first two newlines
         self.index = None   #Set by AddCell, InsertCell, DeleteCell
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
 
-    type='plaintext'
+    type='text'
+    
+    def get_xml_text(self):
+        """Returns the xml text representing the data"""
+        t = self.text
+        #split the text in lines to extract the paragraphs
+        lt = t.splitlines()
+
+        #delete whitespace at the begining and end of each line
+        lt = [x.strip() for x in lt]
+        #replace each sequence of whitespace in each line with a single space
+        lt = [' '.join(x.split()) for x in lt]
+        outxml = StringIO.StringIO()
+        outxml.write('<para>')
+        flag = True #are we inside <para>
+        flag2 = False #have we read a nonempty line at all
+        for line in lt:
+            if line:
+                outxml.write(ifelse(flag,'','<para>')+line+' ')
+                flag = True
+                flag2 = True
+            elif flag and flag2:
+                outxml.write('</para>')
+                flag = False
+        if flag:
+            outxml.write('</para>')
+        t = outxml.getvalue()
+        outxml.close()
+        return t
     
     def SetText(self, text):
         try:
@@ -101,57 +141,6 @@ class PlainTextDocumentPlugin(object):
 
     text = property(fget = GetText,fset = SetText)
     
-    def get_xml_text(self):
-        """Return the xml text representing the document"""
-        return self.text
-    
-    def LoadXML(self, iterator, prevlist, elemlist, endtaglist):
-        """The LoadXML method gets text representing a part of the xml tree.
-        The first element in this part is 'elemlist[-1]', the next are
-        retrieved by 'iterator'. 'prevlist' and 'elemlist' are the previous two
-        results of calling 'iterator.next()'. The LoadXML method stops when the
-        'iterator' throws a 'StopIteration' exception, or it finds an element for
-        which there is a plugin to process it. Currently there are such
-        plugins for the <ipython-block> and <ipython-figure> elements. In that
-        case it returns the last 'elemlist'. The tags on which LoadXML
-        should exit are in 'endtaglist'"""
-        
-        text = StringIO.StringIO()
-        #TODO: what encoding should I choose?
-        writer = XMLWriter(text, encoding='utf-8')
-
-        l1 = len(prevlist)
-        i = l1-1
-        l2 = len(elemlist)
-        while i>=0 and (i>= l2 or prevlist[i] != elemlist[i]):
-            writer.end(prevlist[i].tag)
-            writer.data(prevlist[i].tail or '')
-            i-=1
-
-        while elemlist != () and elemlist[-1].tag not in endtaglist:
-            prevlist = elemlist
-            writer.start(elemlist[-1].tag, elemlist[-1].attrib)
-            writer.data(elemlist[-1].text or '')
-            try:
-                elemlist = iterator.next()
-            except StopIteration:
-                elemlist = ()
-            l1 = len(prevlist)
-            i = l1-1
-            l2 = len(elemlist)
-            while i>=0 and (i>= l2 or prevlist[i] != elemlist[i]):
-                writer.end(prevlist[i].tag)
-                writer.data(prevlist[i].tail or '')
-                i-=1
-            
-        writer.flush()
-        self.text = text.getvalue()
-        if elemlist == ():
-            raise StopIteration
-        else: #elemlist[-1].tag in endtaglist:
-            return elemlist
-        
-        
     def __len__(self):
         return self.view.window.GetLength()
     
@@ -186,7 +175,7 @@ class PlainTextDocumentPlugin(object):
     #text = property(GetText, SetText, Clear, doc = """The text contained in this instance""")
     
     def GetFactory(self):
-        return PlainTextPluginFactory()
+        return TextPluginFactory()
     
     def Split(self, pos, update = True):
         """Removes the text after the given position and returns it"""
@@ -195,17 +184,17 @@ class PlainTextDocumentPlugin(object):
         if update:
             self.view.Update()
         return lambda p:\
-            self.sheet.InsertCell('plaintext', p, update = False, text = text[pos:])
+            self.sheet.InsertCell('text', p, update = False, text = text[pos:])
     
     def Concat(self, block, update = True):
         """ Appends the data in the given text at the end of the this block
         """
-        assert block.type == 'plaintext'
+        assert block.type == 'text'
         self.text = self.text + block.text
         return True
         #update is automatic
 
-class PlainTextNotebookViewPlugin(object):
+class TextNotebookViewPlugin(object):
     def __init__(self, docplugin, view):
         """Initialization"""
         self.view = view
@@ -249,7 +238,7 @@ class PlainTextNotebookViewPlugin(object):
         """Creates the window. If it is already created returns it"""
         if self.window is None: #create the window
             #1. Create the window and set the document plugin
-            self.window = PlainTextCtrl(self.view, -1)
+            self.window = TextCtrl(self.view, -1)
             wx.EVT_SET_FOCUS(self.window, self.__set_focus)
             self.id = self.window.GetId()
             #print "id:", self.id #dbg
@@ -312,15 +301,15 @@ class PlainTextNotebookViewPlugin(object):
         self.doc.sheet.InsertCode(self.doc,pos, update = True)
         
 
-class PlainTextCtrl(stc.StyledTextCtrl, CellCtrlBase):
+class TextCtrl(stc.StyledTextCtrl, CellCtrlBase):
 
-    """ PlainTextCtrl - the widget responsible for displaying and
-    editing plain text. It has only basic functionality and can be
+    """ TextCtrl - the widget responsible for displaying and
+    editing text. It has only basic functionality and can be
     used as a reference on how to make more complicated editing
     plugins.
     """
 
-    def __init__ (self, parent, id, pos = wx.DefaultPosition, size = wx.DefaultSize, style=0, name="plaintext"):
+    def __init__ (self, parent, id, pos = wx.DefaultPosition, size = wx.DefaultSize, style=0, name="text"):
 
         """ Standard __init__ function."""
         stc.StyledTextCtrl.__init__(self, parent, id, pos, size, style, name)
