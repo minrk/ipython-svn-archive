@@ -316,7 +316,7 @@ class Notebook(object):
         if not ext:
             ext = extensions.get(format, '.'+format)
 
-        filename = base + ext
+        filename = os.path.abspath(base + ext)
         #could check if the given extension makes sense for the format
 
         from notabene import docbook
@@ -335,7 +335,9 @@ class Notebook(object):
                 doc.write(tmpf)
             finally:
                 tmpf.close()
-            args = ['pdflatex', '-jobname=%s' % base]
+            dir, fn = os.path.split(filename)
+            base = os.path.splitext(fn)[0]
+            args = ['pdflatex', '-output-directory=%s'%dir, '-jobname=%s'%base]
             p = subprocess.Popen(args+[tmpfn])
             p.wait()
             # Do it a second time to make sure the references are right.
