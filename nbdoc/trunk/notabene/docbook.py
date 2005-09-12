@@ -194,11 +194,6 @@ class DBFormatter(Formatter):
         transform_elements('equation', self.transform_equation)
 
         sheet2.tag = nodetype
-        # get rid of 'type' attribute -- depracated
-        try:
-            del sheet2.attrib['type']
-        except KeyError:
-            print "sheet(2) had no type attr to delete."
                     
         return sheet2
 
