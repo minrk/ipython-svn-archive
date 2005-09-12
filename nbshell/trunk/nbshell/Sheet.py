@@ -317,6 +317,7 @@ class Sheet(object):
         for i in range(l):
             cell = self.celllist[-1]
             cell.view.Close(update=False)
+            del(self.celllist[-1])
         self.celllist = []
         if update:
             self.view.Update()
@@ -765,6 +766,19 @@ class Sheet(object):
                     insert = lambda pos: 
                         self.InsertCell('text', pos, update = False, text = ''),\
                     update = update)
+    
+    def InsertXML(self, block, pos, update = True):
+        """Splits the given block and inserts an empty text cell"""
+        return self.Insert(block, pos,\
+                    check = lambda block, prev, next, pos:\
+                        (block is None) or (\
+                            (block.type != 'plaintext') and\
+                            (pos > 0 or prev == None or prev.type != 'plaintext') and\
+                            (pos < len(block) or next == None or next.type != 'plaintext')),\
+                    insert = lambda pos: 
+                        self.InsertCell('plaintext', pos, update = False, text = ''),\
+                    update = update)
+
     
     def InsertCode(self, block, pos, logid = None, update = True):
         """Splits the given text block and inserts an empty code block. If

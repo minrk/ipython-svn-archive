@@ -49,7 +49,8 @@ ID_RERUN = id_iter.next()
 ID_INSERT_TEXT = id_iter.next()
 ID_INSERT_CODE = id_iter.next()
 ID_INSERT_FIGURE = id_iter.next()
-ID_DELETE_CELL = id_iter.next()
+ID_INSERT_XML = id_iter.next()
+ID_DELETE_BLOCK = id_iter.next()
 
 class ipnFrame(wx.Frame):
     def __init__ (self, parent, id, title, pos=wx.DefaultPosition,
@@ -112,14 +113,16 @@ class ipnFrame(wx.Frame):
         wx.EVT_MENU(self, ID_RERUN, self.OnRerun)
         
         insertmenu = wx.Menu()
-        insertmenu.Append(ID_INSERT_TEXT, "Insert Text", "Inserts a text cell")
-        insertmenu.Append(ID_INSERT_CODE, "Insert Code", "Inserts a new empty code cell")
+        insertmenu.Append(ID_INSERT_TEXT, "Insert Text", "Inserts a text block")
+        insertmenu.Append(ID_INSERT_CODE, "Insert Code", "Inserts a new empty code block")
         insertmenu.Append(ID_INSERT_FIGURE, "Insert Figure...", "Inserts a figure")
-        insertmenu.Append(ID_DELETE_CELL, "Delete cell", "Deletes the currnet cell")
+        insertmenu.Append(ID_INSERT_XML, "Insert XML", "Inserts raw xml code block")
+        insertmenu.Append(ID_DELETE_BLOCK, "Delete block", "Deletes the currnet block")
         wx.EVT_MENU(self, ID_INSERT_CODE, self.OnInsertCode)
         wx.EVT_MENU(self, ID_INSERT_TEXT, self.OnInsertText)
         wx.EVT_MENU(self, ID_INSERT_FIGURE, self.OnInsertFigure)
-        wx.EVT_MENU(self, ID_DELETE_CELL, self.OnDeleteCell)
+        wx.EVT_MENU(self, ID_INSERT_XML, self.OnInsertXML)
+        wx.EVT_MENU(self, ID_DELETE_BLOCK, self.OnDeleteBlock)
         
         menu = wx.MenuBar()
         menu.Append(filemenu, "&File")
@@ -297,6 +300,12 @@ class ipnFrame(wx.Frame):
         sheet = self.app.document.sheet
         block = sheet.currentcell
         sheet.InsertCode(block, default(lambda:block.view.position,0), update = True)
+    
+    def OnInsertXML(self, evt = None):
+        sheet = self.app.document.sheet
+        block = sheet.currentcell
+        sheet.InsertXML(block, default(lambda:block.view.position,0), update = True)
+
         
     def OnInsertFigure(self, evt = None):
         dlg = wx.FileDialog(self, "Choose a Figure", \
@@ -318,7 +327,7 @@ class ipnFrame(wx.Frame):
                figurexml = text.getvalue())
             text.close()
             
-    def OnDeleteCell(self, evt = None):
+    def OnDeleteBlock(self, evt = None):
         sheet = self.app.document.sheet
         sheet.DeleteCell(sheet.currentcell)
 

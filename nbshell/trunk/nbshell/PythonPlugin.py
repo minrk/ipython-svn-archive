@@ -97,7 +97,7 @@ class PythonDocumentPlugin(object):
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
         print "block:"
-        etree.dump(self.element) #dbg
+        #etree.dump(self.element) #dbg
         self.cells = [self.log.log[int(x.attrib['number'])] for x in element]
         #[self.notebook.add_cell(int(x.attrib['number']),self.logid)
         #for x in self.element]

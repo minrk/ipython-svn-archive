@@ -187,9 +187,10 @@ class Notebook(object):
                 warnings.warn("Wrong version %s != %s" % (version,
                     self.version))
             self.head = root.find('head')
-            logelem = root.find('ipython-log')
-            logid = logelem.get('id')
-            self.logs[logid] = Log(self, logid, logelem) 
+            logelems = root.findall('ipython-log')
+            for logelem in logelems:
+                logid = logelem.get('id')
+                self.logs[logid] = Log(self, logid, logelem) 
 
         self.tree = ET.ElementTree(self.root)
         self.xpath = ET.XPathEvaluator(self.tree)

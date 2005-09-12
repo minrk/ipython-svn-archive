@@ -1,5 +1,23 @@
 2005-09-12  Tzanko Matev  <tsanko@gmail.com>
 
+	* nbdoc/notebook.py (Notebook.__init__): Changed to support
+	multiple logs in a document
+
+	* nbshell/Sheet.py (Sheet.InsertXML): 
+	* nbshell/frame.py (ipnFrame.SetUpMenu, ipnFrame.OnInsertXML): Added a way
+	to insert xml editing controls, using the Insert menu. An xml
+	editing control has a red margin.
+
+	* nbshell/frame.py (ipnFrame.SetUpMenu): Changed terminology in menu items
+	and status lins messages, "cell" is replaced with "block"
+
+	* tutorial.pybk: Started making a tutorial. It shows how you can
+	use the __app object in the log namespace to make the notebooks
+	more dynamic.
+
+
+2005-09-12  Tzanko Matev  <tsanko@gmail.com>
+
 	* Sheet.py (Sheet.__update_celllist): Fixed a bug where a text
 	window would not be created if the list of <para> elements was at
 	the end of the document
