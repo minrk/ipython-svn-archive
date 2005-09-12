@@ -3,6 +3,7 @@
 import os
 import subprocess
 import tempfile
+import warnings
 
 from lxml import etree as ET
 
@@ -10,7 +11,7 @@ from notabene import normal
 from notabene import validate
 from notabene.xmlutils import rdf, dc
 
-class SubelemWrapper:
+class SubelemWrapper(object):
     """Abstract superclass for Cell getter and setter."""
     def __init__(self, propname):
         self.propname = propname #the name of the subelement in ob.element
@@ -164,6 +165,9 @@ class Notebook(object):
         source -- filename or filelike object containing properly formed XML
             data
     """
+
+    version = "1"
+
     def __init__(self, name, root=None):
         self.name = name
 
@@ -172,12 +176,16 @@ class Notebook(object):
                        #(for fast access)
 
         if root is None:
-            self.root = ET.Element('notebook')
+            self.root = ET.Element('notebook', version=self.version)
             self.head = ET.SubElement(self.root, 'head')
             self.add_log()
         else: 
             #reconstruct object structure from given xml
             self.root = root
+            version = root.get('version')
+            if version != self.version:
+                warnings.warn("Wrong version %s != %s" % (version,
+                    self.version))
             self.head = root.find('head')
             logelem = root.find('ipython-log')
             logid = logelem.get('id')
@@ -291,10 +299,10 @@ class Notebook(object):
     def write(self, file=None):
         """Write the notebook as XML out to a file.
 
-        If file is None, then write to self.name+'.nbk'
+        If file is None, then write to self.name+'.pybk'
         """
         if file is None:
-            file = self.name + '.nbk'
+            file = self.name + '.pybk'
         ET.ElementTree(self.root).write(file, encoding='utf-8')
 
     def write_formatted(self, name=None, format='html'):

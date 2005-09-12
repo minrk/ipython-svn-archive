@@ -7,11 +7,11 @@ from notabene import notebook
 from notabene.notebook import Notebook, Cell
 
 def test_new():
-    nb = Notebook('test.nbk')
+    nb = Notebook('test.pybk')
     return nb
 
 def test_fromfile():
-    fn = os.path.join(os.path.split(__file__)[0], '..', '..', 'test', 'tut-2.3.5-db.nbk')
+    fn = os.path.join(os.path.split(__file__)[0], '..', '..', 'test', 'tut-2.3.5-db.pybk')
     nb = Notebook.from_file(fn)
 
 def test_fromstring(name='test', 
@@ -38,19 +38,19 @@ def FAILStest_comparison():
     #Tzanko:This fails
     #antont:not anymore!
     #and now also while the next passes, too
-    nb4 = test_fromstring('nb4.nbk','<notebook><sheet></sheet></notebook>')
-    nb5 = test_fromstring('nb5.nbk','<notebook>\n<sheet></sheet>\n</notebook>')
+    nb4 = test_fromstring('nb4.pybk','<notebook><sheet></sheet></notebook>')
+    nb5 = test_fromstring('nb5.pybk','<notebook>\n<sheet></sheet>\n</notebook>')
     assert nb4 == nb5
 
     #this was made to work with the old __eq__,
     #but now fails with the new normalization module.
     #based on the info by Tzanko recorded in Ticker 3, it's ok for this to fail
-    nb6 = test_fromstring('nb6.nbk', '<notebook><sheet>a b c</sheet></notebook>')
-    nb7 = test_fromstring('nb7.nbk', '<notebook><sheet>abc</sheet></notebook>')
+    nb6 = test_fromstring('nb6.pybk', '<notebook><sheet>a b c</sheet></notebook>')
+    nb7 = test_fromstring('nb7.pybk', '<notebook><sheet>abc</sheet></notebook>')
     #FAILS assert not nb6 == nb7
 
-    nb8 = test_fromstring('nb8.nbk', '<notebook><sheet><para><ipython-equation tex="e=mc^2"/></para></sheet></notebook>')
-    nb9 = test_fromstring('nb9.nbk', '<notebook><sheet><para><ipython-equation tex="e=mc^3"/></para></sheet></notebook>')
+    nb8 = test_fromstring('nb8.pybk', '<notebook><sheet><para><ipython-equation tex="e=mc^2"/></para></sheet></notebook>')
+    nb9 = test_fromstring('nb9.pybk', '<notebook><sheet><para><ipython-equation tex="e=mc^3"/></para></sheet></notebook>')
     assert not nb8 == nb9
 
     #there may still be other cases,
@@ -60,19 +60,19 @@ def FAILStest_comparison():
 
     #based on additional comments in the ticket.. what should this be about?
     str10 = "<notebook>\n<sheet>\n<para>&lt;para&gt; elements can have <emphasis>mixed</emphasis> content.</para>\n</sheet>\n</notebook>"
-    nb10 = test_fromstring('nb10.nbk', str10)
+    nb10 = test_fromstring('nb10.pybk', str10)
     str11 = "<notebook>\n<sheet>\n<para>&lt;para&gt; elements can have mixed content.</para>\n</sheet>\n</notebook>" #just -<emphasis>, as didn't get the point
-    nb11 = test_fromstring('nb11.nbk', str11)
+    nb11 = test_fromstring('nb11.pybk', str11)
     assert nb10 != nb11
 
     #newlines in xml source for readability.
     #tho: this particular case can not happen with nbshell,
     #'cause it does not expose the input & output cell source, right?
-    #and when editing .nbk source directly, equivalence check is not used?
+    #and when editing .pybk source directly, equivalence check is not used?
     #surely with other tags (e.g. notebook-xml ones) it can happen w/ nbshell.
     str12 = "<input>\nfor i in range(10):\n    print i\n</input>"
     str13 = "<input>for i in range(10):\n    print i</input>"
-    assert test_fromstring('nb12.nbk', str12) == test_fromstring('nb13.nbk', str13)
+    assert test_fromstring('nb12.pybk', str12) == test_fromstring('nb13.pybk', str13)
     #passed without changes to old __eq__
     #and also with the new normalization module
 
@@ -80,7 +80,7 @@ def FAILStest_comparison():
     #fails with the new normalization module :/
     str14 = "<sheet>\n<para>text</para></sheet>"
     str15 = "<sheet><para>text</para></sheet>"
-    assert test_fromstring('nb14.nbk', str14) == test_fromstring('nb15.nbk', str15)
+    assert test_fromstring('nb14.pybk', str14) == test_fromstring('nb15.pybk', str15)
 
 
 def test_errcheck():
@@ -259,6 +259,11 @@ def test_log():
     assert cell.element.find('stderr').text == stderrtext
 
     #(default) sheet test
+    cell1 = nb.add_cell(1)
+    cell1.stdout = stdouttext
+    cell1.stderr = stderrtext
+    cell1.input = python_in
+    cell1.output = python_out
     sheet = nb.default_sheet()
     ipblock = sheet.find('ipython-block')
     found = set()

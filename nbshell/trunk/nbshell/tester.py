@@ -126,7 +126,7 @@ class SimpleTests(unittest.TestCase):
         [self.document.logs[x].ClearLastInput() for x in self.document.logs.keys()]
         self.document.sheet.UpdateDoc()
         
-        ref_notebook = notebook.Notebook.from_file('testNew.nbk')
+        ref_notebook = notebook.Notebook.from_file('testNew.pybk')
         self.assert_(self.document.notebook == ref_notebook)
         
     def testInsert(self):
@@ -146,7 +146,7 @@ class SimpleTests(unittest.TestCase):
         [self.document.logs[x].ClearLastInput() for x in self.document.logs.keys()]
         self.document.sheet.UpdateDoc()
         
-        ref_notebook = notebook.Notebook.from_file('testInsert.nbk')
+        ref_notebook = notebook.Notebook.from_file('testInsert.pybk')
         if self.document.notebook != ref_notebook:
             ref_out, out = StringIO(), StringIO()
             ref_notebook.write(ref_out)
@@ -157,7 +157,7 @@ class SimpleTests(unittest.TestCase):
 
     def testDeleteCell(self):
         """Tests the Delete Cell menu item"""
-        self.document.LoadFile('testDeleteCell_in.nbk', True)
+        self.document.LoadFile('testDeleteCell_in.pybk', True)
         sheet = self.document.sheet
         sheet.currentcell = 1
         self.frame.OnDeleteCell()
@@ -168,7 +168,7 @@ class SimpleTests(unittest.TestCase):
         [self.document.logs[x].ClearLastInput() for x in self.document.logs.keys()]
         self.document.sheet.UpdateDoc()
         
-        ref_notebook = notebook.Notebook.from_file('testDeleteCell.nbk')
+        ref_notebook = notebook.Notebook.from_file('testDeleteCell.pybk')
         if self.document.notebook != ref_notebook:
             ref_out, out = StringIO(), StringIO()
             ref_notebook.write(ref_out)

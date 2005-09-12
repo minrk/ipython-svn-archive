@@ -48,13 +48,13 @@ class ipnDocument(object):
     def DefaultNotebook(self):
         """Create a default empty notebook"""
         self.Clear()
-        self.notebook = notebook.Notebook('untitled.nbk')
+        self.notebook = notebook.Notebook('untitled.pybk')
         #etree.dump(self.notebook.root) #dbg
         self.logs = {'default-log':IPythonLog.IPythonLog(self, self.notebook, 'default-log')}
         self.sheet = Sheet.Sheet(self, self.notebook, self.view, self.factory)
         self.fileinfo['init'] = True
         self.fileinfo['path'] = os.getcwd()
-        self.fileinfo['name'] = 'untitled.nbk'
+        self.fileinfo['name'] = 'untitled.pybk'
         self.fileinfo['modified'] = False
         self.fileinfo['untitled'] = True
         self.sheet.DefaultSheet()

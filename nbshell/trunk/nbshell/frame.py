@@ -170,7 +170,7 @@ class ipnFrame(wx.Frame):
             if val == wx.ID_YES:
                 self.OnSave(evt) #well, the parameter is unused
         dlg = wx.FileDialog(self, "Choose a File", \
-                            wildcard = "Notebook files (*.nbk)|*.nbk",style = wx.OPEN)
+                            wildcard = "Notebook files (*.pybk)|*.pybk",style = wx.OPEN)
         val = dlg.ShowModal()
         if val == wx.ID_CANCEL:
             return None
@@ -203,7 +203,7 @@ class ipnFrame(wx.Frame):
         dlg = wx.FileDialog(self, "Choose a File", \
                             defaultDir = self.app.document.fileinfo['path'],\
                             defaultFile = self.app.document.fileinfo['name'],\
-                            wildcard = "Notebook files (*.nbk)|*.nbk",style = wx.SAVE)
+                            wildcard = "Notebook files (*.pybk)|*.pybk",style = wx.SAVE)
         val = dlg.ShowModal()
         if val == wx.ID_CANCEL:
             return None
