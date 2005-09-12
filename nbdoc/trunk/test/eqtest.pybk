@@ -1,4 +1,4 @@
-<notebook><head/><ipython-log id="default-log"><cell number="0"><input>
+<notebook version="1"><head/><ipython-log id="default-log"><cell number="0"><input>
 nb = __app.document.notebook
 </input></cell><cell number="1"><input>
 nb.add_equation(nb.sheet, "e = mc^2", "Even i know this. But what an earth does it mean?")
