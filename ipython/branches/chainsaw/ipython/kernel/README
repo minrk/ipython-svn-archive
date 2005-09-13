@@ -2,8 +2,7 @@ Date:  9/5/2005
 Author:  Brian E. Granger (bgranger@scu.edu)
 
 This file gives an overview of the ipython kernel and the ipython kernel
-interface layer.  Eventually, this README will contain basic information
-and a tutorial describing to use the kernel.
+interface layer.
 
 For installation instructions, see the INSTALL file in this directory.
 
@@ -28,21 +27,36 @@ the user in a separate python interpreter.  The kernel interface
 consists of a set of python objects that allow the user to interact with one 
 or more kernels simultaneously.  
 
+
 = Basic Usage =
 
-Using the ipython kernel involves three things.
 
 == Starting the kernel ==
 
 The basic ipython kernel is contained in the module kernel.py.  The 
 kernel can be started using the command:
 
-python kernel.py --port 10104 --allow 135.234.129.23
+    python kernel.py
 
-This starts the kernel listening on port 10104.  The kernel can be configured
-to allow or deny connections from specific ip addresses.  The default is to 
-allow connections from only the localhost (127.0.0.1).  To allow an additional 
-ip address to connect to the kernel, use the option.
+NOTE: The kernel cannot be run in the background currently.  Thus is you try
+python kernel.py &, the kernel will not work.  This has to do with the deep
+inner workings of twisted.  In the future you will be able to do this.
+
+Be default, the kernel listens on TCP port 10105.  To specify what TCP port
+the kernel should listen on, use the -p (or --port) option:
+
+    python kernel.py -p 10106
+
+For security reasons, the kernel can be configured to allow or deny connections
+from specific ip addresses.  The default is to allow connections from only the
+localhost (127.0.0.1).  To allow an additional ip address to connect to the
+kernel, use the option -a (or --allow):
+
+    python kernel.py -p 10106 -a 168.169.170.171
+
+Only a single additional ip address can be allowed at the command line.  To 
+allow (deny) additional hosts to connect to the kernel see the allow (deny)
+method of the RemoteKernel or InteractiveCluster classes.
 
 The basic kernel does not support interactive calls to GUI toolkits (tk, wx,
 qt, Cocoa, etc.).  This is because each GUI toolkit has its own event loop that 
@@ -51,13 +65,14 @@ must be integrated with the event loop of the kernel (which uses twisted).
 To allow the interactive use of GUI toolkits, special purpose kernels are 
 offered.  Currently, we have implemented a kernel that integrates with wx.
 To start this kernel, use kernelwx.py rather than kernel.py in the above 
-command.
+command.  The GUI kernel accept the same command line options.
 
-Note: do not run the GUI kernel unless you really need it.  This is because
+NOTE: Do not run the GUI kernel unless you really need it.  This is because
 the GUI kernel lacks some of the features of the basic kernel.  Most importantly
 the basic kernel is multithreaded and has a queue, whereas the GUI kernels have
-only a single user thread an no queue.  The queue allow multiple python commands
-to be sent to the kernel while previous commands are still executing.
+only a single user thread and no queue.  The queue allow multiple python 
+commands to be sent to the kernel while previous commands are still executing.
+
 
 == Controlling the kernels ==
 

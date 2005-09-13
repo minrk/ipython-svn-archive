@@ -1,5 +1,45 @@
-# Copyright (c) 2001-2004 Twisted Matrix Laboratories.
-# See LICENSE for details.
+"""An ipython kernel that is integrated with the wxPython event loop.
+
+This kernel is designed for users who want to use wxPython interactively from
+within ipython.  When this kernel is running, the user can import wx and then
+interactively create and use wx widgets.  
+
+This kernel should only be used if wx integration is needed.  This is because
+this kernel lacks many features that the default kernel has, such as being
+multithreaded and having a computational queue.
+
+This module is meant to be run from the command line.  To start the kernel,
+issue the command:
+
+    python kernelwx.py
+
+This will start the kernel listening on port 10105 (the default) and will allow
+connections from only the localhost (127.0.0.1).  Here is an example that starts
+the kernel on port 10106 and allows connections from the localhost and 
+121.122.123.124:
+
+    python kernelwx.py -p 10106 -a 121.122.123.124
+
+For more information on the command line options, run:
+
+    python kernelwx.py -h
+
+NOTE:  The kernel cannot currently be run in the background, so:
+
+    python kernelwx.py &
+
+won't result in a running kernel instance.
+
+NOTE:  On Mac OS X, the command pythonw must be used instead of python.
+"""
+
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
 from optparse import OptionParser
 import sys
 

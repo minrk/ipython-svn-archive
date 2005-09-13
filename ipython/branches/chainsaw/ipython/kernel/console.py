@@ -1,3 +1,21 @@
+"""Classes that derive from code.InteractiveConsole.
+
+This module adds additional functionality, such as output trapping,
+thread safety and queues to the classes in the builtin python module code.py.
+
+Classes:
+
+TrappingInteractiveConsole -- InteractiveConsole that traps stdout and stderr
+QueuedInteractiveConsole   -- Multithreaded InteractiveConsole with a queue
+"""
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
 import Queue
 import threading
 import time

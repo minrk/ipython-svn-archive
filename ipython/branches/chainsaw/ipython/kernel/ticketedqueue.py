@@ -1,5 +1,3 @@
-import Queue
-
 """A queue that works on a ticketing system.
 
 Here is how its works
@@ -13,6 +11,15 @@ a ticket.
 placed on the queue, attemps to pull something off the queue will block
 until that ticket is deleted or the item is placed on the queue.
 """ 
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+import Queue
 
 class TicketedQueue(object):
 

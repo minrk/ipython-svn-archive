@@ -1,35 +1,22 @@
-#****************************************************************************
-#       Copyright (C) 2005 Brian Granger. <bgranger@scu.edu>
+"""An ipython magic function interface to the kernel interface.
+
+This module exposes two magic functions:
+%px     -- Run a single python command on the active cluster
+%autopx -- Go into autoparallel mode where every command in executed on the
+           cluster.
+"""
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
 #
-#  Distributed under the terms of the BSD License.  
-#****************************************************************************
-
-"""Example of how to define a magic function for extending IPython.
-
-The name of the function *must* begin with magic_. IPython mangles it so
-that magic_foo() becomes available as %foo.
-
-The argument list must be *exactly* (self,parameter_s='').
-
-The single string parameter_s will have the user's input. It is the magic
-function's responsability to parse this string.
-
-That is, if the user types
->>>%foo a b c
-
-The followinng internal call is generated:
-   self.magic_foo(parameter_s='a b c').
-
-To have any functions defined here available as magic functions in your
-IPython environment, import this file in your configuration file with an
-execfile = this_file.py statement. See the details at the end of the sample
-ipythonrc file.  """
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
 
 import new
 
 from IPython.iplib import InteractiveShell
 
-# fisrt define a function with the proper form:
 def magic_px(self,parameter_s=''):
     """Executes the given python command on the active IPython cluster.
     
@@ -107,5 +94,3 @@ InteractiveShell.magic_autopx = magic_autopx
 # copy bound to IPython stays, we're just removing the global name.
 del magic_px
 del magic_autopx
-
-#********************** End of file <example-magic.py> ***********************

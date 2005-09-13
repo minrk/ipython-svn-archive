@@ -1,3 +1,23 @@
+"""The kernel interface.
+
+The kernel interface is a set of classes that provide a high level interface
+to a running ipython kernel instance.  Currently these classes use blocking
+sockets and thus, do not require Twisted.  
+
+Classes:
+
+ResultGatherer     -- A multithreaded class that collects and prints results
+                      from kernels.
+RemoteKernel       -- An interface to a single kernel
+Interactivecluster -- An interface to a set of kernels
+"""
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
 import socket
 import threading
 import pickle
