@@ -96,7 +96,7 @@ class PythonDocumentPlugin(object):
         self.index = None   #Set by AddCell, InsertCell, DeleteCell
         self.view = None    #This plugin is designed for a single view. For
                             #multiple views there should be some modifications
-        print "block:"
+        #print "block:" #dbg
         #etree.dump(self.element) #dbg
         self.cells = [self.log.log[int(x.attrib['number'])] for x in element]
         #[self.notebook.add_cell(int(x.attrib['number']),self.logid)
@@ -184,6 +184,63 @@ class PythonNotebookViewPlugin(object):
 
         self.prompt_in_tpl = 'In [%s]: '
         self.prompt_out_tpl = 'Out[%s]: '
+        
+        self.hist_max_len = 666 #TODO: This must go in some configuration file
+        self.history = [] #FIFO of at most self.hist_max_len strings
+        self.hist_current = None #Index of the curret history item
+        
+    def add_to_history(self, line = None):
+        """Adds the line to the history. If line is None gets the current line
+        from the window"""
+        if line is None:
+            linenum = self.window.GetCurrentLine()
+            line = self.window.GetLine(linenum)[self.promptlens[self.line2log[linenum][0]]:]
+        
+        if line: #We don't need empty lines
+            self.history.append(line)
+            l = len(self.history)
+            if l > self.hist_max_len:
+                del(self.history[0])
+            self.hist_current = l-1
+    
+    def get_hist_item(self, dir= -1):
+        """Gets the next previous line from the history if dir<0 or the next
+        line if dir>0. If the history is empty return None"""
+
+        dir = dir/abs(dir)
+        if self.hist_current is None:
+            return None
+        self.hist_current+=dir
+        l = len(self.history)
+        if self.hist_current == l:
+            self.hist_current = 0
+        elif self.hist_current < 0:
+            self.hist_current = l-1
+        
+        return self.history[self.hist_current]
+    
+    def hist_replace(self, dir):
+        """Replaces the current line with prevoius (dir<0) or next (dir>0)
+        line from the history"""
+        
+        t = self.get_hist_item(dir)
+        if not t:
+            return
+        
+        pos = self.window.GetCurrentPos()
+        linenum = self.window.LineFromPosition(pos)
+
+        if not self.CanEdit(pos = pos, line = linenum):
+            return None
+
+        startpos = self.window.PositionFromLine(linenum) +\
+                 self.promptlens[self.line2log[linenum][0]]
+        endpos = self.window.GetLineEndPosition(linenum)
+
+        self.window.SetTargetStart(startpos)
+        self.window.SetTargetEnd(endpos)
+        self.window.ReplaceTarget(t)
+
 
     def SetFocus(self):
         if self.window is not None:
@@ -306,6 +363,8 @@ class PythonNotebookViewPlugin(object):
         last = len(cells) -1
         # Here we set up the text which will be displayed in the window
         outtext = StringIO.StringIO()
+        #self.promptlen[i] holds the length of the prompt of cell i
+        self.promptlens = []
         for i, cell in enumerate(cells):
             number =  cell.number
             #print 'i-> %d'%(i,) #dbg
@@ -347,6 +406,9 @@ class PythonNotebookViewPlugin(object):
             l2l_append(None)
             for j in range(len(lines)):
                 l2l_append((i, j+1))
+            
+            #set up self.promptlens
+            self.promptlens.append(len(prompt))
                 #print "i -> %s, id->%s, type->%s, text->%s"%(str(i), str(id), str(type), str(text))
             #oldlinecnt = linecnt
         #if we have no cells we must set line2log here
@@ -397,15 +459,15 @@ class PythonNotebookViewPlugin(object):
         line = self.line2log[linenum]
         if line is None: #a separator line
             return 0
-        
+        return self.promptlens[line[0]]
         #if line[1] != 1: #currently only the first line of a block is indented and has a prompt
         #    return 0
         
         #get the number of digits of the number of the input
-        item = self.doc.element[line[0]]
-        type = self.doc.GetStuff(line[0])[0]
-        strnumber = item.attrib['number']
-        return len(self.GetPrompt(type, strnumber, line[1] == 1))
+        #item = self.doc.element[line[0]]
+        #type = self.doc.GetStuff(line[0])[0]
+        #strnumber = item.attrib['number']
+        #return len(self.GetPrompt(type, strnumber, line[1] == 1))
     
     def UpdateDoc(self):
         """Updates the document to the current text in the widget. This method is
@@ -540,12 +602,9 @@ class PythonNotebookViewPlugin(object):
         #else:
         #    return False
         #Check if the current cell is an input cell
-        if self.doc.GetStuff(id)[0] in ['input', 'special']:
-            return True
-        else:
-            return False
+        return self.doc.element[id].attrib['type'] in ['input', 'special']
     
-    def CanEdit(self, oper = 'insert', pos = None):
+    def CanEdit(self, oper = 'insert', pos = None, line = None):
         """Return true if the given editing operation should succeed at the
         given position if pos is None use the current position. oper can be
         one of: 'insert', 'delete', and 'backspace'"""
@@ -560,10 +619,16 @@ class PythonNotebookViewPlugin(object):
         #    return self.GetCurrentPos() >= self.promptPosEnd
         
         pos = pos or self.window.GetCurrentPos()
-        line = self.window.LineFromPosition(pos)
-
-        #Check if the current line is editable
-        if not self.CanEditLine(line):
+        #This is for optimization 
+        line = line or self.window.LineFromPosition(pos)
+        l2l = self.line2log
+        #Check if the current line is editable. self.CanEditLine does the same
+        #as the code below. It is not called for optimization
+        id = l2l[line]
+        if id is None:
+            return False
+        id = id[0]
+        if not self.doc.element[id].attrib['type'] in ['input', 'special']:
             return False
 
         #Check if the cursor is in the prompt
@@ -575,12 +640,12 @@ class PythonNotebookViewPlugin(object):
         #If the operation is delete and the cursor is at the end of the line 
         if oper == 'delete' and self.window.GetCharAt(pos) == ord('\n'):
             #Check if the next line belongs to the same input
-            l = len(self.line2log)
-            return (line +1 < l and self.line2log[line+1] is not None and
-                self.line2log[line+1][0] == self.line2log[line][0])
+            l = len(l2l)
+            return (line +1 < l and l2l[line+1] is not None and
+                l2l[line+1][0] == l2l[line][0])
         elif oper == 'backspace':
             #Check if this is the first line
-            return pos > startpos + promptlen or self.line2log[line][1] > 1
+            return pos > startpos + promptlen or l2l[line][1] > 1
         else:
             return True
 

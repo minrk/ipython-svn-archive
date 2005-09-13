@@ -265,16 +265,19 @@ class Shell(editwindow.EditWindow, CellCtrlBase):
         # Return (Enter) is used to insert a new line
         if not shiftDown and not controlDown and key == wx.WXK_RETURN:
             if self.view.CanEdit():
+                self.view.add_to_history()
                 self.view.InsertLineBreak()
         #Shift-Return, (Shift-Enter) is used to execute the current input
         elif shiftDown and key == wx.WXK_RETURN:
             if self.CallTipActive():
                 self.CallTipCancel()
+            self.view.add_to_history()
             self.view.ProcessLine()
         #Ctrl-Return will reexecute the current input and all cells after it
         elif controlDown and key == wx.WXK_RETURN:
             if self.CallTipActive():
                 self.CallTipCancel()
+            self.view.add_to_history()
             self.view.ProcessLine(flag = True)
 
         #Ctrl-I inserts a text cell
@@ -350,13 +353,13 @@ class Shell(editwindow.EditWindow, CellCtrlBase):
         #elif controlDown and shiftDown and key in (ord('V'), ord('v')):
         #    self.PasteAndRun()
         # Replace with the previous command from the history buffer.
-        #elif (controlDown and key == wx.WXK_UP) \
-        #         or (altDown and key in (ord('P'), ord('p'))):
-        #    self.OnHistoryReplace(step=+1)
+        elif (controlDown and key == wx.WXK_UP) \
+                 or (altDown and key in (ord('P'), ord('p'))):
+            self.view.hist_replace(dir=-1)
         # Replace with the next command from the history buffer.
-        #elif (controlDown and key == wx.WXK_DOWN) \
-        #         or (altDown and key in (ord('N'), ord('n'))):
-        #    self.OnHistoryReplace(step=-1)
+        elif (controlDown and key == wx.WXK_DOWN) \
+                 or (altDown and key in (ord('N'), ord('n'))):
+            self.view.hist_replace(dir=+1)
         # Insert the previous command from the history buffer.
         #elif (shiftDown and key == wx.WXK_UP) and self.view.CanEdit():
         #    self.OnHistoryInsert(step=+1)

@@ -127,7 +127,7 @@ class ipnFrame(wx.Frame):
         menu = wx.MenuBar()
         menu.Append(filemenu, "&File")
         menu.Append(insertmenu, "&Insert")
-        menu.Append(nbshellmenu, "&NBShell")
+        menu.Append(nbshellmenu, "N&BShell")
         self.SetMenuBar(menu)
 
     def OnClose(self, evt):

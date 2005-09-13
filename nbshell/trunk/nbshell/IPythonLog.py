@@ -12,6 +12,7 @@ __author__  = '%s <%s>' % Release.author
 __license__ = Release.license
 __version__ = Release.version
 
+import os.path
 import sys
 import StringIO
 import textwrap
@@ -113,7 +114,7 @@ ion()
     def filename_iter(self):
         """A generator function used for generating unique figure filenames"""
         counter = 1
-        fn = self.doc.fileinfo['path'] + '/' + self.doc.fileinfo['name']
+        fn = self.doc.fileinfo['path'] + '/' + os.path.splitext(self.doc.fileinfo['name'])[0]
         while True:
             yield "%s_%d.png"%(fn,counter)
             counter+=1

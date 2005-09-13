@@ -1,3 +1,22 @@
+2005-09-13  Tzanko Matev  <tsanko@gmail.com>
+
+	* IPythonLog.py (IPythonLog.filename_iter): Changed generation of
+	figure names to avoid 'filename.nbk_1.png' names. This resolves
+	ticket #29.
+
+	* PythonPlugin.py (PythonNotebookViewPlugin): 
+	* PythonWidget.py (Shell.OnKeyDown): Added history. The user can
+	access it using Ctrl-Up/Alt-P, Ctrl-Down/Alt-N. This resolves 
+	ticket 	#12.
+
+	* PythonPlugin.py (PythonNotebookView.Update, PromptLen, CanEdit):
+	Added a variable self.promptlens, which contains the lenghts of
+	the prompts and is generated when Update is called. This slightly
+	optimizes PromptLen and CanEdit. Added other small optimisations
+	to CanEdit. As a result typing should get a bit faster. See ticket
+	#11 for more info.
+
+	
 2005-09-12  Tzanko Matev  <tsanko@gmail.com>
 
 	* nbdoc/notebook.py (Notebook.__init__): Changed to support
