@@ -213,8 +213,8 @@ class Shell(editwindow.EditWindow, CellCtrlBase):
 
         # Prevent modification of previously submitted
         # commands/responses.
-        if not self.view.CanEdit():
-            return
+        #if not self.view.CanEdit(): #TODO: why is this here? We already checked in OnKeyDown
+        #    return
         key = event.KeyCode()
         currpos = self.GetCurrentPos()
         stoppos = self.promptPosEnd

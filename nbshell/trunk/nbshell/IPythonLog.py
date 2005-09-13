@@ -31,7 +31,7 @@ from notabene import notebook
 
 from lxml import etree
 
-from nbshell.utils import findnew
+from nbshell.utils import *
 
 #TODO: Fix the plotting API
 from nbshell.plotting_backends import matplotlib_backend as backend
@@ -232,7 +232,7 @@ ion()
     def __run(self, cell):
         """ This methods runs the input lines. """
         #print 'running code...' #dbg
-        
+        #delta_time('__run: start')
         print 'In[%d]: '%cell.number,cell.input #dbg
         self.output = '' #used by displayhook to store output
         cout = StringIO.StringIO()
@@ -244,7 +244,7 @@ ion()
         retval = self.interp.runlines(cell.input[1:-1],\
                                       displayhook = self.displayhook,\
                                       stdout = cout, stderr = cerr)
-        
+        #delta_time('__run: code run') #dbg
         #Retrieve stdout
         text = '\n' + cout.getvalue()
         #print 'unformatted stdout ->', text #dbg
@@ -254,7 +254,7 @@ ion()
             cell.stdout =''.join(['\n'.join(self.wrapper.wrap(x))+'\n'\
                                   for x in text.splitlines(False)]) #wrap stdout
         cout.close()
-        
+        #delta_time('__run: handled stdout') #dbg
         #Retrieve stderr
         text = '\n' + cerr.getvalue()
         #print 'unformatted stderr ->', text #dbg
@@ -264,11 +264,13 @@ ion()
             cell.stderr = ''.join(['\n'.join(self.wrapper.wrap(x))+'\n'\
                                   for x in text.splitlines(False)]) #wrap stderr
         cerr.close()
+        #delta_time('__run: handled stderr') #dbg
         
         if self.output != '':
             cell.output = ''.join(['\n'.join(self.wrapper.wrap(x))+'\n'\
                                    for x in self.output.splitlines(False)]) #wrap the output
             #print 'wrapped output ->', self.output.text #dbg
+        #delta_time('__run: handled output') #dbg
 
         print 'Out[%d]: '%cell.number, cell.output #dbg
         print 'Stdout[%d]: '%cell.number, cell.stdout #dbg

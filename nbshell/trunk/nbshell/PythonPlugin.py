@@ -365,6 +365,7 @@ class PythonNotebookViewPlugin(object):
         outtext = StringIO.StringIO()
         #self.promptlen[i] holds the length of the prompt of cell i
         self.promptlens = []
+        #delta_time('Update start') #dbg
         for i, cell in enumerate(cells):
             number =  cell.number
             #print 'i-> %d'%(i,) #dbg
@@ -423,8 +424,11 @@ class PythonNotebookViewPlugin(object):
         #else:
             #self.line2log.append(None) #append ane
             #empty line at the end outtext.write('\n')
+        #delta_time('Update cycle end') #dbg
         self.window.SetText(outtext.getvalue())
+        #delta_time('Text drawn on screen') #dbg
         self.window.GotoPos(self.window.GetTextLength())
+        #delta_time('Update end') #dbg
         #print "line2log->", self.window.line2log #dbg
 
     def SetSavePoint(self):

@@ -1,5 +1,9 @@
 2005-09-13  Tzanko Matev  <tsanko@gmail.com>
 
+	* editwindow.py (EditWindow.__config): Turned Python lexer off. It
+	caused lagging, and was the reason for the performance issues
+	described in ticket #11. This should solve the problem
+
 	* IPythonLog.py (IPythonLog.filename_iter): Changed generation of
 	figure names to avoid 'filename.nbk_1.png' names. This resolves
 	ticket #29.

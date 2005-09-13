@@ -106,7 +106,7 @@ class EditWindow(stc.StyledTextCtrl):
         #self.SetMarginType(1, stc.STC_MARGIN_NUMBER)
         #self.SetMarginWidth(1, 40)
 
-        self.SetLexer(stc.STC_LEX_PYTHON)
+        #self.SetLexer(stc.STC_LEX_PYTHON)
         self.SetKeyWords(0, ' '.join(keyword.kwlist))
 
         self.setStyles(FACES)
