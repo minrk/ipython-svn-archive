@@ -38,7 +38,7 @@ kernel can be started using the command:
 
     python kernel.py
 
-NOTE: The kernel cannot be run in the background currently.  Thus is you try
+NOTE: The kernel cannot be run in the background currently.  Thus if you try
 python kernel.py &, the kernel will not work.  This has to do with the deep
 inner workings of twisted.  In the future you will be able to do this.
 
@@ -72,6 +72,25 @@ the GUI kernel lacks some of the features of the basic kernel.  Most importantly
 the basic kernel is multithreaded and has a queue, whereas the GUI kernels have
 only a single user thread and no queue.  The queue allow multiple python 
 commands to be sent to the kernel while previous commands are still executing.
+
+== Monitoring the kernels ==
+
+To monitor the stdin, stdout and stderr of the kernels, you must start a 
+ResultGatherer class.  This class is bound to a UDP port and receives UDP
+datagrams from the kernels when results are ready.  To start a ResultGatherer run the following command from the command line:
+
+	python results.py
+
+This will start a ResultGathere bound to port 10104.  To change the port,
+use the -p options:
+
+	python results.py -p 10101
+
+Once a ResultGatherer is running, you must notify the kernel that it
+should send results to the ResultGatherer.  This is done using the notify()
+method of the RemoteKernel or InteractiveCluster class.  
+
+See below for examples of this.
 
 
 == Controlling the kernels ==
@@ -109,25 +128,3 @@ The InteractiveCluster class has a similar inteface as the RemoteKernel class.
 
 === Magic inteface ===
 
-== Monitoring the kernels ==
-
-To monitor the stdin, stdout and stderr of the kernels, you must start a 
-ResultGatherer class.  This class listens on a UDP port and receives UDP
-datagrams from the kernels when results are ready.  To start this, in a separate
-ipython session, run the following:
-
-    from kernelclient import *
-
-    rg = ResultGatherer(('127.0.0.1',10104))
-
-    rg.start()
-
-Now the ResultGatherer is ready to get results from kernels.  But you need to 
-tell the kernels that they should send results to this ResultGatherer when
-then are ready.  After you have created a RemoteKernel or InteractiveCluster
-object, use the notify command:
-
-    ic.notify(('127.0.0.1',10104))
- 
-Most importantly, multple people can monitor a cluster or kernel, even if those
-people are not using the cluster or kernel currently.

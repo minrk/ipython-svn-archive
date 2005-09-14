@@ -30,6 +30,7 @@ InteractiveCluster classes.  Multiple kernels can notify a single gatherer.
 #*****************************************************************************
 import socket
 import threading
+import pickle
 import time, os
 from optparse import OptionParser
 
