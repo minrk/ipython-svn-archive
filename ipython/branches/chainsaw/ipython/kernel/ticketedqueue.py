@@ -1,16 +1,9 @@
 """A queue that works on a ticketing system.
 
-Here is how its works
+Classes:
 
-1.  Each item that wants to be placed in the queue is first assigned 
-a ticket.  
-
-2.  Items are pulled off the queue in the order of their tickets.
-
-3.  If a ticket has been drawn for an item, but the item has not been
-placed on the queue, attemps to pull something off the queue will block
-until that ticket is deleted or the item is placed on the queue.
-""" 
+TicktedQueue -- A FIFO queue with a ticketing system
+"""
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
 #                           Fernando Perez. <fperez@colorado.edu>
@@ -22,6 +15,8 @@ until that ticket is deleted or the item is placed on the queue.
 import Queue
 
 class TicketedQueue(object):
+    """A FIFO queue with a ticketing system to provide asynchronous operations.
+    """
 
     def __init__(self):
         self.q = Queue.Queue()
