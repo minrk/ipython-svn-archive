@@ -2,7 +2,7 @@ Date:  9/5/2005
 Author:  Brian E. Granger (bgranger@scu.edu)
 
 This file gives an overview of the ipython kernel and the ipython kernel
-interface layer.
+interface.
 
 For installation instructions, see the INSTALL file in this directory.
 
@@ -17,7 +17,7 @@ The ipython kernel opens up the door for the following:
     
 3.  Seamless support for the interactive use of multiple GUI toolkits.
 
-4.  Collaborative computing and visualization.
+4.  Collaborative computing and collaborative visualization.
 
 The ipython kernel actually consists of two layers: the kernel and the kernel
 interface.  The kernel is run in a separate process and consists of a
@@ -40,7 +40,7 @@ kernel can be started using the command:
 
 NOTE: The kernel cannot be run in the background currently.  Thus if you try
 python kernel.py &, the kernel will not work.  This has to do with the deep
-inner workings of twisted.  In the future you will be able to do this.
+inner workings of Twisted.  In the future you will be able to do this.
 
 Be default, the kernel listens on TCP port 10105.  To specify what TCP port
 the kernel should listen on, use the -p (or --port) option:
@@ -48,7 +48,7 @@ the kernel should listen on, use the -p (or --port) option:
     python kernel.py -p 10106
 
 For security reasons, the kernel can be configured to allow or deny connections
-from specific ip addresses.  The default is to allow connections from only the
+from specific ip addresses.  The default is to allow connections only from the
 localhost (127.0.0.1).  To allow an additional ip address to connect to the
 kernel, use the option -a (or --allow):
 
@@ -65,7 +65,8 @@ must be integrated with the event loop of the kernel (which uses twisted).
 To allow the interactive use of GUI toolkits, special purpose kernels are 
 offered.  Currently, we have implemented a kernel that integrates with wx.
 To start this kernel, use kernelwx.py rather than kernel.py in the above 
-command.  The GUI kernel accept the same command line options.
+command.  The GUI kernel accept the same command line options.  On Mac OS X
+the GUI kernels must be started with the command pythonw rather than python.
 
 NOTE: Do not run the GUI kernel unless you really need it.  This is because
 the GUI kernel lacks some of the features of the basic kernel.  Most importantly
@@ -81,7 +82,7 @@ datagrams from the kernels when results are ready.  To start a ResultGatherer ru
 
 	python results.py
 
-This will start a ResultGathere bound to port 10104.  To change the port,
+This will start a ResultGatherer bound to port 10104.  To change the port,
 use the -p options:
 
 	python results.py -p 10101
