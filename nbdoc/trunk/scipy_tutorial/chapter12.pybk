@@ -1,0 +1,34 @@
+<notebook version="1"><head/><ipython-log id="default-log"/><sheet id="chapter12">
+<title>Interfacing with Python Imaging Library</title>
+<para>If you have the Python Imaging Library installed, SciPy provides
+some convenient functions that make use of it's facilities particularly for
+reading, writing, displaying, and rotating images. In SciPy an image is always a
+two- or three-dimensional array. Gray-scale, and colormap images are always
+two-dimensional arrays while RGB images are three-dimensional with the third
+dimension specifying the channel. 
+</para>
+<para>
+Commands available include 
+</para>
+<itemizedlist>
+<listitem><para>* fromimage --- convert a PIL image to a Numeric array
+</para></listitem>
+<listitem><para>* toimage --- convert Numeric array to PIL image
+</para></listitem>
+<listitem><para>* imsave --- save Numeric array to an image file
+</para></listitem>
+<listitem><para>* imread --- read an image file into a Numeric array
+</para></listitem>
+<listitem><para>* imrotate --- rotate an image (a Numeric array) counter-clockwise
+</para></listitem>
+<listitem><para>* imresize --- resize an image using the PIL
+</para></listitem>
+<listitem><para>* imshow --- external viewer of a Numeric array (using PIL)
+</para></listitem>
+<listitem><para>* imfilter --- fast, simple built-in filters provided by PIL
+</para></listitem>
+<listitem><para>* radon --- simple radon transform based on imrotate
+</para></listitem>
+</itemizedlist>
+
+</sheet></notebook>
