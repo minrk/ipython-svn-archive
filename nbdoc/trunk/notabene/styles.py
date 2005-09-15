@@ -139,6 +139,10 @@ class Style(object):
         ET.SubElement(sheet, xsl['import'],
                       href=os.path.join(XSLDIR, "latex", "docbook.xsl"))
 
+        # Add template for <code>
+        t = ET.SubElement(sheet, xsl.template, match="code")
+        ET.SubElement(t, xsl['call-template'], name="inline.monoseq")
+
         # turn on fancyvrb
         fancyvrb = ET.SubElement(sheet, xsl.param, name="latex.use.fancyvrb")
         fancyvrb.text = "1"

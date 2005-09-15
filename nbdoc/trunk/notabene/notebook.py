@@ -343,7 +343,7 @@ class Notebook(object):
             tmpfid, tmpfn = tempfile.mkstemp(suffix='.tex')
             tmpf = os.fdopen(tmpfid, 'w+b')
             try:
-                doc.write(tmpf)
+                tmpf.write(doc)
             finally:
                 tmpf.close()
             try:
@@ -375,7 +375,9 @@ class Notebook(object):
             return filename
 
         else:
-            doc.write(filename, 'utf-8')
+            f = open(filename, 'wb')
+            f.write(doc)
+            f.close()
             return filename
 
     def get_code(self, logid='default-log', specials=None):

@@ -30,12 +30,13 @@ a base package instead of Numeric anyway.
 <para>Finally, some of the basic functions like log, sqrt, and inverse trig functions
 have been modified to return complex numbers instead of NaN's where appropriate.
 </para>
-<para>XXX: scipy.sqrt(-1) </para>
+<para>XXX: ipython
+>>> scipy.sqrt(-1) </para>
 </section>
 
 <section>
 <title>scipy_base routines</title>
-<para>﻿The purpose of scipy_base is to collect general-purpose routines
+<para>The purpose of scipy_base is to collect general-purpose routines
 that the other sub-packages can use and to provide a simple replacement for
 Numeric. Anytime you might think to import Numeric, you can import scipy_base
 instead and remove yourself from direct dependence on Numeric. These routines
@@ -264,14 +265,8 @@ array([0, 0, 2, 3, 4])
 available from the top-level of SciPy due to their common use. These are
 functions that might have been placed in scipy_base except for their dependence
 on other sub-packages of SciPy. For example the factorial and comb functions
-compute 
-<inlineequation>
-<alt role="latex">n!</alt>
-</inlineequation>
- and 
-<inlineequation>
-<alt role="latex">n!/k!(n-k)!</alt>
-</inlineequation> 
+compute <ipython-inlineequation>n!</ipython-inlineequation>
+ and <ipython-inlineequation>n!/k!(n-k)!</ipython-inlineequation> 
 using either exact integer arithmetic (thanks to
 Python's Long integer object), or by using floating-point precision and the
 gamma function. The functions rand and randn are used so often that they
@@ -290,9 +285,8 @@ only samples of the function are avaiable. When the function is an object that
 can be handed to a routine and evaluated, the function derivative can be used to
 automatically evaluate the object at the correct points to obtain an N-point
 approximation to the 
-<inlineequation>
-<alt role="latex">o^{\textrm{th}}</alt>
-</inlineequation>-derivative at a given point. 
+<ipython-inlineequation>o^{\textrm{th}}</ipython-inlineequation>-derivative at a
+given point. 
 </para>
 </section>
 

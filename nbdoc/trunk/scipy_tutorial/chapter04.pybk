@@ -21,10 +21,13 @@ Methods for Integrating Functions
 <section>
 <title>General integration (integrate.quad)</title>
 <para>The function quad is provided to integrate a function of one variable
-between two points. The points can be \pm\infty  (\pm integrate.inf) to indicate
+between two points. The points can be 
+<ipython-inlineequation>\pm\infty</ipython-inlineequation>
+(<ipython-inlineequation>\pm</ipython-inlineequation> integrate.inf) to indicate
 infinite limits. For example, suppose you wish to integrate a bessel function
-jv(2.5,x) along the interval [0,4.5]. I=\int_{0}^{4.5}J_{2.5}\left(x\right)\,
-dx. This could be computed using quad:
+<code>jv(2.5,x)</code> along the interval [0,4.5]. 
+<ipython-equation>I=\int_{0}^{4.5}J_{2.5}\left(x\right)\,dx</ipython-equation>.
+This could be computed using quad:
 </para>
 <para>XXX: ipython
 &gt;&gt;&gt; result = integrate.quad(lambda x: special.jv(2.5,x), 0, 4.5)
@@ -45,17 +48,25 @@ the argument. The next two arguments are the limits of integration. The return
 value is a tuple, with the first element holding the estimated value of the
 integral and the second element holding an upper bound on the error. Notice,
 that in this case, the true value of this integral is
+<ipython-equation>
 I=\sqrt{\frac{2}{\pi}}\left(\frac{18}{27}\sqrt{2}\cos\left(4.5\right)-\frac{4}{27}\sqrt{2}\sin\left(4.5\right)+\sqrt{2\pi}\textrm{Si}\left(\frac{3}{\sqrt{\pi}}\right)\right),
+</ipython-equation>
 where
-\textrm{Si}\left(x\right)=\int_{0}^{x}\sin\left(\frac{\pi}{2}t^{2}\right)\, dt.
+<ipython-equation>
+\textrm{Si}\left(x\right)=\int_{0}^{x}\sin\left(\frac{\pi}{2}t^{2}\right)\, dt
+</ipython-equation>.
 is the Fresnel sine integral. Note that the numerically-computed integral is
-within 1.04\times10^{-11} of the exact result --- well below the reported error
+within <ipython-inlineequation>1.04\times10^{-11}</ipython-inlineequation> of
+the exact result --- well below the reported error
 bound. 
 </para>
-<para>Infinite inputs are also allowed in quad by using \pm integrate.inf (or
+<para>Infinite inputs are also allowed in quad by using 
+<ipython-inlineequation>\pm</ipython-inlineequation> integrate.inf (or
 inf) as one of the arguments. For example, suppose that a numerical value for
 the exponential
-integral:E_{n}\left(x\right)=\int_{1}^{\infty}\frac{e^{-xt}}{t^{n}}\, dt. is
+integral:
+<ipython-equation>E_{n}\left(x\right)=\int_{1}^{\infty}\frac{e^{-xt}}{t^{n}}\, dt
+</ipython-equation>. is
 desired (and the fact that this integral can be computed as special.expn(n,x) is
 forgotten). The functionality of the function special.expn can be replicated by
 defining a new function vec_expint based on the routine quad: 
@@ -78,8 +89,9 @@ array([ 0.1097,  0.0567,  0.0301,  0.0163,  0.0089,  0.0049])
 <para>The function which is integrated can even use the quad argument (though
 the error bound may underestimate the error due to possible numerical error in
 the integrand from the use of quad). The integral in this case is
+<ipython-equation>
 I_{n}=\int_{0}^{\infty}\int_{1}^{\infty}\frac{e^{-xt}}{t^{n}}\, dt\,
-dx=\frac{1}{n}.
+dx=\frac{1}{n}</ipython-equation>.
 </para>
 <para>XXX: ipython
 &gt;&gt;&gt; result = quad(lambda x: expint(3, x), 0, Inf)
@@ -99,7 +111,8 @@ have been wrapped up into the functions dblquad and tplquad. The function,
 dblquad performs double integration. Use the help function to be sure that the
 arguments are defined in the correct order. In addition, the limits on all inner
 integrals are actually functions which can be constant functions. An example of
-using double integration to compute several values of I_{n} is shown below:
+using double integration to compute several values of
+<ipython-inlineequation>I_{n}<ipython-inlineequation> is shown below:
 </para>
 <para>XXX: ipython
 &gt;&gt;&gt; from __future__ import nested_scopes
@@ -138,7 +151,8 @@ function as a straight line between adjacent points, while Simpson's rule
 approximates the function between three adjacent points as a parabola. 
 </para>
 <para>If the samples are equally-spaced and the number of samples available is
-2^{k}+1 for some integer k, then Romberg integration can be used to obtain
+<ipython-inlineequation>2^{k}+1</ipython-inlineequation> for some integer 
+<ipython-inlineequation>k</ipython-inlineequation>, then Romberg integration can be used to obtain
 high-precision estimates of the integral using the available samples. Romberg
 integration uses the trapezoid rule at step-sizes related by a power of two and
 then performs Richardson extrapolation on these estimates to approximate the
@@ -152,27 +166,37 @@ integrate.romberg).
 <para>Integrating a set of ordinary differential equations (ODEs) given initial
 conditions is another useful example. The function odeint is available in SciPy
 for integrating a first-order vector differential
-equation:\frac{d\mathbf{y}}{dt}=\mathbf{f}\left(\mathbf{y},t\right), given
-initial conditions \mathbf{y}\left(0\right)=y_{0}, where \mathbf{y} is a length
-N vector and \mathbf{f} is a mapping from \mathcal{R}^{N} to \mathcal{R}^{N}. A
+equation:
+<ipython-equation>\frac{d\mathbf{y}}{dt}=\mathbf{f}\left(\mathbf{y},t\right),</ipython-equation> 
+given
+initial conditions
+<ipython-inlineequation>\mathbf{y}\left(0\right)=y_{0}</ipython-inlineequation>, where 
+<ipython-inlineequation>\mathbf{y}</ipython-inlineequation> is a length
+<ipython-inlineequation>N</ipython-inlineequation> vector and 
+<ipython-inlineequation>\mathbf{f}</ipython-inlineequation> is a mapping from 
+<ipython-inlineequation>\mathcal{R}^{N}</ipython-inlineequation> to 
+<ipython-inlineequation>\mathcal{R}^{N}</ipython-inlineequation>. A
 higher-order ordinary differential equation can always be reduced to a
 differential equation of this type by introducing intermediate derivatives into
-the \mathbf{y} vector. 
+the <ipython-inlineequation>\mathbf{y}</ipython-inlineequation> vector. 
 </para>
 <para>
 For example suppose it is desired to find the solution to the following
-second-order differential equation:\frac{d^{2}w}{dz^{2}}-zw(z)=0 with initial
+second-order differential equation:
+<ipython-equation>\frac{d^{2}w}{dz^{2}}-zw(z)=0</ipython-equation> with initial
 conditions
-w\left(0\right)=\frac{1}{\sqrt[3]{3^{2}}\Gamma\left(\frac{2}{3}\right)} and
-\left.\frac{dw}{dz}\right|_{z=0}=-\frac{1}{\sqrt[3]{3}\Gamma\left(\frac{1}{3}\right)}.
+<ipython-inlineequation>w\left(0\right)=\frac{1}{\sqrt[3]{3^{2}}\Gamma\left(\frac{2}{3}\right)}</ipython-inlineequation> and
+<ipython-inlineequation>\left.\frac{dw}{dz}\right|_{z=0}=-\frac{1}{\sqrt[3]{3}\Gamma\left(\frac{1}{3}\right)}</ipython-inlineequation>.
 It is known that the solution to this differential equation with these boundary
-conditions is the Airy function w=\textrm{Ai}\left(z\right), which gives a means
+conditions is the Airy function <ipython-equation>w=\textrm{Ai}\left(z\right)</ipython-equation>, which gives a means
 to check the integrator using special.airy. 
 </para>
 <para>
 First, convert this ODE into standard form by setting
-\mathbf{y}=\left[\frac{dw}{dz},w\right] and t=z. Thus, the differential equation
-becomes\frac{d\mathbf{y}}{dt}=\left[\begin{array}{c}
+<ipython-inlineequation>\mathbf{y}=\left[\frac{dw}{dz},w\right]</ipython-inlineequation>
+and <ipython-inlineequation>t=z</ipython-inlineequation>. Thus, the differential equation
+becomes
+<ipython-equation>\frac{d\mathbf{y}}{dt}=\left[\begin{array}{c}
 ty_{1}\\
 y_{0}\end{array}\right]=\left[\begin{array}{cc}
 0 &amp; t\\
@@ -180,16 +204,23 @@ y_{0}\end{array}\right]=\left[\begin{array}{cc}
 y_{0}\\
 y_{1}\end{array}\right]=\left[\begin{array}{cc}
 0 &amp; t\\
-1 &amp; 0\end{array}\right]\mathbf{y}. In other words,
-\mathbf{f}\left(\mathbf{y},t\right)=\mathbf{A}\left(t\right)\mathbf{y}. 
+1 &amp; 0\end{array}\right]\mathbf{y}.</ipython-equation> 
+In other words,
+<ipython-equation>\mathbf{f}\left(\mathbf{y},t\right)=\mathbf{A}\left(t\right)\mathbf{y}. 
+</ipython-equation>
 </para>
 <para>
-As an interesting reminder, if \mathbf{A}\left(t\right) commutes with
-\int_{0}^{t}\mathbf{A}\left(\tau\right)\, d\tau  under matrix multiplication,
+As an interesting reminder, if
+<ipython-inlineequation>\mathbf{A}\left(t\right)</ipython-inlineequation> commutes with
+<ipython-inlineequation>\int_{0}^{t}\mathbf{A}\left(\tau\right)\,
+d\tau</ipython-inlineequation>  under matrix multiplication,
 then this linear differential equation has an exact solution using the matrix
 exponential:
+<ipython-equation>
 \mathbf{y}\left(t\right)=\exp\left(\int_{0}^{t}\mathbf{A}\left(\tau\right)d\tau\right)\mathbf{y}\left(0\right),
-However, in this case, \mathbf{A}\left(t\right) and its integral do not commute.
+</ipython-equation>
+However, in this case,
+<ipython-inlineequation>\mathbf{A}\left(t\right)</ipython-inlineequation> and its integral do not commute.
 </para>
 <para>
 There are many optional inputs and outputs available when using odeint which can
@@ -205,7 +236,8 @@ the first output row).
 <para>
 The following example illustrates the use of odeint including the usage of the
 Dfun option which allows the user to specify a gradient (with respect to
-\mathbf{y}) of the function, \mathbf{f}\left(\mathbf{y},t\right).
+<ipython-inlineequation>\mathbf{y})</ipython-inlineequation> of the function,
+<ipython-inlineequation>\mathbf{f}\left(\mathbf{y},t\right)</ipython-inlineequation>.
 </para>
 <para>XXX: ipython
 &gt;&gt;&gt; from integrate import odeint

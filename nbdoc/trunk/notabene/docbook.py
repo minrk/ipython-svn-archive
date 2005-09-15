@@ -5,10 +5,9 @@ from itertools import izip
 import copy
 from cgi import escape
 
-from notabene.formatter import Formatter
-
 from lxml import etree as ET
 
+from notabene.formatter import Formatter
 from PyFontify import fontify
 
 def dbify(text):
@@ -91,8 +90,6 @@ class DBFormatter(Formatter):
         return wholetext
 
     def transform_figure(self, fig):
-        #logid = elem.xpath("../../@id")[0]
-        ET.dump(fig)
         number = fig.get('number')
         dbfig = ET.Element('figure', label="Fig%s"%(number))
         dbmedia = ET.SubElement(dbfig, "mediaobject")
@@ -108,20 +105,38 @@ class DBFormatter(Formatter):
             strong.text = 'Fig[%s]: ' % number
             strong.tail = caption.strip()
         dbfig.tail = fig.tail
-        ET.dump(dbfig)
         return dbfig
 
     def transform_equation(self, equ):
-        """This uses the old method that uses graphic for image. It is unfortunate because otherwise the graphic-element is not used for images anymore, but mediaobject imageobjects instead. Perhaps we should just fix db2latex to get this right?"""
-        dbeq = ET.Element('equation')
-        title = equ.get('title')
-        tex = equ.get('tex')
-        if title is not None:
-            dbtit = ET.SubElement(dbeq, 'title')
-            dbtit.text = title
-        dbmath = ET.SubElement(dbeq, 'alt', role="tex")
-        dbmath.text = tex
-        #XXX add image support (for html & nbshell) here .. somewhere
+        # This uses the old method that uses graphic for image. It is
+        # unfortunate because otherwise the graphic-element is not used for images
+        # anymore, but mediaobject imageobjects instead. Perhaps we should just
+        # fix db2latex to get this right?
+        dbeq = ET.Element('informalequation')
+        tex = equ.text
+        verbatim = equ.get('verb', None)
+        if verbatim != '1':
+            tex = r'\begin{equation}%s\end{equation}' % tex
+        mo = ET.SubElement(dbeq, 'mediaobject')
+        to = ET.SubElement(mo, 'textobject')
+        phrase = ET.SubElement(to, 'phrase', role="latex")
+        phrase.text = tex
+        # XXX: add image support (for html & nbshell) here .. somewhere
+        dbeq.tail = equ.tail
+        return dbeq
+
+    def transform_inlineequation(self, equ):
+        dbeq = ET.Element('inlineequation')
+        tex = equ.text
+        verbatim = equ.get('verb', None)
+        if verbatim != '1':
+            tex = r'$%s$' % tex
+        mo = ET.SubElement(dbeq, 'inlinemediaobject')
+        to = ET.SubElement(mo, 'textobject')
+        phrase = ET.SubElement(to, 'phrase', role="latex")
+        phrase.text = tex
+        # XXX: add image support (for html & nbshell) here .. somewhere
+        dbeq.tail = equ.tail
         return dbeq
 
     def transform_block(self, block):
@@ -181,20 +196,10 @@ class DBFormatter(Formatter):
 
         transform_elements('block', self.transform_block)
         transform_elements('figure', self.transform_figure)
-
-        ## figs = sheet2.xpath('.//ipython-figure')
-##         for fig in figs:
-##             parent, idx = parent_and_index(fig)
-##             number = fig.get('number')
-##             #logid = fig.get('logid', 'default-log')
-##             #elem = self.notebook.get_from_log('figure', number, logid=logid)
-##             img = self.transform_figure(fig)
-##             parent[idx] = img
-
         transform_elements('equation', self.transform_equation)
+        transform_elements('inlineequation', self.transform_inlineequation)
 
         sheet2.tag = nodetype
-                    
         return sheet2
 
     def format_sheet(self, sheet):
@@ -223,6 +228,10 @@ class DBFormatter(Formatter):
                 sub.tail = self.escape_latex(sub.tail)  
 
     def to_formatted(self, sheet, kind='html', style=None):
+        """Convert a sheet to the desired output format.
+
+        Returns a string containing the new document.
+        """
         if style is None:
             from notabene.styles import LightBGStyle as style
         xsl = getattr(style, '%s_xsl'%kind)()
@@ -230,4 +239,4 @@ class DBFormatter(Formatter):
         article_tree = ET.ElementTree(self.transform_sheet(sheet))
         getattr(self, 'prep_%s' % kind)(article_tree)
         newtree = xslt.apply(article_tree)
-        return newtree
+        return xslt.tostring(newtree)

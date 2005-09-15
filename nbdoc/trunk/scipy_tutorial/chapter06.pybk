@@ -52,11 +52,16 @@ desired points. In order to find the spline representation, there are two
 different was to represent a curve and obtain (smoothing) spline coefficients:
 directly and parametrically. The direct method finds the spline representation
 of a curve in a two-dimensional plane using the function interpolate.splrep. The
-first two arguments are the only ones required, and these provide the x and y
-components of the curve. The normal output is a 3-tuple, \left(t,c,k\right),
-containing the knot-points, t, the coefficients c and the order k of the spline.
+first two arguments are the only ones required, and these provide the
+<ipython-inlineequation>x</ipython-inlineequation> and
+<ipython-inlineequation>y</ipython-inlineequation> 
+components of the curve. The normal output is a 3-tuple,
+<ipython-inlineequation>\left(t,c,k\right)</ipython-inlineequation>,
+containing the knot-points, <ipython-inlineequation>t</ipython-inlineequation>,
+the coefficients <ipython-inlineequation>c</ipython-inlineequation> and the
+order <ipython-inlineequation>k</ipython-inlineequation> of the spline.
 The default spline order is cubic, but this can be changed with the input
-keyword, k.
+keyword, <ipython-inlineequation>k</ipython-inlineequation>.
 </para>
 <para>For curves in N-dimensional space the function interpolate.splprep allows
 defining the curve parametrically. For this function only 1 input argument is
@@ -65,19 +70,21 @@ N-dimensional space. The length of each array is the number of curve points, and
 each array provides one component of the N-dimensional data point. The parameter
 variable is given with the keword argument, u, which defaults to an
 equally-spaced monotonic sequence between 0 and 1. The default output consists
-of two objects: a 3-tuple, \left(t,c,k\right), containing the spline
+of two objects: a 3-tuple,
+<ipython-inlineequation>\left(t,c,k\right)</ipython-inlineequation>, containing the spline
 representation and the parameter variable u. 
 </para>
 <para>The keyword argument, s, is used to specify the amount of smoothing to
-perform during the spline fit. The default value of s is s=m-\sqrt{2m} where m
+perform during the spline fit. The default value of s is
+<ipython-inlineequation>s=m-\sqrt{2m}</ipython-inlineequation> where m
 is the number of data-points being fit. Therefore, if no smoothing is desired a
-value of \mathbf{s}=0 should be passed to the routines. 
+value of <ipython-inlineequation>\mathbf{s}=0</ipython-inlineequation> should be passed to the routines. 
 </para>
 <para>Once the spline representation of the data has been determined, functions
 are available for evaluating the spline (interpolate.splev) and its derivatives
 (interpolate.splev, interpolate.splade) at any point and the integral of the
 spline between any two points (interpolate.splint). In addition, for cubic
-splines (k=3) with 8 or more knots, the roots of the spline can be estimated
+splines (<ipython-inlineequation>k=3</ipython-inlineequation>) with 8 or more knots, the roots of the spline can be estimated
 (interpolate.sproot). These functions are demonstrated in the example that
 follows (see also Figure [fig:spline-1d]).
 </para>
@@ -149,15 +156,18 @@ follows (see also Figure [fig:spline-1d]).
 <para>For (smooth) spline-fitting to a two dimensional surface, the function
 interpolate.bisplrep is available. This function takes as required inputs the
 1-D arrays x, y, and z which represent points on the surface
-z=f\left(x,y\right). The default output is a list \left[tx,ty,c,kx,ky\right]
+<ipython-inlineequation>z=f\left(x,y\right)</ipython-inlineequation>. The
+default output is a list
+<ipython-inlineequation>\left[tx,ty,c,kx,ky\right]</ipython-inlineequation> 
 whose entries represent respectively, the components of the knot positions, the
 coefficients of the spline, and the order of the spline in each coordinate. It
 is convenient to hold this list in a single object, tck, so that it can be
 passed easily to the function interpolate.bisplev. The keyword, s, can be used
 to change the amount of smoothing performed on the data while determining the
-appropriate spline. The default value is s=m-\sqrt{2m} where m is the number of
+appropriate spline. The default value is
+<ipython-inlineequation>s=m-\sqrt{2m}</ipython-inlineequation> where m is the number of
 data points in the x, y, and z vectors. As a result, if no smoothing is desired,
-then s=0 should be passed to interpolate.bisplrep.
+then <ipython-inlineequation>s=0</ipython-inlineequation> should be passed to interpolate.bisplrep.
 </para>
 <para>To evaluate the two-dimensional spline and it's partial derivatives (up to
 the order of the spline), the function interpolate.bisplev is required. This

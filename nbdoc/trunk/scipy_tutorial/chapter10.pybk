@@ -303,17 +303,17 @@ array([-0.5297, -0.4494, -0.7193])
 <para>Singular Value Decompostion (SVD) can be thought of as an extension of the
 eigenvalue problem to matrices that are not square. Let \mathbf{A} be an M\times
 N matrix with M and N arbitrary. The matrices \mathbf{A}^{H}\mathbf{A} and
-\mathbf{A}\mathbf{A}^{H} are square hermitian matrices<footnote>A hermition matrix
-\mathbf{D} satisfies \mathbf{D}^{H}=\mathbf{D}.</footnote> of size N\times N and M\times M
+\mathbf{A}\mathbf{A}^{H} are square hermitian matrices<footnote><para>A hermition matrix
+\mathbf{D} satisfies \mathbf{D}^{H}=\mathbf{D}.</para></footnote> of size N\times N and M\times M
 respectively. It is known that the eigenvalues of square hermitian matrices are
 real and non-negative. In addtion, there are at most \min\left(M,N\right)
 identical non-zero eigenvalues of \mathbf{A}^{H}\mathbf{A} and
 \mathbf{A}\mathbf{A}^{H}. Define these positive eigenvalues as \sigma_{i}^{2}.
 The square-root of these are called singular values of \mathbf{A}. The
 eigenvectors of \mathbf{A}^{H}\mathbf{A} are collected by columns into an
-N\times N unitary<footnote>A unitary matrix \mathbf{D} satisfies
+N\times N unitary<footnote><para>A unitary matrix \mathbf{D} satisfies
 \mathbf{D}^{H}\mathbf{D}=\mathbf{I}=\mathbf{D}\mathbf{D}^{H} so that
-\mathbf{D}^{-1}=\mathbf{D}^{H}.</footnote> matrix \mathbf{V} while the eigenvectors of
+\mathbf{D}^{-1}=\mathbf{D}^{H}.</para></footnote> matrix \mathbf{V} while the eigenvectors of
 \mathbf{A}\mathbf{A}^{H} are collected by columns in the unitary matrix
 \mathbf{U}, the singular values are collected in an M\times N zero matrix
 \mathbf{\boldsymbol{\Sigma}} with main diagonal entries set to the singular

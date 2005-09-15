@@ -14,17 +14,23 @@ in SciPy is an array of real or complex numbers.
 <title>B-splines</title>
 <para>A B-spline is an approximation of a continuous function over a
 finite-domain in terms of B-spline coefficients and knot points. If the
-knot-points are equally spaced with spacing \Delta x, then the B-spline
+knot-points are equally spaced with spacing <ipython-inlineequation>\Delta
+x</ipython-inlineequation>, then the B-spline
 approximation to a 1-dimensional function is the finite-basis expansion.
-y\left(x\right)\approx\sum_{j}c_{j}\beta^{o}\left(\frac{x}{\Delta x}-j\right).
-In two dimensions with knot-spacing \Delta x and \Delta y, the function
+<ipython-equation>y\left(x\right)\approx\sum_{j}c_{j}\beta^{o}\left(\frac{x}{\Delta
+x}-j\right).</ipython-equation> 
+In two dimensions with knot-spacing <ipython-inlineequation>\Delta
+x</ipython-inlineequation> and <ipython-inlineequation>\Delta
+y</ipython-inlineequation>, the function
 representation is
-z\left(x,y\right)\approx\sum_{j}\sum_{k}c_{jk}\beta^{o}\left(\frac{x}{\Delta
-x}-j\right)\beta^{o}\left(\frac{y}{\Delta y}-k\right). In these expressions,
-\beta^{o}\left(\cdot\right) is the space-limited B-spline basis function of
+<ipython-equation>z\left(x,y\right)\approx\sum_{j}\sum_{k}c_{jk}\beta^{o}\left(\frac{x}{\Delta
+x}-j\right)\beta^{o}\left(\frac{y}{\Delta y}-k\right).</ipython-equation> In these expressions,
+<ipython-inlineequation>\beta^{o}\left(\cdot\right)</ipython-inlineequation> is the space-limited B-spline basis function of
 order, o. The requirement of equally-spaced knot-points and equally-spaced data
 points, allows the development of fast (inverse-filtering) algorithms for
-determining the coefficients, c_{j}, from sample-values, y_{n}. Unlike the
+determining the coefficients,
+<ipython-inlineequation>c_{j}</ipython-inlineequation>, from sample-values,
+<ipython-inlineequation>y_{n}</ipython-inlineequation>. Unlike the
 general spline interpolation algorithms, these algorithms can quickly find the
 spline coefficients for large images. 
 </para>
@@ -33,16 +39,26 @@ that continuous-domain operators (derivatives, re-sampling, integral, etc.)
 which assume that the data samples are drawn from an underlying continuous
 function can be computed with relative ease from the spline coefficients. For
 example, the second-derivative of a spline is
-y{}^{\prime\prime}\left(x\right)=\frac{1}{\Delta
-x^{2}}\sum_{j}c_{j}\beta^{o\prime\prime}\left(\frac{x}{\Delta x}-j\right). Using
+<ipython-equation>y{}^{\prime\prime}\left(x\right)=\frac{1}{\Delta
+x^{2}}\sum_{j}c_{j}\beta^{o\prime\prime}\left(\frac{x}{\Delta
+x}-j\right).</ipython-equation> Using
 the property of B-splines that
-\frac{d^{2}\beta^{o}\left(w\right)}{dw^{2}}=\beta^{o-2}\left(w+1\right)-2\beta^{o-2}\left(w\right)+\beta^{o-2}\left(w-1\right)
-it can be seen that y^{\prime\prime}\left(x\right)=\frac{1}{\Delta
+<ipython-equation>\frac{d^{2}\beta^{o}\left(w\right)}{dw^{2}}=\beta^{o-2}\left(w+1\right)-2\beta^{o-2}\left(w\right)+\beta^{o-2}\left(w-1\right)</ipython-equation> 
+it can be seen that 
+<ipython-equation>y^{\prime\prime}\left(x\right)=\frac{1}{\Delta
 x^{2}}\sum_{j}c_{j}\left[\beta^{o-2}\left(\frac{x}{\Delta
 x}-j+1\right)-2\beta^{o-2}\left(\frac{x}{\Delta
-x}-j\right)+\beta^{o-2}\left(\frac{x}{\Delta x}-j-1\right)\right]. If o=3, then
-at the sample points, \Delta
-x^{2}\left.y^{\prime}\left(x\right)\right|_{x=n\Delta x} Thus, the
+x}-j\right)+\beta^{o-2}\left(\frac{x}{\Delta x}-j-1\right)\right]. 
+</ipython-equation>
+If <ipython-inlineequation>o=3</ipython-inlineequation>, then
+at the sample points, 
+<ipython-equation verb="1">\begin{eqnarray*}
+\Delta
+x^{2}\left.y^{\prime}\left(x\right)\right|_{x=n\Delta x} &amp; = &amp;
+\sum_{j}c_{j}\delta_{n-j+1}-2c
+_{j}\delta_{n-j}+c_{j}\delta_{n-j-1},\\
+ &amp; = &amp;
+c_{n+1}-2c_{n}+c_{n-1}.\end{eqnarray*}</ipython-equation> Thus, the
 second-derivative signal can be easily calculated from the spline fit. if
 desired, smoothing splines can be found to make the second-derivative less
 sensitive to random-errors. 
@@ -62,10 +78,12 @@ them to be mirror-symmetric also.
 third-order cubic spline coefficients from equally spaced samples in one- and
 two-dimensions (signal.qspline1d, signal.qspline2d, signal.cspline1d,
 signal.cspline2d). The package also supplies a function (signal.bspline) for
-evaluating the bspline basis function, \beta^{o}\left(x\right) for arbitrary
+evaluating the bspline basis function,
+<ipython-inlineequation>\beta^{o}\left(x\right)</ipython-inlineequation> for arbitrary
 order and x. For large o, the B-spline basis function can be approximated well
 by a zero-mean Gaussian function with standard-deviation equal to
-\sigma_{o}=\left(o+1\right)/12:\beta^{o}\left(x\right)\approx\frac{1}{\sqrt{2\pi\sigma_{o}^{2}}}\exp\left(-\frac{x^{2}}{2\sigma_{o}}\right).
+<ipython-inlineequation>\sigma_{o}=\left(o+1\right)/12</ipython-inlineequation>:
+<ipython-equation>\beta^{o}\left(x\right)\approx\frac{1}{\sqrt{2\pi\sigma_{o}^{2}}}\exp\left(-\frac{x^{2}}{2\sigma_{o}}\right).</ipython-equation> 
 A function to compute this Gaussian for arbitrary x and o is also available
 (signal.gauss_spline). The following code and Figure uses spline-filtering to
 compute an edge-image (the second-derivative of a smoothed spline) of Lena's
@@ -110,11 +128,15 @@ filtering operations: linear and non-linear. Linear filters can always be
 reduced to multiplication of the flattened Numeric array by an appropriate
 matrix resulting in another flattened Numeric array. Of course, this is not
 usually the best way to compute the filter as the matrices and vectors involved
-may be huge. For example filtering a 512\times512 image with this method would
-require multiplication of a 512^{2}\times512^{2}matrix with a 512^{2} vector.
-Just trying to store the 512^{2}\times512^{2} matrix using a standard Numeric
+may be huge. For example filtering a
+<ipython-inlineequation>512\times512</ipython-inlineequation> image with this method would
+require multiplication of a
+<ipython-inlineequation>512^{2}\times512^{2}matrix</ipython-inlineequation> with
+a <ipython-inlineequation>512^{2}</ipython-inlineequation> vector.
+Just trying to store the
+<ipython-inlineequation>512^{2}\times512^{2}</ipython-inlineequation> matrix using a standard Numeric
 array would require 68,719,476,736 elements. At 4 bytes per element this would
-require 256\textrm{GB} of memory. In most applications most of the elements of
+require <ipython-inlineequation>256\textrm{GB}</ipython-inlineequation> of memory. In most applications most of the elements of
 this matrix are zero and a different method for computing the output of the
 filter is employed.
 </para>
@@ -128,19 +150,43 @@ one row (or column) of the matrix alone. In this case, the matrix multiplication
 can be accomplished using Fourier transforms.
 </para>
 <para>
-Let x\left[n\right] define a one-dimensional signal indexed by the integer n.
+Let <ipython-inlineequation>x\left[n\right]</ipython-inlineequation> define a one-dimensional signal indexed by the integer n.
 Full convolution of two one-dimensional signals can be expressed as
-y\left[n\right]=\sum_{k=-\infty}^{\infty}x\left[k\right]h\left[n-k\right]. This
+<ipython-inlineequation>y\left[n\right]=\sum_{k=-\infty}^{\infty}x\left[k\right]h\left[n-k\right]</ipython-inlineequation>. This
 equation can only be implemented directly if we limit the sequences to finite
-support sequences that can be stored in a computer, choose n=0 to be the
-starting point of both sequences, let K+1 be that value for which
-y\left[n\right]=0 for all n&gt;K+1 and M+1 be that value for which
-x\left[n\right]=0 for all n&gt;M+1, then the discrete convolution expression is
-y\left[n\right]=\sum_{k=\max\left(n-M,0\right)}^{\min\left(n,K\right)}x\left[k\right]h\left[n-k\right].
-For convenience assume K\geq M. Then, more explicitly the output of this
-operation is y\left[0\right] Thus, the full discrete convolution of two finite
-sequences of lengths K+1 and M+1 respectively results in a finite sequence of
-length K+M+1=\left(K+1\right)+\left(M+1\right)-1. 
+support sequences that can be stored in a computer, choose
+<ipython-inlineequation>n=0</ipython-inlineequation> to be the
+starting point of both sequences, let
+<ipython-inlineequation>K+1</ipython-inlineequation> be that value for which
+<ipython-inlineequation>y\left[n\right]=0</ipython-inlineequation> for all
+<ipython-inlineequation>n&gt;K+1</ipython-inlineequation> and
+<ipython-inlineequation>M+1</ipython-inlineequation> be that value for which
+<ipython-inlineequation>x\left[n\right]=0</ipython-inlineequation> for all
+<ipython-inlineequation>n&gt;M+1</ipython-inlineequation>, then the discrete convolution expression is
+<ipython-equation>y\left[n\right]=\sum_{k=\max\left(n-M,0\right)}^{\min\left(n,K\right)}x\left[k\right]h\left[n-k\right].</ipython-equation> 
+For convenience assume <ipython-inlineequation>K\geq M</ipython-inlineequation>. Then, more explicitly the output of this
+operation is 
+<ipython-equation verb="1">
+\begin{eqnarray*}
+y\left[0\right] &amp; = &amp; x\left[0\right]h\left[0\right]\\
+y\left[1\right] &amp; = &amp; x\left[0\right]h\left[1\right]+x\left[1\right]h\left[0\right]\\
+y\left[2\right] &amp; = &amp; x\left[0\right]h\left[2\right]+x\left[1\right]h\left[1\right]+x\left[2\right]h
+\left[0\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+y\left[M\right] &amp; = &amp; x\left[0\right]h\left[M\right]+x\left[1\right]h\left[M-1\right]+\cdots+x\left[
+M\right]h\left[0\right]\\
+y\left[M+1\right] &amp; = &amp; x\left[1\right]h\left[M\right]+x\left[2\right]h\left[M-1\right]+\cdots+x\left[M+1\right]h\left[0\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+y\left[K\right] &amp; = &amp; x\left[K-M\right]h\left[M\right]+\cdots+x\left[K\right]h\left[0\right]\\
+y\left[K+1\right] &amp; = &amp; x\left[K+1-M\right]h\left[M\right]+\cdots+x\left[K\right]h\left[1\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+y\left[K+M-1\right] &amp; = &amp; x\left[K-1\right]h\left[M\right]+x\left[K\right]h\left[M-1\right]\\
+y\left[K+M\right] &amp; = &amp; x\left[K\right]h\left[M\right].\end{eqnarray*}
+</ipython-equation>
+ Thus, the full discrete convolution of two finite
+sequences of lengths <ipython-inlineequation>K+1</ipython-inlineequation> and
+<ipython-inlineequation>M+1</ipython-inlineequation> respectively results in a finite sequence of
+length <ipython-inlineequation>K+M+1=\left(K+1\right)+\left(M+1\right)-1</ipython-inlineequation>. 
 </para>
 <para>
 One dimensional convolution is implemented in SciPy with the function
@@ -148,13 +194,17 @@ signal.convolve. This function takes as inputs the signals x, h, and an optional
 flag and returns the signal y. The optional flag allows for specification of
 which part of the output signal to return. The default value of 'full' returns
 the entire signal. If the flag has a value of 'same' then only the middle K
-values are returned starting at y\left[\left\lfloor \frac{M-1}{2}\right\rfloor
-\right] so that the output has the same length as the largest input. If the flag
+values are returned starting at <ipython-inlineequation>y\left[\left\lfloor \frac{M-1}{2}\right\rfloor
+\right]</ipython-inlineequation> so that the output has the same length as the largest input. If the flag
 has a value of 'valid' then only the middle
-K-M+1=\left(K+1\right)-\left(M+1\right)+1 output values are returned where z
-depends on all of the values of the smallest input from h\left[0\right] to
-h\left[M\right]. In other words only the values y\left[M\right] to
-y\left[K\right] inclusive are returned.
+<ipython-inlineequation>K-M+1=\left(K+1\right)-\left(M+1\right)+1</ipython-inlineequation>
+output values are returned where
+<ipython-inlineequation>z</ipython-inlineequation> 
+depends on all of the values of the smallest input from
+<ipython-inlineequation>h\left[0\right]</ipython-inlineequation> to
+<ipython-inlineequation>h\left[M\right]</ipython-inlineequation>. In other words
+only the values <ipython-inlineequation>y\left[M\right]</ipython-inlineequation> to
+<ipython-inlineequation>y\left[K\right]</ipython-inlineequation> inclusive are returned.
 </para>
 <para>This same function signal.convolve can actually take N-dimensional arrays
 as inputs and will return the N-dimensional convolution of the two arrays. The
@@ -163,20 +213,54 @@ same input flags are available for that case as well.
 <para>
 Correlation is very similar to convolution except for the minus sign becomes a
 plus sign. Thus
-w\left[n\right]=\sum_{k=-\infty}^{\infty}y\left[k\right]x\left[n+k\right] is the
-(cross) correlation of the signals y and x. For finite-length signals with
-y\left[n\right]=0 outside of the range \left[0,K\right] and x\left[n\right]=0
-outside of the range \left[0,M\right], the summation can simplify to
-w\left[n\right]=\sum_{k=\max\left(0,-n\right)}^{\min\left(K,M-n\right)}y\left[k\right]x\left[n+k\right].Assuming
-again that K\geq M this is w\left[-K\right]
+<ipython-equation>
+w\left[n\right]=\sum_{k=-\infty}^{\infty}y\left[k\right]x\left[n+k\right]
+</ipython-equation> is the
+(cross) correlation of the signals
+<ipython-inlineequation>y</ipython-inlineequation> and
+<ipython-inlineequation>x</ipython-inlineequation>. For finite-length signals with
+<ipython-inlineequation>y\left[n\right]=0</ipython-inlineequation> outside of
+the range <ipython-inlineequation>\left[0,K\right]</ipython-inlineequation> and
+<ipython-inlineequation>x\left[n\right]=0</ipython-inlineequation> 
+outside of the range <ipython-inlineequation>\left[0,M\right]</ipython-inlineequation>, the summation can simplify to
+<ipython-equation>
+w\left[n\right]=\sum_{k=\max\left(0,-n\right)}^{\min\left(K,M-n\right)}y\left[k\right]x\left[n+k\right].</ipython-equation>Assuming
+again that <ipython-inlineequation>K\geq M</ipython-inlineequation> this is
+<ipython-equation verb="1">
+\begin{eqnarray*}
+w\left[-K\right] &amp; = &amp; y\left[K\right]x\left[0\right]\\
+w\left[-K+1\right] &amp; = &amp; y\left[K-1\right]x\left[0\right]+y\left[K\right]x\left[1\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+w\left[M-K\right] &amp; = &amp; y\left[K-M\right]x\left[0\right]+y\left[K-M+1\right]x\left[1\right]+\cdots+y
+\left[K\right]x\left[M\right]\\
+w\left[M-K+1\right] &amp; = &amp; y\left[K-M-1\right]x\left[0\right]+\cdots+y\left[K-1\right]x\left[M\right]
+\\
+\vdots &amp; \vdots &amp; \vdots\\
+w\left[-1\right] &amp; = &amp; y\left[1\right]x\left[0\right]+y\left[2\right]x\left[1\right]+\cdots+y\left[M
++1\right]x\left[M\right]\\
+w\left[0\right] &amp; = &amp; y\left[0\right]x\left[0\right]+y\left[1\right]x\left[1\right]+\cdots+y\left[M
+\right]x\left[M\right]\\
+w\left[1\right] &amp; = &amp; y\left[0\right]x\left[1\right]+y\left[1\right]x\left[2\right]+\cdots+y\left[M-
+1\right]x\left[M\right]\\
+w\left[2\right] &amp; = &amp; y\left[0\right]x\left[2\right]+y\left[1\right]x\left[3\right]+\cdots+y\left[M-
+2\right]x\left[M\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+w\left[M-1\right] &amp; = &amp; y\left[0\right]x\left[M-1\right]+y\left[1\right]x\left[M\right]\\
+w\left[M\right] &amp; = &amp; y\left[0\right]x\left[M\right].\end{eqnarray*}
+</ipython-equation>
 </para>
 <para>
 The SciPy function signal.correlate implements this operation. Equivalent flags
-are available for this operation to return the full K+M+1 length sequence
+are available for this operation to return the full
+<ipython-inlineequation>K+M+1</ipython-inlineequation> length sequence
 ('full') or a sequence with the same size as the largest sequence starting at
-w\left[-K+\left\lfloor \frac{M-1}{2}\right\rfloor \right] ('same') or a sequence
+<ipython-inlineequation>w\left[-K+\left\lfloor \frac{M-1}{2}\right\rfloor
+\right]</ipython-inlineequation> ('same') or a sequence
 where the values depend on all the values of the smallest sequence ('valid').
-This final option returns the K-M+1 values w\left[M-K\right] to w\left[0\right]
+This final option returns the
+<ipython-inlineequation>K-M+1</ipython-inlineequation> values
+<ipython-inlineequation>w\left[M-K\right]</ipython-inlineequation> to
+<ipython-inlineequation>w\left[0\right]</ipython-inlineequation> 
 inclusive. 
 </para>
 <para>
@@ -184,13 +268,13 @@ The function signal.correlate can also take arbitrary N-dimensional arrays as
 input and return the N-dimensional convolution of the two arrays on output. 
 </para>
 <para>
-When N=2, signal.correlate and/or signal.convolve can be used to construct
+When <ipython-inlineequation>N=2</ipython-inlineequation>, signal.correlate and/or signal.convolve can be used to construct
 arbitrary image filters to perform actions such as blurring, enhancing, and
 edge-detection for an image. 
 </para>
 <para>
 Convolution is mainly used for filtering when one of the signals is much smaller
-than the other (K\gg M), otherwise linear filtering is more easily accomplished
+than the other (<ipython-inlineequation>K\gg M</ipython-inlineequation>), otherwise linear filtering is more easily accomplished
 in the frequency domain (see Fourier Transforms). 
 </para>
 </section>
@@ -199,27 +283,46 @@ in the frequency domain (see Fourier Transforms).
 <title>Difference-equation filtering</title>
 <para>A general class of linear one-dimensional filters (that includes
 convolution filters) are filters described by the difference equation
-\sum_{k=0}^{N}a_{k}y\left[n-k\right]=\sum_{k=0}^{M}b_{k}x\left[n-k\right] where
-x\left[n\right] is the input sequence and y\left[n\right] is the output
-sequence. If we assume initial rest so that y\left[n\right]=0 for n&lt;0, then this
+<ipython-equation>
+\sum_{k=0}^{N}a_{k}y\left[n-k\right]=\sum_{k=0}^{M}b_{k}x\left[n-k\right]</ipython-equation> where
+<ipython-inlineequation>x\left[n\right]</ipython-inlineequation> is the input
+sequence and <ipython-inlineequation>y\left[n\right]</ipython-inlineequation> is the output
+sequence. If we assume initial rest so that
+<ipython-inlineequation>y\left[n\right]=0</ipython-inlineequation> for
+<ipython-inlineequation>n&lt;0</ipython-inlineequation>, then this
 kind of filter can be implemented using convolution. However, the convolution
-filter sequence h\left[n\right] could be infinite if a_{k}\neq0 for k\geq1. In
+filter sequence <ipython-inlineequation>h\left[n\right]</ipython-inlineequation> could be infinite if
+<ipython-inlineequation>a_{k}\neq0 for k\geq1</ipython-inlineequation>. In
 addition, this general class of linear filter allows initial conditions to be
-placed on y\left[n\right] for n&lt;0 resulting in a filter that cannot be expressed
+placed on <ipython-inlineequation>y\left[n\right]</ipython-inlineequation> for <ipython-inlineequation>n&lt;0</ipython-inlineequation> resulting in a filter that cannot be expressed
 using convolution.
 </para>
 <para>The difference equation filter can be thought of as finding
-y\left[n\right] recursively in terms of it's previous values
-a_{0}y\left[n\right]=-a_{1}y\left[n-1\right]-\cdots-a_{N}y\left[n-N\right]+\cdots+b_{0}x\left[n\right]+\cdots+b_{M}x\left[n-M\right].Often
-a_{0}=1 is chosen for normalization. The implementation in SciPy of this general
+<ipython-inlineequation>y\left[n\right]</ipython-inlineequation> recursively in terms of it's previous values
+<ipython-equation>a_{0}y\left[n\right]=-a_{1}y\left[n-1\right]-\cdots-a_{N}y\left[n-N\right]+\cdots+b_{0}x\left[n\right]+\cdots+b_{M}x\left[n-M\right].</ipython-equation> Often
+<ipython-inlineequation>a_{0}=1</ipython-inlineequation> is chosen for normalization. The implementation in SciPy of this general
 difference equation filter is a little more complicated then would be implied by
 the previous equation. It is implemented so that only one signal needs to be
-delayed. The actual implementation equations are (assuming a_{0}=1).
-y\left[n\right]where K=\max\left(N,M\right). Note that b_{K}=0 if K&gt;M and
-a_{K}=0 if K&gt;N. In this way, the output at time n depends only on the input at
-time n and the value of z_{0} at the previous time. This can always be
-calculated as long as the K values z_{0}\left[n-1\right]\ldots
-z_{K-1}\left[n-1\right] are computed and stored at each time step. 
+delayed. The actual implementation equations are (assuming
+<ipython-inlineequation>a_{0}=1</ipython-inlineequation>).
+<ipython-equation verb="1">
+\begin{eqnarray*}
+y\left[n\right] &amp; = &amp; b_{0}x\left[n\right]+z_{0}\left[n-1\right]\\
+z_{0}\left[n\right] &amp; = &amp; b_{1}x\left[n\right]+z_{1}\left[n-1\right]-a_{1}y\left[n\right]\\
+z_{1}\left[n\right] &amp; = &amp; b_{2}x\left[n\right]+z_{2}\left[n-1\right]-a_{2}y\left[n\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+z_{K-2}\left[n\right] &amp; = &amp; b_{K-1}x\left[n\right]+z_{K-1}\left[n-1\right]-a_{K-1}y\left[n\right]\\
+z_{K-1}\left[n\right] &amp; = &amp; b_{K}x\left[n\right]-a_{K}y\left[n\right],\end{eqnarray*}
+</ipython-equation>
+where <ipython-inlineequation>K=\max\left(N,M\right)</ipython-inlineequation>.
+Note that <ipython-inlineequation>b_{K}=0</ipython-inlineequation> if
+<ipython-inlineequation>K&gt;M</ipython-inlineequation> and
+<ipython-inlineequation>a_{K}=0</ipython-inlineequation> if
+<ipython-inlineequation>K&gt;N</ipython-inlineequation>. In this way, the output at time n depends only on the input at
+time n and the value of <ipython-inlineequation>z_{0}</ipython-inlineequation> at the previous time. This can always be
+calculated as long as the <ipython-inlineequation>K</ipython-inlineequation>
+values <ipython-inlineequation>z_{0}\left[n-1\right]\ldots
+z_{K-1}\left[n-1\right]</ipython-inlineequation> are computed and stored at each time step. 
 </para>
 <para>
 The difference-equation filter is called using the command signal.lfilter in
@@ -227,21 +330,27 @@ SciPy. This command takes as inputs the vector b, the vector, a, a signal x and
 returns the vector y (the same length as x) computed using the equation given
 above. If x is N-dimensional, then the filter is computed along the axis
 provided. If, desired, initial conditions providing the values of
-z_{0}\left[-1\right] to z_{K-1}\left[-1\right] can be provided or else it will
+<ipython-inlineequation>z_{0}\left[-1\right]</ipython-inlineequation> to <ipython-inlineequation>z_{K-1}\left[-1\right]</ipython-inlineequation> can be provided or else it will
 be assumed that they are all zero. If initial conditions are provided, then the
 final conditions on the intermediate variables are also returned. These could be
 used, for example, to restart the calculation in the same state.
 </para>
 <para>
 Sometimes it is more convenient to express the initial conditions in terms of
-the signals x\left[n\right] and y\left[n\right]. In other words, perhaps you
-have the values of x\left[-M\right] to x\left[-1\right] and the values of
-y\left[-N\right] to y\left[-1\right] and would like to determine what values of
-z_{m}\left[-1\right] should be delivered as initial conditions to the
-difference-equation filter. It is not difficult to show that for 0\leq
-m&lt;K,z_{m}\left[n\right]=\sum_{p=0}^{K-m-1}\left(b_{m+p+1}x\left[n-p\right]-a_{m+p+1}y\left[n-p\right]\right).
-Using this formula we can find the intial condition vector z_{0}\left[-1\right]
-to z_{K-1}\left[-1\right] given initial conditions on y (and x). The command
+the signals <ipython-inlineequation>x\left[n\right]</ipython-inlineequation> and
+<ipython-inlineequation>y\left[n\right]</ipython-inlineequation>. In other words, perhaps you
+have the values of
+<ipython-inlineequation>x\left[-M\right]</ipython-inlineequation> to
+<ipython-inlineequation>x\left[-1\right]</ipython-inlineequation> and the values of
+<ipython-inlineequation>y\left[-N\right]</ipython-inlineequation> to
+<ipython-inlineequation>y\left[-1\right]</ipython-inlineequation> and would like to determine what values of
+<ipython-inlineequation>z_{m}\left[-1\right]</ipython-inlineequation> should be delivered as initial conditions to the
+difference-equation filter. It is not difficult to show that for
+<ipython-inlineequation>0\leq m&lt;K</ipython-inlineequation>,
+<ipython-equation>z_{m}\left[n\right]=\sum_{p=0}^{K-m-1}\left(b_{m+p+1}x\left[n-p\right]-a_{m+p+1}y\left[n-p\right]\right).</ipython-equation> 
+Using this formula we can find the intial condition vector
+<ipython-inlineequation>z_{0}\left[-1\right]</ipython-inlineequation> 
+to <ipython-inlineequation>z_{K-1}\left[-1\right]</ipython-inlineequation> given initial conditions on y (and x). The command
 signal.lfiltic performs this function.
 </para>
 </section>
@@ -283,13 +392,17 @@ The Wiener filter is a simple deblurring filter for denoising images. This is
 not the Wiener filter commonly described in image reconstruction problems but
 instead it is a simple, local-mean filter. Let x be the input signal, then the
 output is
+<ipython-equation>
 y=\left\{ \begin{array}{cc}
 \frac{\sigma^{2}}{\sigma_{x}^{2}}m_{x}+\left(1-\frac{\sigma^{2}}{\sigma_{x}^{2}}\right)x
 &amp; \sigma_{x}^{2}\geq\sigma^{2},\\
-m_{x} &amp; \sigma_{x}^{2}&lt;\sigma^{2}.\end{array}\right. Where m_{x} is the
-local estimate of the mean and \sigma_{x}^{2} is the local estimate of the
+m_{x} &amp; \sigma_{x}^{2}&lt;\sigma^{2}.\end{array}\right.</ipython-equation>
+Where <ipython-inlineequation>m_{x}</ipython-inlineequation> is the
+local estimate of the mean and <ipython-inlineequation>\sigma_{x}^{2}</ipython-inlineequation> is the local estimate of the
 variance. The window for these estimates is an optional input parameter (default
-is 3\times3). The parameter \sigma^{2} is a threshold noise parameter. If \sigma
+is <ipython-inlineequation>3\times3</ipython-inlineequation>). The parameter
+<ipython-inlineequation>\sigma^{2}</ipython-inlineequation> is a threshold noise
+parameter. If <ipython-inlineequation>\sigma</ipython-inlineequation> 
 is not given then it is estimated as the average of the local variances. 
 </para>
 <para>
@@ -297,9 +410,14 @@ Hilbert filter
 </para>
 <para>
 The Hilbert transform constructs the complex-valued analytic signal from a real
-signal. For example if x=\cos\omega n then y=\textrm{hilbert}\left(x\right)
-would return (except near the edges) y=\exp\left(j\omega n\right). In the
-frequency domain, the hilbert transform performsY=X\cdot H where H is 2 for
+signal. For example if <ipython-inlineequation>x=\cos\omega
+n</ipython-inlineequation> then
+<ipython-inlineequation>y=\textrm{hilbert}\left(x\right)</ipython-inlineequation> 
+would return (except near the edges) 
+<ipython-inlineequation>y=\exp\left(j\omega n\right)</ipython-inlineequation>. In the
+frequency domain, the hilbert transform performs
+<ipython-equation>Y=X\cdot H</ipython-equation> where
+<ipython-inlineequation>H</ipython-inlineequation> is 2 for
 positive frequencies, 0 for negative frequencies and 1 for zero-frequencies. 
 </para>
 <para>
