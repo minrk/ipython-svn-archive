@@ -232,6 +232,22 @@ Or use the dictionary interface:
 
 In [7]: ic['a'] = Scatter(range(10))
 
+By default, Scatter treats unit length sequences as lists:
+
+In [7]: ic['a'] = Scatter(range(2))
+
+In [8]: ic['a']
+Out[8]: [[0], [1]]
+
+To scatter length one lists as scalars, set the flatten flag on the Scatter
+object:
+
+In [9]: ic['a'] = Scatter(range(2),True)
+
+In [10]: ic['a']
+Out[10]: [0, 1]
+
+
 NOTE:  While you can do things like ic[0]['a'] = ic[1]['b'], these types of
 data movements have not been optimized.  Currently the python object would
 come back to you  from kernel 1 and then be sent out to kernel 0.  Eventually

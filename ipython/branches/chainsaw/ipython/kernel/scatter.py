@@ -7,8 +7,6 @@ Classes:
 
 Scatter -- The basic class for scattering sequences
 """
-
-
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
 #                           Fernando Perez. <fperez@colorado.edu>
@@ -19,7 +17,8 @@ Scatter -- The basic class for scattering sequences
 
 
 class Scatter:
-    def __init__(self,seq,balance=0):
+    def __init__(self,seq,flatten=False):
+        self.flatten = flatten
         self.seq = seq
             
     def partition(self, p, q):
@@ -42,5 +41,8 @@ class Scatter:
                 lo.append(n*basesize + remainder)
                 hi.append(lo[-1] + basesize)
 
-        return self.seq[lo[p]:hi[p]]
-            
+        result = self.seq[lo[p]:hi[p]]
+        if self.flatten and len(result) ==  1:
+            return result[0]
+        else:          
+            return result            
