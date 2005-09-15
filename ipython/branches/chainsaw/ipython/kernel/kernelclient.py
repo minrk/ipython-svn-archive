@@ -540,7 +540,7 @@ class InteractiveCluster(object):
         
     def kill(self):
         """Kill all the kernels in the cluster."""
-        for w in workers:
+        for w in self.workers:
             w.kill()
             
     def push(self, value, key, workers=None):
