@@ -1,3 +1,24 @@
+2005-09-17  Tzanko Matev  <tsanko@gmail.com>
+
+	* Sheet.py (Sheet._update_celllist):
+	* PythonPlugin.py (PythonPluginFactory.get_matchers):
+	* FigurePlugin.py (FigurePluginFactory.get_matchers):
+	* textplugin.py (TextPluginFactory.get_matchers):
+	* PlainTextPlugin.py (PlainTextPluginFactory.get_matchers):
+	Rewrote the algorithm for converting a ElementTree structure to a
+	list of nbshell blocks. Now each plugin must give a method which
+	decides if a given element must be handled by that plugin. As a
+	result this part of the sheet is now independant of the specific
+	plugins (except for the raw xml plugin). Also adding complex tests
+	for parts of the xml tree is much easier than before. The text
+	plugin now matches only <para> elements with no subelements which
+	fixes ticket #34
+
+	* ipnNotebookWidget.py (CellCtrlBase.OnKeyDown): Fixed an
+	indentation bug where the given method was considered a function
+	in another method
+	
+
 2005-09-13  Tzanko Matev  <tsanko@gmail.com>
 
 	* editwindow.py (EditWindow.__config): Turned Python lexer off. It

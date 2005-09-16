@@ -85,8 +85,8 @@ class CellCtrlBase(wx.Window):
         else:
             self.OnKeyDown(evt)
             
-        def OnKeyDown(self,evt):
-            evt.Skip()
+    def OnKeyDown(self,evt):
+        evt.Skip()
 
 class ipnNotebook (wx.ScrolledWindow):
     """

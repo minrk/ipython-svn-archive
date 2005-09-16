@@ -21,6 +21,7 @@ from notabene import notebook,validate
 
 from nbshell import PythonPlugin
 from nbshell.utils import *
+from nbshell import SimpleXMLWriter
 
 
 class Sheet(object):
@@ -154,7 +155,7 @@ class Sheet(object):
             #NBDOC: add that facility to notebook.Cell?
 
             self.__clear_celllist(update = False)
-            self.__update_celllist(update = False)
+            self._update_celllist(update = False)
         if dicts:
             self.__update_dicts()
         if output:
@@ -225,7 +226,109 @@ class Sheet(object):
         return elemlist
 
 
-    def __update_celllist(self, update = False):
+    def _update_celllist(self, update = False):
+        
+        #Get the matchers from the plugin factories
+        matchers = {}
+        for plugin_string in self.factory.keys():
+            result = self.factory[plugin_string].get_matchers()
+            #get_matchers must return either one matcher or a list of matchers
+            if callable(result): #one matcher
+                matchers[result] = plugin_string
+            elif result: #a list of matchers
+                for a in result: #there should be a more pythonic way to do this
+                    matchers[a] = plugin_string
+            #else get_match can return None
+        
+        buffer = StringIO.StringIO()
+        read_pos = [0] #possition in the buffer from which to start reading. It must be mutable
+        writer = SimpleXMLWriter.XMLWriter(buffer, encoding='utf-8')
+        
+        def process_element(element):
+            """Processes one unhandled element"""
+            #write the start tag and any text after it
+            if element.tag != 'sheet':
+                writer.start(element.tag, element.attrib)
+            writer.data(element.text or '')
+            #Get a list of the children
+            children = iter(element[:])
+            try:
+                child = children.next()
+            except StopIteration:
+                #The sheet is empty. Create one empty xml block
+                self.InsertCell('plaintext', update = False, text = '')
+            else:
+                while True:
+                    result = False
+                    #Test the child against the matchers until one returns non False
+                    for matcher in matchers.keys():
+                        result = matcher(child)
+                        if result:
+                            break
+                    if not result:
+                        #None of the mathchers returned true, so process the
+                        #element the standard way
+                        process_element(child)
+                        #append the tail to the buffer
+                        writer.data(child.tail or '')
+                        #get the next child
+                        try:
+                            child = children.next()
+                        except:
+                            break
+                    else: #The element returned a match.
+                        #Create a new xml block and empty the buffer if there is something in it
+                        if buffer.tell() != read_pos[0]:
+                            buffer.seek(read_pos[0])
+                            self.InsertCell('plaintext',update = False, text = buffer.read())
+                            read_pos[0] = buffer.tell()
+    
+                        plugin_string = matchers[matcher]
+                        if callable(result):
+                            #If the result is callable, this means that we want to
+                            #match a list of consequtive elements to give to the
+                            #plugin. To do that call the result on the next
+                            #element and get the result and with it do the same,
+                            #until there are no more elements or one of the
+                            #matchers returned false.
+                            elem_list = []
+                            while result:
+                                elem_list.append(child)
+                                try:
+                                    child = children.next()
+                                except StopIteration:
+                                    break
+                                result = result(child)
+                            
+                            #Now create the corresponding block
+                            self.InsertCell(plugin_string, update = False,
+                                           element_list = elem_list)
+                        else: 
+                            #This is a simple match, create the block, giving the
+                            #element as a parameter
+                            self.InsertCell(plugin_string, update=False, element = child)
+                            #get the next element
+                            try:
+                                child = children.next()
+                            except StopIteration:
+                                break
+            #The element is almost processed, write the end tag and exit
+            if element.tag != 'sheet':
+                writer.end(tag = element.tag)
+        #process_element end
+        
+        #Run the function with the sheet element, and empty the buffer at the end
+        process_element(self.element)
+        if buffer.tell() != read_pos[0]:
+            buffer.seek(read_pos[0])
+            self.InsertCell('plaintext', update = False, text = buffer.read())
+        buffer.close()
+        if update:
+            self.Update(celllist = False)
+        
+
+            
+    def _old_update_celllist(self, update = False):
         """Updates the celllist from self.element and updates the view if
         update == True """
         

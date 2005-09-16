@@ -55,7 +55,7 @@ class PythonPluginFactory(object):
     #    supported types are "raw" and "encoded". See notebookformat.txt for 
     #    more info"""
     #    return "raw" #Probably only the python code plugin should be raw
-        
+    
     def CreateDocumentPlugin(self,document, element):
         """Creates the document part of the plugin. The returned object is 
         stored in ipgDocument.celllist and is responsible for storing and
@@ -79,6 +79,10 @@ class PythonPluginFactory(object):
         else:
             return None #Well here I should throw an exception, however I am 
                         #not supposed to get to this line for a long long time
+                        
+    def get_matchers(self):
+        """Matches the <ipython-block> element"""
+        return lambda element:element.tag == 'ipython-block'
 #end GenericPluginFactory
 
 

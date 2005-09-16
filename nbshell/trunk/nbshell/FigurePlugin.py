@@ -48,7 +48,11 @@ class FigurePluginFactory(object):
         else:
             return None #Well here I should throw an exception, however I am 
                         #not supposed to get to this line for a long long time
-                        
+    
+    def get_matchers(self):
+        """A matcher for the <ipython-figure> element"""
+        return lambda element:element.tag == 'ipython-figure'
+        
 
 #end GenericPluginFactory
 

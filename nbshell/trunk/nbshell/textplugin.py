@@ -71,6 +71,17 @@ class TextPluginFactory(object):
         else:
             return None #Well here I should throw an exception, however I am 
                         #not supposed to get to this line for a long long time
+    
+    def get_matchers(self):
+        """matches a sequence of para elements without inner subelements"""
+        def matcher(element):
+            if element.tag == 'para' and len(element) == 0:
+                return matcher
+            else:
+                return False
+        
+        return matcher
+
 #end GenericPluginFactory
 
 class TextDocumentPlugin(object):

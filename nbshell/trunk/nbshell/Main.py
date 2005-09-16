@@ -52,7 +52,7 @@ class App(wx.App):
     """Application class."""
     
     plugin_dir = "." #this should be configured somewhere
-    plugin_dict = {0:0}
+    plugin_dict = {}
     
     def __init__(self, *args, **kwds):
         wx.App.__init__(self, *args, **kwds)
