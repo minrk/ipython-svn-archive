@@ -662,11 +662,11 @@ class InteractiveCluster(object):
         for w in worker_numbers:
             self.workers[w].execute(source)
             
-    def notify(self, addr, workers=None):
+    def notify(self, addr, flag=True, workers=None):
         """Instruct a set of workers to notify a result gatherer."""
         worker_numbers = self._parse_workers_arg(workers)
         for w in worker_numbers:
-            self.workers[w].notify(addr)
+            self.workers[w].notify(addr, flag)
 
     def allow(self, ip, workers=None):
         """Instruct a set of workers to allow connections from an ip."""
