@@ -336,7 +336,7 @@ class Notebook(object):
         if format == 'pdf':
             format = 'latex' #we get pdf via latex for now
             toPDF = True
-        doc = formatter.to_formatted(self.sheet, format)
+        doc = formatter.to_formatted(self.sheet, format).encode('utf-8')
 
         if toPDF:
             env = os.environ.copy()
@@ -457,6 +457,9 @@ def main():
         help='output format', default='html', metavar='FORMAT')
     parser.add_option('-l', '--list-formats', dest='list_formats',
         help='list available formats', default=False, action='store_true')
+    parser.add_option('-b', '--book', dest='book',
+        help='format each argument as a chapter in a single book using a template',
+        default=None, metavar='TEMPLATE')
     options, args = parser.parse_args()
 
     if options.list_formats:
@@ -466,11 +469,20 @@ def main():
     pdf:   PDF (via LaTeX, requires pdflatex(1))"""
 
     else:
-        for file in args:
-            base = os.path.splitext(file)[0]
-            nb = Notebook.from_file(file)
-            newfile = nb.write_formatted(base, options.format)
-            print "%s -> %s" % (file, newfile)
+        if options.book is None:
+            for filename in args:
+                base = os.path.splitext(filename)[0]
+                nb = Notebook.from_file(filename)
+                newfile = nb.write_formatted(base, options.format)
+                print "%s -> %s" % (filename, newfile)
+        else:
+            raise NotImplementedError("XXX: need to figure this out")
+            sheets = []
+            for filename in args:
+                base = os.path.splitext(filename)[0]
+                nb = Notebook.from_file(filename)
+                
+
 
 if __name__ == '__main__':
     main()

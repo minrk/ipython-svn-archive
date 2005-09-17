@@ -206,7 +206,7 @@ class DBFormatter(Formatter):
         """Format a <sheet> element to DocBook text.
         """
         newsheet = self.transform_sheet(sheet)
-        return ET.tostring(newsheet)
+        return ET.tostring(newsheet, encoding='utf8')
 
     @staticmethod
     def escape_latex(text):
@@ -240,3 +240,25 @@ class DBFormatter(Formatter):
         getattr(self, 'prep_%s' % kind)(article_tree)
         newtree = xslt.apply(article_tree)
         return xslt.tostring(newtree)
+
+    def to_book(self, sheets, template=None, kind='html', style=None):
+        """Convert a list of sheets to a book with each sheet being a chapter.
+        """
+        if style is None:
+            from notabene.styles import LightBGStyle as style
+        xsl = getattr(style, '%s_xsl' % kind)()
+        xslt = ET.XSLT(xsl)
+        if template is None:
+            book = ET.Element('book')
+        else:
+            book = copy.deepcopy(template)
+        for sheet in sheets:
+            chapter = self.transform_sheet(sheet)
+            chapter.tag = 'chapter'
+            book.append(chapter)
+        book = ET.ElementTree(book)
+        getattr(self, 'prep_%s' % kind)(article_tree)
+        newtree = xslt.apply(article_tree)
+        return xslt.tostring(newtree)
+
+
