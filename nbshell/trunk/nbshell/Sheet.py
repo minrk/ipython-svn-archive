@@ -255,8 +255,7 @@ class Sheet(object):
             try:
                 child = children.next()
             except StopIteration:
-                #The sheet is empty. Create one empty xml block
-                self.InsertCell('plaintext', update = False, text = '')
+                pass
             else:
                 while True:
                     result = False
@@ -292,17 +291,22 @@ class Sheet(object):
                             #until there are no more elements or one of the
                             #matchers returned false.
                             elem_list = []
+                            flag = False 
                             while result:
                                 elem_list.append(child)
                                 try:
                                     child = children.next()
                                 except StopIteration:
+                                    flag = True
                                     break
+                                
                                 result = result(child)
                             
                             #Now create the corresponding block
                             self.InsertCell(plugin_string, update = False,
                                            element_list = elem_list)
+                            if flag:
+                                break
                         else: 
                             #This is a simple match, create the block, giving the
                             #element as a parameter
@@ -319,7 +323,7 @@ class Sheet(object):
         
         #Run the function with the sheet element, and empty the buffer at the end
         process_element(self.element)
-        if buffer.tell() != read_pos[0]:
+        if buffer.tell() != read_pos[0] or not self.celllist:
             buffer.seek(read_pos[0])
             self.InsertCell('plaintext', update = False, text = buffer.read())
         buffer.close()

@@ -338,7 +338,9 @@ class PlainTextCtrl(stc.StyledTextCtrl, CellCtrlBase):
         self.StyleSetSpec(stc.STC_H_TAG,"fore:#0000FF")
         self.StyleSetSpec(stc.STC_STYLE_LINENUMBER, "back:#E0C0C0")
 
-        self.SetKeyWords(0,'para title section')
+        #self.SetKeyWords(0,' '.join(['para', 'title', 'section', 'code',
+        #                             'ipython-figure', 'ipython-block', 
+        #                             'ipython-inlineequation']))
         
         stc.EVT_STC_MODIFIED(self, id, self.OnModified)
         stc.EVT_STC_UPDATEUI(self, id, self.OnUpdateUI)
