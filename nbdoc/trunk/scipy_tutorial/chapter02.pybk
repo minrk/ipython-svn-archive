@@ -33,7 +33,11 @@ have been modified to return complex numbers instead of NaN's where appropriate.
 <para>XXX: ipython
 >>> scipy.sqrt(-1) </para>
 </section>
-
+<section>
+<title>Alter numeric</title>
+<para>With the command scipy.alter_numeric() you can now use index and mask arrays inside brackets and the coercion rules of Numeric will be changed so that Python scalars will not be used to determine the type of the output of an expression.
+</para>
+</section>
 <section>
 <title>scipy_base routines</title>
 <para>The purpose of scipy_base is to collect general-purpose routines

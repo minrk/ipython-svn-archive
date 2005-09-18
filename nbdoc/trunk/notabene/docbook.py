@@ -7,11 +7,51 @@ from cgi import escape
 import os
 import tempfile
 import subprocess
+import shutil
+import warnings
 
 from lxml import etree as ET
 
 from notabene.formatter import Formatter
 from PyFontify import fontify
+
+def relpath(target, base=os.curdir):
+    """
+    Return a relative path to the target from either the current dir or an optional base dir.
+    Base can be a directory specified either as absolute or relative to current dir.
+
+    This function is by Richard Barran.
+    http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/302594
+    """
+
+    if not os.path.exists(target):
+        raise OSError, 'Target does not exist: '+target
+
+    if not os.path.isdir(base):
+        raise OSError, 'Base is not a directory or does not exist: '+base
+
+    base_list = (os.path.abspath(base)).split(os.sep)
+    target_list = (os.path.abspath(target)).split(os.sep)
+
+    # On the windows platform the target may be on a completely different drive from the base.
+    if os.name in ['nt','dos','os2'] and base_list[0] <> target_list[0]:
+        raise OSError, 'Target is on a different drive to base. Target: '+target_list[0].upper()+', base: '+base_list[0].upper()
+
+    # Starting from the filepath root, work out how much of the filepath is
+    # shared by base and target.
+    for i in range(min(len(base_list), len(target_list))):
+        if base_list[i] <> target_list[i]: break
+    else:
+        # If we broke out of the loop, i is pointing to the first differing path elements.
+        # If we didn't break out of the loop, i is pointing to identical path elements.
+        # Increment i so that in all cases it points to the first differing path elements.
+        i+=1
+
+    rel_list = [os.pardir] * (len(base_list)-i) + target_list[i:]
+    return os.path.join(*rel_list)
+
+
+
 
 def dbify(text):
     marker = 0
@@ -119,7 +159,7 @@ class DBFormatter(Formatter):
         tex = equ.text
         verbatim = equ.get('verb', None)
         if verbatim != '1':
-            tex = r'\begin{equation}%s\end{equation}' % tex
+            tex = r'$$%s$$' % tex
         mo = ET.SubElement(dbeq, 'mediaobject')
         to = ET.SubElement(mo, 'textobject')
         phrase = ET.SubElement(to, 'phrase', role="latex")
@@ -218,15 +258,54 @@ class DBFormatter(Formatter):
         return text.replace('\\', r'\\').replace('{', r'\{').replace('}', r'\}')
         
     @classmethod
-    def prep_fo(cls, tree):
+    def equation_images(cls, tree, name):
+        can_tex = False
+        try:
+            from matplotlib import texmanager
+        except ImportError:
+            warnings.warn('matplotlib not available')
+        try:
+            texmgr = texmanager.TexManager()
+            texmgr.get_dvipng_version()
+            can_tex = True
+        except RuntimeError:
+            warnings.warn('dvipng not up-to-date')
+        if can_tex == False:
+            warnings.warn('Cannot convert equations to images')
+            return
+        else:
+            if name is None:
+                raise ValueError("must provide a name")
+            eqdir = name + '_files'
+            if not os.path.isdir(eqdir):
+                os.mkdir(eqdir)
+            equations = tree.xpath('//informalequation')
+            equations.extend(tree.xpath('//inlineequation'))
+            for eq in equations:
+                mo = eq.find('mediaobject')
+                if mo is None:
+                    mo = eq.find('inlinemediaobject')
+                phrase = mo.find('textobject/phrase')
+                latex = phrase.text
+                pngfile = texmgr.make_png(latex, dpi=120)
+                pngbase = os.path.basename(pngfile)
+                newpng = os.path.join(eqdir, pngbase)
+                shutil.copyfile(pngfile, newpng)
+                io = ET.SubElement(mo, 'imageobject')
+                data = ET.SubElement(io, 'imagedata', 
+                    fileref=relpath(newpng, os.path.split(os.path.abspath(name))[0]),
+                    format='PNG')
+    
+    @classmethod
+    def prep_fo(cls, tree, name=None):
         pass
 
     @classmethod
-    def prep_html(cls, tree):
-        pass
+    def prep_html(cls, tree, name=None):
+        cls.equation_images(tree, name)
     
     @classmethod
-    def prep_latex(cls, tree):
+    def prep_latex(cls, tree, name=None):
         listings = tree.xpath('//programlisting') 
         for listing in listings:  
             listing.text = cls.escape_latex(listing.text)  
@@ -235,7 +314,7 @@ class DBFormatter(Formatter):
                 sub.tail = cls.escape_latex(sub.tail)  
 
     @classmethod
-    def to_formatted(cls, dbxml, kind='html', style=None):
+    def to_formatted(cls, dbxml, kind='html', name=None, style=None):
         """Convert a DocBook document to the final format.
 
         Returns a string containing the new document.
@@ -246,7 +325,7 @@ class DBFormatter(Formatter):
         xslt = ET.XSLT(xsl)
         if ET.iselement(dbxml):
             dbxml = ET.ElementTree(dbxml)
-        getattr(cls, 'prep_%s' % kind)(dbxml)
+        getattr(cls, 'prep_%s' % kind)(dbxml, name)
         newtree = xslt.apply(dbxml)
         return xslt.tostring(newtree)
 
@@ -282,7 +361,7 @@ class DBFormatter(Formatter):
             format = 'latex' #we get pdf via latex for now
             toPDF = True
             
-        doc = cls.to_formatted(dbxml, kind=format).encode('utf-8')
+        doc = cls.to_formatted(dbxml, kind=format, name=base).encode('utf-8')
 
         if toPDF:
             env = os.environ.copy()

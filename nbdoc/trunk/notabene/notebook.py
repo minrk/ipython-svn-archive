@@ -2,12 +2,16 @@
 
 import os
 import warnings
+import copy
 
 from lxml import etree as ET
 
 from notabene import normal
 from notabene import validate
 from notabene.xmlutils import nsmap, rdf, dc, xlink
+
+def element_copy(element):
+    return ET.XML(ET.tostring(element, encoding='utf-8'))
 
 class SubelemWrapper(object):
     """Abstract superclass for Cell getter and setter."""
@@ -477,7 +481,6 @@ def book2docbook(bookfilename):
         namespaces=nsmap(xlink)):
         parent = child2parent[link]
         path, frag = spliturl(basedir, link.get(xlink.href))
-        print path, frag
         nb = Notebook.from_file(path)
         sheet = nb.xpath.evaluate('/notebook/sheet[@id="%s"]' % frag)
         if sheet == []:
@@ -488,7 +491,8 @@ def book2docbook(bookfilename):
         dbf = DBFormatter(nb)
         dbxml = dbf.transform_sheet(sheet, nodetype=link.tag)
         idx = parent.index(link)
-        parent[idx] = dbxml
+        del parent[idx]
+        parent.insert(idx, dbxml)
     return book
 
 def main():

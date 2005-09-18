@@ -126,6 +126,16 @@ div.ipy_output_bundle {
     margin: 0;
     padding: 0;
 }
+
+div.mediaobject {
+    text-align: center;
+    margin: 1em;
+}
+
+span.inlinemediaobject > img {
+    vertical-align: middle;
+}
+
 """
 
 class Style(object):
@@ -148,6 +158,10 @@ class Style(object):
         fancyvrb.text = "1"
         fvopt = ET.SubElement(sheet, xsl.template, name="latex.fancyvrb.options")
         fvopt.text = r",commandchars=\\\{\}"
+
+        # turn off fancyhdr
+        fancyhdr = ET.SubElement(sheet, xsl.param, name='latex.use.fancyhdr')
+        fancyhdr.text = '0'
 
         docclass = ET.SubElement(sheet, xsl.param,
             name="latex.documentclass.article")
@@ -197,6 +211,9 @@ class Style(object):
         css_style = ET.SubElement(css, "style", type="text/css")
         comment = ET.SubElement(css_style, xsl.comment)
         comment.text = self.html_css()
+        ET.SubElement(sheet, xsl.param, name="section.autolabel", select="1")
+        ET.SubElement(sheet, xsl.param, 
+            name="section.label.includes.component.label", select="1")
 
         return ET.ElementTree(sheet)
 
