@@ -112,7 +112,7 @@ dblquad performs double integration. Use the help function to be sure that the
 arguments are defined in the correct order. In addition, the limits on all inner
 integrals are actually functions which can be constant functions. An example of
 using double integration to compute several values of
-<ipython-inlineequation>I_{n}<ipython-inlineequation> is shown below:
+<ipython-inlineequation>I_{n}</ipython-inlineequation> is shown below:
 </para>
 <para>XXX: ipython
 &gt;&gt;&gt; from __future__ import nested_scopes

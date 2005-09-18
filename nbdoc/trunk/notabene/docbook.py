@@ -4,6 +4,9 @@
 from itertools import izip
 import copy
 from cgi import escape
+import os
+import tempfile
+import subprocess
 
 from lxml import etree as ET
 
@@ -213,22 +216,27 @@ class DBFormatter(Formatter):
         if text is None:
             return None
         return text.replace('\\', r'\\').replace('{', r'\{').replace('}', r'\}')
-    def prep_fo(self, tree):
+        
+    @classmethod
+    def prep_fo(cls, tree):
         pass
 
-    def prep_html(self, tree):
+    @classmethod
+    def prep_html(cls, tree):
         pass
-
-    def prep_latex(self, tree):
+    
+    @classmethod
+    def prep_latex(cls, tree):
         listings = tree.xpath('//programlisting') 
         for listing in listings:  
-            listing.text = self.escape_latex(listing.text)  
+            listing.text = cls.escape_latex(listing.text)  
             for sub in listing.getiterator():  
-                sub.text = self.escape_latex(sub.text)
-                sub.tail = self.escape_latex(sub.tail)  
+                sub.text = cls.escape_latex(sub.text)
+                sub.tail = cls.escape_latex(sub.tail)  
 
-    def to_formatted(self, sheet, kind='html', style=None):
-        """Convert a sheet to the desired output format.
+    @classmethod
+    def to_formatted(cls, dbxml, kind='html', style=None):
+        """Convert a DocBook document to the final format.
 
         Returns a string containing the new document.
         """
@@ -236,29 +244,85 @@ class DBFormatter(Formatter):
             from notabene.styles import LightBGStyle as style
         xsl = getattr(style, '%s_xsl'%kind)()
         xslt = ET.XSLT(xsl)
-        article_tree = ET.ElementTree(self.transform_sheet(sheet))
-        getattr(self, 'prep_%s' % kind)(article_tree)
-        newtree = xslt.apply(article_tree)
+        if ET.iselement(dbxml):
+            dbxml = ET.ElementTree(dbxml)
+        getattr(cls, 'prep_%s' % kind)(dbxml)
+        newtree = xslt.apply(dbxml)
         return xslt.tostring(newtree)
 
-    def to_book(self, sheets, template=None, kind='html', style=None):
-        """Convert a list of sheets to a book with each sheet being a chapter.
+    @classmethod
+    def write_formatted(cls, dbxml, name, format='html'):
+        """Convert DocBook document to the format and write it to disk.
+        
+        This method will also run any post-processing necessary (e.g. pdflatex 
+        to get PDF from LaTeX).
+        
+        Return the filename that was created.
         """
-        if style is None:
-            from notabene.styles import LightBGStyle as style
-        xsl = getattr(style, '%s_xsl' % kind)()
-        xslt = ET.XSLT(xsl)
-        if template is None:
-            book = ET.Element('book')
+        extensions = {'latex': '.tex',
+                      'html': '.html',
+                      'doshtml': '.htm', #to allow specifying it explicitly
+                      'pdf': '.pdf',
+                      }
+
+        base, ext = os.path.splitext(name) #allows giving also ext in name
+        if ext not in extensions.values():
+            #probably the name has a dot in it, like 'tut-2.3.5-db'
+            base = name
+            ext = False
+
+        if not ext:
+            ext = extensions.get(format, '.'+format)
+
+        filename = os.path.abspath(base + ext)
+        #could check if the given extension makes sense for the format
+
+        toPDF = False
+        if format == 'pdf':
+            format = 'latex' #we get pdf via latex for now
+            toPDF = True
+            
+        doc = cls.to_formatted(dbxml, kind=format).encode('utf-8')
+
+        if toPDF:
+            env = os.environ.copy()
+            tmpfid, tmpfn = tempfile.mkstemp(suffix='.tex')
+            tmpf = os.fdopen(tmpfid, 'w+b')
+            try:
+                tmpf.write(doc)
+            finally:
+                tmpf.close()
+            try:
+                # Try as hard as we can to output the PDF in the same directory
+                # as the notebook file.
+                dir, fn = os.path.split(filename)
+                base = os.path.splitext(fn)[0]
+
+                # Abusing TEXMFOUTPUT like this is a hideous hack that we need
+                # to use for compatibility with teTeX < 3.0 and other older TeX
+                # distributions. pdflatex only recently grew a nice
+                # -output-directory option. This current strategy might be
+                # unreliable; TEXMFOUTPUT only kicks in when "the current
+                # directory is unwritable." We try to force that condition by
+                # giving the full pathname as the jobname. That works on OS X at
+                # least.
+                env['TEXMFOUTPUT'] = dir
+
+                #args = ['pdflatex', '-output-directory=%s'%dir, '-jobname=%s'%base]
+                args = ['pdflatex', '-jobname=%s'%os.path.join(dir,base)]
+                p = subprocess.Popen(args+[tmpfn], env=env)
+                p.wait()
+                # Do it a second time to make sure the references are right.
+                p = subprocess.Popen(args+[tmpfn], env=env)
+                p.wait()
+            finally:
+                os.unlink(tmpfn)
+
+            return filename
+
         else:
-            book = copy.deepcopy(template)
-        for sheet in sheets:
-            chapter = self.transform_sheet(sheet)
-            chapter.tag = 'chapter'
-            book.append(chapter)
-        book = ET.ElementTree(book)
-        getattr(self, 'prep_%s' % kind)(article_tree)
-        newtree = xslt.apply(article_tree)
-        return xslt.tostring(newtree)
-
-
+            f = open(filename, 'wb')
+            f.write(doc)
+            f.close()
+            return filename
+    

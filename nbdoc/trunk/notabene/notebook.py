@@ -1,15 +1,13 @@
 #!/usr/bin/env python
 
 import os
-import subprocess
-import tempfile
 import warnings
 
 from lxml import etree as ET
 
 from notabene import normal
 from notabene import validate
-from notabene.xmlutils import rdf, dc
+from notabene.xmlutils import nsmap, rdf, dc, xlink
 
 class SubelemWrapper(object):
     """Abstract superclass for Cell getter and setter."""
@@ -447,6 +445,52 @@ class Notebook(object):
 
     contents = property(get_contents)
 
+    def write_formatted(self, filename=None, format='html'):
+        from notabene.docbook import DBFormatter
+        dbf = DBFormatter(self)
+        if filename is None:
+            base = self.name
+        else:
+            base = os.path.splitext(filename)[0]
+        sheet = self.root.find('sheet')
+        if sheet is not None:
+            dbxml = dbf.transform_sheet(sheet)
+            newfile = dbf.write_formatted(dbxml, base, format)
+            return newfile
+            
+def spliturl(basedir, url):
+    import urlparse
+    parts = urlparse.urlparse(url)
+    if parts[0] not in ('file', ''):
+        warnings.warn('Unknown protocol %s://' % parts[0])
+    path = parts[2]
+    frag = parts[-1]
+    path = os.path.abspath(os.path.join(basedir, path))
+    return path, frag
+
+def book2docbook(bookfilename):
+    from notabene.docbook import DBFormatter
+    book = ET.parse(bookfilename)
+    basedir, basename = os.path.split(bookfilename)
+    child2parent = dict((c,p) for p in book.getiterator() for c in p)
+    for link in book.xpath('//*[@xlink:type="simple"]', 
+        namespaces=nsmap(xlink)):
+        parent = child2parent[link]
+        path, frag = spliturl(basedir, link.get(xlink.href))
+        print path, frag
+        nb = Notebook.from_file(path)
+        sheet = nb.xpath.evaluate('/notebook/sheet[@id="%s"]' % frag)
+        if sheet == []:
+            raise ValueError('could not find <sheet id="%s"> in %s' %
+                (frag, path))
+        else:
+            sheet = sheet[0]
+        dbf = DBFormatter(nb)
+        dbxml = dbf.transform_sheet(sheet, nodetype=link.tag)
+        idx = parent.index(link)
+        parent[idx] = dbxml
+    return book
+
 def main():
     import sys
     import os
@@ -469,18 +513,20 @@ def main():
     pdf:   PDF (via LaTeX, requires pdflatex(1))"""
 
     else:
+        from notabene.docbook import DBFormatter
         if options.book is None:
             for filename in args:
-                base = os.path.splitext(filename)[0]
                 nb = Notebook.from_file(filename)
-                newfile = nb.write_formatted(base, options.format)
-                print "%s -> %s" % (filename, newfile)
+                newfile = nb.write_formatted(filename, options.format)
+                if newfile is not None:
+                    print "%s -> %s" % (filename, newfile)
+                else:
+                    print 'No sheet in %s . Skipping.' % filename
         else:
-            raise NotImplementedError("XXX: need to figure this out")
-            sheets = []
-            for filename in args:
-                base = os.path.splitext(filename)[0]
-                nb = Notebook.from_file(filename)
+            dbxml = book2docbook(options.book)
+            base = os.path.splitext(options.book)[0]
+            newfile = DBFormatter.write_formatted(dbxml, base, options.format)
+            print "%s -> %s" % (options.book, newfile)
                 
 
 

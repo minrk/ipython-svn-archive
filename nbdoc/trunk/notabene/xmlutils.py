@@ -1,3 +1,10 @@
+#*****************************************************************************
+#       Copyright (C) 2005 Robert Kern. All rights reserved.
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
 class XMLNS(object):
     """Convenience object for handling namespaced tag names in ElementTree-like
     APIs.
@@ -41,3 +48,4 @@ def nsmap(*args):
 rdf = XMLNS('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#')
 dc = XMLNS('dc', 'http://purl.org/dc/elements/1.1/')
 xsl = XMLNS('xsl', 'http://www.w3.org/1999/XSL/Transform')
+xlink = XMLNS('xlink', 'http://www.w3.org/1999/xlink')
