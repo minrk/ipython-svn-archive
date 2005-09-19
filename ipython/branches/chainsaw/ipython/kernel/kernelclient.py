@@ -741,6 +741,10 @@ class InteractiveCluster(object):
         self.execute(source_to_run)
         return self.pull('_ipython_map_seq_result')
         
+    def msg(self, txt):
+        for w in self.workers:
+            w.execute("# %s" % txt)
+        
     def vectorize(self, func_name):
         """Contruct and return a vectorized and parallelized function.
         
