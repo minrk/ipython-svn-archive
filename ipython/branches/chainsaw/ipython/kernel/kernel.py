@@ -46,10 +46,10 @@ def main(port, allow_ip):
     log.startLogging(sys.stdout)       
     d = reactor.listenTCP(port, KernelTCPFactory(allow=allow_list))
     reactor.run()
-    
-if __name__ == "__main__":
+
+def start(port=10105):
     parser = OptionParser()
-    parser.set_defaults(port=10105)
+    parser.set_defaults(port=port)
     parser.add_option("-p", "--port", type="int", dest="port",
         help="the TCP port the kernel will listen on")
     parser.add_option("-a", "--allow", dest="allow_ip",
@@ -57,3 +57,6 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
     print "Starting the kernel on port %i" % options.port
     main(options.port, options.allow_ip)
+    
+if __name__ == "__main__":
+    start()

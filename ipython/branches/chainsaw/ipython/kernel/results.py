@@ -140,13 +140,15 @@ def main(port):
     rg.start(True)
     while 1:
         time.sleep(1)
-    
-if __name__ == '__main__':        
+
+def start():
     parser = OptionParser()
     parser.set_defaults(port=10104)
     parser.add_option("-p", "--port", type="int", dest="port",
         help="the UDP port the gatherer will listen on")
     (options, args) = parser.parse_args()
     print "Starting the gatherer on port %i" % options.port
-    main(options.port)           
-                  
+    main(options.port)
+    
+if __name__ == '__main__':
+    start()
