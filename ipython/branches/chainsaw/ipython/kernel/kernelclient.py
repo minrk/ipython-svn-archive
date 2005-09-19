@@ -743,7 +743,7 @@ class InteractiveCluster(object):
         
     def msg(self, txt):
         for w in self.workers:
-            w.execute("# %s" % txt)
+            w.execute("#[%s]: %s" % (os.getlogin(), txt))
         
     def vectorize(self, func_name):
         """Contruct and return a vectorized and parallelized function.
