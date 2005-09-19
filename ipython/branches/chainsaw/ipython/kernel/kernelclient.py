@@ -490,8 +490,11 @@ class InteractiveCluster(object):
         
         %autopx         # The second time it toggles autoparallel mode off
         """
-        __IPYTHON__.active_cluster = self
-        
+        try:
+            __IPYTHON__.active_cluster = self
+        except NameError:
+            print "Working in non-interactive mode, %px and %autopx are not active"
+                
     def save(self, cluster_name):
         """Saves the cluster information to a file in ~/.ipython.
         
