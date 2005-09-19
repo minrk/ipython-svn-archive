@@ -1,3 +1,10 @@
+2005-09-19  Robert Kern  <robert.kern@gmail.com>
+
+	* IPythonLog.py (IPythonLog.__init__, displayhook, __run): Restored
+	output cache and input history functionality via the In and Out
+	variables.
+
+
 2005-09-18  Tzanko Matev  <tsanko@gmail.com>
 
 	* Sheet.py (Sheet._update_celllist): Fixed two bugs in the xml to

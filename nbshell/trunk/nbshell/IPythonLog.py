@@ -16,6 +16,8 @@ import os.path
 import sys
 import StringIO
 import textwrap
+import __builtin__
+import pprint
 
 from wx.py.buffer import Buffer
 import wx.py.dispatcher
@@ -27,6 +29,8 @@ from wx.py.pseudo import PseudoFileErr
 #from wx.py.version import VERSION
 
 from IPython import Shell
+from IPython import genutils
+from IPython.Magic import Macro
 from notabene import notebook
 
 from lxml import etree
@@ -86,6 +90,13 @@ class IPythonLog(object):
         #        exec mplstart in user_ns
         excepthook_orig = sys.excepthook
         self.interp = Shell.IPShellGUI(argv=['-colors','NoColor'], user_ns=user_ns)
+
+        self.interp_log = self.interp.IP.log
+        def donothing(*args, **kwds):
+            pass
+        self.interp.IP.log = donothing
+        del self.interp.IP.input_hist[0]
+
         self.excepthook_IP = sys.excepthook
         sys.excepthook = excepthook_orig
         #Set up the number 0 cell. It is used for code which is not supposed to
@@ -240,6 +251,11 @@ ion()
         #self.currentcell points to cell for grab_figure to use
         #TODO:this could be prettier
         self.currentcell = cell
+
+        # Add the whole input to the input history (ignoring the leading and
+        # trailing '\n')
+        self.interp_log(cell.input[1:-1], False)
+
         #The first and last characters of cell.input are '\n'
         retval = self.interp.runlines(cell.input[1:-1],\
                                       displayhook = self.displayhook,\
@@ -283,7 +299,50 @@ ion()
             return True
         
     def displayhook(self, obj):
+        # RTK: modified from IPython.Prompts.CachedOutput.__call__()
+        
+        slf = self.interp.IP.outputcache
+        slf.prompt_count = self.currentcell.number
+
         #print >> self.stdout_orig,  'displayhook called' #dbg
         # We want to keep only the last output
         if obj is not None:
-            self.output = '\n%s\n' % obj
+            if slf.Pprint:
+                self.output = '\n%s\n' % pprint.pformat(obj)
+            else:
+                self.output = '\n%r\n' % obj
+
+        # If something injected a '_' variable in __builtin__, delete
+        # ipython's automatic one so we don't clobber that.  gettext() in
+        # particular uses _, so we need to stay away from it.
+        if '_' in __builtin__.__dict__:
+            try:
+                del slf.user_ns['_']
+            except KeyError:
+                pass
+        if obj is not None:
+            cout_write = genutils.Term.cout.write # fast lookup
+            # first handle the cache and counters
+            slf.update(obj)
+            # do not print output if input ends in ';'
+            if slf.input_hist[slf.prompt_count].endswith(';\n'):
+                return
+            # don't use print, puts an extra space
+            #cout_write(slf.output_sep)
+            #if slf.do_full_cache:
+            #    cout_write(str(slf.prompt_out))
+
+            if isinstance(obj,Macro):
+                print 'Executing Macro...'
+                # in case the macro takes a long time to execute
+                genutils.Term.cout.flush()
+                exec obj.value in slf.user_ns
+                return None
+
+            # and now call a possibly user-defined print mechanism
+            #slf.display(obj)
+            #cout_write(slf.output_sep2)
+            #genutils.Term.cout.flush()
+
+
+
