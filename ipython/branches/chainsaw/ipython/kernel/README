@@ -76,9 +76,10 @@ commands to be sent to the kernel while previous commands are still executing.
 
 == Monitoring the kernels ==
 
-To monitor the stdin, stdout and stderr of the kernels, you must start a 
+To monitor the stdin, stdout and stderr of the kernels, you must start a
 ResultGatherer class.  This class is bound to a UDP port and receives UDP
-datagrams from the kernels when results are ready.  To start a ResultGatherer run the following command from the command line:
+datagrams from the kernels when results are ready.  To start a ResultGatherer
+run the following command from the command line:
 
 	python results.py
 

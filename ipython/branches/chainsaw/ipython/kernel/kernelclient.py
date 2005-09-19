@@ -532,6 +532,29 @@ class InteractiveCluster(object):
             f.close()
             self.start(addrs)        
         
+    def load00(self, cluster_name):
+        """Loads a saved cluster.
+        
+        Arguments:
+        
+        cluster_name -- The filename of the saved cluster as a string
+        """
+        isfile = os.path.isfile
+        if isfile(cluster_name):
+            file_path = cluster_name
+        else:
+            path_base = os.path.expanduser("~/.ipython")
+            file_path = path_base + "/" + cluster_name
+        try:
+            f = open(file_path,'r')
+        except IOError:
+            print "Saved cluster not found"
+        else:
+            print "Loading from: ", file_path
+            addrs = pickle.load(f)
+            f.close()
+            self.start(addrs)        
+        
     def __getitem__(self, key):
         if isinstance(key, int):
             return self.workers[key]
