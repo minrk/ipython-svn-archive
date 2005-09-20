@@ -301,7 +301,7 @@ class RemoteKernel(object):
         else:
             return False      
 
-    def notify(self, addr, flag=True):
+    def notify(self, addr=None, flag=True):
         """Instruct the kernel to notify a result gatherer.
         
         Arguments:
@@ -326,8 +326,14 @@ class RemoteKernel(object):
         different set of kernels.  
         """
         self._check_connection()
-        
-        host, port = addr
+
+        if addr == None:
+            host = socket.gethostbyname(socket.gethostname())
+            port = 10104
+            print "Kernel notification: ", host, port, flag
+        else:
+            host, port = addr
+
         if flag:
             self.es.write_line("NOTIFY TRUE %s %s" % (host, port))
         else:
@@ -688,7 +694,7 @@ class InteractiveCluster(object):
         for w in worker_numbers:
             self.workers[w].execute(source)
             
-    def notify(self, addr, flag=True, workers=None):
+    def notify(self, addr=None, flag=True, workers=None):
         """Instruct a set of workers to notify a result gatherer."""
         worker_numbers = self._parse_workers_arg(workers)
         for w in worker_numbers:
