@@ -287,11 +287,11 @@ class KernelTCPProtocol(basic.LineReceiver):
             d.addCallback(self.execute_ok_block)
             d.addErrback(self.execute_fail)
         else:                   
+            self.execute_finish("OK")   
             # The deferToThread in this call costs 2 ms currently :(
             self.work_vars['current_ticket'] = self.factory.get_ticket()
             d = self.factory.execute(execute_cmd, 
                 self.work_vars['current_ticket'])
-            self.execute_finish("OK")   
             d.addCallback(self.execute_ok)
             d.addErrback(self.execute_fail)
         
