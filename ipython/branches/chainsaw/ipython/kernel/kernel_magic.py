@@ -36,6 +36,36 @@ def magic_px(self,parameter_s=''):
     else:
         print "Error: No active IPython cluster.  Use activate()."
     
+def magic_pn(self,parameter_s=''):
+    """Executes the given python command on the active IPython cluster.
+    
+    To activate a cluster in IPython, first create it and then call
+    the activate() method.
+    
+    Then you can do the following:
+     
+    %pn 0 a = 5       # Runs a = 5 on kernel 0
+    """
+    args = parameter_s.split(" ", 1)
+    if len(args) == 2:
+        try:
+            k = int(args[0])
+        except:
+            print "Usage: %pn kernel command"
+            return
+    else:
+            print "Usage: %pn kernel command"
+            return
+    cmd = args[1]
+            
+    active_cluster = __IPYTHON__.active_cluster
+    if active_cluster:
+        print "Executing command on cluster"
+        active_cluster.execute(cmd, k)
+    else:
+        print "Error: No active IPython cluster.  Use activate()."
+
+    
 def pxrunsource(self, source, filename="<input>", symbol="single"):
 
     try:
@@ -104,9 +134,11 @@ def magic_autopx(self, parameter_s=''):
 # Add the new magic function to the class dict:
 
 InteractiveShell.magic_px = magic_px
+InteractiveShell.magic_pn = magic_pn
 InteractiveShell.magic_autopx = magic_autopx
 
 # And remove the global name to keep global namespace clean.  Don't worry, the
 # copy bound to IPython stays, we're just removing the global name.
 del magic_px
 del magic_autopx
+del magic_pn
