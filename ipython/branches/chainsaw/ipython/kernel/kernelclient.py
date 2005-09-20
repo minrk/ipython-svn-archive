@@ -707,6 +707,14 @@ class InteractiveCluster(object):
         for w in worker_numbers:
             self.workers[w].execute(source)
             
+    def status(self, workers=None):
+        """Get the status of a set of kernels."""
+        worker_numbers = self._parse_workers_arg(workers)
+        result = []
+        for w in worker_numbers:
+            result.append(self.workers[w].status())
+        return result
+        
     def notify(self, addr=None, flag=True, workers=None):
         """Instruct a set of workers to notify a result gatherer."""
         worker_numbers = self._parse_workers_arg(workers)
