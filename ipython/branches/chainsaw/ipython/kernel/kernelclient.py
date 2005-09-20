@@ -258,8 +258,10 @@ class RemoteKernel(object):
             if line_split[0] == "STATUS" and line_split[1] == "OK":
                 return (int(line_split[2]), line_split[3])
             else:
+                print "Status Error: ", line
                 return None
         else:
+            print "Status Error: ", line
             return None
 
     def allow(self, ip):
