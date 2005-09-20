@@ -706,7 +706,20 @@ class InteractiveCluster(object):
         worker_numbers = self._parse_workers_arg(workers)
         for w in worker_numbers:
             self.workers[w].execute(source)
-            
+
+    def run(self, fname, workers=None):
+        """Run a file on a set of kernels."""
+        worker_numbers = self._parse_workers_arg(workers)
+        fileobj = open(fname,'r')
+        source = fileobj.read()
+        fileobj.close()
+        # if the compilation blows, we get a local error right away
+        code = compile(source,fname,'exec')
+        
+        # Now run the code
+        for w in worker_numbers:
+            self.workers[w].execute(source)
+
     def status(self, workers=None):
         """Get the status of a set of kernels."""
         worker_numbers = self._parse_workers_arg(workers)
