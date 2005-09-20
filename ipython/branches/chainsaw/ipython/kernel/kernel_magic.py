@@ -67,11 +67,27 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
     
 def magic_autopx(self, parameter_s=''):
 
+    # Build and activate a subcluster if needed 
+    if parameter_s:
+        exec_str = 'workers = %s' % parameter_s
+        try:
+            exec exec_str
+        except:
+            print "Argument of autopx must evaluate to a list"
+            return
+        else:
+            print "Autoparallel mode will use kernels: ", workers
+            self.saved_active_cluster = self.active_cluster
+            ic = self.active_cluster.subcluster(workers)
+            self.active_cluster = ic            
+    
     if hasattr(self, 'autopx'):
         if self.autopx == True:
             self.runsource = new.instancemethod(InteractiveShell.runsource,
                 self, self.__class__)
             self.autopx = False
+            del self.active_cluster
+            self.active_cluster = self.saved_active_cluster
             print "Auto Parallel Disabled" 
         else:
             self.runsource = new.instancemethod(pxrunsource, self,

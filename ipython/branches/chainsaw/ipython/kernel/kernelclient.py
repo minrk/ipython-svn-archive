@@ -448,6 +448,14 @@ class InteractiveCluster(object):
         ic._cluster()
         return ic
         
+    def subcluster(self, worker_list):
+        ic = InteractiveCluster()
+        for w in worker_list:
+            ic.workers.append(self.workers[w])
+            ic.worker_addrs.append(self.worker_addrs[w])
+        ic.count= len(ic.workers)
+        return ic
+        
     def _parse_workers_arg(self, workers):
         if workers is None:
             return range(self.count)
