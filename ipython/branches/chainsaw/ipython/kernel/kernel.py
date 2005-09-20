@@ -38,10 +38,13 @@ from twisted.internet import reactor
 from twisted.python import log
 
 try:
-    from ipython.kernel.kernelcore import KernelTCPFactory
+    try:
+        from ipython.kernel.kernelcore import KernelTCPFactory
+    except ImportError:
+        from kernel.kernelcore import KernelTCPFactory
 except ImportError:
-    from kernel.kernelcore import KernelTCPFactory
-
+    from kernelcore import KernelTCPFactory
+    
 #from kernelcore import KernelTCPFactory
 
 def main(port, allow_ip):

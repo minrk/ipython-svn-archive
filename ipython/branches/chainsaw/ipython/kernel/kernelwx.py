@@ -51,9 +51,12 @@ from twisted.internet import reactor
 from twisted.python import log
 
 try:
-    from ipython.kernel.kernelcore import KernelTCPFactoryGUI
+    try:
+        from ipython.kernel.kernelcore import KernelTCPFactoryGUI
+    except ImportError:
+        from kernel.kernelcore import KernelTCPFactoryGUI
 except ImportError:
-    from kernel.kernelcore import KernelTCPFactoryGUI
+    from kernelcore import KernelTCPFactory
 
 #from kernelcore import KernelTCPFactoryGUI
 
