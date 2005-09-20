@@ -14,7 +14,13 @@ Eventually, the kernel -will be- ipython itself.
 
 1.  Download and install the current version of ipython
 
-2.  Download and install the latest SVN version of Twisted
+2.  Download and install the zope.interface package
+
+    See the Zope 3 interface web site for instuctions.  
+
+    http://www.zope.org/Products/ZopeInterface
+
+3.  Download and install the latest SVN version of Twisted
 
     You can check out the SVN trunk using the subversion command:
 
@@ -32,9 +38,9 @@ Eventually, the kernel -will be- ipython itself.
     Run the second of these as an admin user.
     
     The extra 'all' in these commands instructs distutils to install all of 
-    Twisted _and_ Zope3 interface (which Twisted needs).
+    Twisted.
     
-3.  Place the kernel related files somewhere in your python path
+4.  Place the kernel related files somewhere in your python path
 
     The easiest thing to do is simply put them in your current working 
     directory.  Currently there is no setup.py script for the kernel.
