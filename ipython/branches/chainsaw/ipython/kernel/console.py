@@ -25,8 +25,13 @@ from code import InteractiveConsole
 from StringIO import StringIO
 
 from IPython.OutputTrap import OutputTrap
+
 from ticketedqueue import TicketedQueue
-from kernelerror import NotDefined
+
+try:
+    from ipython.kernel.kernelerror import NotDefined
+except ImportError:
+    from kernel.kernelerror import NotDefined
 
 class TrappingInteractiveConsole(InteractiveConsole):
     """This class subclasses code.InteractiveConsole to
@@ -62,7 +67,32 @@ class TrappingInteractiveConsole(InteractiveConsole):
         self._datalock.acquire()
         self._trap.flush()
         self._trap.trap()
-        result = InteractiveConsole.runsource(self,source,filename,symbol)
+        #result = InteractiveConsole.runsource(self,source,filename,symbol)
+
+        # Hack for multiple lines of code
+        try:
+            code = compile(source, filename, symbol)
+        except (OverflowError, SyntaxError, ValueError):
+            # Case 1
+            self.showsyntaxerror(filename)
+            result = None
+
+        if code is None:
+            # Case 2
+            result = True
+
+        # Case 3
+        # We store the code object so that threaded shells and
+        # custom exception handlers can access all this info if needed.
+        # The source corresponding to this can be obtained from the
+        # buffer attribute as '\n'.join(self.buffer).
+        self.code_to_run = code
+        # now actually execute the code object
+        if self.runcode(code) == 0:
+            result = False
+        else:
+            result = None
+
         self._trap.release()
         self._datalock.release()
                 
