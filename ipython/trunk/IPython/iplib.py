@@ -959,7 +959,7 @@ class InteractiveShell(code.InteractiveConsole, Logger, Magic):
         In particular, make sure no Python keywords/builtins are in it."""
 
         no_alias = self.no_alias
-        for k in self.alias_table:
+        for k in self.alias_table.keys():
             if k in no_alias:
                 del self.alias_table[k]
                 if verbose:

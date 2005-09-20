@@ -732,7 +732,16 @@ def get_home_dir():
                                        "Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders")
                     homedir = wreg.QueryValueEx(key,'Personal')[0]
                     key.Close()
+                    if not isdir(homedir):
+                        e = ('Invalid "Personal" folder registry key '
+                             'typically "My Documents".\n'
+                             'Value: %s\n'
+                             'This is not a valid directory on your system.' %
+                             homedir)
+                        raise HomeDirError(e)
                     return homedir
+                except HomeDirError:
+                    raise
                 except:
                     return 'C:\\'
         elif os.name == 'dos':
