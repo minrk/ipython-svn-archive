@@ -119,7 +119,7 @@ class RemoteKernel(object):
         else:
             return False
         
-    def push(self, value, key, forward=False):
+    def push(self, key, value, forward=False):
         """Send a python object to the namespace of a kernel.
         
         Arguments:
@@ -133,7 +133,7 @@ class RemoteKernel(object):
                 
             rk = RemoteKernel(addr)
         
-            rk['a'] = 10    # Same as rk.push(10,'a')
+            rk['a'] = 10    # Same as rk.push('a', 10)
         """
         self._check_connection()
         try:
@@ -154,7 +154,7 @@ class RemoteKernel(object):
             return False
         
     def __setitem__(self, key, value):
-        self.push(value, key)
+        self.push(key, value)
         
     def pull(self, key):
         """Get a python object from a remote kernel.
@@ -170,7 +170,7 @@ class RemoteKernel(object):
 
             rk = RemoteKernel(addr)
         
-            rk['a'] = 10    # Same as rk.push(10,'a')
+            rk['a'] = 10    # Same as rk.push('a', 10)
             
             rk['a']         # Same as rk.pull('a')
             10        
@@ -575,7 +575,7 @@ class InteractiveCluster(object):
         for w in self.workers:
             w.kill()
             
-    def push(self, value, key, workers=None):
+    def push(self, key, value, workers=None):
         """Send a python object to the namespace of some kernels.
         
         Arguments:
@@ -599,23 +599,24 @@ class InteractiveCluster(object):
             
             ...
             
-            ic['a'] = 10        # Same as ic.push(10,'a')
+            ic['a'] = 10        # Same as ic.push('a',10)
             
-            ic[1]['a'] = 10     # Same as ic.push(10,'a',1)
+            ic[1]['a'] = 10     # Same as ic.push('a',10,1)
         """
         worker_numbers = self._parse_workers_arg(workers)
         n_workers = len(worker_numbers)
         
         if isinstance(value, Scatter):
             for index, item in enumerate(worker_numbers):
-                self.workers[item].push(value.partition(index,n_workers), key)
+                self.workers[item].push(key,
+                    value.partition(index,n_workers))
         else:
             for w in worker_numbers:
-                self.workers[w].push(value, key)
+                self.workers[w].push(key, value)
                 
     def __setitem__(self, key, value):
         if isinstance(key, str):
-            self.push(value, key)
+            self.push(key, value)
         else:
             raise ValueError
             
@@ -645,7 +646,7 @@ class InteractiveCluster(object):
             
             ...
             
-            ic['a'] = 10        # Same as ic.push(10,'a')
+            ic['a'] = 10        # Same as ic.push('a',10)
             
             ic['a']             # Same as ic.pull(10,'a')
             [10, 10, 10, 10]
@@ -740,7 +741,7 @@ class InteractiveCluster(object):
         
         map('lambda x: x*x', range(10000))
         """
-        self.push(Scatter(seq), '_ipython_map_seq')
+        self.push('_ipython_map_seq', Scatter(seq))
         source_to_run = \
             '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
             func_code
