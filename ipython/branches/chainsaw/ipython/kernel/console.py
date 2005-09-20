@@ -28,10 +28,12 @@ from IPython.OutputTrap import OutputTrap
 
 from ticketedqueue import TicketedQueue
 
-try:
-    from ipython.kernel.kernelerror import NotDefined
-except ImportError:
-    from kernel.kernelerror import NotDefined
+from kernelerror import NotDefined
+
+#try:
+#    from ipython.kernel.kernelerror import NotDefined
+#except ImportError:
+#    from kernel.kernelerror import NotDefined
 
 class TrappingInteractiveConsole(InteractiveConsole):
     """This class subclasses code.InteractiveConsole to
