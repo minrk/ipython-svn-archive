@@ -116,8 +116,10 @@ def magic_autopx(self, parameter_s=''):
             self.runsource = new.instancemethod(InteractiveShell.runsource,
                 self, self.__class__)
             self.autopx = False
-            del self.active_cluster
-            self.active_cluster = self.saved_active_cluster
+            try:
+                self.active_cluster = self.saved_active_cluster
+            except:
+                pass
             print "Auto Parallel Disabled" 
         else:
             self.runsource = new.instancemethod(pxrunsource, self,

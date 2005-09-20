@@ -26,9 +26,24 @@ from vectorfunction import VectorFunction
 from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 
-from esocket import LineSocket
-import kernel_magic
-from kernelerror import NotDefined
+try:
+    from ipython.kernel.esocket import LineSocket
+except ImportError:
+    from kernel.esocket import LineSocket
+    
+try:
+    import ipython.kernel.kernel_magic
+except ImportError:
+    import kernel.kernel_magic
+
+try:
+    from ipython.kernel.kernelerror import NotDefined
+except ImportError:
+    from kernel.kernelerror import NotDefined
+
+#from esocket import LineSocket
+#import kernel_magic
+#from kernelerror import NotDefined
                     
 class RemoteKernel(object):
     """A high level interface to a remotely running ipython kernel."""
@@ -502,6 +517,14 @@ class InteractiveCluster(object):
         return True
     
     def remove(self, kernel_to_remove):
+        """Remove a specific kernel from the cluster.
+        
+        This does not kill the kernel, it just stops using it.
+
+        Arguments:
+        
+        kernel_to_remove - An integer specifying which kernel to remove
+        """
         del self.workers[kernel_to_remove]
         del self.worker_addrs[kernel_to_remove]
         self.count = len(self.worker_addrs)

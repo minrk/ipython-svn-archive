@@ -25,16 +25,22 @@ from code import InteractiveConsole
 from StringIO import StringIO
 
 from IPython.OutputTrap import OutputTrap
-#from IPython.iplib import InteractiveShell
 
-from ticketedqueue import TicketedQueue
+#from ticketedqueue import TicketedQueue
 
-from kernelerror import NotDefined
+#from kernelerror import NotDefined
 
-#try:
-#    from ipython.kernel.kernelerror import NotDefined
-#except ImportError:
-#    from kernel.kernelerror import NotDefined
+try:
+    from ipython.kernel.ticketedqueue import TicketedQueue
+except ImportError:
+    from kernel.ticketedqueue import TicketedQueue
+
+try:
+    from ipython.kernel.kernelerror import NotDefined
+except ImportError:
+    from kernel.kernelerror import NotDefined
+
+
 
 class TrappingInteractiveConsole(InteractiveConsole):
     """This class subclasses code.InteractiveConsole to

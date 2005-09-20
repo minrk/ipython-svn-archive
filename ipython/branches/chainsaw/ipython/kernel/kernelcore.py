@@ -20,7 +20,12 @@ from twisted.python import log
 from twisted.python import failure
 import sys
 
-from console import QueuedInteractiveConsole, TrappingInteractiveConsole
+try:
+    from ipython.kernel.console import QueuedInteractiveConsole, TrappingInteractiveConsole
+except ImportError:
+    from kernel.console import QueuedInteractiveConsole, TrappingInteractiveConsole
+
+#from console import QueuedInteractiveConsole, TrappingInteractiveConsole
 
 # modified from twisted.mail.imap4.LiteralString
 class LiteralString:
