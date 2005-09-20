@@ -29,8 +29,9 @@ or more kernels simultaneously.
 
 NOTE:   If you run code on the kernel that i) calls C/C++/fortran and ii)
         does not release Python's Global Interpreter Lock (GIL), the kernel
-        will block until the command is completed.  This is a limitation
-        of python not the kernel.
+        will become unresponsive while the code runs.  The best way to monitor
+        the kernel in this state is to give a status command - this will 
+        return when the kernel is available.
 
 
 = Basic Usage =
