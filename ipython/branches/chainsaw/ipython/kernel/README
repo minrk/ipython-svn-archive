@@ -173,7 +173,7 @@ In addition to being able to execute python code on the kernels, you can move
 arbitrary (OK, not arbitrary, the objects need to be pickleable) python
 objects around.  This is done using the push() and pull() methods:
 
-    In [17]: ic.push(10,'a')            # Send 10 to all kernels as 'a'
+    In [17]: ic.push('a',10)            # Send 10 to all kernels as 'a'
 
     In [18]: ic.pull('a')               # Pull 'a' back from all kernels
     Out[18]: [10, 10]
@@ -185,23 +185,23 @@ In this form, push() acts like an MPI broadcast and pull acts like an MPI
 gather.  But push and pull support a much richer interface for more complicated
 data movement:
 
-    In [20]: ic.push(10,'a',0)          # Push to only kernel 0
+    In [20]: ic.push('a',10,0)          # Push to only kernel 0
     
-    In [21]: ic.push(20,'a',1)          # Push to only kernel 1
+    In [21]: ic.push('a',20,1)          # Push to only kernel 1
 
     In [22]: ic.pull('a')               # Now gather from both
     Out[22]: [10, 20]
 
 You can also give push and pull a list of kernel to work with:
 
-    In [23]: ic.push(10,'a',[0,1])
+    In [23]: ic.push('a',10,[0,1])
 
     In [24]: ic.pull('a',[0,1])
     Out[24]: [10, 10]
 
 You can also use the list syntax:
 
-    In [25]: ic[0].push(10,'a')
+    In [25]: ic[0].push('a',10)
     Out[25]: True
 
     In [26]: ic[0].pull('a')
@@ -224,7 +224,7 @@ Best of all, push and pull have convenient dictionary style interfaces:
 You can partition and distribute a python sequence (an MPI scatter) to the 
 kernels by pushing a Scatter object initialized with the sequence:
 
-In [5]: ic.push(Scatter(range(10)),'a')
+In [5]: ic.push('a',Scatter(range(10)))
 
 In [6]: ic.pull('a')
 Out[6]: [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]]
