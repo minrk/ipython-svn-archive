@@ -224,36 +224,85 @@ Best of all, push and pull have convenient dictionary style interfaces:
 You can partition and distribute a python sequence (an MPI scatter) to the 
 kernels by pushing a Scatter object initialized with the sequence:
 
-In [5]: ic.push('a',Scatter(range(10)))
+    In [5]: ic.push('a',Scatter(range(10)))
 
-In [6]: ic.pull('a')
-Out[6]: [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]]
+    In [6]: ic.pull('a')
+    Out[6]: [[0, 1, 2, 3, 4], [5, 6, 7, 8, 9]]
 
 Or use the dictionary interface:
 
-In [7]: ic['a'] = Scatter(range(10))
+    In [7]: ic['a'] = Scatter(range(10))
 
 By default, Scatter treats unit length sequences as lists:
 
-In [7]: ic['a'] = Scatter(range(2))
+    In [7]: ic['a'] = Scatter(range(2))
 
-In [8]: ic['a']
-Out[8]: [[0], [1]]
+    In [8]: ic['a']
+    Out[8]: [[0], [1]]
 
 To scatter length one lists as scalars, set the flatten flag on the Scatter
 object:
 
-In [9]: ic['a'] = Scatter(range(2),True)
+    In [9]: ic['a'] = Scatter(range(2),True)
 
-In [10]: ic['a']
-Out[10]: [0, 1]
+    In [10]: ic['a']
+    Out[10]: [0, 1]
 
 
 NOTE:  While you can do things like ic[0]['a'] = ic[1]['b'], these types of
-data movements have not been optimized.  Currently the python object would
-come back to you  from kernel 1 and then be sent out to kernel 0.  Eventually
-we will implement a move(0 method for moving objects directly from one
-kernel to another.
+       data movements have not been optimized.  Currently the python object
+       would come back to you  from kernel 1 and then be sent out to kernel 
+       0.  Eventually we will implement a move(0 method for moving objects
+       directly from one kernel to another.
+
+NOTE:  Because push and pull use the pickle module, you cannot push and pull
+       python functions to the kernels and back.
+
+=== The map and vectorize commands ===
+
+With the basic commands (push, pull and execute) higher level constructs
+can be build.  The map() and vectorize() methods of InteractiveCluster are
+examples of this.
+
+The map() method work just like the builtin python map, but the calling 
+convention differs slightly.
+
+    In [14]: map(lambda x: x*x,range(10))
+    Out[14]: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+
+The same thing on the cluster is called by giving the function to call
+as a string:
+
+    In [15]: ic.map('lambda x: x*x',range(10))
+    Out[15]: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+
+But, in this case, the sequence range(10) is scattered amongst the kernels
+and then each kernel maps part of the list in parallel.  This is the most 
+trivial way of parallelizing a simple algorithm. 
+
+There are a number of similar ways of accomplishing the same thing:
+
+    In [23]: ic.push('a', Scatter(range(10)))
+
+    In [24]: %px b = [x*x for x in a]
+    Executing command on cluster
+
+    In [25]: ic.pull('a',flatten=True)
+    Out[25]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+Or, there is a powerful VectorFunction object:
+
+    In [26]: f = ic.vectorize('lambda x: x*x')
+
+    In [27]: f(range(10))
+    Out[27]: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
+
+The function f is a VectorFunction object that exists in the local namespace.
+It basically is a wrapper for the parallelized map() method of the cluster.
+
+NOTE:  The functions used by map and vectorize must already be defined in the
+       namespace of each kernel!  You cannot pass functions to the kernels.
+
 
 === Other commands ===
 

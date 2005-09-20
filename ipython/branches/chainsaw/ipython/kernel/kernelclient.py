@@ -24,6 +24,7 @@ from scatter import Scatter
 from vectorfunction import VectorFunction
 
 from IPython.ColorANSI import *
+from IPython.genutils import flatten as genutil_flatten
 
 from esocket import LineSocket
 import kernel_magic
@@ -622,7 +623,7 @@ class InteractiveCluster(object):
         else:
             raise ValueError
             
-    def pull(self, key, workers=None, flatten=False):
+    def pull(self, key, flatten=False, workers=None):
         """Get a python object from some kernels.
         
         Arguments:
@@ -661,9 +662,10 @@ class InteractiveCluster(object):
         for w in worker_numbers:
             results.append(self.workers[w].pull(key))
         if flatten:
-            print "Flattening is not implemented"
-        return results
-                
+            return genutil_flatten(results)
+        else:
+            return results
+            
     def execute(self, source, workers=None):
         """Execute python source code on the ipython kernel.
         
@@ -748,7 +750,7 @@ class InteractiveCluster(object):
             '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
             func_code
         self.execute(source_to_run)
-        return self.pull('_ipython_map_seq_result')
+        return self.pull('_ipython_map_seq_result',flatten=True)
         
     def msg(self, txt):
         self.workers[0].execute("#[%s]: %s" % (os.getlogin(), txt))
