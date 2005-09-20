@@ -25,6 +25,7 @@ from code import InteractiveConsole
 from StringIO import StringIO
 
 from IPython.OutputTrap import OutputTrap
+from IPython.iplib import InteractiveShell
 
 from ticketedqueue import TicketedQueue
 
@@ -57,7 +58,35 @@ class TrappingInteractiveConsole(InteractiveConsole):
         self._datalock = threading.Lock()
         self._inouterr_lock = threading.Lock()
 
-    def runsource(self, source, filename="<input>", symbol="single"):
+    #def runsource(self, source, filename="<input>", symbol="single"):
+    #    """
+    #    This executes the python source code, source, in the
+    #    self.locals namespace and traps stdout and stderr.  Upon
+    #    exiting, self.out and self.err contain the values of 
+    #    stdout and stderr for the last executed command only.
+    #    """
+    #    
+    #    # Execute the code
+    #    self._datalock.acquire()
+    #    self._trap.flush()
+    #    self._trap.trap()
+    #    result = InteractiveConsole.runsource(self,source,filename,symbol)
+    #    self._trap.release()
+    #    self._datalock.release()
+    #            
+    #    # Save stdin, stdout and stderr to lists
+    #    self._inouterr_lock.acquire()
+    #    self._stdin.append(source)
+    #    self._stdout.append(self._trap.out.getvalue())
+    #    self._stderr.append(self._trap.err.getvalue())
+    #    self._inouterr_lock.release()
+    #
+    #    return result
+
+    def prefilter(self, line, more):
+        return line
+
+    def runlines(self, lines):
         """
         This executes the python source code, source, in the
         self.locals namespace and traps stdout and stderr.  Upon
@@ -69,7 +98,7 @@ class TrappingInteractiveConsole(InteractiveConsole):
         self._datalock.acquire()
         self._trap.flush()
         self._trap.trap()
-        result = InteractiveConsole.runsource(self,source,filename,symbol)
+        InteractiveShell.runlines(self, lines)
         self._trap.release()
         self._datalock.release()
                 
@@ -79,8 +108,6 @@ class TrappingInteractiveConsole(InteractiveConsole):
         self._stdout.append(self._trap.out.getvalue())
         self._stderr.append(self._trap.err.getvalue())
         self._inouterr_lock.release()
-
-        return result
         
     def update(self,dict_of_data):
         """Loads a dictionary of key value pairs into the self.locals 
