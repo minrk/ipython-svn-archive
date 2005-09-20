@@ -119,6 +119,18 @@ class RemoteKernel(object):
             return data
         else:
             return False
+
+    def run(self, fname):
+        """Run a file on the kernel."""
+
+        fileobj = open(fname,'r')
+        source = fileobj.read()
+        fileobj.close()
+        # if the compilation blows, we get a local error right away
+        code = compile(source,fname,'exec')
+        
+        # Now run the code
+        self.execute(source)
         
     def push(self, key, value, forward=False):
         """Send a python object to the namespace of a kernel.
@@ -488,6 +500,12 @@ class InteractiveCluster(object):
         self.activate()
                     
         return True
+    
+    def remove(self, kernel_to_remove):
+        del self.workers[kernel_to_remove]
+        del self.worker_addrs[kernel_to_remove]
+        self.count = len(self.worker_addrs)
+        self._cluster()
         
     def activate(self):
         """Make this cluster the active one for ipython magics.

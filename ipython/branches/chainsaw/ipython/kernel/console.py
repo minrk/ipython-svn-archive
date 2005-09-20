@@ -25,7 +25,7 @@ from code import InteractiveConsole
 from StringIO import StringIO
 
 from IPython.OutputTrap import OutputTrap
-from IPython.iplib import InteractiveShell
+#from IPython.iplib import InteractiveShell
 
 from ticketedqueue import TicketedQueue
 
@@ -98,17 +98,47 @@ class TrappingInteractiveConsole(InteractiveConsole):
         self._datalock.acquire()
         self._trap.flush()
         self._trap.trap()
-        InteractiveShell.runlines(self, lines)
+        self._runlines(lines)
         self._trap.release()
         self._datalock.release()
                 
         # Save stdin, stdout and stderr to lists
         self._inouterr_lock.acquire()
-        self._stdin.append(source)
+        self._stdin.append(lines)
         self._stdout.append(self._trap.out.getvalue())
         self._stderr.append(self._trap.err.getvalue())
         self._inouterr_lock.release()
-        
+
+    # Lifted from iplib.InteractiveShell
+    def _runlines(self,lines):
+        """Run a string of one or more lines of source.
+
+        This method is capable of running a string containing multiple source
+        lines, as if they had been entered at the IPython prompt.  Since it
+        exposes IPython's processing machinery, the given strings can contain
+        magic calls (%magic), special shell access (!cmd), etc."""
+
+        # We must start with a clean buffer, in case this is run from an
+        # interactive IPython session (via a magic, for example).
+        self.resetbuffer()
+        lines = lines.split('\n')
+        more = 0
+        for line in lines:
+            # skip blank lines so we don't mess up the prompt counter, but do
+            # NOT skip even a blank line if we are in a code block (more is
+            # true)
+            if line or more:
+                more = self.push((self.prefilter(line,more)))
+                # IPython's runsource returns None if there was an error
+                # compiling the code.  This allows us to stop processing right
+                # away, so the user gets the error message at the right place.
+                if more is None:
+                    break
+        # final newline in case the input didn't have it, so that the code
+        # actually does get executed
+        if more:
+            self.push('\n')
+
     def update(self,dict_of_data):
         """Loads a dictionary of key value pairs into the self.locals 
         namespace and traps stdout and stderr."""
@@ -207,7 +237,7 @@ class QueuedInteractiveConsole:
                 
     def _handle_EXECUTE(self, (source, notifier)):
         #print "Handling EXECUTE..."
-        self.tic.runsource(source)
+        self.tic.runlines(source)
         if notifier:
             notifier.put(self.tic.get_last_result())
                                
