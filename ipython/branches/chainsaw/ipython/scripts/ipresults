@@ -1,4 +1,4 @@
-!#/usr/bin/env python
+#!/usr/bin/env python
 """Classes for gathering results from kernels.
 
 IPython kernels send back results (stdout, stderr) to a UDP port.  The classes
