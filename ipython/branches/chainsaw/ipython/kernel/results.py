@@ -8,15 +8,6 @@ Classes:
 ResultGatherer     -- A multithreaded class that collects and prints results
                       from kernels.
 
-To use simply start a basic result gatherer from the command line, issue:
-
-python results.py
-
-This will start the results gatherer on port 10104.  To use a different port,
-use the -p option:
-
-python results.py -p 10001
-
 Once the result gatherer has been started you can tell kernels to send results
 to the gatherer by using the .notify method of the RemoteKernel or 
 InteractiveCluster classes.  Multiple kernels can notify a single gatherer.
@@ -32,7 +23,6 @@ import socket
 import threading
 import pickle
 import time, os
-from optparse import OptionParser
 
 from IPython.ColorANSI import *
     
@@ -134,21 +124,3 @@ class ResultGatherer(object):
                 s.sendto("RESULT FAIL", client_addr)
             else:
                 s.sendto("RESULT OK", client_addr)
-     
-def main(port):
-    rg = ResultGatherer(("",port))
-    rg.start(True)
-    while 1:
-        time.sleep(1)
-
-def start():
-    parser = OptionParser()
-    parser.set_defaults(port=10104)
-    parser.add_option("-p", "--port", type="int", dest="port",
-        help="the UDP port the gatherer will listen on")
-    (options, args) = parser.parse_args()
-    print "Starting the gatherer on port %i" % options.port
-    main(options.port)
-    
-if __name__ == '__main__':
-    start()
