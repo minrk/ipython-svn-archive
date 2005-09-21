@@ -120,7 +120,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         rc_suffix = '.ini'
         ipdir_def = '_ipython'
 
-    # default directory for configuration
+    # default directory for configuration  XXX - after cleanup, use the
+    # get_ipython_dir() function from genutils
     ipythondir = os.path.abspath(os.environ.get('IPYTHONDIR',
                                  os.path.join(IP.home_dir,ipdir_def)))
 

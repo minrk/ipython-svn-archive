@@ -741,6 +741,25 @@ def get_home_dir():
         else:
             raise HomeDirError,'support for your operating system not implemented.'
 
+def get_ipython_dir():
+    """Return the default ipython config directory.
+
+    If an ipython instance is found to be running already"""
+    # Platform-dependent suffix and directory names
+    if os.name == 'posix':
+        ipdir_def = '.ipython'
+    else:
+        ipdir_def = '_ipython'
+
+    # default directory for configuration
+    try:
+        home_dir = __IPYTHON__.home_dir
+    except NameError:
+        home_dir = get_home_dir()
+
+    return os.path.abspath(os.environ.get('IPYTHONDIR',
+                                          os.path.join(home_dir,ipdir_def)))
+
 #****************************************************************************
 # strings and text
 

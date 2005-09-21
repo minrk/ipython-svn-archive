@@ -35,7 +35,7 @@ def magic_px(self,parameter_s=''):
         active_cluster.execute(parameter_s)
     else:
         print "Error: No active IPython cluster.  Use activate()."
-    
+        
 def magic_pn(self,parameter_s=''):
     """Executes the given python command on the active IPython cluster.
     

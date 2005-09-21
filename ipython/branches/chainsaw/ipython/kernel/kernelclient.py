@@ -589,8 +589,10 @@ class InteractiveCluster(object):
             addrs = pickle.load(f)
             f.close()
             self.start(addrs)        
-        
-    def load00(self, cluster_name):
+
+    # XXX - fperez: finish after scipy, b/c I'll make use of changed
+    # functionality in genutils, only available to svn users
+    def __load00(self, cluster_name):
         """Loads a saved cluster.
         
         Arguments:
