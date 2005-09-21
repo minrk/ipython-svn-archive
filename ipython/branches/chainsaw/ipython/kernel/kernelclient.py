@@ -20,7 +20,7 @@ import socket
 import threading
 import pickle
 import time, os
-from scatter import Scatter
+from scatter import *
 from vectorfunction import VectorFunction
 
 from IPython.ColorANSI import *

@@ -46,3 +46,14 @@ class Scatter:
             return result[0]
         else:          
             return result            
+
+class RoundScatter(Scatter):
+
+    def partition(self, p, q):
+        result = []
+        for i in range(p,len(self.seq),q):
+            result.append(self.seq[i])
+        if self.flatten and len(result) ==  1:
+            return result[0]
+        else:          
+            return result          
