@@ -27,5 +27,5 @@ setup(name             = 'ipkernel',
       url              = 'http://ipython.scipy.org',
       license          = 'BSD',
       packages         = ['kernel'],
-      scripts          = ['scripts/startkernel','scripts/startkernelwx'],
+      scripts          = ['scripts/ipkernel','scripts/ipkernelwx'],
       )
