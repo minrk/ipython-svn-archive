@@ -10,6 +10,11 @@
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
+import os
+# BEFORE importing distutils, remove MANIFEST. distutils doesn't properly
+# update it when the contents of directories change.
+if os.path.exists('MANIFEST'): os.remove('MANIFEST')
+
 from distutils.core import setup
 
 # Call the setup() routine which does most of the work
@@ -23,5 +28,4 @@ setup(name             = 'ipkernel',
       license          = 'BSD',
       packages         = ['kernel'],
       scripts          = ['scripts/startkernel','scripts/startkernelwx'],
-
       )
