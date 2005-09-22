@@ -899,6 +899,16 @@ def ask_yes_no(prompt,default=None):
     return answers[ans]
 
 #----------------------------------------------------------------------------
+def marquee(txt='',width=80,mark='*'):
+    """Return the input string centered in a 'marquee'."""
+    if not txt:
+        return (mark*width)[:width]
+    nmark = (width-len(txt)-2)/len(mark)/2
+    if nmark < 0: nmark =0
+    marks = mark*nmark
+    return '%s %s %s' % (marks,txt,marks)
+
+#----------------------------------------------------------------------------
 class EvalDict:
     """
     Emulate a dict which evaluates its contents in the caller's frame.

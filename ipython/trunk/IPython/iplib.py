@@ -1272,7 +1272,7 @@ want to merge them back into the new files.""" % locals()
             return
         pdb.pm()
 
-    def showtraceback(self,exc_tuple = None):
+    def showtraceback(self,exc_tuple = None,filename=None):
         """Display the exception that just occurred."""
 
         # Though this won't be called by syntax errors in the input line,
@@ -1282,7 +1282,7 @@ want to merge them back into the new files.""" % locals()
         else:
             type, value, tb = exc_tuple
         if type is SyntaxError:
-            self.showsyntaxerror()
+            self.showsyntaxerror(filename)
         else:
             sys.last_type = type
             sys.last_value = value
