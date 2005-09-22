@@ -630,7 +630,7 @@ class KernelTCPFactoryGUI(protocol.ServerFactory, KernelFactoryBase):
         return self.execute_block(source)
                 
     def execute_block(self, source, ticket=None):
-        self.tic.runsource(source)
+        self.tic.runlines(source)
         result = self.tic.get_last_result()
         return defer.succeed(result)
         
