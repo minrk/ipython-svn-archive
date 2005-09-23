@@ -286,6 +286,12 @@ class QueuedInteractiveConsole:
         
         This method should have an option to block or not block.
         """
+        # This time.sleep statement is here for now to solve a problem
+        # Our kernel was blocking when extension code was run that
+        # didn't release the GIL.  This should fix it for now.
+        # Eventually, the client should use non-blocking sockets and
+        # be able to handle this with no problem
+        time.sleep(0.1)
         if block:
             notifier = Queue.Queue(1)
             self.workq.put(('EXECUTE', (source, notifier)), ticket)
