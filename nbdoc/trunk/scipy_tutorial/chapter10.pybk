@@ -39,7 +39,9 @@ let
 <ipython-equation>\mathbf{A=}\left[\begin{array}{ccc}
 1 &amp; 3 &amp; 5\\
 2 &amp; 5 &amp; 1\\
-2 &amp; 3 &amp; 8\end{array}\right]then \mathbf{A^{-1}=\frac{1}{25}\left[\begin{array}{ccc}
+2 &amp; 3 &amp; 8\end{array}\right]
+</ipython-equation>
+then <ipython-equation>\mathbf{A^{-1}=\frac{1}{25}\left[\begin{array}{ccc}
 -37 &amp; 9 &amp; 22\\
 14 &amp; 2 &amp; -9\\
 4 &amp; -3 &amp; 1\end{array}\right]=\left[\begin{array}{ccc}
@@ -179,7 +181,7 @@ For matrix <ipython-inlineequation>\mathbf{A}</ipython-inlineequation> the only 
 \max\sigma_{i} &amp; \textrm{ord}=2\\
 \min\sigma_{i} &amp; \textrm{ord}=-2\\
 \sqrt{\textrm{trace}\left(\mathbf{A}^{H}\mathbf{A}\right)} &amp;
-\textrm{ord}=\textrm{'fro'}\end{array}\right</ipython-equation> where <ipython-inlineequation>\sigma_{i}</ipython-inlineequation> are the singular
+\textrm{ord}=\textrm{'fro'}\end{array}\right.</ipython-equation> where <ipython-inlineequation>\sigma_{i}</ipython-inlineequation> are the singular
 values of <ipython-inlineequation>\mathbf{A}</ipython-inlineequation>. 
 </para>
 </section>
@@ -195,7 +197,7 @@ functions <ipython-inlineequation>f_{j}\left(\mathbf{x}_{i}\right)</ipython-inli
 <ipython-inlineequation>\epsilon_{i}</ipython-inlineequation> represents uncertainty in the data. The strategy of least squares
 is to pick the coefficients <ipython-inlineequation>c_{j}</ipython-inlineequation> to minimize
 <ipython-equation>
-J\left(\mathbf{c}\right)=\sum_{i}\left|y_{i}-\sum_{j}c_{j}f_{j}\left(x_{i}\right)\right|^{2}.\]
+J\left(\mathbf{c}\right)=\sum_{i}\left|y_{i}-\sum_{j}c_{j}f_{j}\left(x_{i}\right)\right|^{2}.
 </ipython-equation></para>
 <para>Theoretically, a global minimum will occur when 
 <ipython-equation>\frac{\partial J}{\partial

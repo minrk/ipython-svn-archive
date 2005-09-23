@@ -5,7 +5,7 @@ import os
 import glob
 import shutil
 
-goodfiles = glob.glob('*.pybk') + glob.glob('*.xml') + glob.glob('*.py')
+goodfiles = (glob.glob('*.pybk') + glob.glob('*.xml') + glob.glob('*.py') + glob.glob('*.png'))
 allfiles = glob.glob('*')
 badfiles = sorted(set(allfiles) - set(goodfiles))
 

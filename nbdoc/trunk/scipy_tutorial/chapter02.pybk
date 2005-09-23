@@ -1,4 +1,105 @@
-<notebook version="1"><head/><ipython-log id="default-log"/><sheet id="chapter02">
+<notebook version="1"><head/><ipython-log id="default-log"><cell number="0"><input>  
+############DO NOT EDIT THIS CELL############  
+from pylab import *  
+switch_backend('WXAgg')  
+ion()  
+</input></cell><cell number="1"><input>
+import scipy; from scipy import *
+</input></cell><cell number="2"><input>
+scipy.sqrt(-1)
+</input><output>
+1j
+</output></cell><cell number="3"><input>
+concatenate(([3], [0]*5, arange(-1,1.002,2/9.0))
+)
+</input><output>
+[ 3.        , 0.        , 0.        , 0.        , 0.        , 0.
+,
+      -1.        ,-0.77777778,-0.55555556,-0.33333333,-0.11111111,
+0.11111111,
+       0.33333333, 0.55555556, 0.77777778, 1.        ,]
+</output></cell><cell number="4"><input>
+r_[3, [0]*5, -1:1:10j]
+</input><output>
+[ 3.        , 0.        , 0.        , 0.        , 0.        , 0.
+,
+      -1.        ,-0.77777778,-0.55555556,-0.33333333,-0.11111111,
+0.11111111,
+       0.33333333, 0.55555556, 0.77777778, 1.        ,]
+</output></cell><cell number="5"><input>
+mgrid[0:5, 0:5]
+</input><output>
+[[[0,0,0,0,0,]
+  [1,1,1,1,1,]
+  [2,2,2,2,2,]
+  [3,3,3,3,3,]
+  [4,4,4,4,4,]]
+ [[0,1,2,3,4,]
+  [0,1,2,3,4,]
+  [0,1,2,3,4,]
+  [0,1,2,3,4,]
+  [0,1,2,3,4,]]]
+</output></cell><cell number="6"><input>
+mgrid[0:5:4j, 0:5:4j]
+</input><output>
+[[[ 0.        , 0.        , 0.        , 0.        ,]
+  [ 1.66666667, 1.66666667, 1.66666667, 1.66666667,]
+  [ 3.33333333, 3.33333333, 3.33333333, 3.33333333,]
+  [ 5.        , 5.        , 5.        , 5.        ,]]
+ [[ 0.        , 1.66666667, 3.33333333, 5.        ,]
+  [ 0.        , 1.66666667, 3.33333333, 5.        ,]
+  [ 0.        , 1.66666667, 3.33333333, 5.        ,]
+  [ 0.        , 1.66666667, 3.33333333, 5.        ,]]]
+</output></cell><cell number="7"><input>
+p = poly1d([3,4,5])
+</input></cell><cell number="8"><input>
+print p
+</input><stdout>
+   2
+3 x + 4 x + 5
+</stdout></cell><cell number="9"><input>
+print p*p
+</input><stdout>
+   4      3      2
+9 x + 24 x + 46 x + 40 x + 25
+</stdout></cell><cell number="10"><input>
+print p.integ(k=6)
+</input><stdout>
+ 3     2
+x + 2 x + 5 x + 6
+</stdout></cell><cell number="11"><input>
+print p.deriv()
+</input><stdout>
+
+6 x + 4
+</stdout></cell><cell number="12"><input>
+p([4,5])
+</input><output>
+[ 69,100,]
+</output></cell><cell number="13"><input>
+def addsubtract(a, b):
+    if a &gt; b:
+        return a - b
+    else:
+        return a + b
+        
+</input></cell><cell number="14"><input>
+vec_addsubtract = vectorize(addsubtract)
+</input></cell><cell number="15"><input>
+vec_addsubtract([0,3,6,9], [1,3,5,7])
+</input><output>
+[1,6,1,2,]
+</output></cell><cell number="16"><input>
+x = r_[-2:3]
+</input></cell><cell number="17"><input>
+x
+</input><output>
+[-2,-1, 0, 1, 2,]
+</output></cell><cell number="19"><input>
+select([x &gt; 3, x &gt;= 0], [0,x+2])
+</input><output>
+[0,0,2,3,4,]
+</output></cell></ipython-log><sheet id="chapter02">
 <title>Basic functions in scipy_base and top-level scipy</title>
 <section>
 <title>Interaction with Numeric</title>
@@ -6,11 +107,7 @@
 the scipy namespace so that all of those functions are available without
 additionally importing Numeric. In addition, the universal functions (addition,
 subtraction, division) have been altered to not raise exceptions if
-floating-point errors are encountered<footnote><para>These changes are all made in a new module
-(fastumath) that is part of the scipy_base package. The old functionality is
-still available in umath (part of Numeric) if you need it (note: importing umath
-or fastumath resets the behavior of the infix operators to use the umath or
-fastumath ufuncs respectively).</para></footnote>, instead NaN's and Inf's are returned in the
+floating-point errors are encountered<footnote><para>These changes are all made in a new module (fastumath) that is part of the scipy_base package. The old functionality is still available in umath (part of Numeric) if you need it (note: importing umath or fastumath resets the behavior of the infix operators to use the umath or fastumath ufuncs respectively). </para></footnote>, instead NaN's and Inf's are returned in the
 arrays. To assist in detection of these events new universal functions (isnan,
 isfinite, isinf) have been added.
 </para>
@@ -19,247 +116,41 @@ comparisons and logical operations of complex numbers (only the real part is
 compared). Also, with the new universal functions in SciPy, the logical
 operations (except logical_XXX functions) all return arrays of unsigned bytes
 (8-bits per element instead of the old 32-bits, or even 64-bits) per
-element<footnote><para>Be
-careful when treating logical expressions as integers as the 8-bit integers may
-silently overflow at 256.</para></footnote>.
+element<footnote><para>Be careful when treating logical expressions as integers as the 8-bit integers may silently overflow at 256. </para></footnote>.
 </para>
-<para>In an effort to get a consistency for default arguments, some of the
-default arguments have changed from Numeric. The idea is for you to use scipy as
-a base package instead of Numeric anyway.
-</para>
-<para>Finally, some of the basic functions like log, sqrt, and inverse trig functions
-have been modified to return complex numbers instead of NaN's where appropriate.
-</para>
-<programlisting>XXX: ipython
->>> scipy.sqrt(-1) </programlisting>
+<para>In an effort to get a consistency for default arguments, some of the default arguments have changed from Numeric. The idea is for you to use scipy as a base package instead of Numeric anyway. </para><para>Finally, some of the basic functions like log, sqrt, and inverse trig functions have been modified to return complex numbers instead of NaN's where appropriate. </para><ipython-block logid="default-log"><ipython-cell type="input" number="1"/><ipython-cell type="input" number="2"/><ipython-cell type="output" number="2"/></ipython-block>
 </section>
 <section>
 <title>Alter numeric</title>
-<para>With the command scipy.alter_numeric() you can now use index and mask arrays inside brackets and the coercion rules of Numeric will be changed so that Python scalars will not be used to determine the type of the output of an expression.
-</para>
-</section>
+<para>With the command scipy.alter_numeric() you can now use index and mask arrays inside brackets and the coercion rules of Numeric will be changed so that Python scalars will not be used to determine the type of the output of an expression. </para></section>
 <section>
 <title>scipy_base routines</title>
-<para>The purpose of scipy_base is to collect general-purpose routines
-that the other sub-packages can use and to provide a simple replacement for
-Numeric. Anytime you might think to import Numeric, you can import scipy_base
-instead and remove yourself from direct dependence on Numeric. These routines
-are divided into several files for organizational purposes, but they are all
-available under the scipy_base namespace (and the scipy namespace). There are
-routines for type handling and type checking, shape and matrix manipulation,
-polynomial processing, and other useful functions. Rather than giving a detailed
-description of each of these functions (which is available using the help, info
-and source commands), this tutorial will discuss some of the more useful
-commands which require a little introduction to use to their full potential. 
-</para>
-<section>
+<para>The purpose of scipy_base is to collect general-purpose routines that the other sub-packages can use and to provide a simple replacement for Numeric. Anytime you might think to import Numeric, you can import scipy_base instead and remove yourself from direct dependence on Numeric. These routines are divided into several files for organizational purposes, but they are all available under the scipy_base namespace (and the scipy namespace). There are routines for type handling and type checking, shape and matrix manipulation, polynomial processing, and other useful functions. Rather than giving a detailed description of each of these functions (which is available using the help, info and source commands), this tutorial will discuss some of the more useful commands which require a little introduction to use to their full potential. </para><section>
 <title>Type handling</title>
-<para>Note the difference between iscomplex (isreal) and iscomplexobj
-(isrealobj). The former command is array based and returns byte arrays of ones
-and zeros providing the result of the element-wise test. The latter command is
-object based and returns a scalar describing the result of the test on the
-entire object. 
-</para>
-<para>Often it is required to get just the real and/or imaginary part of a complex
-number. While complex numbers and arrays have attributes that return those
-values, if one is not sure whether or not the object will be complex-valued, it
-is better to use the functional forms real and imag. These functions succeed for
-anything that can be turned into a Numeric array. Consider also the function
-real_if_close which transforms a complex-valued number with tiny imaginary part
-into a real number. 
-</para>
-<para>Occasionally the need to check whether or not a number is a scalar (Python
-(long)int, Python float, Python complex, or rank-0 array) occurs in coding. This
-functionality is provided in the convenient function isscalar which returns a 1
-or a 0. 
-</para>
-<para>Finally, ensuring that objects are a certain Numeric type occurs often enough
-that it has been given a convenient interface in SciPy through the use of the
-cast dictionary. The dictionary is keyed by the type it is desired to cast to
-and the dictionary stores functions to perform the casting. Thus, &gt;&gt;&gt; a =
-cast['f'](d) returns an array of float32 from d. This function is also useful as
-an easy way to get a scalar of a certain type: &gt;&gt;&gt; fpi = cast['f'](pi) although
-this should not be needed if you use alter_numeric().
-</para>
-</section>
+<para>Note the difference between iscomplex (isreal) and iscomplexobj (isrealobj). The former command is array based and returns byte arrays of ones and zeros providing the result of the element-wise test. The latter command is object based and returns a scalar describing the result of the test on the entire object. </para><para>Often it is required to get just the real and/or imaginary part of a complex number. While complex numbers and arrays have attributes that return those values, if one is not sure whether or not the object will be complex-valued, it is better to use the functional forms real and imag. These functions succeed for anything that can be turned into a Numeric array. Consider also the function real_if_close which transforms a complex-valued number with tiny imaginary part into a real number. </para><para>Occasionally the need to check whether or not a number is a scalar (Python (long)int, Python float, Python complex, or rank-0 array) occurs in coding. This functionality is provided in the convenient function isscalar which returns a 1 or a 0. </para><para>Finally, ensuring that objects are a certain Numeric type occurs often enough that it has been given a convenient interface in SciPy through the use of the cast dictionary. The dictionary is keyed by the type it is desired to cast to and the dictionary stores functions to perform the casting. Thus, &gt;&gt;&gt; a = cast['f'](d) returns an array of float32 from d. This function is also useful as an easy way to get a scalar of a certain type: &gt;&gt;&gt; fpi = cast['f'](pi) although this should not be needed if you use alter_numeric(). </para></section>
 <section>
 <title>Index tricks</title>
-<para>There are some class instances that make special use of the slicing
-functionality to provide efficient means for array construction. This part will
-discuss the operation of mgrid, ogrid, r_, and c_ for quickly constructing
-arrays. 
-</para>
-<para>One familiar with Matlab may complain that it is difficult to construct arrays
-from the interactive session with Python. Suppose, for example that one wants to
-construct an array that begins with 3 followed by 5 zeros and then contains 10
-numbers spanning the range -1 to 1 (inclusive on both ends). Before SciPy, you
-would need to enter something like the following &gt;&gt;&gt;
-concatenate(([3],[0]*5,arange(-1,1.002,2/9.0)). With the r_ command one can
-enter this as &gt;&gt;&gt; r_[3,[0]*5,-1:1:10j] which can ease typing and make for more
-readable code. Notice how objects are concatenated, and the slicing syntax is
-(ab)used to construct ranges. The other term that deserves a little explanation
-is the use of the complex number 10j as the step size in the slicing syntax.
-This non-standard use allows the number to be interpreted as the number of
-points to produce in the range rather than as a step size (note we would have
-used the long integer notation, 10L, but this notation may go away in Python as
-the integers become unified). This non-standard usage may be unsightly to some,
-but it gives the user the ability to quickly construct complicated vectors in a
-very readable fashion. When the number of points is specified in this way, the
-end-point is inclusive.
-</para>
-<para>The "r" stands for row concatenation because if the objects between commas are 2
-dimensional arrays, they are stacked by rows (and thus must have commensurate
-columns). There is an equivalent command c_ that stacks 2d arrays by columns but
-works identically to r_ for 1d arrays. 
-</para>
-<para>Another very useful class instance which makes use of extended slicing notation
-is the function mgrid. In the simplest case, this function can be used to
-construct 1d ranges as a convenient substitute for arange. It also allows the
-use of complex-numbers in the step-size to indicate the number of points to
-place between the (inclusive) end-points. The real purpose of this function
-however is to produce N, N-d arrays which provide coordinate arrays for an
-N-dimensional volume. The easiest way to understand this is with an example of
-its usage: 
-</para>
-<programlisting>XXX: 
-&gt;&gt;&gt; mgrid[0:5,0:5]
-array([[[0, 0, 0, 0, 0],
-        [1, 1, 1, 1, 1],
-        [2, 2, 2, 2, 2],
-        [3, 3, 3, 3, 3],
-        [4, 4, 4, 4, 4]],
-       [[0, 1, 2, 3, 4],
-        [0, 1, 2, 3, 4],
-        [0, 1, 2, 3, 4],
-        [0, 1, 2, 3, 4],
-        [0, 1, 2, 3, 4]]])  
-&gt;&gt;&gt; mgrid[0:5:4j,0:5:4j]
-array([[[ 0.    ,  0.    ,  0.    ,  0.    ],
-        [ 1.6667,  1.6667,  1.6667,  1.6667],
-        [ 3.3333,  3.3333,  3.3333,  3.3333],
-        [ 5.    ,  5.    ,  5.    ,  5.    ]],
-       [[ 0.    ,  1.6667,  3.3333,  5.    ],
-        [ 0.    ,  1.6667,  3.3333,  5.    ],
-        [ 0.    ,  1.6667,  3.3333,  5.    ],
-        [ 0.    ,  1.6667,  3.3333,  5.    ]]])
-</programlisting>
-<para>Having meshed arrays like this is sometimes very useful. However, it is
-not always needed just to evaluate some N-dimensional function over a grid due
-to the array-broadcasting rules of Numeric and SciPy. If this is the only
-purpose for generating a meshgrid, you should instead use the function ogrid
-which generates an "open" grid using NewAxis judiciously to create N, N-d arrays
-where only one-dimension in each array has length greater than 1. This will save
-memory and create the same result if the only purpose for the meshgrid is to
-generate sample points for evaluation of an N-d function. 
-</para>
-</section>
+<para>There are some class instances that make special use of the slicing functionality to provide efficient means for array construction. This part will discuss the operation of mgrid, ogrid, r_, and c_ for quickly constructing arrays. </para><para>One familiar with Matlab may complain that it is difficult to construct arrays from the interactive session with Python. Suppose, for example that one wants to construct an array that begins with 3 followed by 5 zeros and then contains 10 numbers spanning the range -1 to 1 (inclusive on both ends). Before SciPy, you would need to enter something like the following </para><ipython-block logid="default-log"><ipython-cell type="input" number="3"/><ipython-cell type="output" number="3"/></ipython-block><para>With the r_ command one can enter this as </para><ipython-block logid="default-log"><ipython-cell type="input" number="4"/><ipython-cell type="output" number="4"/></ipython-block><para>which can ease typing and make for more readable code. Notice how objects are concatenated, and the slicing syntax is (ab)used to construct ranges. The other term that deserves a little explanation is the use of the complex number 10j as the step size in the slicing syntax. This non-standard use allows the number to be interpreted as the number of points to produce in the range rather than as a step size (note we would have used the long integer notation, 10L, but this notation may go away in Python as the integers become unified). This non-standard usage may be unsightly to some, but it gives the user the ability to quickly construct complicated vectors in a very readable fashion. When the number of points is specified in this way, the end-point is inclusive. </para><para>The "r" stands for row concatenation because if the objects between commas are 2 dimensional arrays, they are stacked by rows (and thus must have commensurate columns). There is an equivalent command c_ that stacks 2d arrays by columns but works identically to r_ for 1d arrays. </para><para>Another very useful class instance which makes use of extended slicing notation is the function mgrid. In the simplest case, this function can be used to construct 1d ranges as a convenient substitute for arange. It also allows the use of complex-numbers in the step-size to indicate the number of points to place between the (inclusive) end- points. The real purpose of this function however is to produce N, N-d arrays which provide coordinate arrays for an N-dimensional volume. The easiest way to understand this is with an example of its usage: </para><ipython-block logid="default-log"><ipython-cell type="input" number="5"/><ipython-cell type="output" number="5"/><ipython-cell type="input" number="6"/><ipython-cell type="output" number="6"/></ipython-block>
+<para>Having meshed arrays like this is sometimes very useful. However, it is not always needed just to evaluate some N-dimensional function over a grid due to the array-broadcasting rules of Numeric and SciPy. If this is the only purpose for generating a meshgrid, you should instead use the function ogrid which generates an "open" grid using NewAxis judiciously to create N, N-d arrays where only one-dimension in each array has length greater than 1. This will save memory and create the same result if the only purpose for the meshgrid is to generate sample points for evaluation of an N-d function. </para></section>
 
 <section>
 <title>Shape manipulation</title>
-<para>In this category of functions are routines for squeezing out length-one
-dimensions from N-dimensional arrays, ensuring that an array is at least 1-, 2-,
-or 3-dimensional, and stacking (concatenating) arrays by rows, columns, and
-"pages" (in the third dimension). Routines for splitting arrays (roughly the
-opposite of stacking arrays) are also available. 
-</para>
-</section>
+<para>In this category of functions are routines for squeezing out length- one dimensions from N-dimensional arrays, ensuring that an array is at least 1-, 2-, or 3-dimensional, and stacking (concatenating) arrays by rows, columns, and "pages" (in the third dimension). Routines for splitting arrays (roughly the opposite of stacking arrays) are also available. </para></section>
 <section>
 <title>Matrix manipulations</title>
-<para>These are functions specifically suited for 2-dimensional arrays that were
-part of MLab in the Numeric distribution, but have been placed in scipy_base for
-completeness so that users are not importing Numeric. 
-</para>
-</section>
+<para>These are functions specifically suited for 2-dimensional arrays that were part of MLab in the Numeric distribution, but have been placed in scipy_base for completeness so that users are not importing Numeric. </para></section>
 <section>
 <title>Polynomials</title>
-<para>There are two (interchangeable) ways to deal with 1-d polynomials in
-SciPy. The first is to use the poly1d class in scipy_base. This class accepts
-coefficients or polynomial roots to initialize a polynomial. The polynomial
-object can then be manipulated in algebraic expressions, integrated,
-differentiated, and evaluated. It even prints like a polynomial:
-</para>
-<programlisting> XXX: ipython
-&gt;&gt;&gt; p =
-poly1d([3,4,5])
-&gt;&gt;&gt; print p
-   2
-3 x + 4 x + 5
-&gt;&gt;&gt; print p*p
-   4      3      2
-9 x + 24 x + 46 x + 40 x + 25
-&gt;&gt;&gt; print p.integ(k=6)
- 3     2
-x + 2 x + 5 x + 6
-&gt;&gt;&gt; print p.deriv()
-6 x + 4
-&gt;&gt;&gt; p([4,5])
-array([ 69, 100])
-</programlisting>
-<para>The other way to handle polynomials is as an array of coefficients with
-the first element of the array giving the coefficient of the highest power.
-There are explicit functions to add, subtract, multiply, divide, integrate,
-differentiate, and evaluate polynomials represented as sequences of
-coefficients. 
-</para>
-</section>
+<para>There are two (interchangeable) ways to deal with 1-d polynomials in SciPy. The first is to use the poly1d class in scipy_base. This class accepts coefficients or polynomial roots to initialize a polynomial. The polynomial object can then be manipulated in algebraic expressions, integrated, differentiated, and evaluated. It even prints like a polynomial: </para><ipython-block logid="default-log"><ipython-cell type="input" number="7"/><ipython-cell type="input" number="8"/><ipython-cell type="stdout" number="8"/><ipython-cell type="input" number="9"/><ipython-cell type="stdout" number="9"/><ipython-cell type="input" number="10"/><ipython-cell type="stdout" number="10"/><ipython-cell type="input" number="11"/><ipython-cell type="stdout" number="11"/><ipython-cell type="input" number="12"/><ipython-cell type="output" number="12"/></ipython-block>
+<para>The other way to handle polynomials is as an array of coefficients with the first element of the array giving the coefficient of the highest power. There are explicit functions to add, subtract, multiply, divide, integrate, differentiate, and evaluate polynomials represented as sequences of coefficients. </para></section>
 
 <section>
 <title>Vectorizing functions (vectorize)</title>
-<para>One of the features that SciPy provides is a class vectorize to convert an
-ordinary Python function which accepts scalars and returns scalars into a
-"vectorized-function" with the same broadcasting rules as other Numeric
-functions (i.e. the Universal functions, or ufuncs). For example, suppose you
-have a Python function named addsubtract defined as:
-</para>
-<programlisting>XXX: ipython
-&gt;&gt;&gt; def addsubtract(a,b):
-    if a &gt; b:
-        return a - b
-    else:
-        return a + b
-</programlisting>
-<para>which defines a function of two scalar variables and returns a scalar
-result. The class vectorize can be used to "vectorize" this function so that
-returns a function which takes array arguments and returns an array result:
-</para>
-<programlisting> XXX: ipython
-&gt;&gt;&gt; vec_addsubtract([0,3,6,9],[1,3,5,7])
-array([1, 6, 1, 2])
-</programlisting>
-<para>This particular function could have been written in vector form without
-the use of vectorize. But, what if the function you have written is the result
-of some optimization or integration routine. Such functions can likely only be
-vectorized using vectorize.
-</para>
-</section>
+<para>One of the features that SciPy provides is a class vectorize to convert an ordinary Python function which accepts scalars and returns scalars into a "vectorized-function" with the same broadcasting rules as other Numeric functions (i.e. the Universal functions, or ufuncs). For example, suppose you have a Python function named addsubtract defined as: </para><ipython-block logid="default-log"><ipython-cell type="input" number="13"/></ipython-block><para>which defines a function of two scalar variables and returns a scalar result. The class vectorize can be used to "vectorize" this function so that returns a function which takes array arguments and returns an array result: </para><ipython-block logid="default-log"><ipython-cell type="input" number="14"/><ipython-cell type="input" number="15"/><ipython-cell type="output" number="15"/></ipython-block>
+<para>This particular function could have been written in vector form without the use of vectorize. But, what if the function you have written is the result of some optimization or integration routine. Such functions can likely only be vectorized using vectorize. </para></section>
 <section>
 <title>Other useful functions</title>
-<para>There are several other functions in the scipy_base package including most
-of the other functions that are also in MLab that comes with the Numeric
-package. The reason for duplicating these functions is to allow SciPy to
-potentially alter their original interface and make it easier for users to know
-how to get access to functions &gt;&gt;&gt; from scipy import *.
-</para>
-<para>New functions which should be mentioned are mod(x,y) which can replace x%y
-when it is desired that the result take the sign of y instead of x. Also
-included is fix which always rounds to the nearest integer towards zero. For
-doing phase processing, the functions angle, and unwrap are also useful. Also,
-the linspace and logspace functions return equally spaced samples in a linear or
-log scale. Finally, mention should be made of the new function select which
-extends the functionality of where to include multiple conditions and multiple
-choices. The calling convention is select(condlist,choicelist,default=0). Select
-is a vectorized form of the multiple if-statement. It allows rapid construction
-of a function which returns an array of results based on a list of conditions.
-Each element of the return array is taken from the array in a choicelist
-corresponding to the first condition in condlist that is true. For example 
-</para>
-<programlisting> XXX: ipython
-&gt;&gt;&gt; x = r_[-2:3]
-&gt;&gt;&gt; x
-array([-2, -1,  0,  1,  2])
-&gt;&gt;&gt; select([x &gt; 3, x &gt;= 0],[0,x+2])
-array([0, 0, 2, 3, 4])
-</programlisting>
+<para>There are several other functions in the scipy_base package including most of the other functions that are also in MLab that comes with the Numeric package. The reason for duplicating these functions is to allow SciPy to potentially alter their original interface and make it easier for users to know how to get access to functions &gt;&gt;&gt; from scipy import *. </para><para>New functions which should be mentioned are mod(x,y) which can replace x%y when it is desired that the result take the sign of y instead of x. Also included is fix which always rounds to the nearest integer towards zero. For doing phase processing, the functions angle, and unwrap are also useful. Also, the linspace and logspace functions return equally spaced samples in a linear or log scale. Finally, mention should be made of the new function select which extends the functionality of where to include multiple conditions and multiple choices. The calling convention is select(condlist,choicelist,default=0). Select is a vectorized form of the multiple if-statement. It allows rapid construction of a function which returns an array of results based on a list of conditions. Each element of the return array is taken from the array in a choicelist corresponding to the first condition in condlist that is true. For example </para><ipython-block logid="default-log"><ipython-cell type="input" number="16"/><ipython-cell type="input" number="17"/><ipython-cell type="output" number="17"/><ipython-cell type="input" number="19"/><ipython-cell type="output" number="19"/></ipython-block>
 </section>
 </section>
 

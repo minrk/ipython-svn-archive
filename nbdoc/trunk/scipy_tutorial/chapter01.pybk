@@ -1,34 +1,17 @@
-<notebook version="1"><head/><ipython-log id="default-log"/><sheet id="chapter01">
+<notebook version="1"><head/><ipython-log id="default-log"><cell number="0"><input>  
+############DO NOT EDIT THIS CELL############  
+from pylab import *  
+switch_backend('WXAgg')  
+ion()  
+</input></cell><cell number="1"><input>
+from scipy import *
+</input></cell><cell number="2"><input>
+info(optimize.fmin)
+</input></cell><cell number="3"><input>
+optimize.fmin?
+</input></cell></ipython-log><sheet id="chapter01">
 <title>Introduction</title>
-<para>SciPy is a collection of mathematical algorithms and convenience functions
-built on the Numeric extension for Python. It adds significant power to the
-interactive Python session by exposing the user to high-level commands and
-classes for the manipulation and visualization of data. With SciPy, an
-interactive Python session becomes a data-processing and system-prototyping
-environment rivaling sytems such as Matlab, IDL, Octave, R-Lab, and SciLab. 
-</para>
-<para>The additional power of using SciPy within Python, however, is that a powerful
-programming language is also available for use in developing sophisticated
-programs and specialized applications. Scientific applications written in SciPy
-benefit from the development of additional modules in numerous niche's of the
-software landscape by developers across the world. Everything from parallel
-programming to web and data-base subroutines and classes have been made
-available to the Python programmer. All of this power is available in addition
-to the mathematical libraries in SciPy.
-</para>
-<para>This document provides a tutorial for the first-time user of SciPy to help get
-started with some of the features available in this powerful package. It is
-assumed that the user has already installed the package. Some general Python
-facility is also assumed such as could be acquired by working through the
-Tutorial in the Python distribution. For further introductory help the user is
-directed to the Numeric documentation. Throughout this tutorial it is assumed
-that the user has imported all of the names defined in the SciPy namespace using
-the command
-</para>
-<programlisting>XXX: ipython
->>> from scipy import *
-</programlisting>
-
+<para>SciPy is a collection of mathematical algorithms and convenience functions built on the Numeric extension for Python. It adds significant power to the interactive Python session by exposing the user to high-level commands and classes for the manipulation and visualization of data. With SciPy, an interactive Python session becomes a data-processing and system-prototyping environment rivaling sytems such as Matlab, IDL, Octave, R-Lab, and SciLab. </para><para>The additional power of using SciPy within Python, however, is that a powerful programming language is also available for use in developing sophisticated programs and specialized applications. Scientific applications written in SciPy benefit from the development of additional modules in numerous niche's of the software landscape by developers across the world. Everything from parallel programming to web and data-base subroutines and classes have been made available to the Python programmer. All of this power is available in addition to the mathematical libraries in SciPy. </para><para>This document provides a tutorial for the first-time user of SciPy to help get started with some of the features available in this powerful package. It is assumed that the user has already installed the package. Some general Python facility is also assumed such as could be acquired by working through the Tutorial in the Python distribution. For further introductory help the user is directed to the Numeric documentation. Throughout this tutorial it is assumed that the user has imported all of the names defined in the SciPy namespace using the command </para><ipython-block logid="default-log"><ipython-cell type="input" number="1"/></ipython-block>
 <section>
 <title>General Help</title>
 <para>Python provides the facility of documentation strings. The functions and
@@ -50,44 +33,7 @@ writeable object passed as the third argument). The second keyword argument of
 passed as the argument to help than a list of the functions and classes defined
 in that module is printed. For example:
 </para>
-<programlisting>XXX: ipython
->>> info(optimize.fmin)
- fmin(func, x0, args=(), xtol=0.0001, ftol=0.0001, maxiter=None, maxfun=None,
-      full_output=0, printmessg=1)
-
-Minimize a function using the simplex algorithm.
-
-Description:
-
-  Uses a Nelder-Mead simplex algorithm to find the minimum of function
-  of one or more variables.
-
-Inputs:
-
-  func -- the Python function or method to be minimized.
-  x0 -- the initial guess.
-  args -- extra arguments for func.
-  xtol -- relative tolerance
-
-Outputs: (xopt, {fopt, warnflag})
-
-  xopt -- minimizer of function
-
-  fopt -- value of function at minimum: fopt = func(xopt)
-  warnflag -- Integer warning flag:
-              1 : 'Maximum number of function evaluations.'
-              2 : 'Maximum number of iterations.'
-
-Additional Inputs:
-
-  xtol -- acceptable relative error in xopt for convergence.
-  ftol -- acceptable relative error in func(xopt) for convergence.
-  maxiter -- the maximum number of iterations to perform.
-  maxfun -- the maximum number of function evaluations.
-  full_output -- non-zero if fval and warnflag outputs are desired.
-  printmessg -- non-zero to print convergence messages.
-  
-</programlisting>
+<ipython-block logid="default-log"><ipython-cell type="input" number="2"/></ipython-block><para>(For some reason nbshell does not capture the output of this function, yet. The implementation of info() is very naughty and uses sys.stdout as a default argument instead of using None, then setting the default value of sys.stdout inside the function. If that had been the case, then we would have captured the output. </para><para>Naughty scipy!) </para>
 <para>Another useful command is <code>source</code>. When given a function written in
 Python as an argument, it prints out a listing of the source code for that
 function. This can be helpful in learning about an algorithm or understanding
@@ -106,22 +52,5 @@ the <code>scipy</code> package itself and could be installed separately. This al
 possibility of separately distributing the subpackages of <code>scipy</code> as long as
 <code>scipy_base</code> package is provided as well. 
 </para>
-<para>Two other packages are installed at the higher-level:
-scipy_distutils and weave. These two packages while distributed with main scipy
-package could see use independently of scipy and so are treated as separate
-packages and described elsewhere.
-</para>
-<para>The remaining subpackages are summarized in the following table (a * denotes an
-optional sub-package that requires additional libraries to function or is not
-available on all platforms). 
-</para>
-<para>XXX: Table here.</para>
-<para>Because of their ubiquitousness, some of the functions in these
-subpackages are also made available in the scipy namespace to ease their use in
-interactive sessions and programs. In addition, many convenience functions are
-located in the scipy_base package and the in the top-level of the scipy package.
-Before looking at the sub-packages individually, we will first look at some of
-these common functions. 
-</para>
-</section>
+<para>Two other packages are installed at the higher-level: scipy_distutils and weave. These two packages while distributed with main scipy package could see use independently of scipy and so are treated as separate packages and described elsewhere. </para><para>The remaining subpackages are summarized in the following table (a * denotes an optional sub-package that requires additional libraries to function or is not available on all platforms). </para><para>XXX: Table here. </para><para>Because of their ubiquitousness, some of the functions in these subpackages are also made available in the scipy namespace to ease their use in interactive sessions and programs. In addition, many convenience functions are located in the scipy_base package and the in the top-level of the scipy package. Before looking at the sub-packages individually, we will first look at some of these common functions. </para></section>
 </sheet></notebook>

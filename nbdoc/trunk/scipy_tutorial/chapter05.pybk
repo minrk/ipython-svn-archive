@@ -1,10 +1,189 @@
-<notebook version="1"><head/><ipython-log id="default-log"/><sheet id="chapter05">
+<notebook version="1"><head/><ipython-log id="default-log"><cell number="0"><input>  
+############DO NOT EDIT THIS CELL############  
+from pylab import *  
+switch_backend('WXAgg')  
+ion()  
+</input></cell><cell number="1"><input>
+from scipy.optimize import fmin
+</input></cell><cell number="2"><input>
+import scipy; from scipy import *
+
+</input></cell><cell number="3"><input>
+def rosen(x):
+  return sum(100.0*(x[1:] - x[:-1]**2.0)**2.0 + (1-x[:-1])**2.0)
+</input></cell><cell number="4"><input>
+x0 = [1.3, 0.7, 0.8, 1.9, 1.2]
+</input></cell><cell number="5"><input>
+xopt = fmin(rosen, x0)
+</input><stdout>
+Optimization terminated successfully.
+         Current function value: 0.000066
+         Iterations: 141
+         Function evaluations: 243
+</stdout></cell><cell number="6"><input>
+print xopt
+</input><stdout>
+[ 0.99910115, 0.99820923, 0.99646346, 0.99297555, 0.98600385,]
+</stdout></cell><cell number="7"><input>
+rosen(ones(5))
+</input><output>
+0.0
+</output></cell><cell number="8"><input>
+def rosen_der(x):
+  xm = x[1:-1]
+  xm_m1 = x[:-2]
+  xm_p1 = x[2:]
+  der = zeros(x.shape, x.typecode())
+  der[1:-1] = 200*(xm-xm_m1**2) - 400*(xm_p1 - xm**2)*xm - 2*(1-xm)
+  der[0] = -400*x[0]*(x[1] - x[0]**2) - 2*(1-x[0])
+  der[-1] = 200*(x[-1]-x[-2]**2)
+  return der
+  
+</input></cell><cell number="9"><input>
+from scipy.optimize import fmin_bfgs
+</input></cell><cell number="10"><input>
+x0
+</input><output>
+[1.3, 0.69999999999999996, 0.80000000000000004, 1.8999999999999999,
+1.2]
+</output></cell><cell number="11"><input>
+xopt = fmin_bfgs(rosen, x0, fprime=rosen_der)
+</input><stdout>
+Optimization terminated successfully.
+         Current function value: 0.000000
+         Iterations: 51
+         Function evaluations: 63
+         Gradient evaluations: 63
+</stdout></cell><cell number="12"><input>
+print xopt
+</input><stdout>
+[ 1.        , 0.99999999, 0.99999999, 0.99999997, 0.99999994,]
+</stdout></cell><cell number="13"><input>
+from scipy.optimize import fmin_ncg
+</input></cell><cell number="15"><input>
+def rosen_hess(x):
+  x = asarray(x)
+  H = diag(-400*x[:-1], 1) - diag(400*x[:-1], -1)
+  diagonal = zeros(len(x), x.typecode())
+  diagonal[0] = 1200*x[0] - 400*x[1] + 2
+  diagonal[-1] = 200
+  diagonal[1:-1] = 202 + 1200*x[1:-1]**2 - 400*x[2:]
+  H = H + diag(diagonal)
+  return H
+  
+</input></cell><cell number="16"><input>
+x0
+</input><output>
+[1.3, 0.69999999999999996, 0.80000000000000004, 1.8999999999999999,
+1.2]
+</output></cell><cell number="17"><input>
+xopt = fmin_ncg(rosen, x0, rosen_der, fhess=rosen_hess)
+</input><stdout>
+Optimization terminated successfully.
+         Current function value: 0.000000
+         Iterations: 19
+         Function evaluations: 22
+         Gradient evaluations: 19
+         Hessian evaluations: 19
+</stdout></cell><cell number="18"><input>
+print xopt
+
+</input><stdout>
+[ 0.99994389, 0.9998889 , 0.99977745, 0.99955271, 0.99910334,]
+</stdout></cell><cell number="19"><input>
+from scipy.optimize import fmin_ncg
+</input></cell><cell number="20"><input>
+def rosen_hess_p(x, p):
+  x = asarray(x)
+  Hp = zeros(len(x), x.typecode())
+  Hp[0] = (1200*x[0]**2 - 400*x[1] + 2)*p[0] - 400*x[0]*p[1]
+  Hp[1:-1] = (-400*x[:-2]*p[:-2] + (202 + 1200*x[1:-1]**2-400*x[2:])*p[1:-1]
+    -400*x[1:-1]*p[2:])
+  Hp[-1] = -400*x[-2]*p[-2] + 200*p[-1]
+  return Hp
+  
+</input></cell><cell number="21"><input>
+print x0
+</input><stderr>
+----------------------------------------------------------------------
+-----
+exceptions.NameError                                 Traceback (most
+recent call last)
+
+/Users/kern/svk-projects/ipython/nbshell/trunk/&lt;console&gt;
+
+NameError: name 'x0' is not defined
+</stderr><stdout>
+[1.3, 0.69999999999999996, 0.80000000000000004, 1.8999999999999999,
+1.2]
+</stdout></cell><cell number="22"><input>
+x0
+</input><output>
+[1.3, 0.69999999999999996, 0.80000000000000004, 1.8999999999999999,
+1.2]
+</output></cell><cell number="24"><input>
+xopt = fmin_ncg(rosen, x0, rosen_der, fhess_p=rosen_hess_p)
+</input><stdout>
+Optimization terminated successfully.
+         Current function value: 0.000000
+         Iterations: 20
+         Function evaluations: 23
+         Gradient evaluations: 20
+         Hessian evaluations: 44
+</stdout></cell><cell number="25"><input>
+print xopt
+</input><stdout>
+[ 0.99999352, 0.99998455, 0.99996844, 0.99993646, 0.99987251,]
+</stdout></cell><cell number="26"><input>
+xopt
+</input><output>
+[ 0.99999352, 0.99998455, 0.99996844, 0.99993646, 0.99987251,]
+</output></cell><cell number="61"><input>
+x = arange(0,6e-2,6e-2/30)
+</input></cell><cell number="62"><input>
+A,k,theta = 10, 1.0/3e-2,pi/6
+</input></cell><cell number="75"><input>
+title('Least-squares fit to noisy data')
+</input><output>
+&lt;matplotlib.text.Text instance at 0xb240058&gt;
+</output></cell><cell number="76"><input>
+y_true = A*sin(2*pi*k*x + theta)
+</input></cell><cell number="77"><input>
+y_meas = y_true + 2*randn(len(x))
+</input></cell><cell number="78"><input>
+def residuals(p, y, x):
+  A,k,theta = p
+  err = y - A*sin(2*pi*k*x + theta)
+  return err
+  
+</input></cell><cell number="79"><input>
+def peval(x, p):
+  return p[0]*sin(2*pi*p[1]*x + p[2])
+</input></cell><cell number="80"><input>
+p0 = [8,1/2.3e-2,pi/3]
+
+</input></cell><cell number="81"><input>
+from scipy.optimize import leastsq
+</input></cell><cell number="82"><input>
+plsq = leastsq(residuals, p0, args=(y_meas, x))
+</input></cell><cell number="83"><input>
+print plsq[0]
+</input><stdout>
+[ -9.71673236, 33.40401019, -2.64065054,]
+</stdout></cell><cell number="84"><input>
+print A, k, theta
+</input><stdout>
+10 33.3333333333 0.523598775598
+</stdout></cell><cell number="85"><input>
+clf();plot(x, peval(x, plsq[0]), 'r--', x, y_true, 'b--')
+scatter(x,y_meas)
+</input><output>
+&lt;matplotlib.collections.RegularPolyCollection instance at 0xb264760&gt;
+</output></cell><cell number="86"><input>
+grab_figure()
+</input></cell></ipython-log><sheet id="chapter05">
 <title>Optimization (optimize)</title>
-<para>There are several classical optimization algorithms provided by SciPy in
-the optimize package. An overview of the module is available using help (or
-pydoc.help):
-</para>
-<programlisting>XXX: ipython
+<para>There are several classical optimization algorithms provided by SciPy in the optimize package. An overview of the module is available using help (or pydoc.help): </para><programlisting>XXX: ipython
 &gt;&gt;&gt; info(optimize)
  Optimization Tools
 
@@ -42,17 +221,7 @@ Also a collection of general_purpose root-finding routines.
 
   fixed_point -- Single-variable fixed-point solver.
 </programlisting>
-<para>
- The first four algorithms are unconstrained minimization algorithms (fmin:
-Nelder-Mead simplex, fmin_bfgs: BFGS, fmin_ncg: Newton Conjugate Gradient, and
-leastsq: Levenburg-Marquardt). The fourth algorithm only works for functions of
-a single variable but allows minimization over a specified interval. The last
-algorithm actually finds the roots of a general function of possibly many
-variables. It is included in the optimization package because at the
-(non-boundary) extreme points of a function, the gradient is equal to zero.
-</para>
-
-<section>
+<para>The first four algorithms are unconstrained minimization algorithms (fmin: Nelder-Mead simplex, fmin_bfgs: BFGS, fmin_ncg: Newton Conjugate Gradient, and leastsq: Levenburg-Marquardt). The fourth algorithm only works for functions of a single variable but allows minimization over a specified interval. The last algorithm actually finds the roots of a general function of possibly many variables. It is included in the optimization package because at the (non-boundary) extreme points of a function, the gradient is equal to zero. </para><section>
 <title>Nelder-Mead simplex algorithm (optimize.fmin)</title>
 <para>The simplex algorithm is probably the simplest way to minimize a fairly
 well-behaved function. The simplex algorithm requires only function evaluations
@@ -68,45 +237,21 @@ The minimum value of this function is 0 which is achieved when
 <ipython-inlineequation>x_{i}=1</ipython-inlineequation>. This
 minimum can be found using the fmin routine as shown in the example below:
 </para>
-<programlisting>XXX: ipython
-&gt;&gt;&gt; from scipy.optimize import fmin
-&gt;&gt;&gt; def rosen(x):  # The Rosenbrock function
-        return sum(100.0*(x[1:]-x[:-1]**2.0)**2.0 + (1-x[:-1])**2.0)
-
-&gt;&gt;&gt; x0 = [1.3, 0.7, 0.8, 1.9, 1.2]
-&gt;&gt;&gt; xopt = fmin(rosen, x0)
-Optimization terminated successfully.
-         Current function value: 0.000000
-         Iterations: 516
-         Function evaluations: 825
-
-&gt;&gt;&gt; print xopt
-[ 1.  1.  1.  1.  1.]
-</programlisting>
-<para>Another optimization algorithm that needs only function calls to find the
-minimum is Powell's method available as optimize.fmin_powell.
-</para>
-</section>
+<ipython-block logid="default-log"><ipython-cell type="input" number="1"/><ipython-cell type="input" number="2"/><ipython-cell type="input" number="3"/><ipython-cell type="input" number="4"/><ipython-cell type="input" number="5"/><ipython-cell type="stdout" number="5"/><ipython-cell type="input" number="6"/><ipython-cell type="stdout" number="6"/></ipython-block><para>(Oops! fmin() isn't actually finding the minimum!) </para><ipython-block logid="default-log"><ipython-cell type="input" number="7"/><ipython-cell type="output" number="7"/></ipython-block><para>Another optimization algorithm that needs only function calls to find the minimum is Powell's method available as optimize.fmin_powell. </para></section>
 
 <section>
 <title>Broyden-Fletcher-Goldfarb-Shanno algorithm
 (optimize.fmin_bfgs)</title>
-<para>In order to converge more quickly to the solution, this routine uses the
-gradient of the objective function. If the gradient is not given by the user,
-then it is estimated using first-differences. The
-Broyden-Fletcher-Goldfarb-Shanno (BFGS) method typically requires fewer function
-calls than the simplex algorithm even when the gradient must be estimated. 
-</para>
-<para>
+<para>In order to converge more quickly to the solution, this routine uses the gradient of the objective function. If the gradient is not given by the user, then it is estimated using first-differences. The Broyden-Fletcher-Goldfarb-Shanno (BFGS) method typically requires fewer function calls than the simplex algorithm even when the gradient must be estimated. </para><para>
 To demonstrate this algorithm, the Rosenbrock function is again used. The
 gradient of the Rosenbrock function is the vector: 
-<ipython-equation verb="1"><![CDATA[
+<ipython-equation verb="1">
 \begin{eqnarray*}
-\frac{\partial f}{\partial x_{j}} & = &
+\frac{\partial f}{\partial x_{j}} &amp; = &amp;
 \sum_{i=1}^{N}200\left(x_{i}-x_{i-1}^{2}\right)\left(\delta_{i,j}-2x_{i-1}\delta_{i-1,j}\right)-2\left(1-x_{i-1}\right)\delta_{i-1,j}.\\
-& = &
+&amp; = &amp;
 200\left(x_{j}-x_{j-1}^{2}\right)-400x_{j}\left(x_{j+1}-x_{j}^{2}\right)-2\left(1-x_{j}\right).
-\end{eqnarray*}]]>
+\end{eqnarray*}
 </ipython-equation>
 This expression is valid for the interior derivatives. Special cases
 are
@@ -122,35 +267,8 @@ f}{\partial x_{N-1}} &amp; = &amp;
 A Python function which computes this
 gradient is constructed by the code-segment:
 </para>
-<programlisting>XXX: ipython
-&gt;&gt;&gt; def rosen_der(x):
-        xm = x[1:-1]
-        xm_m1 = x[:-2]
-        xm_p1 = x[2:]
-        der = zeros(x.shape,x.typecode())
-        der[1:-1] = 200*(xm-xm_m1**2) - 400*(xm_p1 - xm**2)*xm - 2*(1-xm)
-        der[0] = -400*x[0]*(x[1]-x[0]**2) - 2*(1-x[0])
-        der[-1] = 200*(x[-1]-x[-2]**2)
-        return der
-</programlisting>
-<para>
-The calling signature for the BFGS minimization algorithm is similar to fmin
-with the addition of the fprime argument. An example usage of fmin_bfgs is shown
-in the following example which minimizes the Rosenbrock function.
-</para>
-<programlisting>XXX: ipython
-&gt;&gt;&gt; from scipy.optimize import fmin_bfgs
-
-&gt;&gt;&gt; x0 = [1.3, 0.7, 0.8, 1.9, 1.2]
-&gt;&gt;&gt; xopt = fmin_bfgs(rosen, x0, fprime=rosen_der)
-Optimization terminated successfully.
-         Current function value: 0.000000
-         Iterations: 109
-         Function evaluations: 262
-         Gradient evaluations: 110
-&gt;&gt;&gt; print xopt
-[ 1.  1.  1.  1.  1.] 
-</programlisting>
+<ipython-block logid="default-log"><ipython-cell type="input" number="8"/></ipython-block>
+<para>The calling signature for the BFGS minimization algorithm is similar to fmin with the addition of the fprime argument. An example usage of fmin_bfgs is shown in the following example which minimizes the Rosenbrock function. </para><ipython-block logid="default-log"><ipython-cell type="input" number="9"/><ipython-cell type="input" number="10"/><ipython-cell type="output" number="10"/><ipython-cell type="input" number="11"/><ipython-cell type="stdout" number="11"/><ipython-cell type="input" number="12"/><ipython-cell type="stdout" number="12"/></ipython-block>
 </section>
 
 <section>
@@ -216,44 +334,12 @@ For example, the Hessian when N=5 is
 Hessian along with the code to minimize the function using fmin_ncg is shown in
 the following example:
 </para>
-<programlisting>XXX: ipython
-&gt;&gt;&gt; from scipy.optimize import fmin_ncg
-&gt;&gt;&gt; def rosen_hess(x):
-        x = asarray(x)
-        H = diag(-400*x[:-1],1) - diag(400*x[:-1],-1)
-        diagonal = zeros(len(x),x.typecode())
-        diagonal[0] = 1200*x[0]-400*x[1]+2
-        diagonal[-1] = 200
-        diagonal[1:-1] = 202 + 1200*x[1:-1]**2 - 400*x[2:]
-        H = H + diag(diagonal)
-        return H
 
-&gt;&gt;&gt; x0 = [1.3, 0.7, 0.8, 1.9, 1.2]
-&gt;&gt;&gt; xopt = fmin_ncg(rosen, x0, rosen_der, fhess=rosen_hess)
-Optimization terminated successfully.
-         Current function value: 0.000000
-         Iterations: 19
-         Function evaluations: 40
-         Gradient evaluations: 19
-         Hessian evaluations: 19
-&gt;&gt;&gt; print xopt
-[ 0.9999  0.9999  0.9998  0.9996  0.9991]
-</programlisting>
+<ipython-block logid="default-log"><ipython-cell type="input" number="13"/><ipython-cell type="input" number="15"/><ipython-cell type="input" number="16"/><ipython-cell type="output" number="16"/><ipython-cell type="input" number="17"/><ipython-cell type="stdout" number="17"/><ipython-cell type="input" number="18"/><ipython-cell type="stdout" number="18"/></ipython-block>
 </section>
 <section>
 <title>Hessian product example:</title>
-<para>
-For larger minimization problems, storing the entire Hessian matrix can consume
-considerable time and memory. The Newton-CG algorithm only needs the product of
-the Hessian times an arbitrary vector. As a result, the user can supply code to
-compute this product rather than the full Hessian by setting the fhess_p keyword
-to the desired function. The fhess_p function should take the minimization
-vector as the first argument and the arbitrary vector as the second argument.
-Any extra arguments passed to the function to be minimized will also be passed
-to this function. If possible, using Newton-CG with the hessian product option
-is probably the fastest way to minimize the function. 
-</para>
-<para>
+<para>For larger minimization problems, storing the entire Hessian matrix can consume considerable time and memory. The Newton-CG algorithm only needs the product of the Hessian times an arbitrary vector. As a result, the user can supply code to compute this product rather than the full Hessian by setting the fhess_p keyword to the desired function. The fhess_p function should take the minimization vector as the first argument and the arbitrary vector as the second argument. Any extra arguments passed to the function to be minimized will also be passed to this function. If possible, using Newton-CG with the hessian product option is probably the fastest way to minimize the function. </para><para>
 In this case, the product of the Rosenbrock Hessian with an arbitrary vector is
 not difficult to compute. If
 <ipython-inlineequation>\mathbf{p}</ipython-inlineequation> is the arbitrary vector, then
@@ -270,28 +356,8 @@ has elements:
 Code which makes use of the
 fhess_p keyword to minimize the Rosenbrock function using fmin_ncg follows:
 </para>
-<programlisting>XXX: ipython
-&gt;&gt;&gt; from scipy.optimize import fmin_ncg
-&gt;&gt;&gt; def rosen_hess_p(x,p):
-        x = asarray(x)
-        Hp = zeros(len(x),x.typecode())
-        Hp[0] = (1200*x[0]**2 - 400*x[1] + 2)*p[0] - 400*x[0]*p[1]
-        Hp[1:-1] = -400*x[:-2]*p[:-2]+(202+1200*x[1:-1]**2-400*x[2:])*p[1:-1] \
-                   -400*x[1:-1]*p[2:]
-        Hp[-1] = -400*x[-2]*p[-2] + 200*p[-1]
-        return Hp
 
-&gt;&gt;&gt; x0 = [1.3, 0.7, 0.8, 1.9, 1.2]
-&gt;&gt;&gt; xopt = fmin_ncg(rosen, x0, rosen_der, fhess_p=rosen_hess_p)
-Optimization terminated successfully.
-         Current function value: 0.000000
-         Iterations: 20
-         Function evaluations: 42
-         Gradient evaluations: 20
-         Hessian evaluations: 44
-&gt;&gt;&gt; print xopt
-[ 1.      1.      1.      0.9999  0.9999]
-</programlisting>
+<ipython-block logid="default-log"><ipython-cell type="input" number="19"/><ipython-cell type="input" number="20"/><ipython-cell type="input" number="21"/><ipython-cell type="stderr" number="21"/><ipython-cell type="stdout" number="21"/><ipython-cell type="input" number="22"/><ipython-cell type="output" number="22"/><ipython-cell type="input" number="24"/><ipython-cell type="stdout" number="24"/><ipython-cell type="input" number="25"/><ipython-cell type="stdout" number="25"/><ipython-cell type="input" number="26"/><ipython-cell type="output" number="26"/></ipython-block>
 </section>
 </section>
 
@@ -381,16 +447,12 @@ example and a plot of the results is shown in Figure [fig:least_squares_fit].
 &gt;&gt;&gt; legend(['Fit', 'Noisy', 'True'])
 &gt;&gt;&gt; gist.eps('leastsqfit')   # Make epsi file.
 </programlisting>
+<ipython-block logid="default-log"><ipython-cell type="input" number="61"/><ipython-cell type="input" number="62"/><ipython-cell type="input" number="76"/><ipython-cell type="input" number="77"/><ipython-cell type="input" number="78"/><ipython-cell type="input" number="79"/><ipython-cell type="input" number="80"/><ipython-cell type="input" number="81"/><ipython-cell type="input" number="82"/><ipython-cell type="input" number="83"/><ipython-cell type="stdout" number="83"/><ipython-cell type="input" number="84"/><ipython-cell type="stdout" number="84"/><ipython-cell type="input" number="85"/><ipython-cell type="output" number="85"/><ipython-cell type="input" number="75"/><ipython-cell type="output" number="75"/><ipython-cell type="input" number="86"/></ipython-block><ipython-figure type="png" filename="/Users/kern/svk-projects/ipython/nbdoc/trunk/scipy_tutorial/chapter05_2.png"/><ipython-block logid="default-log"/>
 </section>
 
 <section>
 <title>Scalar function minimizers</title>
-<para>Often only the minimum of a scalar function is needed (a scalar function
-is one that takes a scalar as input and returns a scalar output). In these
-circumstances, other optimization techniques have been developed that can work
-faster. 
-</para>
-<section>
+<para>Often only the minimum of a scalar function is needed (a scalar function is one that takes a scalar as input and returns a scalar output). In these circumstances, other optimization techniques have been developed that can work faster. </para><section>
 <title>Unconstrained minimization (optimize.brent)</title>
 <para>
 There are actually two methods that can be used to minimize a scalar function
@@ -409,15 +471,7 @@ for your function and result in an unexpected minimum being returned).
 </section>
 <section>
 <title>Bounded minimization (optimize.fminbound)</title>
-<para>
-Thus far all of the minimization routines described have been unconstrained
-minimization routines. Very often, however, there are constraints that can be
-placed on the solution space before minimization occurs. The fminbound function
-is an example of a constrained minimization procedure that provides a
-rudimentary interval constraint for scalar functions. The interval constraint
-allows the minimization to occur only between two fixed endpoints.
-</para>
-<para>
+<para>Thus far all of the minimization routines described have been unconstrained minimization routines. Very often, however, there are constraints that can be placed on the solution space before minimization occurs. The fminbound function is an example of a constrained minimization procedure that provides a rudimentary interval constraint for scalar functions. The interval constraint allows the minimization to occur only between two fixed endpoints. </para><para>
 For example, to find the minimum of
 <ipython-inlineequation>J_{1}\left(x\right)</ipython-inlineequation> near
 <ipython-inlineequation>x=5</ipython-inlineequation>, fminbound can
@@ -433,6 +487,7 @@ be called using the interval
 &gt;&gt;&gt; print xmin
 5.33144184241
 </programlisting>
+<ipython-block logid="default-log"/>
 </section>
 </section>
 
@@ -476,13 +531,7 @@ x_{0}\cos\left(x_{1}\right)
 </section>
 <section>
 <title>Scalar function root finding</title>
-<para>If one has a single-variable equation, there are four different root
-finder algorithms that can be tried. Each of these root finding algorithms
-requires the endpoints of an interval where a root is suspected (because the
-function changes signs). In general brentq is the best choice, but the other
-methods may be useful in certain circumstances or for academic purposes.
-</para>
-</section>
+<para>If one has a single-variable equation, there are four different root finder algorithms that can be tried. Each of these root finding algorithms requires the endpoints of an interval where a root is suspected (because the function changes signs). In general brentq is the best choice, but the other methods may be useful in certain circumstances or for academic purposes. </para></section>
 <section>
 <title>Fixed-point solving</title>
 <para>A problem closely related to finding the zeros of a function is the
