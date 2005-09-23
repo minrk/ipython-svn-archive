@@ -291,7 +291,7 @@ class QueuedInteractiveConsole:
         # didn't release the GIL.  This should fix it for now.
         # Eventually, the client should use non-blocking sockets and
         # be able to handle this with no problem
-        time.sleep(0.1)
+        time.sleep(0.01)
         if block:
             notifier = Queue.Queue(1)
             self.workq.put(('EXECUTE', (source, notifier)), ticket)
