@@ -94,7 +94,7 @@ is ideally suited for reconstructing samples from spline coefficients and is
 faster than signal.convolve2d which convolves arbitrary two-dimensional filters
 and allows for choosing mirror-symmetric boundary conditions. 
 </para>
-<para>XXX: ipython
+<programlisting>XXX: ipython
 &gt;&gt;&gt; image = lena().astype(Float32)
 &gt;&gt;&gt; derfilt = array([1.0,-2,1.0],Float32)
 &gt;&gt;&gt; ck = signal.cspline2d(image,8.0)
@@ -111,7 +111,7 @@ and allows for choosing mirror-symmetric boundary conditions.
 &gt;&gt;&gt; xplt.imagesc(deriv[::-1])
 &gt;&gt;&gt; xplt.title('Output of spline edge filter')
 &gt;&gt;&gt; xplt.eps('lena_edge')
-</para>
+</programlisting>
 <para>
 [Graphics file: lena_image.epsi]
 [Graphics file: lena_edge.epsi]

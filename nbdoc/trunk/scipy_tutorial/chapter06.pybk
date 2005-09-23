@@ -18,7 +18,7 @@ treated like a function which interpolates between known data values to obtain
 unknown values (it even has a docstring for help). Behavior at the boundary can
 be specified at instantiation time. The following example demonstrates it's use. 
 </para>
-<para> XXX: ipython
+<programlisting> XXX: ipython
 &gt;&gt;&gt; x = arange(0,10)
 &gt;&gt;&gt; y = exp(-x/3.0)
 &gt;&gt;&gt; f = interpolate.linear_1d(x,y)
@@ -37,7 +37,7 @@ Outputs:
 
 &gt;&gt;&gt; xnew = arange(0,9,0.1)
 &gt;&gt;&gt; xplt.plot(x,y,'x',xnew,f(xnew),'.')
-</para>
+</programlisting>
 <para>
 Figure shows the result: [Graphics file: inter_1d.epsi]
 [fig:inter_1d]One-dimensional interpolation using the class interpolate.linear_1d.
@@ -95,7 +95,7 @@ follows (see also Figure [fig:spline-1d]).
 [Graphics file: interp_cubic_param.epsi]
 [fig:spline-1d]Examples of using cubic-spline interpolation.
 </para>
-<para> XXX: ipython
+<programlisting> XXX: ipython
 &gt;&gt;&gt; # Cubic-spline
 &gt;&gt;&gt; x = arange(0,2*pi+pi/4,2*pi/8)
 &gt;&gt;&gt; y = sin(x)
@@ -148,7 +148,7 @@ follows (see also Figure [fig:spline-1d]).
 &gt;&gt;&gt; xplt.limits(-1.05,1.05,-1.05,1.05)
 &gt;&gt;&gt; xplt.title('Spline of parametrically-defined curve')
 &gt;&gt;&gt; xplt.eps('interp_cubic_param')
-</para>
+</programlisting>
 </section>
 
 <section>
@@ -189,7 +189,7 @@ ogrid command if the full-mesh is not needed). The number of output arguments
 and the number of dimensions of each argument is determined by the number of
 indexing objects passed in mgrid[]. 
 </para>
-<para> XXX: ipython
+<programlisting> XXX: ipython
 &gt;&gt;&gt; # Define function over sparse 20x20 grid
 &gt;&gt;&gt; x,y = mgrid[-1:1:20j,-1:1:20j]
 &gt;&gt;&gt; z = (x+y)*exp(-6.0*(x*x+y*y))
@@ -204,7 +204,7 @@ indexing objects passed in mgrid[].
 &gt;&gt;&gt; xplt.surf(znew,xnew,ynew,shade=1,palette='rainbow')
 &gt;&gt;&gt; xplt.title3("Interpolated function.")
 &gt;&gt;&gt; xplt.eps("2d_interp")
-</para>
+</programlisting>
 <para>
 [Graphics file: 2d_func.epsi]
 [Graphics file: 2d_interp.epsi]

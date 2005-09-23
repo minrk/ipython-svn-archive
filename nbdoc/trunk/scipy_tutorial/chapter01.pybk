@@ -25,9 +25,9 @@ directed to the Numeric documentation. Throughout this tutorial it is assumed
 that the user has imported all of the names defined in the SciPy namespace using
 the command
 </para>
-<para>XXX: ipython
+<programlisting>XXX: ipython
 >>> from scipy import *
-</para>
+</programlisting>
 
 <section>
 <title>General Help</title>
@@ -50,7 +50,7 @@ writeable object passed as the third argument). The second keyword argument of
 passed as the argument to help than a list of the functions and classes defined
 in that module is printed. For example:
 </para>
-<para>XXX: ipython
+<programlisting>XXX: ipython
 >>> info(optimize.fmin)
  fmin(func, x0, args=(), xtol=0.0001, ftol=0.0001, maxiter=None, maxfun=None,
       full_output=0, printmessg=1)
@@ -87,7 +87,7 @@ Additional Inputs:
   full_output -- non-zero if fval and warnflag outputs are desired.
   printmessg -- non-zero to print convergence messages.
   
-</para>
+</programlisting>
 <para>Another useful command is <code>source</code>. When given a function written in
 Python as an argument, it prints out a listing of the source code for that
 function. This can be helpful in learning about an algorithm or understanding

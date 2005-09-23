@@ -4,7 +4,7 @@
 including an ordinary differential equation integrator. An overview of the
 module is provided by the help command:
 </para>
-<para>XXX: ipython
+<programlisting>XXX: ipython
 &gt;&gt;&gt; help(integrate)
 Methods for Integrating Functions
 
@@ -17,7 +17,7 @@ Methods for Integrating Functions
 
   See the orthogonal module (integrate.orthogonal) for Gaussian
      quadrature roots and weights.
-</para>
+</programlisting>
 <section>
 <title>General integration (integrate.quad)</title>
 <para>The function quad is provided to integrate a function of one variable
@@ -29,7 +29,7 @@ infinite limits. For example, suppose you wish to integrate a bessel function
 <ipython-equation>I=\int_{0}^{4.5}J_{2.5}\left(x\right)\,dx</ipython-equation>.
 This could be computed using quad:
 </para>
-<para>XXX: ipython
+<programlisting>XXX: ipython
 &gt;&gt;&gt; result = integrate.quad(lambda x: special.jv(2.5,x), 0, 4.5)
 &gt;&gt;&gt; print result
 (1.1178179380783249, 7.8663172481899801e-09)
@@ -41,7 +41,7 @@ This could be computed using quad:
 
 &gt;&gt;&gt; print abs(result[0]-I)
 1.03761443881e-11 
-</para>
+</programlisting>
 <para>The first argument to quad is a "callable" Python object (i.e a function,
 method, or class instance). Notice the use of a lambda-function in this case as
 the argument. The next two arguments are the limits of integration. The return
@@ -71,7 +71,7 @@ desired (and the fact that this integral can be computed as special.expn(n,x) is
 forgotten). The functionality of the function special.expn can be replicated by
 defining a new function vec_expint based on the routine quad: 
 </para>
-<para> XXX: ipython
+<programlisting> XXX: ipython
 &gt;&gt;&gt; from integrate import quad, Inf
 &gt;&gt;&gt; def integrand(t,n,x):
         return exp(-x*t) / t**n
@@ -85,7 +85,7 @@ defining a new function vec_expint based on the routine quad:
 array([ 0.1097,  0.0567,  0.0301,  0.0163,  0.0089,  0.0049])
 &gt;&gt;&gt; special.expn(3,arange(1.0,4.0,0.5))
 array([ 0.1097,  0.0567,  0.0301,  0.0163,  0.0089,  0.0049])
-</para>
+</programlisting>
 <para>The function which is integrated can even use the quad argument (though
 the error bound may underestimate the error due to possible numerical error in
 the integrand from the use of quad). The integral in this case is
@@ -93,7 +93,7 @@ the integrand from the use of quad). The integral in this case is
 I_{n}=\int_{0}^{\infty}\int_{1}^{\infty}\frac{e^{-xt}}{t^{n}}\, dt\,
 dx=\frac{1}{n}</ipython-equation>.
 </para>
-<para>XXX: ipython
+<programlisting>XXX: ipython
 &gt;&gt;&gt; result = quad(lambda x: expint(3, x), 0, Inf)
 &gt;&gt;&gt; print result
 (0.33333333324560266, 2.8548934485373678e-09)  
@@ -104,7 +104,7 @@ dx=\frac{1}{n}</ipython-equation>.
 
 &gt;&gt;&gt; print I3 - result[0]
 8.77306560731e-11     
-</para>
+</programlisting>
 <para>This last example shows that multiple integration can be handled using
 repeated calls to quad. The mechanics of this for double and triple integration
 have been wrapped up into the functions dblquad and tplquad. The function,
@@ -114,7 +114,7 @@ integrals are actually functions which can be constant functions. An example of
 using double integration to compute several values of
 <ipython-inlineequation>I_{n}</ipython-inlineequation> is shown below:
 </para>
-<para>XXX: ipython
+<programlisting>XXX: ipython
 &gt;&gt;&gt; from __future__ import nested_scopes
 &gt;&gt;&gt; from integrate import quad, dblquad, Inf
 &gt;&gt;&gt; def I(n):
@@ -126,7 +126,7 @@ using double integration to compute several values of
 (0.33333333325010883, 2.8604069919261191e-09) 
 &gt;&gt;&gt; print I(2)
 (0.49999999999857514, 1.8855523253868967e-09)
-</para>
+</programlisting>
 </section>
 <section>
 <title>Gaussian quadrature (integrate.gauss_quadtol)</title>
@@ -236,10 +236,10 @@ the first output row).
 <para>
 The following example illustrates the use of odeint including the usage of the
 Dfun option which allows the user to specify a gradient (with respect to
-<ipython-inlineequation>\mathbf{y})</ipython-inlineequation> of the function,
+<ipython-inlineequation>\mathbf{y}</ipython-inlineequation>) of the function,
 <ipython-inlineequation>\mathbf{f}\left(\mathbf{y},t\right)</ipython-inlineequation>.
 </para>
-<para>XXX: ipython
+<programlisting>XXX: ipython
 &gt;&gt;&gt; from integrate import odeint
 &gt;&gt;&gt; from special import gamma, airy
 &gt;&gt;&gt; y1_0 = 1.0/3**(2.0/3.0)/gamma(2.0/3.0)
@@ -267,7 +267,7 @@ Dfun option which allows the user to specify a gradient (with respect to
 
 &gt;&gt;&gt; print y2[:36:6,1]
 [ 0.355028  0.339511  0.324067  0.308763  0.293658  0.278806]
-</para>
+</programlisting>
 
 </section>
 </sheet></notebook>
