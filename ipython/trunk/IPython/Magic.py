@@ -2463,6 +2463,7 @@ Defaulting color scheme to 'NoColor'"""
             filename = get_py_filename(parameter_s)
         except IndexError:
             warn('you must provide at least a filename.')
+            return
         fobj=open(filename,'r')
         source = fobj.read()
         fobj.close()
