@@ -305,11 +305,12 @@ class TextNotebookViewPlugin(object):
         else:
             return False
     modified = property(fget = IsModified)
-        
+
     def Close(self, update = True):
-        index = self.view.GetIndex(self.id)
-        self.view.DeleteCell(index, update)
-    
+        if self.window is not None:
+            index = self.view.GetIndex(self.id)
+            self.view.DeleteCell(index, update)
+
     def InsertCode(self):
         #self.doc.text = self.window.GetText()
         pos = self.window.GetCurrentPos()

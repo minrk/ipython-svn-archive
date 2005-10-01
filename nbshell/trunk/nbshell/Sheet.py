@@ -23,6 +23,8 @@ from nbshell import PythonPlugin
 from nbshell.utils import *
 from nbshell import SimpleXMLWriter
 
+from nbshell import testtools
+
 
 class Sheet(object):
     def __init__(self, doc, notebook, view, factory):
@@ -71,27 +73,7 @@ class Sheet(object):
         if cell is not None:
             cell.view.SetFocus()
     currentcell = property(fget = __get_current_cell, fset = __set_current_cell)
-    
-    def InsertCell(self, type, pos=-1, update = True, **kwds):
-        """Inserts a cell of the given type with the given data at the given
-        pos. If pos=-1 insert at the end. **kwds is passed to the
-        plugin.Returns an instance to the cell"""
-        factory = self.factory[type]
-        cell = factory.CreateDocumentPlugin(self.doc, **kwds)
-        view = factory.CreateViewPlugin(cell, self.view)
-        if pos == -1:
-            self.__add_cell(cell)
-        else:
-            #print 'cell-> %s, pos->%s'%(str(cell),str(pos)) #dbg
-            self.__insert_cell(cell, pos)
 
-        #TODO: Smarter update of the dicts here
-        self.Update(update = False, dicts = True)
-        if update:
-            view.Update()
-            self.view.Update()
-        return cell
-    
     def DeleteCell(self, cell, update = True):
         """Deletes a given element in celllist"""
         #Change the current cell if necessary
@@ -117,17 +99,31 @@ class Sheet(object):
                 self.DeleteCell(self.celllist[index], update =False)
         
         self.Update(update)
+    
+    @testtools.verify
+    @testtools.reverse_decorator(DeleteCell, "[x.type for x in self.celllist]",
+                                 "{'self':self, 'cell':self.celllist[pos], 'update':update}",
+                                 "[x.type for x in self.celllist]")
+    def InsertCell(self, type, pos=-1, update = True, **kwds):
+        """Inserts a cell of the given type with the given data at the given
+        pos. If pos=-1 insert at the end. **kwds is passed to the
+        plugin.Returns an instance to the cell"""
+        factory = self.factory[type]
+        cell = factory.CreateDocumentPlugin(self.doc, **kwds)
+        view = factory.CreateViewPlugin(cell, self.view)
+        if pos == -1:
+            self.__add_cell(cell)
+        else:
+            #print 'cell-> %s, pos->%s'%(str(cell),str(pos)) #dbg
+            self.__insert_cell(cell, pos)
 
-    def __del_text_cell(self,cell,update = False):
-        """Deletes the given text cell. Does not check if this is the first or
-        last text cell"""
-        #TODO: write this
-        return
-        
-    def __del_code_cell(self,cell,update = False):
-        #TODO: write this
-        return
-
+        #TODO: Smarter update of the dicts here
+        self.Update(update = False, dicts = True)
+        if update:
+            view.Update()
+            self.view.Update()
+        return cell
+    
     def Update(self, update = True, celllist = False, dicts = False, output = False):
         
         """Updates the sheet. If update is True calls the Update method for
@@ -310,6 +306,7 @@ class Sheet(object):
                         else: 
                             #This is a simple match, create the block, giving the
                             #element as a parameter
+                            print dir(self)
                             self.InsertCell(plugin_string, update=False, element = child)
                             #get the next element
                             try:

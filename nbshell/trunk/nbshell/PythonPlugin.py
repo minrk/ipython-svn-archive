@@ -821,8 +821,9 @@ class PythonNotebookViewPlugin(object):
         self.doc.sheet.DeleteCell(self.doc)
         
     def Close(self, update = True):
-        index = self.view.GetIndex(self.id)
-        self.view.DeleteCell(index, update)
+        if self.window is not None:
+            index = self.view.GetIndex(self.id)
+            self.view.DeleteCell(index, update)
         
     def Copy(self):
         """Copies the selection to the clipboard"""

@@ -1,0 +1,106 @@
+<notebook version="1">
+
+<head/>
+
+<ipython-log id="default-log">
+	<cell number="0">
+		<input>  
+############DO NOT EDIT THIS CELL############  
+from pylab import *  
+switch_backend('WXAgg')  
+ion()  
+</input>
+	</cell>
+
+</ipython-log>
+
+<ipython-log id="tutorial-log">
+	<cell number="0">
+		<input>
+from lxml import etree
+app = __app
+
+class Tutorial(object):
+    def __init__(self):
+        self.current = 1
+        self.tuts = [None, self.page_1, self.page_2]
+        self.app = app
+        self.doc = self.app.document
+        self.sheet = self.doc.sheet
+        self.tutlog = self.doc.logs['tutorial-log']
+        self.deflog = self.doc.logs['default-log']
+        self.page(1)
+    
+    def page(self, number):
+        """Shows the new page with the given number"""
+        self.sheet.Clear(False)
+        self.tuts[number]() #Generate the given page
+        #Add the code the user has to run to get to the next cell
+        if number == len(self.tuts) -1 :
+            cell = self.tutlog.Append('\n#This is the end of the tutorial. Use \n#tutorial.page(x)if you want to go to a prevoius cell\n')
+        else:
+            cell = self.tutlog.Append('\ntutorial.next()\n')
+        #Append the code cell
+        self.sheet.InsertCell('python', update = False, 
+            element = self._ipython_block('tutorial-log',[('input',cell.number)] ))
+        self.sheet.Update()
+        self.sheet.currentcell = self.sheet.celllist[-1]
+        self.current = number
+    
+    def _ipython_block(self, logid, cells):
+        """Generates a &lt;ipython-block&gt; element. logid is the log's id. cells
+        is a list of 2-tuples, the first one is the type, and the second one
+        the number of the cell"""
+        print '123'   
+        c = ['&lt;ipython-cell type="%s" number="%s"/&gt;'%(str(x[0]),str(x[1])) for x in cells]
+        t = '&lt;ipython-block logid="%s"&gt;'%str(logid) + ''.join(c)+ '&lt;/ipython-block&gt;'
+        return etree.XML(t)
+    
+    def next(self):
+        self.page(self.current+1)
+    
+    def page_1(self):
+        self.sheet.InsertCell('text', update = False, text =
+""" This is page 1 of the nbshell tutorial. It will guide you step by step
+through the basics of using nbshell. When you have read a page of the tutorial
+go to the bottom of the document, put the cursor on the line that looks like:
+
+In[1]: tutorial.next()
+
+and press Shift-Enter. If you want to review any page of the tutorial
+edit the last line to say:
+
+In[1]: tutorial.page(x)
+
+where x is the number of the page you want to see and the press 
+Shift-Enter. Now go to the next page
+""")
+    
+    def page_2(self):
+        self.sheet.InsertCell('text', update = False, text=
+"""Nbshell allows you to create and edit IPython notebooks. A IPython notebook
+is a document which contains python code, formatted text and figues. The code
+is entered in input cells like the one you on the previous page you used to
+get here. A cell is executed when you put the cursor on it and press
+Shift-Enter. When you do that output is produced and is written after the
+cell. Try executing the next cell""")
+        cell = self.deflog.Append('\nprint "Hello nbshell world!"\n')
+        self.sheet.InsertCell('python', update = False,\
+            element = self._ipython_block('default-log',[('input', cell.number)]))
+</input>
+    </cell>
+
+    <cell number="1">
+        <input>
+tutorial=Tutorial()
+</input>
+	</cell>    
+
+</ipython-log>
+
+<sheet>
+	<para>To start the tutorial press Shift-Enter on the next nonempty line</para>
+    <ipython-block logid="tutorial-log"><ipython-cell type="input" number="1"/></ipython-block>
+</sheet>
+
+</notebook>

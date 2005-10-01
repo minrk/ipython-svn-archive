@@ -1,3 +1,17 @@
+2005-10-02  Tzanko Matev  <tsanko@gmail.com>
+
+	* testtools.py: Added some tools for automatic testing of
+	functions. See the documentation of testtools.reverse_verifier for
+	more info and Sheet.InsertCell for an example of how to use them.
+	Also fixed a small bug in the xxxNotebookViewPlugin.Close()
+	methods of all plugins which was found when I added the
+	verification to InsertCell
+
+	* tutorial.pybk: Changed the tutorial to an ordinary notebook and
+	added some more text. The old tutorial is in old_tutorial.pybk. I
+	did this because the old tutorial was too confusing for novice
+	users (as Robert pointed out).
+
 2005-09-19  Robert Kern  <robert.kern@gmail.com>
 
 	* IPythonLog.py (IPythonLog.__init__, displayhook, __run): Restored

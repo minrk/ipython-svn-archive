@@ -200,13 +200,11 @@ class FigureNotebookViewPlugin(object):
         the view """
         pass
     
-    def Close(self, update=True):
-        """ This method is called when the document cell is
-        destroyed. It must close all windows. If update is false, do
-        not update the view"""
-        index = self.view.GetIndex(self.id)
-        self.view.DeleteCell(index, update)
-        
+    def Close(self, update = True):
+        if self.window is not None:
+            index = self.view.GetIndex(self.id)
+            self.view.DeleteCell(index, update)
+
     position = property(fget = lambda :0, fset = lambda x:None)
 
 class FigureCtrl(CellCtrlBase):
