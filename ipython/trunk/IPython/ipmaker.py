@@ -112,7 +112,9 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
 
     IP.usage = interactive_usage
 
-    # Platform-dependent suffix and directory names
+    # Platform-dependent suffix and directory names.  We use _ipython instead
+    # of .ipython under win32 b/c there's software that breaks with .named
+    # directories on that platform.
     if os.name == 'posix':
         rc_suffix = ''
         ipdir_def = '.ipython'
