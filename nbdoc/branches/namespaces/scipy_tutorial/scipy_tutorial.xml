@@ -1,0 +1,25 @@
+<db:book xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:db="http://docbook.org/ns/docbook">
+    <db:title>Scipy Tutorial</db:title>
+    <db:bookinfo>
+    <db:authorgroup>
+        <db:author>
+            <db:firstname>Travis</db:firstname>
+            <db:othername>E.</db:othername>
+            <db:surname>Oliphant</db:surname>
+        </db:author>
+    </db:authorgroup>
+    </db:bookinfo>
+    
+    <db:chapter xlink:type="simple" xlink:href="chapter01.pybk#chapter01"/>
+    <db:chapter xlink:type="simple" xlink:href="chapter02.pybk#chapter02"/>
+    <db:chapter xlink:type="simple" xlink:href="chapter03.pybk#chapter03"/>
+    <db:chapter xlink:type="simple" xlink:href="chapter04.pybk#chapter04"/>
+    <db:chapter xlink:type="simple" xlink:href="chapter05.pybk#chapter05"/>
+    <db:chapter xlink:type="simple" xlink:href="chapter06.pybk#chapter06"/>
+    <db:chapter xlink:type="simple" xlink:href="chapter07.pybk#chapter07"/>
+    <db:chapter xlink:type="simple" xlink:href="chapter08.pybk#chapter08"/>
+    <db:chapter xlink:type="simple" xlink:href="chapter09.pybk#chapter09"/>
+    <db:chapter xlink:type="simple" xlink:href="chapter10.pybk#chapter10"/>
+    <db:chapter xlink:type="simple" xlink:href="chapter11.pybk#chapter11"/>
+    <db:chapter xlink:type="simple" xlink:href="chapter12.pybk#chapter12"/>
+</db:book>

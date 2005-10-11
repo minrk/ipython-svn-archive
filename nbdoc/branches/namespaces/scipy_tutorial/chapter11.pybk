@@ -1,0 +1,21 @@
+<ip:notebook xmlns:ip="http://ipython.scipy.org/notebook-xml" xmlns:db="http://docbook.org/ns/docbook" version="1.1"><ip:head/><ip:log id="default-log"/><ip:sheet id="chapter11">
+<db:title>Statistics</db:title>
+<db:para>SciPy has a tremendous number of basic statistics routines with more
+easily added by the end user (if you create one please contribute it). All of
+the statistics functions are located in the sub-package stats and a fairly
+complete listing of these functions can be had using info(stats).
+</db:para>
+
+<db:section>
+<db:title>Random Variables</db:title>
+<db:para>There are two general distribution classes that have been
+implemented for encapsulating continuous random variables and discrete random
+variables. Over 80 continuous random variables and 10 discrete random variables
+have been implemented using these classes. The list of the random variables
+available is in the docstring for the stats sub-package. A detailed description
+of each of them is also located in the files continuous.lyx and discrete.lyx in
+the stats sub-directories. 
+</db:para>
+</db:section>
+
+</ip:sheet></ip:notebook>

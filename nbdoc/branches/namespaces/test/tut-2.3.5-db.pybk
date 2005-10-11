@@ -1,0 +1,86 @@
+<notebook version="1">
+<head>
+<meta content="/usr/local/bin/ipython" name="cmdline">
+</meta>
+</head>
+<sheet>
+<title>Scipy Tutorial</title>
+<section>
+<title>Chapter 2</title>
+<section>
+<title>2.3.5 Polynomials</title>
+
+<para>There are two (interchangeable) ways to deal with 1-d polynomials in Scipy. The
+first is to use the <emphasis role="bold">poly1d</emphasis> class in
+<emphasis role="bold">scipy_base</emphasis>. This class accepts
+coefficients or polynomial roots to initialize a polynomial. The polynomial
+object can then be manipulated in algebraic expressions, integrated,
+differentiated, and evaluated. It even prints like a polynomial:
+</para>
+
+<ipython-block logid="default-log">
+    <ipython-cell type="input" number="3">
+    </ipython-cell>
+    <ipython-cell type="input" number="4">
+    </ipython-cell>
+    <ipython-cell type="input" number="5">
+    </ipython-cell>
+    <ipython-cell type="stdout" number="5">
+    </ipython-cell>
+    <ipython-cell type="input" number="6">
+    </ipython-cell>
+    <ipython-cell type="stdout" number="6">
+    </ipython-cell>
+    <ipython-cell type="input" number="7">
+    </ipython-cell>
+    <ipython-cell type="stdout" number="7">
+    </ipython-cell>
+    <ipython-cell type="input" number="8">
+    </ipython-cell>
+    <ipython-cell type="output" number="8">
+    </ipython-cell>
+    <ipython-cell type="input" number="9">
+    </ipython-cell>
+    <ipython-cell type="output" number="9">
+    </ipython-cell>
+</ipython-block>
+
+<para>The <emphasis>other way</emphasis> to handle polynomials is an array of coefficients with the first
+element of the array giving the coefficient of the highest power. There are
+explicit functions to add, subtract, multiply, divide, integrate, differentiate,
+and evalute polynomials represented as sequences of coefficients.
+</para>
+</section>
+</section>
+</sheet>
+<ipython-log id="default-log"><cell number="3"><input>
+from scipy import *
+</input></cell>
+<cell number="4"><input>
+p = poly1d([3,4,5])
+</input></cell>
+<cell number="5"><input>
+print p
+</input><stdout>   2
+3 x + 4 x + 5
+</stdout></cell>
+<cell number="6"><input>
+print p*p
+</input><stdout>   4      3      2
+9 x + 24 x + 46 x + 40 x + 25
+</stdout></cell>
+<cell number="7"><input>
+print p.integ(k=6)
+</input><stdout> 3     2
+x + 2 x + 5 x + 6
+</stdout></cell>
+<cell number="8"><input>
+p.deriv()
+</input><output>poly1d([6, 4])
+</output></cell>
+<cell number="9"><input>
+p([4,5])
+</input><output>array([ 69, 100])
+</output></cell>
+</ipython-log>
+</notebook>

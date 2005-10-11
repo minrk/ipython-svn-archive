@@ -1,0 +1,429 @@
+<ip:notebook xmlns:ip="http://ipython.scipy.org/notebook-xml" xmlns:db="http://docbook.org/ns/docbook" version="1.1"><ip:head/><ip:log id="default-log"/><ip:sheet id="chapter07">
+<db:title>Signal Processing (signal)</db:title>
+<db:para>The signal processing toolbox currently contains some filtering
+functions, a limited set of filter design tools, and a few B-spline
+interpolation algorithms for one- and two-dimensional data. While the B-spline
+algorithms could technically be placed under the interpolation category, they
+are included here because they only work with equally-spaced data and make heavy
+use of filter-theory and transfer-function formalism to provide a fast B-spline
+transform. To understand this section you will need to understand that a signal
+in SciPy is an array of real or complex numbers. 
+</db:para>
+
+<db:section>
+<db:title>B-splines</db:title>
+<db:para>A B-spline is an approximation of a continuous function over a
+finite-domain in terms of B-spline coefficients and knot points. If the
+knot-points are equally spaced with spacing <ip:inlineequation>\Delta
+x</ip:inlineequation>, then the B-spline
+approximation to a 1-dimensional function is the finite-basis expansion.
+<ip:equation>y\left(x\right)\approx\sum_{j}c_{j}\beta^{o}\left(\frac{x}{\Delta
+x}-j\right).</ip:equation> 
+In two dimensions with knot-spacing <ip:inlineequation>\Delta
+x</ip:inlineequation> and <ip:inlineequation>\Delta
+y</ip:inlineequation>, the function
+representation is
+<ip:equation>z\left(x,y\right)\approx\sum_{j}\sum_{k}c_{jk}\beta^{o}\left(\frac{x}{\Delta
+x}-j\right)\beta^{o}\left(\frac{y}{\Delta y}-k\right).</ip:equation> In these expressions,
+<ip:inlineequation>\beta^{o}\left(\cdot\right)</ip:inlineequation> is the space-limited B-spline basis function of
+order, o. The requirement of equally-spaced knot-points and equally-spaced data
+points, allows the development of fast (inverse-filtering) algorithms for
+determining the coefficients,
+<ip:inlineequation>c_{j}</ip:inlineequation>, from sample-values,
+<ip:inlineequation>y_{n}</ip:inlineequation>. Unlike the
+general spline interpolation algorithms, these algorithms can quickly find the
+spline coefficients for large images. 
+</db:para>
+<db:para>The advantage of representing a set of samples via B-spline basis functions is
+that continuous-domain operators (derivatives, re-sampling, integral, etc.)
+which assume that the data samples are drawn from an underlying continuous
+function can be computed with relative ease from the spline coefficients. For
+example, the second-derivative of a spline is
+<ip:equation>y{}^{\prime\prime}\left(x\right)=\frac{1}{\Delta
+x^{2}}\sum_{j}c_{j}\beta^{o\prime\prime}\left(\frac{x}{\Delta
+x}-j\right).</ip:equation> Using
+the property of B-splines that
+<ip:equation>\frac{d^{2}\beta^{o}\left(w\right)}{dw^{2}}=\beta^{o-2}\left(w+1\right)-2\beta^{o-2}\left(w\right)+\beta^{o-2}\left(w-1\right)</ip:equation> 
+it can be seen that 
+<ip:equation>y^{\prime\prime}\left(x\right)=\frac{1}{\Delta
+x^{2}}\sum_{j}c_{j}\left[\beta^{o-2}\left(\frac{x}{\Delta
+x}-j+1\right)-2\beta^{o-2}\left(\frac{x}{\Delta
+x}-j\right)+\beta^{o-2}\left(\frac{x}{\Delta x}-j-1\right)\right]. 
+</ip:equation>
+If <ip:inlineequation>o=3</ip:inlineequation>, then
+at the sample points, 
+<ip:equation verb="1">\begin{eqnarray*}
+\Delta
+x^{2}\left.y^{\prime}\left(x\right)\right|_{x=n\Delta x} &amp; = &amp;
+\sum_{j}c_{j}\delta_{n-j+1}-2c
+_{j}\delta_{n-j}+c_{j}\delta_{n-j-1},\\
+ &amp; = &amp;
+c_{n+1}-2c_{n}+c_{n-1}.\end{eqnarray*}</ip:equation> Thus, the
+second-derivative signal can be easily calculated from the spline fit. if
+desired, smoothing splines can be found to make the second-derivative less
+sensitive to random-errors. 
+</db:para>
+<db:para>The savvy reader will have already noticed that the data samples are related to
+the knot coefficients via a convolution operator, so that simple convolution
+with the sampled B-spline function recovers the original data from the spline
+coefficients. The output of convolutions can change depending on how boundaries
+are handled (this becomes increasingly more important as the number of
+dimensions in the data-set increases). The algorithms relating to B-splines in
+the signal-processing sub package assume mirror-symmetric boundary conditions.
+Thus, spline coefficients are computed based on that assumption, and
+data-samples can be recovered exactly from the spline coefficients by assuming
+them to be mirror-symmetric also.
+</db:para>
+<db:para>Currently the package provides functions for determining second- and
+third-order cubic spline coefficients from equally spaced samples in one- and
+two-dimensions (signal.qspline1d, signal.qspline2d, signal.cspline1d,
+signal.cspline2d). The package also supplies a function (signal.bspline) for
+evaluating the bspline basis function,
+<ip:inlineequation>\beta^{o}\left(x\right)</ip:inlineequation> for arbitrary
+order and x. For large o, the B-spline basis function can be approximated well
+by a zero-mean Gaussian function with standard-deviation equal to
+<ip:inlineequation>\sigma_{o}=\left(o+1\right)/12</ip:inlineequation>:
+<ip:equation>\beta^{o}\left(x\right)\approx\frac{1}{\sqrt{2\pi\sigma_{o}^{2}}}\exp\left(-\frac{x^{2}}{2\sigma_{o}}\right).</ip:equation> 
+A function to compute this Gaussian for arbitrary x and o is also available
+(signal.gauss_spline). The following code and Figure uses spline-filtering to
+compute an edge-image (the second-derivative of a smoothed spline) of Lena's
+face which is an array returned by the command lena(). The command
+signal.sepfir2d was used to apply a separable two-dimensional FIR filter with
+mirror-symmetric boundary conditions to the spline coefficients. This function
+is ideally suited for reconstructing samples from spline coefficients and is
+faster than signal.convolve2d which convolves arbitrary two-dimensional filters
+and allows for choosing mirror-symmetric boundary conditions. 
+</db:para>
+<db:programlisting>XXX: ipython
+&gt;&gt;&gt; image = lena().astype(Float32)
+&gt;&gt;&gt; derfilt = array([1.0,-2,1.0],Float32)
+&gt;&gt;&gt; ck = signal.cspline2d(image,8.0)
+&gt;&gt;&gt; deriv = signal.sepfir2d(ck, derfilt, [1]) + \
+&gt;&gt;&gt;         signal.sepfir2d(ck, [1], derfilt)
+&gt;&gt;&gt; 
+&gt;&gt;&gt; ## Alternatively we could have done:
+&gt;&gt;&gt; ## laplacian = array([[0,1,0],[1,-4,1],[0,1,0]],Float32)
+&gt;&gt;&gt; ## deriv2 = signal.convolve2d(ck,laplacian,mode='same',boundary='symm')
+&gt;&gt;&gt; 
+&gt;&gt;&gt; xplt.imagesc(image[::-1]) # flip image so it looks right-side up.
+&gt;&gt;&gt; xplt.title('Original image')
+&gt;&gt;&gt; xplt.eps('lena_image')
+&gt;&gt;&gt; xplt.imagesc(deriv[::-1])
+&gt;&gt;&gt; xplt.title('Output of spline edge filter')
+&gt;&gt;&gt; xplt.eps('lena_edge')
+</db:programlisting>
+<db:para>
+[Graphics file: lena_image.epsi]
+[Graphics file: lena_edge.epsi]
+[fig:lena_edge_spline]Example of using smoothing splines to filter images.
+</db:para>
+</db:section>
+
+<db:section>
+<db:title>Filtering</db:title>
+<db:para>Filtering is a generic name for any system that modifies an input signal in some
+way. In SciPy a signal can be thought of as a Numeric array. There are different
+kinds of filters for different kinds of operations. There are two broad kinds of
+filtering operations: linear and non-linear. Linear filters can always be
+reduced to multiplication of the flattened Numeric array by an appropriate
+matrix resulting in another flattened Numeric array. Of course, this is not
+usually the best way to compute the filter as the matrices and vectors involved
+may be huge. For example filtering a
+<ip:inlineequation>512\times512</ip:inlineequation> image with this method would
+require multiplication of a
+<ip:inlineequation>512^{2}\times512^{2}matrix</ip:inlineequation> with
+a <ip:inlineequation>512^{2}</ip:inlineequation> vector.
+Just trying to store the
+<ip:inlineequation>512^{2}\times512^{2}</ip:inlineequation> matrix using a standard Numeric
+array would require 68,719,476,736 elements. At 4 bytes per element this would
+require <ip:inlineequation>256\textrm{GB}</ip:inlineequation> of memory. In most applications most of the elements of
+this matrix are zero and a different method for computing the output of the
+filter is employed.
+</db:para>
+
+<db:section>
+<db:title>Convolution/Correlation</db:title>
+<db:para>Many linear filters also have the property of shift-invariance. This means
+that the filtering operation is the same at different locations in the signal
+and it implies that the filtering matrix can be constructed from knowledge of
+one row (or column) of the matrix alone. In this case, the matrix multiplication
+can be accomplished using Fourier transforms.
+</db:para>
+<db:para>
+Let <ip:inlineequation>x\left[n\right]</ip:inlineequation> define a one-dimensional signal indexed by the integer n.
+Full convolution of two one-dimensional signals can be expressed as
+<ip:inlineequation>y\left[n\right]=\sum_{k=-\infty}^{\infty}x\left[k\right]h\left[n-k\right]</ip:inlineequation>. This
+equation can only be implemented directly if we limit the sequences to finite
+support sequences that can be stored in a computer, choose
+<ip:inlineequation>n=0</ip:inlineequation> to be the
+starting point of both sequences, let
+<ip:inlineequation>K+1</ip:inlineequation> be that value for which
+<ip:inlineequation>y\left[n\right]=0</ip:inlineequation> for all
+<ip:inlineequation>n&gt;K+1</ip:inlineequation> and
+<ip:inlineequation>M+1</ip:inlineequation> be that value for which
+<ip:inlineequation>x\left[n\right]=0</ip:inlineequation> for all
+<ip:inlineequation>n&gt;M+1</ip:inlineequation>, then the discrete convolution expression is
+<ip:equation>y\left[n\right]=\sum_{k=\max\left(n-M,0\right)}^{\min\left(n,K\right)}x\left[k\right]h\left[n-k\right].</ip:equation> 
+For convenience assume <ip:inlineequation>K\geq M</ip:inlineequation>. Then, more explicitly the output of this
+operation is 
+<ip:equation verb="1">
+\begin{eqnarray*}
+y\left[0\right] &amp; = &amp; x\left[0\right]h\left[0\right]\\
+y\left[1\right] &amp; = &amp; x\left[0\right]h\left[1\right]+x\left[1\right]h\left[0\right]\\
+y\left[2\right] &amp; = &amp; x\left[0\right]h\left[2\right]+x\left[1\right]h\left[1\right]+x\left[2\right]h
+\left[0\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+y\left[M\right] &amp; = &amp; x\left[0\right]h\left[M\right]+x\left[1\right]h\left[M-1\right]+\cdots+x\left[
+M\right]h\left[0\right]\\
+y\left[M+1\right] &amp; = &amp; x\left[1\right]h\left[M\right]+x\left[2\right]h\left[M-1\right]+\cdots+x\left[M+1\right]h\left[0\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+y\left[K\right] &amp; = &amp; x\left[K-M\right]h\left[M\right]+\cdots+x\left[K\right]h\left[0\right]\\
+y\left[K+1\right] &amp; = &amp; x\left[K+1-M\right]h\left[M\right]+\cdots+x\left[K\right]h\left[1\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+y\left[K+M-1\right] &amp; = &amp; x\left[K-1\right]h\left[M\right]+x\left[K\right]h\left[M-1\right]\\
+y\left[K+M\right] &amp; = &amp; x\left[K\right]h\left[M\right].\end{eqnarray*}
+</ip:equation>
+ Thus, the full discrete convolution of two finite
+sequences of lengths <ip:inlineequation>K+1</ip:inlineequation> and
+<ip:inlineequation>M+1</ip:inlineequation> respectively results in a finite sequence of
+length <ip:inlineequation>K+M+1=\left(K+1\right)+\left(M+1\right)-1</ip:inlineequation>. 
+</db:para>
+<db:para>
+One dimensional convolution is implemented in SciPy with the function
+signal.convolve. This function takes as inputs the signals x, h, and an optional
+flag and returns the signal y. The optional flag allows for specification of
+which part of the output signal to return. The default value of 'full' returns
+the entire signal. If the flag has a value of 'same' then only the middle K
+values are returned starting at <ip:inlineequation>y\left[\left\lfloor \frac{M-1}{2}\right\rfloor
+\right]</ip:inlineequation> so that the output has the same length as the largest input. If the flag
+has a value of 'valid' then only the middle
+<ip:inlineequation>K-M+1=\left(K+1\right)-\left(M+1\right)+1</ip:inlineequation>
+output values are returned where
+<ip:inlineequation>z</ip:inlineequation> 
+depends on all of the values of the smallest input from
+<ip:inlineequation>h\left[0\right]</ip:inlineequation> to
+<ip:inlineequation>h\left[M\right]</ip:inlineequation>. In other words
+only the values <ip:inlineequation>y\left[M\right]</ip:inlineequation> to
+<ip:inlineequation>y\left[K\right]</ip:inlineequation> inclusive are returned.
+</db:para>
+<db:para>This same function signal.convolve can actually take N-dimensional arrays
+as inputs and will return the N-dimensional convolution of the two arrays. The
+same input flags are available for that case as well. 
+</db:para>
+<db:para>
+Correlation is very similar to convolution except for the minus sign becomes a
+plus sign. Thus
+<ip:equation>
+w\left[n\right]=\sum_{k=-\infty}^{\infty}y\left[k\right]x\left[n+k\right]
+</ip:equation> is the
+(cross) correlation of the signals
+<ip:inlineequation>y</ip:inlineequation> and
+<ip:inlineequation>x</ip:inlineequation>. For finite-length signals with
+<ip:inlineequation>y\left[n\right]=0</ip:inlineequation> outside of
+the range <ip:inlineequation>\left[0,K\right]</ip:inlineequation> and
+<ip:inlineequation>x\left[n\right]=0</ip:inlineequation> 
+outside of the range <ip:inlineequation>\left[0,M\right]</ip:inlineequation>, the summation can simplify to
+<ip:equation>
+w\left[n\right]=\sum_{k=\max\left(0,-n\right)}^{\min\left(K,M-n\right)}y\left[k\right]x\left[n+k\right].</ip:equation>Assuming
+again that <ip:inlineequation>K\geq M</ip:inlineequation> this is
+<ip:equation verb="1">
+\begin{eqnarray*}
+w\left[-K\right] &amp; = &amp; y\left[K\right]x\left[0\right]\\
+w\left[-K+1\right] &amp; = &amp; y\left[K-1\right]x\left[0\right]+y\left[K\right]x\left[1\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+w\left[M-K\right] &amp; = &amp; y\left[K-M\right]x\left[0\right]+y\left[K-M+1\right]x\left[1\right]+\cdots+y
+\left[K\right]x\left[M\right]\\
+w\left[M-K+1\right] &amp; = &amp; y\left[K-M-1\right]x\left[0\right]+\cdots+y\left[K-1\right]x\left[M\right]
+\\
+\vdots &amp; \vdots &amp; \vdots\\
+w\left[-1\right] &amp; = &amp; y\left[1\right]x\left[0\right]+y\left[2\right]x\left[1\right]+\cdots+y\left[M
++1\right]x\left[M\right]\\
+w\left[0\right] &amp; = &amp; y\left[0\right]x\left[0\right]+y\left[1\right]x\left[1\right]+\cdots+y\left[M
+\right]x\left[M\right]\\
+w\left[1\right] &amp; = &amp; y\left[0\right]x\left[1\right]+y\left[1\right]x\left[2\right]+\cdots+y\left[M-
+1\right]x\left[M\right]\\
+w\left[2\right] &amp; = &amp; y\left[0\right]x\left[2\right]+y\left[1\right]x\left[3\right]+\cdots+y\left[M-
+2\right]x\left[M\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+w\left[M-1\right] &amp; = &amp; y\left[0\right]x\left[M-1\right]+y\left[1\right]x\left[M\right]\\
+w\left[M\right] &amp; = &amp; y\left[0\right]x\left[M\right].\end{eqnarray*}
+</ip:equation>
+</db:para>
+<db:para>
+The SciPy function signal.correlate implements this operation. Equivalent flags
+are available for this operation to return the full
+<ip:inlineequation>K+M+1</ip:inlineequation> length sequence
+('full') or a sequence with the same size as the largest sequence starting at
+<ip:inlineequation>w\left[-K+\left\lfloor \frac{M-1}{2}\right\rfloor
+\right]</ip:inlineequation> ('same') or a sequence
+where the values depend on all the values of the smallest sequence ('valid').
+This final option returns the
+<ip:inlineequation>K-M+1</ip:inlineequation> values
+<ip:inlineequation>w\left[M-K\right]</ip:inlineequation> to
+<ip:inlineequation>w\left[0\right]</ip:inlineequation> 
+inclusive. 
+</db:para>
+<db:para>
+The function signal.correlate can also take arbitrary N-dimensional arrays as
+input and return the N-dimensional convolution of the two arrays on output. 
+</db:para>
+<db:para>
+When <ip:inlineequation>N=2</ip:inlineequation>, signal.correlate and/or signal.convolve can be used to construct
+arbitrary image filters to perform actions such as blurring, enhancing, and
+edge-detection for an image. 
+</db:para>
+<db:para>
+Convolution is mainly used for filtering when one of the signals is much smaller
+than the other (<ip:inlineequation>K\gg M</ip:inlineequation>), otherwise linear filtering is more easily accomplished
+in the frequency domain (see Fourier Transforms). 
+</db:para>
+</db:section>
+
+<db:section>
+<db:title>Difference-equation filtering</db:title>
+<db:para>A general class of linear one-dimensional filters (that includes
+convolution filters) are filters described by the difference equation
+<ip:equation>
+\sum_{k=0}^{N}a_{k}y\left[n-k\right]=\sum_{k=0}^{M}b_{k}x\left[n-k\right]</ip:equation> where
+<ip:inlineequation>x\left[n\right]</ip:inlineequation> is the input
+sequence and <ip:inlineequation>y\left[n\right]</ip:inlineequation> is the output
+sequence. If we assume initial rest so that
+<ip:inlineequation>y\left[n\right]=0</ip:inlineequation> for
+<ip:inlineequation>n&lt;0</ip:inlineequation>, then this
+kind of filter can be implemented using convolution. However, the convolution
+filter sequence <ip:inlineequation>h\left[n\right]</ip:inlineequation> could be infinite if
+<ip:inlineequation>a_{k}\neq0 for k\geq1</ip:inlineequation>. In
+addition, this general class of linear filter allows initial conditions to be
+placed on <ip:inlineequation>y\left[n\right]</ip:inlineequation> for <ip:inlineequation>n&lt;0</ip:inlineequation> resulting in a filter that cannot be expressed
+using convolution.
+</db:para>
+<db:para>The difference equation filter can be thought of as finding
+<ip:inlineequation>y\left[n\right]</ip:inlineequation> recursively in terms of it's previous values
+<ip:equation>a_{0}y\left[n\right]=-a_{1}y\left[n-1\right]-\cdots-a_{N}y\left[n-N\right]+\cdots+b_{0}x\left[n\right]+\cdots+b_{M}x\left[n-M\right].</ip:equation> Often
+<ip:inlineequation>a_{0}=1</ip:inlineequation> is chosen for normalization. The implementation in SciPy of this general
+difference equation filter is a little more complicated then would be implied by
+the previous equation. It is implemented so that only one signal needs to be
+delayed. The actual implementation equations are (assuming
+<ip:inlineequation>a_{0}=1</ip:inlineequation>).
+<ip:equation verb="1">
+\begin{eqnarray*}
+y\left[n\right] &amp; = &amp; b_{0}x\left[n\right]+z_{0}\left[n-1\right]\\
+z_{0}\left[n\right] &amp; = &amp; b_{1}x\left[n\right]+z_{1}\left[n-1\right]-a_{1}y\left[n\right]\\
+z_{1}\left[n\right] &amp; = &amp; b_{2}x\left[n\right]+z_{2}\left[n-1\right]-a_{2}y\left[n\right]\\
+\vdots &amp; \vdots &amp; \vdots\\
+z_{K-2}\left[n\right] &amp; = &amp; b_{K-1}x\left[n\right]+z_{K-1}\left[n-1\right]-a_{K-1}y\left[n\right]\\
+z_{K-1}\left[n\right] &amp; = &amp; b_{K}x\left[n\right]-a_{K}y\left[n\right],\end{eqnarray*}
+</ip:equation>
+where <ip:inlineequation>K=\max\left(N,M\right)</ip:inlineequation>.
+Note that <ip:inlineequation>b_{K}=0</ip:inlineequation> if
+<ip:inlineequation>K&gt;M</ip:inlineequation> and
+<ip:inlineequation>a_{K}=0</ip:inlineequation> if
+<ip:inlineequation>K&gt;N</ip:inlineequation>. In this way, the output at time n depends only on the input at
+time n and the value of <ip:inlineequation>z_{0}</ip:inlineequation> at the previous time. This can always be
+calculated as long as the <ip:inlineequation>K</ip:inlineequation>
+values <ip:inlineequation>z_{0}\left[n-1\right]\ldots
+z_{K-1}\left[n-1\right]</ip:inlineequation> are computed and stored at each time step. 
+</db:para>
+<db:para>
+The difference-equation filter is called using the command signal.lfilter in
+SciPy. This command takes as inputs the vector b, the vector, a, a signal x and
+returns the vector y (the same length as x) computed using the equation given
+above. If x is N-dimensional, then the filter is computed along the axis
+provided. If, desired, initial conditions providing the values of
+<ip:inlineequation>z_{0}\left[-1\right]</ip:inlineequation> to <ip:inlineequation>z_{K-1}\left[-1\right]</ip:inlineequation> can be provided or else it will
+be assumed that they are all zero. If initial conditions are provided, then the
+final conditions on the intermediate variables are also returned. These could be
+used, for example, to restart the calculation in the same state.
+</db:para>
+<db:para>
+Sometimes it is more convenient to express the initial conditions in terms of
+the signals <ip:inlineequation>x\left[n\right]</ip:inlineequation> and
+<ip:inlineequation>y\left[n\right]</ip:inlineequation>. In other words, perhaps you
+have the values of
+<ip:inlineequation>x\left[-M\right]</ip:inlineequation> to
+<ip:inlineequation>x\left[-1\right]</ip:inlineequation> and the values of
+<ip:inlineequation>y\left[-N\right]</ip:inlineequation> to
+<ip:inlineequation>y\left[-1\right]</ip:inlineequation> and would like to determine what values of
+<ip:inlineequation>z_{m}\left[-1\right]</ip:inlineequation> should be delivered as initial conditions to the
+difference-equation filter. It is not difficult to show that for
+<ip:inlineequation>0\leq m&lt;K</ip:inlineequation>,
+<ip:equation>z_{m}\left[n\right]=\sum_{p=0}^{K-m-1}\left(b_{m+p+1}x\left[n-p\right]-a_{m+p+1}y\left[n-p\right]\right).</ip:equation> 
+Using this formula we can find the intial condition vector
+<ip:inlineequation>z_{0}\left[-1\right]</ip:inlineequation> 
+to <ip:inlineequation>z_{K-1}\left[-1\right]</ip:inlineequation> given initial conditions on y (and x). The command
+signal.lfiltic performs this function.
+</db:para>
+</db:section>
+
+<db:section>
+<db:title>Other filters</db:title>
+<db:para>The signal processing package provides many more filters as well. 
+</db:para>
+<db:para>Median Filter
+</db:para>
+<db:para>A median filter is commonly applied when noise is markedly non-Gaussian or
+when it is desired to preserve edges. The median filter works by sorting all of
+the array pixel values in a rectangular region surrounding the point of
+interest. The sample median of this list of neighborhood pixel values is used as
+the value for the output array. The sample median is the middle array value in a
+sorted list of neighborhood values. If there are an even number of elements in
+the neighborhood, then the average of the middle two values is used as the
+median. A general purpose median filter that works on N-dimensional arrays is
+signal.medfilt. A specialized version that works only for two-dimensional arrays
+is available as signal.medfilt2d. 
+</db:para>
+<db:para>Order Filter</db:para>
+<db:para>
+A median filter is a specific example of a more general class of filters called
+order filters. To compute the output at a particular pixel, all order filters
+use the array values in a region surrounding that pixel. These array values are
+sorted and then one of them is selected as the output value. For the median
+filter, the sample median of the list of array values is used as the output. A
+general order filter allows the user to select which of the sorted values will
+be used as the output. So, for example one could choose to pick the maximum in
+the list or the minimum. The order filter takes an additional argument besides
+the input array and the region mask that specifies which of the elements in the
+sorted list of neighbor array values should be used as the output. The command
+to perform an order filter is signal.order_filter. 
+</db:para>
+<db:para>Wiener filter</db:para>
+<db:para>
+The Wiener filter is a simple deblurring filter for denoising images. This is
+not the Wiener filter commonly described in image reconstruction problems but
+instead it is a simple, local-mean filter. Let x be the input signal, then the
+output is
+<ip:equation>
+y=\left\{ \begin{array}{cc}
+\frac{\sigma^{2}}{\sigma_{x}^{2}}m_{x}+\left(1-\frac{\sigma^{2}}{\sigma_{x}^{2}}\right)x
+&amp; \sigma_{x}^{2}\geq\sigma^{2},\\
+m_{x} &amp; \sigma_{x}^{2}&lt;\sigma^{2}.\end{array}\right.</ip:equation>
+Where <ip:inlineequation>m_{x}</ip:inlineequation> is the
+local estimate of the mean and <ip:inlineequation>\sigma_{x}^{2}</ip:inlineequation> is the local estimate of the
+variance. The window for these estimates is an optional input parameter (default
+is <ip:inlineequation>3\times3</ip:inlineequation>). The parameter
+<ip:inlineequation>\sigma^{2}</ip:inlineequation> is a threshold noise
+parameter. If <ip:inlineequation>\sigma</ip:inlineequation> 
+is not given then it is estimated as the average of the local variances. 
+</db:para>
+<db:para>
+Hilbert filter
+</db:para>
+<db:para>
+The Hilbert transform constructs the complex-valued analytic signal from a real
+signal. For example if <ip:inlineequation>x=\cos\omega
+n</ip:inlineequation> then
+<ip:inlineequation>y=\textrm{hilbert}\left(x\right)</ip:inlineequation> 
+would return (except near the edges) 
+<ip:inlineequation>y=\exp\left(j\omega n\right)</ip:inlineequation>. In the
+frequency domain, the hilbert transform performs
+<ip:equation>Y=X\cdot H</ip:equation> where
+<ip:inlineequation>H</ip:inlineequation> is 2 for
+positive frequencies, 0 for negative frequencies and 1 for zero-frequencies. 
+</db:para>
+<db:para>
+Detrend
+</db:para>
+</db:section>
+</db:section>
+
+</ip:sheet></ip:notebook>

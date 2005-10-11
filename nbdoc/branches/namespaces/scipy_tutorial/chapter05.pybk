@@ -1,0 +1,552 @@
+<ip:notebook xmlns:ip="http://ipython.scipy.org/notebook-xml" xmlns:db="http://docbook.org/ns/docbook" version="1.1"><ip:head/><ip:log id="default-log"><ip:cell number="0"><ip:input>  
+############DO NOT EDIT THIS CELL############  
+from pylab import *  
+switch_backend('WXAgg')  
+ion()  
+</ip:input></ip:cell><ip:cell number="1"><ip:input>
+from scipy.optimize import fmin
+</ip:input></ip:cell><ip:cell number="2"><ip:input>
+import scipy; from scipy import *
+
+</ip:input></ip:cell><ip:cell number="3"><ip:input>
+def rosen(x):
+  return sum(100.0*(x[1:] - x[:-1]**2.0)**2.0 + (1-x[:-1])**2.0)
+</ip:input></ip:cell><ip:cell number="4"><ip:input>
+x0 = [1.3, 0.7, 0.8, 1.9, 1.2]
+</ip:input></ip:cell><ip:cell number="5"><ip:input>
+xopt = fmin(rosen, x0)
+</ip:input><ip:stdout>
+Optimization terminated successfully.
+         Current function value: 0.000066
+         Iterations: 141
+         Function evaluations: 243
+</ip:stdout></ip:cell><ip:cell number="6"><ip:input>
+print xopt
+</ip:input><ip:stdout>
+[ 0.99910115, 0.99820923, 0.99646346, 0.99297555, 0.98600385,]
+</ip:stdout></ip:cell><ip:cell number="7"><ip:input>
+rosen(ones(5))
+</ip:input><ip:output>
+0.0
+</ip:output></ip:cell><ip:cell number="8"><ip:input>
+def rosen_der(x):
+  xm = x[1:-1]
+  xm_m1 = x[:-2]
+  xm_p1 = x[2:]
+  der = zeros(x.shape, x.typecode())
+  der[1:-1] = 200*(xm-xm_m1**2) - 400*(xm_p1 - xm**2)*xm - 2*(1-xm)
+  der[0] = -400*x[0]*(x[1] - x[0]**2) - 2*(1-x[0])
+  der[-1] = 200*(x[-1]-x[-2]**2)
+  return der
+  
+</ip:input></ip:cell><ip:cell number="9"><ip:input>
+from scipy.optimize import fmin_bfgs
+</ip:input></ip:cell><ip:cell number="10"><ip:input>
+x0
+</ip:input><ip:output>
+[1.3, 0.69999999999999996, 0.80000000000000004, 1.8999999999999999,
+1.2]
+</ip:output></ip:cell><ip:cell number="11"><ip:input>
+xopt = fmin_bfgs(rosen, x0, fprime=rosen_der)
+</ip:input><ip:stdout>
+Optimization terminated successfully.
+         Current function value: 0.000000
+         Iterations: 51
+         Function evaluations: 63
+         Gradient evaluations: 63
+</ip:stdout></ip:cell><ip:cell number="12"><ip:input>
+print xopt
+</ip:input><ip:stdout>
+[ 1.        , 0.99999999, 0.99999999, 0.99999997, 0.99999994,]
+</ip:stdout></ip:cell><ip:cell number="13"><ip:input>
+from scipy.optimize import fmin_ncg
+</ip:input></ip:cell><ip:cell number="15"><ip:input>
+def rosen_hess(x):
+  x = asarray(x)
+  H = diag(-400*x[:-1], 1) - diag(400*x[:-1], -1)
+  diagonal = zeros(len(x), x.typecode())
+  diagonal[0] = 1200*x[0] - 400*x[1] + 2
+  diagonal[-1] = 200
+  diagonal[1:-1] = 202 + 1200*x[1:-1]**2 - 400*x[2:]
+  H = H + diag(diagonal)
+  return H
+  
+</ip:input></ip:cell><ip:cell number="16"><ip:input>
+x0
+</ip:input><ip:output>
+[1.3, 0.69999999999999996, 0.80000000000000004, 1.8999999999999999,
+1.2]
+</ip:output></ip:cell><ip:cell number="17"><ip:input>
+xopt = fmin_ncg(rosen, x0, rosen_der, fhess=rosen_hess)
+</ip:input><ip:stdout>
+Optimization terminated successfully.
+         Current function value: 0.000000
+         Iterations: 19
+         Function evaluations: 22
+         Gradient evaluations: 19
+         Hessian evaluations: 19
+</ip:stdout></ip:cell><ip:cell number="18"><ip:input>
+print xopt
+
+</ip:input><ip:stdout>
+[ 0.99994389, 0.9998889 , 0.99977745, 0.99955271, 0.99910334,]
+</ip:stdout></ip:cell><ip:cell number="19"><ip:input>
+from scipy.optimize import fmin_ncg
+</ip:input></ip:cell><ip:cell number="20"><ip:input>
+def rosen_hess_p(x, p):
+  x = asarray(x)
+  Hp = zeros(len(x), x.typecode())
+  Hp[0] = (1200*x[0]**2 - 400*x[1] + 2)*p[0] - 400*x[0]*p[1]
+  Hp[1:-1] = (-400*x[:-2]*p[:-2] + (202 + 1200*x[1:-1]**2-400*x[2:])*p[1:-1]
+    -400*x[1:-1]*p[2:])
+  Hp[-1] = -400*x[-2]*p[-2] + 200*p[-1]
+  return Hp
+  
+</ip:input></ip:cell><ip:cell number="21"><ip:input>
+print x0
+</ip:input><ip:stderr>
+----------------------------------------------------------------------
+-----
+exceptions.NameError                                 Traceback (most
+recent call last)
+
+/Users/kern/svk-projects/ipython/nbshell/trunk/&lt;console&gt;
+
+NameError: name 'x0' is not defined
+</ip:stderr><ip:stdout>
+[1.3, 0.69999999999999996, 0.80000000000000004, 1.8999999999999999,
+1.2]
+</ip:stdout></ip:cell><ip:cell number="22"><ip:input>
+x0
+</ip:input><ip:output>
+[1.3, 0.69999999999999996, 0.80000000000000004, 1.8999999999999999,
+1.2]
+</ip:output></ip:cell><ip:cell number="24"><ip:input>
+xopt = fmin_ncg(rosen, x0, rosen_der, fhess_p=rosen_hess_p)
+</ip:input><ip:stdout>
+Optimization terminated successfully.
+         Current function value: 0.000000
+         Iterations: 20
+         Function evaluations: 23
+         Gradient evaluations: 20
+         Hessian evaluations: 44
+</ip:stdout></ip:cell><ip:cell number="25"><ip:input>
+print xopt
+</ip:input><ip:stdout>
+[ 0.99999352, 0.99998455, 0.99996844, 0.99993646, 0.99987251,]
+</ip:stdout></ip:cell><ip:cell number="26"><ip:input>
+xopt
+</ip:input><ip:output>
+[ 0.99999352, 0.99998455, 0.99996844, 0.99993646, 0.99987251,]
+</ip:output></ip:cell><ip:cell number="61"><ip:input>
+x = arange(0,6e-2,6e-2/30)
+</ip:input></ip:cell><ip:cell number="62"><ip:input>
+A,k,theta = 10, 1.0/3e-2,pi/6
+</ip:input></ip:cell><ip:cell number="75"><ip:input>
+title('Least-squares fit to noisy data')
+</ip:input><ip:output>
+&lt;matplotlib.text.Text instance at 0xb240058&gt;
+</ip:output></ip:cell><ip:cell number="76"><ip:input>
+y_true = A*sin(2*pi*k*x + theta)
+</ip:input></ip:cell><ip:cell number="77"><ip:input>
+y_meas = y_true + 2*randn(len(x))
+</ip:input></ip:cell><ip:cell number="78"><ip:input>
+def residuals(p, y, x):
+  A,k,theta = p
+  err = y - A*sin(2*pi*k*x + theta)
+  return err
+  
+</ip:input></ip:cell><ip:cell number="79"><ip:input>
+def peval(x, p):
+  return p[0]*sin(2*pi*p[1]*x + p[2])
+</ip:input></ip:cell><ip:cell number="80"><ip:input>
+p0 = [8,1/2.3e-2,pi/3]
+
+</ip:input></ip:cell><ip:cell number="81"><ip:input>
+from scipy.optimize import leastsq
+</ip:input></ip:cell><ip:cell number="82"><ip:input>
+plsq = leastsq(residuals, p0, args=(y_meas, x))
+</ip:input></ip:cell><ip:cell number="83"><ip:input>
+print plsq[0]
+</ip:input><ip:stdout>
+[ -9.71673236, 33.40401019, -2.64065054,]
+</ip:stdout></ip:cell><ip:cell number="84"><ip:input>
+print A, k, theta
+</ip:input><ip:stdout>
+10 33.3333333333 0.523598775598
+</ip:stdout></ip:cell><ip:cell number="85"><ip:input>
+clf();plot(x, peval(x, plsq[0]), 'r--', x, y_true, 'b--')
+scatter(x,y_meas)
+</ip:input><ip:output>
+&lt;matplotlib.collections.RegularPolyCollection instance at 0xb264760&gt;
+</ip:output></ip:cell><ip:cell number="86"><ip:input>
+grab_figure()
+</ip:input></ip:cell></ip:log><ip:sheet id="chapter05">
+<db:title>Optimization (optimize)</db:title>
+<db:para>There are several classical optimization algorithms provided by SciPy in the optimize package. An overview of the module is available using help (or pydoc.help): </db:para><db:programlisting>XXX: ipython
+&gt;&gt;&gt; info(optimize)
+ Optimization Tools
+
+A collection of general-purpose optimization routines.
+
+  fmin        --  Nelder-Mead Simplex algorithm
+                    (uses only function calls)
+  fmin_powell --  Powell's (modified) level set method (uses only 
+                    function calls)
+  fmin_bfgs   --  Quasi-Newton method (can use function and gradient)
+  fmin_ncg    --  Line-search Newton Conjugate Gradient (can use
+                    function, gradient and hessian).
+  leastsq     --  Minimize the sum of squares of M equations in
+                    N unknowns given a starting estimate.
+
+ Scalar function minimizers
+
+  fminbound   --  Bounded minimization of a scalar function.
+  brent       --  1-D function minimization using Brent method.
+  golden      --  1-D function minimization using Golden Section method
+  bracket     --  Bracket a minimum (given two starting points)
+ 
+Also a collection of general_purpose root-finding routines.
+
+  fsolve      --  Non-linear multi-variable equation solver.
+
+ Scalar function solvers
+
+  brentq      --  quadratic interpolation Brent method
+  brenth      --  Brent method (modified by Harris with
+                    hyperbolic extrapolation)
+  ridder      --  Ridder's method
+  bisect      --  Bisection method
+  newton      --  Secant method or Newton's method
+
+  fixed_point -- Single-variable fixed-point solver.
+</db:programlisting>
+<db:para>The first four algorithms are unconstrained minimization algorithms (fmin: Nelder-Mead simplex, fmin_bfgs: BFGS, fmin_ncg: Newton Conjugate Gradient, and leastsq: Levenburg-Marquardt). The fourth algorithm only works for functions of a single variable but allows minimization over a specified interval. The last algorithm actually finds the roots of a general function of possibly many variables. It is included in the optimization package because at the (non-boundary) extreme points of a function, the gradient is equal to zero. </db:para><db:section>
+<db:title>Nelder-Mead simplex algorithm (optimize.fmin)</db:title>
+<db:para>The simplex algorithm is probably the simplest way to minimize a fairly
+well-behaved function. The simplex algorithm requires only function evaluations
+and is a good choice for simple minimization problems. However, because it does
+not use any gradient evaluations, it may take longer to find the minimum. To
+demonstrate the minimization function consider the problem of minimizing the
+Rosenbrock function of N
+variables:
+<ip:equation>
+f\left(\mathbf{x}\right)=\sum_{i=1}^{N-1}100\left(x_{i}-x_{i-1}^{2}\right)^{2}+\left(1-x_{i-1}\right)^{2}.
+</ip:equation>
+The minimum value of this function is 0 which is achieved when
+<ip:inlineequation>x_{i}=1</ip:inlineequation>. This
+minimum can be found using the fmin routine as shown in the example below:
+</db:para>
+<ip:block logid="default-log"><ip:cell type="input" number="1"/><ip:cell type="input" number="2"/><ip:cell type="input" number="3"/><ip:cell type="input" number="4"/><ip:cell type="input" number="5"/><ip:cell type="stdout" number="5"/><ip:cell type="input" number="6"/><ip:cell type="stdout" number="6"/></ip:block><db:para>(Oops! fmin() isn't actually finding the minimum!) </db:para><ip:block logid="default-log"><ip:cell type="input" number="7"/><ip:cell type="output" number="7"/></ip:block><db:para>Another optimization algorithm that needs only function calls to find the minimum is Powell's method available as optimize.fmin_powell. </db:para></db:section>
+
+<db:section>
+<db:title>Broyden-Fletcher-Goldfarb-Shanno algorithm
+(optimize.fmin_bfgs)</db:title>
+<db:para>In order to converge more quickly to the solution, this routine uses the gradient of the objective function. If the gradient is not given by the user, then it is estimated using first-differences. The Broyden-Fletcher-Goldfarb-Shanno (BFGS) method typically requires fewer function calls than the simplex algorithm even when the gradient must be estimated. </db:para><db:para>
+To demonstrate this algorithm, the Rosenbrock function is again used. The
+gradient of the Rosenbrock function is the vector: 
+<ip:equation verb="1">
+\begin{eqnarray*}
+\frac{\partial f}{\partial x_{j}} &amp; = &amp;
+\sum_{i=1}^{N}200\left(x_{i}-x_{i-1}^{2}\right)\left(\delta_{i,j}-2x_{i-1}\delta_{i-1,j}\right)-2\left(1-x_{i-1}\right)\delta_{i-1,j}.\\
+&amp; = &amp;
+200\left(x_{j}-x_{j-1}^{2}\right)-400x_{j}\left(x_{j+1}-x_{j}^{2}\right)-2\left(1-x_{j}\right).
+\end{eqnarray*}
+</ip:equation>
+This expression is valid for the interior derivatives. Special cases
+are
+<ip:equation verb="1">
+\begin{eqnarray*}
+\frac{\partial f}{\partial x_{0}} &amp; = &amp;
+-400x_{0}\left(x_{1}-x_{0}^{2}\right)-2\left(1-x_{0}\right),\\
+\frac{\partial
+f}{\partial x_{N-1}} &amp; = &amp;
+200\left(x_{N-1}-x_{N-2}^{2}\right).
+\end{eqnarray*}
+</ip:equation>
+A Python function which computes this
+gradient is constructed by the code-segment:
+</db:para>
+<ip:block logid="default-log"><ip:cell type="input" number="8"/></ip:block>
+<db:para>The calling signature for the BFGS minimization algorithm is similar to fmin with the addition of the fprime argument. An example usage of fmin_bfgs is shown in the following example which minimizes the Rosenbrock function. </db:para><ip:block logid="default-log"><ip:cell type="input" number="9"/><ip:cell type="input" number="10"/><ip:cell type="output" number="10"/><ip:cell type="input" number="11"/><ip:cell type="stdout" number="11"/><ip:cell type="input" number="12"/><ip:cell type="stdout" number="12"/></ip:block>
+</db:section>
+
+<db:section>
+<db:title>Newton-Conjugate-Gradient (optimize.fmin_ncg)</db:title>
+<db:para>The method which requires the fewest function calls and is therefore
+often the fastest method to minimize functions of many variables is fmin_ncg.
+This method is a modified Newton's method and uses a conjugate gradient
+algorithm to (approximately) invert the local Hessian. Newton's method is based
+on fitting the function locally to a quadratic
+form:
+<ip:equation>f\left(\mathbf{x}\right)\approx f\left(\mathbf{x}_{0}\right)+\nabla
+f\left(\mathbf{x}_{0}\right)\cdot\left(\mathbf{x}-\mathbf{x}_{0}\right)+\frac{1}{2}\left(\mathbf{x}-\mathbf{x}_{0}\right)^{T}\mathbf{H}\left(\mathbf{x}_{0}\right)\left(\mathbf{x}-\mathbf{x}_{0}\right).
+</ip:equation>
+where
+<ip:inlineequation>\mathbf{H}\left(\mathbf{x}_{0}\right)</ip:inlineequation> is a matrix of second-derivatives
+(the Hessian). If the Hessian is positive definite then the local minimum of
+this function can be found by setting the gradient of the quadratic form to
+zero, resulting in
+<ip:equation>
+\mathbf{x}_{\textrm{opt}}=\mathbf{x}_{0}-\mathbf{H}^{-1}\nabla f.
+</ip:equation> The inverse of
+the Hessian is evaluted using the conjugate-gradient method. An example of
+employing this method to minimizing the Rosenbrock function is given below. To
+take full advantage of the NewtonCG method, a function which computes the
+Hessian must be provided. The Hessian matrix itself does not need to be
+constructed, only a vector which is the product of the Hessian with an arbitrary
+vector needs to be available to the minimization routine. As a result, the user
+can provide either a function to compute the Hessian matrix, or a function to
+compute the product of the Hessian with an arbitrary vector. 
+</db:para>
+<db:section>
+<db:title>Full Hessian example:</db:title>
+<db:para>The Hessian of the Rosenbrock function is
+<ip:equation verb="1">\begin{eqnarray*}
+H_{ij}=\frac{\partial^{2}f}{\partial x_{i}\partial x_{j}} &amp; = &amp;
+200\left(\delta_{i,j}-2x_{i-1}\delta_{i-1,j}\right)-400x_{i}\left(\delta_{i+1,j}-2x_{i}\delta_{i,j}\right)-400\delta_{i,j}\left(x_{i+1}-x_{i}^{2}\right)+2\delta_{i,j},\\
+&amp; = &amp;
+\left(202+1200x_{i}^{2}-400x_{i+1}\right)\delta_{i,j}-400x_{i}\delta_{i+1,j}-400x_{i-1}\delta_{i-1,j},\end{eqnarray*}
+</ip:equation>
+ if
+<ip:inlineequation>i,j\in\left[1,N-2\right]</ip:inlineequation> with 
+<ip:inlineequation>i,j\in\left[0,N-1\right]</ip:inlineequation> defining the 
+<ip:inlineequation>N\times N</ip:inlineequation> 
+matrix. Other non-zero entries of the matrix are 
+<ip:equation verb="1">\begin{eqnarray*}
+\frac{\partial^{2}f}{\partial x_{0}^{2}} &amp; = &amp; 1200x_{0}^{2}-400x_{1}+2,\\
+\frac{\partial^{2}f}{\partial x_{0}\partial x_{1}}=\frac{\partial^{2}f}{\partial x_{1}\partial x_{0}
+} &amp; = &amp; -400x_{0},\\
+\frac{\partial^{2}f}{\partial x_{N-1}\partial x_{N-2}}=\frac{\partial^{2}f}{\partial x_{N-2}\partial
+ x_{N-1}} &amp; = &amp; -400x_{N-2},\\
+\frac{\partial^{2}f}{\partial x_{N-1}^{2}} &amp; = &amp; 200.
+\end{eqnarray*}</ip:equation>
+For example, the Hessian when N=5 is
+<ip:equation>
+\mathbf{H}=\left[\begin{array}{ccccc}
+1200x_{0}^{2}-400x_{1}+2 &amp; -400x_{0} &amp; 0 &amp; 0 &amp; 0\\
+-400x_{0} &amp; 202+1200x_{1}^{2}-400x_{2} &amp; -400x_{1} &amp; 0 &amp; 0\\
+0 &amp; -400x_{1} &amp; 202+1200x_{2}^{2}-400x_{3} &amp; -400x_{2} &amp; 0\\
+0 &amp;  &amp; -400x_{2} &amp; 202+1200x_{3}^{2}-400x_{4} &amp; -400x_{3}\\
+0 &amp; 0 &amp; 0 &amp; -400x_{3} &amp; 200\end{array}\right].
+</ip:equation>
+ The code which computes this
+Hessian along with the code to minimize the function using fmin_ncg is shown in
+the following example:
+</db:para>
+
+<ip:block logid="default-log"><ip:cell type="input" number="13"/><ip:cell type="input" number="15"/><ip:cell type="input" number="16"/><ip:cell type="output" number="16"/><ip:cell type="input" number="17"/><ip:cell type="stdout" number="17"/><ip:cell type="input" number="18"/><ip:cell type="stdout" number="18"/></ip:block>
+</db:section>
+<db:section>
+<db:title>Hessian product example:</db:title>
+<db:para>For larger minimization problems, storing the entire Hessian matrix can consume considerable time and memory. The Newton-CG algorithm only needs the product of the Hessian times an arbitrary vector. As a result, the user can supply code to compute this product rather than the full Hessian by setting the fhess_p keyword to the desired function. The fhess_p function should take the minimization vector as the first argument and the arbitrary vector as the second argument. Any extra arguments passed to the function to be minimized will also be passed to this function. If possible, using Newton-CG with the hessian product option is probably the fastest way to minimize the function. </db:para><db:para>
+In this case, the product of the Rosenbrock Hessian with an arbitrary vector is
+not difficult to compute. If
+<ip:inlineequation>\mathbf{p}</ip:inlineequation> is the arbitrary vector, then
+<ip:inlineequation>\mathbf{H}\left(\mathbf{x}\right)\mathbf{p}</ip:inlineequation>
+has elements:
+<ip:equation>
+\mathbf{H}\left(\mathbf{x}\right)\mathbf{p}=\left[\begin{array}{c}
+\left(1200x_{0}^{2}-400x_{1}+2\right)p_{0}-400x_{0}p_{1}\\
+\vdots\\
+-400x_{i-1}p_{i-1}+\left(202+1200x_{i}^{2}-400x_{i+1}\right)p_{i}-400x_{i}p_{i+1}\\
+\vdots\\
+-400x_{N-2}p_{N-2}+200p_{N-1}\end{array}\right]. 
+</ip:equation>
+Code which makes use of the
+fhess_p keyword to minimize the Rosenbrock function using fmin_ncg follows:
+</db:para>
+
+<ip:block logid="default-log"><ip:cell type="input" number="19"/><ip:cell type="input" number="20"/><ip:cell type="input" number="21"/><ip:cell type="stderr" number="21"/><ip:cell type="stdout" number="21"/><ip:cell type="input" number="22"/><ip:cell type="output" number="22"/><ip:cell type="input" number="24"/><ip:cell type="stdout" number="24"/><ip:cell type="input" number="25"/><ip:cell type="stdout" number="25"/><ip:cell type="input" number="26"/><ip:cell type="output" number="26"/></ip:block>
+</db:section>
+</db:section>
+
+<db:section>
+<db:title>Least-square fitting (minimize.leastsq)</db:title>
+<db:para>All of the previously-explained minimization procedures can be used to
+solve a least-squares problem provided the appropriate objective function is
+constructed. For example, suppose it is desired to fit a set of data 
+<ip:inlineequation>\left\{
+\mathbf{x}_{i},\mathbf{y}_{i}\right\}</ip:inlineequation>  to a known model,
+<ip:inlineequation>\mathbf{y}=\mathbf{f}\left(\mathbf{x},\mathbf{p}\right)</ip:inlineequation>
+where <ip:inlineequation>\mathbf{p}</ip:inlineequation> is a
+vector of parameters for the model that need to be found. A common method for
+determining which parameter vector gives the best fit to the data is to minimize
+the sum of squares of the residuals. The residual is usually defined for each
+observed data-point as
+<ip:equation>
+e_{i}\left(\mathbf{p},\mathbf{y}_{i},\mathbf{x}_{i}\right)=\left\Vert
+\mathbf{y}_{i}-\mathbf{f}\left(\mathbf{x}_{i},\mathbf{p}\right)\right\Vert .
+</ip:equation>
+ An
+objective function to pass to any of the previous minization algorithms to
+obtain a least-squares fit is.
+<ip:equation>
+J\left(\mathbf{p}\right)=\sum_{i=0}^{N-1}e_{i}^{2}\left(\mathbf{p}\right).
+</ip:equation>
+The leastsq algorithm performs this squaring and summing of the residuals
+automatically. It takes as an input argument the vector function
+<ip:inlineequation>\mathbf{e}\left(\mathbf{p}\right)</ip:inlineequation>
+and returns the value of
+<ip:inlineequation>\mathbf{p}</ip:inlineequation> which
+minimizes
+<ip:inlineequation>J\left(\mathbf{p}\right)=\mathbf{e}^{T}\mathbf{e}</ip:inlineequation>
+directly. The user
+is also encouraged to provide the Jacobian matrix of the function (with
+derivatives down the columns or across the rows). If the Jacobian is not
+provided, it is estimated. 
+</db:para>
+<db:para>An example should clarify the usage. Suppose it is believed some measured
+data follow a sinusoidal pattern
+<ip:equation>y_{i}=A\sin\left(2\pi kx_{i}+\theta\right) 
+</ip:equation> 
+where
+the parameters <ip:inlineequation>A</ip:inlineequation>,
+<ip:inlineequation>k</ip:inlineequation>, and
+<ip:inlineequation>\theta</ip:inlineequation>  are unknown. The residual vector is
+<ip:equation>
+e_{i}=\left|y_{i}-A\sin\left(2\pi kx_{i}+\theta\right)\right|. 
+</ip:equation>
+By defining a
+function to compute the residuals and (selecting an appropriate starting
+position), the least-squares fit routine can be used to find the best-fit
+parameters
+<ip:inlineequation>\hat{A},\,\hat{k},\,\hat{\theta}</ip:inlineequation>.
+This is shown in the following
+example and a plot of the results is shown in Figure [fig:least_squares_fit].
+</db:para>
+<db:programlisting>XXX: ipython and figure
+&gt;&gt;&gt; x = arange(0,6e-2,6e-2/30)
+&gt;&gt;&gt; A,k,theta = 10, 1.0/3e-2, pi/6
+&gt;&gt;&gt; y_true = A*sin(2*pi*k*x+theta)
+&gt;&gt;&gt; y_meas = y_true + 2*randn(len(x))
+
+&gt;&gt;&gt; def residuals(p, y, x):
+        A,k,theta = p
+        err = y-A*sin(2*pi*k*x+theta)
+        return err
+
+&gt;&gt;&gt; def peval(x, p):
+        return p[0]*sin(2*pi*p[1]*x+p[2])
+
+&gt;&gt;&gt; p0 = [8, 1/2.3e-2, pi/3]
+&gt;&gt;&gt; print array(p0)
+[  8.      43.4783   1.0472]
+
+&gt;&gt;&gt; from scipy.optimize import leastsq
+&gt;&gt;&gt; plsq = leastsq(residuals, p0, args=(y_meas, x))
+&gt;&gt;&gt; print plsq[0]
+[ 10.9437  33.3605   0.5834]
+
+&gt;&gt;&gt; print array([A, k, theta])
+[ 10.      33.3333   0.5236]
+
+&gt;&gt;&gt; from xplt import *    # Only on X-windows systems
+&gt;&gt;&gt; plot(x,peval(x,plsq[0]),x,y_meas,'o',x,y_true)
+&gt;&gt;&gt; title('Least-squares fit to noisy data')
+&gt;&gt;&gt; legend(['Fit', 'Noisy', 'True'])
+&gt;&gt;&gt; gist.eps('leastsqfit')   # Make epsi file.
+</db:programlisting>
+<ip:block logid="default-log"><ip:cell type="input" number="61"/><ip:cell type="input" number="62"/><ip:cell type="input" number="76"/><ip:cell type="input" number="77"/><ip:cell type="input" number="78"/><ip:cell type="input" number="79"/><ip:cell type="input" number="80"/><ip:cell type="input" number="81"/><ip:cell type="input" number="82"/><ip:cell type="input" number="83"/><ip:cell type="stdout" number="83"/><ip:cell type="input" number="84"/><ip:cell type="stdout" number="84"/><ip:cell type="input" number="85"/><ip:cell type="output" number="85"/><ip:cell type="input" number="75"/><ip:cell type="output" number="75"/><ip:cell type="input" number="86"/></ip:block><ip:figure type="png" filename="/Users/kern/svk-projects/ipython/nbdoc/trunk/scipy_tutorial/chapter05_2.png"/><ip:block logid="default-log"/>
+</db:section>
+
+<db:section>
+<db:title>Scalar function minimizers</db:title>
+<db:para>Often only the minimum of a scalar function is needed (a scalar function is one that takes a scalar as input and returns a scalar output). In these circumstances, other optimization techniques have been developed that can work faster. </db:para><db:section>
+<db:title>Unconstrained minimization (optimize.brent)</db:title>
+<db:para>
+There are actually two methods that can be used to minimize a scalar function
+(brent and golden), but golden is included only for academic purposes and should
+rarely be used. The brent method uses Brent's algorithm for locating a minimum.
+Optimally a bracket should be given which contains the minimum desired. A
+bracket is a triple
+<ip:inlineequation>\left(a,b,c\right)</ip:inlineequation> such that
+<ip:inlineequation>f\left(a\right)&gt;f\left(b\right)&lt;f\left(c\right)
+</ip:inlineequation>and <ip:inlineequation>a &lt;b &lt;c</ip:inlineequation>. If this is not given,
+then alternatively two starting points can be chosen and a bracket will be found
+from these points using a simple marching algorithm. If these two starting
+points are not provided 0 and 1 will be used (this may not be the right choice
+for your function and result in an unexpected minimum being returned). 
+</db:para>
+</db:section>
+<db:section>
+<db:title>Bounded minimization (optimize.fminbound)</db:title>
+<db:para>Thus far all of the minimization routines described have been unconstrained minimization routines. Very often, however, there are constraints that can be placed on the solution space before minimization occurs. The fminbound function is an example of a constrained minimization procedure that provides a rudimentary interval constraint for scalar functions. The interval constraint allows the minimization to occur only between two fixed endpoints. </db:para><db:para>
+For example, to find the minimum of
+<ip:inlineequation>J_{1}\left(x\right)</ip:inlineequation> near
+<ip:inlineequation>x=5</ip:inlineequation>, fminbound can
+be called using the interval
+<ip:inlineequation>\left[4,7\right]</ip:inlineequation> as a constraint. The result is
+<ip:inlineequation>x_{\textrm{min}}=5.3314</ip:inlineequation>:
+</db:para>
+<db:programlisting> XXX: ipython
+&gt;&gt;&gt; from scipy.special import j1
+
+&gt;&gt;&gt; from scipy.optimize import fminbound
+&gt;&gt;&gt; xmin = fminbound(j1, 4, 7)
+&gt;&gt;&gt; print xmin
+5.33144184241
+</db:programlisting>
+<ip:block logid="default-log"/>
+</db:section>
+</db:section>
+
+<db:section>
+<db:title>Root finding</db:title>
+<db:section>
+<db:title>Sets of equations</db:title>
+<db:para>To find the roots of a polynomial, the command roots is useful. To find a
+root of a set of non-linear equations, the command optimize.fsolve is needed.
+For example, the following example finds the roots of the single-variable
+transcendental equation
+<ip:equation>
+x+2\cos\left(x\right)=0,
+</ip:equation>
+ and the set of non-linear
+equations
+<ip:equation>
+x_{0}\cos\left(x_{1}\right)
+</ip:equation>
+ The results are <ip:inlineequation>x=-1.0299</ip:inlineequation> and
+<ip:inlineequation>x_{0}=6.5041,\, x_{1}=0.9084</ip:inlineequation>.
+</db:para>
+<db:programlisting>XXX: ipython
+&gt;&gt;&gt; def func(x):
+        return x + 2*cos(x)
+
+&gt;&gt;&gt; def func2(x):
+        out = [x[0]*cos(x[1]) - 4]
+        out.append(x[1]*x[0] - x[1] - 5)
+        return out
+
+&gt;&gt;&gt; from optimize import fsolve
+&gt;&gt;&gt; x0 = fsolve(func, 0.3)
+&gt;&gt;&gt; print x0
+-1.02986652932
+
+&gt;&gt;&gt; x02 = fsolve(func2, [1, 1])
+&gt;&gt;&gt; print x02
+[ 6.5041  0.9084]
+</db:programlisting>
+</db:section>
+<db:section>
+<db:title>Scalar function root finding</db:title>
+<db:para>If one has a single-variable equation, there are four different root finder algorithms that can be tried. Each of these root finding algorithms requires the endpoints of an interval where a root is suspected (because the function changes signs). In general brentq is the best choice, but the other methods may be useful in certain circumstances or for academic purposes. </db:para></db:section>
+<db:section>
+<db:title>Fixed-point solving</db:title>
+<db:para>A problem closely related to finding the zeros of a function is the
+problem of finding a fixed-point of a function. A fixed point of a function is
+the point at which evaluation of the function returns the point:
+<ip:inlineequation>g\left(x\right)=x</ip:inlineequation>. Clearly the
+fixed point of <ip:inlineequation>g</ip:inlineequation> is the root of
+<ip:inlineequation>f\left(x\right)=g\left(x\right)-x</ip:inlineequation>.
+Equivalently, the root of <ip:inlineequation>f</ip:inlineequation> is the
+fixed_point of
+<ip:inlineequation>g\left(x\right)=f\left(x\right)+x</ip:inlineequation>. The routine fixed_point
+provides a simple iterative method using Aitkens sequence acceleration to
+estimate the fixed point of g given a starting point. 
+</db:para>
+</db:section>
+</db:section>
+
+</ip:sheet></ip:notebook>

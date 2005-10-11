@@ -1,0 +1,11 @@
+This is the document processing module for the interactive notebooks project.
+
+The code is migrated from the 'cell' branch in google-rkern
+repository, and has been developed since mostly to match the needs of
+the nbshell module, i.e. the GUI. And of course to provide the
+necessary features for notebook documents.
+
+The XSLT packaged needed to process notebooks to e.g. html and latex
+(and via that to pdf, provided that pdflatex is also installed in the
+system) are available at
+http://starship.python.net/~kernr/notebook-xsl-cutdown.tar.bz2

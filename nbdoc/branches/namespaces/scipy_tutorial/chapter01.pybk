@@ -1,0 +1,56 @@
+<ip:notebook xmlns:ip="http://ipython.scipy.org/notebook-xml" xmlns:db="http://docbook.org/ns/docbook" version="1.1"><ip:head/><ip:log id="default-log"><ip:cell number="0"><ip:input>  
+############DO NOT EDIT THIS CELL############  
+from pylab import *  
+switch_backend('WXAgg')  
+ion()  
+</ip:input></ip:cell><ip:cell number="1"><ip:input>
+from scipy import *
+</ip:input></ip:cell><ip:cell number="2"><ip:input>
+info(optimize.fmin)
+</ip:input></ip:cell><ip:cell number="3"><ip:input>
+optimize.fmin?
+</ip:input></ip:cell></ip:log><ip:sheet id="chapter01">
+<db:title>Introduction</db:title>
+<db:para>SciPy is a collection of mathematical algorithms and convenience functions built on the Numeric extension for Python. It adds significant power to the interactive Python session by exposing the user to high-level commands and classes for the manipulation and visualization of data. With SciPy, an interactive Python session becomes a data-processing and system-prototyping environment rivaling sytems such as Matlab, IDL, Octave, R-Lab, and SciLab. </db:para><db:para>The additional power of using SciPy within Python, however, is that a powerful programming language is also available for use in developing sophisticated programs and specialized applications. Scientific applications written in SciPy benefit from the development of additional modules in numerous niche's of the software landscape by developers across the world. Everything from parallel programming to web and data-base subroutines and classes have been made available to the Python programmer. All of this power is available in addition to the mathematical libraries in SciPy. </db:para><db:para>This document provides a tutorial for the first-time user of SciPy to help get started with some of the features available in this powerful package. It is assumed that the user has already installed the package. Some general Python facility is also assumed such as could be acquired by working through the Tutorial in the Python distribution. For further introductory help the user is directed to the Numeric documentation. Throughout this tutorial it is assumed that the user has imported all of the names defined in the SciPy namespace using the command </db:para><ip:block logid="default-log"><ip:cell type="input" number="1"/></ip:block>
+<db:section>
+<db:title>General Help</db:title>
+<db:para>Python provides the facility of documentation strings. The functions and
+classes available in SciPy use this method for on-line documentation. There are
+two methods for reading these messages and getting help. Python provides the
+command <db:code>help</db:code> in the pydoc module. Entering this command with no
+arguments (i.e. <db:code>In [1]: help</db:code>) launches an interactive help session
+that allows searching through the keywords and modules available to all of
+Python. Running the command help with an object as the argument displays the
+calling signature, and the documentation string of the object.
+</db:para>
+<db:para>The pydoc method of help is sophisticated but uses a pager to
+display the text. Sometimes this can interfere with the terminal you are running
+the interactive session within. A scipy-specific help system is also available
+under the command <db:code>scipy.info</db:code>. The signature and documentation string for the
+object passed to the help command are printed to standard output (or to a
+writeable object passed as the third argument). The second keyword argument of
+<db:code>scipy.info</db:code> defines the maximum width of the line for printing. If a module is
+passed as the argument to help than a list of the functions and classes defined
+in that module is printed. For example:
+</db:para>
+<ip:block logid="default-log"><ip:cell type="input" number="2"/></ip:block><db:para>(For some reason nbshell does not capture the output of this function, yet. The implementation of info() is very naughty and uses sys.stdout as a default argument instead of using None, then setting the default value of sys.stdout inside the function. If that had been the case, then we would have captured the output. </db:para><db:para>Naughty scipy!) </db:para>
+<db:para>Another useful command is <db:code>source</db:code>. When given a function written in
+Python as an argument, it prints out a listing of the source code for that
+function. This can be helpful in learning about an algorithm or understanding
+exactly what a function is doing with its arguments. Also don't forget about the
+Python command <db:code>dir</db:code> which can be used to look at the namespace of a module or
+package.
+</db:para>
+</db:section>
+
+<db:section>
+<db:title>SciPy Organization</db:title>
+<db:para>SciPy is organized into subpackages covering different scientific
+computing domains. Some common functions which several subpackages rely on live
+under the <db:code>scipy_base</db:code> package which is installed at the same directory level as
+the <db:code>scipy</db:code> package itself and could be installed separately. This allows for the
+possibility of separately distributing the subpackages of <db:code>scipy</db:code> as long as
+<db:code>scipy_base</db:code> package is provided as well. 
+</db:para>
+<db:para>Two other packages are installed at the higher-level: scipy_distutils and weave. These two packages while distributed with main scipy package could see use independently of scipy and so are treated as separate packages and described elsewhere. </db:para><db:para>The remaining subpackages are summarized in the following table (a * denotes an optional sub-package that requires additional libraries to function or is not available on all platforms). </db:para><db:para>XXX: Table here. </db:para><db:para>Because of their ubiquitousness, some of the functions in these subpackages are also made available in the scipy namespace to ease their use in interactive sessions and programs. In addition, many convenience functions are located in the scipy_base package and the in the top-level of the scipy package. Before looking at the sub-packages individually, we will first look at some of these common functions. </db:para></db:section>
+</ip:sheet></ip:notebook>

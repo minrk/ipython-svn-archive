@@ -1,0 +1,215 @@
+<ip:notebook xmlns:ip="http://ipython.scipy.org/notebook-xml" xmlns:db="http://docbook.org/ns/docbook" version="1.1"><ip:head/><ip:log id="default-log"/><ip:sheet id="chapter06">
+<db:title>Interpolation (interpolate)</db:title>
+<db:para>There are two general interpolation facilities available in SciPy. The
+first facility is an interpolation class which performs linear 1-dimensional
+interpolation. The second facility is based on the FORTRAN library FITPACK and
+provides functions for 1- and 2-dimensional (smoothed) cubic-spline
+interpolation. 
+</db:para>
+
+<db:section>
+<db:title>Linear 1-d interpolation (interpolate.linear_1d)</db:title>
+<db:para>The linear_1d class in scipy.interpolate is a convenient method to
+create a function based on fixed data points which can be evaluated anywhere
+within the domain defined by the given data using linear interpolation. An
+instance of this class is created by passing the 1-d vectors comprising the
+data. The instance of this class defines a __call__ method and can therefore by
+treated like a function which interpolates between known data values to obtain
+unknown values (it even has a docstring for help). Behavior at the boundary can
+be specified at instantiation time. The following example demonstrates it's use. 
+</db:para>
+<db:programlisting> XXX: ipython
+&gt;&gt;&gt; x = arange(0,10)
+&gt;&gt;&gt; y = exp(-x/3.0)
+&gt;&gt;&gt; f = interpolate.linear_1d(x,y)
+&gt;&gt;&gt; help(f)
+Instance of class:  linear_1d
+
+ &lt;name&gt;(x_new)
+
+Find linearly interpolated y_new = &lt;name&gt;(x_new).
+
+Inputs:        
+  x_new -- New independent variables.
+
+Outputs:
+  y_new -- Linearly interpolated values corresponding to x_new.
+
+&gt;&gt;&gt; xnew = arange(0,9,0.1)
+&gt;&gt;&gt; xplt.plot(x,y,'x',xnew,f(xnew),'.')
+</db:programlisting>
+<db:para>
+Figure shows the result: [Graphics file: inter_1d.epsi]
+[fig:inter_1d]One-dimensional interpolation using the class interpolate.linear_1d.
+</db:para>
+</db:section>
+
+<db:section>
+<db:title>Spline interpolation in 1-d (interpolate.splXXX)</db:title>
+<db:para>Spline interpolation requires two essential steps: (1) a spline
+representation of the curve is computed, and (2) the spline is evaluated at the
+desired points. In order to find the spline representation, there are two
+different was to represent a curve and obtain (smoothing) spline coefficients:
+directly and parametrically. The direct method finds the spline representation
+of a curve in a two-dimensional plane using the function interpolate.splrep. The
+first two arguments are the only ones required, and these provide the
+<ip:inlineequation>x</ip:inlineequation> and
+<ip:inlineequation>y</ip:inlineequation> 
+components of the curve. The normal output is a 3-tuple,
+<ip:inlineequation>\left(t,c,k\right)</ip:inlineequation>,
+containing the knot-points, <ip:inlineequation>t</ip:inlineequation>,
+the coefficients <ip:inlineequation>c</ip:inlineequation> and the
+order <ip:inlineequation>k</ip:inlineequation> of the spline.
+The default spline order is cubic, but this can be changed with the input
+keyword, <ip:inlineequation>k</ip:inlineequation>.
+</db:para>
+<db:para>For curves in N-dimensional space the function interpolate.splprep allows
+defining the curve parametrically. For this function only 1 input argument is
+required. This input is a list of N-arrays representing the curve in
+N-dimensional space. The length of each array is the number of curve points, and
+each array provides one component of the N-dimensional data point. The parameter
+variable is given with the keword argument, u, which defaults to an
+equally-spaced monotonic sequence between 0 and 1. The default output consists
+of two objects: a 3-tuple,
+<ip:inlineequation>\left(t,c,k\right)</ip:inlineequation>, containing the spline
+representation and the parameter variable u. 
+</db:para>
+<db:para>The keyword argument, s, is used to specify the amount of smoothing to
+perform during the spline fit. The default value of s is
+<ip:inlineequation>s=m-\sqrt{2m}</ip:inlineequation> where m
+is the number of data-points being fit. Therefore, if no smoothing is desired a
+value of <ip:inlineequation>\mathbf{s}=0</ip:inlineequation> should be passed to the routines. 
+</db:para>
+<db:para>Once the spline representation of the data has been determined, functions
+are available for evaluating the spline (interpolate.splev) and its derivatives
+(interpolate.splev, interpolate.splade) at any point and the integral of the
+spline between any two points (interpolate.splint). In addition, for cubic
+splines (<ip:inlineequation>k=3</ip:inlineequation>) with 8 or more knots, the roots of the spline can be estimated
+(interpolate.sproot). These functions are demonstrated in the example that
+follows (see also Figure [fig:spline-1d]).
+</db:para>
+<db:para>
+[Graphics file: interp_cubic.epsi]
+[Graphics file: interp_cubic_der.epsi]
+[Graphics file: interp_cubic_int.epsi]
+[Graphics file: interp_cubic_param.epsi]
+[fig:spline-1d]Examples of using cubic-spline interpolation.
+</db:para>
+<db:programlisting> XXX: ipython
+&gt;&gt;&gt; # Cubic-spline
+&gt;&gt;&gt; x = arange(0,2*pi+pi/4,2*pi/8)
+&gt;&gt;&gt; y = sin(x)
+&gt;&gt;&gt; tck = interpolate.splrep(x,y,s=0)
+&gt;&gt;&gt; xnew = arange(0,2*pi,pi/50)
+&gt;&gt;&gt; ynew = interpolate.splev(xnew,tck,der=0)
+&gt;&gt;&gt; xplt.plot(x,y,'x',xnew,ynew,xnew,sin(xnew),x,y,'b')
+&gt;&gt;&gt; xplt.legend(['Linear','Cubic Spline', 'True'],['b-x','m','r'])
+&gt;&gt;&gt; xplt.limits(-0.05,6.33,-1.05,1.05)
+&gt;&gt;&gt; xplt.title('Cubic-spline interpolation')
+&gt;&gt;&gt; xplt.eps('interp_cubic')
+
+&gt;&gt;&gt; # Derivative of spline
+&gt;&gt;&gt; yder = interpolate.splev(xnew,tck,der=1)
+&gt;&gt;&gt; xplt.plot(xnew,yder,xnew,cos(xnew),'|')
+&gt;&gt;&gt; xplt.legend(['Cubic Spline', 'True'])
+&gt;&gt;&gt; xplt.limits(-0.05,6.33,-1.05,1.05)
+&gt;&gt;&gt; xplt.title('Derivative estimation from spline')
+&gt;&gt;&gt; xplt.eps('interp_cubic_der')
+
+&gt;&gt;&gt; # Integral of spline
+&gt;&gt;&gt; def integ(x,tck,constant=-1):
+&gt;&gt;&gt;     x = asarray_1d(x)
+&gt;&gt;&gt;     out = zeros(x.shape, x.typecode())
+&gt;&gt;&gt;     for n in xrange(len(out)):
+&gt;&gt;&gt;         out[n] = interpolate.splint(0,x[n],tck)
+&gt;&gt;&gt;     out += constant
+&gt;&gt;&gt;     return out
+&gt;&gt;&gt;
+&gt;&gt;&gt; yint = integ(xnew,tck)
+&gt;&gt;&gt; xplt.plot(xnew,yint,xnew,-cos(xnew),'|')
+&gt;&gt;&gt; xplt.legend(['Cubic Spline', 'True'])
+&gt;&gt;&gt; xplt.limits(-0.05,6.33,-1.05,1.05)
+&gt;&gt;&gt; xplt.title('Integral estimation from spline')
+&gt;&gt;&gt; xplt.eps('interp_cubic_int')
+
+&gt;&gt;&gt; # Roots of spline
+&gt;&gt;&gt; print interpolate.sproot(tck)
+[ 0.      3.1416]
+
+&gt;&gt;&gt; # Parametric spline
+&gt;&gt;&gt; t = arange(0,1.1,.1)
+&gt;&gt;&gt; x = sin(2*pi*t)
+&gt;&gt;&gt; y = cos(2*pi*t)
+&gt;&gt;&gt; tck,u = interpolate.splprep([x,y],s=0)
+&gt;&gt;&gt; unew = arange(0,1.01,0.01)
+&gt;&gt;&gt; out = interpolate.splev(unew,tck)
+&gt;&gt;&gt; xplt.plot(x,y,'x',out[0],out[1],sin(2*pi*unew),cos(2*pi*unew),x,y,'b')
+&gt;&gt;&gt; xplt.legend(['Linear','Cubic Spline', 'True'],['b-x','m','r'])
+&gt;&gt;&gt; xplt.limits(-1.05,1.05,-1.05,1.05)
+&gt;&gt;&gt; xplt.title('Spline of parametrically-defined curve')
+&gt;&gt;&gt; xplt.eps('interp_cubic_param')
+</db:programlisting>
+</db:section>
+
+<db:section>
+<db:title>Two-dimensionsal spline representation (interpolate.bisplrep)</db:title>
+<db:para>For (smooth) spline-fitting to a two dimensional surface, the function
+interpolate.bisplrep is available. This function takes as required inputs the
+1-D arrays x, y, and z which represent points on the surface
+<ip:inlineequation>z=f\left(x,y\right)</ip:inlineequation>. The
+default output is a list
+<ip:inlineequation>\left[tx,ty,c,kx,ky\right]</ip:inlineequation> 
+whose entries represent respectively, the components of the knot positions, the
+coefficients of the spline, and the order of the spline in each coordinate. It
+is convenient to hold this list in a single object, tck, so that it can be
+passed easily to the function interpolate.bisplev. The keyword, s, can be used
+to change the amount of smoothing performed on the data while determining the
+appropriate spline. The default value is
+<ip:inlineequation>s=m-\sqrt{2m}</ip:inlineequation> where m is the number of
+data points in the x, y, and z vectors. As a result, if no smoothing is desired,
+then <ip:inlineequation>s=0</ip:inlineequation> should be passed to interpolate.bisplrep.
+</db:para>
+<db:para>To evaluate the two-dimensional spline and it's partial derivatives (up to
+the order of the spline), the function interpolate.bisplev is required. This
+function takes as the first two arguments two 1-D arrays whose cross-product
+specifies the domain over which to evaluate the spline. The third argument is
+the tck list returned from interpolate.bisplrep. If desired, the fourth and
+fifth arguments provide the orders of the partial derivative in the x and y
+direction respectively. 
+</db:para>
+<db:para>It is important to note that two dimensional interpolation should not be
+used to find the spline representation of images. The algorithm used is not
+amenable to large numbers of input points. The signal processing toolbox
+contains more appropriate algorithms for finding the spline representation of an
+image. The two dimensional interpolation commands are intended for use when
+interpolating a two dimensional function as shown in the example that follows
+(See also Figure [fig:2d_interp]). This example uses the mgrid command in SciPy
+which is useful for defining a "mesh-grid" in many dimensions. (See also the
+ogrid command if the full-mesh is not needed). The number of output arguments
+and the number of dimensions of each argument is determined by the number of
+indexing objects passed in mgrid[]. 
+</db:para>
+<db:programlisting> XXX: ipython
+&gt;&gt;&gt; # Define function over sparse 20x20 grid
+&gt;&gt;&gt; x,y = mgrid[-1:1:20j,-1:1:20j]
+&gt;&gt;&gt; z = (x+y)*exp(-6.0*(x*x+y*y))
+&gt;&gt;&gt; xplt.surf(z,x,y,shade=1,palette='rainbow')
+&gt;&gt;&gt; xplt.title3("Sparsely sampled function.")
+&gt;&gt;&gt; xplt.eps("2d_func")
+
+&gt;&gt;&gt; # Interpolate function over new 70x70 grid
+&gt;&gt;&gt; xnew,ynew = mgrid[-1:1:70j,-1:1:70j]
+&gt;&gt;&gt; tck = interpolate.bisplrep(x,y,z,s=0)
+&gt;&gt;&gt; znew = interpolate.bisplev(xnew[:,0],ynew[0,:],tck)
+&gt;&gt;&gt; xplt.surf(znew,xnew,ynew,shade=1,palette='rainbow')
+&gt;&gt;&gt; xplt.title3("Interpolated function.")
+&gt;&gt;&gt; xplt.eps("2d_interp")
+</db:programlisting>
+<db:para>
+[Graphics file: 2d_func.epsi]
+[Graphics file: 2d_interp.epsi]
+[fig:2d_interp]Example of two-dimensional spline interpolation.
+</db:para>
+</db:section>
+
+</ip:sheet></ip:notebook>

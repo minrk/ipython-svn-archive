@@ -1,0 +1,8 @@
+<notebook version="1"><head/><ipython-log id="default-log"><cell number="0"><input>
+nb = __app.document.notebook
+</input></cell><cell number="1"><input>
+nb.add_equation(nb.sheet, "e = mc^2", "Even i know this. But what an earth does it mean?")
+</input><output> None
+</output></cell></ipython-log><sheet> This is a temporary message, until I write proper help. Please use Return
+to insert new lines and Shift-Return to execute inputs.
+<ipython-block logid="default-log"><ipython-cell type="input" number="0"/><ipython-cell type="input" number="1"/><ipython-cell type="output" number="1"/></ipython-block><ipython-block logid="default-log"/><ipython-equation tex="e = mc^2" title="Even i know this. But what an earth does it mean?"/></sheet></notebook>

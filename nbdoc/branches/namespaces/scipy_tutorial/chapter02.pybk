@@ -1,0 +1,188 @@
+<ip:notebook xmlns:ip="http://ipython.scipy.org/notebook-xml" xmlns:db="http://docbook.org/ns/docbook" version="1.1"><ip:head/><ip:log id="default-log"><ip:cell number="0"><ip:input>  
+############DO NOT EDIT THIS CELL############  
+from pylab import *  
+switch_backend('WXAgg')  
+ion()  
+</ip:input></ip:cell><ip:cell number="1"><ip:input>
+import scipy; from scipy import *
+</ip:input></ip:cell><ip:cell number="2"><ip:input>
+scipy.sqrt(-1)
+</ip:input><ip:output>
+1j
+</ip:output></ip:cell><ip:cell number="3"><ip:input>
+concatenate(([3], [0]*5, arange(-1,1.002,2/9.0))
+)
+</ip:input><ip:output>
+[ 3.        , 0.        , 0.        , 0.        , 0.        , 0.
+,
+      -1.        ,-0.77777778,-0.55555556,-0.33333333,-0.11111111,
+0.11111111,
+       0.33333333, 0.55555556, 0.77777778, 1.        ,]
+</ip:output></ip:cell><ip:cell number="4"><ip:input>
+r_[3, [0]*5, -1:1:10j]
+</ip:input><ip:output>
+[ 3.        , 0.        , 0.        , 0.        , 0.        , 0.
+,
+      -1.        ,-0.77777778,-0.55555556,-0.33333333,-0.11111111,
+0.11111111,
+       0.33333333, 0.55555556, 0.77777778, 1.        ,]
+</ip:output></ip:cell><ip:cell number="5"><ip:input>
+mgrid[0:5, 0:5]
+</ip:input><ip:output>
+[[[0,0,0,0,0,]
+  [1,1,1,1,1,]
+  [2,2,2,2,2,]
+  [3,3,3,3,3,]
+  [4,4,4,4,4,]]
+ [[0,1,2,3,4,]
+  [0,1,2,3,4,]
+  [0,1,2,3,4,]
+  [0,1,2,3,4,]
+  [0,1,2,3,4,]]]
+</ip:output></ip:cell><ip:cell number="6"><ip:input>
+mgrid[0:5:4j, 0:5:4j]
+</ip:input><ip:output>
+[[[ 0.        , 0.        , 0.        , 0.        ,]
+  [ 1.66666667, 1.66666667, 1.66666667, 1.66666667,]
+  [ 3.33333333, 3.33333333, 3.33333333, 3.33333333,]
+  [ 5.        , 5.        , 5.        , 5.        ,]]
+ [[ 0.        , 1.66666667, 3.33333333, 5.        ,]
+  [ 0.        , 1.66666667, 3.33333333, 5.        ,]
+  [ 0.        , 1.66666667, 3.33333333, 5.        ,]
+  [ 0.        , 1.66666667, 3.33333333, 5.        ,]]]
+</ip:output></ip:cell><ip:cell number="7"><ip:input>
+p = poly1d([3,4,5])
+</ip:input></ip:cell><ip:cell number="8"><ip:input>
+print p
+</ip:input><ip:stdout>
+   2
+3 x + 4 x + 5
+</ip:stdout></ip:cell><ip:cell number="9"><ip:input>
+print p*p
+</ip:input><ip:stdout>
+   4      3      2
+9 x + 24 x + 46 x + 40 x + 25
+</ip:stdout></ip:cell><ip:cell number="10"><ip:input>
+print p.integ(k=6)
+</ip:input><ip:stdout>
+ 3     2
+x + 2 x + 5 x + 6
+</ip:stdout></ip:cell><ip:cell number="11"><ip:input>
+print p.deriv()
+</ip:input><ip:stdout>
+
+6 x + 4
+</ip:stdout></ip:cell><ip:cell number="12"><ip:input>
+p([4,5])
+</ip:input><ip:output>
+[ 69,100,]
+</ip:output></ip:cell><ip:cell number="13"><ip:input>
+def addsubtract(a, b):
+    if a &gt; b:
+        return a - b
+    else:
+        return a + b
+        
+</ip:input></ip:cell><ip:cell number="14"><ip:input>
+vec_addsubtract = vectorize(addsubtract)
+</ip:input></ip:cell><ip:cell number="15"><ip:input>
+vec_addsubtract([0,3,6,9], [1,3,5,7])
+</ip:input><ip:output>
+[1,6,1,2,]
+</ip:output></ip:cell><ip:cell number="16"><ip:input>
+x = r_[-2:3]
+</ip:input></ip:cell><ip:cell number="17"><ip:input>
+x
+</ip:input><ip:output>
+[-2,-1, 0, 1, 2,]
+</ip:output></ip:cell><ip:cell number="19"><ip:input>
+select([x &gt; 3, x &gt;= 0], [0,x+2])
+</ip:input><ip:output>
+[0,0,2,3,4,]
+</ip:output></ip:cell></ip:log><ip:sheet id="chapter02">
+<db:title>Basic functions in scipy_base and top-level scipy</db:title>
+<db:section>
+<db:title>Interaction with Numeric</db:title>
+<db:para>To begin with, all of the Numeric functions have been subsumed into
+the scipy namespace so that all of those functions are available without
+additionally importing Numeric. In addition, the universal functions (addition,
+subtraction, division) have been altered to not raise exceptions if
+floating-point errors are encountered<db:footnote><db:para>These changes are all made in a new module (fastumath) that is part of the scipy_base package. The old functionality is still available in umath (part of Numeric) if you need it (note: importing umath or fastumath resets the behavior of the infix operators to use the umath or fastumath ufuncs respectively). </db:para></db:footnote>, instead NaN's and Inf's are returned in the
+arrays. To assist in detection of these events new universal functions (isnan,
+isfinite, isinf) have been added.
+</db:para>
+<db:para>In addition, the comparision operators have been changed to allow
+comparisons and logical operations of complex numbers (only the real part is
+compared). Also, with the new universal functions in SciPy, the logical
+operations (except logical_XXX functions) all return arrays of unsigned bytes
+(8-bits per element instead of the old 32-bits, or even 64-bits) per
+element<db:footnote><db:para>Be careful when treating logical expressions as integers as the 8-bit integers may silently overflow at 256. </db:para></db:footnote>.
+</db:para>
+<db:para>In an effort to get a consistency for default arguments, some of the default arguments have changed from Numeric. The idea is for you to use scipy as a base package instead of Numeric anyway. </db:para><db:para>Finally, some of the basic functions like log, sqrt, and inverse trig functions have been modified to return complex numbers instead of NaN's where appropriate. </db:para><ip:block logid="default-log"><ip:cell type="input" number="1"/><ip:cell type="input" number="2"/><ip:cell type="output" number="2"/></ip:block>
+</db:section>
+<db:section>
+<db:title>Alter numeric</db:title>
+<db:para>With the command scipy.alter_numeric() you can now use index and mask arrays inside brackets and the coercion rules of Numeric will be changed so that Python scalars will not be used to determine the type of the output of an expression. </db:para></db:section>
+<db:section>
+<db:title>scipy_base routines</db:title>
+<db:para>The purpose of scipy_base is to collect general-purpose routines that the other sub-packages can use and to provide a simple replacement for Numeric. Anytime you might think to import Numeric, you can import scipy_base instead and remove yourself from direct dependence on Numeric. These routines are divided into several files for organizational purposes, but they are all available under the scipy_base namespace (and the scipy namespace). There are routines for type handling and type checking, shape and matrix manipulation, polynomial processing, and other useful functions. Rather than giving a detailed description of each of these functions (which is available using the help, info and source commands), this tutorial will discuss some of the more useful commands which require a little introduction to use to their full potential. </db:para><db:section>
+<db:title>Type handling</db:title>
+<db:para>Note the difference between iscomplex (isreal) and iscomplexobj (isrealobj). The former command is array based and returns byte arrays of ones and zeros providing the result of the element-wise test. The latter command is object based and returns a scalar describing the result of the test on the entire object. </db:para><db:para>Often it is required to get just the real and/or imaginary part of a complex number. While complex numbers and arrays have attributes that return those values, if one is not sure whether or not the object will be complex-valued, it is better to use the functional forms real and imag. These functions succeed for anything that can be turned into a Numeric array. Consider also the function real_if_close which transforms a complex-valued number with tiny imaginary part into a real number. </db:para><db:para>Occasionally the need to check whether or not a number is a scalar (Python (long)int, Python float, Python complex, or rank-0 array) occurs in coding. This functionality is provided in the convenient function isscalar which returns a 1 or a 0. </db:para><db:para>Finally, ensuring that objects are a certain Numeric type occurs often enough that it has been given a convenient interface in SciPy through the use of the cast dictionary. The dictionary is keyed by the type it is desired to cast to and the dictionary stores functions to perform the casting. Thus, &gt;&gt;&gt; a = cast['f'](d) returns an array of float32 from d. This function is also useful as an easy way to get a scalar of a certain type: &gt;&gt;&gt; fpi = cast['f'](pi) although this should not be needed if you use alter_numeric(). </db:para></db:section>
+<db:section>
+<db:title>Index tricks</db:title>
+<db:para>There are some class instances that make special use of the slicing functionality to provide efficient means for array construction. This part will discuss the operation of mgrid, ogrid, r_, and c_ for quickly constructing arrays. </db:para><db:para>One familiar with Matlab may complain that it is difficult to construct arrays from the interactive session with Python. Suppose, for example that one wants to construct an array that begins with 3 followed by 5 zeros and then contains 10 numbers spanning the range -1 to 1 (inclusive on both ends). Before SciPy, you would need to enter something like the following </db:para><ip:block logid="default-log"><ip:cell type="input" number="3"/><ip:cell type="output" number="3"/></ip:block><db:para>With the r_ command one can enter this as </db:para><ip:block logid="default-log"><ip:cell type="input" number="4"/><ip:cell type="output" number="4"/></ip:block><db:para>which can ease typing and make for more readable code. Notice how objects are concatenated, and the slicing syntax is (ab)used to construct ranges. The other term that deserves a little explanation is the use of the complex number 10j as the step size in the slicing syntax. This non-standard use allows the number to be interpreted as the number of points to produce in the range rather than as a step size (note we would have used the long integer notation, 10L, but this notation may go away in Python as the integers become unified). This non-standard usage may be unsightly to some, but it gives the user the ability to quickly construct complicated vectors in a very readable fashion. When the number of points is specified in this way, the end-point is inclusive. </db:para><db:para>The "r" stands for row concatenation because if the objects between commas are 2 dimensional arrays, they are stacked by rows (and thus must have commensurate columns). There is an equivalent command c_ that stacks 2d arrays by columns but works identically to r_ for 1d arrays. </db:para><db:para>Another very useful class instance which makes use of extended slicing notation is the function mgrid. In the simplest case, this function can be used to construct 1d ranges as a convenient substitute for arange. It also allows the use of complex-numbers in the step-size to indicate the number of points to place between the (inclusive) end- points. The real purpose of this function however is to produce N, N-d arrays which provide coordinate arrays for an N-dimensional volume. The easiest way to understand this is with an example of its usage: </db:para><ip:block logid="default-log"><ip:cell type="input" number="5"/><ip:cell type="output" number="5"/><ip:cell type="input" number="6"/><ip:cell type="output" number="6"/></ip:block>
+<db:para>Having meshed arrays like this is sometimes very useful. However, it is not always needed just to evaluate some N-dimensional function over a grid due to the array-broadcasting rules of Numeric and SciPy. If this is the only purpose for generating a meshgrid, you should instead use the function ogrid which generates an "open" grid using NewAxis judiciously to create N, N-d arrays where only one-dimension in each array has length greater than 1. This will save memory and create the same result if the only purpose for the meshgrid is to generate sample points for evaluation of an N-d function. </db:para></db:section>
+
+<db:section>
+<db:title>Shape manipulation</db:title>
+<db:para>In this category of functions are routines for squeezing out length- one dimensions from N-dimensional arrays, ensuring that an array is at least 1-, 2-, or 3-dimensional, and stacking (concatenating) arrays by rows, columns, and "pages" (in the third dimension). Routines for splitting arrays (roughly the opposite of stacking arrays) are also available. </db:para></db:section>
+<db:section>
+<db:title>Matrix manipulations</db:title>
+<db:para>These are functions specifically suited for 2-dimensional arrays that were part of MLab in the Numeric distribution, but have been placed in scipy_base for completeness so that users are not importing Numeric. </db:para></db:section>
+<db:section>
+<db:title>Polynomials</db:title>
+<db:para>There are two (interchangeable) ways to deal with 1-d polynomials in SciPy. The first is to use the poly1d class in scipy_base. This class accepts coefficients or polynomial roots to initialize a polynomial. The polynomial object can then be manipulated in algebraic expressions, integrated, differentiated, and evaluated. It even prints like a polynomial: </db:para><ip:block logid="default-log"><ip:cell type="input" number="7"/><ip:cell type="input" number="8"/><ip:cell type="stdout" number="8"/><ip:cell type="input" number="9"/><ip:cell type="stdout" number="9"/><ip:cell type="input" number="10"/><ip:cell type="stdout" number="10"/><ip:cell type="input" number="11"/><ip:cell type="stdout" number="11"/><ip:cell type="input" number="12"/><ip:cell type="output" number="12"/></ip:block>
+<db:para>The other way to handle polynomials is as an array of coefficients with the first element of the array giving the coefficient of the highest power. There are explicit functions to add, subtract, multiply, divide, integrate, differentiate, and evaluate polynomials represented as sequences of coefficients. </db:para></db:section>
+
+<db:section>
+<db:title>Vectorizing functions (vectorize)</db:title>
+<db:para>One of the features that SciPy provides is a class vectorize to convert an ordinary Python function which accepts scalars and returns scalars into a "vectorized-function" with the same broadcasting rules as other Numeric functions (i.e. the Universal functions, or ufuncs). For example, suppose you have a Python function named addsubtract defined as: </db:para><ip:block logid="default-log"><ip:cell type="input" number="13"/></ip:block><db:para>which defines a function of two scalar variables and returns a scalar result. The class vectorize can be used to "vectorize" this function so that returns a function which takes array arguments and returns an array result: </db:para><ip:block logid="default-log"><ip:cell type="input" number="14"/><ip:cell type="input" number="15"/><ip:cell type="output" number="15"/></ip:block>
+<db:para>This particular function could have been written in vector form without the use of vectorize. But, what if the function you have written is the result of some optimization or integration routine. Such functions can likely only be vectorized using vectorize. </db:para></db:section>
+<db:section>
+<db:title>Other useful functions</db:title>
+<db:para>There are several other functions in the scipy_base package including most of the other functions that are also in MLab that comes with the Numeric package. The reason for duplicating these functions is to allow SciPy to potentially alter their original interface and make it easier for users to know how to get access to functions &gt;&gt;&gt; from scipy import *. </db:para><db:para>New functions which should be mentioned are mod(x,y) which can replace x%y when it is desired that the result take the sign of y instead of x. Also included is fix which always rounds to the nearest integer towards zero. For doing phase processing, the functions angle, and unwrap are also useful. Also, the linspace and logspace functions return equally spaced samples in a linear or log scale. Finally, mention should be made of the new function select which extends the functionality of where to include multiple conditions and multiple choices. The calling convention is select(condlist,choicelist,default=0). Select is a vectorized form of the multiple if-statement. It allows rapid construction of a function which returns an array of results based on a list of conditions. Each element of the return array is taken from the array in a choicelist corresponding to the first condition in condlist that is true. For example </db:para><ip:block logid="default-log"><ip:cell type="input" number="16"/><ip:cell type="input" number="17"/><ip:cell type="output" number="17"/><ip:cell type="input" number="19"/><ip:cell type="output" number="19"/></ip:block>
+</db:section>
+</db:section>
+
+<db:section>
+<db:title>Common functions</db:title>
+<db:para>Some functions depend on sub-packages of SciPy but should be
+available from the top-level of SciPy due to their common use. These are
+functions that might have been placed in scipy_base except for their dependence
+on other sub-packages of SciPy. For example the factorial and comb functions
+compute <ip:inlineequation>n!</ip:inlineequation>
+ and <ip:inlineequation>n!/k!(n-k)!</ip:inlineequation> 
+using either exact integer arithmetic (thanks to
+Python's Long integer object), or by using floating-point precision and the
+gamma function. The functions rand and randn are used so often that they
+warranted a place at the top level. There are convenience functions for the
+interactive use: disp (similar to print), and who (returns a list of defined
+variables and memory consumption--upper bounded). Another function returns a
+common image used in image processing: lena. 
+</db:para>
+<db:para>Finally, two functions are provided that are useful for approximating
+derivatives of functions using discrete-differences. The function
+central_diff_weights returns weighting coefficients for an equally-spaced
+N-point approximation to the derivative of order o. These weights must be
+multiplied by the function corresponding to these points and the results added
+to obtain the derivative approximation. This function is intended for use when
+only samples of the function are avaiable. When the function is an object that
+can be handed to a routine and evaluated, the function derivative can be used to
+automatically evaluate the object at the correct points to obtain an N-point
+approximation to the 
+<ip:inlineequation>o^{\textrm{th}}</ip:inlineequation>-derivative at a
+given point. 
+</db:para>
+</db:section>
+
+</ip:sheet></ip:notebook>

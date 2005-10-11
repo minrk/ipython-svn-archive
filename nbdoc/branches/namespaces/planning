@@ -1,0 +1,7 @@
+Major refactorings regarding this module, and how it's used in
+nbshell, is needed and planned. For more info on that, the file
+'notes' here is an irc session where it was discussed. First part is
+done now (the new cell class and accompanying methods in the notebook
+class), further things (move of nbshell IPythonLog to nbdoc, making
+the block system in nbdoc to replace nbshell Sheet, etc.) are still in
+planning.

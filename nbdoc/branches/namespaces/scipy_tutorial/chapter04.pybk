@@ -1,0 +1,344 @@
+<ip:notebook xmlns:ip="http://ipython.scipy.org/notebook-xml" xmlns:db="http://docbook.org/ns/docbook" version="1.1"><ip:head/><ip:log id="default-log"><ip:cell number="0"><ip:input>  
+############DO NOT EDIT THIS CELL############  
+from pylab import *  
+switch_backend('WXAgg')  
+ion()  
+</ip:input></ip:cell><ip:cell number="1"><ip:input>
+import scipy; from scipy import *
+</ip:input></ip:cell><ip:cell number="2"><ip:input>
+help(integrate)
+</ip:input><ip:stdout>
+Help on package scipy.integrate in scipy:
+
+NAME
+    scipy.integrate
+
+FILE
+    /Library/Frameworks/Python.framework/Versions/2.4/lib/python2.4
+/site-packages/scipy_complete-0.3.3_309.4626-py2.4-macosx-10.4-ppc.egg
+/scipy/integrate/__init__.py
+
+DESCRIPTION
+    Integration routines
+    ====================
+
+     Methods for Integrating Functions given function object.
+
+       quad          -- General purpose integration.
+       dblquad       -- General purpose double integration.
+       tplquad       -- General purpose triple integration.
+       fixed_quad    -- Integrate func(x) using Gaussian quadrature of
+order n.
+       quadrature    -- Integrate with given tolerance using Gaussian
+quadrature.
+       romberg       -- Integrate func using Romberg integration.
+
+     Methods for Integrating Functions given fixed samples.
+
+       trapz         -- Use trapezoidal rule to compute integral from
+samples.
+       cumtrapz      -- Use trapezoidal rule to cumulatively compute
+integral.
+       simps         -- Use Simpson's rule to compute integral from
+samples.
+       romb          -- Use Romberg Integration to compute integral
+from
+                        (2**k + 1) evenly-spaced samples.
+
+       See the special module's orthogonal polynomials (special) for
+Gaussian
+          quadrature roots and weights for other weighting factors and
+regions.
+
+     Interface to numerical integrators of ODE systems.
+
+       odeint        -- General integration of ordinary differential
+equations.
+       ode           -- Integrate ODE using vode routine.
+
+PACKAGE CONTENTS
+    _odepack
+    _quadpack
+    common_routines
+    info_integrate
+    ode
+    odepack
+    quadpack
+    quadrature
+    setup_integrate
+    vode
+
+DATA
+    Inf = inf
+    inf = inf
+
+</ip:stdout></ip:cell><ip:cell number="3"><ip:input>
+result = integrate.quad(lambda x: special.jv(2.5,x), 0, 4.5)
+</ip:input></ip:cell><ip:cell number="4"><ip:input>
+print result
+</ip:input><ip:stdout>
+(1.1178179380783251, 7.8663172163807182e-09)
+</ip:stdout></ip:cell><ip:cell number="5"><ip:input>
+I = sqrt(2/pi)*(18.0/27*sqrt(2)*cos(4.5)-4.0/27*sqrt(2)*sin(4.5)+sqrt(2*pi)*
+special.fresnel(3/sqrt(pi))[0])
+</ip:input></ip:cell><ip:cell number="6"><ip:input>
+print I
+
+</ip:input><ip:stdout>
+1.11781793809
+</ip:stdout></ip:cell><ip:cell number="7"><ip:input>
+print abs(result[0] - I)
+</ip:input><ip:stdout>
+1.03759223435e-11
+</ip:stdout></ip:cell><ip:cell number="8"><ip:input>
+from scipy.integrate import quad, Inf
+</ip:input></ip:cell><ip:cell number="9"><ip:input>
+def integrand(t, n, x):
+    return exp(-x*t)/t**n
+</ip:input></ip:cell><ip:cell number="10"><ip:input>
+def expint(n, x):
+    return quad(integrand, 1, Inf, args=(n,x))[0]
+</ip:input></ip:cell><ip:cell number="11"><ip:input>
+vec_expint = vectorize(expint)
+</ip:input></ip:cell><ip:cell number="12"><ip:input>
+vec_expint(3, arange(1.0, 4.0, 0.5))
+</ip:input><ip:output>
+[ 0.10969197, 0.05673949, 0.03013338, 0.01629537, 0.00893065,
+0.00494538,]
+</ip:output></ip:cell><ip:cell number="13"><ip:input>
+special.expn(3, arange(1.0, 4.0, 0.5))
+</ip:input><ip:output>
+[ 0.10969197, 0.05673949, 0.03013338, 0.01629537, 0.00893065,
+0.00494538,]
+</ip:output></ip:cell><ip:cell number="14"><ip:input>
+result = quad(lambda x: expint(3, x), 0, Inf)
+</ip:input></ip:cell><ip:cell number="15"><ip:input>
+print result
+</ip:input><ip:stdout>
+(0.33333333325010889, 2.8604070802797126e-09)
+</ip:stdout></ip:cell><ip:cell number="16"><ip:input>
+I3 = 1.0/3.0
+</ip:input></ip:cell><ip:cell number="17"><ip:input>
+print I3
+</ip:input><ip:stdout>
+0.333333333333
+</ip:stdout></ip:cell><ip:cell number="18"><ip:input>
+print I3 - result[0]
+</ip:input><ip:stdout>
+8.32244273496e-11
+</ip:stdout></ip:cell><ip:cell number="19"><ip:input>
+from scipy.integrate import dblquad
+</ip:input></ip:cell><ip:cell number="20"><ip:input>
+def I(n):
+  return dblquad(lambda t,x: exp(-x*t)/t**n, 0, Inf, lambda x: 1, lambda x: Inf)
+</ip:input></ip:cell><ip:cell number="21"><ip:input>
+print I(4)
+</ip:input><ip:stdout>
+(0.25000000000435768, 1.0518246209542075e-09)
+</ip:stdout></ip:cell><ip:cell number="22"><ip:input>
+print I(3)
+</ip:input><ip:stdout>
+(0.33333333325010889, 2.8604070802797126e-09)
+</ip:stdout></ip:cell><ip:cell number="23"><ip:input>
+print I(2)
+</ip:input><ip:stdout>
+(0.49999999999857531, 1.8855523253868967e-09)
+</ip:stdout></ip:cell><ip:cell number="24"><ip:input>
+from scipy.integrate import odeint
+</ip:input></ip:cell><ip:cell number="25"><ip:input>
+from scipy.special import gamma, airy
+</ip:input></ip:cell><ip:cell number="26"><ip:input>
+y1_0 = 1.0/3**(2.0/3.0)/gamma(2.0/3.0)
+</ip:input></ip:cell><ip:cell number="27"><ip:input>
+y0_0 = -1.0/3**(1.0/3.0)/gamma(1.0/3.0)
+</ip:input></ip:cell><ip:cell number="28"><ip:input>
+y0 = [y0_0, y1_0]
+</ip:input></ip:cell><ip:cell number="29"><ip:input>
+def func(y, t):
+  return [t*y[1], y[0]]
+</ip:input></ip:cell><ip:cell number="30"><ip:input>
+def gradient(y, t):
+  return [[0,t], [1,0]]
+  
+  
+</ip:input></ip:cell><ip:cell number="31"><ip:input>
+x = arange(0, 4.0, 0.01)
+</ip:input></ip:cell><ip:cell number="32"><ip:input>
+t = x
+</ip:input></ip:cell><ip:cell number="33"><ip:input>
+ychk = airy(x)[0]
+</ip:input></ip:cell><ip:cell number="34"><ip:input>
+y = odeint(func, y0, t)
+</ip:input></ip:cell><ip:cell number="35"><ip:input>
+y2 = odeint(func, y0, t, Dfun=gradient)
+</ip:input></ip:cell><ip:cell number="36"><ip:input>
+import sys
+</ip:input></ip:cell><ip:cell number="37"><ip:input>
+sys.float_output_precision = 6
+</ip:input></ip:cell><ip:cell number="38"><ip:input>
+print ychk[:36:6]
+</ip:input><ip:stdout>
+[ 0.355028, 0.339511, 0.324068, 0.308763, 0.293658, 0.278806,]
+</ip:stdout></ip:cell><ip:cell number="39"><ip:input>
+print y[:36:6,1]
+</ip:input><ip:stdout>
+[ 0.355028, 0.339511, 0.324067, 0.308763, 0.293658, 0.278806,]
+</ip:stdout></ip:cell><ip:cell number="40"><ip:input>
+print y2[:36:6,1]
+</ip:input><ip:stdout>
+[ 0.355028, 0.339511, 0.324067, 0.308763, 0.293658, 0.278806,]
+</ip:stdout></ip:cell></ip:log><ip:sheet id="chapter04">
+<db:title>Integration (integrate)</db:title>
+<db:para>The integrate sub-package provides several integration techniques including an ordinary differential equation integrator. An overview of the module is provided by the help command: </db:para><ip:block logid="default-log"><ip:cell type="input" number="1"/><ip:cell type="input" number="2"/><ip:cell type="stdout" number="2"/></ip:block>
+<db:section>
+<db:title>General integration (integrate.quad)</db:title>
+<db:para>The function quad is provided to integrate a function of one variable
+between two points. The points can be 
+<ip:inlineequation>\pm\infty</ip:inlineequation>
+(<ip:inlineequation>\pm</ip:inlineequation> integrate.inf) to indicate
+infinite limits. For example, suppose you wish to integrate a bessel function
+<db:code>jv(2.5,x)</db:code> along the interval [0,4.5]. 
+<ip:equation>I=\int_{0}^{4.5}J_{2.5}\left(x\right)\,dx</ip:equation>.
+This could be computed using quad:
+</db:para>
+<ip:block logid="default-log"><ip:cell type="input" number="3"/><ip:cell type="input" number="4"/><ip:cell type="stdout" number="4"/><ip:cell type="input" number="5"/><ip:cell type="input" number="6"/><ip:cell type="stdout" number="6"/><ip:cell type="input" number="7"/><ip:cell type="stdout" number="7"/></ip:block>
+<db:para>The first argument to quad is a "callable" Python object (i.e a function,
+method, or class instance). Notice the use of a lambda-function in this case as
+the argument. The next two arguments are the limits of integration. The return
+value is a tuple, with the first element holding the estimated value of the
+integral and the second element holding an upper bound on the error. Notice,
+that in this case, the true value of this integral is
+<ip:equation>
+I=\sqrt{\frac{2}{\pi}}\left(\frac{18}{27}\sqrt{2}\cos\left(4.5\right)-\frac{4}{27}\sqrt{2}\sin\left(4.5\right)+\sqrt{2\pi}\textrm{Si}\left(\frac{3}{\sqrt{\pi}}\right)\right),
+</ip:equation>
+where
+<ip:equation>
+\textrm{Si}\left(x\right)=\int_{0}^{x}\sin\left(\frac{\pi}{2}t^{2}\right)\, dt
+</ip:equation>.
+is the Fresnel sine integral. Note that the numerically-computed integral is
+within <ip:inlineequation>1.04\times10^{-11}</ip:inlineequation> of
+the exact result --- well below the reported error
+bound. 
+</db:para>
+<db:para>Infinite inputs are also allowed in quad by using 
+<ip:inlineequation>\pm</ip:inlineequation> integrate.inf (or
+inf) as one of the arguments. For example, suppose that a numerical value for
+the exponential
+integral:
+<ip:equation>E_{n}\left(x\right)=\int_{1}^{\infty}\frac{e^{-xt}}{t^{n}}\, dt
+</ip:equation>. is
+desired (and the fact that this integral can be computed as special.expn(n,x) is
+forgotten). The functionality of the function special.expn can be replicated by
+defining a new function vec_expint based on the routine quad: 
+</db:para>
+
+<ip:block logid="default-log"><ip:cell type="input" number="8"/><ip:cell type="input" number="9"/><ip:cell type="input" number="10"/><ip:cell type="input" number="11"/><ip:cell type="input" number="12"/><ip:cell type="output" number="12"/><ip:cell type="input" number="13"/><ip:cell type="output" number="13"/></ip:block>
+<db:para>The function which is integrated can even use the quad argument (though
+the error bound may underestimate the error due to possible numerical error in
+the integrand from the use of quad). The integral in this case is
+<ip:equation>
+I_{n}=\int_{0}^{\infty}\int_{1}^{\infty}\frac{e^{-xt}}{t^{n}}\, dt\,
+dx=\frac{1}{n}</ip:equation>.
+</db:para>
+<ip:block logid="default-log"><ip:cell type="input" number="14"/><ip:cell type="input" number="15"/><ip:cell type="stdout" number="15"/><ip:cell type="input" number="16"/><ip:cell type="input" number="17"/><ip:cell type="stdout" number="17"/><ip:cell type="input" number="18"/><ip:cell type="stdout" number="18"/></ip:block>
+
+<db:para>This last example shows that multiple integration can be handled using
+repeated calls to quad. The mechanics of this for double and triple integration
+have been wrapped up into the functions dblquad and tplquad. The function,
+dblquad performs double integration. Use the help function to be sure that the
+arguments are defined in the correct order. In addition, the limits on all inner
+integrals are actually functions which can be constant functions. An example of
+using double integration to compute several values of
+<ip:inlineequation>I_{n}</ip:inlineequation> is shown below:
+</db:para>
+
+<ip:block logid="default-log"><ip:cell type="input" number="19"/><ip:cell type="input" number="20"/><ip:cell type="input" number="21"/><ip:cell type="stdout" number="21"/><ip:cell type="input" number="22"/><ip:cell type="stdout" number="22"/><ip:cell type="input" number="23"/><ip:cell type="stdout" number="23"/></ip:block>
+</db:section>
+<db:section>
+<db:title>Gaussian quadrature (integrate.gauss_quadtol)</db:title>
+<db:para>A few functions are also provided in order to perform simple Gaussian quadrature over a fixed interval. The first is fixed_quad which performs fixed-order Gaussian quadrature. The second function is quadrature which performs Gaussian quadrature of multiple orders until the difference in the integral estimate is beneath some tolerance supplied by the user. These functions both use the module special.orthogonal which can calculate the roots and quadrature weights of a large variety of orthogonal polynomials (the polynomials themselves are available as special functions returning instances of the polynomial class --- e.g. special.legendre). </db:para></db:section>
+<db:section>
+<db:title>Integrating using samples</db:title>
+<db:para>There are three functions for computing integrals given only samples: trapz, simps, and romb. The first two functions use Newton-Coates formulas of order 1 and 2 respectively to perform integration. These two functions can handle, non-equally-spaced samples. The trapezoidal rule approximates the function as a straight line between adjacent points, while Simpson's rule approximates the function between three adjacent points as a parabola. </db:para><db:para>If the samples are equally-spaced and the number of samples available is
+<ip:inlineequation>2^{k}+1</ip:inlineequation> for some integer 
+<ip:inlineequation>k</ip:inlineequation>, then Romberg integration can be used to obtain
+high-precision estimates of the integral using the available samples. Romberg
+integration uses the trapezoid rule at step-sizes related by a power of two and
+then performs Richardson extrapolation on these estimates to approximate the
+integral with a higher-degree of accuracy. (A different interface to Romberg
+integration useful when the function can be provided is also available as
+integrate.romberg). 
+</db:para>
+</db:section>
+<db:section>
+<db:title>Ordinary differential equations (integrate.odeint)</db:title>
+<db:para>Integrating a set of ordinary differential equations (ODEs) given initial
+conditions is another useful example. The function odeint is available in SciPy
+for integrating a first-order vector differential
+equation:
+<ip:equation>\frac{d\mathbf{y}}{dt}=\mathbf{f}\left(\mathbf{y},t\right),</ip:equation> 
+given
+initial conditions
+<ip:inlineequation>\mathbf{y}\left(0\right)=y_{0}</ip:inlineequation>, where 
+<ip:inlineequation>\mathbf{y}</ip:inlineequation> is a length
+<ip:inlineequation>N</ip:inlineequation> vector and 
+<ip:inlineequation>\mathbf{f}</ip:inlineequation> is a mapping from 
+<ip:inlineequation>\mathcal{R}^{N}</ip:inlineequation> to 
+<ip:inlineequation>\mathcal{R}^{N}</ip:inlineequation>. A
+higher-order ordinary differential equation can always be reduced to a
+differential equation of this type by introducing intermediate derivatives into
+the <ip:inlineequation>\mathbf{y}</ip:inlineequation> vector. 
+</db:para>
+<db:para>
+For example suppose it is desired to find the solution to the following
+second-order differential equation:
+<ip:equation>\frac{d^{2}w}{dz^{2}}-zw(z)=0</ip:equation> with initial
+conditions
+<ip:inlineequation>w\left(0\right)=\frac{1}{\sqrt[3]{3^{2}}\Gamma\left(\frac{2}{3}\right)}</ip:inlineequation> and
+<ip:inlineequation>\left.\frac{dw}{dz}\right|_{z=0}=-\frac{1}{\sqrt[3]{3}\Gamma\left(\frac{1}{3}\right)}</ip:inlineequation>.
+It is known that the solution to this differential equation with these boundary
+conditions is the Airy function <ip:equation>w=\textrm{Ai}\left(z\right)</ip:equation>, which gives a means
+to check the integrator using special.airy. 
+</db:para>
+<db:para>
+First, convert this ODE into standard form by setting
+<ip:inlineequation>\mathbf{y}=\left[\frac{dw}{dz},w\right]</ip:inlineequation>
+and <ip:inlineequation>t=z</ip:inlineequation>. Thus, the differential equation
+becomes
+<ip:equation>\frac{d\mathbf{y}}{dt}=\left[\begin{array}{c}
+ty_{1}\\
+y_{0}\end{array}\right]=\left[\begin{array}{cc}
+0 &amp; t\\
+1 &amp; 0\end{array}\right]\left[\begin{array}{c}
+y_{0}\\
+y_{1}\end{array}\right]=\left[\begin{array}{cc}
+0 &amp; t\\
+1 &amp; 0\end{array}\right]\mathbf{y}.</ip:equation> 
+In other words,
+<ip:equation>\mathbf{f}\left(\mathbf{y},t\right)=\mathbf{A}\left(t\right)\mathbf{y}. 
+</ip:equation>
+</db:para>
+<db:para>
+As an interesting reminder, if
+<ip:inlineequation>\mathbf{A}\left(t\right)</ip:inlineequation> commutes with
+<ip:inlineequation>\int_{0}^{t}\mathbf{A}\left(\tau\right)\,
+d\tau</ip:inlineequation>  under matrix multiplication,
+then this linear differential equation has an exact solution using the matrix
+exponential:
+<ip:equation>
+\mathbf{y}\left(t\right)=\exp\left(\int_{0}^{t}\mathbf{A}\left(\tau\right)d\tau\right)\mathbf{y}\left(0\right),
+</ip:equation>
+However, in this case,
+<ip:inlineequation>\mathbf{A}\left(t\right)</ip:inlineequation> and its integral do not commute.
+</db:para>
+<db:para>There are many optional inputs and outputs available when using odeint which can help tune the solver. These additional inputs and outputs are not needed much of the time, however, and the three required input arguments and the output solution suffice. The required inputs are the function defining the derivative, fprime, the initial conditions vector, y0, and the time points to obtain a solution, t, (with the initial value point as the first element of this sequence). The output to odeint is a matrix where each row contains the solution vector at each requested time point (thus, the initial conditions are given in the first output row). </db:para><db:para>
+The following example illustrates the use of odeint including the usage of the
+Dfun option which allows the user to specify a gradient (with respect to
+<ip:inlineequation>\mathbf{y}</ip:inlineequation>) of the function,
+<ip:inlineequation>\mathbf{f}\left(\mathbf{y},t\right)</ip:inlineequation>.
+</db:para>
+<ip:block logid="default-log"><ip:cell type="input" number="24"/><ip:cell type="input" number="25"/><ip:cell type="input" number="26"/><ip:cell type="input" number="27"/><ip:cell type="input" number="28"/><ip:cell type="input" number="29"/><ip:cell type="input" number="30"/><ip:cell type="input" number="31"/><ip:cell type="input" number="32"/><ip:cell type="input" number="33"/><ip:cell type="input" number="34"/><ip:cell type="input" number="35"/><ip:cell type="input" number="36"/><ip:cell type="input" number="37"/><ip:cell type="input" number="38"/><ip:cell type="stdout" number="38"/><ip:cell type="input" number="39"/><ip:cell type="stdout" number="39"/><ip:cell type="input" number="40"/><ip:cell type="stdout" number="40"/></ip:block>
+
+
+</db:section>
+</ip:sheet></ip:notebook>
