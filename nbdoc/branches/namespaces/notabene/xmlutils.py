@@ -55,10 +55,13 @@ def strip_ns(elems, *namespaces):
             if el.tag.startswith(curly_prefix):
                 el.tag = el.tag[n:]
 
+# These are standards
 rdf = XMLNS('rdf', 'http://www.w3.org/1999/02/22-rdf-syntax-ns#')
 dc = XMLNS('dc', 'http://purl.org/dc/elements/1.1/')
 xsl = XMLNS('xsl', 'http://www.w3.org/1999/XSL/Transform')
 xlink = XMLNS('xlink', 'http://www.w3.org/1999/xlink')
+db = XMLNS('db', 'http://docbook.org/ns/docbook')
+
+# These are namespaces we've defined
 ip = XMLNS('ip', 'http://ipython.scipy.org/notebook-xml')
 iptest = XMLNS('iptest', 'http://ipython.scipy.org/notebook-test-xml')
-db = XMLNS('db', 'http://docbook.org/ns/docbook')
