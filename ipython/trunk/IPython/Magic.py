@@ -816,7 +816,7 @@ Currently the magic system has the following functions:\n"""
             array_type = Numeric.ArrayType.__name__
         
         # Find all variable names and types so we can figure out column sizes
-        get_vars = lambda i: self.locals[i]
+        get_vars = lambda i: self.shell.user_ns[i]
         type_name = lambda v: type(v).__name__
         varlist = map(get_vars,varnames)
         typelist = map(type_name,varlist)
@@ -871,8 +871,9 @@ Currently the magic system has the following functions:\n"""
         if not ans.lower() == 'y':
             print 'Nothing done.'
             return
+        user_ns = self.shell.user_ns
         for i in self.magic_who_ls():
-            del(self.locals[i])
+            del(user_ns[i])
 
     def magic_config(self,parameter_s=''):
         """Show IPython's internal configuration."""
