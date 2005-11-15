@@ -592,10 +592,6 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         else:
             IP.safe_execfile(os.path.expanduser(file),IP.user_ns)
 
-    # Load user aliases
-    for alias in IP_rc.alias:
-        IP.magic_alias(alias)
-
     # release stdout and stderr and save config log into a global summary
     msg.config.release_all()
     if IP_rc.messages:
