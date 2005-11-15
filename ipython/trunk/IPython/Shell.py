@@ -132,9 +132,6 @@ class IPShellEmbed:
         #self.IP = make_IPython(argv,user_ns=__main__.__dict__)
         self.IP = make_IPython(argv,rc_override=rc_override,embedded=True)
 
-        # mark this as an embedded instance so we know if we get a crash
-        # post-mortem
-        self.IP.rc.embedded = 1
         # copy our own displayhook also
         self.sys_displayhook_embed = sys.displayhook
         # and leave the system's display hook clean
