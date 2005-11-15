@@ -445,11 +445,15 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     #------------------------------------------------------------------------
     # Execute user config
 
-    # first, create a valid config structure with the right precedence order:
-    # defaults < rcfile < command line.  We make it as a local (IP_rc) to
-    # avoid a zillion attribute accesses.  Right before returning, this will
-    # be set as IP.rc.
-    IP_rc = rc_def.copy()
+    # Create a valid config structure with the right precedence order:
+    # defaults < rcfile < command line.  This needs to be in the instance, so
+    # that method calls below that rely on it find it.
+    IP.rc = rc_def.copy()
+
+    # Work with a local alias inside this routine to avoid unnecessary
+    # attribute lookups.
+    IP_rc = IP.rc
+    
     IP_rc.update(opts_def)
     if rcfiledata:
         # now we can update 
@@ -718,9 +722,6 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     if msg.summary: BANN_P.append(msg.summary)
     # Final banner is a string
     IP.BANNER = '\n'.join(BANN_P)
-
-    # Assign the IP_rc object as an attribute of IP
-    IP.rc = IP_rc
 
     # Finalize the IPython instance.  This assumes the rc structure is fully
     # in place.
