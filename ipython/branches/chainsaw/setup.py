@@ -26,6 +26,6 @@ setup(name             = 'ipython',
       author_email     = 'Fernando.Perez@colorado.edu / bgranger@scu.edu',
       url              = 'http://ipython.scipy.org',
       license          = 'BSD',
-      packages         = ['ipython','ipython.kernel'],
+      packages         = ['ipythonnew','ipythonnew.kernel'],
       scripts          = ['scripts/ipkernel','scripts/ipkernelwx','scripts/ipresults'],
       )
