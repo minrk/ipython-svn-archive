@@ -18,14 +18,14 @@ if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 from distutils.core import setup
 
 # Call the setup() routine which does most of the work
-setup(name             = 'ipython',
+setup(name             = 'ip_new',
       version          = '0.1',
-      description      = 'ipython kernel - temporary package',
-      long_description = 'ipython kernel - temporary package',
+      description      = 'Newly Redesigned IPython',
+      long_description = 'Newly Redesigned IPython',
       author           = 'Fernando / Brian',
       author_email     = 'Fernando.Perez@colorado.edu / bgranger@scu.edu',
       url              = 'http://ipython.scipy.org',
       license          = 'BSD',
-      packages         = ['ipythonnew','ipythonnew.kernel'],
+      packages         = ['ip_new','ip_new.kernel','ip_new.twokernel'],
       scripts          = ['scripts/ipkernel','scripts/ipkernelwx','scripts/ipresults'],
       )
