@@ -44,9 +44,6 @@ try:
 except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
 
-    
-#from kernelcore import KernelTCPFactory
-
 def main(port, allow_ip):
     allow_list = ['127.0.0.1']
     if allow_ip is not None:
