@@ -1,0 +1,198 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>ipython1.kernel.engine.KernelEngineClientProtocol</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css"></link>
+</head>
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="ipython1-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <font size="-1"><b class="breadcrumbs">
+        <a href="ipython1-module.html">Package&nbsp;ipython1</a> ::
+        <a href="ipython1.kernel-module.html">Package&nbsp;kernel</a> ::
+        <a href="ipython1.kernel.engine-module.html">Module&nbsp;engine</a> ::
+        Class&nbsp;KernelEngineClientProtocol
+      </b></font></br>
+    </td>
+    <td><table cellpadding="0" cellspacing="0">
+      <tr><td align="right"><font size="-2">[show&nbsp;private&nbsp;|&nbsp;<a href="../public/ipython1.kernel.engine.KernelEngineClientProtocol-class.html">hide&nbsp;private</a>]</font></td></tr>
+      <tr><td align="right"><font size="-2">[<a href="frames.html"target="_top">frames</a>&nbsp;|&nbsp;<a href="ipython1.kernel.engine.KernelEngineClientProtocol-class.html" target="_top">no&nbsp;frames</a>]</font></td></tr>
+    </table></td>
+</tr></table>
+
+<!-- =========== START OF CLASS DESCRIPTION =========== -->
+<h2 class="class">Class KernelEngineClientProtocol</h2>
+
+<pre class="base-tree">
+<a href="../private/twisted.internet.protocol.BaseProtocol-class.html"><code>BaseProtocol</code></a> --+        
+               |        
+        <a href="twisted.internet.protocol.Protocol-class.html"><code>Protocol</code></a> --+    
+                   |    
+ <a href="../private/twisted.protocols.basic._PauseableMixin-class.html"><code>_PauseableMixin</code></a> --+    
+                   |    
+        <a href="twisted.protocols.basic.LineReceiver-class.html"><code>LineReceiver</code></a> --+
+                       |
+                      <b>KernelEngineClientProtocol</b>
+</pre><br />
+
+<hr/>
+
+Client network protocol for the kernel engine.
+<hr/>
+
+
+<!-- =========== START OF METHOD SUMMARY =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Method Summary</th></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from LineReceiver</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="twisted.protocols.basic.LineReceiver-class.html#clearLineBuffer" class="summary-sig-name"><code>clearLineBuffer</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Clear buffered data.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="twisted.protocols.basic.LineReceiver-class.html#dataReceived" class="summary-sig-name"><code>dataReceived</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>data</span>)</span></code>
+<br />
+Protocol.dataReceived.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="twisted.protocols.basic.LineReceiver-class.html#lineLengthExceeded" class="summary-sig-name"><code>lineLengthExceeded</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>line</span>)</span></code>
+<br />
+Called when the maximum line length has been reached.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="twisted.protocols.basic.LineReceiver-class.html#lineReceived" class="summary-sig-name"><code>lineReceived</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>line</span>)</span></code>
+<br />
+Override this for when each line is received.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="twisted.protocols.basic.LineReceiver-class.html#rawDataReceived" class="summary-sig-name"><code>rawDataReceived</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>data</span>)</span></code>
+<br />
+Override this for when raw data is received.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="twisted.protocols.basic.LineReceiver-class.html#sendLine" class="summary-sig-name"><code>sendLine</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>line</span>)</span></code>
+<br />
+Sends a line to the other end of the connection.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="twisted.protocols.basic.LineReceiver-class.html#setLineMode" class="summary-sig-name"><code>setLineMode</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>extra</span>)</span></code>
+<br />
+Sets the line-mode of this receiver.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="twisted.protocols.basic.LineReceiver-class.html#setRawMode" class="summary-sig-name"><code>setRawMode</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Sets the raw mode of this receiver.</td></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from Protocol</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="twisted.internet.protocol.Protocol-class.html#connectionLost" class="summary-sig-name"><code>connectionLost</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>reason</span>)</span></code>
+<br />
+Called when the connection is shut down.</td></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from BaseProtocol</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="../private/twisted.internet.protocol.BaseProtocol-class.html#connectionMade" class="summary-sig-name"><code>connectionMade</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Called when a connection is made.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="../private/twisted.internet.protocol.BaseProtocol-class.html#makeConnection" class="summary-sig-name"><code>makeConnection</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>transport</span>)</span></code>
+<br />
+Make a connection to a transport and a server.</td></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from _PauseableMixin</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="../private/twisted.protocols.basic._PauseableMixin-class.html#pauseProducing" class="summary-sig-name"><code>pauseProducing</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="../private/twisted.protocols.basic._PauseableMixin-class.html#resumeProducing" class="summary-sig-name"><code>resumeProducing</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="../private/twisted.protocols.basic._PauseableMixin-class.html#stopProducing" class="summary-sig-name"><code>stopProducing</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+</td></tr>
+</table><br />
+
+
+<!-- =========== START OF CLASS VARIABLE SUMMARY =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Class Variable Summary</th></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from LineReceiver</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>str</code></font></td>
+<td><b><a href="twisted.protocols.basic.LineReceiver-class.html#delimiter"><code>delimiter</code></a></b>: The line-ending delimiter to use.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>int</code></font></td>
+<td><b><a href="twisted.protocols.basic.LineReceiver-class.html#line_mode"><code>line_mode</code></a></b> = <span title="1">1&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>int</code></font></td>
+<td><b><a href="twisted.protocols.basic.LineReceiver-class.html#MAX_LENGTH"><code>MAX_LENGTH</code></a></b>: The maximum length of a line to allow (If a sent line is longer than 
+this, the connection is dropped).</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>str</code></font></td>
+<td><b><a href="../private/twisted.protocols.basic.LineReceiver-class.html#__buffer"><code>_LineReceiver__buffer</code></a></b> = <span title="''"><code><span class="variable-quote">'</span><span class="variable-quote">'</span>                               </code>
+</span></td></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from Protocol</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>Implements</code></font></td>
+<td><b><a href="twisted.internet.protocol.Protocol-class.html#__implemented__"><code>__implemented__</code></a></b> = <span title="&lt;implementedBy twisted.internet.protocol.Protocol&gt;"><code>&lt;implementedBy&nbsp;twisted.internet.protoc<span class="variable-ellipsis">...</span></code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>_implementsTuple</code></font></td>
+<td><b><a href="twisted.internet.protocol.Protocol-class.html#__implements__"><code>__implements__</code></a></b> = <span title="(&lt;MetaInterface twisted.internet.interfaces.IProtocol&gt;,)"><code>(&lt;MetaInterface&nbsp;twisted.internet.interf<span class="variable-ellipsis">...</span></code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>ClassProvides</code></font></td>
+<td><b><a href="twisted.internet.protocol.Protocol-class.html#__provides__"><code>__provides__</code></a></b> = <span title="&lt;zope.interface.declarations.ClassProvides object at 0x2c22b0&gt;"><code>&lt;zope.interface.declarations.ClassProvide<span class="variable-ellipsis">...</span></code>
+</span></td></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from BaseProtocol</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>ClassProvides</code></font></td>
+<td><b><a href="../private/twisted.internet.protocol.BaseProtocol-class.html#__providedBy__"><code>__providedBy__</code></a></b> = <span title="&lt;zope.interface.declarations.ClassProvides object at 0x2c21d0&gt;"><code>&lt;zope.interface.declarations.ClassProvi<span class="variable-ellipsis">...</span></code>
+</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>int</code></font></td>
+<td><b><a href="../private/twisted.internet.protocol.BaseProtocol-class.html#connected"><code>connected</code></a></b> = <span title="0">0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>NoneType</code></font></td>
+<td><b><a href="../private/twisted.internet.protocol.BaseProtocol-class.html#transport"><code>transport</code></a></b> = <span title="None">None&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from _PauseableMixin</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1"><code>bool</code></font></td>
+<td><b><a href="../private/twisted.protocols.basic._PauseableMixin-class.html#paused"><code>paused</code></a></b> = <span title="False"><code>False                                           </code>
+</span></td></tr>
+</table><br />
+
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="ipython1-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+  <tr>
+    <td align="left"><font size="-2">Generated by Epydoc 2.1 on Fri Dec 23 14:43:08 2005</font></td>
+    <td align="right"><a href="http://epydoc.sourceforge.net"
+                      ><font size="-2">http://epydoc.sf.net</font></a></td>
+  </tr>
+</table>
+</body>
+</html>

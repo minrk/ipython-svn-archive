@@ -1,0 +1,638 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>ipython1.kernel1p.kernelclient.InteractiveCluster</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css"></link>
+</head>
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="ipython1-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <font size="-1"><b class="breadcrumbs">
+        <a href="ipython1-module.html">Package&nbsp;ipython1</a> ::
+        <a href="ipython1.kernel1p-module.html">Package&nbsp;kernel1p</a> ::
+        <a href="ipython1.kernel1p.kernelclient-module.html">Module&nbsp;kernelclient</a> ::
+        Class&nbsp;InteractiveCluster
+      </b></font></br>
+    </td>
+    <td><table cellpadding="0" cellspacing="0">
+      <tr><td align="right"><font size="-2">[show&nbsp;private&nbsp;|&nbsp;<a href="../public/ipython1.kernel1p.kernelclient.InteractiveCluster-class.html">hide&nbsp;private</a>]</font></td></tr>
+      <tr><td align="right"><font size="-2">[<a href="frames.html"target="_top">frames</a>&nbsp;|&nbsp;<a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html" target="_top">no&nbsp;frames</a>]</font></td></tr>
+    </table></td>
+</tr></table>
+
+<!-- =========== START OF CLASS DESCRIPTION =========== -->
+<h2 class="class">Type InteractiveCluster</h2>
+
+<pre class="base-tree">
+<a href="__builtin__.object-class.html"><code>object</code></a> --+
+         |
+        <b>InteractiveCluster</b>
+</pre><br />
+
+<hr/>
+
+An interface to a set of ipython kernels for parallel computation.
+<hr/>
+
+
+<!-- =========== START OF METHOD SUMMARY =========== -->
+<table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="summary">
+  <th colspan="2">Method Summary</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#__init__" class="summary-sig-name"><code>__init__</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Create an empty cluster object.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#__add__" class="summary-sig-name"><code>__add__</code></a>(<span class=summary-sig-arg>first</span>,
+          <span class=summary-sig-arg>second</span>)</span></code>
+<br />
+Add two clusters together.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="__getitem__"></a><span class="summary-sig"><span class="summary-sig-name">__getitem__</span>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>key</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="__len__"></a><span class="summary-sig"><span class="summary-sig-name">__len__</span>(<span class=summary-sig-arg>self</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="__setitem__"></a><span class="summary-sig"><span class="summary-sig-name">__setitem__</span>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>key</span>,
+          <span class=summary-sig-arg>value</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#activate" class="summary-sig-name"><code>activate</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Make this cluster the active one for ipython magics.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#allow" class="summary-sig-name"><code>allow</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>ip</span>,
+          <span class=summary-sig-arg>workers</span>)</span></code>
+<br />
+Instruct a set of workers to allow connections from an ip.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#deny" class="summary-sig-name"><code>deny</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>ip</span>,
+          <span class=summary-sig-arg>workers</span>)</span></code>
+<br />
+Instruc a set of workers to deny connections from an ip.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#disconnect" class="summary-sig-name"><code>disconnect</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>workers</span>)</span></code>
+<br />
+Disconnect from a set of workers.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#execute" class="summary-sig-name"><code>execute</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>source</span>,
+          <span class=summary-sig-arg>workers</span>)</span></code>
+<br />
+Execute python source code on the ipython kernel.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#kill" class="summary-sig-name"><code>kill</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Kill all the kernels in the cluster.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#load" class="summary-sig-name"><code>load</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>cluster_name</span>)</span></code>
+<br />
+Loads a saved cluster.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#map" class="summary-sig-name"><code>map</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>func_code</span>,
+          <span class=summary-sig-arg>seq</span>)</span></code>
+<br />
+A parallelized version of python's builtin map.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="msg"></a><span class="summary-sig"><span class="summary-sig-name">msg</span>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>txt</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#notify" class="summary-sig-name"><code>notify</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>addr</span>,
+          <span class=summary-sig-arg>flag</span>,
+          <span class=summary-sig-arg>workers</span>)</span></code>
+<br />
+Instruct a set of workers to notify a result gatherer.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#pull" class="summary-sig-name"><code>pull</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>key</span>,
+          <span class=summary-sig-arg>flatten</span>,
+          <span class=summary-sig-arg>workers</span>)</span></code>
+<br />
+Get a python object from some kernels.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#push" class="summary-sig-name"><code>push</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>key</span>,
+          <span class=summary-sig-arg>value</span>,
+          <span class=summary-sig-arg>workers</span>)</span></code>
+<br />
+Send a python object to the namespace of some kernels.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#remove" class="summary-sig-name"><code>remove</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>kernel_to_remove</span>)</span></code>
+<br />
+Remove a specific kernel from the cluster.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#reset" class="summary-sig-name"><code>reset</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>workers</span>)</span></code>
+<br />
+Reset the namespace of a set of workers.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#run" class="summary-sig-name"><code>run</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>fname</span>,
+          <span class=summary-sig-arg>workers</span>)</span></code>
+<br />
+Run a file on a set of kernels.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#save" class="summary-sig-name"><code>save</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>cluster_name</span>)</span></code>
+<br />
+Saves the cluster information to a file in ~/.ipython.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#start" class="summary-sig-name"><code>start</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>addr_list</span>)</span></code>
+<br />
+Add already running kernels to the cluster.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#status" class="summary-sig-name"><code>status</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>workers</span>)</span></code>
+<br />
+Get the status of a set of kernels.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="subcluster"></a><span class="summary-sig"><span class="summary-sig-name">subcluster</span>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>worker_list</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#vectorize" class="summary-sig-name"><code>vectorize</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>func_name</span>)</span></code>
+<br />
+Contruct and return a vectorized and parallelized function.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="../private/ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#__load00" class="summary-sig-name"><code>__load00</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>cluster_name</span>)</span></code>
+<br />
+Loads a saved cluster.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="../private/ipython1.kernel1p.kernelclient.InteractiveCluster-class.html#_cluster" class="summary-sig-name"><code>_cluster</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Notify each kernel in the cluster about the other kernels.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="_parse_workers_arg"></a><span class="summary-sig"><span class="summary-sig-name">_parse_workers_arg</span>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>workers</span>)</span></code>
+</td></tr>
+<tr bgcolor="#e8f0f8" class="group">
+  <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from object</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__delattr__" class="summary-sig-name"><code>__delattr__</code></a>(<span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+x.__delattr__('name') &lt;==&gt; del x.name</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__getattribute__" class="summary-sig-name"><code>__getattribute__</code></a>(<span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+x.__getattribute__('name') &lt;==&gt; x.name</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__hash__" class="summary-sig-name"><code>__hash__</code></a>(<span class=summary-sig-arg>x</span>)</span></code>
+<br />
+x.__hash__() &lt;==&gt; hash(x)</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__new__" class="summary-sig-name"><code>__new__</code></a>(<span class=summary-sig-arg>T</span>,
+          <span class=summary-sig-arg>S</span>,
+          <span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+T.__new__(S, ...) -&gt; a new object with type S, a subtype of T</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__reduce__" class="summary-sig-name"><code>__reduce__</code></a>(<span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+helper for pickle</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__reduce_ex__" class="summary-sig-name"><code>__reduce_ex__</code></a>(<span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+helper for pickle</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__repr__" class="summary-sig-name"><code>__repr__</code></a>(<span class=summary-sig-arg>x</span>)</span></code>
+<br />
+x.__repr__() &lt;==&gt; repr(x)</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__setattr__" class="summary-sig-name"><code>__setattr__</code></a>(<span class="summary-sig-vararg">...</span>)</span></code>
+<br />
+x.__setattr__('name', value) &lt;==&gt; x.name = value</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="__builtin__.object-class.html#__str__" class="summary-sig-name"><code>__str__</code></a>(<span class=summary-sig-arg>x</span>)</span></code>
+<br />
+x.__str__() &lt;==&gt; str(x)</td></tr>
+</table><br />
+
+
+<!-- =========== START OF METHOD DETAILS =========== -->
+<table class="details" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="details">
+  <th colspan="2">Method Details</th></tr>
+</table>
+
+<a name="__init__"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">__init__</span>(<span class=sig-arg>self</span>)</span>
+    <br /><i>(Constructor)</i>
+  </h3>
+  Create an empty cluster object.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="__builtin__.object-class.html#__init__"><code>__builtin__.object.__init__</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="__add__"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">__add__</span>(<span class=sig-arg>first</span>,
+          <span class=sig-arg>second</span>)</span>
+    <br /><i>(Addition operator)</i>
+  </h3>
+  Add two clusters together.
+<pre class="doctestblock">
+<span class="py-src"><span class="py-prompt">&gt;&gt;&gt; </span>cluster3 = cluster1 + cluster2</span></pre>
+  Currently, this addition does not eliminate duplicates.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="activate"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">activate</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  <p>Make this cluster the active one for ipython magics.</p>
+  <p>IPython has a magic syntax to work with InteractiveCluster objects. 
+  In a given ipython session there is a single active cluster. While 
+  there can be many clusters created and used by the user, there is only 
+  one active one. The active cluster is used when ever the magic syntax 
+  is used.</p>
+  The activate() method is called on a given cluster to make it the 
+  active one. Once this has been done, the magic command can be used:
+<pre class="doctestblock">
+<span class="py-src"><span class="py-prompt">&gt;&gt;&gt; </span>%px a = 5       <span class="py-comment"># Same as execute('a = 5')</span></span></pre>
+<pre class="doctestblock">
+<span class="py-src"><span class="py-prompt">&gt;&gt;&gt; </span>%autopx         <span class="py-comment"># Now every command is sent to execute()</span></span></pre>
+<pre class="doctestblock">
+<span class="py-src"><span class="py-prompt">&gt;&gt;&gt; </span>%autopx         <span class="py-comment"># The second time it toggles autoparallel mode off</span></span></pre>
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="allow"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">allow</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>ip</span>,
+          <span class=sig-arg>workers</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Instruct a set of workers to allow connections from an ip.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="deny"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">deny</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>ip</span>,
+          <span class=sig-arg>workers</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Instruc a set of workers to deny connections from an ip.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="disconnect"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">disconnect</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>workers</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Disconnect from a set of workers.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="execute"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">execute</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>source</span>,
+          <span class=sig-arg>workers</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  <p>Execute python source code on the ipython kernel.</p>
+  <p>The workers argument is used to select which kernels are sent the 
+  object. There are three cases:</p>
+  <p>workers is left empty -&gt; all workers get the object workers is a 
+  list of integers -&gt; only those workers get it workers is an integer 
+  -&gt; only that worker gets it</p>
+  <p>The kernels in the cluster are labeled by integers starting with 
+  0.</p>
+  The execute command also has a magic syntax. Once a cluster has been 
+  made active using the activate() method, the %px and %autopx magics 
+  will work for the cluster:
+<pre class="doctestblock">
+<span class="py-src"><span class="py-prompt">&gt;&gt;&gt; </span>%px a = 5           <span class="py-comment"># Same as execute('a=5')</span>
+<span class="py-prompt">&gt;&gt;&gt; </span>%autopx             <span class="py-comment"># Toggles autoparallel mode on</span></span>
+<span class="py-output"># Now every command is wrapped in execute()</span>
+
+<span class="py-src"><span class="py-prompt">&gt;&gt;&gt; </span>%autopx             <span class="py-comment"># Toggles autoparallel mode off</span></span></pre>
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>source</b></code> -
+         A string containing valid python code
+      <dd><code><b>workers</b></code> -
+         Which kernels to get the object from to.
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="kill"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">kill</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Kill all the kernels in the cluster.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="load"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">load</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>cluster_name</span>)</span>
+  </h3>
+  Loads a saved cluster.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>cluster_name</b></code> -
+         The filename of the saved cluster as a string
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="map"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">map</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>func_code</span>,
+          <span class=sig-arg>seq</span>)</span>
+  </h3>
+  <p>A parallelized version of python's builtin map.</p>
+  <p>This version of map is designed to work similarly to python's 
+  builtin map(), but the execution is done in parallel on the 
+  cluster.</p>
+  Example:
+<pre class="doctestblock">
+<span class="py-src"><span class="py-prompt">&gt;&gt;&gt; </span>map(<span class="py-string">'lambda x: x*x'</span>, range(10000))</span></pre>
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>func_code</b></code> -
+         A string of python code representing a callable. It must be 
+        defined in the kernels namespace.
+      <dd><code><b>seq</b></code> -
+         A python sequence to call the callable on
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="notify"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">notify</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>addr</span>=<span class=sig-default>None</span>,
+          <span class=sig-arg>flag</span>=<span class=sig-default>True</span>,
+          <span class=sig-arg>workers</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Instruct a set of workers to notify a result gatherer.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="pull"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">pull</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>key</span>,
+          <span class=sig-arg>flatten</span>=<span class=sig-default>False</span>,
+          <span class=sig-arg>workers</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  <p>Get a python object from some kernels.</p>
+  <p>The workers argument is used to select which kernels are sent the 
+  object. There are three cases:</p>
+  <p>workers is left empty -&gt; all workers get the object workers is a 
+  list of integers -&gt; only those workers get it workers is an integer 
+  -&gt; only that worker gets it</p>
+  <p>The kernels in the cluster are labeled by integers starting with 
+  0.</p>
+  <p>If the object does not exist in the kernel's namespace a NotDefined 
+  object will be returned.</p>
+  Like push, pull also has a dictionary interface:
+<pre class="doctestblock">
+<span class="py-src"><span class="py-prompt">&gt;&gt;&gt; </span>ic = InteractiveCluster()
+<span class="py-prompt">&gt;&gt;&gt; </span>ic[<span class="py-string">'a'</span>] = 10        <span class="py-comment"># Same as ic.push('a',10)</span>
+<span class="py-prompt">&gt;&gt;&gt; </span>ic[<span class="py-string">'a'</span>]             <span class="py-comment"># Same as ic.pull(10,'a')</span></span>
+<span class="py-output">[10, 10, 10, 10]</span>
+
+<span class="py-src"><span class="py-prompt">&gt;&gt;&gt; </span>ic[0][<span class="py-string">'a'</span>]          <span class="py-comment"># Same as ic.pull(10, 'a', 0)</span></span>
+<span class="py-output">10</span></pre>
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>key</b></code> -
+         The name of the python object to get
+      <dd><code><b>workers</b></code> -
+         Which kernels to get the object from to.
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="push"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">push</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>key</span>,
+          <span class=sig-arg>value</span>,
+          <span class=sig-arg>workers</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  <p>Send a python object to the namespace of some kernels.</p>
+  <p>The workers argument is used to select which kernels are sent the 
+  object. There are three cases:</p>
+  <p>workers is left empty -&gt; all workers get the object workers is a 
+  list of integers -&gt; only those workers get it workers is an integer 
+  -&gt; only that worker gets it</p>
+  <p>The kernels in the cluster are labeled by integers starting with 
+  0.</p>
+  There is also a dictionary style interface to the push command:
+<pre class="doctestblock">
+<span class="py-src"><span class="py-prompt">&gt;&gt;&gt; </span>ic = InteractiveCluster()
+<span class="py-prompt">&gt;&gt;&gt; </span>ic[<span class="py-string">'a'</span>] = 10        <span class="py-comment"># Same as ic.push('a',10)</span>
+<span class="py-prompt">&gt;&gt;&gt; </span>ic[1][<span class="py-string">'a'</span>] = 10     <span class="py-comment"># Same as ic.push('a',10,1)</span></span></pre>
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>key</b></code> -
+         What to name the object in the kernel' namespace
+      <dd><code><b>value</b></code> -
+         The python object to send
+      <dd><code><b>workers</b></code> -
+         Which kernels to push to.
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="remove"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">remove</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>kernel_to_remove</span>)</span>
+  </h3>
+  <p>Remove a specific kernel from the cluster.</p>
+  This does not kill the kernel, it just stops using it.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>kernel_to_remove</b></code> -
+         An integer specifying which kernel to remove
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="reset"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">reset</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>workers</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Reset the namespace of a set of workers.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="run"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">run</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>fname</span>,
+          <span class=sig-arg>workers</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Run a file on a set of kernels.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="save"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">save</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>cluster_name</span>)</span>
+  </h3>
+  <p>Saves the cluster information to a file in ~/.ipython.</p>
+  This method is used to save a cluster and reload it later. During 
+  this period, the kernels in the cluster will remain running. If a 
+  kernel is killed or crashes, reloading will not work.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>cluster_name</b></code> -
+         A string to name the file
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="start"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">start</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>addr_list</span>)</span>
+  </h3>
+  <p>Add already running kernels to the cluster.</p>
+  This method can be called anytime to add new kernels to the 
+  cluster.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>addr_list</b></code> -
+         A list of (ip, port) tuples of running kernels
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="status"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">status</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>workers</span>=<span class=sig-default>None</span>)</span>
+  </h3>
+  Get the status of a set of kernels.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="vectorize"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">vectorize</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>func_name</span>)</span>
+  </h3>
+  <p>Contruct and return a vectorized and parallelized function.</p>
+  The resulting VectorFunction object is a callable that can operates 
+  on sequences.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>func_name</b></code> -
+         The name of the function to parallelize. It must be defined in 
+        the namespace of the kernel.
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="__load00"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">__load00</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>cluster_name</span>)</span>
+  </h3>
+  Loads a saved cluster.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>cluster_name</b></code> -
+         The filename of the saved cluster as a string
+      </dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="_cluster"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">_cluster</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Notify each kernel in the cluster about the other kernels.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+<br />
+
+
+<!-- =========== START OF NAVBAR =========== -->
+<table class="navbar" border="0" width="100%" cellpadding="0" bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="center">
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="ipython1-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="trees.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="indices.html">Index</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar">&nbsp;&nbsp;&nbsp;<a class="navbar" href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+    <th class="navbar" width="100%"></th>
+  </tr>
+</table>
+
+<table border="0" cellpadding="0" cellspacing="0" width="100%">
+  <tr>
+    <td align="left"><font size="-2">Generated by Epydoc 2.1 on Fri Dec 23 14:50:41 2005</font></td>
+    <td align="right"><a href="http://epydoc.sourceforge.net"
+                      ><font size="-2">http://epydoc.sf.net</font></a></td>
+  </tr>
+</table>
+</body>
+</html>
