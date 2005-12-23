@@ -1,8 +1,4 @@
 """A set of socket wrappers to support various modes of reading/writing.
-
-Classes:
-Int32Socket -- A socket wrapper for in32 prefixed strings
-LineSocket -- A socket wrapper for CRLF terminated strings
 """
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
@@ -22,11 +18,11 @@ class Int32Socket(object):
     a 4 byte integer specifying the length of the string.  This 4 byte
     integer is encoded in network byte order.
     
-    Notes:
-    
-    - If extra data is received by this class it is discarded.
-    - This class might work with blocking/timeout'd sockets.
-    - No socket related exceptions are caught.
+    Notes
+    =====
+        1. If extra data is received by this class it is discarded.
+        2. This class might work with blocking/timeout'd sockets.
+        3. No socket related exceptions are caught.
     """
     
     MAX_LENGTH = 99999999
@@ -42,9 +38,11 @@ class Int32Socket(object):
     def write_string(self,data):
         """Writes data to the socket.
         
-        Notes:
-        - This method uses buffers so substrings are not copied.
-        - No errors are caught currently.
+        Notes
+        =====
+        
+            1. This method uses buffers so substrings are not copied.
+            2. No errors are caught currently.
         """
         prefix = struct.pack("!i",len(data))
         
@@ -67,11 +65,12 @@ class Int32Socket(object):
         
         THIS IS BROKEN RIGHT NOW!!
         
-        Notes"
-        - If there is an error, an error message is printed and
-          an empty string is returned.  Change over to using exceptions.
-        - The received data is stored in a list to avoid copying strings.
-        - No socket related errors are caught currently.
+        Notes
+        =====
+            1. If there is an error, an error message is printed and
+                an empty string is returned.  Change over to using exceptions.
+            2. The received data is stored in a list to avoid copying strings.
+            3. No socket related errors are caught currently.
         """
         recvd = self.remainder # From the last read_string call
         
@@ -109,8 +108,10 @@ class Int32Socket(object):
     def write_string_slow(self,data):
         """Writes data to the socket.
         
-        Notes:
-        - Uses sendall so it won't work with timeouts or non-blocking sockets.
+        Notes
+        =====
+            1. Uses sendall so it won't work with timeouts or non-blocking
+              sockets.
         """
         self.sock.sendall(struct.pack("!i",len(data)))
         self.sock.sendall(data)

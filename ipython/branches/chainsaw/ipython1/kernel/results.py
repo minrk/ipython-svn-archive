@@ -3,11 +3,6 @@
 IPython kernels send back results (stdout, stderr) to a UDP port.  The classes
 in this module listen on the UDP port and hadle the incoming results.
 
-Classes:
-
-ResultGatherer     -- A multithreaded class that collects and prints results
-                      from kernels.
-
 Once the result gatherer has been started you can tell kernels to send results
 to the gatherer by using the .notify method of the RemoteKernel or 
 InteractiveCluster classes.  Multiple kernels can notify a single gatherer.

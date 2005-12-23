@@ -3,11 +3,6 @@
 The kernel interface is a set of classes that provide a high level interface
 to a running ipython kernel instance.  Currently these classes use blocking
 sockets and thus, do not require Twisted.  
-
-Classes:
-
-RemoteKernel       -- An interface to a single kernel
-Interactivecluster -- An interface to a set of kernels
 """
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
@@ -27,19 +22,19 @@ from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 
 try:
-    from ipython.kernel.esocket import LineSocket
+    from ipython1.kernel.esocket import LineSocket
 except ImportError:
-    from kernel.esocket import LineSocket
+    print "ipython1 needs to be in your PYTHONPATH"
     
 try:
-    import ipython.kernel.kernel_magic
+    import ipython1.kernel.kernel_magic
 except ImportError:
-    import kernel.kernel_magic
+    print "ipython1 needs to be in your PYTHONPATH"
 
 try:
-    from ipython.kernel.kernelerror import NotDefined
+    from ipython1.kernel.kernelerror import NotDefined
 except ImportError:
-    from kernel.kernelerror import NotDefined
+    print "ipython1 needs to be in your PYTHONPATH"
 
 #from esocket import LineSocket
 #import kernel_magic
@@ -51,14 +46,13 @@ class RemoteKernel(object):
     def __init__(self, addr):
         """Create a RemoteKernel instance pointed at a specific kernel.
         
-        Arguments:
-                
-        addr --  The (ip,port) tuple of the kernel.  The ip in a string
-                 and the port is an int.
-        
         Upon creation, the RemoteKernel class knows about, but is not
         connected to the kernel.  The connection occurs automatically when
         other methods of RemoteKernel are called.
+        
+        @arg addr:
+            The (ip,port) tuple of the kernel.  The ip in a string
+            and the port is an int.
         """
         self.addr = addr
         self.extra = ''
@@ -84,6 +78,7 @@ class RemoteKernel(object):
             
     def connect(self):
         """Initiate a new connection to the kernel."""
+        
         print "Connecting to kernel: ", self.addr
         try:
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -104,9 +99,8 @@ class RemoteKernel(object):
     def execute(self, source):
         """Execute python source code on the ipython kernel.
         
-        Arguments:
-        
-        source -- A string containing valid python code
+        @arg source:
+            A string containing valid python code
         """
         self._check_connection()
         if self.block:
@@ -150,18 +144,19 @@ class RemoteKernel(object):
     def push(self, key, value, forward=False):
         """Send a python object to the namespace of a kernel.
         
-        Arguments:
-        
-        value   -- The python object to send
-        key     -- What to name the object in the kernel' namespace
-        forward -- Boolean that determines if the object should be forwarded
-                   Not implemented.
-                   
         There is also a dictionary style interface to the push command:
                 
-            rk = RemoteKernel(addr)
+        >>> rk = RemoteKernel(addr)
         
-            rk['a'] = 10    # Same as rk.push('a', 10)
+        >>> rk['a'] = 10    # Same as rk.push('a', 10)
+        
+        @arg value:
+            The python object to send
+        @arg key:
+            What to name the object in the kernel' namespace
+        @arg forward:
+            Boolean that determines if the object should be forwarded
+            Not implemented.
         """
         self._check_connection()
         try:
@@ -186,22 +181,19 @@ class RemoteKernel(object):
         
     def pull(self, key):
         """Get a python object from a remote kernel.
-        
-        Arguments:
-        
-        key -- The name of the python object to get
-        
+                
         If the object does not exist in the kernel's namespace a NotDefined
         object will be returned.
         
         Like push, pull also has a dictionary interface:
 
-            rk = RemoteKernel(addr)
+        >>> rk = RemoteKernel(addr)
+        >>> rk['a'] = 10    # Same as rk.push('a', 10)
+        >>> rk['a']         # Same as rk.pull('a')
+        10
         
-            rk['a'] = 10    # Same as rk.push('a', 10)
-            
-            rk['a']         # Same as rk.pull('a')
-            10        
+        @arg key:
+            The name of the python object to get        
         """
         self._check_connection()    
     
@@ -294,14 +286,14 @@ class RemoteKernel(object):
 
     def allow(self, ip):
         """Instruct the kernel to allow connections from an ip address.
-        
-        Arguments:
-        
-        ip -- An ip to allow as a string
-        
+                
         By default kernels allow only connections from the localhost and one
         other ip address specified when the kernel is started.  Thus, this 
         method must be used to add other allowed ip addresses.
+
+        @arg ip:
+            An ip address to allow.
+        @type ip: str
         """
         self._check_connection()
         
@@ -315,12 +307,12 @@ class RemoteKernel(object):
     def deny(self, ip):
         """Instruct the kernel to not allow connections from an ip address.
         
-        Arguments:
-        
-        ip -- An ip to deny as a string
-        
         IP addresses are denied by default, so this method only needs to be
-        called to deny access to an ip that was allowed with allow(). 
+        called to deny access to an ip that was allowed with allow().
+
+        @arg ip:
+            An ip address to deny.
+        @type ip: str 
         """
         self._check_connection()
         
@@ -333,11 +325,6 @@ class RemoteKernel(object):
 
     def notify(self, addr=None, flag=True):
         """Instruct the kernel to notify a result gatherer.
-        
-        Arguments:
-        
-        addr -- The (ip, port) tuple of the result gatherer
-        flag -- A boolean to turn notification on (True) or off (False)
         
         When the IPython kernel runs code, it traps the stdout and stderr
         of each command and stores them in a list.  The tuple of stdin, stdout
@@ -353,7 +340,12 @@ class RemoteKernel(object):
         (ip, port) tuples to which results should be sent.  New addresses are
         added to this list using the notify() method.  This way each kernel can
         send results to multple observers and each observer can watch a 
-        different set of kernels.  
+        different set of kernels. 
+            
+        @arg addr:
+            The (ip, port) tuple of the result gatherer
+        @arg flag:
+            A boolean to turn notification on (True) or off (False) 
         """
         self._check_connection()
 
@@ -381,10 +373,9 @@ class RemoteKernel(object):
         done using InteractiveCluster intances.  The cluster() method is
         provided to allow each kernel to be notified of the addresses of 
         the other kernels in its cluster.
-        
-        Arguments:
-        
-        addrs -- A list of (ip, port) tuples of the other kernels in the cluster
+   
+        @arg addrs:
+            A list of (ip, port) tuples of the other kernels in the cluster
         """
         self._check_connection()
         if addrs is None:
@@ -457,9 +448,7 @@ class InteractiveCluster(object):
     def __add__(first, second):
         """Add two clusters together.
         
-        Example:
-        
-            cluster3 = cluster1 + cluster2
+        >>> cluster3 = cluster1 + cluster2
         
         Currently, this addition does not eliminate duplicates.
         """
@@ -501,9 +490,8 @@ class InteractiveCluster(object):
         
         This method can be called anytime to add new kernels to the cluster.
         
-        Arguments:
-        
-        addr_list -- A list of (ip, port) tuples of running kernels
+        @arg addr_list:
+            A list of (ip, port) tuples of running kernels
         """
         for a in addr_list:
             self.worker_addrs.append(a)
@@ -521,9 +509,8 @@ class InteractiveCluster(object):
         
         This does not kill the kernel, it just stops using it.
 
-        Arguments:
-        
-        kernel_to_remove - An integer specifying which kernel to remove
+        @arg kernel_to_remove:
+            An integer specifying which kernel to remove
         """
         del self.workers[kernel_to_remove]
         del self.worker_addrs[kernel_to_remove]
@@ -542,11 +529,11 @@ class InteractiveCluster(object):
         The activate() method is called on a given cluster to make it the active
         one.  Once this has been done, the magic command can be used:
         
-        %px a = 5       # Same as execute('a = 5')
+        >>> %px a = 5       # Same as execute('a = 5')
         
-        %autopx         # Now every command is sent to execute()
+        >>> %autopx         # Now every command is sent to execute()
         
-        %autopx         # The second time it toggles autoparallel mode off
+        >>> %autopx         # The second time it toggles autoparallel mode off
         """
         try:
             __IPYTHON__.active_cluster = self
@@ -560,9 +547,8 @@ class InteractiveCluster(object):
         this period, the kernels in the cluster will remain running.  If 
         a kernel is killed or crashes, reloading will not work.
         
-        Arguments:
-        
-        cluster_name -- A string to name the file
+        @arg cluster_name:
+            A string to name the file
         """
         path_base = os.path.expanduser("~/.ipython")
         file_path = path_base + "/" + cluster_name
@@ -574,9 +560,8 @@ class InteractiveCluster(object):
     def load(self, cluster_name):
         """Loads a saved cluster.
         
-        Arguments:
-        
-        cluster_name -- The filename of the saved cluster as a string
+        @arg cluster_name:
+            The filename of the saved cluster as a string
         """
         path_base = os.path.expanduser("~/.ipython")
         file_path = path_base + "/" + cluster_name
@@ -595,9 +580,8 @@ class InteractiveCluster(object):
     def __load00(self, cluster_name):
         """Loads a saved cluster.
         
-        Arguments:
-        
-        cluster_name -- The filename of the saved cluster as a string
+        @arg cluster_name:
+            The filename of the saved cluster as a string
         """
         isfile = os.path.isfile
         if isfile(cluster_name):
@@ -631,13 +615,7 @@ class InteractiveCluster(object):
             
     def push(self, key, value, workers=None):
         """Send a python object to the namespace of some kernels.
-        
-        Arguments:
-        
-        value   -- The python object to send
-        key     -- What to name the object in the kernel' namespace
-        workers -- Which kernels to push to.
-        
+                
         The workers argument is used to select which kernels are sent the 
         object.  There are three cases:
         
@@ -649,13 +627,16 @@ class InteractiveCluster(object):
                            
         There is also a dictionary style interface to the push command:
                 
-            ic = InteractiveCluster()
-            
-            ...
-            
-            ic['a'] = 10        # Same as ic.push('a',10)
-            
-            ic[1]['a'] = 10     # Same as ic.push('a',10,1)
+        >>> ic = InteractiveCluster()
+        >>> ic['a'] = 10        # Same as ic.push('a',10)
+        >>> ic[1]['a'] = 10     # Same as ic.push('a',10,1)
+
+        @arg value:
+            The python object to send
+        @arg key:
+            What to name the object in the kernel' namespace
+        @arg workers:
+            Which kernels to push to.
         """
         worker_numbers = self._parse_workers_arg(workers)
         n_workers = len(worker_numbers)
@@ -677,11 +658,6 @@ class InteractiveCluster(object):
     def pull(self, key, flatten=False, workers=None):
         """Get a python object from some kernels.
         
-        Arguments:
-        
-        key -- The name of the python object to get
-        workers -- Which kernels to get the object from to.
-        
         The workers argument is used to select which kernels are sent the 
         object.  There are three cases:
         
@@ -696,17 +672,17 @@ class InteractiveCluster(object):
         
         Like push, pull also has a dictionary interface:
 
-            ic = InteractiveCluster()
-            
-            ...
-            
-            ic['a'] = 10        # Same as ic.push('a',10)
-            
-            ic['a']             # Same as ic.pull(10,'a')
-            [10, 10, 10, 10]
-            
-            ic[0]['a']          # Same as ic.pull(10, 'a', 0)
-            10
+        >>> ic = InteractiveCluster()
+        >>> ic['a'] = 10        # Same as ic.push('a',10)
+        >>> ic['a']             # Same as ic.pull(10,'a')
+        [10, 10, 10, 10]
+        >>> ic[0]['a']          # Same as ic.pull(10, 'a', 0)
+        10
+        
+        @arg key:
+            The name of the python object to get
+        @arg workers:
+            Which kernels to get the object from to.
         """    
         results = []
         worker_numbers = self._parse_workers_arg(workers)
@@ -719,12 +695,7 @@ class InteractiveCluster(object):
             
     def execute(self, source, workers=None):
         """Execute python source code on the ipython kernel.
-        
-        Arguments:
-        
-        source -- A string containing valid python code
-        workers -- Which kernels to get the object from to.
-        
+                
         The workers argument is used to select which kernels are sent the 
         object.  There are three cases:
         
@@ -738,12 +709,15 @@ class InteractiveCluster(object):
         made active using the activate() method, the %px and %autopx magics
         will work for the cluster:
         
-        %px a = 5           # Same as execute('a=5')
-        
-        %autopx             # Toggles autoparallel mode on
-                            # Now every command is wrapped in execute()
-        
-        %autopx             # Toggles autoparallel mode off
+        >>> %px a = 5           # Same as execute('a=5')
+        >>> %autopx             # Toggles autoparallel mode on
+                                # Now every command is wrapped in execute()
+        >>> %autopx             # Toggles autoparallel mode off
+
+        @arg source:
+            A string containing valid python code
+        @arg workers:
+            Which kernels to get the object from to.
         """
     
         worker_numbers = self._parse_workers_arg(workers)
@@ -806,16 +780,16 @@ class InteractiveCluster(object):
         
         This version of map is designed to work similarly to python's
         builtin map(), but the execution is done in parallel on the cluster.
-        
-        Arguments:
-        
-        func_code -- A string of python code representing a callable.
-                     It must be defined in the kernels namespace.
-        seq -- A python sequence to call the callable on
-        
+                
         Example:
         
-        map('lambda x: x*x', range(10000))
+        >>> map('lambda x: x*x', range(10000))
+
+        @arg func_code:
+            A string of python code representing a callable.
+            It must be defined in the kernels namespace.
+        @arg seq:
+            A python sequence to call the callable on
         """
         self.push('_ipython_map_seq', Scatter(seq))
         source_to_run = \
@@ -834,10 +808,9 @@ class InteractiveCluster(object):
         The resulting VectorFunction object is a callable that can operates 
         on sequences.  
         
-        Arguments:
-        
-        func_name -- The name of the function to parallelize.  
-                     It must be defined in the namespace of the kernel.
+        @arg func_name:
+            The name of the function to parallelize.  
+            It must be defined in the namespace of the kernel.
         """
         return VectorFunction(func_name, self)
     

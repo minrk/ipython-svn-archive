@@ -38,13 +38,12 @@ from optparse import OptionParser
 from twisted.internet import reactor
 from twisted.python import log
 
+
 try:
-    try:
-        from ipython.kernel.kernelcore import KernelTCPFactory
-    except ImportError:
-        from kernel.kernelcore import KernelTCPFactory
+    from ipython1.kernel.kernelcore import KernelTCPFactory
 except ImportError:
-    from kernelcore import KernelTCPFactory
+    print "ipython1 needs to be in your PYTHONPATH"
+
     
 #from kernelcore import KernelTCPFactory
 

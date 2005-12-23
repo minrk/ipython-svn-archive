@@ -21,10 +21,9 @@ from twisted.python import failure
 import sys
 
 try:
-    from ipython.kernel.console import QueuedInteractiveConsole, TrappingInteractiveConsole
+    from ipython1.kernel.console import QueuedInteractiveConsole, TrappingInteractiveConsole
 except ImportError:
-    from kernel.console import QueuedInteractiveConsole, TrappingInteractiveConsole
-
+    print "ipython1 needs to be in your PYTHONPATH"
 #from console import QueuedInteractiveConsole, TrappingInteractiveConsole
 
 # modified from twisted.mail.imap4.LiteralString

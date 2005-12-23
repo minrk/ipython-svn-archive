@@ -1,9 +1,4 @@
 """An ipython magic function interface to the kernel interface.
-
-This module exposes two magic functions:
-%px     -- Run a single python command on the active cluster
-%autopx -- Go into autoparallel mode where every command in executed on the
-           cluster.
 """
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
@@ -25,7 +20,7 @@ def magic_px(self,parameter_s=''):
     
     Then you can do the following:
      
-    %px a = 5       # Runs a = 5 on all nodes
+    >>> %px a = 5       # Runs a = 5 on all nodes
     """
     #print 'Magic function. Passed parameter is between < >: <'+parameter_s+'>'
     #print 'The self object is:',self
@@ -44,7 +39,7 @@ def magic_pn(self,parameter_s=''):
     
     Then you can do the following:
      
-    %pn 0 a = 5       # Runs a = 5 on kernel 0
+    >>> %pn 0 a = 5       # Runs a = 5 on kernel 0
     """
     args = parameter_s.split(" ", 1)
     if len(args) == 2:

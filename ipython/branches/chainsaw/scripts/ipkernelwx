@@ -52,14 +52,10 @@ from twisted.internet import reactor
 from twisted.python import log
 
 try:
-    try:
-        from ipython.kernel.kernelcore import KernelTCPFactoryGUI
-    except ImportError:
-        from kernel.kernelcore import KernelTCPFactoryGUI
+    from ipython1.kernel.kernelcore import KernelTCPFactoryGUI
 except ImportError:
-    from kernelcore import KernelTCPFactory
+    print "ipython1 needs to be in your PYTHONPATH"
 
-#from kernelcore import KernelTCPFactoryGUI
 
 # Here are the classes for wxPython
 
