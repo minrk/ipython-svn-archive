@@ -1,4 +1,4 @@
-"""The Twisted related parts of the Kernel Engine."""
+"""The Twisted related parts of the kernel engine client."""
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
 #                           Fernando Perez. <fperez@colorado.edu>

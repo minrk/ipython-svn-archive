@@ -60,6 +60,18 @@ Network protocol for the kernel engine.
 <table class="summary" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
 <tr bgcolor="#70b0f0" class="summary">
   <th colspan="2">Method Summary</th></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel.engine.KernelEngineProtocol-class.html#connectionMade" class="summary-sig-name"><code>connectionMade</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Setup per connection things.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel.engine.KernelEngineProtocol-class.html#lineReceived" class="summary-sig-name"><code>lineReceived</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>line</span>)</span></code>
+<br />
+Called when a line is received.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="reset_state_vars"></a><span class="summary-sig"><span class="summary-sig-name">reset_state_vars</span>(<span class=summary-sig-arg>self</span>)</span></code>
+</td></tr>
 <tr bgcolor="#e8f0f8" class="group">
   <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from LineReceiver</th></tr>
 <tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
@@ -76,11 +88,6 @@ Protocol.dataReceived.</td></tr>
           <span class=summary-sig-arg>line</span>)</span></code>
 <br />
 Called when the maximum line length has been reached.</td></tr>
-<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
-  <td><code><span class="summary-sig"><a href="twisted.protocols.basic.LineReceiver-class.html#lineReceived" class="summary-sig-name"><code>lineReceived</code></a>(<span class=summary-sig-arg>self</span>,
-          <span class=summary-sig-arg>line</span>)</span></code>
-<br />
-Override this for when each line is received.</td></tr>
 <tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
   <td><code><span class="summary-sig"><a href="twisted.protocols.basic.LineReceiver-class.html#rawDataReceived" class="summary-sig-name"><code>rawDataReceived</code></a>(<span class=summary-sig-arg>self</span>,
           <span class=summary-sig-arg>data</span>)</span></code>
@@ -132,9 +139,78 @@ this, the connection is dropped).</td></tr>
 <td><b><a href="twisted.internet.protocol.Protocol-class.html#__implements__"><code>__implements__</code></a></b> = <span title="(&lt;MetaInterface twisted.internet.interfaces.IProtocol&gt;,)"><code>(&lt;MetaInterface&nbsp;twisted.internet.interf<span class="variable-ellipsis">...</span></code>
 </span></td></tr>
 <tr><td align="right" valign="top" width="15%"><font size="-1"><code>ClassProvides</code></font></td>
-<td><b><a href="twisted.internet.protocol.Protocol-class.html#__provides__"><code>__provides__</code></a></b> = <span title="&lt;zope.interface.declarations.ClassProvides object at 0x2c3330&gt;"><code>&lt;zope.interface.declarations.ClassProvide<span class="variable-ellipsis">...</span></code>
+<td><b><a href="twisted.internet.protocol.Protocol-class.html#__provides__"><code>__provides__</code></a></b> = <span title="&lt;zope.interface.declarations.ClassProvides object at 0x2c32d0&gt;"><code>&lt;zope.interface.declarations.ClassProvide<span class="variable-ellipsis">...</span></code>
 </span></td></tr>
 </table><br />
+
+
+<!-- =========== START OF METHOD DETAILS =========== -->
+<table class="details" border="1" cellpadding="3" cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="details">
+  <th colspan="2">Method Details</th></tr>
+</table>
+
+<a name="connectionMade"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">connectionMade</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Setup per connection things.
+  <dl><dt></dt><dd>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="../private/twisted.internet.protocol.BaseProtocol-class.html#connectionMade"><code>twisted.internet.protocol.BaseProtocol.connectionMade</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+
+<a name="lineReceived"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">lineReceived</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>line</span>)</span>
+  </h3>
+  <p>Called when a line is received.</p>
+  This method implements the main parts of the kernel engine protocol. 
+  It works by analysing the received line and calling the appropriate 
+  handler method. The analysis of the line is based on two things:
+  <ol start="1">
+    <li>
+      The current state of the protocol (INIT, PULLING, etc.)
+    </li>
+    <li>
+      The command (first word) of the received line (KILL, STATUS, 
+      etc.)
+    </li>
+  </ol>
+  <p>The handlers are named according to the following convention:</p>
+  <p>handle[_state][_command]</p>
+  The handlers are resolved accoring to the follow precidence:
+  <ol start="1">
+    <li>
+      Handler resolved by both state and command.
+    </li>
+    <li>
+      Handler resolved by command only.
+    </li>
+    <li>
+      Handler resolved by state only.
+    </li>
+    <li>
+      Handler not resolved (default handler called).
+    </li>
+  </ol>
+  <dl><dt></dt><dd>
+    <dl><dt><b>Parameters:</b></dt>
+      <dd><code><b>line</b></code> -
+         The line that has been received.
+        <br /><i>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        (type=str)</i>
+      </dd>
+    </dl>
+    <dl><dt><b>Overrides:</b></dt>
+      <dd><a href="twisted.protocols.basic.LineReceiver-class.html#lineReceived"><code>twisted.protocols.basic.LineReceiver.lineReceived</code></a></dd>
+    </dl>
+  </dd></dl>
+</td></tr></table>
+<br />
 
 
 <!-- =========== START OF NAVBAR =========== -->
@@ -150,7 +226,7 @@ this, the connection is dropped).</td></tr>
 
 <table border="0" cellpadding="0" cellspacing="0" width="100%">
   <tr>
-    <td align="left"><font size="-2">Generated by Epydoc 2.1 on Fri Dec 23 15:20:25 2005</font></td>
+    <td align="left"><font size="-2">Generated by Epydoc 2.1 on Fri Dec 23 15:46:02 2005</font></td>
     <td align="right"><a href="http://epydoc.sourceforge.net"
                       ><font size="-2">http://epydoc.sf.net</font></a></td>
   </tr>

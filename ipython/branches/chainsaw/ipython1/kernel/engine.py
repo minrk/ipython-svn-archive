@@ -16,9 +16,79 @@ from twisted.python import failure
 import sys
 
 class KernelEngineProtocol(basic.LineReceiver):
-    """Network protocol for the kernel engine.
-    """
-    pass
+    """Network protocol for the kernel engine."""
+
+    def connectionMade(self):
+        """Setup per connection things."""
+        log.msg("Connection Made...")
+        self.transport.setTcpNoDelay(True)
+        self.state = 'INIT'
+        self.state_vars = {}
+
+    def lineReceived(self, line):
+        """Called when a line is received.
+        
+        This method implements the main parts of the kernel engine
+        protocol.  It works by analysing the received line and calling
+        the appropriate handler method.  The analysis of the line is based on
+        two things:
+        
+            1. The current state of the protocol (INIT, PULLING, etc.)
+            2. The command (first word) of the received line 
+              (KILL, STATUS, etc.)
+            
+        The handlers are named according to the following convention:
+        
+        handle[_state][_command]
+        
+        The handlers are resolved accoring to the follow precidence:
+        
+            1.  Handler resolved by both state and command.
+            2.  Handler resolved by command only.
+            3.  Handler resolved by state only.
+            4.  Handler not resolved (default handler called).
+
+        @arg line: The line that has been received.
+        @type line: str
+        """
+        split_line = line.split(" ", 1)
+        if len(split_line) == 1:
+            cmd = split_line[0]
+            args = None
+        elif len(split_line) == 2:
+            cmd = split_line[0]
+            args = split_line[1]
+
+        f = getattr(self, 'handle_%s_%s' %
+                    (self.state, cmd), None)            
+        if f:
+            # Handler resolved with state and cmd 
+            f(args)
+        else:
+            f = getattr(self, 'handle_%s' %
+                (cmd), None)
+            if f:
+                # Handler resolved with only cmd
+                f(args)
+            else:
+                f = getattr(self, 'handle_%s' %
+                    (self.state), None)
+                if f:
+                    # Handler resolve with only self.state
+                    # Pass the entire line rather than just args
+                    f(line)
+                else:
+                    # No handler resolved
+                    self.sendLine("BAD")
+                    self._reset()
+
+    def reset_state_vars(self):
+        self.state_vars = {}
+        
+    def _reset(self):
+        self.reset_state_vars()
+        self.state = 'INIT'
+        
     
 class KernelEngineFactory(protocol.ServerFactory):
     """Factory for creating KernelEngineProtocol instances."""
