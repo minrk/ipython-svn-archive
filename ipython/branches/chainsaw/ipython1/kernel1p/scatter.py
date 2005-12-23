@@ -2,10 +2,6 @@
 
 Scattering consists of partitioning a sequence and sending the various
 pieces to individual nodes in a cluster.
-
-Classes:
-
-Scatter -- The basic class for scattering sequences
 """
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>

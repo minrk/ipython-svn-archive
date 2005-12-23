@@ -22,12 +22,12 @@ from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 
 try:
-    from ipython1.kernel.esocket import LineSocket
+    from ipython1.kernel1p.esocket import LineSocket
 except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
     
 try:
-    import ipython1.kernel.kernel_magic
+    import ipython1.kernel1p.kernel_magic
 except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
 
