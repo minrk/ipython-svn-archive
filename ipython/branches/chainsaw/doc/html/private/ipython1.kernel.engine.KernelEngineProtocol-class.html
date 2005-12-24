@@ -65,16 +65,36 @@ Network protocol for the kernel engine.
 <br />
 Setup per connection things.</td></tr>
 <tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel.engine.KernelEngineProtocol-class.html#execute_finish" class="summary-sig-name"><code>execute_finish</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>msg</span>)</span></code>
+<br />
+Send final reply to the client and reset the protocol.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="handle_DISCONNECT"></a><span class="summary-sig"><span class="summary-sig-name">handle_DISCONNECT</span>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>args</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel.engine.KernelEngineProtocol-class.html#handle_INIT_EXECUTE" class="summary-sig-name"><code>handle_INIT_EXECUTE</code></a>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>args</span>)</span></code>
+<br />
+Handle the EXECUTE command in the state INIT.</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
+  <td><code><a name="handle_KILL"></a><span class="summary-sig"><span class="summary-sig-name">handle_KILL</span>(<span class=summary-sig-arg>self</span>,
+          <span class=summary-sig-arg>args</span>)</span></code>
+</td></tr>
+<tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
   <td><code><span class="summary-sig"><a href="ipython1.kernel.engine.KernelEngineProtocol-class.html#lineReceived" class="summary-sig-name"><code>lineReceived</code></a>(<span class=summary-sig-arg>self</span>,
           <span class=summary-sig-arg>line</span>)</span></code>
 <br />
 Called when a line is received.</td></tr>
 <tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
-  <td><code><a name="reset_state_vars"></a><span class="summary-sig"><span class="summary-sig-name">reset_state_vars</span>(<span class=summary-sig-arg>self</span>)</span></code>
-</td></tr>
+  <td><code><span class="summary-sig"><a href="ipython1.kernel.engine.KernelEngineProtocol-class.html#reset_state_vars" class="summary-sig-name"><code>reset_state_vars</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Reset the state variables.</td></tr>
 <tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
-  <td><code><a name="_reset"></a><span class="summary-sig"><span class="summary-sig-name">_reset</span>(<span class=summary-sig-arg>self</span>)</span></code>
-</td></tr>
+  <td><code><span class="summary-sig"><a href="../private/ipython1.kernel.engine.KernelEngineProtocol-class.html#_reset" class="summary-sig-name"><code>_reset</code></a>(<span class=summary-sig-arg>self</span>)</span></code>
+<br />
+Fully reset the state of the protocol.</td></tr>
 <tr bgcolor="#e8f0f8" class="group">
   <th colspan="2">&nbsp;&nbsp;&nbsp;&nbsp;Inherited from LineReceiver</th></tr>
 <tr><td align="right" valign="top" width="15%"><font size="-1">&nbsp;</font></td>
@@ -200,6 +220,26 @@ this, the connection is dropped).</td></tr>
   </dd></dl>
 </td></tr></table>
 
+<a name="execute_finish"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">execute_finish</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>msg</span>)</span>
+  </h3>
+  Send final reply to the client and reset the protocol.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="handle_INIT_EXECUTE"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">handle_INIT_EXECUTE</span>(<span class=sig-arg>self</span>,
+          <span class=sig-arg>args</span>)</span>
+  </h3>
+  Handle the EXECUTE command in the state INIT.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
 <a name="lineReceived"></a>
 <table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
   <h3><span class="sig"><span class="sig-name">lineReceived</span>(<span class=sig-arg>self</span>,
@@ -248,6 +288,24 @@ this, the connection is dropped).</td></tr>
     </dl>
   </dd></dl>
 </td></tr></table>
+
+<a name="reset_state_vars"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">reset_state_vars</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Reset the state variables.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
+
+<a name="_reset"></a>
+<table width="100%" class="func-details" bgcolor="#e0e0e0"><tr><td>
+  <h3><span class="sig"><span class="sig-name">_reset</span>(<span class=sig-arg>self</span>)</span>
+  </h3>
+  Fully reset the state of the protocol.
+  <dl><dt></dt><dd>
+  </dd></dl>
+</td></tr></table>
 <br />
 
 
@@ -264,7 +322,7 @@ this, the connection is dropped).</td></tr>
 
 <table border="0" cellpadding="0" cellspacing="0" width="100%">
   <tr>
-    <td align="left"><font size="-2">Generated by Epydoc 2.1 on Fri Dec 23 15:46:02 2005</font></td>
+    <td align="left"><font size="-2">Generated by Epydoc 2.1 on Fri Dec 23 16:50:50 2005</font></td>
     <td align="right"><a href="http://epydoc.sourceforge.net"
                       ><font size="-2">http://epydoc.sf.net</font></a></td>
   </tr>

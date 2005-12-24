@@ -83,13 +83,51 @@ class KernelEngineProtocol(basic.LineReceiver):
                     self._reset()
 
     def reset_state_vars(self):
+        """Reset the state variables."""
         self.state_vars = {}
         
     def _reset(self):
+        """Fully reset the state of the protocol."""
         self.reset_state_vars()
         self.state = 'INIT'
         
+    ########
+    ########  Handlers for the protocol
+    ########
+    
+    def handle_INIT_EXECUTE(self, args):
+        """Handle the EXECUTE command in the state INIT."""
+        
+        if not args:
+            self.execute_finish("FAIL")
+            return
+                   
+        cmd = args
+        log.msg("EXECUTE: %s" % cmd)
+        #result = self.factory.execute(cmd)
+            
+        self.execute_finish("OK")
+            
+    def execute_finish(self, msg):
+        """Send final reply to the client and reset the protocol."""
+        self.sendLine("EXECUTE %s" % msg)
+        self._reset()
+
+    def handle_KILL(self, args):
+        log.msg("Killing the kernel...")
+        reactor.stop()
+
+    def handle_DISCONNECT(self, args):
+        log.msg("Disconnecting client...")
+        self.sendLine("DISCONNECT OK")
+        self.transport.loseConnection()
     
 class KernelEngineFactory(protocol.ServerFactory):
     """Factory for creating KernelEngineProtocol instances."""
-    pass
+    
+    protocol = KernelEngineProtocol
+    
+    def __init__(self):
+        pass
+        
+    
