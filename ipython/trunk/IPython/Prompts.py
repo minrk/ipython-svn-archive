@@ -49,6 +49,7 @@ PromptColors.add_scheme(ColorANSI.ColorScheme(
 
     normal = Colors.NoColor  # color off (usu. Colors.Normal)
     ))
+
 # make some schemes as instances so we can copy them for modification easily:
 __PColLinux =  ColorANSI.ColorScheme(
     'Linux',
@@ -64,8 +65,9 @@ __PColLinux =  ColorANSI.ColorScheme(
     )
 # Don't forget to enter it into the table!
 PromptColors.add_scheme(__PColLinux)
+
 # Slightly modified Linux for light backgrounds
-__PColLightBG  = ColorANSI.ColorScheme('LightBG',**__PColLinux.colors.dict().copy())
+__PColLightBG  = __PColLinux.copy('LightBG')
 
 __PColLightBG.colors.update(
     in_prompt  = InputColors.Blue,

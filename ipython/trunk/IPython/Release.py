@@ -69,6 +69,8 @@ authors = {'Fernando' : ('Fernando Perez','fperez@colorado.edu'),
 
 url = 'http://ipython.scipy.org'
 
+download_url = 'http://ipython.scipy.org/dist'
+
 platforms = ['Linux','Mac OSX','Windows XP/2000/NT','Windows 95/98/ME']
 
 keywords = ['Interactive','Interpreter','Shell']
