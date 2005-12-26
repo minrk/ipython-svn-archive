@@ -1934,7 +1934,7 @@ want to merge them back into the new files.""" % locals()
         cmd = '%sipmagic("%s")' % (pre,esc_quotes('%s %s' % (iFun,theRest)))
         self.log(cmd,continue_prompt)
         self.update_cache(line)
-        print 'in handle_magic, cmd=<%s>' % cmd  # dbg
+        #print 'in handle_magic, cmd=<%s>' % cmd  # dbg
         return cmd
 
     def handle_auto(self, line, continue_prompt=None,
