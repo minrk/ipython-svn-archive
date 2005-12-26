@@ -550,7 +550,18 @@ class VerboseTB(TBTools):
         exception = ['%s%s%s: %s' % (Colors.excName, etype_str,
                                      ColorsNormal, evalue_str)]
         if type(evalue) is types.InstanceType:
-            names = [w for w in dir(evalue) if isinstance(w, basestring)]
+            try:
+                names = [w for w in dir(evalue) if isinstance(w, basestring)]
+            except:
+                # Every now and then, an object with funny inernals blows up
+                # when dir() is called on it.  We do the best we can to report
+                # the problem and continue
+                _m = '%sException reporting error (object with broken dir())%s:'
+                exception.append(_m % (Colors.excName,ColorsNormal))
+                etype_str,evalue_str = map(str,sys.exc_info()[:2])
+                exception.append('%s%s%s: %s' % (Colors.excName,etype_str,
+                                     ColorsNormal, evalue_str))
+                names = []
             for name in names:
                 value = text_repr(getattr(evalue, name))
                 exception.append('\n%s%s = %s' % (indent, name, value))
