@@ -15,6 +15,35 @@ from twisted.python import log
 from twisted.python import failure
 import sys
 
+try:
+    from ipython1.kernel1p.console import QueuedInteractiveConsole,\
+        TrappingInteractiveConsole
+except ImportError:
+    print "ipython1 needs to be in your PYTHONPATH"
+
+# modified from twisted.mail.imap4.LiteralString
+class LiteralString:
+    def __init__(self, size, defered):
+        self.size = size
+        self.data = []
+        self.defer = defered
+
+    def write(self, data):
+        self.size -= len(data)
+        passon = None
+        if self.size > 0:
+            self.data.append(data)
+        else:
+            if self.size:
+                data, passon = data[:self.size], data[self.size:]
+            else:
+                passon = ''
+            if data:
+                self.data.append(data)
+            if passon == '':
+                self.defer.callback(''.join(self.data))
+        return passon
+
 class KernelEngineProtocol(basic.LineReceiver):
     """Network protocol for the kernel engine."""
 
@@ -91,12 +120,16 @@ class KernelEngineProtocol(basic.LineReceiver):
         self.reset_state_vars()
         self.state = 'INIT'
         
-    ########
-    ########  Handlers for the protocol
-    ########
+    #############################################
+    #   Handlers for the protocol               #
+    #############################################
+    
+    #############################################
+    #   EXECUTE                                 #
+    #############################################
     
     def handle_INIT_EXECUTE(self, args):
-        """Handle the EXECUTE command in the state INIT."""
+        """Handle the EXECUTE command in the INIT state."""
         
         if not args:
             self.execute_finish("FAIL")
@@ -104,15 +137,94 @@ class KernelEngineProtocol(basic.LineReceiver):
                    
         cmd = args
         log.msg("EXECUTE: %s" % cmd)
-        #result = self.factory.execute(cmd)
+        
+        # Execute the command
+        try:
+            result = self.factory.execute(cmd)
+        except:
+            self.execute_finish("FAIL")
             
-        self.execute_finish("OK")
+        print result
+        # Pickle the result dict and reply to client
+        try:
+            package = pickle.dumps(result, 2)
+        except pickle.PickleError:
+            self.execute_finish("FAIL")
+        else:
+            self.sendLine("RESULT %i" % len(package))
+            self.transport.write(package)
+            self.execute_finish("OK")
             
     def execute_finish(self, msg):
         """Send final reply to the client and reset the protocol."""
         self.sendLine("EXECUTE %s" % msg)
         self._reset()
 
+    #############################################
+    #   PUSH                                    #
+    #############################################
+
+    def handle_INIT_PUSH(self, args):
+        """Handle the PUSH command in the INIT state."""
+        log.msg("PUSH %s" % msg)
+        
+        # Parse the args
+        if not args:
+            self.push_finish("FAIL")
+            return
+                                            
+        self.state_vars['push_name'] = args
+
+        # Setup to process the command
+        self.state = 'PUSHING'
+
+    def setup_literal(self, size):
+        """Called by data command handlers to handle raw data."""
+        d = defer.Deferred()
+        self._pendingLiteral = LiteralString(size, d)
+        self.setRawMode()
+        return d        
+        
+    def handle_PUSHING_PICKLE(self, size_str):
+        """Handle the PICKLE command in the PUSHING state.""" 
+        try:
+            size = int(size_str)
+        except (ValueError, TypeError):
+            self.push_finish("FAIL")
+        else:         
+            d = self.setup_literal(size)
+            d.addCallback(self.process_pickle)
+
+    def process_pickle(self, package):
+        """Unpack a pickled package and put it in the users namespace."""
+        try:
+            data = pickle.loads(package)
+        except pickle.PickleError:
+            self.push_finish("FAIL")
+        else:
+            # What if this fails?  When could it?
+            self.factory.push(self.work_vars['push_name'], data)
+            self.push_finish("OK")
+
+    def push_finish(self,msg):
+        """Send final reply to the client and reset the protocol."""
+        self.sendLine("PUSH %s" % msg)
+        self._reset()
+
+        self.sendLine("PUSH %s" % msg)
+        self._reset()
+
+    #############################################
+    #   PULL                                    #
+    #############################################
+
+    def handle_INIT_PULL(self, msg):
+        log.msg("PUSH %s" % msg)
+        
+    #############################################
+    #         Misc                              #
+    #############################################
+    
     def handle_KILL(self, args):
         log.msg("Killing the kernel...")
         reactor.stop()
@@ -127,7 +239,30 @@ class KernelEngineFactory(protocol.ServerFactory):
     
     protocol = KernelEngineProtocol
     
-    def __init__(self):
-        pass
+    def __init__(self, allow=[], notify=[]):
+        self.tic = TrappingInteractiveConsole()
+
+    # Kernel methods
+            
+    def push(self, key, value):
+        self.tic.update({key:value})
+        
+    def pull(self, key):
+        value = self.tic.get(key)
+        return value
+
+    def execute(self, source):
+        self.tic.runlines(source)
+        result = self.tic.get_last_result()
+        return result
+        
+    def reset(self):
+        self.tic.locals = {}
+        
+    def get_result(self, i):
+        return self.tic.get_result(i)
+        
+    def get_last_result(self):
+        return self.tic.get_last_result()
         
     
