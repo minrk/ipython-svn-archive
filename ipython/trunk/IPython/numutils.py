@@ -29,8 +29,10 @@ __all__ = ['sum_flat','mean_flat','rms_flat','base_repr','binary_repr',
 #****************************************************************************
 # required modules
 import __main__
-import sys,operator
 import math
+import operator
+import sys
+
 import Numeric
 from Numeric import *
 

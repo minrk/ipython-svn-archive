@@ -36,8 +36,12 @@ All Rights Reserved."""
 # Required modules
 
 # From the standard library
-import __main__, __builtin__
-import os,sys,types,re
+import __main__
+import __builtin__
+import os
+import re
+import sys
+import types
 from pprint import pprint,pformat
 
 # Our own

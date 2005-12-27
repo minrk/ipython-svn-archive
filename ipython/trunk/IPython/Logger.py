@@ -22,7 +22,9 @@ __author__  = '%s <%s>\n%s <%s>' % \
 __license__ = Release.license
 
 # Python standard modules
-import os,sys,glob
+import glob
+import os
+import sys
 
 # Homebrewed
 from IPython.genutils import *

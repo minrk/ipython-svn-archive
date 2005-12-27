@@ -19,7 +19,8 @@ __version__  = Release.version
 # Required modules
 
 # From the standard library
-import os,sys
+import os
+import sys
 from pprint import pprint,pformat
 
 # Homebrewed

@@ -19,7 +19,9 @@ __version__ = Release.version
 #****************************************************************************
 # Required modules
 import __builtin__
-import os,sys,socket
+import os
+import socket
+import sys
 import time
 from pprint import pprint,pformat
 

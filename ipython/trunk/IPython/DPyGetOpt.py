@@ -69,8 +69,8 @@ __version__ = '1.2'
 # Modified to use re instead of regex and regsub modules.
 # 2001/5/7, Jonathan Hogg <jonathan@onegoodidea.com>
 
-import string
 import re
+import string
 import sys
 import types
 

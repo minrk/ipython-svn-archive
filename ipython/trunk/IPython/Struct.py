@@ -17,6 +17,7 @@ __license__ = Release.license
 __all__ = ['Struct']
 
 import types
+
 from IPython.genutils import list2dict2
 
 class Struct:

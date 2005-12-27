@@ -21,11 +21,19 @@ __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
 
 #****************************************************************************
-# required modules
+# required modules from the Python standard library
 import __main__
-import types,commands,time,sys,os,re,shutil
+import commands
+import os
+import re
 import shlex
+import shutil
+import sys
 import tempfile
+import time
+import types
+
+# Other IPython utilities
 from IPython.Itpl import Itpl,itpl,printpl
 from IPython import DPyGetOpt
 

@@ -21,11 +21,18 @@ __license__ = Release.license
 
 # Python standard modules
 import __builtin__
-import os,sys,inspect,pydoc,re,tempfile,pdb,bdb,time
-import Debugger
+import bdb
+import inspect
+import os
+import pdb
+import pydoc
+import sys
+import re
+import tempfile
+import time
+from cStringIO import StringIO
 from getopt import getopt
 from pprint import pprint, pformat
-from cStringIO import StringIO
 
 # profile isn't bundled by default in Debian for license reasons
 try:
@@ -34,12 +41,11 @@ except ImportError:
     profile = pstats = None
 
 # Homebrewed
-from IPython.Struct import Struct
-from IPython.Itpl import Itpl, itpl, printpl,itplns
+from IPython import Debugger, OInspect, wildcard
 from IPython.FakeModule import FakeModule
+from IPython.Itpl import Itpl, itpl, printpl,itplns
 from IPython.PyColorize import Parser
-from IPython import OInspect
-from IPython import wildcard
+from IPython.Struct import Struct
 from IPython.genutils import *
 
 # Globals to be set later by Magic constructor

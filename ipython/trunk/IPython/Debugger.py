@@ -21,7 +21,13 @@ from IPython import Release
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = 'Python'
 
-import pdb,bdb,cmd,os,sys,linecache
+import bdb
+import cmd
+import linecache
+import os
+import pdb
+import sys
+
 from IPython import PyColorize, ColorANSI
 from IPython.genutils import Term
 from IPython.excolors import ExceptionColors

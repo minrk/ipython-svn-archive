@@ -15,12 +15,17 @@ import IPython.Gnuplot2 as Gnuplot
 
 $Id$"""
 
-import string,os,time,types
 import cStringIO
+import os
+import string
 import sys
 import tempfile
-import Numeric
+import time
+import types
+
 import Gnuplot as Gnuplot_ori
+import Numeric
+
 from IPython.genutils import popkey,xsys
 
 # needed by hardcopy():

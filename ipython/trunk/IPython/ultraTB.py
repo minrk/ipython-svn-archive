@@ -76,17 +76,24 @@ __author__  = '%s <%s>\n%s <%s>' % (Release.authors['Nathan']+
 __license__ = Release.license
 
 # Required modules
-import sys, os, traceback, types, string, time
-import keyword, tokenize, linecache, inspect, pydoc
-from UserDict import UserDict
+import inspect
+import keyword
+import linecache
+import os
+import pydoc
+import string
+import sys
+import time
+import tokenize
+import traceback
+import types
 
 # IPython's own modules
 # Modified pdb which doesn't damage IPython's readline handling
 from IPython import Debugger
-
 from IPython.Struct import Struct
-from IPython.genutils import Term,uniq_stable,error,info
 from IPython.excolors import ExceptionColors
+from IPython.genutils import Term,uniq_stable,error,info
 
 #---------------------------------------------------------------------------
 # Code begins

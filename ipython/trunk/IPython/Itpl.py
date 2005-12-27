@@ -77,9 +77,10 @@ $Id$
 __author__  = 'Ka-Ping Yee <ping@lfw.org>'
 __license__ = 'MIT'
 
-import sys, string
-from types import StringType
+import string
+import sys
 from tokenize import tokenprog
+from types import StringType
 
 class ItplError(ValueError):
     def __init__(self, text, pos):

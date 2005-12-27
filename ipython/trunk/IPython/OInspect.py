@@ -24,13 +24,17 @@ __all__ = ['Inspector','InspectColors']
 
 # stdlib modules
 import __builtin__
-import inspect,linecache,types,StringIO,string
+import inspect
+import linecache
+import string
+import StringIO
+import types
 
 # IPython's own
 from IPython import PyColorize
+from IPython.genutils import page,indent,Term,mkdict
 from IPython.Itpl import itpl
 from IPython.wildcard import list_namespace
-from IPython.genutils import page,indent,Term,mkdict
 from IPython.ColorANSI import *
 
 #****************************************************************************

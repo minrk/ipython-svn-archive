@@ -35,8 +35,13 @@ __all__ = ['ANSICodeColors','Parser']
 _scheme_default = 'Linux'
 
 # Imports
-import string, sys, os, cStringIO
-import keyword, token, tokenize
+import cStringIO
+import keyword
+import os
+import string
+import sys
+import token
+import tokenize
 
 from IPython.ColorANSI import *
 

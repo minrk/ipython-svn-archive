@@ -27,7 +27,9 @@ __license__ = Release.license
 __version__ = "0.5"
 __date__    = "21 August 2001"
 
-import sys, imp, __builtin__
+import __builtin__
+import imp
+import sys
 
 # Replacement for __import__()
 def deep_import_hook(name, globals=None, locals=None, fromlist=None):

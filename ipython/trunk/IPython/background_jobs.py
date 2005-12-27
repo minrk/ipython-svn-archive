@@ -33,7 +33,8 @@ __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
 
 # Code begins
-import threading,sys
+import sys
+import threading
 
 from IPython.ultraTB import AutoFormattedTB
 from IPython.genutils import warn,error

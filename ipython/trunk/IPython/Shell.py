@@ -20,19 +20,18 @@ __license__ = Release.license
 # Code begins
 import __main__
 import __builtin__
-import sys
 import os
-import code
-import threading
+import sys
 import signal
+import threading
 
 import IPython
+from IPython import ultraTB
+from IPython.genutils import Term,warn,error,flag_calls
 from IPython.iplib import InteractiveShell
 from IPython.ipmaker import make_IPython
-from IPython.genutils import Term,warn,error,flag_calls
-from IPython.Struct import Struct
 from IPython.Magic import Magic
-from IPython import ultraTB
+from IPython.Struct import Struct
 
 # global flag to pass around information about Ctrl-C without exceptions
 KBINT = False

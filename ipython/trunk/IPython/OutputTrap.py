@@ -14,7 +14,8 @@ from IPython import Release
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
 
-import exceptions,sys
+import exceptions
+import sys
 from cStringIO import StringIO
 
 class OutputTrapError(exceptions.Exception):
