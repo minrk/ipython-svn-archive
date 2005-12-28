@@ -236,6 +236,13 @@ class InteractiveShell(Logger, Magic):
                  user_ns = None,user_global_ns=None,banner2='',
                  custom_exceptions=((),None),embedded=False):
 
+        # some minimal strict typechecks.  For some core data structures, I
+        # want actual basic python types, not just anything that looks like
+        # one.  This is especially true for namespaces.
+        for ns in (user_ns,user_global_ns):
+            if ns is not None and type(ns) != types.DictType:
+                raise TypeError,'namespace must be a dictionary'
+
         # Put a reference to self in builtins so that any form of embedded or
         # imported code can test for being inside IPython.
         __builtin__.__IPYTHON__ = self

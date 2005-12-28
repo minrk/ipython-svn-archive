@@ -55,8 +55,9 @@ from IPython.Prompts import CachedOutput
 from IPython.genutils import *
 
 #-----------------------------------------------------------------------------
-def make_IPython(argv=None,user_ns=None,debug=1,rc_override=None,
-                 shell_class=InteractiveShell,embedded=False,**kw):
+def make_IPython(argv=None,user_ns=None,user_global_ns=None,debug=1,
+                 rc_override=None,shell_class=InteractiveShell,
+                 embedded=False,**kw):
     """This is a dump of IPython into a single function.
 
     Later it will have to be broken up in a sensible manner.
@@ -86,7 +87,8 @@ def make_IPython(argv=None,user_ns=None,debug=1,rc_override=None,
     # __IP.name. We set its name via the first parameter passed to
     # InteractiveShell:
 
-    IP = shell_class('__IP',user_ns=user_ns,embedded=embedded,**kw)
+    IP = shell_class('__IP',user_ns=user_ns,user_global_ns=user_global_ns,
+                     embedded=embedded,**kw)
 
     # Put 'help' in the user namespace
     from site import _Helper
