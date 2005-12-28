@@ -494,7 +494,9 @@ class CachedOutput:
         if arg is not None:
             cout_write = Term.cout.write # fast lookup
             # first handle the cache and counters
-            self.update(arg)
+            # but avoid recursive reference when displaying _oh/Out
+            if arg is not self.user_ns['_oh']:
+                self.update(arg)
             # do not print output if input ends in ';'
             if self.input_hist[self.prompt_count].endswith(';\n'):
                 return

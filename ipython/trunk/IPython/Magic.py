@@ -1875,7 +1875,7 @@ Currently the magic system has the following functions:\n"""
         else:
             print 'done. Executing edited code...'
             try:
-                execfile(filename,self.shell.user_ns)
+                self.shell.safe_execfile(filename,self.shell.user_ns)
             except IOError,msg:
                 if msg.filename == filename:
                     warn('File not found. Did you forget to save?')

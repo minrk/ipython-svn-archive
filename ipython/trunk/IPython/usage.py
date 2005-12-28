@@ -154,13 +154,12 @@ REGULAR OPTIONS
 
        -[no]automagic
               Make magic commands automatic (without needing their first char-
-              acter to be @).  Type @magic at  the  IPython  prompt  for  more
+              acter to be %).  Type %magic at  the  IPython  prompt  for  more
               information.
 
-       -[no]autoparens
-              Make  IPython automatically call any callable object even if you
-              didn’t type explicit parentheses.  For example, ’str 43’ becomes
-              ’str(43)’ automatically.
+       -[no]autoedit_syntax
+              When a syntax error occurs after editing a file, automatically
+              open the file to the trouble causing line for convenient fixing.
 
        -[no]banner
               Print the intial information banner (default on).

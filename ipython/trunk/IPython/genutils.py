@@ -948,7 +948,7 @@ def ask_yes_no(prompt,default=None):
 
     Valid answers are: y/yes/n/no (match is not case sensitive)."""
 
-    answers = {'y':1,'n':0,'yes':1,'no':0}
+    answers = {'y':True,'n':False,'yes':True,'no':False}
     ans = None
     eofs, max_eofs = 0, 20
     while ans not in answers.keys():

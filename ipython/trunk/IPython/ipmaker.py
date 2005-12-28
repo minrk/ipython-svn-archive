@@ -161,7 +161,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                     'rcfile=s separate_in|si=s separate_out|so=s '
                     'separate_out2|so2=s xmode=s wildcards_case_sensitive! '
                     'magic_docstrings system_verbose! '
-                    'multi_line_specials!')
+                    'multi_line_specials! '
+                    'autoedit_syntax!')
 
     # Options that can *only* appear at the cmd line (not in rcfiles).
     
@@ -224,6 +225,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       xmode = 'Verbose',
                       wildcards_case_sensitive = 1,
                       magic_docstrings = 0,  # undocumented, for doc generation
+                      autoedit_syntax = 0,
                       )
     
     # Things that will *only* appear in rcfiles (not at the command line).
