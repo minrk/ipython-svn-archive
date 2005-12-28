@@ -621,10 +621,10 @@ class VerboseTB(TBTools):
     # out the right info on its own.
     def __call__(self, etype=None, evalue=None, etb=None):
         """This hook can replace sys.excepthook (for Python 2.1 or higher)."""
-        if etb is not None:
-            self.handler((etype, evalue, etb))
-        else:
+        if etb is None:
             self.handler()
+        else:
+            self.handler((etype, evalue, etb))
         self.debugger()
 
 #----------------------------------------------------------------------------
