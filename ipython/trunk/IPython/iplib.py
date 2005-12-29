@@ -691,6 +691,22 @@ class InteractiveShell(Magic):
             self.persist = pickle.load(file(self.persist_fname))
         except:
             self.persist = {}
+        
+        
+        for (key, value) in [(k[2:],v) for (k,v) in self.persist.items() if k.startswith('S:')]:
+            try:
+                obj = pickle.loads(value)
+            except:
+                
+                print "Unable to restore variable '%s', ignoring (use %%store -d to forget!)" % key
+                print "The error was:",sys.exc_info()[0]
+                continue
+                
+            
+            self.user_ns[key] = obj
+            
+          
+        
             
     def set_hook(self,name,hook):
         """set_hook(name,hook) -> sets an internal IPython hook.
