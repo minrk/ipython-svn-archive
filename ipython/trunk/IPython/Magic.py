@@ -2527,17 +2527,17 @@ Defaulting color scheme to 'NoColor'"""
         self.shell.jobs.new(parameter_s,self.shell.user_ns)
         
     def magic_store(self, parameter_s=''):
-        """Lightweight persistence for ipython variables
+        """Lightweight persistence for python variables.
 
         Example:
         
-        ville@badger[~]|1> A = ['hello',10,'world']
-        ville@badger[~]|2> %store A
+        ville@badger[~]|1> A = ['hello',10,'world']\\
+        ville@badger[~]|2> %store A\\
         ville@badger[~]|3> Exit
         
         (IPython session is closed and started again...)
         
-        ville@badger:~$ ipython -p pysh
+        ville@badger:~$ ipython -p pysh\\
         ville@badger[~]|1> print A
         
         ['hello', 10, 'world']
