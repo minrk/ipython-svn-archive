@@ -49,7 +49,7 @@ from IPython import DPyGetOpt
 from IPython.Struct import Struct
 from IPython.OutputTrap import OutputTrap
 from IPython.ConfigLoader import ConfigLoader
-from IPython.iplib import InteractiveShell,qw_lol,import_fail_info
+from IPython.iplib import InteractiveShell
 from IPython.usage import cmd_line_usage,interactive_usage
 from IPython.genutils import *
 
