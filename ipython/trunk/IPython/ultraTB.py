@@ -225,12 +225,12 @@ class ListTB(TBTools):
         """Format the exception part of a traceback.
 
         The arguments are the exception type and value such as given by
-        sys.last_type and sys.last_value. The return value is a list of
-        strings, each ending in a newline.  Normally, the list contains a
-        single string; however, for SyntaxError exceptions, it contains
-        several lines that (when printed) display detailed information
-        about where the syntax error occurred.  The message indicating
-        which exception occurred is the always last string in the list.
+        sys.exc_info()[:2]. The return value is a list of strings, each ending
+        in a newline.  Normally, the list contains a single string; however,
+        for SyntaxError exceptions, it contains several lines that (when
+        printed) display detailed information about where the syntax error
+        occurred.  The message indicating which exception occurred is the
+        always last string in the list.
         
         Also lifted nearly verbatim from traceback.py
         """

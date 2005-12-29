@@ -26,11 +26,11 @@ import time
 from pprint import pprint,pformat
 
 # IPython's own
-from IPython.genutils import *
-from IPython.Struct import Struct
-from IPython.Magic import Macro
-from IPython.Itpl import ItplNS
 from IPython import ColorANSI
+from IPython.Itpl import ItplNS
+from IPython.Struct import Struct
+from IPython.macro import Macro
+from IPython.genutils import *
 
 #****************************************************************************
 #Color schemes for Prompts.
