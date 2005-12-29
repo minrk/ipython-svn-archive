@@ -308,6 +308,10 @@ def system(cmd,verbose=0,debug=0,header=''):
     if not debug: stat = os.system(cmd)
     return stat
 
+# This function is used by ipython in a lot of places to make system calls.
+# We need it to be slightly different under win32, due to the vagaries of
+# 'network shares'.  A win32 override is below.
+
 def shell(cmd,verbose=0,debug=0,header=''):
     """Execute a command in the system shell, always return None.
 
@@ -330,6 +334,27 @@ def shell(cmd,verbose=0,debug=0,header=''):
     sys.stdout.flush()
     if not debug:
         os.system(cmd)
+
+# override shell() for win32 to deal with network shares
+if os.name in ('nt','dos'):
+
+    shell_ori = shell
+
+    def shell(cmd,verbose=0,debug=0,header=''):
+        if os.getcwd().startswith(r"\\"):
+            path = os.getcwd()
+            # change to c drive (cannot be on UNC-share when issuing os.system,
+            # as cmd.exe cannot handle UNC addresses)
+            os.chdir("c:")
+            # issue pushd to the UNC-share and then run the command
+            try:
+                shell_ori('"pushd %s&&"'%path+cmd,verbose,debug,header)
+            finally:
+                os.chdir(path)
+        else:
+            shell_ori('"pushd %s&&"'%path+cmd,verbose,debug,header)
+
+    shell.__doc__ = shell_ori.__doc__
 
 def getoutput(cmd,verbose=0,debug=0,header='',split=0):
     """Dummy substitute for perl's backquotes.
