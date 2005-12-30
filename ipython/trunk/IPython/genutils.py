@@ -352,7 +352,7 @@ if os.name in ('nt','dos'):
             finally:
                 os.chdir(path)
         else:
-            shell_ori('"pushd %s&&"'%path+cmd,verbose,debug,header)
+            shell_ori(cmd,verbose,debug,header)
 
     shell.__doc__ = shell_ori.__doc__
 
