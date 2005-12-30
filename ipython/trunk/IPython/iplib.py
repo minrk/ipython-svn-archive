@@ -1676,6 +1676,7 @@ want to merge them back into the new files.""" % locals()
         self._last_input_line = line
 
         #print '***line: <%s>' % line # dbg
+        self.autoindent_update(line)
         
         # the input history needs to track even empty lines
         if not line.strip():
