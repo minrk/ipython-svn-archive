@@ -297,6 +297,13 @@ class InteractiveShell(object,Magic):
         # Default name given in compilation of code
         self.filename = '<ipython console>'
 
+        # Make an empty namespace, which extension writers can rely on both
+        # existing and NEVER being used by ipython itself.  This gives them a
+        # convenient location for storing additional information and state
+        # their extensions may require, without fear of collisions with other
+        # ipython names that may develop later.
+        self.meta = Bunch()
+
         # Create the namespace where the user will operate.  user_ns is
         # normally the only one used, and it is passed to the exec calls as
         # the locals argument.  But we do carry a user_global_ns namespace
