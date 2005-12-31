@@ -1599,7 +1599,7 @@ want to merge them back into the new files.""" % locals()
         # need this done correctly even for code run via runlines (which uses
         # push).
 
-        print 'push line: <%s>' % line  # dbg
+        #print 'push line: <%s>' % line  # dbg
         self.autoindent_update(line)
 
         self.buffer.append(line)
