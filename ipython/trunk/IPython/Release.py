@@ -22,7 +22,7 @@ name = 'ipython'
 # because bdist_rpm does not accept dashes (an RPM) convention, and
 # bdist_deb does not accept underscores (a Debian convention).
 
-version = '0.7.0.rc6'
+version = '0.7.0.rc7'
 
 revision = '$Revision$'
 

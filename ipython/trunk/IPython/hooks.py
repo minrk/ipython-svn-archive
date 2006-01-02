@@ -52,7 +52,7 @@ import os
 # but over time we'll move here all the public API for user-accessible things.
 __all__ = ['editor', 'fix_error_editor']
 
-def editor(self,filename, linenum):
+def editor(self,filename, linenum=None):
     """Open the default editor at the given filename and linenumber.
 
     This is IPython's default editor hook, you can use it as an example to
