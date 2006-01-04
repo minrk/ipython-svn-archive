@@ -207,6 +207,18 @@ def fatal(msg,exit_val=1):
 
     warn(msg,exit_val=exit_val,level=4)
 
+
+# useful for debugging
+def debugp(expr):
+    """Print the value of an expression from the caller's frame.
+    
+    Takes an expression, evaluates it in the caller's frame and prints both
+    the given expression and the resulting value.  The input must be of a form
+    suitable for eval()."""
+    
+    cf = sys._getframe(1)
+    print '[DBG] %s -> %r' % (expr,eval(expr,cf.f_globals,cf.f_locals))
+
 #----------------------------------------------------------------------------
 StringTypes = types.StringTypes
 

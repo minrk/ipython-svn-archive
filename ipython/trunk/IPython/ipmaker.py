@@ -147,7 +147,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     # DPyGetOpt syntax (=s,=i,:f,etc).
 
     # Make sure there's a space before each end of line (they get auto-joined!)
-    cmdline_opts = ('autocall! autoindent! automagic! banner! cache_size|cs=i '
+    cmdline_opts = ('autocall=i autoindent! automagic! banner! cache_size|cs=i '
                     'c=s classic|cl color_info! colors=s confirm_exit! '
                     'debug! deep_reload! editor=s log|l messages! nosep pdb! '
                     'pprint! prompt_in1|pi1=s prompt_in2|pi2=s prompt_out|po=s '
