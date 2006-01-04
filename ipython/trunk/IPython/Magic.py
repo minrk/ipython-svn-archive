@@ -2286,7 +2286,7 @@ Defaulting color scheme to 'NoColor'"""
             else:
                 if bkms:
                     error("Bookmark '%s' not found.  "
-                          "Use '%bookmark -l' to see your bookmarks." % ps)
+                          "Use '%%bookmark -l' to see your bookmarks." % ps)
                 else:
                     print "Bookmarks not set - use %bookmark <bookmarkname>"
                 return
