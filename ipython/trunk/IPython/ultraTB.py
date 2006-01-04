@@ -121,9 +121,12 @@ def _fixed_getinnerframes(etb, context=1,tb_offset=0):
     # otherwise produce 5 blank lines printed out (there is no file at the
     # console)
     rec_check = records[tb_offset:]
-    rname = rec_check[0][1]
-    if rname == '<ipython console>' or rname.endswith('<string>'):
-        return rec_check
+    try:
+        rname = rec_check[0][1]
+        if rname == '<ipython console>' or rname.endswith('<string>'):
+            return rec_check
+    except IndexError:
+        pass
 
     aux = traceback.extract_tb(etb)
     assert len(records) == len(aux)
