@@ -625,9 +625,9 @@ class IPShellGTK(threading.Thread):
         
         if self.gtk.pygtk_version >= (2,4,0):
             import gobject
-            gobject.idle_add(self.on_timer)
+            gobject.timeout_add(self.TIMEOUT, self.on_timer)
         else:
-            self.gtk.idle_add(self.on_timer)
+            self.gtk.timeout_add(self.TIMEOUT, self.on_timer)
 
         if sys.platform != 'win32':
             try:
