@@ -140,7 +140,6 @@ def _fixed_getinnerframes(etb, context=1,tb_offset=0):
             lines = (['\n'] * -maybeStart) + lines
         if len(lines) < context:
             lines += ['\n'] * (context - len(lines))
-        assert len(lines) == context
         buf = list(records[i])
         buf[LNUM_POS] = lnum
         buf[INDEX_POS] = lnum - 1 - start

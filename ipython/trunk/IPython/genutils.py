@@ -8,7 +8,7 @@ these things are also convenient when working at the command line.
 $Id$"""
 
 #*****************************************************************************
-#       Copyright (C) 2001-2004 Fernando Perez. <fperez@colorado.edu>
+#       Copyright (C) 2001-2006 Fernando Perez. <fperez@colorado.edu>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.

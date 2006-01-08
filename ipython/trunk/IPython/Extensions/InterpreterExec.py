@@ -9,7 +9,7 @@ $Id$"""
 
 #*****************************************************************************
 #       Copyright (C) 2004 W.J. van der Laan <gnufnork@hetdigitalegat.nl>
-#       Copyright (C) 2004 Fernando Perez <fperez@colorado.edu>
+#       Copyright (C) 2004-2006 Fernando Perez <fperez@colorado.edu>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.

@@ -17,6 +17,22 @@ http://www.python.org/2.2.3/license.html
 
 $Id$"""
 
+#*****************************************************************************
+#
+# Since this file is essentially a modified copy of the pdb module which is
+# part of the standard Python distribution, I assume that the proper procedure
+# is to maintain its copyright as belonging to the Python Software Foundation
+# (in addition to my own, for all new code).
+#
+#       Copyright (C) 2001 Python Software Foundation, www.python.org
+#       Copyright (C) 2005-2006 Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#
+#*****************************************************************************
+
+
 from IPython import Release
 __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = 'Python'
