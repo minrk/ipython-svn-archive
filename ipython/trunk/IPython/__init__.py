@@ -38,8 +38,8 @@ $Id$"""
 
 # Enforce proper version requirements
 import sys
-if sys.version[0:3] < '2.2':
-    raise ImportError, 'Python Version 2.2 or above is required.'
+if sys.version[0:3] < '2.3':
+    raise ImportError, 'Python Version 2.3 or above is required.'
         
 # Define what gets imported with a 'from IPython import *'
 __all__ = ['deep_reload','genutils','ultraTB','DPyGetOpt','Itpl','hooks',

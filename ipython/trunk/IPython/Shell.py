@@ -668,6 +668,26 @@ class IPShellWX(threading.Thread):
     def __init__(self,argv=None,user_ns=None,user_global_ns=None,
                  debug=1,shell_class=MTInteractiveShell):
 
+        self.IP = make_IPython(argv,user_ns=user_ns,
+                               user_global_ns=user_global_ns,
+                               debug=debug,
+                               shell_class=shell_class,
+                               on_kill=[self.wxexit])
+
+        wantedwxversion=self.IP.rc.wxversion
+        if wantedwxversion!="0":
+            try:
+                import wxversion
+            except ImportError:
+                error('The wxversion module is needed for WX version selection')
+            else:
+                try:
+                    wxversion.select(wantedwxversion)
+                except:
+                    self.IP.InteractiveTB()
+                    error('Requested wxPython version %s could not be loaded' %
+                                                               wantedwxversion)
+
         import wxPython.wx as wx
 
         threading.Thread.__init__(self)
@@ -677,11 +697,7 @@ class IPShellWX(threading.Thread):
         # Allows us to use both Tk and GTK.
         self.tk = get_tk()
         
-        self.IP = make_IPython(argv,user_ns=user_ns,
-                               user_global_ns=user_global_ns,
-                               debug=debug,
-                               shell_class=shell_class,
-                               on_kill=[self.wxexit])
+        
         # HACK: slot for banner in self; it will be passed to the mainloop
         # method only and .run() needs it.  The actual value will be set by
         # .mainloop().

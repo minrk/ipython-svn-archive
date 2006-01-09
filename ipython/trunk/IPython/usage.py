@@ -67,6 +67,11 @@ SPECIAL THREADING OPTIONS
               essentially the same functionality, respectively for GTK, QT and
               WXWidgets (via their Python interfaces).
 
+              Note that with -wthread, you can additionally use the -wxversion
+              option to request a specific version of wx to be used.  This
+              requires that you have the 'wxversion' Python module installed,
+              which is part of recent wxPython distributions.
+
               If -pylab is given, IPython loads special support for the mat-
               plotlib library (http://matplotlib.sourceforge.net), allowing
               interactive usage of any of its backends as defined in the
@@ -379,6 +384,11 @@ REGULAR OPTIONS
 
        -Version
               Print version information and exit.
+
+       -wxversion <string>
+              Select a specific version of wxPython (used in conjunction with
+              -wthread). Requires the wxversion module, part of recent
+              wxPython distributions.
 
        -xmode <modename>
               Mode  for  exception reporting.  The valid modes are Plain, Con-
