@@ -2033,7 +2033,7 @@ want to merge them back into the new files.""" % locals()
           - data(None): if data is given, it gets written out to the temp file
           immediately, and the file is closed again."""
 
-        filename = tempfile.mktemp('.py')
+        filename = tempfile.mktemp('.py','ipython_edit_')
         self.tempfiles.append(filename)
         
         if data:
