@@ -1177,9 +1177,9 @@ want to merge them back into the new files.""" % locals()
 
     def _should_recompile(self,e):
         """Utility routine for edit_syntax_error"""
-        
+
         if e.filename in ('<ipython console>','<input>','<string>',
-                          '<console>'):
+                          '<console>',None):
             return False
         try:
             if not ask_yes_no('Return to editor to correct syntax error? '
