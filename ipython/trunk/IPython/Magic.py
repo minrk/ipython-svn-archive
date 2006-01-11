@@ -2735,7 +2735,7 @@ Defaulting color scheme to 'NoColor'"""
         to be Python source and will show it with syntax highlighting. """
         
         filename = get_py_filename(parameter_s)
-        page(self.shell.colorize(file_read(filename)),
+        page(self.shell.pycolorize(file_read(filename)),
              screen_lines=self.shell.rc.screen_length)
 
 # end Magic
