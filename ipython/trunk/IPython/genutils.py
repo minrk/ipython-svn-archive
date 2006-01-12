@@ -949,6 +949,40 @@ def esc_quotes(strng):
     return strng.replace('"','\\"').replace("'","\\'")
 
 #----------------------------------------------------------------------------
+def make_quoted_expr(s):
+    """Return string s in appropriate quotes, using raw string if possible.
+    
+    Effectively this turns string: cd \ao\ao\
+    to: r"cd \ao\ao\_"[:-1]
+    
+    Note the use of raw string and padding at the end to allow trailing backslash.
+    
+    """
+    
+    tail = ''
+    tailpadding = ''
+    raw  = ''
+    if "\\" in s:
+        raw = 'r'
+        if s.endswith('\\'):
+            tail = '[:-1]'
+            tailpadding = '_'
+    if '"' not in s:
+        quote = '"'
+    elif "'" not in s:
+        quote = "'"
+    elif '"""' not in s and not s.endswith('"'):
+        quote = '"""'
+    elif "'''" not in s and not s.endswith("'"):
+        quote = "'''"
+    else:
+        # give up, backslash-escaped string will do
+        return '"%s"' % esc_quotes(s)
+    res = itpl("$raw$quote$s$tailpadding$quote$tail")
+    return res
+
+
+#----------------------------------------------------------------------------
 def raw_input_multi(header='', ps1='==> ', ps2='..> ',terminate_str = '.'):
     """Take multiple lines of input.
 
