@@ -28,7 +28,7 @@ from pprint import pprint,pformat
 # IPython's own
 from IPython import ColorANSI
 from IPython.Itpl import ItplNS
-from IPython.Struct import Struct
+from IPython.ipstruct import Struct
 from IPython.macro import Macro
 from IPython.genutils import *
 

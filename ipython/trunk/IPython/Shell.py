@@ -32,7 +32,7 @@ from IPython.genutils import Term,warn,error,flag_calls
 from IPython.iplib import InteractiveShell
 from IPython.ipmaker import make_IPython
 from IPython.Magic import Magic
-from IPython.Struct import Struct
+from IPython.ipstruct import Struct
 
 # global flag to pass around information about Ctrl-C without exceptions
 KBINT = False

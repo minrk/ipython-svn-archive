@@ -91,7 +91,7 @@ import types
 # IPython's own modules
 # Modified pdb which doesn't damage IPython's readline handling
 from IPython import Debugger
-from IPython.Struct import Struct
+from IPython.ipstruct import Struct
 from IPython.excolors import ExceptionColors
 from IPython.genutils import Term,uniq_stable,error,info
 

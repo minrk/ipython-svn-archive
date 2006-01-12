@@ -70,7 +70,7 @@ from IPython.Itpl import Itpl,itpl,printpl,ItplNS,itplns
 from IPython.Logger import Logger
 from IPython.Magic import Magic
 from IPython.Prompts import CachedOutput
-from IPython.Struct import Struct
+from IPython.ipstruct import Struct
 from IPython.background_jobs import BackgroundJobManager
 from IPython.usage import cmd_line_usage,interactive_usage
 from IPython.genutils import *
