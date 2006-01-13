@@ -937,12 +937,6 @@ class SList(list):
     n = nlstr = property(get_nlstr)
 
 #----------------------------------------------------------------------------
-# This can be replaced with an isspace() call once we drop 2.2 compatibility
-_isspace_match = re.compile(r'^\s+$').match
-def isspace(s):
-    return bool(_isspace_match(s))
-
-#----------------------------------------------------------------------------
 def esc_quotes(strng):
     """Return the input string with single and double quotes escaped out"""
 
