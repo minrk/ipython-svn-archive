@@ -64,7 +64,8 @@ license = 'BSD'
 
 authors = {'Fernando' : ('Fernando Perez','fperez@colorado.edu'),
            'Janko'    : ('Janko Hauser','jhauser@zscout.de'),
-           'Nathan'   : ('Nathaniel Gray','n8gray@caltech.edu')
+           'Nathan'   : ('Nathaniel Gray','n8gray@caltech.edu'),
+           'Ville'    : ('Ville Vainio','vivainio@gmail.com')           
            }
 
 url = 'http://ipython.scipy.org'
