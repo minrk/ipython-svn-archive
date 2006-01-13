@@ -1867,6 +1867,7 @@ want to merge them back into the new files.""" % locals()
                 if iFun in self.alias_table:
                     return self.handle_alias(line,continue_prompt,
                                              pre,iFun,theRest)
+                 
                 else:
                     return self.handle_normal(line,continue_prompt)
         
@@ -1938,10 +1939,11 @@ want to merge them back into the new files.""" % locals()
             # correctly
             theRest = '%s %s' % (iFun[2:],theRest)
             iFun = 'sx'
-            return self.handle_magic('%ssx %s' % (self.ESC_MAGIC,line[2:]),
+            return self.handle_magic('%ssx %s' % (self.ESC_MAGIC,
+                                     line.lstrip()[2:]),
                                      continue_prompt,pre,iFun,theRest)
         else:
-            cmd=line.lstrip()[1:]
+            cmd=line.lstrip().lstrip('!')
             line_out = '%sipsystem(%s)' % (pre,make_quoted_expr(cmd))
         # update cache/log and return
         self.log(line_out,continue_prompt)
