@@ -525,19 +525,11 @@ class CachedOutput:
     def _display(self,arg):
         """Default printer method, uses pprint.
 
-        This can be over-ridden by the users to implement special formatting
-        of certain types of output."""
+        Do ip.set_hook("result_display", my_displayhook) for custom result
+        display, e.g. when your own objects need special formatting.
+        """
 
-        if self.Pprint:
-            out = pformat(arg)
-            if '\n' in out:
-                # So that multi-line strings line up with the left column of
-                # the screen, instead of having the output prompt mess up
-                # their first line.                
-                Term.cout.write('\n')
-            print >>Term.cout, out
-        else:
-            print >>Term.cout, arg
+        self.shell.hooks.result_display(arg)
 
     # Assign the default display method:
     display = _display
