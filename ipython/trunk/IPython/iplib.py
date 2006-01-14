@@ -192,7 +192,7 @@ class InteractiveShell(object,Magic):
                  custom_exceptions=((),None),embedded=False):
 
         # first thing: introduce ourselves to IPython.ipapi which is uncallable
-        # before it knows an InteractiveShell object. Uninitialized state is ok
+        # before it knows an InteractiveShell object. 
         IPython.ipapi._init_with_shell(self)
         
         # some minimal strict typechecks.  For some core data structures, I

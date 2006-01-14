@@ -415,6 +415,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
            warn('Profile configuration file %s not found. Ignoring request.'
                 % (opts_all.profile) )
 
+
     # load the config file
     rcfiledata = None
     if opts_all.quick:
@@ -553,7 +554,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     #IP.internal_ns.update(locals()) # so our stuff doesn't show up in %who
 
     # Now run through the different sections of the users's config
-    if IP_rc.debug:
+    if IP_rc.debug:    
         print 'Trying to execute the following configuration structure:'
         print '(Things listed first are deeper in the inclusion tree and get'
         print 'loaded first).\n'
