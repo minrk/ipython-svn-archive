@@ -268,6 +268,8 @@ class Inspector:
             ds = "Alias to the system command:\n  %s" % obj[1]
         else:
             ds = getdoc(obj)
+            if ds is None:
+                ds = '<no docstring>'
         if formatter is not None:
             ds = formatter(ds)
 

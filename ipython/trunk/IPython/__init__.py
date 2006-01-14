@@ -44,7 +44,8 @@ if sys.version[0:3] < '2.3':
 # Define what gets imported with a 'from IPython import *'
 __all__ = ['deep_reload','genutils','ipstruct','ultraTB','DPyGetOpt',
            'Itpl','hooks','ConfigLoader','OutputTrap','Release','Shell',
-           'platutils','platutils_win32','platutils_posix','platutils_dummy']
+           'platutils','platutils_win32','platutils_posix','platutils_dummy',
+           'ipapi']
 
 # Load __all__ in IPython namespace so that a simple 'import IPython' gives
 # access to them via IPython.<name>
