@@ -2303,6 +2303,9 @@ Defaulting color scheme to 'NoColor'"""
             else:
                 opts = {}
         else:
+            #turn all non-space-escaping backslashes to slashes, 
+            # for c:\windows\directory\names\
+            parameter_s = re.sub(r'\\(?! )','/', parameter_s)            
             opts,ps = self.parse_options(parameter_s,'qb',mode='string')
         # jump to previous
         if ps == '-':
