@@ -1941,6 +1941,8 @@ Currently the magic system has the following functions:\n"""
                     self.shell.showtraceback()
             except:
                 self.shell.showtraceback()
+        if use_temp:
+            return open(filename).read()
 
     def magic_xmode(self,parameter_s = ''):
         """Switch modes for the exception handlers.
