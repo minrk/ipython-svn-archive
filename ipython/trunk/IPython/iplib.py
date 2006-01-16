@@ -1894,15 +1894,20 @@ want to merge them back into the new files.""" % locals()
         if not oinfo['found']:
             return self.handle_normal(line,continue_prompt)
         else:
-            #print 'iFun <%s> rest <%s>' % (iFun,theRest) # dbg
+            #print 'pre<%s> iFun <%s> rest <%s>' % (pre,iFun,theRest) # dbg
             if oinfo['isalias']:
                 return self.handle_alias(line,continue_prompt,
                                              pre,iFun,theRest)
 
-            if self.rc.autocall and \
-                   not self.re_exclude_auto.match(theRest) and \
-                   self.re_fun_name.match(iFun) and \
-                   callable(oinfo['obj']) :
+            if (self.rc.autocall 
+                 and
+                   (
+                   #only consider exclusion re if not "," or ";" autoquoting
+                   (pre == self.ESC_QUOTE or pre == self.ESC_QUOTE2) or 
+                   (not self.re_exclude_auto.match(theRest)))
+                 and 
+                   self.re_fun_name.match(iFun) and 
+                   callable(oinfo['obj'])) :
                 #print 'going auto'  # dbg
                 return self.handle_auto(line,continue_prompt,
                                         pre,iFun,theRest,oinfo['obj'])
