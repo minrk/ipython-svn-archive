@@ -191,7 +191,10 @@ class InteractiveShell(object,Magic):
                  user_ns = None,user_global_ns=None,banner2='',
                  custom_exceptions=((),None),embedded=False):
 
-        # first thing: introduce ourselves to IPython.ipapi which is uncallable
+        # log system
+        self.logger = Logger(self,logfname='ipython_log.py',logmode='rotate')
+
+        # introduce ourselves to IPython.ipapi which is uncallable
         # before it knows an InteractiveShell object. 
         IPython.ipapi._init_with_shell(self)
         
@@ -604,8 +607,6 @@ class InteractiveShell(object,Magic):
         if rc.readline:
             self.init_readline()
 
-        # log system
-        self.logger = Logger(self,logfname='ipython_log.py',logmode='rotate')
         # local shortcut, this is used a LOT
         self.log = self.logger.log
 
