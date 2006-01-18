@@ -1396,6 +1396,10 @@ Currently the magic system has the following functions:\n"""
                 name = '__main__'
             prog_ns = {'__name__':name}
 
+        # Since '%run foo' emulates 'python foo.py' at the cmd line, we must
+        # set the __file__ global in the script's namespace
+        prog_ns['__file__'] = filename
+        
         # pickle fix.  See iplib for an explanation.  But we need to make sure
         # that, if we overwrite __main__, we replace it at the end
         if prog_ns['__name__'] == '__main__':

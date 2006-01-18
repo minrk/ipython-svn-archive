@@ -66,11 +66,21 @@ def _file_lines(fname):
 
 class Pdb(pdb.Pdb):
     """Modified Pdb class, does not load readline."""
+
+    # Ugly hack: we can't call the parent constructor, because it binds
+    # readline and breaks tab-completion.  This means we have to COPY the
+    # constructor here, and that requires tracking various python versions.
+    
     def __init__(self,color_scheme='NoColor'):
         bdb.Bdb.__init__(self)
         cmd.Cmd.__init__(self,completekey=None) # don't load readline
         self.prompt = 'ipdb> ' # The default prompt is '(Pdb)'
         self.aliases = {}
+
+        # These two lines are part of the py2.4 constructor, let's put them
+        # unconditionally here as they won't cause any problems in 2.3.
+        self.mainpyfile = ''
+        self._wait_for_mainpyfile = 0
 
         # Read $HOME/.pdbrc and ./.pdbrc
         try:
