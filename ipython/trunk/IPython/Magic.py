@@ -1935,18 +1935,16 @@ Currently the magic system has the following functions:\n"""
             print
         else:
             print 'done. Executing edited code...'
+            self.shell.safe_execfile(filename,self.shell.user_ns)
+        if use_temp:
             try:
-                self.shell.safe_execfile(filename,self.shell.user_ns)
+                return open(filename).read()
             except IOError,msg:
                 if msg.filename == filename:
                     warn('File not found. Did you forget to save?')
                     return
                 else:
                     self.shell.showtraceback()
-            except:
-                self.shell.showtraceback()
-        if use_temp:
-            return open(filename).read()
 
     def magic_xmode(self,parameter_s = ''):
         """Switch modes for the exception handlers.
