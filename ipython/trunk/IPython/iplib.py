@@ -1099,7 +1099,14 @@ Successful installation!
 Please read the sections 'Initial Configuration' and 'Quick Tips' in the
 IPython manual (there are both HTML and PDF versions supplied with the
 distribution) to make sure that your system environment is properly configured
-to take advantage of IPython's features."""
+to take advantage of IPython's features.
+
+Important note: the configuration system has changed! The old system is
+still in place, but its setting may be partly overridden by the settings in 
+"~/.ipython/ipy_user_conf.py" config file. Please take a look at the file 
+if some of the new settings bother you. 
+
+"""
         else:
             print """
 Successful upgrade!
