@@ -602,6 +602,14 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         else:
             IP.safe_execfile(os.path.expanduser(file),IP.user_ns)
 
+    # finally, try importing ipy_*_conf for final configuration
+    try:
+        import ipy_system_conf
+        import ipy_user_conf
+
+    except ImportError:
+        IP.InteractiveTB()
+
     # release stdout and stderr and save config log into a global summary
     msg.config.release_all()
     if IP_rc.messages:
