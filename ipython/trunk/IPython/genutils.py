@@ -209,7 +209,7 @@ def fatal(msg,exit_val=1):
 
 
 # useful for debugging
-def debugp(expr):
+def debugp(expr,pre_msg=''):
     """Print the value of an expression from the caller's frame.
     
     Takes an expression, evaluates it in the caller's frame and prints both
@@ -217,7 +217,11 @@ def debugp(expr):
     suitable for eval()."""
     
     cf = sys._getframe(1)
-    print '[DBG] %s -> %r' % (expr,eval(expr,cf.f_globals,cf.f_locals))
+    print '[DBG] %s %s -> %r' % (pre_msg,expr,
+                                 eval(expr,cf.f_globals,cf.f_locals))
+
+# deactivate it from here:
+def debugp(expr,pre_msg=''): pass
 
 #----------------------------------------------------------------------------
 StringTypes = types.StringTypes
