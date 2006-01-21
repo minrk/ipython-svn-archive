@@ -608,7 +608,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         import ipy_user_conf
 
     except ImportError:
-        IP.InteractiveTB()
+        pass
+        #IP.InteractiveTB() XXX uncomment in a later release
 
     # release stdout and stderr and save config log into a global summary
     msg.config.release_all()
