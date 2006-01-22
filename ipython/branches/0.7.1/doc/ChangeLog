@@ -1,5 +1,14 @@
 2006-01-22  Fernando Perez  <Fernando.Perez@colorado.edu>
 
+	* IPython/OInspect.py (Inspector.pinfo): fix bug where foo?? or
+	%pfile foo would print the file for foo even if it was a binary.
+	Now, extensions '.so' and '.dll' are skipped.
+
+	* IPython/Shell.py (MTInteractiveShell.__init__): Fix threading
+	bug, where macros would fail in all threaded modes.  I'm not 100%
+	sure, so I'm going to put out an rc instead of making a release
+	today, and wait for feedback for at least a few days.
+
 	* IPython/iplib.py (handle_normal): fix (finally? somehow I doubt
 	it...) the handling of pasting external code with autoindent on.
 	To get out of a multiline input, the rule will appear for most
