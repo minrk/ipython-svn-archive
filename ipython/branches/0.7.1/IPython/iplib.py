@@ -274,7 +274,7 @@ class InteractiveShell(object,Magic):
         # intentional (or sensible), I don't know. In any case, the idea is
         # that if you need to access the built-in namespace directly, you
         # should start with "import __builtin__" (note, no 's') which will
-        # definitely give you a module. Yeah, it's somewhat confusing:-(.
+        # definitely give you a module. Yeah, it's somewhatÂ confusing:-(.
         
         if user_ns is None:
             # Set __name__ to __main__ to better match the behavior of the
@@ -1947,7 +1947,7 @@ want to merge them back into the new files.""" % locals()
         if (continue_prompt and self.autoindent and line.isspace() and
             (0 < abs(len(line) - self.indent_current_nsp) <= 2 or
              (self.buffer[-1]).isspace() )):
-            print 'reset line' # dbg
+            #print 'reset line' # dbg
             line = ''
 
         self.log(line,continue_prompt)
