@@ -234,8 +234,15 @@ class Inspector:
             self.noinfo('file',oname)
         else:
             # run contents of file through pager starting at line
-            # where the object is defined            
-            page(self.format(open(inspect.getabsfile(obj)).read()),lineno)
+            # where the object is defined
+            ofile = inspect.getabsfile(obj)
+            
+            if (ofile.endswith('.so') or ofile.endswith('.dll')):
+                print 'File %r is binary, not printing.' % ofile
+            else:
+                # Print only text files, not extension binaries.
+                page(self.format(open(ofile).read()),lineno)
+            #page(self.format(open(inspect.getabsfile(obj)).read()),lineno)
 
     def pinfo(self,obj,oname='',formatter=None,info=None,detail_level=0):
         """Show detailed information about an object.
@@ -319,12 +326,18 @@ class Inspector:
         except: pass
 
         # Filename where object was defined
+        binary_file = False
         try:
-            file = inspect.getabsfile(obj)
-            if file.endswith('<string>'):
-                file = 'Dynamically generated function. No source code available.'
-            out.writeln(header('File:\t\t')+file)
-        except: pass
+            fname = inspect.getabsfile(obj)
+            if fname.endswith('<string>'):
+                fname = 'Dynamically generated function. No source code available.'
+            if fname.endswith('.so') or fname.endswith('.dll'):
+                binary_file = True
+            out.writeln(header('File:\t\t')+fname)
+        except:
+            # if anything goes wrong, we don't want to show source, so it's as
+            # if the file was binary
+            binary_file = True
 
         # reconstruct the function definition and print it:
         defln = self.__getdef(obj,oname)
@@ -341,8 +354,9 @@ class Inspector:
             # Flush the source cache because inspect can return out-of-date source
             linecache.checkcache()
             try:
-                source = self.format(inspect.getsource(obj))
-                out.write(header('Source:\n')+source.rstrip())
+                if not binary_file:
+                    source = self.format(inspect.getsource(obj))
+                    out.write(header('Source:\n')+source.rstrip())
             except:
                 if ds:
                     out.writeln(header('Docstring:\n') + indent(ds))
