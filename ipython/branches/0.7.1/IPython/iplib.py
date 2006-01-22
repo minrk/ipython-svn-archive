@@ -274,7 +274,7 @@ class InteractiveShell(object,Magic):
         # intentional (or sensible), I don't know. In any case, the idea is
         # that if you need to access the built-in namespace directly, you
         # should start with "import __builtin__" (note, no 's') which will
-        # definitely give you a module. Yeah, it's somewhatÂ confusing:-(.
+        # definitely give you a module. Yeah, it's somewhat confusing:-(.
         
         if user_ns is None:
             # Set __name__ to __main__ to better match the behavior of the
