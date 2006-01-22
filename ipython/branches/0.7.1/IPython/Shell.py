@@ -273,7 +273,7 @@ class MTInteractiveShell(InteractiveShell):
                                   user_global_ns,banner2)
 
         # Locking control variable
-        self.thread_ready = threading.Condition()
+        self.thread_ready = threading.Condition(threading.Lock())
 
         # Stuff to do at closing time
         self._kill = False
@@ -312,10 +312,13 @@ class MTInteractiveShell(InteractiveShell):
 
         # Case 3
         # Store code in self, so the execution thread can handle it
-        self.thread_ready.acquire()
+        got_lock = self.thread_ready.acquire(False)
         self.code_to_run = code
-        self.thread_ready.wait()  # Wait until processed in timeout interval
-        self.thread_ready.release()
+        if got_lock:
+            self.thread_ready.wait()  # Wait until processed in timeout interval
+            self.thread_ready.release()
+        else:
+            print "ERROR: This statement won't get run:",source
 
         return False
 
@@ -325,7 +328,7 @@ class MTInteractiveShell(InteractiveShell):
         Multithreaded wrapper around IPython's runcode()."""
 
         # lock thread-protected stuff
-        self.thread_ready.acquire()
+        self.thread_ready.acquire(False)
 
         # Install sigint handler
         try:
@@ -354,7 +357,7 @@ class MTInteractiveShell(InteractiveShell):
 
     def kill (self):
         """Kill the thread, returning when it has been shut down."""
-        self.thread_ready.acquire()
+        self.thread_ready.acquire(False)
         self._kill = True
         self.thread_ready.release()
 
