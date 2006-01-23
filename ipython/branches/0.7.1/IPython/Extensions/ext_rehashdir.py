@@ -29,7 +29,7 @@ import IPython.ipapi as ip
 
 import os,re,fnmatch
 
-@ip.asmagic("rehashdir")
+#@ip.asmagic("rehashdir")  # only allowed in py2.4+
 def rehashdir_f(self,arg):
     """ Add executables in all specified dirs to alias table
      
@@ -99,3 +99,4 @@ def rehashdir_f(self,arg):
         self.shell.init_auto_alias()
     finally:
         os.chdir(savedir)
+ip.expose_magic('rehashdir',rehashdir_f)
