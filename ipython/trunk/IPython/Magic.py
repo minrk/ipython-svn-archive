@@ -2793,7 +2793,7 @@ Defaulting color scheme to 'NoColor'"""
         #print "block:\n",block
         if not par:
             b = textwrap.dedent(block)
-            self.runsource(b)
+            exec b in self.user_ns            
             self.user_ns['pasted_block'] = b
         else:
             self.user_ns[par] = block
