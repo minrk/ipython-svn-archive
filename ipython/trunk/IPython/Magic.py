@@ -2784,6 +2784,7 @@ Defaulting color scheme to 'NoColor'"""
         par = parameter_s.strip()
         from IPython import iplib
         lines = []
+        print "Pasting code; enter '--' alone on the line to stop."
         while 1:
             l = iplib.raw_input_original(':')
             if l =='--':
