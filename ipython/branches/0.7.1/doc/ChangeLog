@@ -1,3 +1,5 @@
+2006-01-23  *** Released version 0.7.1
+
 2006-01-23  Fernando Perez  <Fernando.Perez@colorado.edu>
 
 	* tools/release (daystamp): Fix build tools to use the new
