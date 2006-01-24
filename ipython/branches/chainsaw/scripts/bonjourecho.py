@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys
 
 from ipython1.bonjour.twistbonjour import BonjourAdvertiser
