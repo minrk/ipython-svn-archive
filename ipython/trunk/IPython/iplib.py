@@ -194,9 +194,10 @@ class InteractiveShell(object,Magic):
         # log system
         self.logger = Logger(self,logfname='ipython_log.py',logmode='rotate')
 
-        # introduce ourselves to IPython.ipapi which is uncallable
-        # before it knows an InteractiveShell object. 
-        IPython.ipapi._init_with_shell(self)
+        # Produce a public API instance
+
+        self.api = IPython.ipapi.IPApi(self)
+        
         
         # some minimal strict typechecks.  For some core data structures, I
         # want actual basic python types, not just anything that looks like
