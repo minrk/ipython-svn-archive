@@ -1,5 +1,8 @@
 2006-01-23  Fernando Perez  <Fernando.Perez@colorado.edu>
 
+	* tools/release (daystamp): Fix build tools to use the new
+	eggsetup.py script to build lightweight eggs.
+
 	* Applied changesets 1062 and 1064 before 0.7.1 release.
 	
 	* IPython/Magic.py (magic_history): Add '-r' option to %hist, to
