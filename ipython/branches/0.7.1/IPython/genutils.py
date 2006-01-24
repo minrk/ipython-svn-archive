@@ -207,9 +207,10 @@ def fatal(msg,exit_val=1):
 
     warn(msg,exit_val=exit_val,level=4)
 
-
-# useful for debugging
-def debugp(expr,pre_msg=''):
+#---------------------------------------------------------------------------
+# Debugging routines
+# 
+def debugx(expr,pre_msg=''):
     """Print the value of an expression from the caller's frame.
     
     Takes an expression, evaluates it in the caller's frame and prints both
@@ -225,7 +226,7 @@ def debugp(expr,pre_msg=''):
                                    eval(expr,cf.f_globals,cf.f_locals))
 
 # deactivate it by uncommenting the following line, which makes it a no-op
-def debugp(expr,pre_msg=''): pass
+#def debugx(expr,pre_msg=''): pass
 
 #----------------------------------------------------------------------------
 StringTypes = types.StringTypes

@@ -1,3 +1,23 @@
+2006-01-23  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* Applied changesets 1062 and 1064 before 0.7.1 release.
+	
+	* IPython/Magic.py (magic_history): Add '-r' option to %hist, to
+	see the raw input history (without conversions like %ls ->
+	ipmagic("ls")).  After a request from W. Stein, SAGE
+	(http://modular.ucsd.edu/sage) developer.  This information is
+	stored in the input_hist_raw attribute of the IPython instance, so
+	developers can access it if needed (it's an InputList instance).
+	
+	* Versionstring = 0.7.2.svn
+	
+	* eggsetup.py: A separate script for constructing eggs, creates
+	proper launch scripts even on Windows (an .exe file in 
+	\python24\scripts).
+	
+	* ipapi.py: launch_new_instance, launch entry point needed for the 
+	egg.
+
 2006-01-22  Ville Vainio  <vivainio@gmail.com>
 
 	* MANIFEST.in: Add root level ipython.py launch script
