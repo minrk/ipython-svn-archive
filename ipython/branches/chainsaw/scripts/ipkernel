@@ -35,7 +35,7 @@ import cPickle as pickle
 import sys
 from optparse import OptionParser
 
-from twisted.internet import reactor
+from twisted.internet import reactor, error
 from twisted.python import log
 
 
@@ -44,12 +44,22 @@ try:
 except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
 
+def try_ports(port, allow_list):
+    try:
+        d = reactor.listenTCP(port, KernelTCPFactory(allow=allow_list))
+    except error.CannotListenError:
+        log.msg("Trying the next port")
+        try:
+            d = reactor.listenTCP(port+1, KernelTCPFactory(allow=allow_list))
+        except error.CannotListenError:
+            raise
+
 def main(port, allow_ip):
     allow_list = ['127.0.0.1']
     if allow_ip is not None:
         allow_list.append(allow_ip)
-    log.startLogging(sys.stdout)       
-    d = reactor.listenTCP(port, KernelTCPFactory(allow=allow_list))
+    log.startLogging(sys.stdout)
+    reactor.callLater(2.0,try_ports,port,allow_list)
     reactor.run()
 
 def start(port=10105):

@@ -20,6 +20,19 @@ class BonjourRegistrationError(BonjourError):
     
     def __str__(self):
         return "Bonjour Registration Error: %i" % self.errorCode    
+
+class BonjourBrowseError(BonjourError):
+    """Bonjour Browse Error"""
+    
+    def __str__(self):
+        return "Bonjour Browse Error: %i" % self.errorCode    
+           
+class BonjourResolveError(BonjourError):
+    """Bonjour Resolve Error"""
+    
+    def __str__(self):
+        return "Bonjour Resolve Error: %i" % self.errorCode    
+
             
 class BonjourDescriptor(object,log.Logger):
     """Integrates a Bonjour file desc. into the Twisted event loop.
@@ -59,10 +72,17 @@ class BonjourDescriptor(object,log.Logger):
 class BonjourAdvertiser(object):
     """Advertise a service using Bonjour."""
     
-    def __init__(self, name, regtype, port, reactor,
+    def __init__(self, name, regtype, port, callback, reactor,
                  flags=0, interfaceIndex=0, domain='local',host='', 
                  txtLen=0, txtRecord=None, context=None):
         """Create an object to advertise a Bonjour service.
+        
+        It will call the callback when there is a Bonjour event.  The callback
+        should have the following arguments:
+        
+        def callback(sdRef,flags,errorCode,name,regtype,domain,context):
+        
+        The callback could be called more than once.
         
         @arg name: The name of the service
         @type name: str
@@ -80,6 +100,7 @@ class BonjourAdvertiser(object):
         self.domain = domain
         self.port = port
         self.reactor = reactor
+        self.callback = callback
         self.flags = flags
         self.interfaceIndex = interfaceIndex
         self.host = host
@@ -109,20 +130,19 @@ class BonjourAdvertiser(object):
             self.port,
             self.txtLen,
             self.txtRecord,
-            self._registrationCallback,
+            self.callback,
             self.context)
                         
         # Error check for immediate failure
         if ret != bonjour.kDNSServiceErr_NoError:
-            return defer.fail(BonjourRegistrationError(ret))
+            raise BonjourRegistrationError(ret)
             
         # Get the file descriptor and integrate with twisted
         self.fd = bonjour.DNSServiceRefSockFD(self.sdRef)
         self.bonjourDesc = BonjourDescriptor(self.fd, self.sdRef)
         self.reactor.addReader(self.bonjourDesc)
         
-        self.d = defer.Deferred()
-        return self.d
+        return None
         
     def stopAdvertising(self):
         """Stop advertising the service."""
@@ -133,22 +153,155 @@ class BonjourAdvertiser(object):
             bonjour.DNSServiceRefDeallocate(self.sdRef)
             self.sdRef = None
 
-    def _registrationCallback(self,sdRef,flags,errorCode,name,
-                             regtype,domain,context):
-        """Callback function for Bonjour Registration.
+class BonjourBrowser(object):
+    """Browse for a Bonjour advertised service."""
+    
+    def __init__(self, regtype, callback, reactor,
+                 flags=0, interfaceIndex=0, domain='local', 
+                 context=None):
+        """Create an object to browse for a Bonjour service.
         
-        This callback fires the deferred with either a dictionary of 
-        information about the service, or a Failure object.
+        It will call the callback when there is a Bonjour event.  The callback
+        should have the following arguments:
+        
+        def callback(sdRef,flags,interfaceIndex,errorCode,
+                      name,regtype,domain,context):
+        
+        The callback could be called more than once.
+        
+        @arg name: The name of the service
+        @type name: str
+        @arg regtype: The type of service, like _http._tcp
+        @type regtype: str
+        @arg domain: The Bonjour domain to browse, like local
+        @type domain: str
+        @arg port: The port to advertise as
+        @type port: int
+        @arg reactor: The Twisted reactor
         """
-                             
-        if errorCode != bonjour.kDNSServiceErr_NoError:
-            self.d.errback(BonjourRegistrationError(errorCode))
-        else:
-            self.d.callback({'sdRef' : sdRef,
-                             'flags': flags,
-                             'name' : name,
-                             'regtype' : regtype,
-                             'domain' : domain,
-                             'context' : context})
-
         
+        self.regtype = regtype
+        self.domain = domain
+        self.reactor = reactor
+        self.callback = callback
+        self.flags = flags
+        self.interfaceIndex = interfaceIndex
+        self.context = context
+        
+    def startBrowsing(self):
+        """Advertise the service with Bonjour.
+        
+        This method returns a deferred.  Upon success, the result
+        is a dictionary of information about the service.  Upon failure,
+        the result is a Failure object that knows the BonjourError code.
+        """
+        
+        # Allocate a Bonjour Service Reference
+        self.sdRef = bonjour.AllocateDNSServiceRef()
+        
+        # Initiate Registration of the service
+        ret = bonjour.pyDNSServiceBrowse(self.sdRef,
+            self.flags,
+            self.interfaceIndex,
+            self.regtype,
+            self.domain,
+            self.callback,
+            self.context)
+                        
+        # Error check for immediate failure
+        if ret != bonjour.kDNSServiceErr_NoError:
+            raise BonjourBrowseError(ret)
+            
+        # Get the file descriptor and integrate with twisted
+        self.fd = bonjour.DNSServiceRefSockFD(self.sdRef)
+        self.bonjourDesc = BonjourDescriptor(self.fd, self.sdRef)
+        self.reactor.addReader(self.bonjourDesc)
+        
+        return None
+        
+    def stopBrowsing(self):
+        """Stop advertising the service."""
+        
+        # Remove the Reader Deallocate the serviceReference
+        self.reactor.removeReader(self.bonjourDesc)
+        if self.sdRef is not None:
+            bonjour.DNSServiceRefDeallocate(self.sdRef)
+            self.sdRef = None
+
+class BonjourResolver(object):
+    """Resolve a Bonjour service."""
+    
+    def __init__(self, name, regtype, callback, reactor,
+                 flags=0, interfaceIndex=0, domain='local', 
+                 context=None):
+        """Create an object to resolve a Bonjour service.
+        
+        It will call the callback when there is a Bonjour event.  The callback
+        should have the following arguments:
+        
+        def callback(sdRef,flags,interfaceIndex,errorCode,
+                      fullname,hosttarget,port,txtLen,txtRecord,context):
+        
+        The callback could be called more than once.
+        
+        @arg name: The name of the service
+        @type name: str
+        @arg regtype: The type of service, like _http._tcp
+        @type regtype: str
+        @arg domain: The Bonjour domain to browse, like local
+        @type domain: str
+        @arg port: The port to advertise as
+        @type port: int
+        @arg reactor: The Twisted reactor
+        """
+        
+        self.name = name
+        self.regtype = regtype
+        self.domain = domain
+        self.reactor = reactor
+        self.callback = callback
+        self.flags = flags
+        self.interfaceIndex = interfaceIndex
+        self.context = context
+        
+    def startResolving(self):
+        """Advertise the service with Bonjour.
+        
+        This method returns a deferred.  Upon success, the result
+        is a dictionary of information about the service.  Upon failure,
+        the result is a Failure object that knows the BonjourError code.
+        """
+        
+        # Allocate a Bonjour Service Reference
+        self.sdRef = bonjour.AllocateDNSServiceRef()
+        
+        # Initiate Registration of the service
+        ret = bonjour.pyDNSServiceResolve(self.sdRef,
+            self.flags,
+            self.interfaceIndex,
+            self.name
+            self.regtype,
+            self.domain,
+            self.callback,
+            self.context)
+                        
+        # Error check for immediate failure
+        if ret != bonjour.kDNSServiceErr_NoError:
+            raise BonjourResolveError(ret)
+            
+        # Get the file descriptor and integrate with twisted
+        self.fd = bonjour.DNSServiceRefSockFD(self.sdRef)
+        self.bonjourDesc = BonjourDescriptor(self.fd, self.sdRef)
+        self.reactor.addReader(self.bonjourDesc)
+        
+        return None
+        
+    def stopResolving(self):
+        """Stop advertising the service."""
+        
+        # Remove the Reader Deallocate the serviceReference
+        self.reactor.removeReader(self.bonjourDesc)
+        if self.sdRef is not None:
+            bonjour.DNSServiceRefDeallocate(self.sdRef)
+            self.sdRef = None
+

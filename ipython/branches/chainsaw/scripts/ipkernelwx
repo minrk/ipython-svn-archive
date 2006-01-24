@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env pythonw
 """An ipython kernel that is integrated with the wxPython event loop.
 
 This kernel is designed for users who want to use wxPython interactively from

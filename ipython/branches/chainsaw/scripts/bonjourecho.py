@@ -1,8 +1,9 @@
 import sys
 
-from twistbonjour import BonjourAdvertiser
+from ipython1.bonjour.twistbonjour import BonjourAdvertiser
 from twisted.internet import reactor, protocol
 from twisted.python import log
+import bonjour
 
 class Echo(protocol.Protocol):
     """This is just about the simplest possible protocol"""
@@ -29,22 +30,22 @@ class BonjourEchoFactory(protocol.ServerFactory):
     def stopAdvertising(self):
         self.ba.stopAdvertising()
         
+    def registrationCallback(self, sdRef,flags,errorCode,name,
+                     regtype,domain,context):
+        if errorCode == bonjour.kDNSServiceErr_NoError:
+            print errorCode, name, regtype, domain
+        else:
+            print "Bonjour registration error"
+            
     def startFactory(self):
         self.ba = BonjourAdvertiser(self.serviceName,
                                     "_echo._tcp",
                                     8000,
+                                    self.registrationCallback,
                                     reactor)
                                     
-        d = self.ba.startAdvertising()
-        
-        def didAdvertise(t):
-            print "Advertising with Bonjour:", t['name'], \
-                t['regtype'], t['domain']
-        def didNotAdvertise(t):
-            t.printTraceback()
-        d.addCallback(didAdvertise)
-        d.addErrback(didNotAdvertise)
-        
+        self.ba.startAdvertising()
+                
 def main():
     """This runs the protocol on port 8000"""
     log.startLogging(sys.stdout)    
