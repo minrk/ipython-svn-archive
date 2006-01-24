@@ -32,7 +32,7 @@ except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
 
 try:
-    from ipython1.kernel.kernelerror import NotDefined
+    from ipython1.kernel1p.kernelerror import NotDefined
 except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
 
