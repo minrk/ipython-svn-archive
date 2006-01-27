@@ -1350,7 +1350,7 @@ want to merge them back into the new files.""" % locals()
 
         This emulates Python's -c option."""
 
-        sys.argv = ['-c']
+        #sys.argv = ['-c']
         self.push(self.rc.c)
 
     def embed_mainloop(self,header='',local_ns=None,global_ns=None,stack_depth=0):
