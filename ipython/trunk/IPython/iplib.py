@@ -242,7 +242,7 @@ class InteractiveShell(object,Magic):
         # convenient location for storing additional information and state
         # their extensions may require, without fear of collisions with other
         # ipython names that may develop later.
-        self.meta = Bunch()
+        self.meta = Struct()
 
         # Create the namespace where the user will operate.  user_ns is
         # normally the only one used, and it is passed to the exec calls as
@@ -724,6 +724,8 @@ class InteractiveShell(object,Magic):
         # accepts it.  Probably at least check that the hook takes the number
         # of args it's supposed to.
         dp = getattr(self.hooks, name, None)
+        if name not in IPython.hooks.__all__:
+            print "Warning! Hook '%s' is not one of %s" % (name, IPython.hooks.__all__ )
         if not dp:
             dp = IPython.hooks.CommandChainDispatcher()
         
