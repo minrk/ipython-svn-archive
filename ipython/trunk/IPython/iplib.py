@@ -410,7 +410,7 @@ class InteractiveShell(object,Magic):
         for hook_name in hooks.__all__:
             # default hooks have priority 100, i.e. low; user hooks should have 0-100 priority
             self.set_hook(hook_name,getattr(hooks,hook_name), 100)
-            print "bound hook",hook_name
+            #print "bound hook",hook_name
 
         # Flag to mark unconditional exit
         self.exit_now = False

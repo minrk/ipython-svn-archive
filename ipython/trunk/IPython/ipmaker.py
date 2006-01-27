@@ -666,7 +666,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         old_excepthook,sys.excepthook = sys.excepthook, IP.excepthook
 
         save_argv = sys.argv[:] # save it for later restoring
-        sys.argv.pop(0) # the first arg is 'ipython' 
+        
+        sys.argv = args
 
         try:
             IP.safe_execfile(args[0], IP.user_ns)
