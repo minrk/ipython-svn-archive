@@ -2860,7 +2860,10 @@ Defaulting color scheme to 'NoColor'"""
         else:
             self.user_ns[par] = block
             print "Block assigned to '%s'" % par
-        
+    def magic_quickref(self,arg):
+        import IPython.usage
+        page(IPython.usage.quick_reference)
+        del IPython.usage
 
 
 # end Magic
