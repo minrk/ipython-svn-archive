@@ -2007,7 +2007,7 @@ want to merge them back into the new files.""" % locals()
                                      continue_prompt,pre,iFun,theRest)
         else:
             cmd=line.lstrip().lstrip('!')
-            line_out = '%sipsystem(%s)' % (pre,make_quoted_expr(cmd))
+            line_out = '%s_ip.system(%s)' % (pre,make_quoted_expr(cmd))
         # update cache/log and return
         self.log(line_out,continue_prompt)
         return line_out
