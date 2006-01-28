@@ -33,7 +33,7 @@ import time
 import cPickle as pickle
 import textwrap
 from cStringIO import StringIO
-from getopt import getopt
+from getopt import getopt,GetoptError
 from pprint import pprint, pformat
 
 # profile isn't bundled by default in Debian for license reasons
@@ -306,7 +306,11 @@ license. To use profiling, please install"python2.3-profiler" from non-free.""")
             # need to look for options
             argv = shlex_split(arg_str)
             # Do regular option processing
-            opts,args = getopt(argv,opt_str,*long_opts)
+            try:
+                opts,args = getopt(argv,opt_str,*long_opts)
+            except GetoptError,e:
+                raise GetoptError('%s ( allowed: "%s" %s)' % (e.msg,opt_str, 
+                                        " ".join(long_opts)))
             for o,a in opts:
                 if o.startswith('--'):
                     o = o[2:]
