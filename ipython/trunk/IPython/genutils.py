@@ -149,7 +149,7 @@ Term = IOTerm()
 
 import IPython.rlineimpl as readline
 # Remake Term to use the readline i/o facilities
-if readline.have_readline:
+if sys.platform == 'win32' and readline.have_readline:
     
     Term = IOTerm(cout=readline._outputfile,cerr=readline._outputfile)
     
