@@ -59,7 +59,12 @@ Main features:
 
  * Easily embeddable in other Python programs.
 
- * Integrated access to the pdb debugger and the Python profiler. """
+ * Integrated access to the pdb debugger and the Python profiler. 
+ 
+ The latest development version is always available at
+ <a href="http://ipython.scipy.org/svn/ipython/ipython/trunk#egg=ipython-dev">
+ the IPython subversion repository</a>.
+ """
 
 license = 'BSD'
 
