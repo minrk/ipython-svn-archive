@@ -36,7 +36,7 @@ import types
 # Other IPython utilities
 from IPython.Itpl import Itpl,itpl,printpl
 from IPython import DPyGetOpt
-from IPython.path import path
+from path import path
 if os.name == "nt":
     from IPython.winconsole import get_console_size
 

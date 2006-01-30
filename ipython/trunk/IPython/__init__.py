@@ -38,14 +38,21 @@ $Id$"""
 
 # Enforce proper version requirements
 import sys
+
 if sys.version[0:3] < '2.3':
     raise ImportError, 'Python Version 2.3 or above is required.'
+
+# Make it easy to import extensions - they are always directly on pythonpath.
+# Therefore, non-IPython modules can be added to Extensions directory
+
+import os
+sys.path.append(os.path.dirname(__file__) + "/Extensions")
         
 # Define what gets imported with a 'from IPython import *'
 __all__ = ['deep_reload','genutils','ipstruct','ultraTB','DPyGetOpt',
            'Itpl','hooks','ConfigLoader','OutputTrap','Release','Shell',
            'platutils','platutils_win32','platutils_posix','platutils_dummy',
-           'ipapi','path','rlineimpl']
+           'ipapi','rlineimpl']
 
 # Load __all__ in IPython namespace so that a simple 'import IPython' gives
 # access to them via IPython.<name>
