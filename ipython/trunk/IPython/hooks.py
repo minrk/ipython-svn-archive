@@ -54,7 +54,7 @@ from pprint import pformat
 # List here all the default hooks.  For now it's just the editor functions
 # but over time we'll move here all the public API for user-accessible things.
 __all__ = ['editor', 'fix_error_editor', 'result_display',
-           'input_prefilter']
+           'input_prefilter', 'shutdown_hook', 'late_startup_hook']
 
 def editor(self,filename, linenum=None):
     """Open the default editor at the given filename and linenumber.
@@ -167,3 +167,18 @@ def input_prefilter(self,line):
     """
     #print "attempt to rewrite",line #dbg
     return line
+
+def shutdown_hook(self):
+    """ default shutdown hook
+    
+    Typically, shotdown hooks should raise TryNext so all shutdown ops are done
+    """
+    
+    #print "default shutdown hook ok" # dbg
+    return
+
+def late_startup_hook(self):
+    """ Executed after ipython has been constructed and configured 
+    
+    """
+    #print "default startup hook ok" # dbg
