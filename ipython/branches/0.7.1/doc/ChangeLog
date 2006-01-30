@@ -1,3 +1,9 @@
+2006-01-29  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* IPython/Release.py (version): Release 0.7.1.fix1 with a
+	backported bugfix from trunk/, regarding improper handling of
+	KeyboardInterrupt exceptions.
+
 2006-01-23  *** Released version 0.7.1
 
 2006-01-23  Fernando Perez  <Fernando.Perez@colorado.edu>
