@@ -562,8 +562,6 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         print 'loaded first).\n'
         pprint(IP_rc.__dict__)
         
-    # Make it easy to import extensions
-    sys.path.append(os.path.join(IPython_dir,"Extensions"))
     for mod in IP_rc.import_mod:
         try:
             exec 'import '+mod in IP.user_ns
