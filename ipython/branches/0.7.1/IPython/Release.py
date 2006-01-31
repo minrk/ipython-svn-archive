@@ -60,9 +60,10 @@ Main features:
 
  * Integrated access to the pdb debugger and the Python profiler. 
  
- The latest development version is always available at
- <a href="http://ipython.scipy.org/svn/ipython/ipython/trunk#egg=ipython-dev">
- the IPython subversion repository</a>.
+ The latest development version is always available at the IPython subversion
+ repository_.
+
+.. _repository: http://ipython.scipy.org/svn/ipython/ipython/trunk#egg=ipython-dev
  """
 
 license = 'BSD'
