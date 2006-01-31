@@ -1220,7 +1220,7 @@ want to merge them back into the new files.""" % locals()
                               
             return False
         try:
-            if (self.rc.autoedit_syntax != 2 and 
+            if (self.rc.autoedit_syntax and 
                 not ask_yes_no('Return to editor to correct syntax error? '
                               '[Y/n] ','y')):
                 return False
