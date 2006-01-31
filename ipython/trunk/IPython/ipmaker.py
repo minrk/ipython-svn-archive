@@ -127,6 +127,12 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     ipythondir = os.path.abspath(os.environ.get('IPYTHONDIR',
                                  os.path.join(IP.home_dir,ipdir_def)))
 
+    # add personal .ipython dir to sys.path so that users can put things in
+    # there for customization
+    sys.path.append(ipythondir)
+        
+    sys.path.insert(0, '') # add . to sys.path. Fix from Prabhu Ramachandran
+
     # we need the directory where IPython itself is installed
     import IPython
     IPython_dir = os.path.dirname(IPython.__file__)
@@ -476,11 +482,6 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     # from this point on, all config should be handled through IP_rc,
     # opts* shouldn't be used anymore.
 
-    # add personal .ipython dir to sys.path so that users can put things in
-    # there for customization
-    sys.path.append(IP_rc.ipythondir)
-        
-    sys.path.insert(0, '') # add . to sys.path. Fix from Prabhu Ramachandran
     
     # update IP_rc with some special things that need manual
     # tweaks. Basically options which affect other options. I guess this
