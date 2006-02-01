@@ -1320,10 +1320,14 @@ want to merge them back into the new files.""" % locals()
         if self.rc.c:  # Emulate Python's -c option
             self.exec_init_cmd()
         if banner is None:
-            if self.rc.banner:
-                banner = self.BANNER+self.banner2
-            else:
+            if not self.rc.banner:
                 banner = ''
+            # banner is string? Use it directly!
+            elif isinstance(self.rc.banner,basestring):
+                banner = self.rc.banner
+            else:                
+                banner = self.BANNER+self.banner2
+
         self.interact(banner)
 
     def exec_init_cmd(self):
