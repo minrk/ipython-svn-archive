@@ -258,7 +258,7 @@ object:
 NOTE:  While you can do things like ic[0]['a'] = ic[1]['b'], these types of
        data movements have not been optimized.  Currently the python object
        would come back to you  from kernel 1 and then be sent out to kernel 
-       0.  Eventually we will implement a move(0 method for moving objects
+       0.  Eventually we will implement a move() method for moving objects
        directly from one kernel to another.
 
 NOTE:  Because push and pull use the pickle module, you cannot push and pull

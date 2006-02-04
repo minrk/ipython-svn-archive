@@ -57,9 +57,10 @@ def try_ports(port, allow_list):
 def main(port, allow_ip):
     allow_list = ['127.0.0.1']
     if allow_ip is not None:
-        allow_list.append(allow_ip)
+        allow_list.extend(allow_ip.split(":"))
     log.startLogging(sys.stdout)
     reactor.callLater(2.0,try_ports,port,allow_list)
+    log.msg(allow_list)
     reactor.run()
 
 def start(port=10105):
@@ -67,7 +68,7 @@ def start(port=10105):
     parser.set_defaults(port=port)
     parser.add_option("-p", "--port", type="int", dest="port",
         help="the TCP port the kernel will listen on")
-    parser.add_option("-a", "--allow", dest="allow_ip",
+    parser.add_option("-a", "--allow", type="string", dest="allow_ip",
         help="an IP address to allow to connect to the kernel")
     (options, args) = parser.parse_args()
     print "Starting the kernel on port %i" % options.port
