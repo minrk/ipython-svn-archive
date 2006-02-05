@@ -75,6 +75,7 @@ class MyFrame(wxFrame):
         reactor.interleave(wxCallAfter)
 
     def DoExit(self, event):
+        print true
         reactor.addSystemEventTrigger('after', 'shutdown', self.Close, true)
         reactor.stop()
 

@@ -1,0 +1,4 @@
+#!/usr/bin/env pythonw
+
+from ipython1.sandbox.PIPCrust import main
+main()

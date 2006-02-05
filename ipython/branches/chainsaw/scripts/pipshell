@@ -1,0 +1,4 @@
+#!/usr/bin/env pythonw
+
+from ipython1.sandbox.PIPShell import main
+main()
