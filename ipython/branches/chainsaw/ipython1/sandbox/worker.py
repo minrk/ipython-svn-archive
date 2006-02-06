@@ -9,7 +9,8 @@ class Worker(threading.Thread):
     or can be set to not block if there is not a result ready.  It takes
     the same arguments as Queue.get().
     
-    WARNING:  There is currently no way of killing the thread.
+    WARNING:  There is currently no way of killing the thread (fperez - there
+    is NO way to kill threads in general...)
     
     >>> w = Worker(kernel_addr)
     >>> w.start()

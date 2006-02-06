@@ -161,7 +161,7 @@ class RemoteKernel(object):
         self._check_connection()
         try:
             package = pickle.dumps(value, 2)
-        except picket.PickleError, e:
+        except pickle.PickleError, e:
             print "Object cannot be pickled: ", e
             return False
         if forward:
@@ -401,7 +401,7 @@ class RemoteKernel(object):
         else:
             try:
                 package = pickle.dumps(addrs, 2)
-            except picket.PickleError, e:
+            except pickle.PickleError, e:
                 print "Pass a valid python list of addresses: ", e
                 return False
             else:
@@ -820,7 +820,14 @@ class InteractiveCluster(object):
         return self.pull('_ipython_map_seq_result',flatten=True)
         
     def msg(self, txt):
-        self.workers[0].push('__ipmsg',"[%s]: %s" % (os.getlogin(), txt))
+        # XXX getlogin is very mysteriously failing under ubuntu.  Protect 
+        # with a hack for now
+        try:
+            user = os.getlogin()
+        except:
+            user = 'user'
+        
+        self.workers[0].push('__ipmsg',"[%s]: %s" % (user, txt))
         self.workers[0].execute("print __ipmsg,")
         
     def vectorize(self, func_name):
