@@ -298,7 +298,7 @@ only the communications that absolutely need to be secure.
         This would take 3 ms over 100Mb.
         
     Int32 Based Version (must have TCP_NODELAY = 1):
-        C: PUSH a FORWARE PICKLE
+        C: PUSH a FORWARD PICKLE
         C: asdfasdf
         S: PUSH OK
         
