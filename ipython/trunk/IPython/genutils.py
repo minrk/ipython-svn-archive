@@ -529,10 +529,17 @@ def filefind(fname,alt_dirs = None):
 #----------------------------------------------------------------------------
 def file_read(filename):
     """Read a file and close it.  Returns the file source."""
-    fobj=open(filename,'r');
+    fobj = open(filename,'r');
     source = fobj.read();
     fobj.close()
     return source
+
+def file_readlines(filename):
+    """Read a file and close it.  Returns the file source using readlines()."""
+    fobj = open(filename,'r');
+    lines = fobj.readlines();
+    fobj.close()
+    return lines
 
 #----------------------------------------------------------------------------
 def target_outdated(target,deps):
