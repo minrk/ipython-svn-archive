@@ -176,6 +176,19 @@ class RemoteKernel(object):
         if line == "PUSH FAIL":
             return False
         
+    def update(self,dict):
+        """Send the dict of key value pairs to the kernel's namespace.
+        
+        >>> rk = RemoteKernel(addr)
+        >>> rk.update({'a':1,'b':2,'c':'mystring})    
+        # sends a, b and c to the kernel
+        
+        @arg dict:
+            A dictionary of key, value pairs to send to the kernel
+        """
+        for key in dict.keys():
+            self.push(key,dict[key])
+        
     def __setitem__(self, key, value):
         self.push(key, value)
         
@@ -654,6 +667,14 @@ class InteractiveCluster(object):
             self.push(key, value)
         else:
             raise ValueError
+            
+    def update(self, dict, workers=None):
+        """Send the dict of key, value pairs to the workers."""
+        
+        worker_numbers = self._parse_workers_arg(workers)
+        n_workers = len(worker_numbers)
+        for w in worker_numbers:
+            self.workers[w].update(dict)
             
     def pull(self, key, flatten=False, workers=None):
         """Get a python object from some kernels.
