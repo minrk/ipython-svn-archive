@@ -2046,11 +2046,11 @@ want to merge them back into the new files.""" % locals()
                     else:
                         # if the object doesn't support [] access, go ahead and
                         # autocall
-                        newcmd = '%s(%s)' % (iFun.rstrip(),",".join(theRest.split()))
+                        newcmd = '%s(%s)' % (iFun.rstrip(),theRest)
                 elif theRest.endswith(';'):
                     newcmd = '%s(%s);' % (iFun.rstrip(),theRest[:-1])
                 else:
-                    newcmd = '%s(%s)' % (iFun.rstrip(),",".join(theRest.split()))
+                    newcmd = '%s(%s)' % (iFun.rstrip(), theRest)
 
         if auto_rewrite:
             print >>Term.cout, self.outputcache.prompt1.auto_rewrite() + newcmd
