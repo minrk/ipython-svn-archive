@@ -96,14 +96,14 @@ class RemoteKernel(object):
         # Turn of Nagle's algorithm to prevent the 200 ms delay :)
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
         
-    def execute(self, source):
+    def execute(self, source, block=False):
         """Execute python source code on the ipython kernel.
         
         @arg source:
             A string containing valid python code
         """
         self._check_connection()
-        if self.block:
+        if self.block or block:
             self.es.write_line("EXECUTE BLOCK %s" % source)
             line, self.extra = self.es.read_line(self.extra)
             line_split = line.split(" ")

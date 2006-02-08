@@ -652,3 +652,53 @@ class KernelTCPFactoryGUI(protocol.ServerFactory, KernelFactoryBase):
     def get_last_result(self):
         return self.tic.get_last_result()
         
+class ThreadlessKernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
+    protocol = KernelTCPProtocol
+    
+    def __init__(self, allow=[], notify=[]):
+        self.tic = TrappingInteractiveConsole()
+        # Uncomment these lines for mpi support - no docs on this yet.
+        #self.qic.execute('import mpi')
+        #self.qic.execute('import sys')
+        #self.qic.execute('sys.argv =  mpi.mpi_init(len(sys.argv),sys.argv)')
+        KernelFactoryBase.__init__(self, allow, notify)
+
+    def stopFactory(self):
+        pass
+
+    # Kernel methods
+            
+    def get_ticket(self):
+        return 0
+        
+    def push(self, key, value, ticket=None):
+        self.tic.update({key:value})
+        
+    def pull(self, key, ticket):
+        data = self.tic.get(key)
+        return defer.succeed(data)
+        
+    def execute(self, source, ticket):
+        self.tic.runlines(source)
+        result = self.tic.get_last_result()
+        return defer.succeed(result)
+        
+    def execute_block(self, source, ticket):
+        return self.execute(source=source, ticket=ticket)
+        
+    def status(self):
+        return 0
+        
+    def reset(self):
+        del self.tic
+        self.tic = TrappingInteractiveConsole()
+        
+    def get_result(self, i):
+        result = self.tic.get_result(i)
+        return defer.succeed(result)
+        
+    def get_last_result(self):
+        result = self.tic.get_last_result()
+        return defer.succeed(result)
+        
+        
