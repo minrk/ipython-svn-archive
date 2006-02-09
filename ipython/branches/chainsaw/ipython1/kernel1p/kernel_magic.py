@@ -27,7 +27,7 @@ def magic_px(self,parameter_s=''):
     active_cluster = __IPYTHON__.active_cluster
     if active_cluster:
         print "Executing command on cluster"
-        active_cluster.execute(parameter_s)
+        active_cluster.execute(parameter_s,block=True)
     else:
         print "Error: No active IPython cluster.  Use activate()."
         
@@ -56,7 +56,7 @@ def magic_pn(self,parameter_s=''):
     active_cluster = __IPYTHON__.active_cluster
     if active_cluster:
         print "Executing command on cluster"
-        active_cluster.execute(cmd, k)
+        active_cluster.execute(cmd, block=True, workers=k)
     else:
         print "Error: No active IPython cluster.  Use activate()."
 
@@ -81,13 +81,13 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
     # buffer attribute as '\n'.join(self.buffer).
     self.code_to_run = code
     # now actually execute the code object
-    if 'ipmagic("%autopx' in source:
+    if '_ip.magic("%autopx' in source:
         if self.runcode(code) == 0:
             return False
         else:
             return None
     else:
-        self.active_cluster.execute(source)
+        self.active_cluster.execute(source,block=True)
         return False
     
 def magic_autopx(self, parameter_s=''):

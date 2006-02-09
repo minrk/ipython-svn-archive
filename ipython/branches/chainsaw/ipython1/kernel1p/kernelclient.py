@@ -116,6 +116,27 @@ class RemoteKernel(object):
                 package, self.extra = self.es.read_bytes(nbytes, self.extra)
                 data = pickle.loads(package)
                 line, self.extra = self.es.read_line(self.extra)
+                
+                # Now print data
+                blue = TermColors.Blue
+                normal = TermColors.Normal
+                red = TermColors.Red
+                green = TermColors.Green
+                cmd_num = data[0]
+                cmd_stdin = data[1]
+                cmd_stdout = data[2][:-1]
+                cmd_stderr = data[3][:-1]
+                print "%s[%s]%s In [%i]:%s %s" % \
+                    (green, self.addr[0],
+                    blue, cmd_num, normal, cmd_stdin)
+                if cmd_stdout:
+                    print "%s[%s]%s Out[%i]:%s %s" % \
+                        (green, self.addr[0],
+                        red, cmd_num, normal, cmd_stdout)
+                if cmd_stderr:
+                    print "%s[%s]%s Err[%i]:\n%s %s" % \
+                        (green, self.addr[0],
+                        red, cmd_num, normal, cmd_stderr)
             else:
                 data = None
                 line = ""
@@ -123,9 +144,9 @@ class RemoteKernel(object):
             self.es.write_line("EXECUTE %s" % source)
             line, self.extra = self.es.read_line(self.extra)
             data = None
-            
+             
         if line == "EXECUTE OK":
-            return data
+            return None
         else:
             return False
 
@@ -714,7 +735,7 @@ class InteractiveCluster(object):
         else:
             return results
             
-    def execute(self, source, workers=None):
+    def execute(self, source, block=False, workers=None):
         """Execute python source code on the ipython kernel.
                 
         The workers argument is used to select which kernels are sent the 
@@ -732,7 +753,7 @@ class InteractiveCluster(object):
         
         >>> %px a = 5           # Same as execute('a=5')
         >>> %autopx             # Toggles autoparallel mode on
-                                # Now every command is wrapped in execute()
+                                # Now every comic.mand is wrapped in execute()
         >>> %autopx             # Toggles autoparallel mode off
 
         @arg source:
@@ -740,10 +761,9 @@ class InteractiveCluster(object):
         @arg workers:
             Which kernels to get the object from to.
         """
-    
         worker_numbers = self._parse_workers_arg(workers)
         for w in worker_numbers:
-            self.workers[w].execute(source)
+            self.workers[w].execute(source,block=block)
 
     def run(self, fname, workers=None):
         """Run a file on a set of kernels."""
