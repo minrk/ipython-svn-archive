@@ -498,6 +498,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         IP_rc.colors = 'NoColor'
         IP_rc.xmode = 'Plain'
 
+    IP.pre_config_initialization()
     # configure readline
     # Define the history file for saving commands in between sessions
     if IP_rc.profile:

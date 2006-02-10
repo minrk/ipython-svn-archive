@@ -601,6 +601,19 @@ class InteractiveShell(object,Magic):
         self.init_auto_alias()
     # end __init__
 
+    def pre_config_initialization(self):
+        """Pre-configuration init method
+
+        This is called before the configuration files are processed to
+        prepare the services the config files might need.
+        
+        self.rc already has reasonable default values at this point.
+        """
+        rc = self.rc
+        
+        self.db = pickleshare.PickleShareDB(rc.ipythondir + "/db")
+
+    
     def post_config_initialization(self):
         """Post configuration init method
 
@@ -609,7 +622,6 @@ class InteractiveShell(object,Magic):
 
         rc = self.rc
         
-        self.db = pickleshare.PickleShareDB(rc.ipythondir + "/db")
         # Load readline proper
         if rc.readline:
             self.init_readline()
