@@ -375,11 +375,19 @@ def getoutput(cmd,verbose=0,debug=0,header='',split=0):
     - split(0): if true, the output is returned as a list split on newlines.
 
     Note: a stateful version of this function is available through the
-    SystemExec class."""
+    SystemExec class.
+    
+    This is pretty much deprecated and rarely used, 
+    genutils.getoutputerror may be what you need.
+    
+    """
 
     if verbose or debug: print header+cmd
     if not debug:
-        output = commands.getoutput(cmd)
+        output = os.popen(cmd).read()
+        # stipping last \n is here for backwards compat.
+        if output.endswith('\n'):
+            output = output[:-1]
         if split:
             return output.split('\n')
         else:
