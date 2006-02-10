@@ -14,6 +14,7 @@ sockets and thus, do not require Twisted.
 import socket
 import threading
 import pickle
+import types
 import time, os
 from scatter import *
 from vectorfunction import VectorFunction
@@ -39,6 +40,62 @@ except ImportError:
 #from esocket import LineSocket
 #import kernel_magic
 #from kernelerror import NotDefined
+           
+def _tar_module(mod):
+    """Makes a tarball (as a string) of a locally imported module.
+        
+    This method looks at the __file__ attribute of an imported module
+    and makes a tarball of the top level of the module.  It then
+    reads the tarball into a binary string.  
+    
+    The method returns the tarball's name and the binary string
+    representing the tarball.
+    
+    Notes:
+    
+    - It will handle both single module files, as well as packages.
+    
+    - The byte code files (*.pyc) are not deleted.
+    
+    - It has not been tested with modules containing extension code,
+      but it should work in most cases.
+      
+    - There are cross platform issues. 
+    """
+    
+    if not isinstance(mod, types.ModuleType):
+        raise TypeError, "Pass an imported module to push_module"
+    module_dir, module_file = os.path.split(mod.__file__)
+
+    # Figure out what the module is called and where it is
+    print "Locating the module..."
+    if "__init__.py" in module_file:  # package
+        module_name = module_dir.split("/")[-1]
+        module_dir = "/".join(module_dir.split("/")[:-1])
+        module_file = module_name
+    else:                             # Simple module
+        module_name = module_file.split(".")[0]
+        module_dir = module_dir
+    print "Module (%s) found in:\n%s" % (module_name, module_dir)
+        
+    # Make a tarball of the module in the cwd
+    if module_dir:
+        os.system('tar -cf %s.tar -C %s %s' % \
+            (module_name, module_dir, module_file))
+    else:   # must be the cwd
+        os.system('tar -cf %s.tar %s' % \
+            (module_name, module_file))
+    
+    # Read the tarball into a binary string        
+    tarball_name = module_name + ".tar"
+    tar_file = open(tarball_name,'rb')
+    file_string = tar_file.read()
+    tar_file.close()
+    
+    # Remove the local copy of the tarball
+    os.system("rm %s" % tarball_name)
+    
+    return tarball_name, file_string
                     
 class RemoteKernel(object):
     """A high level interface to a remotely running ipython kernel."""
@@ -470,6 +527,41 @@ class RemoteKernel(object):
                 return False
         else:
             return True
+          
+    def push_module(self, mod):
+        """Send a locally imported module to a kernel.
+        
+        This method makes a tarball of an imported module that exists 
+        on the local host and sends it to the working directory of the
+        kernel.  It then untars it.  
+        
+        After that, the module can be imported and used by the kernel.
+        
+        Notes:
+    
+        - It will handle both single module files, as well as packages.
+    
+        - The byte code files (*.pyc) are not deleted.
+    
+        - It has not been tested with modules containing extension code,
+          but it should work in most cases.
+      
+        - There are cross platform issues. 
+        """
+        
+        tarball_name, file_string = _tar_module(mod)
+        self._push_module_string(tarball_name, file_string)
+            
+    def _push_module_string(self, tarball_name, file_string):
+        """This method send a tarball'd module to a kernel."""
+        
+        self.push('tar_file_string',file_string)
+        self.execute("tar_file = open('%s','wb')" % \
+            tarball_name, block=False)
+        self.execute("tar_file.write(tar_file_string)", block=False)
+        self.execute("tar_file.close()", block=False)
+        self.execute("import os", block=False)
+        self.execute("os.system('tar -xf %s')" % tarball_name)        
             
 class InteractiveCluster(object):
     """An interface to a set of ipython kernels for parallel computation."""
@@ -815,6 +907,31 @@ class InteractiveCluster(object):
         worker_numbers = self._parse_workers_arg(workers)
         for w in worker_numbers:
             self.workers[w].disconnect()    
+
+    def push_module(self, mod):
+        """Send a locally imported module to a kernel.
+        
+        This method makes a tarball of an imported module that exists 
+        on the local host and sends it to the working directory of the
+        kernels in the cluster.  It then untars it.  
+        
+        After that, the module can be imported and used by the kernels.
+        
+        Notes:
+    
+        - It will handle both single module files, as well as packages.
+    
+        - The byte code files (*.pyc) are not deleted.
+    
+        - It has not been tested with modules containing extension code,
+          but it should work in most cases.
+      
+        - There are cross platform issues. 
+        """
+    
+        tarball_name, file_string = _tar_module(mod)
+        for w in self.workers:
+            w._push_module_string(tarball_name, file_string)
     
     def map(self, func_code, seq):
         """A parallelized version of python's builtin map.
