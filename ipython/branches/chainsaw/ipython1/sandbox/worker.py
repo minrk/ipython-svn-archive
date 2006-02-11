@@ -1,3 +1,10 @@
+"""This is a BackgroundJob() like interface to a RemoteKernel.  The 
+RemoteKernel is run in a different thread to it won't ever block.  Just
+a prototype.
+
+B. Granger
+2006-02-11
+"""
 import threading
 import ipython1.kernel1p.kernelclient as kc
 import Queue

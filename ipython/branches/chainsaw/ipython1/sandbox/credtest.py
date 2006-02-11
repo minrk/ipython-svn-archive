@@ -1,3 +1,4 @@
+"""Example of using authemtication in a Twisted server."""
 from twisted.cred import portal, checkers, credentials, error as credError
 from twisted.protocols import basic
 from twisted.internet import protocol, reactor, defer
