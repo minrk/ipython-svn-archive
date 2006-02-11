@@ -1,18 +1,30 @@
-Date:  9/5/2005
-Author:  Brian E. Granger (bgranger@scu.edu)
+Date:  2006-02-11
+Author:  Brian E. Granger (ellisonbg@gmail.com)
 
-This file describes the steps required to install the ipython kernel.  
-For now, the kernel works with the current ipython release or the current 
-SVN trunk.  It should also work with older version of ipython, but I am not 
-sure how far back.
+This file describes the steps required to install the ipython kernel.  The
+current kernel requires four things:
+
+- The current version of IPython from svn trunk
+- Zope Interface
+- Twisted
+- The ipython1 kernel itself
 
 For a description of the kernel, see the README file in this directory.
 
-Eventually, the kernel -will be- ipython itself.  
+For now, the kernel works with the current ipython release or the current 
+SVN trunk.
+
+Eventually, the kernel -will be- ipython itself.  But for now you can use
+the kernel within the standard IPython.  
 
 = Installation Instructions =
 
 1.  Download and install the current version of ipython
+
+    svn co http://ipython.scipy.org/svn/ipython/ipython/trunk ipython
+    cd ipython
+    python setup.py build
+    sudo python setup.py install
 
 2.  Download and install the zope.interface package
 
@@ -25,24 +37,26 @@ Eventually, the kernel -will be- ipython itself.
     You can check out the SVN trunk using the subversion command:
 
     svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted
-    
-    Then cd into the Twisted directory and issue the following at the command
-    line:
-    
+    cd Twisted
     python setup.py all build
-    
-    followed by:
-    
-    python setup.py all install
-    
-    Run the second of these as an admin user.
+    sudo python setup.py all install
     
     The extra 'all' in these commands instructs distutils to install all of 
-    Twisted.
+    Twisted.  It may not be needed.
     
-4.  Place the kernel related files somewhere in your python path
+4.  Install the kernel from ipython1
 
-    The easiest thing to do is simply put them in your current working 
-    directory.  Currently there is no setup.py script for the kernel.
+    While in the ipython1 source directory issue:
+
+    python setup.py build
+    python setup.py install
+
+    After this, the scipts to start the kernel should be installed and you
+    should be able to use the kernelclient from within the standard ipython.
     
+NOTE:  If you are installing this on Mac OS X, you need to provide the
+--install-scripts /usr/local/bin flag to have the scripts put in the correct
+location.  Replace /usr/local/bin by the appropriate directory for your system.
 
+An easier way of intalling on Mac OS X is using the bdist_mpkg command of
+PyObjC.

@@ -17,22 +17,20 @@ The ipython kernel opens up the door for the following:
     
 3.  Seamless support for the interactive use of multiple GUI toolkits.
 
-4.  Collaborative computing and collaborative visualization.
+4.  Collaborative computing.
 
 The ipython kernel actually consists of two layers: the kernel and the kernel
-interface.  The kernel is run in a separate process and consists of a
+client.  The kernel is run in a separate process and consists of a
 fully functional python interpreter that listen for python commands on a 
-network port rather that a command line.  The kernel interface is run by
-the user in a separate python interpreter.  The kernel interface 
+network port rather that a command line.  The kernel client is run by
+the user in a separate python interpreter.  The kernel client 
 consists of a set of python objects that allow the user to interact with one 
 or more kernels simultaneously.  
 
 NOTE:   If you run code on the kernel that i) calls C/C++/fortran and ii)
         does not release Python's Global Interpreter Lock (GIL), the kernel
-        will become unresponsive while the code runs.  The best way to monitor
-        the kernel in this state is to give a status command - this will 
-        return when the kernel is available.
-
+        will become unresponsive while the code runs.  We are fixing this
+        problem in a future release.
 
 = Basic Usage =
 
@@ -42,26 +40,25 @@ NOTE:   If you run code on the kernel that i) calls C/C++/fortran and ii)
 The basic ipython kernel is contained in the module kernel.py.  The 
 kernel can be started using the command:
 
-    python kernel.py
+    ipkernel
 
-NOTE: The kernel cannot be run in the background currently.  Thus if you try
-python kernel.py &, the kernel will not work.  This has to do with the deep
-inner workings of Twisted.  In the future you will be able to do this.
+NOTE: It may not be possible to run the kernel in the background currently. 
+Thus if you try python kernel.py &, the kernel will not work.  This has to do with the deep inner workings of Twisted.  In the future you will be able to do
+this.
 
 Be default, the kernel listens on TCP port 10105.  To specify what TCP port
 the kernel should listen on, use the -p (or --port) option:
 
-    python kernel.py -p 10106
+    ipkernel --port 10106
 
 For security reasons, the kernel can be configured to allow or deny connections
 from specific ip addresses.  The default is to allow connections only from the
 localhost (127.0.0.1).  To allow an additional ip address to connect to the
 kernel, use the option -a (or --allow):
 
-    python kernel.py -p 10106 -a 168.169.170.171
+    ipkernel --port 10106 --allow 168.169.170.171:192.169.0.1
 
-Only a single additional ip address can be allowed at the command line.  To 
-allow (deny) additional hosts to connect to the kernel see the allow (deny)
+To allow (deny) additional hosts to connect to the kernel see the allow (deny)
 method of the RemoteKernel or InteractiveCluster classes.
 
 The basic kernel does not support interactive calls to GUI toolkits (tk, wx,
@@ -70,7 +67,7 @@ must be integrated with the event loop of the kernel (which uses twisted).
 
 To allow the interactive use of GUI toolkits, special purpose kernels are 
 offered.  Currently, we have implemented a kernel that integrates with wx.
-To start this kernel, use kernelwx.py rather than kernel.py in the above 
+To start this kernel, use ipkernelwx rather than ipkernel in the above 
 command.  The GUI kernel accept the same command line options.  On Mac OS X
 the GUI kernels must be started with the command pythonw rather than python.
 
@@ -87,19 +84,18 @@ ResultGatherer class.  This class is bound to a UDP port and receives UDP
 datagrams from the kernels when results are ready.  To start a ResultGatherer
 run the following command from the command line:
 
-	python results.py
+	ipresults
 
 This will start a ResultGatherer bound to port 10104.  To change the port,
 use the -p options:
 
-	python results.py -p 10101
+	ipresults -p 10101
 
 Once a ResultGatherer is running, you must notify the kernel that it
 should send results to the ResultGatherer.  This is done using the notify()
 method of the RemoteKernel or InteractiveCluster class.  
 
 See below for examples of this.
-
 
 == Using the kernel ==
 
@@ -115,7 +111,7 @@ Begin by creating an InteractiveCluster object in ipython.  Then you tell the
 object where two kernels are running and what ResultGatherer the kernels should
 be notifying of results:
 
-    In [1]: from kernelclient import *
+    In [1]: from ipython1.kernel1p.kernelclient import *
 
     In [2]: ic = InteractiveCluster()
 
