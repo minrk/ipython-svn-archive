@@ -260,10 +260,10 @@ NOTE:  While you can do things like ic[0]['a'] = ic[1]['b'], these types of
 NOTE:  Because push and pull use the pickle module, you cannot push and pull
        python functions to the kernels and back.
 
-=== The map and vectorize commands ===
+=== The map and parallelize commands ===
 
 With the basic commands (push, pull and execute) higher level constructs
-can be build.  The map() and vectorize() methods of InteractiveCluster are
+can be build.  The map() and parallelize() methods of InteractiveCluster are
 examples of this.
 
 The map() method work just like the builtin python map, but the calling 
@@ -294,15 +294,15 @@ There are a number of similar ways of accomplishing the same thing:
 
 Or, there is a powerful VectorFunction object:
 
-    In [26]: f = ic.vectorize('lambda x: x*x')
+    In [26]: f = ic.parallelize('lambda x: x*x')
 
     In [27]: f(range(10))
     Out[27]: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
 
-The function f is a VectorFunction object that exists in the local namespace.
+The function f is a ParallelFunction object that exists in the local namespace.
 It basically is a wrapper for the parallelized map() method of the cluster.
 
-NOTE:  The functions used by map and vectorize must already be defined in the
+NOTE:  The functions used by map and parallelize must already be defined in the
        namespace of each kernel!  You cannot pass functions to the kernels.
 
 

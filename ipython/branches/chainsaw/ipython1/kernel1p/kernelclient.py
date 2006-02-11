@@ -16,11 +16,12 @@ import threading
 import pickle
 import types
 import time, os
-from scatter import *
-from vectorfunction import VectorFunction
 
 from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
+
+from ipython1.kernel1p.scatter import *
+from ipython1.kernel1p.parallelfunction import ParallelFunction
 
 try:
     from ipython1.kernel1p.esocket import LineSocket
@@ -967,16 +968,16 @@ class InteractiveCluster(object):
         self.workers[0].push('__ipmsg',"[%s]: %s" % (user, txt))
         self.workers[0].execute("print __ipmsg,")
         
-    def vectorize(self, func_name):
-        """Contruct and return a vectorized and parallelized function.
+    def parallelize(self, func_name):
+        """Contruct and return a parallelized function.
         
-        The resulting VectorFunction object is a callable that can operates 
+        The resulting ParallelFunction object is a callable that can operates 
         on sequences.  
         
         @arg func_name:
             The name of the function to parallelize.  
             It must be defined in the namespace of the kernel.
         """
-        return VectorFunction(func_name, self)
+        return ParallelFunction(func_name, self)
     
                   

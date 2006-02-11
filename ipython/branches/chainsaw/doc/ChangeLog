@@ -1,3 +1,12 @@
 2006-02-11  Brian Granger <ellisonbg@gmail.com>
 
+        * Renamed vectorfunction.py to parallelfunction.py
+
+        * parallelfunction.py, README, kernelclient.py: Renamed all usages
+        of VectorFunction to ParallelFunction to better reflect what it does.
+
+        * kernelclient.py: Fixed intermodule imports.
+
+2006-02-11  Brian Granger <ellisonbg@gmail.com>
+
         * ChangeLog: Started the ChangeLog for ipython1.

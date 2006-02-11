@@ -9,10 +9,10 @@
 
 Classes:
 
-VectorFunction -- A basic vetorized function
+ParallelFunction -- A basic parallelized function
 """
 
-class VectorFunction:
+class ParallelFunction:
     def __init__(self,funcname,cluster):
         self.funcname = funcname
         self.cluster = cluster
