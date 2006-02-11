@@ -394,12 +394,38 @@ class VerboseTB(TBTools):
         Colors        = self.Colors   # just a shorthand + quicker name lookup
         ColorsNormal  = Colors.Normal  # used a lot
         indent        = ' '*INDENT_SIZE
-        text_repr     = pydoc.text.repr
         exc           = '%s%s%s' % (Colors.excName, str(etype), ColorsNormal)
         em_normal     = '%s\n%s%s' % (Colors.valEm, indent,ColorsNormal)
         undefined     = '%sundefined%s' % (Colors.em, ColorsNormal)
 
         # some internal-use functions
+        def text_repr(value):
+            """Hopefully pretty robust repr equivalent."""
+            # this is pretty horrible but should always return *something*
+            try:
+                return pydoc.text.repr(value)
+            except KeyboardInterrupt:
+                raise
+            except:
+                try:
+                    return repr(value)
+                except KeyboardInterrupt:
+                    raise
+                except:
+                    try:
+                        # all still in an except block so we catch
+                        # getattr raising
+                        name = getattr(value, '__name__', None)
+                        if name:
+                            # ick, recursion
+                            return text_repr(name)
+                        klass = getattr(value, '__class__', None)
+                        if klass:
+                            return '%s instance' % text_repr(klass)
+                    except KeyboardInterrupt:
+                        raise
+                    except:
+                        return 'UNRECOVERABLE REPR FAILURE'
         def eqrepr(value, repr=text_repr): return '=%s' % repr(value)
         def nullrepr(value, repr=text_repr): return ''
 
