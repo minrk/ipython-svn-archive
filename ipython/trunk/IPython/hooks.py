@@ -73,7 +73,7 @@ def editor(self,filename, linenum=None):
     else:
         linemark = '+%d' % linenum
     # Call the actual editor
-    os.system('%s %s %s' % (editor,linemark,filename))
+    os.system('"%s" %s %s' % (editor,linemark,filename))
 
 import tempfile
 def fix_error_editor(self,filename,linenum,column,msg):
