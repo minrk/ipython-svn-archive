@@ -27,7 +27,6 @@ setup(name             = 'ipython1',
       author_email     = 'Fernando.Perez@colorado.edu / ellisonbg@gmail.com',
       url              = 'http://ipython.scipy.org',
       license          = 'BSD',
-      data_files       = ['INSTALL']
       packages         = ['ipython1','ipython1.kernel','ipython1.kernel1p'],
       scripts          = ['scripts/ipkernel','scripts/ipkernelwx','scripts/ipresults'],
       )
