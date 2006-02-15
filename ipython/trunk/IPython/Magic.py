@@ -2112,9 +2112,9 @@ Defaulting color scheme to 'NoColor'"""
     def magic_Pprint(self, parameter_s=''):
         """Toggle pretty printing on/off."""
         
-        self.shell.outputcache.Pprint = 1 - self.shell.outputcache.Pprint
+        self.shell.rc.pprint = 1 - self.shell.rc.pprint
         print 'Pretty printing has been turned', \
-              ['OFF','ON'][self.shell.outputcache.Pprint]
+              ['OFF','ON'][self.shell.rc.pprint]
         
     def magic_exit(self, parameter_s=''):
         """Exit IPython, confirming if configured to do so.
