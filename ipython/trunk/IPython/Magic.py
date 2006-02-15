@@ -2802,7 +2802,7 @@ Defaulting color scheme to 'NoColor'"""
     def magic_quickref(self,arg):
         import IPython.usage
         page(IPython.usage.quick_reference)
-        del IPython.usage
+        
 
 
 # end Magic
