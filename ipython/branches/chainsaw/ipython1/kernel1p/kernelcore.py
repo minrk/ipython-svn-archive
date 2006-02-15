@@ -531,7 +531,7 @@ class KernelFactoryBase:
         print "Allowed: ", self._allowed_clients
             
     def is_allowed(self, c):
-        if c in self._allowed_clients:
+        if c in self._allowed_clients or 'all' in self._allowed_clients:
             return True
         else:
             return False
