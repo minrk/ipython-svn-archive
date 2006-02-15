@@ -569,8 +569,9 @@ class InteractiveCluster(object):
     def __init__(self):
         """Create an empty cluster object."""
         self.count = 0
-        self.workers = []
-        self.worker_addrs = []
+        self.kernels = []
+        self.kernel_addrs = []
+        self._block = False
         
     def __add__(first, second):
         """Add two clusters together.
@@ -582,35 +583,45 @@ class InteractiveCluster(object):
         # Don't simply call start() as I want references to the RemoteKernel
         # objects and not copies.  This preserves connections.
         ic = InteractiveCluster()
-        for w in first.workers:
-            ic.workers.append(w)
-        for w in second.workers:
-            ic.workers.append(w)
-        ic.worker_addrs = first.worker_addrs + second.worker_addrs
-        ic.count = len(ic.workers)
+        for w in first.kernels:
+            ic.kernels.append(w)
+        for w in second.kernels:
+            ic.kernels.append(w)
+        ic.kernel_addrs = first.kernel_addrs + second.kernel_addrs
+        ic.count = len(ic.kernels)
         ic._cluster()
         return ic
         
-    def subcluster(self, worker_list):
+    def set_block(self, block):
+        self._block = block
+        for k in self.kernels:
+            k.block = self._block
+        
+    def get_block(self):
+        return self._block
+        
+    block = property(get_block, set_block, doc="Toggles blocking execution")
+        
+    def subcluster(self, kernel_list):
         ic = InteractiveCluster()
-        for w in worker_list:
-            ic.workers.append(self.workers[w])
-            ic.worker_addrs.append(self.worker_addrs[w])
-        ic.count= len(ic.workers)
+        for w in kernel_list:
+            ic.kernels.append(self.kernels[w])
+            ic.kernel_addrs.append(self.kernel_addrs[w])
+        ic.count= len(ic.kernels)
         return ic
         
-    def _parse_workers_arg(self, workers):
-        if workers is None:
+    def _parse_kernels_arg(self, kernels):
+        if kernels is None:
             return range(self.count)
-        elif isinstance(workers, list) or isinstance(workers, tuple):
-            return workers
-        elif isinstance(workers, int):
-            return [workers]
+        elif isinstance(kernels, list) or isinstance(kernels, tuple):
+            return kernels
+        elif isinstance(kernels, int):
+            return [kernels]
      
     def _cluster(self):
         """Notify each kernel in the cluster about the other kernels."""
-        for w in self.workers:
-            w.cluster(self.worker_addrs)
+        for w in self.kernels:
+            w.cluster(self.kernel_addrs)
               
     def start(self, addr_list):
         """Add already running kernels to the cluster.
@@ -621,9 +632,9 @@ class InteractiveCluster(object):
             A list of (ip, port) tuples of running kernels
         """
         for a in addr_list:
-            self.worker_addrs.append(a)
-            self.workers.append(RemoteKernel(a))
-        self.count = len(self.workers)
+            self.kernel_addrs.append(a)
+            self.kernels.append(RemoteKernel(a))
+        self.count = len(self.kernels)
         
         # Let everyone know about each other
         self._cluster()
@@ -639,9 +650,9 @@ class InteractiveCluster(object):
         @arg kernel_to_remove:
             An integer specifying which kernel to remove
         """
-        del self.workers[kernel_to_remove]
-        del self.worker_addrs[kernel_to_remove]
-        self.count = len(self.worker_addrs)
+        del self.kernels[kernel_to_remove]
+        del self.kernel_addrs[kernel_to_remove]
+        self.count = len(self.kernel_addrs)
         self._cluster()
         
     def activate(self):
@@ -665,7 +676,7 @@ class InteractiveCluster(object):
         try:
             __IPYTHON__.active_cluster = self
         except NameError:
-            print "Working in non-interactive mode, %px and %autopx are not active"
+            print "The %px and %autopx magic's are not active."
                 
     def save(self, cluster_name):
         """Saves the cluster information to a file in ~/.ipython.
@@ -681,7 +692,7 @@ class InteractiveCluster(object):
         file_path = path_base + "/" + cluster_name
         f = open(file_path,'w')
         print "Saving to: ", file_path
-        pickle.dump(self.worker_addrs, f, 1)
+        pickle.dump(self.kernel_addrs, f, 1)
         f.close()
         
     def load(self, cluster_name):
@@ -728,7 +739,7 @@ class InteractiveCluster(object):
         
     def __getitem__(self, key):
         if isinstance(key, int):
-            return self.workers[key]
+            return self.kernels[key]
         elif isinstance(key, str):
             return self.pull(key)
             
@@ -737,18 +748,18 @@ class InteractiveCluster(object):
         
     def kill(self):
         """Kill all the kernels in the cluster."""
-        for w in self.workers:
+        for w in self.kernels:
             w.kill()
             
-    def push(self, key, value, workers=None):
+    def push(self, key, value, kernels=None):
         """Send a python object to the namespace of some kernels.
                 
-        The workers argument is used to select which kernels are sent the 
+        The kernels argument is used to select which kernels are sent the 
         object.  There are three cases:
         
-        workers is left empty         -> all workers get the object
-        workers is a list of integers -> only those workers get it
-        workers is an integer         -> only that worker gets it
+        kernels is left empty         -> all kernels get the object
+        kernels is a list of integers -> only those kernels get it
+        kernels is an integer         -> only that kernel gets it
         
         The kernels in the cluster are labeled by integers starting with 0.
                            
@@ -762,19 +773,19 @@ class InteractiveCluster(object):
             The python object to send
         @arg key:
             What to name the object in the kernel' namespace
-        @arg workers:
+        @arg kernels:
             Which kernels to push to.
         """
-        worker_numbers = self._parse_workers_arg(workers)
-        n_workers = len(worker_numbers)
+        kernel_numbers = self._parse_kernels_arg(kernels)
+        n_kernels = len(kernel_numbers)
         
         if isinstance(value, Scatter):
-            for index, item in enumerate(worker_numbers):
-                self.workers[item].push(key,
-                    value.partition(index,n_workers))
+            for index, item in enumerate(kernel_numbers):
+                self.kernels[item].push(key,
+                    value.partition(index,n_kernels))
         else:
-            for w in worker_numbers:
-                self.workers[w].push(key, value)
+            for w in kernel_numbers:
+                self.kernels[w].push(key, value)
                 
     def __setitem__(self, key, value):
         if isinstance(key, str):
@@ -782,23 +793,23 @@ class InteractiveCluster(object):
         else:
             raise ValueError
             
-    def update(self, dict, workers=None):
-        """Send the dict of key, value pairs to the workers."""
+    def update(self, dict, kernels=None):
+        """Send the dict of key, value pairs to the kernels."""
         
-        worker_numbers = self._parse_workers_arg(workers)
-        n_workers = len(worker_numbers)
-        for w in worker_numbers:
-            self.workers[w].update(dict)
+        kernel_numbers = self._parse_kernels_arg(kernels)
+        n_kernels = len(kernel_numbers)
+        for w in kernel_numbers:
+            self.kernels[w].update(dict)
             
-    def pull(self, key, flatten=False, workers=None):
+    def pull(self, key, flatten=False, kernels=None):
         """Get a python object from some kernels.
         
-        The workers argument is used to select which kernels are sent the 
+        The kernels argument is used to select which kernels are sent the 
         object.  There are three cases:
         
-        workers is left empty         -> all workers get the object
-        workers is a list of integers -> only those workers get it
-        workers is an integer         -> only that worker gets it
+        kernels is left empty         -> all kernels get the object
+        kernels is a list of integers -> only those kernels get it
+        kernels is an integer         -> only that kernel gets it
         
         The kernels in the cluster are labeled by integers starting with 0.
                 
@@ -816,27 +827,27 @@ class InteractiveCluster(object):
         
         @arg key:
             The name of the python object to get
-        @arg workers:
+        @arg kernels:
             Which kernels to get the object from to.
         """    
         results = []
-        worker_numbers = self._parse_workers_arg(workers)
-        for w in worker_numbers:
-            results.append(self.workers[w].pull(key))
+        kernel_numbers = self._parse_kernels_arg(kernels)
+        for w in kernel_numbers:
+            results.append(self.kernels[w].pull(key))
         if flatten:
             return genutil_flatten(results)
         else:
             return results
             
-    def execute(self, source, block=False, workers=None):
+    def execute(self, source, block=False, kernels=None):
         """Execute python source code on the ipython kernel.
                 
-        The workers argument is used to select which kernels are sent the 
+        The kernels argument is used to select which kernels are sent the 
         object.  There are three cases:
         
-        workers is left empty         -> all workers get the object
-        workers is a list of integers -> only those workers get it
-        workers is an integer         -> only that worker gets it
+        kernels is left empty         -> all kernels get the object
+        kernels is a list of integers -> only those kernels get it
+        kernels is an integer         -> only that kernel gets it
         
         The kernels in the cluster are labeled by integers starting with 0.
         
@@ -851,16 +862,16 @@ class InteractiveCluster(object):
 
         @arg source:
             A string containing valid python code
-        @arg workers:
+        @arg kernels:
             Which kernels to get the object from to.
         """
-        worker_numbers = self._parse_workers_arg(workers)
-        for w in worker_numbers:
-            self.workers[w].execute(source,block=block)
+        kernel_numbers = self._parse_kernels_arg(kernels)
+        for w in kernel_numbers:
+            self.kernels[w].execute(source,block=block)
 
-    def run(self, fname, workers=None):
+    def run(self, fname, kernels=None):
         """Run a file on a set of kernels."""
-        worker_numbers = self._parse_workers_arg(workers)
+        kernel_numbers = self._parse_kernels_arg(kernels)
         fileobj = open(fname,'r')
         source = fileobj.read()
         fileobj.close()
@@ -868,46 +879,46 @@ class InteractiveCluster(object):
         code = compile(source,fname,'exec')
         
         # Now run the code
-        for w in worker_numbers:
-            self.workers[w].execute(source)
+        for w in kernel_numbers:
+            self.kernels[w].execute(source)
 
-    def status(self, workers=None):
+    def status(self, kernels=None):
         """Get the status of a set of kernels."""
-        worker_numbers = self._parse_workers_arg(workers)
+        kernel_numbers = self._parse_kernels_arg(kernels)
         result = []
-        for w in worker_numbers:
-            result.append(self.workers[w].status())
+        for w in kernel_numbers:
+            result.append(self.kernels[w].status())
         return result
         
-    def notify(self, addr=None, flag=True, workers=None):
-        """Instruct a set of workers to notify a result gatherer."""
-        worker_numbers = self._parse_workers_arg(workers)
-        for w in worker_numbers:
-            self.workers[w].notify(addr, flag)
+    def notify(self, addr=None, flag=True, kernels=None):
+        """Instruct a set of kernels to notify a result gatherer."""
+        kernel_numbers = self._parse_kernels_arg(kernels)
+        for w in kernel_numbers:
+            self.kernels[w].notify(addr, flag)
 
-    def allow(self, ip, workers=None):
-        """Instruct a set of workers to allow connections from an ip."""
-        worker_numbers = self._parse_workers_arg(workers)
-        for w in worker_numbers:
-            self.workers[w].allow(ip)
+    def allow(self, ip, kernels=None):
+        """Instruct a set of kernels to allow connections from an ip."""
+        kernel_numbers = self._parse_kernels_arg(kernels)
+        for w in kernel_numbers:
+            self.kernels[w].allow(ip)
 
-    def deny(self, ip, workers=None):
-        """Instruc a set of workers to deny connections from an ip."""
-        worker_numbers = self._parse_workers_arg(workers)
-        for w in worker_numbers:
-            self.workers[w].deny(ip)
+    def deny(self, ip, kernels=None):
+        """Instruc a set of kernels to deny connections from an ip."""
+        kernel_numbers = self._parse_kernels_arg(kernels)
+        for w in kernel_numbers:
+            self.kernels[w].deny(ip)
 
-    def reset(self, workers=None):
-        """Reset the namespace of a set of workers."""
-        worker_numbers = self._parse_workers_arg(workers)
-        for w in worker_numbers:
-            self.workers[w].reset()
+    def reset(self, kernels=None):
+        """Reset the namespace of a set of kernels."""
+        kernel_numbers = self._parse_kernels_arg(kernels)
+        for w in kernel_numbers:
+            self.kernels[w].reset()
             
-    def disconnect(self, workers=None):
-        """Disconnect from a set of workers."""
-        worker_numbers = self._parse_workers_arg(workers)
-        for w in worker_numbers:
-            self.workers[w].disconnect()    
+    def disconnect(self, kernels=None):
+        """Disconnect from a set of kernels."""
+        kernel_numbers = self._parse_kernels_arg(kernels)
+        for w in kernel_numbers:
+            self.kernels[w].disconnect()    
 
     def push_module(self, mod):
         """Send a locally imported module to a kernel.
@@ -931,7 +942,7 @@ class InteractiveCluster(object):
         """
     
         tarball_name, file_string = _tar_module(mod)
-        for w in self.workers:
+        for w in self.kernels:
             w._push_module_string(tarball_name, file_string)
     
     def map(self, func_code, seq):
@@ -965,8 +976,8 @@ class InteractiveCluster(object):
         except:
             user = 'user'
         
-        self.workers[0].push('__ipmsg',"[%s]: %s" % (user, txt))
-        self.workers[0].execute("print __ipmsg,")
+        self.kernels[0].push('__ipmsg',"[%s]: %s" % (user, txt))
+        self.kernels[0].execute("print __ipmsg,")
         
     def parallelize(self, func_name):
         """Contruct and return a parallelized function.

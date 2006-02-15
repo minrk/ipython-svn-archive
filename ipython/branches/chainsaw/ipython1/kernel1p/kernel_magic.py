@@ -27,7 +27,7 @@ def magic_px(self,parameter_s=''):
     active_cluster = __IPYTHON__.active_cluster
     if active_cluster:
         print "Executing command on cluster"
-        active_cluster.execute(parameter_s,block=True)
+        active_cluster.execute(parameter_s)
     else:
         print "Error: No active IPython cluster.  Use activate()."
         
@@ -56,7 +56,7 @@ def magic_pn(self,parameter_s=''):
     active_cluster = __IPYTHON__.active_cluster
     if active_cluster:
         print "Executing command on cluster"
-        active_cluster.execute(cmd, block=True, workers=k)
+        active_cluster.execute(cmd, kernels=k)
     else:
         print "Error: No active IPython cluster.  Use activate()."
 
@@ -87,23 +87,23 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
         else:
             return None
     else:
-        self.active_cluster.execute(source,block=True)
+        self.active_cluster.execute(source)
         return False
     
 def magic_autopx(self, parameter_s=''):
 
     # Build and activate a subcluster if needed 
     if parameter_s:
-        exec_str = 'workers = %s' % parameter_s
+        exec_str = 'kernels = %s' % parameter_s
         try:
             exec exec_str
         except:
             print "Argument of autopx must evaluate to a list"
             return
         else:
-            print "Autoparallel mode will use kernels: ", workers
+            print "Autoparallel mode will use kernels: ", kernels
             self.saved_active_cluster = self.active_cluster
-            ic = self.active_cluster.subcluster(workers)
+            ic = self.active_cluster.subcluster(kernels)
             self.active_cluster = ic            
     
     if hasattr(self, 'autopx'):

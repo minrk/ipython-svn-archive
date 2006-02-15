@@ -1,3 +1,16 @@
+2006-02-14  Brian Granger <ellisonbg@gmail.com>
+
+        * kernel_client.py: Added a block property to the InteractiveCluster
+        class.  When this is set, calls to execute() will block and print
+        stdin/stdout/stderr.  It also sets the block attribute on the 
+        RemoteKernels in the cluster.
+
+        * kernel_client.py: Renamed "worker" and "workers" to "kernel"
+        and "kernels" to better reflect the naming of things.
+        
+        * kernel_magic.py: Made block=False by default for auto-executed
+        code.
+
 2006-02-11  Brian Granger <ellisonbg@gmail.com>
 
         * Renamed vectorfunction.py to parallelfunction.py
