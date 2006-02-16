@@ -94,7 +94,7 @@ def _tar_module(mod):
     tar_file.close()
     
     # Remove the local copy of the tarball
-    os.system("rm %s" % tarball_name)
+    #os.system("rm %s" % tarball_name)
     
     return tarball_name, file_string
                     
@@ -539,6 +539,10 @@ class RemoteKernel(object):
         After that, the module can be imported and used by the kernel.
         
         Notes:
+        
+        - It DOES NOT handle eggs yet.
+        
+        - The file must fit in the available RAM.
     
         - It will handle both single module files, as well as packages.
     
@@ -930,6 +934,10 @@ class InteractiveCluster(object):
         After that, the module can be imported and used by the kernels.
         
         Notes:
+        
+        - It DOES NOT handle eggs yet.
+        
+        - The file must fit in the available RAM.
     
         - It will handle both single module files, as well as packages.
     
