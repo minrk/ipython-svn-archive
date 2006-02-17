@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import xg
 c = xg.Controller()
-g = c.grid()
+g = c.grid(5)
 for i in range(10):
     print "Starting kernel: ", i
     #g.submit(cmd="/usr/local/bin/ipkernel",args=["--port 10106","--allow 129.210.112.34:128.138.249.189"])
