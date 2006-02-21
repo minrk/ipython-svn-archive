@@ -1706,7 +1706,7 @@ Currently the magic system has the following functions:\n"""
         It adds a '.py' extension to the file if you don't do so yourself, and
         it asks for confirmation before overwriting existing files."""
 
-        opts,args = self.parse_options(parameter_s,'r')
+        opts,args = self.parse_options(parameter_s,'r', mode = 'list')
         fname,ranges = args[0], args[1:]
         if not fname.endswith('.py'):
             fname += '.py'
