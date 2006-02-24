@@ -614,9 +614,9 @@ alist = %alias   : Get list of aliases to 'alist'
 System commands:
     
 !cp a.txt b/     : System command escape, calls os.system()
-cp a.txt b/      : after %rehash, most system commands work without !
+cp a.txt b/      : after %rehashx, most system commands work without !
 cp ${f}.txt $bar : Variable expansion in magics and system commands
-files = ls /usr  : Capture sytem command output
+files = !ls /usr : Capture sytem command output
 files.s, files.l, files.n: "a b c", ['a','b','c'], 'a\nb\nc'
 cd /usr/share    : Obvious, also 'cd d:\home\_ipython' works
 
@@ -631,7 +631,8 @@ _oh              : Output history
 
 Autocall:
 
-f 1 2            : f(1,2)
+f 1,2            : f(1,2)
+/f 1,2           : f(1,2) (forced autoparen)
 ,f 1 2           : f("1","2")
 ;f 1 2           : f("1 2")
 
