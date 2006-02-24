@@ -43,6 +43,7 @@ except ImportError:
     profile = pstats = None
 
 # Homebrewed
+import IPython
 from IPython import Debugger, OInspect, wildcard
 from IPython.FakeModule import FakeModule
 from IPython.Itpl import Itpl, itpl, printpl,itplns
@@ -2800,8 +2801,28 @@ Defaulting color scheme to 'NoColor'"""
             self.user_ns[par] = block
             print "Block assigned to '%s'" % par
     def magic_quickref(self,arg):
+        """ Show a quick reference sheet """
         import IPython.usage
         page(IPython.usage.quick_reference)
+        
+    def magic_upgrade(self,arg):
+        """ Upgrade your IPython installation
+        
+        This will copy the config files that don't yet exist in your 
+        ipython dir from the system config dir. Use this after upgrading 
+        IPython if you don't wish to delete your .ipython dir.
+        
+        """
+        ip = self.getapi()
+        ipinstallation = path(IPython.__file__).dirname()
+        upgrade_script = ipinstallation / 'upgrade_dir.py'
+        src_config = ipinstallation / 'UserConfig'
+        cmd = upgrade_script + " " + src_config + " " + ip.options().ipythondir
+        print ">",cmd
+        shell(cmd)
+        
+        
+        
         
 
 
