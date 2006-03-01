@@ -2276,7 +2276,10 @@ Defaulting color scheme to 'NoColor'"""
         '|'-separated string of extensions, stored in the IPython config
         variable win_exec_ext.  This defaults to 'exe|com|bat'. """
         
-        path = filter(os.path.isdir,os.environ['PATH'].split(os.pathsep))
+        path = [os.path.abspath(os.path.expanduser(p)) for p in 
+            os.environ['PATH'].split(os.pathsep)]
+        path = filter(os.path.isdir,path)
+        
         alias_table = self.shell.alias_table
         syscmdlist = []
         if os.name == 'posix':
