@@ -251,7 +251,7 @@ license. To use profiling, please install"python2.3-profiler" from non-free.""")
         """Format a string for latex inclusion."""
 
         # Characters that need to be escaped for latex:
-        escape_re = re.compile(r'(%|_|\$|#)',re.MULTILINE)
+        escape_re = re.compile(r'(%|_|\$|#|&)',re.MULTILINE)
         # Magic command names as headers:
         cmd_name_re = re.compile(r'^(%s.*?):' % self.shell.ESC_MAGIC,
                                  re.MULTILINE)
