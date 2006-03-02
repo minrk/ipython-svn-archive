@@ -1,4 +1,8 @@
 2006-03-02 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Work on setup and eggsetup
+	* Added COPYING file
+	
+2006-03-02 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Started work on latex manual
 	* Created configuration directory in the package directory
 	* Moved config file and startup.py example to configuration dir

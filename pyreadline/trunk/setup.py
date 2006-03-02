@@ -24,6 +24,7 @@ setup(name=name,
       platforms        = platforms,
       keywords         = keywords,
       packages         = ['pyreadline'],
+      package_data     = {'pyreadline':['configuration/*']},
       data_files       = [('share/doc/pyreadline', glob.glob("doc/*")),
                          ]
       )

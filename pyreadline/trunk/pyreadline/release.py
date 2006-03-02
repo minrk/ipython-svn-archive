@@ -44,7 +44,7 @@ features:
  The latest development version is always available at the IPython subversion
  repository_.
 
-.. _repository: http://ipython.scipy.org/svn/ipython/pyreadline/trunk#egg=ipython-dev
+.. _repository: http://ipython.scipy.org/svn/ipython/pyreadline/trunk#egg=pyreadline-dev
 """
 
 license = 'BSD'
