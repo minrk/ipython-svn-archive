@@ -30,9 +30,7 @@ description = "A python implmementation of GNU readline."
 long_description = \
 """
 The pyreadline package is a python implementation of GNU readline functionality. 
-It is not complete and does not necessarily strive for complete
-compatibilty but rather convenience in use on the windows platform. It has been
-tested for use with windows 2000 and windows xp.
+It is not complete. It has been tested for use with windows 2000 and windows xp.
 
 features:
 - Copy and paste using the clipboard
@@ -41,8 +39,7 @@ features:
   spaces using \ .
 - Configuration file
 
- The latest development version is always available at the IPython subversion
- repository_.
+ The development version is available in the IPython subversion repository_.
 
 .. _repository: http://ipython.scipy.org/svn/ipython/pyreadline/trunk#egg=pyreadline-dev
 """

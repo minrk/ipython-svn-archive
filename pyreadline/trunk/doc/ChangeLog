@@ -1,3 +1,9 @@
+2006-03-05 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Updating manual
+	* adding readline.py alias (necessary for rlcompleter)
+	* adding read/write history to startup.py example
+	* minor changes to release.py
+	
 2006-03-02 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Work on setup and eggsetup
 	* Added COPYING file
