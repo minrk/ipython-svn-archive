@@ -1,3 +1,7 @@
+2006-03-07 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Fixed release.py so python setup.py register works. 
+	  (\ must be escaped in description string as \\\\ for reST to work)
+
 2006-03-05 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Updating manual
 	* adding readline.py alias (necessary for rlcompleter)
