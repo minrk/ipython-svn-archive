@@ -20,9 +20,8 @@ import exceptions
 
 import win32con as c32
 
-import console
-import clipboard
-from   console import log
+import clipboard,logger,console
+from   logger import log
 from   keysyms import key_text_to_keyinfo
 
 
@@ -1216,6 +1215,9 @@ class Readline:
             self.mark_directories=mode
         def completer_delims(mode):
             self.completer_delims=mode
+        def debug_output(on,filename="pyreadline_debug_log.txt"):  #Not implemented yet
+            logger.start_log(on,filename)
+            logger.log("STARTING LOG")
         loc={"bind_key":bind_key,
              "bind_exit_key":bind_exit_key,
              "un_bind_key":un_bind_key,
@@ -1223,7 +1225,8 @@ class Readline:
              "bell_style":setbellstyle,
              "mark_directories":mark_directories,
              "show_all_if_ambiguous":show_all_if_ambiguous,
-             "completer_delims":completer_delims,}
+             "completer_delims":completer_delims,
+             "debug_output":debug_output,}
         if os.path.isfile(inputrcpath): 
             try:
                 execfile(inputrcpath,loc,loc)
