@@ -29,10 +29,11 @@ description = "A python implmementation of GNU readline."
 
 long_description = \
 """
-The pyreadline package is a python implementation of GNU readline functionality. 
+The pyreadline package is a python implementation of GNU readline functionality
+it is based on the ctypes based UNC readline package by Gary Bishop. 
 It is not complete. It has been tested for use with windows 2000 and windows xp.
 
-features:
+Features:
  *  Copy and paste using the clipboard
  *  Smart paste for convenient use with ipython. Converting tab separated data 
     to python list or numpy array. Converting file paths to use / and escaping 
@@ -52,10 +53,16 @@ authors = {'Jorgen' : ('Jorgen Stenarson','jorgen.stenarson@bostream.nu'),
            'Jack':    ('Jack Trainor', ''),         
            }
 
-url = ''
+url = 'http://projects.scipy.org/ipython/ipython/wiki/PyReadline/Intro'
 
 download_url = ''
 
 platforms = ['Windows XP/2000/NT','Windows 95/98/ME']
 
 keywords = ['readline','pyreadline']
+
+classifiers = ['Development Status :: 4 - Beta',
+               'Environment :: Console',
+               'Operating System :: Microsoft :: Windows',]
+               
+               
