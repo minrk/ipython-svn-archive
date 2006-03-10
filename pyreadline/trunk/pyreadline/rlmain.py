@@ -24,9 +24,6 @@ import clipboard,logger,console
 from   logger import log
 from   keysyms import key_text_to_keyinfo
 
-
-
-
 def quote_char(c):
     if ord(c)>0:
         return c
@@ -36,7 +33,6 @@ class ReadlineError(exceptions.Exception):
 
 def inword(buffer,point):
     return buffer[point:point+1] in [A-Za-z0-9]
-
 
 class Readline:
     def __init__(self):
@@ -1285,6 +1281,5 @@ if __name__ == '__main__':
     res = [ rl.readline('In[%d] ' % i) for i in range(3) ]
     print res
 else:
-    #import wingdbstub
     console.install_readline(rl.readline)
 
