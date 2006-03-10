@@ -1234,9 +1234,12 @@ class Readline:
         if os.path.isfile(inputrcpath): 
             try:
                 execfile(inputrcpath,loc,loc)
-            except:
-                #Or should we force output otherwise python -v is necessary?
-                #print >>sys.stderr, "Error reading .pyinputrc" 
+            except Exception,x:
+                import traceback
+                print >>sys.stderr, "Error reading .pyinputrc"
+                filepath,lineno=traceback.extract_tb(sys.exc_traceback)[1][:2]
+                print >>sys.stderr, "Line: %s in file %s"%(lineno,filepath)
+                print >>sys.stderr, x
                 raise ReadlineError("Error reading .pyinputrc")
 
 
