@@ -40,9 +40,10 @@ class Readline:
         self.pre_input_hook = None
         self.completer = None
         self.completer_delims = " \t\n\"\\'`@$><=;|&{("
-        self.history_length = -1
+        self.history_length = 100
         self.history = [] # strings for previous commands
         self.history_cursor = 0
+        self.history_filename=os.path.expanduser('~/.history')
         self.undo_stack = [] # each entry is a tuple with cursor_position and line_text
         self.line_buffer = []
         self.line_cursor = 0
@@ -302,25 +303,28 @@ class Readline:
         '''Parse a readline initialization file. The default filename is the last filename used.'''
         log('read_init_file("%s")' % filename)
 
-    def read_history_file(self, filename=os.path.expanduser('~/.history')): 
+    def read_history_file(self, filename=None): 
         '''Load a readline history file. The default filename is ~/.history.'''
+        if filename is None:
+            filename=self.history_filename
         try:
             for line in open(filename, 'rt'):
                 self.add_history(line.rstrip())
         except IOError:
             self.history = []
             self.history_cursor = 0
-            raise IOError
 
-    def write_history_file(self, filename=os.path.expanduser('~/.history')): 
+    def write_history_file(self, filename=None): 
         '''Save a readline history file. The default filename is ~/.history.'''
+        if filename is None:
+            filename=self.history_filename
         fp = open(filename, 'wb')
-        for line in self.history:
+        for line in self.history[-self.history_length:]:
             fp.write(line)
             fp.write('\n')
         fp.close()
 
-    def get_history_length(self, ):
+    def get_history_length(self ):
         '''Return the desired length of the history file.
 
         Negative values imply unlimited history file size.'''
@@ -401,8 +405,6 @@ class Readline:
             pass
         else:
             self.history.append(line)
-            if self.history_length > 0 and len(self.history) > self.history_length:
-                self.history = self.history[-self.history_length:]
         self.history_cursor = len(self.history)
 
     ### Methods below here are bindable functions
@@ -1201,8 +1203,12 @@ class Readline:
             if keyinfo in self.exit_dispatch:
                 del self.exit_dispatch[keyinfo]
 
+        def sethistoryfilename(filename):
+            self.history_filename=os.path.expanduser(filename)
         def setbellstyle(mode):
             self.bell_style=mode
+        def sethistorylength(length):
+            self.history_length=int(length)
         def setbellstyle(mode):
             self.bell_style=mode
         def show_all_if_ambiguous(mode):
@@ -1222,7 +1228,9 @@ class Readline:
              "mark_directories":mark_directories,
              "show_all_if_ambiguous":show_all_if_ambiguous,
              "completer_delims":completer_delims,
-             "debug_output":debug_output,}
+             "debug_output":debug_output,
+             "history_filename":sethistoryfilename,
+             "history_length":sethistorylength}
         if os.path.isfile(inputrcpath): 
             try:
                 execfile(inputrcpath,loc,loc)
