@@ -72,8 +72,13 @@ def editor(self,filename, linenum=None):
         linemark = ''
     else:
         linemark = '+%d' % linenum
+    
+    # Enclose in quotes if necessary and legal
+    if ' ' in editor and os.path.isfile(editor) and editor[0] != '"':
+        editor = '"%s"' % editor
+        
     # Call the actual editor
-    os.system('"%s" %s %s' % (editor,linemark,filename))
+    os.system('%s %s %s' % (editor,linemark,filename))
 
 import tempfile
 def fix_error_editor(self,filename,linenum,column,msg):
