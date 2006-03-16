@@ -616,7 +616,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         except ImportError:
             # only warn if ipythonrc-PROFNAME didn't exist
             if opts.profile =='':
-                warn("Could not start with profile '%s'!\n ('%s/%s.py' does not exist?)" % (
+                warn("Could not start with profile '%s'!\n ('%s/%s.py' does not exist? run '%%upgrade')" % (
                       opts_all.profile, ipythondir, profmodname)
 
                       )
@@ -624,7 +624,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         import ipy_user_conf
     except ImportError:
         if opts_all.debug:  IP.InteractiveTB()
-        warn("Could not import user config!\n ('%s/ipy_user_conf.py' does not exist?)" % 
+        warn("Could not import user config!\n ('%s/ipy_user_conf.py' does not exist? Please run '%%upgrade')\n" %
             ipythondir)
 
     # release stdout and stderr and save config log into a global summary
