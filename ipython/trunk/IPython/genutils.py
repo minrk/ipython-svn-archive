@@ -72,7 +72,7 @@ except AttributeError:
     _wordchars = ('abcdfeghijklmnopqrstuvwxyz'
                   'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.~*?'
                   'ÃŸÃ Ã¡Ã¢Ã£Ã¤Ã¥Ã¦Ã§Ã¨Ã©ÃªÃ«Ã¬Ã­Ã®Ã¯Ã°Ã±Ã²Ã³Ã´ÃµÃ¶Ã¸Ã¹ÃºÃ»Ã¼Ã½Ã¾Ã¿'
-                  'Ã€Ã�Ã‚ÃƒÃ„Ã…Ã†Ã‡ÃˆÃ‰ÃŠÃ‹ÃŒÃ�ÃŽÃ�Ã�Ã‘Ã’Ã“Ã”Ã•Ã–Ã˜Ã™ÃšÃ›ÃœÃ�Ãž%s'
+                  'Ã?Ã�Ã?Ã?Ã?Ã…Ã†Ã‡Ã?Ã‰ÃŠÃ?ÃŒÃ�ÃŽÃ�Ã�Ã‘Ã’Ã“Ã”Ã•Ã–Ã?Ã™ÃšÃ?ÃœÃ�Ãž%s'
                   % os.sep)
     
     def shlex_split(s):
@@ -127,7 +127,7 @@ class IOStream:
             except:
                 # if we get here, something is seriously broken.
                 print >> sys.stderr, \
-                      'ERROR - failed to write data to stream:', stream
+                      'ERROR - failed to write data to stream:', self.stream
         
 class IOTerm:
     """ Term holds the file or file-like objects for handling I/O operations.
