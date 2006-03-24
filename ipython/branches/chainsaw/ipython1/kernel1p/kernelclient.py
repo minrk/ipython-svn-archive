@@ -165,7 +165,7 @@ class RemoteKernel(object):
             self.es.write_line("EXECUTE BLOCK %s" % source)
             line, self.extra = self.es.read_line(self.extra)
             line_split = line.split(" ")
-            if line_split[0] == "RESULT" and len(line_split) == 2:
+            if line_split[0] == "PICKLE" and len(line_split) == 2:
                 try:
                     nbytes = int(line_split[1])
                 except:
@@ -322,12 +322,12 @@ class RemoteKernel(object):
         self._check_connection()    
     
         if number is None:
-            self.es.write_line("PULL RESULT")
+            self.es.write_line("RESULT")
         else:
-            self.es.write_line("PULL RESULT %i" % number)
+            self.es.write_line("RESULT %i" % number)
         line, self.extra = self.es.read_line(self.extra)
         line_split = line.split(" ", 1)
-        if line_split[0] == "RESULT":
+        if line_split[0] == "PICKLE":
             try:
                 nbytes = int(line_split[1])
             except (ValueError, TypeError):
@@ -341,7 +341,7 @@ class RemoteKernel(object):
                     print "Error unpickling object: ", e
                     return None
                 else:
-                    if line == "PULL OK":
+                    if line == "RESULT OK":
                         return data
                     else:
                         return None
@@ -365,16 +365,28 @@ class RemoteKernel(object):
 
         self.es.write_line("STATUS")
         line, self.extra = self.es.read_line(self.extra)
-        line_split = line.split(" ")
-        if len(line_split) == 4:
-            if line_split[0] == "STATUS" and line_split[1] == "OK":
-                return (int(line_split[2]), line_split[3])
+        line_split = line.split(" ", 1)
+        if line_split[0] == "PICKLE":
+            try:
+                nbytes = int(line_split[1])
+            except (ValueError, TypeError):
+                raise
             else:
-                print "Status Error: ", line
-                return None
+                package, self.extra = self.es.read_bytes(nbytes, self.extra)
+                line, self.extra = self.es.read_line(self.extra)
+                try:
+                    data = pickle.loads(package)
+                except pickle.PickleError, e:
+                    print "Error unpickling object: ", e
+                    return None
+                else:
+                    if line == "STATUS OK":
+                        return data
+                    else:
+                        return None
         else:
-            print "Status Error: ", line
-            return None
+            # For other data types
+            pass
 
     def allow(self, ip):
         """Instruct the kernel to allow connections from an ip address.

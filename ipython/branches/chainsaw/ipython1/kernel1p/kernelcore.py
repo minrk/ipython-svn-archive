@@ -209,48 +209,27 @@ class KernelTCPProtocol(basic.LineReceiver):
 
         # Parse the args
         if not args:
-            self.push_finish("FAIL")
+            self.pull_finish("FAIL")
             return
         else:
             args_list = args.split(" ")
 
-        if "RESULT" == args_list[0]:
-            self.work_vars['pull_type'] = 'RESULT'
-            if len(args_list) == 1:
-                d = self.factory.get_last_result()
-            elif len(args_list) == 2:
-                try:
-                    cmd_num = int(args_list[1])
-                except (ValueError, TypeError):
-                    self.pull_finish("FAIL")
-                    return
-                else:
-                    d = self.factory.get_result(cmd_num)
-        else:
-            # All other pull request are from the kernel's namespace
-            pull_name = args_list[0]
-            self.work_vars['pull_type'] = 'PICKLE'
-            self.work_vars['current_ticket'] = self.factory.get_ticket()
-            d = self.factory.pull(pull_name, 
-                self.work_vars['current_ticket'])
+        pull_name = args_list[0]
+        self.work_vars['pull_type'] = 'PICKLE'
+        self.work_vars['current_ticket'] = self.factory.get_ticket()
+        d = self.factory.pull(pull_name, self.work_vars['current_ticket'])
                 
-        # In either case, d is a deferred we need to handle.
         d.addCallback(self.pull_ok)
         d.addErrback(self.pull_fail)
      
     def pull_ok(self, result):
-        # Add error code here and chain the callbacksPIU
+        # Add error code here and chain the callbacks
         try:
             presult = pickle.dumps(result, 2)
         except pickle.PickleError:
             self.pull_finish("FAIL")
         else:
-            # What are we sending back?
-            if self.work_vars['pull_type'] == "PICKLE":
-                self.sendLine("PICKLE %s" % len(presult))
-            elif self.work_vars['pull_type'] == "RESULT":
-                self.sendLine("RESULT %s" % len(presult))
-            # Send it off and finish up.
+            self.sendLine("PICKLE %s" % len(presult))
             self.transport.write(presult)
             self.pull_finish("OK")
            
@@ -259,6 +238,44 @@ class KernelTCPProtocol(basic.LineReceiver):
 
     def pull_finish(self, msg):
         self.sendLine("PULL %s" % msg)
+        self._reset()
+
+    #####
+    ##### The RESULT command
+    #####
+    
+    def handle_init_RESULT(self, args):
+
+        if args is None:
+            d = self.factory.get_last_result()
+        else:
+            try:
+                cmd_num = int(args)
+            except (ValueError, TypeError):
+                self.result_finish("FAIL")
+                return
+            else:
+                d = self.factory.get_result(cmd_num)
+                                
+        d.addCallback(self.result_ok)
+        d.addErrback(self.result_fail)
+     
+    def result_ok(self, result):
+        # Add error code here and chain the callbacks
+        try:
+            presult = pickle.dumps(result, 2)
+        except pickle.PickleError:
+            self.result_finish("FAIL")
+        else:
+            self.sendLine("PICKLE %s" % len(presult))
+            self.transport.write(presult)
+            self.result_finish("OK")
+           
+    def result_fail(self, failure):
+        self.result_finish("FAIL")
+
+    def result_finish(self, msg):
+        self.sendLine("RESULT %s" % msg)
         self._reset()
 
     #####
@@ -309,7 +326,7 @@ class KernelTCPProtocol(basic.LineReceiver):
         except pickle.PickleError:
             self.execute_finish("FAIL")
         else:
-            self.sendLine("RESULT %i" % len(package))
+            self.sendLine("PICKLE %i" % len(package))
             self.transport.write(package)
             self.execute_finish("OK")
             self.execute_ok(result)
@@ -408,8 +425,18 @@ class KernelTCPProtocol(basic.LineReceiver):
     #####
     
     def handle_init_STATUS(self, args):
+    
         status = self.factory.status()
-        self.sendLine('STATUS OK %s %s' % (status, self.state))
+        result = (status, self.state)    
+                
+        try:
+            package = pickle.dumps(result, 2)
+        except pickle.PickleError:
+            self.sendLine('STATUS FAIL')
+        else:
+            self.sendLine("PICKLE %s" % len(package))
+            self.transport.write(package)
+            self.sendLine('STATUS OK')
         
     def handle_init_ALLOW(self, args):
         args_split = args.split(" ")

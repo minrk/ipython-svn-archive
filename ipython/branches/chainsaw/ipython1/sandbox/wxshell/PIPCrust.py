@@ -12,7 +12,7 @@ __cvsid__ = "$Id: PyCrust.py,v 1.7 2004/03/15 13:42:37 PKO Exp $"
 __revision__ = "$Revision: 1.7 $"[11:-2]
 
 import wx
-from ipython1.sandbox.crust import PIPCrustFrame
+from ipython1.sandbox.wxshell.crust import PIPCrustFrame
 
 class App(wx.App):
     """PyCrust standalone application."""

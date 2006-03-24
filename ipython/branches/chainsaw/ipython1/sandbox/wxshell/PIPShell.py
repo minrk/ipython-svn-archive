@@ -12,7 +12,7 @@ __cvsid__ = "$Id: PyShell.py,v 1.7 2004/03/15 13:42:37 PKO Exp $"
 __revision__ = "$Revision: 1.7 $"[11:-2]
 
 import wx
-from ipython1.sandbox.shell import PIPShellFrame
+from ipython1.sandbox.wxshell.shell import PIPShellFrame
 
 class App(wx.App):
     """PyShell standalone application."""
