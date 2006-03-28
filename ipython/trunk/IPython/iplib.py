@@ -1532,6 +1532,9 @@ want to merge them back into the new files.""" % locals()
         
         """
         nargs,cmd = self.alias_table[alias]
+        if ' ' in cmd:
+            cmd = '"%s"' % cmd
+
         # Expand the %l special to be the user's input line
         if cmd.find('%l') >= 0:
             cmd = cmd.replace('%l',rest)
