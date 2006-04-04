@@ -1,3 +1,8 @@
+2006-04-03  Brian Granger <ellisonbg@gmail.com>
+
+        * core/shell.py: Began to rework the TrappingInteractiveConsole class
+        into something that will become the IPython core.
+
 2006-02-14  Brian Granger <ellisonbg@gmail.com>
 
         * kernel_client.py: Added a block property to the InteractiveCluster
@@ -23,3 +28,4 @@
 2006-02-11  Brian Granger <ellisonbg@gmail.com>
 
         * ChangeLog: Started the ChangeLog for ipython1.
+
