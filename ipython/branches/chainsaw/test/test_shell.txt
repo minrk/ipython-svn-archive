@@ -1,0 +1,4 @@
+>>> from ipython1.core.shell import InteractiveShell
+>>> ishell = InteractiveShell()
+>>> ishell.execute("a = 10")
+
