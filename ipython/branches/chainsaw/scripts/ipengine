@@ -1,31 +1,16 @@
 #!/usr/bin/env python
 
-import cPickle as pickle
 import sys
-from optparse import OptionParser
 
 from twisted.internet import reactor
+from twisted.spread import pb
 from twisted.python import log
 
+import ipython1.kernel.service as ipservice
 
-try:
-    from ipython1.kernel.engine import KernelEngineFactory
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
-
-def main(port):
-    log.startLogging(sys.stdout)       
-    d = reactor.listenTCP(port, KernelEngineFactory())
-    reactor.run()
-
-def start(port=10105):
-    parser = OptionParser()
-    parser.set_defaults(port=port)
-    parser.add_option("-p", "--port", type="int", dest="port",
-        help="the TCP port the kernel will listen on")
-    (options, args) = parser.parse_args()
-    print "Starting the kernel on port %i" % options.port
-    main(options.port)
-    
-if __name__ == "__main__":
-    start()
+log.startLogging(sys.stdout)
+ 
+ipcore = ipservice.IPythonCoreService()
+reactor.listenTCP(10105, 
+    pb.PBServerFactory(ipservice.IPerspectiveIPythonCore(ipcore)))
+reactor.run()

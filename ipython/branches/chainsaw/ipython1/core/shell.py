@@ -50,6 +50,7 @@ class InteractiveShell(InteractiveConsole):
         self._stderr = []
         self._datalock = threading.Lock()
         self._inouterr_lock = threading.Lock()
+        self.last_command_index = -1
 
     def prefilter(self, line, more):
         return line
@@ -67,6 +68,7 @@ class InteractiveShell(InteractiveConsole):
         self._trap.flush()
         self._trap.trap()
         self._runlines(lines)
+        self.last_command_index += 1
         self._trap.release()
         self._datalock.release()
                 
@@ -122,8 +124,9 @@ class InteractiveShell(InteractiveConsole):
     # Methods for running code
     
     def execute(self, lines):
-        return self.runlines(lines)
-
+        self.runlines(lines)
+        return self.get_command()
+        
     # Methods for working with the namespace
 
     def put(self, key, value):
@@ -135,7 +138,7 @@ class InteractiveShell(InteractiveConsole):
         """
         self.update({key:value})
 
-    def get(self,key):
+    def get(self, key):
         """Gets an item out of the self.locals dict by key.
         
         I have often called this pull().
@@ -146,20 +149,31 @@ class InteractiveShell(InteractiveConsole):
         return result
                 
     # Methods for getting stdout/stderr/stdin
+           
+    def reset(self):
+        """Reset the InteractiveShell."""
+        
+        self._stdin = []
+        self._stdout = []
+        self._stderr = []
+        self.last_command_index = -1
+        self.locals = {}        
                 
-    def get_command(self,i=-1):
+    def get_command(self,i=None):
         """Get the stdin/stdout/stderr of command i."""
         
         self._inouterr_lock.acquire()
         
-        if i in range(len(self._stdin)):
+        if i in range(self.last_command_index + 1):
             in_result = self._stdin[i]
             out_result = self._stdout[i]
             err_result = self._stderr[i]
-        elif i==-1 and len(self._stdin) != 0:
-            in_result = self._stdin[-1]
-            out_result = self._stdout[-1]
-            err_result = self._stderr[-1]
+            cmd_num = i
+        elif i is None and self.last_command_index >= 0:
+            in_result = self._stdin[self.last_command_index]
+            out_result = self._stdout[self.last_command_index]
+            err_result = self._stderr[self.last_command_index]
+            cmd_num = self.last_command_index
         else:
             in_result = None
             out_result = None
@@ -168,7 +182,11 @@ class InteractiveShell(InteractiveConsole):
         self._inouterr_lock.release()
         
         if in_result:
-            return (in_result, out_result, err_result)
+            return (cmd_num, in_result, out_result, err_result)
         else:
             return None
+            
+    def get_last_command_index(self):
+        """Get the index of the last command."""
+        return self.last_command_index
 
