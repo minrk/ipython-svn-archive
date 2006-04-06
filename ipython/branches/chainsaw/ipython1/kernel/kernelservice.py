@@ -10,177 +10,37 @@ from zope.interface import Interface, implements
 
 from twisted.spread import pb
 
-import cPickle as pickle
-
-from ipython1.core.shell import InteractiveShell
-
-# Here is the interface specification for the IPythonCoreService
-
-class ICoreService(Interface):
-    """The Interface for the IPython Core"""
-    
-    def execute(self, lines):
-        """Execute lines of Python code."""
-    
-    def put(self, key, value):
-        """Put value into locals namespace with name key."""
-        
-    def put_pickle(self, key, package):
-        """Unpickle package and put into the locals namespace with name key."""
-        
-    def get(self, key):
-        """Gets an item out of the self.locals dict by key."""
-
-    def get_pickle(self, key):
-        """Gets an item out of the self.locals dist by key and pickles it."""
-
-    def reset(self):
-        """Reset the InteractiveShell."""
-        
-    def get_command(self, i=None):
-        """Get the stdin/stdout/stderr of command i."""
-
-    def get_last_command_index(self):
-        """Get the index of the last command."""
-
-# Now the actual CoreService implementation                   
-
-class CoreService(service.Service):
-
-    implements(ICoreService)
-    
-    def __init__(self, ):
-        self.ishell = InteractiveShell()
-                
-    def execute(self, lines):
-        log.msg("execute: %s" % lines)
-        return defer.succeed(self.ishell.execute(lines))
-    
-    def put(self, key, value):
-        log.msg("put: %s" % key)
-        return defer.succeed(self.ishell.put(key, value))
-        
-    def put_pickle(self, key, package):
-        log.msg("put_pickle: %s" % key)    
-        try:
-            value = pickle.loads(package)
-        except pickle.PickleError:
-            return defer.fail()
-        else:
-            return defer.succeed(self.ishell.put(key, value))
-        
-    def get(self, key):
-        log.msg("get: %s" % key)
-        return defer.succeed(self.ishell.get(key))
-
-    def get_pickle(self, key):
-        log.msg("get_pickle: %s" % key)
-        value = self.ishell.get(key)
-        try:
-            package = pickle.dumps(value, 2)
-        except pickle.PickleError:
-            return defer.fail()
-        else:
-            return defer.succeed(package)
-
-    def reset(self):
-        log.msg("reset")
-        return defer.succeed(self.ishell.reset())
-        
-    def get_command(self, i=None):
-        log.msg("get_command: %i" % i)
-        return defer.succeed(self.ishell.get_command(i))
-
-    def get_last_command_index(self):
-        log.msg("get_last_command_index:")
-        return defer.succeed(self.ishell.get_last_command_index())
-     
-# Expose a PB interface to the CoreService
-     
-class IPerspectiveCore(Interface):
-
-    def remote_execute(self, lines):
-        """Execute lines of Python code."""
-    
-    def remote_put(self, key, value):
-        """Put value into locals namespace with name key."""
-        
-    def remote_put_pickle(self, key, package):
-        """Unpickle package and put into the locals namespace with name key."""
-        
-    def remote_get(self, key):
-        """Gets an item out of the self.locals dict by key."""
-
-    def remote_get_pickle(self, key):
-        """Gets an item out of the self.locals dist by key and pickles it."""
-
-    def remote_reset(self):
-        """Reset the InteractiveShell."""
-        
-    def remote_get_command(self, i=None):
-        """Get the stdin/stdout/stderr of command i."""
-
-    def remote_get_last_command_index(self):
-        """Get the index of the last command."""
-
-class PerspectiveCoreFromService(pb.Root):
-
-    implements(IPerspectiveCore)
-
-    def __init__(self, service):
-        self.service = service
-
-    def remote_execute(self, lines):
-        return self.service.execute(lines)
-    
-    def remote_put(self, key, value):
-        return self.service.put(key, value)
-        
-    def remote_put_pickle(self, key, package):
-        return self.service.put_pickle(key, package)
-        
-    def remote_get(self, key):
-        return self.service.get(key)
-
-    def remote_get_pickle(self, key):
-        return self.service.get_pickle(key)
-
-    def remote_reset(self):
-        return self.service.reset()
-        
-    def remote_get_command(self, i=None):
-        return self.service.get_command(i)
-
-    def remote_get_last_command_index(self):
-        return self.service.get_last_command_index()
-    
-components.registerAdapter(PerspectiveCoreFromService,
-                           CoreService,
-                           IPerspectiveCore)
-           
-# Classes for the Kernel Engine
+# Classes for the Kernel Service
 
 class Command(object):
+    """A command that will be sent to the Kernel Engine."""
 
     def __init__(self, remoteMethod, *args):
+        """Build a new Command object."""
+        
         self.remoteMethod = remoteMethod
         self.args = args
         
     def setDeferred(self, d):
         """Sets the deferred attribute of the Command."""
+        
         self.deferred = d
 
     def __repr__(self):
         return "Command: " + self.remoteMethod + repr(self.args)
         
     def handleResult(self, result):
+        """When the result is ready, relay it to self.deferred."""
+        
         log.msg("Handling Result: " + repr(result))
         self.deferred.callback(result)
         
     def handleError(self, reason):
+        """When an error has occured, relay it to self.deferred."""
+        
         self.deferred.errback(reason)
 
-class KEProcessProtocol(protocol.ProcessProtocol):
+class KernelEngineProcessProtocol(protocol.ProcessProtocol):
 
     def __init__(self, service):
         self.service = service
@@ -188,7 +48,7 @@ class KEProcessProtocol(protocol.ProcessProtocol):
     def connectionMade(self):
         """Called when the Ke process is running.
         
-        This should immediately trigger connecting to the KE process
+        This should immediately trigger a connection to the kenel engine process
         over a socket.
         """
         
@@ -197,20 +57,21 @@ class KEProcessProtocol(protocol.ProcessProtocol):
         reactor.callLater(1,self.service.connectKernelEngineProcess)
     
     def outReceived(self, data):
+        """Let the service decide what to do."""
+        
         self.service.outReceived(data)
                 
     def errReceivved(self, data):
+        """Let the service decide what to do."""
+        
         self.service.errReceived(data)
         
     def processEnded(self, status):
-        self.service.handleKEProcessEnding(status)
-        #if isinstance(status.value, ProcessDone):
-        #log.msg("Kernel Engine Process Completed")
-        #else isinstance(status.value, ProcessTerminated):
-        #    log.msg("Kernel Engine Process Died")
-        #self.service.maybeRestartKernelEngineProcess()
+        """Let the service decide what to do."""
+
+        self.service.handleKernelEngineProcessEnding(status)
            
-class IKernelEngineService(ICoreService):
+class IKernelService(ICoreService):
     """Adds a few controll methods to the IPythonCoreService API"""
     
     def restart(self):
@@ -219,7 +80,7 @@ class IKernelEngineService(ICoreService):
     def clean_queue(self):
         """Remove pending commands."""
 
-class KernelEngineService(service.Service):
+class KernelService(service.Service):
 
     #implements(IIPythonEngineService)
     
@@ -227,17 +88,18 @@ class KernelEngineService(service.Service):
         
         self.port = port
         self.autoStart = True
+        self.kernelEngineProcessProtocol = None
         self.rootObject = None
-        self.KEFactory = None
+        self.kernelEnginePBFactory = None
         self.queued = []
         self.currentCommand = None
         
     def outReceived(self, data):
-        """Called when the KE process writes to stdout."""
+        """Called when the Kernel Engine process writes to stdout."""
         log.msg(data)
      
     def errReceived(self, data):
-        """Called when the KE process writes to stdout."""
+        """Called when the Kernel Engine process writes to stdout."""
         log.msg(data)   
 
     # Methods to manage the Kernel Engine Process 
@@ -250,8 +112,8 @@ class KernelEngineService(service.Service):
         #reactor.callLater(10,self.restartKernelEngineProcess)
         
     def startKernelEngineProcess(self):
-        self.KEProtocol = KEProcessProtocol(self)
-        reactor.spawnProcess(self.KEProtocol,
+        self.kernelEngineProcessProtocol = KernelEngineProcessProtocol(self)
+        reactor.spawnProcess(self.kernelEngineProcessProtocol,
             'ipengine',
             args=['ipengine','-p %i' % self.port],
             env = os.environ)
@@ -260,15 +122,17 @@ class KernelEngineService(service.Service):
     def stopKernelEngineProcess(self):
         self.autoStart = False   # Don't restart automatically after killing
         self.disconnectKernelEngineProcess()
-        os.kill(self.KEProtocol.transport.pid, signal.SIGKILL)
+        os.kill(self.kernelEngineProcessProtocol.transport.pid, 
+            signal.SIGKILL)
 
     def restartKernelEngineProcess(self):
         self.autoStart = True
         self.disconnectKernelEngineProcess()
-        os.kill(self.KEProtocol.transport.pid, signal.SIGKILL)
+        os.kill(self.kernelEngineProcessProtocol.transport.pid, 
+            signal.SIGKILL)
 
-    def handleKEProcessEnding(self, status):
-        """Called when the KE process ends.  Decides whether to restart.
+    def handleKernelEngineProcessEnding(self, status):
+        """Called when the kenel engine process ends & decides to restart.
         
         The status object has info about the exit code, but currently I am
         not using it.
@@ -283,9 +147,9 @@ class KernelEngineService(service.Service):
     # Methods to manage the PB connection to the Kernel Engine Process 
         
     def connectKernelEngineProcess(self):
-        self.KEFactory = pb.PBClientFactory()
-        reactor.connectTCP("127.0.0.1", self.port, self.KEFactory)
-        self.KEFactory.getRootObject().addCallbacks(self.gotRoot,
+        self.kernelEnginePBFactory = pb.PBClientFactory()
+        reactor.connectTCP("127.0.0.1", self.port, self.kernelEnginePBFactory)
+        self.kernelEnginePBFactory.getRootObject().addCallbacks(self.gotRoot,
                                                     self.gotNoRoot)
                                                                                    
     def gotRoot(self, obj):
@@ -310,49 +174,46 @@ class KernelEngineService(service.Service):
         d.addCallback(self.printer)
         
     def printer(self, stuff):
-        print stuff
+        log.msg("Completed: " + repr(stuff))
         
     def gotNoRoot(self, reason):
         reason.printDetailedTraceback()
 
     def disconnectKernelEngineProcess(self):
-        if self.KEFactory:
-            self.KEFactory.disconnect()
+        if self.kernelEnginePBFactory:
+            self.kernelEnginePBFactory.disconnect()
         self.rootObject = None
-        self.KEFactory = None
+        self.kernelEnginePBFactory = None
 
     # The logic of the service
 
     def submitCommand(self, cmd):
         
-        log.msg("Submitting: " + repr(cmd))
         d = defer.Deferred()
         cmd.setDeferred(d)
         if self.currentCommand is not None:
             log.msg("Queueing: " + repr(cmd))
             self.queued.append(cmd)
             return d
-        log.msg("Starting: " + repr(cmd))
         self.currentCommand = cmd
         self.runCurrentCommand()
-    
         return d
     
     def runCurrentCommand(self):
         cmd = self.currentCommand
+        log.msg("Starting: " + repr(self.currentCommand))
         d = self.rootObject.callRemote(cmd.remoteMethod, *(cmd.args))
-        d.addCallback(self.finalizeCommand)
+        d.addCallback(self.finishCommand)
         d.addErrback(self.abortCommand)
 
     def _flushQueue(self):
  
         if len(self.queued) > 0:
             self.currentCommand = self.queued.pop(0)
-            log.msg("Starting: " + repr(self.currentCommand))
             self.runCurrentCommand()
 
-    def finalizeCommand(self, result):
-        log.msg("Finalizing: " + repr(self.currentCommand) + repr(result))
+    def finishCommand(self, result):
+        log.msg("Finishing: " + repr(self.currentCommand) + repr(result))
         self.currentCommand.handleResult(result)
         del self.currentCommand
         self.currentCommand = None

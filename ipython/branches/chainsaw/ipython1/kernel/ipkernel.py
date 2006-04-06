@@ -1,7 +1,7 @@
 from twisted.application import service
 
-from ipython1.kernel.service import KernelEngineService
+from ipython1.kernel.kernelservice import KernelService
 
 application = service.Application('ipkernel')
-kes = KernelEngineService(10105)
+kes = KernelService(10105)
 kes.setServiceParent(application)
