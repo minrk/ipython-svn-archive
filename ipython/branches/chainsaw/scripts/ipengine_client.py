@@ -2,16 +2,23 @@
 
 from twisted.spread import pb
 from twisted.internet import reactor
+from IPython.genutils import clock, clock2
 
 def gotObject(object):
-    print "got object:", object
-    object.callRemote("put_pickle","a",3).addCallback(gotData)
-# or
-#   object.callRemote("getUsers").addCallback(gotData)
+    print "got object:", object, clock()
+    
+    for reps in range(100):
+        object.callRemote("put","b",10).addCallback(gotData)
+    object.callRemote("put","c",10).addCallback(halt)
+    
+def halt(data):
+    print clock()
+    reactor.stop()
    
 def gotData(data):
-    print 'server sent:', data
-    reactor.stop()
+    pass
+    #print 'server sent:', data
+    #reactor.stop()
     
 def gotNoObject(reason):
     print "no object:",reason
