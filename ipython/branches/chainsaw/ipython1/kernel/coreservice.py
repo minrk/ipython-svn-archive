@@ -1,4 +1,23 @@
-"""A Twisted Service Representation of the IPython Core"""
+"""A Twisted Service Representation of the IPython Core
+
+TODO:
+
+- Make it possible to interupt the kernel engine to stop the current
+  command/
+- Use pb.Error subclasses to pass exceptions back to the calling process.
+  For this I can put calls to ishell in a try/except clause:
+  
+    try:
+        result = self.ishell.execute(lines)
+    except Exception:
+        raise pb.Error("execute()")
+    else:
+        return defer.succeed(self.ishell.execute(lines))  
+
+  The argument of the pr.Error is then available on the other side as
+  getErrorMessage().  
+- Security issues.  Turn on TLS an authentication.
+"""
 
 import os, signal
 
@@ -7,7 +26,6 @@ from twisted.internet import protocol, reactor, defer
 from twisted.python import components, log
 from twisted.web import xmlrpc
 from zope.interface import Interface, implements
-
 from twisted.spread import pb
 
 import cPickle as pickle
@@ -53,46 +71,38 @@ class CoreService(service.Service):
         self.ishell = InteractiveShell()
                 
     def execute(self, lines):
-        log.msg("execute: %s" % lines)
         return defer.succeed(self.ishell.execute(lines))
     
     def put(self, key, value):
-        log.msg("put: %s" % key)
         return defer.succeed(self.ishell.put(key, value))
         
     def put_pickle(self, key, package):
-        log.msg("put_pickle: %s" % key)    
         try:
             value = pickle.loads(package)
         except pickle.PickleError:
-            return defer.fail()
+            return defer.fail()  # probably should raise pb.Error("msg")
         else:
             return defer.succeed(self.ishell.put(key, value))
         
     def get(self, key):
-        log.msg("get: %s" % key)
         return defer.succeed(self.ishell.get(key))
 
     def get_pickle(self, key):
-        log.msg("get_pickle: %s" % key)
         value = self.ishell.get(key)
         try:
             package = pickle.dumps(value, 2)
         except pickle.PickleError:
-            return defer.fail()
+            return defer.fail()  # probably should raise pb.Error("msg")
         else:
             return defer.succeed(package)
 
     def reset(self):
-        log.msg("reset")
         return defer.succeed(self.ishell.reset())
         
     def get_command(self, i=None):
-        log.msg("get_command: %i" % i)
         return defer.succeed(self.ishell.get_command(i))
 
     def get_last_command_index(self):
-        log.msg("get_last_command_index:")
         return defer.succeed(self.ishell.get_last_command_index())
      
 # Expose a PB interface to the CoreService

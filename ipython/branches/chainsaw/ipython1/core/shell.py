@@ -12,6 +12,7 @@ The core IPython Shell
 import time
 import sys
 import threading
+import signal
 
 from code import InteractiveConsole
 from StringIO import StringIO
@@ -51,7 +52,15 @@ class InteractiveShell(InteractiveConsole):
         self._datalock = threading.Lock()
         self._inouterr_lock = threading.Lock()
         self.last_command_index = -1
+        # I am using this user defined signal to interrupt the currently 
+        # running command.  I am not sure if this is the best way, but
+        # it is working!
+        signal.signal(signal.SIGUSR1, self.handle_SIGUSR1)
 
+    def handle_SIGUSR1(self, signum, frame):
+        """Handle the SIGUSR1 signal by printing to stderr."""
+        print>>sys.stderr, "Command stopped."
+        
     def prefilter(self, line, more):
         return line
 

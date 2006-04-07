@@ -7,9 +7,10 @@ from IPython.genutils import clock, clock2
 def gotObject(object):
     print "got object:", object, clock()
     
-    for reps in range(100):
-        object.callRemote("put","b",10).addCallback(gotData)
+    for reps in range(10):
+        object.callRemote("put","b",10).addCallbacks(gotData,gotError)
     object.callRemote("put","c",10).addCallback(halt)
+    object.callRemote("restart_engine")
     
 def halt(data):
     print clock()
@@ -20,11 +21,14 @@ def gotData(data):
     #print 'server sent:', data
     #reactor.stop()
     
+def gotError(reason):
+    reason.printTraceback()
+    
 def gotNoObject(reason):
     print "no object:",reason
     reactor.stop()
 
 factory = pb.PBClientFactory()
-reactor.connectTCP("127.0.0.1",10105, factory)
+reactor.connectTCP("127.0.0.1",10106, factory)
 factory.getRootObject().addCallbacks(gotObject,gotNoObject)
 reactor.run()

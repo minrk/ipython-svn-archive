@@ -1,4 +1,14 @@
-"""A Twisted Service Representation of the IPython Core"""
+"""A Twisted Service Representation of the IPython Core
+
+TODO:
+
+- Use subclasses of pb.Error to pass exceptions back to the calling process.
+- Deal more carefully with the failure modes of the kernel engine.  The
+  PbFactory should be make to reconnect possibly.
+- Add an XML-RPC interface
+- Add an HTTP interface
+- Security!!!!!
+"""
 
 import os, signal
 
@@ -9,6 +19,8 @@ from twisted.web import xmlrpc
 from zope.interface import Interface, implements
 
 from twisted.spread import pb
+
+from ipython1.kernel.coreservice import ICoreService
 
 # Classes for the Kernel Service
 
@@ -32,12 +44,11 @@ class Command(object):
     def handleResult(self, result):
         """When the result is ready, relay it to self.deferred."""
         
-        log.msg("Handling Result: " + repr(result))
         self.deferred.callback(result)
         
     def handleError(self, reason):
         """When an error has occured, relay it to self.deferred."""
-        
+        log.msg("Traceback from remote host: " + reason.getErrorMessage())
         self.deferred.errback(reason)
 
 class KernelEngineProcessProtocol(protocol.ProcessProtocol):
@@ -54,7 +65,7 @@ class KernelEngineProcessProtocol(protocol.ProcessProtocol):
         
         # We need to make sure that the kernel engine has really started
         # before connecting to it
-        reactor.callLater(1,self.service.connectKernelEngineProcess)
+        reactor.callLater(2,self.service.connectKernelEngineProcess)
     
     def outReceived(self, data):
         """Let the service decide what to do."""
@@ -74,15 +85,27 @@ class KernelEngineProcessProtocol(protocol.ProcessProtocol):
 class IKernelService(ICoreService):
     """Adds a few controll methods to the IPythonCoreService API"""
     
-    def restart(self):
-        """Restart the IPython Kernel Engine"""
+    def restart_engine(self):
+        """Stops and restarts the kernel engine process."""
         
     def clean_queue(self):
-        """Remove pending commands."""
-
+        """Cleans out pending commands in the kernel's queue."""
+        
+    def interrupt_engine(self):
+        """Send SIGINT to the kernel engine."""
+        
 class KernelService(service.Service):
+    """This service starts the kernel engine and talks to it over PB.
+    
+    There are two steps in starting the kernel engine.  First, spawnProcess
+    is called to start the actual process.  Then it can be connected to over
+    PB.  If the process dies, it will automatically be restarted and re-
+    connected to.  But if the connection fails, but the process doesn't, there
+    will be a fatal error.  This needs to be fixed by having the PB Factory
+    automatically reconnect.
+    """
 
-    #implements(IIPythonEngineService)
+    implements(IKernelService)
     
     def __init__(self, port):
         
@@ -96,7 +119,7 @@ class KernelService(service.Service):
         
     def outReceived(self, data):
         """Called when the Kernel Engine process writes to stdout."""
-        log.msg(data)
+        #log.msg(data)
      
     def errReceived(self, data):
         """Called when the Kernel Engine process writes to stdout."""
@@ -108,7 +131,7 @@ class KernelService(service.Service):
         service.Service.startService(self)
         # I seem to need this to ensure the reactor is running before
         # spawnProcess is called
-        reactor.callLater(0.1,self.startKernelEngineProcess)
+        reactor.callLater(2,self.startKernelEngineProcess)
         #reactor.callLater(10,self.restartKernelEngineProcess)
         
     def startKernelEngineProcess(self):
@@ -154,6 +177,7 @@ class KernelService(service.Service):
                                                                                    
     def gotRoot(self, obj):
         self.rootObject = obj
+        self._flushQueue()
         log.msg("Connected to the Kernel Engine.")
         self.testCommands()
         
@@ -163,6 +187,7 @@ class KernelService(service.Service):
         d.addCallback(self.printer)
         d = self.execute("time.sleep(10)")
         d.addCallback(self.printer)        
+        reactor.callLater(3,self.interrupt_engine)
         
         d = self.execute("a = 5")
         d.addCallback(self.printer)
@@ -182,6 +207,7 @@ class KernelService(service.Service):
     def disconnectKernelEngineProcess(self):
         if self.kernelEnginePBFactory:
             self.kernelEnginePBFactory.disconnect()
+        #self.currentCommand = None
         self.rootObject = None
         self.kernelEnginePBFactory = None
 
@@ -225,17 +251,154 @@ class KernelService(service.Service):
         del self.currentCommand
         self.currentCommand = None
         self._flushQueue()
-        return reason
+        #return reason
+
+    # Interface methods unique to the IKernelService interface
+    
+    def restart_engine(self):
+        """Stops and restarts the kernel engine process."""
+        self.clean_queue()
+        self.restartKernelEngineProcess()
+        
+    def clean_queue(self):
+        """Cleans out pending commands in the kernel's queue."""
+        self.queued = []
+
+    def interrupt_engine(self):
+        """Send SIGUSR1 to the kernel engine to stop the current command."""
+        if self.currentCommand:
+            os.kill(self.kernelEngineProcessProtocol.transport.pid, signal.SIGUSR1)
 
     # Methods that should use the queue
 
     def execute(self, lines):
         """Execute lines of Python code."""
+        
         d = self.submitCommand(Command("execute", lines))
         return d
+
+    def put(self, key, value):
+        """Put value into locals namespace with name key."""
+
+        d = self.submitCommand(Command("put", key, value))
+        return d
+
+    def put_pickle(self, key, package):
+        """Unpickle package and put into the locals namespace with name key."""
         
+        d = self.submitCommand(Command("put_pickle", key, package))
+        return d
+        
+    def get(self, key):
+        """Gets an item out of the self.locals dict by key."""
+        
+        d = self.submitCommand(Command("get", key))
+        return d
 
+    def get_pickle(self, key):
+        """Gets an item out of the self.locals dist by key and pickles it."""
 
+        d = self.submitCommand(Command("get_pickle", key))
+        return d
+
+    def reset(self):
+        """Reset the InteractiveShell."""
+        
+        d = self.submitCommand(Command("reset"))
+        return d
+        
+    def get_command(self, i=None):
+        """Get the stdin/stdout/stderr of command i."""
+
+        d = self.submitCommand(Command("get_command", i))
+        return d
+
+    def get_last_command_index(self):
+        """Get the index of the last command."""
+
+        d = self.submitCommand(Command("get_last_command_index"))
+        return d
+
+# Expose a PB interface to the KernelService
+     
+class IPerspectiveKernel(Interface):
+
+    def remote_execute(self, lines):
+        """Execute lines of Python code."""
+    
+    def remote_put(self, key, value):
+        """Put value into locals namespace with name key."""
+        
+    def remote_put_pickle(self, key, package):
+        """Unpickle package and put into the locals namespace with name key."""
+        
+    def remote_get(self, key):
+        """Gets an item out of the self.locals dict by key."""
+
+    def remote_get_pickle(self, key):
+        """Gets an item out of the self.locals dist by key and pickles it."""
+
+    def remote_reset(self):
+        """Reset the InteractiveShell."""
+        
+    def remote_get_command(self, i=None):
+        """Get the stdin/stdout/stderr of command i."""
+
+    def remote_get_last_command_index(self):
+        """Get the index of the last command."""
+
+    def remote_restart_engine(self):
+        """Stops and restarts the kernel engine process."""
+        
+    def remote_clean_queue(self):
+        """Cleans out pending commands in the kernel's queue."""
+        
+    def remote_interrupt_engine(self):
+        """Send SIGUSR1 to the kernel engine to stop the current command."""
+
+class PerspectiveKernelFromService(pb.Root):
+
+    implements(IPerspectiveKernel)
+
+    def __init__(self, service):
+        self.service = service
+
+    def remote_execute(self, lines):
+        return self.service.execute(lines)
+    
+    def remote_put(self, key, value):
+        return self.service.put(key, value)
+        
+    def remote_put_pickle(self, key, package):
+        return self.service.put_pickle(key, package)
+        
+    def remote_get(self, key):
+        return self.service.get(key)
+
+    def remote_get_pickle(self, key):
+        return self.service.get_pickle(key)
+
+    def remote_reset(self):
+        return self.service.reset()
+        
+    def remote_get_command(self, i=None):
+        return self.service.get_command(i)
+
+    def remote_get_last_command_index(self):
+        return self.service.get_last_command_index()
+
+    def remote_restart_engine(self):
+        return self.service.restart_engine()
+        
+    def remote_clean_queue(self):
+        return self.service.clean_queue()
+
+    def remote_interrupt_engine(self):
+        return self.service.interrupt_engine()
+    
+components.registerAdapter(PerspectiveKernelFromService,
+                           KernelService,
+                           IPerspectiveKernel)
     
     
     
