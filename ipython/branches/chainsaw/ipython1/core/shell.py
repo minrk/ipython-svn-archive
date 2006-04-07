@@ -40,6 +40,11 @@ class InteractiveShell(InteractiveConsole):
     Questions:
     
     - Do we use push/pull or put/get?
+    
+    TODO:
+    
+    - Make sure every method returns a type that can be serialized by
+    XML-RPC and PB.  This means no None types!!!!!!!
     """
      
     def __init__(self, locals=None, filename="<console>"):
@@ -146,6 +151,7 @@ class InteractiveShell(InteractiveConsole):
         is different.
         """
         self.update({key:value})
+        return True
 
     def get(self, key):
         """Gets an item out of the self.locals dict by key.

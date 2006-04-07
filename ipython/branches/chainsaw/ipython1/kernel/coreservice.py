@@ -1,9 +1,15 @@
-"""A Twisted Service Representation of the IPython Core
+"""A Twisted Service Representation of the IPython Core.
+
+This file contains the ICoreService Interface specification.  Any public 
+methods in ipython core must be given here.  If they are not meant to be public
+they should not appear here.
+
+The CoreService should not make any assumptions about what network protocols 
+will be used to expose it.  The Interfaces and Adapters used for this purpose
+can be found in the files corepb.py, corehttp.py, etc.
 
 TODO:
 
-- Make it possible to interupt the kernel engine to stop the current
-  command/
 - Use pb.Error subclasses to pass exceptions back to the calling process.
   For this I can put calls to ishell in a try/except clause:
   
@@ -15,18 +21,17 @@ TODO:
         return defer.succeed(self.ishell.execute(lines))  
 
   The argument of the pr.Error is then available on the other side as
-  getErrorMessage().  
+  getErrorMessage().
+  
 - Security issues.  Turn on TLS an authentication.
 """
 
 import os, signal
 
-from twisted.application import internet, service
-from twisted.internet import protocol, reactor, defer
-from twisted.python import components, log
-from twisted.web import xmlrpc
+from twisted.application import service
+from twisted.internet import defer
+from twisted.python import log
 from zope.interface import Interface, implements
-from twisted.spread import pb
 
 import cPickle as pickle
 
@@ -104,66 +109,3 @@ class CoreService(service.Service):
 
     def get_last_command_index(self):
         return defer.succeed(self.ishell.get_last_command_index())
-     
-# Expose a PB interface to the CoreService
-     
-class IPerspectiveCore(Interface):
-
-    def remote_execute(self, lines):
-        """Execute lines of Python code."""
-    
-    def remote_put(self, key, value):
-        """Put value into locals namespace with name key."""
-        
-    def remote_put_pickle(self, key, package):
-        """Unpickle package and put into the locals namespace with name key."""
-        
-    def remote_get(self, key):
-        """Gets an item out of the self.locals dict by key."""
-
-    def remote_get_pickle(self, key):
-        """Gets an item out of the self.locals dist by key and pickles it."""
-
-    def remote_reset(self):
-        """Reset the InteractiveShell."""
-        
-    def remote_get_command(self, i=None):
-        """Get the stdin/stdout/stderr of command i."""
-
-    def remote_get_last_command_index(self):
-        """Get the index of the last command."""
-
-class PerspectiveCoreFromService(pb.Root):
-
-    implements(IPerspectiveCore)
-
-    def __init__(self, service):
-        self.service = service
-
-    def remote_execute(self, lines):
-        return self.service.execute(lines)
-    
-    def remote_put(self, key, value):
-        return self.service.put(key, value)
-        
-    def remote_put_pickle(self, key, package):
-        return self.service.put_pickle(key, package)
-        
-    def remote_get(self, key):
-        return self.service.get(key)
-
-    def remote_get_pickle(self, key):
-        return self.service.get_pickle(key)
-
-    def remote_reset(self):
-        return self.service.reset()
-        
-    def remote_get_command(self, i=None):
-        return self.service.get_command(i)
-
-    def remote_get_last_command_index(self):
-        return self.service.get_last_command_index()
-    
-components.registerAdapter(PerspectiveCoreFromService,
-                           CoreService,
-                           IPerspectiveCore)

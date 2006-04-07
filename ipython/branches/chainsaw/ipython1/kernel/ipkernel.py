@@ -1,13 +1,20 @@
 from twisted.application import service, internet
 from twisted.spread import pb
+from twisted.web import server, xmlrpc
 
-from ipython1.kernel.kernelservice import KernelService, IPerspectiveKernel
+from ipython1.kernel import kernelservice, kernelpb, kernelxmlrpc
 
 application = service.Application('ipkernel')
 
-kes = KernelService(10105)
-kes.setServiceParent(application)
+ks = kernelservice.KernelService(10105)
+ks.setServiceParent(application)
 
-pbkes = internet.TCPServer(10106, 
-    pb.PBServerFactory(IPerspectiveKernel(kes)))
-pbkes.setServiceParent(application)
+kspb = internet.TCPServer(10106, 
+    pb.PBServerFactory(kernelpb.IPerspectiveKernel(ks)))
+kspb.setServiceParent(application)
+
+kssite = server.Site(kernelxmlrpc.IXMLRPCKernel(ks))
+ksxr = internet.TCPServer(10104, kssite)
+ksxr.setServiceParent(application)
+    
+

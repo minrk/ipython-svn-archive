@@ -20,14 +20,14 @@ from twisted.internet import reactor
 from twisted.spread import pb
 from twisted.python import log
 
-import ipython1.kernel.coreservice as cs
+from ipython1.kernel import coreservice, corepb
 
 def main(port):
     log.startLogging(sys.stdout)
-    ipcore = cs.CoreService()
+    ipcore = coreservice.CoreService()
     ipcore.startService()
     reactor.listenTCP(port, 
-        pb.PBServerFactory(cs.IPerspectiveCore(ipcore)),
+        pb.PBServerFactory(corepb.IPerspectiveCore(ipcore)),
         interface = '127.0.0.1')
     reactor.run()
 
