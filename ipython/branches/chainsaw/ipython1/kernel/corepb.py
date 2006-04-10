@@ -1,3 +1,4 @@
+# -*- test-case-name: ipython1.test.test_corepb -*-
 """Expose the IPython Core Service using Twisted's Perspective Broker.
 
 This module specifies the IPerspectiveCore Interface and its implementation

@@ -1,3 +1,5 @@
+# -*- test-case-name: ipython1.test.test_coreservice -*-
+
 """A Twisted Service Representation of the IPython Core.
 
 This file contains the ICoreService Interface specification.  Any public 
@@ -66,6 +68,7 @@ class ICoreService(Interface):
     def get_last_command_index(self):
         """Get the index of the last command."""
 
+# -*- test-case-name: ipython1.test.test_coreservice -*-
 # Now the actual CoreService implementation                   
 
 class CoreService(service.Service):
