@@ -10,7 +10,7 @@ class FirstTest(unittest.TestCase):
         self.ipcore.startService()
         
     def tearDown(self):
-        selff.ipcore.stopService
+        self.ipcore.stopService()
         
     def testExecute(self):
         d = self.ipcore.execute("a = 5")
