@@ -33,19 +33,42 @@ class InteractiveShell(InteractiveConsole):
     just a python shell.
     
     It is modelled on code.InteractiveConsole, but adds additional
-    capabilities:
+    capabilities.  These additional capabilities are what give IPython
+    its power.  
     
-    - Trapping of input, output and stderr
-    - Working with the locals namespace
-
-    Questions:
+    The current version of this class is meant to be a prototype that guides
+    the future design of the IPython core.  This class must not use Twisted
+    in any way, but it must be designed in a way that makes it easy to 
+    incorporate into Twisted and hook netowrk protocols up to.  
     
-    - Do we use push/pull or put/get?
+    Some of the methods of this class comprise the official IPython core
+    interface.  These methods must be tread safe and they must return types
+    that can be easily serialized by protocols such as PB, XML-RPC and SOAP.
+    Locks have been provided for making the methods thread safe, but addisional
+    locks can be added as needed.
+      
+    Any method that is meant to be a part of the official interface must also
+    be declared in the kernel.coreservice.ICoreService interface.  Eventually
+    all other methods should have single leading underscores to note that they
+    are not designed to be 'public.'  Currently, because this class inherits
+    from code.InteractiveConsole there are many private methods w/o leading
+    underscores.  The interface should be as simple as possible and methods 
+    should not be added to the interface unless they really need to be there.   
     
-    TODO:
+    Note:
     
-    - Make sure every method returns a type that can be serialized by
-    XML-RPC and PB.  This means no None types!!!!!!!
+    - For now I am using methods named put/get to move objects in/out of the
+      users namespace.  Originally, I was calling these methods push/pull, but
+      because code.InteractiveConsole already has a push method, I had to use
+      something different.  Eventually, we probably won't subclass this class
+      so we can call these methods whatever we want.  So, what do we want to
+      call them?
+    - We need a way of running the trapping of stdout/stderr in different ways.
+      We should be able to i) trap, ii) not trap at all or iii) trap and echo
+      things to stdout and stderr.
+    - How should errors be handled?  Should exceptions be raised?
+    - What should methods that don't compute anything return?  The default of 
+      None?
     """
      
     def __init__(self, locals=None, filename="<console>"):
@@ -55,22 +78,22 @@ class InteractiveShell(InteractiveConsole):
         self._stdin = []
         self._stdout = []
         self._stderr = []
-        self._datalock = threading.Lock()
-        self._inouterr_lock = threading.Lock()
+        self._namespace_lock = threading.Lock()
+        self._command_lock = threading.Lock()
         self.last_command_index = -1
         # I am using this user defined signal to interrupt the currently 
         # running command.  I am not sure if this is the best way, but
         # it is working!
-        signal.signal(signal.SIGUSR1, self.handle_SIGUSR1)
+        signal.signal(signal.SIGUSR1, self._handle_SIGUSR1)
 
-    def handle_SIGUSR1(self, signum, frame):
+    def _handle_SIGUSR1(self, signum, frame):
         """Handle the SIGUSR1 signal by printing to stderr."""
         print>>sys.stderr, "Command stopped."
         
-    def prefilter(self, line, more):
+    def _prefilter(self, line, more):
         return line
 
-    def runlines(self, lines):
+    def _trap_runlines(self, lines):
         """
         This executes the python source code, source, in the
         self.locals namespace and traps stdout and stderr.  Upon
@@ -79,20 +102,20 @@ class InteractiveShell(InteractiveConsole):
         """
         
         # Execute the code
-        self._datalock.acquire()
+        self._namespace_lock.acquire()
         self._trap.flush()
         self._trap.trap()
         self._runlines(lines)
         self.last_command_index += 1
         self._trap.release()
-        self._datalock.release()
+        self._namespace_lock.release()
                 
         # Save stdin, stdout and stderr to lists
-        self._inouterr_lock.acquire()
+        self._command_lock.acquire()
         self._stdin.append(lines)
         self._stdout.append(self._trap.out.getvalue())
         self._stderr.append(self._trap.err.getvalue())
-        self._inouterr_lock.release()
+        self._command_lock.release()
 
     # Lifted from iplib.InteractiveShell
     def _runlines(self,lines):
@@ -113,7 +136,7 @@ class InteractiveShell(InteractiveConsole):
             # NOT skip even a blank line if we are in a code block (more is
             # true)
             if line or more:
-                more = self.push((self.prefilter(line,more)))
+                more = self.push((self._prefilter(line,more)))
                 # IPython's runsource returns None if there was an error
                 # compiling the code.  This allows us to stop processing right
                 # away, so the user gets the error message at the right place.
@@ -124,22 +147,26 @@ class InteractiveShell(InteractiveConsole):
         if more:
             self.push('\n')
 
-    def update(self,dict_of_data):
-        """Loads a dictionary of key value pairs into the self.locals 
-        namespace and traps stdout and stderr."""
-        self._datalock.acquire()
-        self.locals.update(dict_of_data)
-        self._datalock.release()
-        return
-
-    ###################################################
+    ##################################################################
     # Methods that are a part of the official interface
-    ###################################################
+    #
+    # These methods should also be put in the 
+    # kernel.coreservice.ICoreService interface.
+    #
+    # These methods must conform to certain restrictions that allow
+    # them to be exposed to various network protocols:
+    #
+    # - As much as possible, these methods must return types that can be 
+    #   serialized by PB, XML-RPC and SOAP.  None is OK.
+    # - Every method must be thread safe.  There are some locks provided
+    #   for this purpose, but new, specialized locks can be added to the
+    #   class.
+    ##################################################################
     
     # Methods for running code
     
     def execute(self, lines):
-        self.runlines(lines)
+        self._trap_runlines(lines)
         return self.get_command()
         
     # Methods for working with the namespace
@@ -151,34 +178,53 @@ class InteractiveShell(InteractiveConsole):
         InteractiveConsole class already defines a push() method that
         is different.
         """
+        if not isinstance(key, str):
+            raise TypeError, "Objects must be keyed by strings."
         self.update({key:value})
-        return True
 
     def get(self, key):
         """Gets an item out of the self.locals dict by key.
         
-        I have often called this pull().
+        What should this return if the key is not defined?  Currently, I return
+        a NotDefined() object.
+        
+        I have often called this pull().  I still like that better.
         """
-        self._datalock.acquire()
+        if not isinstance(key, str):
+            raise TypeError, "Objects must be keyed by strings."
+        self._namespace_lock.acquire()
         result = self.locals.get(key, NotDefined(key))
-        self._datalock.release()
+        self._namespace_lock.release()
         return result
-                
+
+    def update(self, dict_of_data):
+        """Loads a dict of key value pairs into the self.locals namespace."""
+        if not isinstance(dict_of_data, dict):
+            raise TypeError, "update() takes a dict object."
+        self._namespace_lock.acquire()
+        self.locals.update(dict_of_data)
+        self._namespace_lock.release()
+        
     # Methods for getting stdout/stderr/stdin
            
     def reset(self):
         """Reset the InteractiveShell."""
         
+        self._command_lock.acquire()        
         self._stdin = []
         self._stdout = []
         self._stderr = []
         self.last_command_index = -1
-        self.locals = {}        
+        self._command_lock.release()
+
+        self._namespace_lock.acquire()        
+        self.locals = {}
+        self._namespace_lock.release()
                 
     def get_command(self,i=None):
         """Get the stdin/stdout/stderr of command i."""
         
-        self._inouterr_lock.acquire()
+        self._command_lock.acquire()
         
         if i in range(self.last_command_index + 1):
             in_result = self._stdin[i]
@@ -195,14 +241,17 @@ class InteractiveShell(InteractiveConsole):
             out_result = None
             err_result = None
         
-        self._inouterr_lock.release()
+        self._command_lock.release()
         
         if in_result:
             return (cmd_num, in_result, out_result, err_result)
         else:
-            return None
+            raise IndexError, "Command with index does not exist."
             
     def get_last_command_index(self):
         """Get the index of the last command."""
-        return self.last_command_index
+        self._command_lock.acquire()
+        ind = self.last_command_index
+        self._command_lock.release()
+        return ind
 

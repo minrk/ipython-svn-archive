@@ -1,3 +1,19 @@
+2006-04-10  Brian Granger <ellisonbg@gmail.com>
+
+        * ipython1/test: Setup a test directory as a sub-module of
+        ipython1.  This makes it possible to test ipython1 using Twisted's
+        trial command:
+
+        trial ipython1
+
+        This command will find and run the unittests in the test module 
+        in files named tests_*.py.  Most importantly, it will manage the 
+        Twisted reactor and deferreds.  I have written initial tests for 
+        ipython1.core.shell.py.
+
+        * ipython1/kernel: I have begun to write the code for the two process 
+        kernel.  I need to write unittests for this stuff.
+
 2006-04-03  Brian Granger <ellisonbg@gmail.com>
 
         * core/shell.py: Began to rework the TrappingInteractiveConsole class
