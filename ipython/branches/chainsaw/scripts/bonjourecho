@@ -43,7 +43,9 @@ class BonjourEchoFactory(protocol.ServerFactory):
                                     "_echo._tcp",
                                     8000,
                                     self.registrationCallback,
-                                    reactor)
+                                    reactor,
+                                    txtLen=1,
+                                    txtRecord="a")
                                     
         self.ba.startAdvertising()
                 

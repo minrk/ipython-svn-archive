@@ -177,7 +177,7 @@ class KernelService(service.Service):
         self.rootObject = obj
         self._flushQueue()
         log.msg("Connected to the Kernel Engine.")
-        self.testCommands()
+        #self.testCommands()
         
     def testCommands(self):
 

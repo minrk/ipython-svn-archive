@@ -2,8 +2,10 @@
 import bonjour
 
 from twisted.internet.interfaces import IReadDescriptor
+from twisted.internet import reactor
 from twisted.python import log
 from twisted.internet import defer
+from twisted.spread import pb
 from zope.interface import implements, classImplements
 
 class BonjourError(Exception):
@@ -279,7 +281,7 @@ class BonjourResolver(object):
         ret = bonjour.pyDNSServiceResolve(self.sdRef,
             self.flags,
             self.interfaceIndex,
-            self.name
+            self.name,
             self.regtype,
             self.domain,
             self.callback,
@@ -305,3 +307,35 @@ class BonjourResolver(object):
             bonjour.DNSServiceRefDeallocate(self.sdRef)
             self.sdRef = None
 
+class PBServerFactoryBonjour(pb.PBServerFactory):
+    """A replacement for PBServerFactory that enables Bonjour Registration."""
+
+    def __init__(self, root, serviceName, 
+                 serviceType, servicePort, unsafeTracebacks=False):
+        
+        pb.PBServerFactory(root, unsafeTracebacks)
+        self.serviceName = serviceName
+        self.serviceType = serviceType
+        self.servicePort = servicePort
+        
+    def startFactory(self):
+        self.ba = BonjourAdvertiser(self.serviceName,
+                                    self.serviceType,
+                                    self.servicePort,
+                                    self.registrationCallback,
+                                    reactor)
+                                    
+        self.ba.startAdvertising()
+        
+    def stopFactory(self):
+        self.ba.stopAdvertising()
+    
+    def registrationCallback(self, sdRef,flags,errorCode,name,
+                     regtype,domain,context):
+        if errorCode == bonjour.kDNSServiceErr_NoError:
+            print errorCode, name, regtype, domain
+        else:
+            print "Bonjour registration error"
+
+#def listenTCP(port, factory, backlog=50, interface='', serviceName):
+#    def listenTCP(self, port, factory, backlog=50, interface='')
