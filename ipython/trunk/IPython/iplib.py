@@ -665,6 +665,12 @@ class InteractiveShell(object,Magic):
             self.magic_alias(alias)
         self.hooks.late_startup_hook()
         
+        for batchfile in [path(arg) for arg in self.rc.args 
+            if arg.lower().endswith('.ipy')]:
+            if not batchfile.isfile():
+                print "No such batch file:", batchfile
+                continue
+            self.api.runlines(batchfile.text())
 
     def add_builtins(self):
         """Store ipython references into the builtin namespace.
