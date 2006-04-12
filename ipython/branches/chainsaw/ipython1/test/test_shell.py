@@ -10,19 +10,19 @@ from twisted.trial import unittest
 from ipython1.core import shell
 from ipython1.kernel1p.kernelerror import NotDefined
 
-class FirstTest(unittest.TestCase):
+class BasicShellTest(unittest.TestCase):
 
     def setUp(self):
         self.s = shell.InteractiveShell()
         
     def testExecute(self):
-        cmds = [(0,"a = 5","",""),
+        commands = [(0,"a = 5","",""),
             (1,"b = 10","",""),
             (2,"c = a + b","",""),
             (3,"print c","15\n",""),
             (4,"import math","",""),
             (5,"2.0*math.pi","6.2831853071795862\n","")]
-        for c in cmds:
+        for c in commands:
             result = self.s.execute(c[1])
             self.assertEquals(result, c)
             
@@ -51,6 +51,7 @@ class FirstTest(unittest.TestCase):
         self.assertEquals(self.s.get_command(),(0,"a = 5","",""))
         self.assertEquals(self.s.get_command(0),(0,"a = 5","",""))
         self.s.reset()
+        self.assertEquals(self.s.get_last_command_index(),-1)
         self.assertRaises(IndexError,self.s.get_command)
         
         

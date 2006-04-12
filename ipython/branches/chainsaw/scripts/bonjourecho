@@ -39,13 +39,16 @@ class BonjourEchoFactory(protocol.ServerFactory):
             print "Bonjour registration error"
             
     def startFactory(self):
+        import struct
+        tr = struct.pack("@b9s",9,"Baby=Reed")
+        print tr
         self.ba = BonjourAdvertiser(self.serviceName,
                                     "_echo._tcp",
                                     8000,
                                     self.registrationCallback,
                                     reactor,
-                                    txtLen=1,
-                                    txtRecord="a")
+                                    txtLen=10,
+                                    txtRecord=tr)
                                     
         self.ba.startAdvertising()
                 
