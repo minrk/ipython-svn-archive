@@ -23,6 +23,7 @@ import win32con as c32
 import clipboard,logger,console
 from   logger import log
 from   keysyms import key_text_to_keyinfo
+import release
 
 def quote_char(c):
     if ord(c)>0:
@@ -1220,7 +1221,8 @@ class Readline:
         def debug_output(on,filename="pyreadline_debug_log.txt"):  #Not implemented yet
             logger.start_log(on,filename)
             logger.log("STARTING LOG")
-        loc={"bind_key":bind_key,
+        loc={"branch":release.branch,
+             "bind_key":bind_key,
              "bind_exit_key":bind_exit_key,
              "un_bind_key":un_bind_key,
              "un_bind_exit_key":un_bind_exit_key,

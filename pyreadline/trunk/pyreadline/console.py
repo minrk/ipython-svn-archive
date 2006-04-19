@@ -232,15 +232,23 @@ class Console(object):
 
 # Map ANSI color escape sequences into Windows Console Attributes
 
-    terminal_escape = re.compile('(\001?\033\\[[0-9;]+m\002?)')
-    escape_parts = re.compile('\001?\033\\[([0-9;]+)m\002?')
-    escape_to_color = { '0;30': 0x0,             #black
+    terminal_escape = re.compile('(\001?\033\\[[0-9;]*m\002?)')
+    escape_parts = re.compile('\001?\033\\[([0-9;]*)m\002?')
+    escape_to_color = { '30': 0x0,             #black
+                        '31': 0x4,             #red
+                        '32': 0x2,             #green
+                        '33': 0x4+0x2,         #brown?
+                        '34': 0x1,             #blue
+                        '35': 0x1+0x4,         #purple
+                        '36': 0x1+0x2,         #cyan
+                        '37': 0x1+0x2+0x4,     #grey
+                        '0;30': 0x0,             #black
                         '0;31': 0x4,             #red
                         '0;32': 0x2,             #green
                         '0;33': 0x4+0x2,         #brown?
                         '0;34': 0x1,             #blue
                         '0;35': 0x1+0x4,         #purple
-                        '0;36': 0x2+0x4,         #cyan
+                        '0;36': 0x1+0x2,         #cyan
                         '0;37': 0x1+0x2+0x4,     #grey
                         '1;30': 0x1+0x2+0x4,     #dark gray
                         '1;31': 0x4+0x8,         #red
@@ -251,6 +259,7 @@ class Console(object):
                         '1;36': 0x1+0x2+0x8,     #light cyan
                         '1;37': 0x1+0x2+0x4+0x8, #white
                         '0': None,
+                        '':None,
                        }
 
     # This pattern should match all characters that change the cursor position differently
