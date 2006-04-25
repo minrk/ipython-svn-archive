@@ -185,10 +185,6 @@ class Console(object):
         self.GetConsoleScreenBufferInfo(self.hout, byref(info))
         self.attr = info.wAttributes
         self.saveattr = info.wAttributes # remember the initial colors
-        background = self.attr & 0xf0
-        for escape in self.escape_to_color:
-            if self.escape_to_color[escape] is not None:
-                self.escape_to_color[escape] |= background
         log('initial attr=%x' % self.attr)
         self.softspace = 0 # this is for using it as a file-like object
         self.serial = 0
@@ -234,33 +230,6 @@ class Console(object):
 
     terminal_escape = re.compile('(\001?\033\\[[0-9;]*m\002?)')
     escape_parts = re.compile('\001?\033\\[([0-9;]*)m\002?')
-    escape_to_color = { '30': 0x0,             #black
-                        '31': 0x4,             #red
-                        '32': 0x2,             #green
-                        '33': 0x4+0x2,         #brown?
-                        '34': 0x1,             #blue
-                        '35': 0x1+0x4,         #purple
-                        '36': 0x1+0x2,         #cyan
-                        '37': 0x1+0x2+0x4,     #grey
-                        '0;30': 0x0,             #black
-                        '0;31': 0x4,             #red
-                        '0;32': 0x2,             #green
-                        '0;33': 0x4+0x2,         #brown?
-                        '0;34': 0x1,             #blue
-                        '0;35': 0x1+0x4,         #purple
-                        '0;36': 0x1+0x2,         #cyan
-                        '0;37': 0x1+0x2+0x4,     #grey
-                        '1;30': 0x1+0x2+0x4,     #dark gray
-                        '1;31': 0x4+0x8,         #red
-                        '1;32': 0x2+0x8,         #light green
-                        '1;33': 0x4+0x2+0x8,     #yellow
-                        '1;34': 0x1+0x8,         #light blue
-                        '1;35': 0x1+0x4+0x8,     #light purple
-                        '1;36': 0x1+0x2+0x8,     #light cyan
-                        '1;37': 0x1+0x2+0x4+0x8, #white
-                        '0': None,
-                        '':None,
-                       }
 
     # This pattern should match all characters that change the cursor position differently
     # than a normal character.
@@ -334,15 +303,32 @@ class Console(object):
         log('chunks=%s' % repr(chunks))
         junk = c_int(0)
         n = 0 # count the characters we actually write, omitting the escapes
+        if attr is None:
+            info = CONSOLE_SCREEN_BUFFER_INFO()
+            self.GetConsoleScreenBufferInfo(self.hout, byref(info))
+            attr = info.wAttributes # fetch current colors
         for chunk in chunks:
             m = self.escape_parts.match(chunk)
             if m:
-                attr = self.escape_to_color[m.group(1)]
+                for part in m.group(1).split(";"):
+                    if part == "0": # switch to default
+                        attr = self.attr
+                    elif part == "7": # switch on reverse
+                        attr |= 0x4000
+                    if part == "1": # switch on bold (i.e. intensify foreground color)
+                        attr |= 0x08
+                    elif len(part) == 2 and "30" <= part <= "37": # set foreground color
+                        part = int(part)-30
+                        # we have to mirror bits
+                        attr = (attr & ~0x07) | ((part & 0x1) << 2) | (part & 0x2) | ((part & 0x4) >> 2)
+                    elif len(part) == 2 and "40" <= part <= "47": # set background color
+                        part = int(part)-40
+                        # we have to mirror bits
+                        attr = (attr & ~0x70) | ((part & 0x1) << 6) | ((part & 0x2) << 4) | ((part & 0x4) << 2)
+                    # ignore blink, underline and anything we don't understand
                 continue
             n += len(chunk)
             log('attr=%s' % attr)
-            if attr is None:
-                attr = self.attr
             self.SetConsoleTextAttribute(self.hout, attr)
             self.WriteConsoleA(self.hout, chunk, len(chunk), byref(junk), None)
         return n
