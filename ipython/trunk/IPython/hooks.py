@@ -130,8 +130,10 @@ class CommandChainDispatcher:
             try:
                 ret = cmd(*args, **kw)
                 return ret
-            except ipapi.TryNext:
-                pass
+            except ipapi.TryNext, exc:
+                if exc.args or exc.kwargs:
+                    args = exc.args
+                    kw = exc.kwargs
                 
     def __str__(self):
         return str(self.chain)
