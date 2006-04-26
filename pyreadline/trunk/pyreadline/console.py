@@ -313,6 +313,7 @@ class Console(object):
                 for part in m.group(1).split(";"):
                     if part == "0": # switch to default
                         attr = self.attr
+                        attr = attr & ~0x08
                     elif part == "7": # switch on reverse
                         attr |= 0x4000
                     if part == "1": # switch on bold (i.e. intensify foreground color)

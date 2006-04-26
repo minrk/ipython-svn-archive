@@ -1,3 +1,9 @@
+2006-04-25 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Small change in ansi color handling for default values
+
+2006-04-24 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Apply Walter Dörwald's patch for ansi color sequences.
+
 2006-04-19 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Improved ansi escape sequence parsing
 	
