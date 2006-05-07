@@ -17,6 +17,7 @@ import sys
 import traceback
 import re
 from logger import log
+import os
 
 try:
     # I developed this with ctypes 0.6
@@ -144,6 +145,7 @@ funcs = [
     'SetConsoleTitleA',
     'SetConsoleWindowInfo',
     'WriteConsoleA',
+    'WriteFile',
     'WriteConsoleOutputCharacterA',
     ]
 
@@ -343,6 +345,13 @@ class Console(object):
         self.SetConsoleTextAttribute(self.hout, attr)
         self.WriteConsoleA(self.hout, text, len(text), byref(n), None)
         return len(text)
+        
+    if os.environ.has_key("EMACS"):
+        def write_color(self, text, attr=None):
+            junk = c_int(0)
+            self.WriteFile(self.hout, text, len(text), byref(junk), None)
+            return len(text)
+        write_plain = write_color
 
     # make this class look like a file object
     def write(self, text):
