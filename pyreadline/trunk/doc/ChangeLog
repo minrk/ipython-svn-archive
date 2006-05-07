@@ -2,6 +2,7 @@
 	* remove dependency on win32all
 	* make config of configfile location possible
 	* some things to improve emacs interop
+	* some changes to manual
 	
 2006-04-25 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Small change in ansi color handling for default values

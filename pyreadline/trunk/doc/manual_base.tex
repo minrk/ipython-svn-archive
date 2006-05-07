@@ -73,7 +73,7 @@
 
 \newpage
 \section{Overview}
-The pyreadline package is a python implementation of GNU readline. At the moment it is only available for the windows platform. The package is based on the readline package by Gary Bishop. The goal is to provide the functionality of the readline package. New features:
+The pyreadline package is an attempt to implement GNU readline like functionality in python. At the moment it is only available for the windows platform. The package is based on the readline package by Gary Bishop. The goal is to provide the functionality of the readline package. New features:
 \begin{itemize}
 	\item International characters
 	\item Cut and paste from clipboard
@@ -88,7 +88,6 @@ The pyreadline package is a python implementation of GNU readline. At the moment
 \subsection{dependencies}
 \begin{itemize}
 	\item ctypes
-	\item win32all
 \end{itemize}
 
 \subsection{Conflicts}
@@ -96,7 +95,7 @@ Unfortunately the module rlcompleter, the module that provides tab completion, i
 \lstinputlisting{../readline.py}
 
 \section{Installation}
-There are a few things that are not autmatically installed. For instance the configuration file and the startup code that makes sure pyreadline is activated when running python in interactive mode.
+There are a few things that are not automatically installed. For instance the configuration file and the startup code that makes sure pyreadline is activated when running python in interactive mode.
 
 \subsection{Development version}
 Use {\ttfamily easy\_install pyreadline==dev} to get development version. Copy pyreadlineconfig.ini from pyreadline/configuration to your HOME directory (usually c:/documents and settings/YOURNAME)
@@ -118,7 +117,7 @@ The configuration file is read from the users home directory and is named pyread
 	\item[show\_all\_if\_ambiguous] is used to enable the showing of a list of all alternative for tab completion (on|off)
   \item[mark\_directories] show directories (on|off)
   \item[completer\_delims] Which delimeters should be used to separate words for tab completion
-  \item[debug\_output] Turn on debug output (on|off). Not implemented yet.
+  \item[debug\_output] Turn on debug output (on|off).
 \end{description}
 
 Here is the example config file shipped with pyreadline:
@@ -139,8 +138,7 @@ The pyreadline package now supports international characters. However using inte
 
 \section{Known issues}
   \begin{itemize}
-	  \item Ctrl-s can not be used as a bound key. It seems ctrl-s does not generate key-up events in the console. This is an issue with cygwin as well.
-	  \item No vi mode is implemented
+	  \item No vi mode is implemented, though one is under way for the next version
   \end{itemize}
 
 
@@ -161,7 +159,6 @@ The pyreadline package now supports international characters. However using inte
 \subsection{Long term}
   \begin{itemize}
 	  \item Add more platforms
-	  \item Add vi mode
   \end{itemize}
 
 
