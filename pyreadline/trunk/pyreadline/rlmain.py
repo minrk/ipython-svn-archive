@@ -18,8 +18,6 @@ import traceback
 import operator
 import exceptions
 
-import win32con as c32
-
 import clipboard,logger,console
 from   logger import log
 from   keysyms import key_text_to_keyinfo

@@ -1,3 +1,6 @@
+2006-05-07 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* remove dependency on win32all
+	
 2006-04-25 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Small change in ansi color handling for default values
 
