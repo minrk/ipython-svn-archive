@@ -23,7 +23,7 @@ name = 'ipython'
 # bdist_deb does not accept underscores (a Debian convention).
 
 
-version = '0.7.2.svn'
+version = '0.7.2.rc1'
 
 revision = '$Revision$'
 
