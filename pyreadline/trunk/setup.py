@@ -8,9 +8,15 @@
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import glob
+import glob,shutil,os
 from distutils.core import setup
 execfile('pyreadline/release.py')
+
+try:
+    os.chdir("doc")
+    execfile('update_manual.py')
+finally:
+    os.chdir("..")
 
 setup(name=name,
       version          = version,
@@ -29,7 +35,7 @@ setup(name=name,
       py_modules       = ['readline'],
       packages         = ['pyreadline'],
       package_data     = {'pyreadline':['configuration/*']},
-      data_files       = [('share/doc/pyreadline', glob.glob("doc/*")),
+      data_files       = [('share/doc/pyreadline', glob.glob("doc/*.pdf")+glob.glob("doc/*.txt")),
                          ]
       )
 

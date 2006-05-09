@@ -1214,8 +1214,6 @@ class Readline:
             self.bell_style=mode
         def sethistorylength(length):
             self.history_length=int(length)
-        def setbellstyle(mode):
-            self.bell_style=mode
         def show_all_if_ambiguous(mode):
             self.show_all_if_ambiguous=mode
         def mark_directories(mode):
