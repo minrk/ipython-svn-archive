@@ -12,11 +12,12 @@ import glob,shutil,os
 from distutils.core import setup
 execfile('pyreadline/release.py')
 
-try:
-    os.chdir("doc")
-    execfile('update_manual.py')
-finally:
-    os.chdir("..")
+# vivainio preferably no manual setup here...
+#try:
+#    os.chdir("doc")
+#    execfile('update_manual.py')
+#finally:
+#os.chdir("..")
 
 setup(name=name,
       version          = version,
