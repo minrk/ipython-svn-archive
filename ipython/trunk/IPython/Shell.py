@@ -337,7 +337,7 @@ class MTInteractiveShell(InteractiveShell):
         Multithreaded wrapper around IPython's runcode()."""
 
         # lock thread-protected stuff
-        self.thread_ready.acquire(False)
+        got_lock = self.thread_ready.acquire(False)
 
         # Install sigint handler
         try:
@@ -365,7 +365,8 @@ class MTInteractiveShell(InteractiveShell):
             InteractiveShell.runcode(self,code_to_run)
             
         # We're done with thread-protected variables
-        self.thread_ready.release()
+        if got_lock:
+            self.thread_ready.release()
         # This MUST return true for gtk threading to work
         return True
 
