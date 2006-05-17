@@ -23,7 +23,6 @@ import os
 import socket
 import sys
 import time
-from pprint import pprint,pformat
 
 # IPython's own
 from IPython import ColorANSI
