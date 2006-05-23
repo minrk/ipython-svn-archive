@@ -35,8 +35,8 @@ class CrashHandler:
 
     def __init__(self,IP):
         self.IP = IP  # IPython instance
-        self.bug_contact = Release.authors['Fernando'][0]
-        self.mailto = Release.authors['Fernando'][1]
+        self.bug_contact = Release.authors['Ville'][0]
+        self.mailto = Release.authors['Ville'][1]
 
     def __call__(self,etype, evalue, etb):
 
