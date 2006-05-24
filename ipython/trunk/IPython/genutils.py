@@ -1576,17 +1576,22 @@ def chop(seq,size):
     return map(chunk,xrange(0,len(seq),size))
 
 #----------------------------------------------------------------------------
-def with(object, **args):
+# with is a keyword as of python 2.5, so this function is renamed to withobj
+# from its old 'with' name.
+def with_obj(object, **args):
     """Set multiple attributes for an object, similar to Pascal's with.
 
     Example:
-    with(jim,
-         born = 1960,
-         haircolour = 'Brown',
-         eyecolour = 'Green')
+    with_obj(jim,
+             born = 1960,
+             haircolour = 'Brown',
+             eyecolour = 'Green')
 
     Credit: Greg Ewing, in
-    http://mail.python.org/pipermail/python-list/2001-May/040703.html"""
+    http://mail.python.org/pipermail/python-list/2001-May/040703.html.
+
+    NOTE: up until IPython 0.7.2, this was called simply 'with', but 'with'
+    has become a keyword for Python 2.5, so we had to rename it."""
 
     object.__dict__.update(args)
 

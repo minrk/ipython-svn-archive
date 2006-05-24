@@ -73,7 +73,7 @@ def editor(self,filename, linenum=None):
     if linenum is None or editor=='notepad':
         linemark = ''
     else:
-        linemark = '+%d' % linenum
+        linemark = '+%d' % int(linenum)
     
     # Enclose in quotes if necessary and legal
     if ' ' in editor and os.path.isfile(editor) and editor[0] != '"':
