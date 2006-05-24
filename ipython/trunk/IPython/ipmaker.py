@@ -181,8 +181,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     # Set sensible command line defaults.
     # This should have everything from  cmdline_opts and cmdline_only
     opts_def = Struct(autocall = 1,
-                      autoedit_syntax = 1,
-                      autoindent=0,
+                      autoedit_syntax = 0,
+                      autoindent = 0,
                       automagic = 1,
                       banner = 1,
                       cache_size = 1000,
