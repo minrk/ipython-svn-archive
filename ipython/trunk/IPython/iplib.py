@@ -1317,7 +1317,7 @@ want to merge them back into the new files.""" % locals()
 
         If nothing is known about the exception, this is the method which
         should be used throughout the code for presenting user tracebacks,
-        rather htan directly invoking the InteractiveTB object.
+        rather than directly invoking the InteractiveTB object.
 
         A specific showsyntaxerror() also exists, but this method can take
         care of calling it if needed, so unless you are explicitly catching a
