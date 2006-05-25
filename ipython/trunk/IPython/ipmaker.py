@@ -329,6 +329,11 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     mutex_opts(opts,[qw('log logfile'),qw('rcfile profile'),
                      qw('classic profile'),qw('classic rcfile')])
 
+    # Fix up sys.argv to omit the ipython call, for consistency with how
+    # Python itself operates (the inconsistency can break user scripts which
+    # rely on the Python behavior when run under ipython).
+    sys.argv[:] = sys.argv[1:]
+
     #---------------------------------------------------------------------------
     # Log replay
     
