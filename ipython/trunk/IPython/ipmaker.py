@@ -331,11 +331,6 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     mutex_opts(opts,[qw('log logfile'),qw('rcfile profile'),
                      qw('classic profile'),qw('classic rcfile')])
 
-    # Fix up sys.argv to omit the ipython call, for consistency with how
-    # Python itself operates (the inconsistency can break user scripts which
-    # rely on the Python behavior when run under ipython).
-    sys.argv[:] = sys.argv[1:]
-
     #---------------------------------------------------------------------------
     # Log replay
     
@@ -702,19 +697,20 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         # directly. This prevents triggering the IPython crash handler.
         old_excepthook,sys.excepthook = sys.excepthook, IP.excepthook
 
-        save_argv = sys.argv[:] # save it for later restoring
+        save_argv = sys.argv[1:] # save it for later restoring
         
         sys.argv = args
-
+        
         try:
             IP.safe_execfile(args[0], IP.user_ns)
         finally:
             # Reset our crash handler in place
             sys.excepthook = old_excepthook
-            sys.argv = save_argv
+            sys.argv[:] = save_argv
             IP.user_ns['__name__'] = name_save
         
     msg.user_exec.release_all()
+
     if IP_rc.messages:
         msg.summary += msg.user_exec.summary_all()
 
