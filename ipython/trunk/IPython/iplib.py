@@ -190,7 +190,6 @@ class InteractiveShell(object,Magic):
                  user_ns = None,user_global_ns=None,banner2='',
                  custom_exceptions=((),None),embedded=False):
 
-        
         # log system
         self.logger = Logger(self,logfname='ipython_log.py',logmode='rotate')
 
