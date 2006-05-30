@@ -169,6 +169,7 @@ which already exists. But you must first start the logging process with
             print 'Filename       :',self.logfname
             print 'Mode           :',self.logmode
             print 'Output logging :',self.log_output
+            print 'Raw input log  :',self.log_raw_input
             print 'Timestamping   :',self.timestamp
             print 'State          :',state
 
