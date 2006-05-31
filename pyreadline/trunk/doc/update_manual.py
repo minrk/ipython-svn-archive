@@ -1,6 +1,6 @@
 # Must be launched with the build version of pyreadline on path
 #
-import re,os
+import re,os,glob
 import pyreadline.release as release
 
 def run_shell_command(command,path="",stdin=""):
@@ -31,6 +31,10 @@ def build_pdf_doc():
     for ext in ["aux","log","out","toc"]:
         os.remove("manual.%s"%ext)
 
+def rm(pat):
+    for fil in glob.glob(pat):
+        print fil
+        os.remove(fil)    
 
 fil=open("manual_base.tex")
 txt=fil.read()
@@ -43,3 +47,6 @@ fil.close()
 print "Manual (manual.tex) succesfully updated, exiting..."
 print "Run pdflatex manual.tex manually to see errors"
 build_pdf_doc()
+
+for pat in ["aux","log","toc","out"]:
+    rm("*.%s"%pat)

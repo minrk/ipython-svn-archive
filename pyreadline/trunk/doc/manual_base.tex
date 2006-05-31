@@ -95,14 +95,17 @@ Unfortunately the module rlcompleter, the module that provides tab completion, i
 \lstinputlisting{../readline.py}
 
 \section{Installation}
-There are a few things that are not automatically installed. For instance the configuration file and the startup code that makes sure pyreadline is activated when running python in interactive mode.
+There are a few things that are not automatically installed. For instance the configuration file and the startup code that makes sure pyreadline is activated when running python in interactive mode. These files can usually be found in the pyreadline/configuration, the pyreadline directory is usually installed in your site-packages directory.
+
+The configuration file pyreadlineconfig.ini can be copied from pyreadline/configuration to your HOME directory (usually c:/documents and settings/YOURNAME).
+
+When using ipython pyreadline is automatically activated. If you want to use pyreadline from the interactive prompt of the python interpreter then you have to include the code in pyreadline/configuration/startup.py in your pythonstartup file or set the PYTHONSTARTUP environment variable to point to that file.
 
 \subsection{Development version}
-Use {\ttfamily easy\_install pyreadline==dev} to get development version. Copy pyreadlineconfig.ini from pyreadline/configuration to your HOME directory (usually c:/documents and settings/YOURNAME)
+Use {\ttfamily easy\_install pyreadline==dev} to get development version. 
 
 \subsection{Current release version}
-\emph{Currently no release version available.}
-Use {\ttfamily easy\_install pyreadline} to get development version. 
+The current release can be found from \url{http://projects.scipy.org/ipython/ipython/wiki/PyReadline/Intro} where a binary installer is provided.
 
 \section{Usage}
 The purpose of readline is to improve the interactive experience with the python interpreter by improving the line editing facilities. The most important being tab completion and copy and paste.
