@@ -1270,7 +1270,7 @@ want to merge them back into the new files.""" % locals()
                 return
             try:
                 # may set last_syntax_error again if a SyntaxError is raised
-                self.safe_execfile(err.filename,self.shell.user_ns)
+                self.safe_execfile(err.filename,self.user_ns)
             except:
                 self.showtraceback()
             else:
