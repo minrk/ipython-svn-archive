@@ -621,10 +621,9 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         except ImportError:
             # only warn if ipythonrc-PROFNAME didn't exist
             if opts.profile =='':
-                warn("Could not start with profile '%s'!\n ('%s/%s.py' does not exist? run '%%upgrade')" % (
-                      opts_all.profile, ipythondir, profmodname)
-
-                      )
+                warn("Could not start with profile '%s'!\n"
+                     "('%s/%s.py' does not exist? run '%%upgrade')" %
+                     (opts_all.profile, opts_all.ipythondir, profmodname) )
         except:
             print "Error importing",profmodname
             IP.InteractiveTB()
