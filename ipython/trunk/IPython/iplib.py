@@ -566,13 +566,13 @@ class InteractiveShell(object,Magic):
             # --color switch out of the box
             if 'bsd' in sys.platform:
                 ls_extra = ( # ls normal files only
-                             'lf ls -F -o %l | grep ^-',
+                             'lf ls -lF | grep ^-',
                              # ls symbolic links
-                             'lk ls -F -o %l | grep ^l',
+                             'lk ls -lF | grep ^l',
                              # directories or links to directories,
-                             'ldir ls -F -o %l | grep /$',
+                             'ldir ls -lF | grep /$',
                              # things which are executable
-                             'lx ls -F -o %l | grep ^-..x',
+                             'lx ls -lF | grep ^-..x',
                              )
             auto_alias = auto_alias + ls_extra
         elif os.name in ['nt','dos']:
