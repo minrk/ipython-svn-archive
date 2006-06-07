@@ -973,9 +973,9 @@ Currently the magic system has the following functions:\n"""
 
         Input/Output history are left around in case you need them."""
 
-        ans = raw_input(
-          "Once deleted, variables cannot be recovered. Proceed (y/n)? ")
-        if not ans.lower() == 'y':
+        ans = self.shell.ask_yes_no(
+          "Once deleted, variables cannot be recovered. Proceed (y/[n])? ")
+        if not ans:
             print 'Nothing done.'
             return
         user_ns = self.shell.user_ns

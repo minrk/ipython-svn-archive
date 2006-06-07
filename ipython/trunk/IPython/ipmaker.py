@@ -208,6 +208,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       prompt_in2 = '   .\\D.: ',
                       prompt_out = 'Out[\\#]: ',
                       prompts_pad_left = 1,
+                      quiet = 0,
                       quick = 0,
                       readline = 1,
                       readline_merge_completions = 1,
