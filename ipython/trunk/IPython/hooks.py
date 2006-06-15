@@ -55,7 +55,7 @@ from pprint import PrettyPrinter
 # but over time we'll move here all the public API for user-accessible things.
 __all__ = ['editor', 'fix_error_editor', 'result_display',
            'input_prefilter', 'shutdown_hook', 'late_startup_hook',
-           'generate_prompt' ]
+           'generate_prompt', 'generate_output_prompt' ]
 
 pformat = PrettyPrinter().pformat
 
@@ -203,4 +203,8 @@ def generate_prompt(self, is_continuation):
         return str(ip.IP.outputcache.prompt2)
     return str(ip.IP.outputcache.prompt1)
 
-    
+def generate_output_prompt(self):
+    ip = self.api
+    return str(ip.IP.outputcache.prompt_out)
+        
+   

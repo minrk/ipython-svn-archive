@@ -379,6 +379,7 @@ class Prompt2(BasePrompt):
         self.col_p = Colors.out_prompt
         self.col_num = Colors.out_number
 
+
 #-----------------------------------------------------------------------------
 class CachedOutput:
     """Class for printing output from calculations while keeping a cache of
@@ -500,8 +501,9 @@ class CachedOutput:
                 return
             # don't use print, puts an extra space
             cout_write(self.output_sep)
+            outprompt = self.shell.hooks.generate_output_prompt()
             if self.do_full_cache:
-                cout_write(str(self.prompt_out))
+                cout_write(outprompt)
 
             if isinstance(arg,Macro):
                 print 'Executing Macro...'
@@ -583,3 +585,4 @@ class CachedOutput:
             self.user_ns.update({'_':None,'__':None, '___':None})
         import gc
         gc.collect() # xxx needed?
+
