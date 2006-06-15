@@ -5,16 +5,14 @@ from twisted.internet import reactor
 from IPython.genutils import clock, clock2
 
 def gotObject(object):
-    print "got object:", object, clock()
+    print "Got Root object:", object, clock()
     
-    for reps in range(10):
-        object.callRemote("put","b",10).addCallbacks(gotData,gotError)
-    object.callRemote("put","c",10).addCallback(halt)
-    object.callRemote("restart_engine")
+    object.callRemote("put",10,10).addCallback(halt)
+    #object.callRemote("restart_engine")
     
 def halt(data):
     print clock()
-    reactor.stop()
+    #reactor.stop()
    
 def gotData(data):
     pass
@@ -29,6 +27,6 @@ def gotNoObject(reason):
     reactor.stop()
 
 factory = pb.PBClientFactory()
-reactor.connectTCP("127.0.0.1",10106, factory)
+reactor.connectTCP("127.0.0.1",12023, factory)
 factory.getRootObject().addCallbacks(gotObject,gotNoObject)
 reactor.run()

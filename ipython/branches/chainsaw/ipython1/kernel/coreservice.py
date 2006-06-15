@@ -44,15 +44,15 @@ from ipython1.core.shell import InteractiveShell
 class ICoreService(Interface):
     """The Interface for the IPython Core.
     
-    Everything here must return a deferred to which callbacks and errbacks
-    can be added.
+    For now, the methods in this interface must not return deferreds.  This is
+    because the CoreService will be adapted to different protocols, each of
+    which need to handle errors in different ways.  Thus, when esceptions are
+    raised in these methods, they must be allowed to propagate.  That is, they
+    must not be caught.
     """
     
     def execute(self, lines):
-        """Execute lines of Python code.
-        
-        Returns a deferred returning a tuple.
-        """
+        """Execute lines of Python code."""
     
     def put(self, key, value):
         """Put value into locals namespace with name key."""
@@ -81,89 +81,21 @@ class ICoreService(Interface):
     def get_last_command_index(self):
         """Get the index of the last command."""
 
-# -*- test-case-name: ipython1.test.test_coreservice -*-
 # Now the actual CoreService implementation                   
 
-class CoreService(service.Service):
+class CoreService(InteractiveShell, service.Service):
 
     implements(ICoreService)
     
-    def __init__(self, ):
-        self.ishell = InteractiveShell()
-                
-    def execute(self, lines):
-        # If an exception is raised we need to trigger the errback chain
-        try:
-            result = self.ishell.execute(lines)
-        except:
-            result = defer.fail()
-        else:
-            result = defer.succeed(result)
-        return result
-    
-    def put(self, key, value):
-        try:
-            result = self.ishell.put(key, value)
-        except TypeError:
-            result = defer.fail()
-        else:
-            result = defer.succeed(result)
-        return result
-        
     def put_pickle(self, key, package):
-        try:
-            value = pickle.loads(package)
-        except pickle.PickleError:
-            return defer.fail()  # probably should raise pb.Error("msg")
-        else:
-            return defer.succeed(self.ishell.put(key, value))
+        value = pickle.loads(package)
+        return self.put(key, value)
         
-    def get(self, key):
-        try:
-            result = self.ishell.get(key)
-        except TypeError:
-            result = defer.fail()
-        else:
-            result = defer.succeed(result)
-        return result
-
     def get_pickle(self, key):
-        value = self.ishell.get(key)
-        try:
-            package = pickle.dumps(value, 2)
-        except pickle.PickleError:
-            return defer.fail()
-        else:
-            return defer.succeed(package)
-
-    def update(self, dict_of_data):
-        try:
-            result = self.ishell.update(dict_of_data)
-        except TypeError:
-            result = defer.fail()
-        else:
-            result = defer.succeed(result)
-        return result
+        value = self.get(key)
+        package = pickle.dumps(value, 2)
+        return package
         
     def update_pickle(self, dict_pickle):
-        try:
-            value = pickle.loads(package)
-        except pickle.PickleError:
-            return defer.fail()  # probably should raise pb.Error("msg")
-        else:
-            return self.update(value)        
-        
-    def reset(self):
-        return defer.succeed(self.ishell.reset())
-        
-    def get_command(self, i=None):
-        try:
-            result = self.ishell.get_command(i)
-        except IndexError:
-            result = defer.fail()
-        else:
-            result = defer.succeed(result)
-        return result
-
-    def get_last_command_index(self):
-        return defer.succeed(self.ishell.get_last_command_index())
+        value = pickle.loads(package)
+        return self.update(value)    

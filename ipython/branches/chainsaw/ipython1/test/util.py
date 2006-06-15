@@ -39,8 +39,13 @@ class DeferredTestCase(unittest.TestCase):
             chainDeferred = defer.succeed(None)
 
         def gotFailure(f):
-            f.printTraceback()
+            #f.printTraceback()
+            print "Hi here"
+            print " .type =", f.type
+            print " .value =", f.value
+            print " .tb = ", f.tb
             self.assertRaises(expectedException, f.raiseException)
+            #return f
         deferred.addErrback(gotFailure)
             
         return chainDeferred.addCallback(lambda _: deferred)

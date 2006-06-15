@@ -15,12 +15,16 @@ properly:
 from ipython1.kernel import corepb
 """
 
-from twisted.python import components
+from twisted.python import components, failure
 from twisted.spread import pb
+from twisted.spread.pb import Error
 from zope.interface import Interface, implements
 
 from ipython1.kernel import coreservice
      
+class MyError(pb.Error):
+    pass
+
 class IPerspectiveCore(Interface):
 
     def remote_execute(self, lines):
@@ -37,6 +41,12 @@ class IPerspectiveCore(Interface):
 
     def remote_get_pickle(self, key):
         """Gets an item out of the self.locals dist by key and pickles it."""
+
+    def remote_update(self, dict_of_data):
+        """Updates the self.locals dict with the dict_of_data."""
+        
+    def remote_update_pickle(self, dict_pickle):
+        """Updates the self.locals dict with the pickled dict."""
 
     def remote_reset(self):
         """Reset the InteractiveShell."""
@@ -55,28 +65,84 @@ class PerspectiveCoreFromService(pb.Root):
         self.service = service
 
     def remote_execute(self, lines):
-        return self.service.execute(lines)
-    
+        try:
+            result = self.service.execute(lines)
+        except:
+            raise pb.Error("execute()")
+        else:
+            return result
+            
     def remote_put(self, key, value):
-        return self.service.put(key, value)
+        try:
+            result = self.service.put(key, value)
+        except:
+            raise Error("put()")
+        else:
+            return result
         
     def remote_put_pickle(self, key, package):
-        return self.service.put_pickle(key, package)
+        try:
+            result = self.service.put_pickle(key, package)
+        except:
+            raise pb.Error("put_pickle()")
+        else:
+            return result
         
     def remote_get(self, key):
-        return self.service.get(key)
+        try:
+            result = self.service.get(key)
+        except:
+            raise pb.Error("get()")
+        else:
+            return result
 
     def remote_get_pickle(self, key):
-        return self.service.get_pickle(key)
+        try:
+            result = self.service.get_pickle(key)
+        except:
+            raise pb.Error("get_pickle()")
+        else:
+            return result
+
+    def remote_update(self, dict_of_data):
+        try:
+            result = self.service.update(dict_of_data)
+        except:
+            raise pb.Error("update()")
+        else:
+            return result
+        
+    def remote_update_pickle(self, dict_pickle):
+        try:
+            result = self.service.update_pickle(dict_of_data)
+        except:
+            raise pb.Error("update_pickle()")
+        else:
+            return result
 
     def remote_reset(self):
-        return self.service.reset()
+        try:
+            result = self.service.reset()
+        except:
+            raise pb.Error("reset()")
+        else:
+            return result
         
     def remote_get_command(self, i=None):
-        return self.service.get_command(i)
+        try:
+            result = self.service.get_command(i)
+        except:
+            raise pb.Error("get_command()")
+        else:
+            return result
 
     def remote_get_last_command_index(self):
-        return self.service.get_last_command_index()
+        try:
+            result = self.service.get_last_command_index()
+        except:
+            raise pb.Error("get_last_command_index()")
+        else:
+            return result
     
 components.registerAdapter(PerspectiveCoreFromService,
                            coreservice.CoreService,
