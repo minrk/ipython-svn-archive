@@ -54,7 +54,8 @@ from pprint import PrettyPrinter
 # List here all the default hooks.  For now it's just the editor functions
 # but over time we'll move here all the public API for user-accessible things.
 __all__ = ['editor', 'fix_error_editor', 'result_display',
-           'input_prefilter', 'shutdown_hook', 'late_startup_hook']
+           'input_prefilter', 'shutdown_hook', 'late_startup_hook',
+           'generate_prompt' ]
 
 pformat = PrettyPrinter().pformat
 
@@ -194,3 +195,12 @@ def late_startup_hook(self):
     
     """
     #print "default startup hook ok" # dbg
+
+def generate_prompt(self, is_continuation):
+    """ calculate and return a string with the prompt to display """
+    ip = self.api
+    if is_continuation:
+        return str(ip.IP.outputcache.prompt2)
+    return str(ip.IP.outputcache.prompt1)
+
+    
