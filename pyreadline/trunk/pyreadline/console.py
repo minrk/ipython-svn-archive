@@ -179,15 +179,16 @@ class Console(object):
         else:
             self.hout = self.GetStdHandle(STD_OUTPUT_HANDLE)
 
-        self.hin = self.GetStdHandle(STD_INPUT_HANDLE)
-        self.inmode = c_int(0)
-        self.GetConsoleMode(self.hin, byref(self.inmode))
-        self.SetConsoleMode(self.hin, 0xf)
         info = CONSOLE_SCREEN_BUFFER_INFO()
         self.GetConsoleScreenBufferInfo(self.hout, byref(info))
         self.attr = info.wAttributes
         self.saveattr = info.wAttributes # remember the initial colors
         log('initial attr=%x' % self.attr)
+
+        self.hin = self.GetStdHandle(STD_INPUT_HANDLE)
+        self.inmode = c_int(0)
+        self.GetConsoleMode(self.hin, byref(self.inmode))
+        self.SetConsoleMode(self.hin, 0xf)
         self.softspace = 0 # this is for using it as a file-like object
         self.serial = 0
 
@@ -305,17 +306,14 @@ class Console(object):
         log('chunks=%s' % repr(chunks))
         junk = c_int(0)
         n = 0 # count the characters we actually write, omitting the escapes
-        if attr is None:
-            info = CONSOLE_SCREEN_BUFFER_INFO()
-            self.GetConsoleScreenBufferInfo(self.hout, byref(info))
-            attr = info.wAttributes # fetch current colors
+        if attr is None:#use attribute from initial console
+            attr = self.saveattr
         for chunk in chunks:
             m = self.escape_parts.match(chunk)
             if m:
                 for part in m.group(1).split(";"):
-                    if part == "0": # switch to default
-                        attr = self.attr
-                        attr = attr & ~0x08
+                    if part == "0": # No text attribute
+                        attr = 0
                     elif part == "7": # switch on reverse
                         attr |= 0x4000
                     if part == "1": # switch on bold (i.e. intensify foreground color)

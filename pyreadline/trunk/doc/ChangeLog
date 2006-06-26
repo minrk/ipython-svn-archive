@@ -1,3 +1,7 @@
+2006-06-26 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Changes to ansi handling to preserve initial consoles color
+	  attribute for ordinary output.
+
 2006-05-31 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* added text about installation for the binary release to the manual
 	* Added code to remove temporary latex files when building manual
