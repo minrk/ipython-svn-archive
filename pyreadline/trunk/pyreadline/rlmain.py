@@ -50,8 +50,8 @@ class Readline:
         self.line_cursor = 0
         self.console = console.Console()
         self.size = self.console.size()
-        self.prompt_color = None
-        self.command_color = None
+        self.prompt_color = self.console.saveattr
+        self.command_color = self.console.saveattr
         self.key_dispatch = {}
         self.exit_dispatch = {}
         self.previous_func = None
@@ -1223,6 +1223,17 @@ class Readline:
         def debug_output(on,filename="pyreadline_debug_log.txt"):  #Not implemented yet
             logger.start_log(on,filename)
             logger.log("STARTING LOG")
+        def set_prompt_color(color):
+            trtable={"black":0,"darkred":4,"darkgreen":2,"darkyellow":6,"darkblue":1,"darkmagenta":5,"darkcyan":3,"gray":7,
+                     "red":4+8,"green":2+8,"yellow":6+8,"blue":1+8,"magenta":5+8,"cyan":3+8,"white":7+8}
+            self.prompt_color=trtable.get(color.lower(),7)            
+            
+        def set_input_color(color):
+            trtable={"black":0,"darkred":4,"darkgreen":2,"darkyellow":6,"darkblue":1,"darkmagenta":5,"darkcyan":3,"gray":7,
+                     "red":4+8,"green":2+8,"yellow":6+8,"blue":1+8,"magenta":5+8,"cyan":3+8,"white":7+8}
+            self.command_color=trtable.get(color.lower(),7)            
+            
+    
         loc={"branch":release.branch,
              "bind_key":bind_key,
              "bind_exit_key":bind_exit_key,
@@ -1234,7 +1245,9 @@ class Readline:
              "completer_delims":completer_delims,
              "debug_output":debug_output,
              "history_filename":sethistoryfilename,
-             "history_length":sethistorylength}
+             "history_length":sethistorylength,
+             "set_prompt_color":set_prompt_color,
+             "set_input_color":set_input_color,}
         if os.path.isfile(inputrcpath): 
             try:
                 execfile(inputrcpath,loc,loc)

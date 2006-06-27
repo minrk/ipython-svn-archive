@@ -1,3 +1,14 @@
+2006-06-27 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Changes from yesterday were not correct. Resulted in invisible docstrings
+	  when using ? in ipython.
+	* ANSI sequence Esc[0m in write_color will now result in a white color with no 
+	  attributes (same as in cygwin). But the color of input text is controlled
+	  set_input_color in config file with default same as dos-color was when
+	  launching python. set_prompt_color controls prompt and raw_input text
+	  and also defaults to same as dos-color was when launching python.
+	  Unfortunately I have not found a way to control color of text that is printed 
+	  with a print statement.
+
 2006-06-26 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Changes to ansi handling to preserve initial consoles color
 	  attribute for ordinary output.

@@ -195,6 +195,13 @@ class Console(object):
         self.pythondll = CDLL('python%s%s' % (sys.version[0], sys.version[2]))
         self.inputHookPtr = c_int.from_address(addressof(self.pythondll.PyOS_InputHook)).value
         setattr(Console, 'PyMem_Malloc', self.pythondll.PyMem_Malloc)
+        def exit():
+            self.SetConsoleTextAttribute(self.hout, self.saveattr)
+            self.SetConsoleMode(self.hin, self.inmode)
+            self.FreeConsole()
+        import atexit
+        atexit.register(exit)
+            
 
     def __del__(self):
         '''Cleanup the console when finished.'''
@@ -312,8 +319,8 @@ class Console(object):
             m = self.escape_parts.match(chunk)
             if m:
                 for part in m.group(1).split(";"):
-                    if part == "0": # No text attribute
-                        attr = 0
+                    if part == "0": # No text attribute but white
+                        attr = 7
                     elif part == "7": # switch on reverse
                         attr |= 0x4000
                     if part == "1": # switch on bold (i.e. intensify foreground color)
