@@ -1,5 +1,5 @@
 2006-04-10  Brian Granger <ellisonbg@gmail.com>
-
+ 
         * ipython1/test: Setup a test directory as a sub-module of
         ipython1.  This makes it possible to test ipython1 using Twisted's
         trial command:
