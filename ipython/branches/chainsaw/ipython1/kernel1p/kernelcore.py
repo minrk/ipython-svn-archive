@@ -598,13 +598,15 @@ class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
         self.qic = QueuedInteractiveConsole()
         self.qic.start_work()
         # Uncomment these lines for mpi support - no docs on this yet.
-        #self.qic.execute('import mpi')
+        self.qic.execute('from mpi4py import MPI')
+        self.qic.execute('print MPI.rank, MPI.size')
         #self.qic.execute('import sys')
         #self.qic.execute('sys.argv =  mpi.mpi_init(len(sys.argv),sys.argv)')
         KernelFactoryBase.__init__(self, allow, notify)
 
     def stopFactory(self):
-        self.qic.execute('mpi.mpi_finalize()')
+        pass
+        #self.qic.execute('mpi.mpi_finalize()')
 
     # Kernel methods
             
