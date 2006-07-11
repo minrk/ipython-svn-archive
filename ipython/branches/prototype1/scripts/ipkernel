@@ -1,0 +1,85 @@
+#!/usr/bin/env python
+"""The basic ipython computational kernel.
+
+This module is meant to be run from the command line.  To start the kernel,
+issue the command:
+
+    python kernel.py
+
+This will start the kernel listening on port 10105 (the default) and will allow
+connections from only the localhost (127.0.0.1).  Here is an example that starts
+the kernel on port 10106 and allows connections from the localhost and 
+121.122.123.124:
+
+    python kernel.py -p 10106 -a 121.122.123.124
+
+For more information on the command line options, run:
+
+    python kernel.py -h
+
+NOTE:  The kernel cannot currently be run in the background, so:
+
+    python kernel.py &
+
+won't result in a running kernel instance.
+"""
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+import cPickle as pickle
+import sys
+from optparse import OptionParser
+
+from twisted.internet import reactor, error
+from twisted.python import log
+
+
+try:
+    from ipython1.kernel1p.kernelcore import KernelTCPFactory
+    from ipython1.kernel1p.kernelcore import ThreadlessKernelTCPFactory
+except ImportError:
+    print "ipython1 needs to be in your PYTHONPATH"
+
+def try_ports(port, allow_list, factory_class):
+    try:
+        d = reactor.listenTCP(port, factory_class(allow=allow_list))
+    except error.CannotListenError:
+        log.msg("Trying the next port")
+        try:
+            d = reactor.listenTCP(port+1, factory_class(allow=allow_list))
+        except error.CannotListenError:
+            raise
+
+def main(port, allow_ip, threads):
+    if threads:
+        factory_class = KernelTCPFactory
+    else:
+        factory_class = ThreadlessKernelTCPFactory
+        
+    allow_list = ['127.0.0.1']
+    if allow_ip is not None:
+        allow_list.extend(allow_ip.split(":"))
+    log.startLogging(sys.stdout)
+    reactor.callLater(2.0,try_ports, port,allow_list, factory_class)
+    log.msg(allow_list)
+    reactor.run()
+
+def start(port=10105):
+    parser = OptionParser()
+    parser.set_defaults(port=port)
+    parser.add_option("-p", "--port", type="int", dest="port",
+        help="the TCP port the kernel will listen on")
+    parser.add_option("-a", "--allow", type="string", dest="allow_ip",
+        help="an IP address to allow to connect to the kernel")
+    parser.add_option("--threadless",action="store_false",dest="threads",default=True)
+    (options, args) = parser.parse_args()
+    print "Starting the kernel on port %i" % options.port
+    main(options.port, options.allow_ip, options.threads)
+    
+if __name__ == "__main__":
+    start()

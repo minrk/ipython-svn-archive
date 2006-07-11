@@ -1,0 +1,22 @@
+>>> from ipython1.core.shell import InteractiveShell
+>>> ishell = InteractiveShell()
+>>> ishell.get_command()
+>>> ishell.execute("a = 10")
+(0, 'a = 10', '', '')
+>>> ishell.get_last_command_index()
+0
+>>> ishell.execute("b = 20")
+(1, 'b = 20', '', '')
+>>> ishell.execute("c = a + b")
+(2, 'c = a + b', '', '')
+>>> ishell.execute("print c")
+(3, 'print c', '30\n', '')
+>>> ishell.get_command(10)
+>>> ishell.get_command(2)
+(2, 'c = a + b', '', '')
+>>> ishell.reset()
+>>> ishell.get_command()
+>>> ishell.execute("print a, b") 
+(0, 'print a, b', '', 'Traceback (most recent call last):\n  File "<console>", line 1, in ?\nNameError: name \'a\' is not defined\n')
+
+

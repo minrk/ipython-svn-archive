@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+"""Classes for gathering results from kernels.
+
+IPython kernels send back results (stdout, stderr) to a UDP port.  The classes
+in this module listen on the UDP port and hadle the incoming results.
+
+Classes:
+
+ResultGatherer     -- A multithreaded class that collects and prints results
+                      from kernels.
+
+To use simply start a basic result gatherer from the command line, issue:
+
+python results.py
+
+This will start the results gatherer on port 10104.  To use a different port,
+use the -p option:
+
+python results.py -p 10001
+
+Once the result gatherer has been started you can tell kernels to send results
+to the gatherer by using the .notify method of the RemoteKernel or 
+InteractiveCluster classes.  Multiple kernels can notify a single gatherer.
+"""
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+import socket
+import threading
+import pickle
+import time, os
+from optparse import OptionParser
+
+from IPython.ColorANSI import *
+
+try:
+    from ipython1.kernel1p.results import ResultGatherer
+except:
+    print "ipython1 needs to be in your PYTHONPATH"
+     
+def main(port):
+    rg = ResultGatherer(("",port))
+    rg.start(True)
+    while 1:
+        time.sleep(1)
+
+def start():
+    parser = OptionParser()
+    parser.set_defaults(port=10104)
+    parser.add_option("-p", "--port", type="int", dest="port",
+        help="the UDP port the gatherer will listen on")
+    (options, args) = parser.parse_args()
+    print "Starting the gatherer on port %i" % options.port
+    main(options.port)
+    
+if __name__ == '__main__':
+    start()

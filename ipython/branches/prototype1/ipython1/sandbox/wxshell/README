@@ -1,0 +1,9 @@
+This directory contains the classes for Twisted enabled versions of the
+wxPython's PyShell and PyCrust applications.  These version use 
+Twisted's threadedselectreactor() to interleave the Twisted event loop with
+that of wx.  The actual applications can be started with the pipshell and 
+pipcrust scripts.
+
+Oh, and "pip" stands for "parallel ipython"
+
+B. Granger 2006-02-11
