@@ -10,8 +10,11 @@
 
 from twisted.application import internet, service
 
-from ipython1.kernel.engineservice import EngineService
-from ipython1.kernel.controller import EngineFactory
+try:
+	from ipython1.kernel.engineservice import EngineService
+	from ipython1.kernel.engine import EngineTCPFactory
+except ImportError:
+    print "ipython1 needs to be in your PYTHONPATH"
 
 #init service:
 es = EngineService()

@@ -9,10 +9,13 @@
 #*****************************************************************************
 
 from twisted.application import internet, service
+try:
+	from ipython1.kernel.controllerservice import ControllerService
+	from ipython1.kernel.controller import ControllerFactory
+	from ipython1.kernel.engineclient import EngineClientFactory
+except ImportError:
+    print "ipython1 needs to be in your PYTHONPATH"
 
-from ipython1.kernel.controllerservice import ControllerService
-from ipython1.kernel.controller import ControllerFactory
-from ipython1.kernel.engineclient import EngineClientFactory
 
 #init service:
 cs = controllerservice()

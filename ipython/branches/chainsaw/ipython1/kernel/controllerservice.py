@@ -16,7 +16,7 @@ from twisted.application import internet, service
 
 class Engine(object):
 	"""Engine object existing inside controller service"""
-	def __init__(self, service, id=None, addr=(), protocol_instance=None):
+	def __init__(self, service=None, id=None, addr=(), protocol_instance=None, qic):
 		self.service = service
 		self.id = id
 		self.addr = addr

@@ -32,11 +32,7 @@ from IPython.OutputTrap import OutputTrap
 
 try:
     from ipython1.kernel.ticketedqueue import TicketedQueue
-except:
-    print "ipython1 needs to be in your PYTHONPATH"
-
-try:
-    from dev.kernelerror import NotDefined
+    from ipython1.kernel.kernelerror import NotDefined
 except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
 

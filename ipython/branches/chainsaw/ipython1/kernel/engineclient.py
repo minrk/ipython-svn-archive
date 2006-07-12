@@ -20,20 +20,11 @@ import time, os
 from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 
-from ipython1.kernel.scatter import *
-from ipython1.kernel.parallelfunction import ParallelFunction
-
 try:
+	from ipython1.kernel.scatter import *
+	from ipython1.kernel.parallelfunction import ParallelFunction
     from ipython1.kernel.esocket import LineSocket
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
-    
-try:
     import ipython1.kernel.kernel_magic
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
-
-try:
     from ipython1.kernel.kernelerror import NotDefined
 except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
