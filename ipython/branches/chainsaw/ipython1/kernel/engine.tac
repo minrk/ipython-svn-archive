@@ -1,4 +1,4 @@
-"""Twisted application for running a single engine instance
+"""Engine Application for Twisted Daemon (twistd)
 """
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
@@ -15,11 +15,11 @@ from ipython1.kernel.controller import EngineFactory
 
 #init service:
 es = EngineService()
-es.addFactory(EngineFactory())
+es.add_f(EngineFactory())
 
 application = service.Application('engine', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
 
 cs.setServiceParent(serviceCollection)
-internet.TCPClient(10201, es.factoryList[0]
-                   ).setServiceParent(serviceCollection)
+internet.TCPClient(10201, es.factory_list[0]
+			).setServiceParent(serviceCollection)

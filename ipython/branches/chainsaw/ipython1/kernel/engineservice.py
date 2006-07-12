@@ -15,38 +15,38 @@ class EngineService(service.Service):
 	def __init__(self, id=None, factory=[]):
 		self.id = id
 		if type(factory) is list:
-			self.factoryList = factory
+			self.factory_list = factory
 		else:
-			self.factoryList = [factory]
-		for f in self.factoryList:
+			self.factory_list = [factory]
+		for f in self.factory_list:
 			f.service = self
 		if type(engine) is list:
-			self.engineList = engine
+			self.engine_list = engine
 		else:
-			self.engineList = [engine]
-		for e in self.engineList:
+			self.engine_list = [engine]
+		for e in self.engine_list:
 			e.service = self
 	
-	def setId(self, id):
+	def set_id(self, id):
 		self.id = id
 	
-	def setFactoryList(self, factoryList):
-		for f in self.factoryList:
+	def set_factory_list(self, factory_list):
+		for f in self.factory_list:
 			del f
-		self.factoryList = factoryList
-		for f in factoryList:
+		self.factory_list = factory_list
+		for f in factory_list:
 			f.service = self
 	
-	def addFactory(self, factory):
+	def add_factory(self, factory):
 		if type(factory) is list:
-			self.factoryList.extend(factory)
+			self.factory_list.extend(factory)
 			for f in factory:
 				f.service = self
 		else:
-			self.factoryList.append(factory)
+			self.factory_list.append(factory)
 			factory.service = self
 	
-	def addEngine(self, engine=None):
+	def add_engine(self, engine=None):
 		if not engine:
 			engine = Engine()
 
