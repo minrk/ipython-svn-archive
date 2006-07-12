@@ -16,13 +16,16 @@ from twisted.application import internet, service
 
 class Engine(object):
 	"""Engine object existing inside controller service"""
-	def __init__(self, service, id=None, addr=(), protocolInstance=None):
-		self.
+	def __init__(self, service, id=None, addr=(), protocol_instance=None):
+		self.service = service
+		self.id = id
+		self.addr = addr
+		self.protocol_instance = protocol_instance
 
 class ControllerService(service.Service):
 	"""template service for controller service pair listenUp, listenDown"""
-	def __init__(self, factory=[], engine=[]):
-		
+	def __init__(self, name = 'ControllerService', factory=[], engine=[]):
+		self.SetName(name)
 		if type(factory) is list:
 			self.factoryList = factory
 		else:
