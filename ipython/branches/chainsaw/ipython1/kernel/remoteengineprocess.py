@@ -45,7 +45,8 @@ class RemoteEngineProcessProtocol(protocol.ProcessProtocol):
     
 
 class RemoteEngineProcessFactory(protocol.ServerFactory):
-    """"""
+    """factory that passes everything to service"""
+    protocol = RemoteEngineProcessProtocol
     def __init__(self):
         pass
     

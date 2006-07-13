@@ -27,6 +27,13 @@ TODO:
   
 - Security issues.  Turn on TLS an authentication.
 """
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
 
 import os, signal
 
@@ -81,11 +88,17 @@ class IEngine(Interface):
     def get_last_command_index(self):
         """Get the index of the last command."""
 
-# Now the actual CoreService implementation                   
+# Now the actual EngineService implementation                   
 
 class EngineService(InteractiveShell, service.Service):
 
     implements(IEngine)
+    
+    def __init__(self, port, controllerAddress, factory, locals=None, filename="<console>"):
+        self.factory = factory
+        InteractiveShell.__init__(self, locals, filename)
+        
+        reactor.connectTCP(controllerAddress, port, factory)
     
     def put_pickle(self, key, package):
         value = pickle.loads(package)

@@ -12,8 +12,15 @@ PB must be added to both the Interface and Adapter in this file.
 This module must be imported in its entirety to have its Adapters registered
 properly:
 
-from ipython1.kernel import kernelpb
+from ipython1.kernel import enginepb
 """
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
 
 
 from twisted.python import components
@@ -26,37 +33,37 @@ from ipython1.kernel import engineservice
      
 class IPerspectiveEngine(Interface):
 
-    def remote_execute(self, lines):
+    def remoteExecute(self, lines):
         """Execute lines of Python code."""
     
-    def remote_put(self, key, value):
+    def remotePut(self, key, value):
         """Put value into locals namespace with name key."""
         
-    def remote_put_pickle(self, key, package):
+    def remotePutPickle(self, key, package):
         """Unpickle package and put into the locals namespace with name key."""
         
-    def remote_get(self, key):
+    def remoteGet(self, key):
         """Gets an item out of the self.locals dict by key."""
 
-    def remote_get_pickle(self, key):
+    def remoteGetPickle(self, key):
         """Gets an item out of the self.locals dist by key and pickles it."""
 
-    def remote_reset(self):
+    def remoteReset(self):
         """Reset the InteractiveShell."""
         
-    def remote_get_command(self, i=None):
+    def remoteGetCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
 
-    def remote_get_last_command_index(self):
+    def remoteGetLastCommandIndex(self):
         """Get the index of the last command."""
 
-    def remote_restart_engine(self):
+    def remoteRestartEngine(self):
         """Stops and restarts the kernel engine process."""
         
-    def remote_clean_queue(self):
+    def remoteCleanQueue(self):
         """Cleans out pending commands in the kernel's queue."""
         
-    def remote_interrupt_engine(self):
+    def remoteInterruptEngine(self):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
 
 class PerspectiveEngineFromService(pb.Root):
@@ -66,37 +73,37 @@ class PerspectiveEngineFromService(pb.Root):
     def __init__(self, service):
         self.service = service
 
-    def remote_execute(self, lines):
+    def remoteExecute(self, lines):
         return self.service.execute(lines)
     
-    def remote_put(self, key, value):
+    def remotePut(self, key, value):
         return self.service.put(key, value)
         
-    def remote_put_pickle(self, key, package):
+    def remotePutPickle(self, key, package):
         return self.service.put_pickle(key, package)
         
-    def remote_get(self, key):
+    def remoteGet(self, key):
         return self.service.get(key)
 
-    def remote_get_pickle(self, key):
+    def remoteGetPickle(self, key):
         return self.service.get_pickle(key)
 
-    def remote_reset(self):
+    def remoteReset(self):
         return self.service.reset()
         
-    def remote_get_command(self, i=None):
+    def remoteGetCommand(self, i=None):
         return self.service.get_command(i)
 
-    def remote_get_last_command_index(self):
+    def remoteGetLastCommandIndex(self):
         return self.service.get_last_command_index()
 
-    def remote_restart_engine(self):
+    def remoteRestartEngine(self):
         return self.service.restart_engine()
         
-    def remote_clean_queue(self):
+    def remoteCleanQueue(self):
         return self.service.clean_queue()
 
-    def remote_interrupt_engine(self):
+    def remoteInterruptEngine(self):
         return self.service.interrupt_engine()
     
 components.registerAdapter(PerspectiveEngineFromService,

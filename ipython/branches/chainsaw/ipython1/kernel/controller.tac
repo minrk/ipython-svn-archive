@@ -9,21 +9,19 @@
 #*****************************************************************************
 
 from twisted.application import internet, service
+from twisted.spread import pb
 #try:
 from ipython1.kernel.controllerservice import ControllerService
 from ipython1.kernel.remoteengineprocess import RemoteEngineProcessFactory as REPFactory
-#	from ipython1.kernel.engineclient import EngineClientFactory
-#except ImportError:
-#    print "ipython1 needs to be in your PYTHONPATH"
 
 
 #init service:
 application = service.Application('controller', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
 
-f = REPFactory()
-f2 = REPFactory()
-cs = ControllerService(10105, f, 10106, f2)
+cf = REPFactory()
+ef = pb.PBServerFactory(pb.Root())
+cs = ControllerService(10105, f, 10106, ef)
 
 cs.setServiceParent(serviceCollection)
 

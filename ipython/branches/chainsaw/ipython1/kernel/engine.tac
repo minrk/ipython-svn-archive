@@ -17,12 +17,16 @@ except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
 
 #init service:
-es = EngineService()
 
 application = service.Application('engine', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
 
-pbfact = pb.PBClientFactory(enginepb.IPerspectiveEngine(es))
+pbfact = pb.PBClientFactory()
+es = EngineService(10105, pbf)
+cs.setServiceParent(serviceCollection)
+
+#pbfact._root = enginepb.PerspectiveEngineFromService(es)
+es.factory = pbfact
 
 kspb = internet.TCPClient('127.0.0.1', 10105, pbfact)
 kspb.setServiceParent(application)
