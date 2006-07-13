@@ -51,11 +51,8 @@ threadedselectreactor.install()
 from twisted.internet import reactor
 from twisted.python import log
 
-try:
-    from ipython1.kernel1p.kernelcore import KernelTCPFactoryGUI
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
 
+from ipython1.kernel.kernelcore import KernelTCPFactoryGUI
 
 # Here are the classes for wxPython
 

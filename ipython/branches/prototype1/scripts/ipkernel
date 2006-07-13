@@ -38,24 +38,22 @@ from optparse import OptionParser
 from twisted.internet import reactor, error
 from twisted.python import log
 
+from ipython1.kernel.kernelcore import KernelTCPFactory
+from ipython1.kernel.kernelcore import ThreadlessKernelTCPFactory
 
-try:
-    from ipython1.kernel1p.kernelcore import KernelTCPFactory
-    from ipython1.kernel1p.kernelcore import ThreadlessKernelTCPFactory
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
-
-def try_ports(port, allow_list, factory_class):
+def try_ports(port, allow_list, mpi, factory_class):
     try:
-        d = reactor.listenTCP(port, factory_class(allow=allow_list))
+        d = reactor.listenTCP(port, 
+            factory_class(allow=allow_list, mpi=mpi))
     except error.CannotListenError:
         log.msg("Trying the next port")
         try:
-            d = reactor.listenTCP(port+1, factory_class(allow=allow_list))
+            d = reactor.listenTCP(port+1, 
+                factory_class(allow=allow_list, mpi=mpi))
         except error.CannotListenError:
             raise
 
-def main(port, allow_ip, threads):
+def main(port, allow_ip, threads, mpi):
     if threads:
         factory_class = KernelTCPFactory
     else:
@@ -65,7 +63,7 @@ def main(port, allow_ip, threads):
     if allow_ip is not None:
         allow_list.extend(allow_ip.split(":"))
     log.startLogging(sys.stdout)
-    reactor.callLater(2.0,try_ports, port,allow_list, factory_class)
+    reactor.callLater(1.0, try_ports, port, allow_list, mpi, factory_class)
     log.msg(allow_list)
     reactor.run()
 
@@ -76,10 +74,14 @@ def start(port=10105):
         help="the TCP port the kernel will listen on")
     parser.add_option("-a", "--allow", type="string", dest="allow_ip",
         help="an IP address to allow to connect to the kernel")
-    parser.add_option("--threadless",action="store_false",dest="threads",default=True)
+    parser.add_option("--threadless",
+        action="store_false",dest="threads",default=True,
+        help="start single thread kernel")
+    parser.add_option("--mpi", action="store_true", default=False,
+        dest="mpi", help="Start with mpi4py loaded")
     (options, args) = parser.parse_args()
     print "Starting the kernel on port %i" % options.port
-    main(options.port, options.allow_ip, options.threads)
+    main(options.port, options.allow_ip, options.threads, options.mpi)
     
 if __name__ == "__main__":
     start()

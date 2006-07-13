@@ -20,27 +20,12 @@ import time, os
 from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 
-from ipython1.kernel1p.scatter import *
-from ipython1.kernel1p.parallelfunction import ParallelFunction
+from ipython1.kernel.scatter import *
+from ipython1.kernel.parallelfunction import ParallelFunction
 
-try:
-    from ipython1.kernel1p.esocket import LineSocket
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
-    
-try:
-    import ipython1.kernel1p.kernel_magic
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
-
-try:
-    from ipython1.kernel1p.kernelerror import NotDefined
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
-
-#from esocket import LineSocket
-#import kernel_magic
-#from kernelerror import NotDefined
+from ipython1.kernel.esocket import LineSocket
+import ipython1.kernel.kernel_magic
+from ipython1.kernel.kernelerror import NotDefined
            
 def _tar_module(mod):
     """Makes a tarball (as a string) of a locally imported module.

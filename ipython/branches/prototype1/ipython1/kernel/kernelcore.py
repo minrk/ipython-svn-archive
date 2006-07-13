@@ -20,11 +20,8 @@ from twisted.python import log
 from twisted.python import failure
 import sys
 
-try:
-    from ipython1.kernel1p.console import QueuedInteractiveConsole, TrappingInteractiveConsole
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
-#from console import QueuedInteractiveConsole, TrappingInteractiveConsole
+from ipython1.core.shell import QueuedInteractiveConsole
+from ipython1.core.shell import TrappingInteractiveConsole
 
 # modified from twisted.mail.imap4.LiteralString
 class LiteralString:
@@ -594,19 +591,17 @@ class KernelFactoryBase:
 class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
     protocol = KernelTCPProtocol
     
-    def __init__(self, allow=[], notify=[]):
+    def __init__(self, allow=[], notify=[], mpi=False):
         self.qic = QueuedInteractiveConsole()
         self.qic.start_work()
-        # Uncomment these lines for mpi support - no docs on this yet.
-        self.qic.execute('from mpi4py import MPI')
-        self.qic.execute('print MPI.rank, MPI.size')
-        #self.qic.execute('import sys')
-        #self.qic.execute('sys.argv =  mpi.mpi_init(len(sys.argv),sys.argv)')
+        self.mpi =  mpi
+        if self.mpi:
+            self.qic.execute('from mpi4py import MPI')
         KernelFactoryBase.__init__(self, allow, notify)
 
     def stopFactory(self):
-        pass
-        #self.qic.execute('mpi.mpi_finalize()')
+        if self.mpi:
+            self.qic.execute('MPI.Finalize()')
 
     # Kernel methods
             
@@ -684,16 +679,16 @@ class KernelTCPFactoryGUI(protocol.ServerFactory, KernelFactoryBase):
 class ThreadlessKernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
     protocol = KernelTCPProtocol
     
-    def __init__(self, allow=[], notify=[]):
+    def __init__(self, allow=[], notify=[], mpi=False):
         self.tic = TrappingInteractiveConsole()
-        # Uncomment these lines for mpi support - no docs on this yet.
-        #self.qic.execute('import mpi')
-        #self.qic.execute('import sys')
-        #self.qic.execute('sys.argv =  mpi.mpi_init(len(sys.argv),sys.argv)')
+        self.mpi =  mpi
+        if self.mpi:
+            self.tic.runlines('from mpi4py import MPI')
         KernelFactoryBase.__init__(self, allow, notify)
 
     def stopFactory(self):
-        pass
+        if self.mpi:
+            self.tic.runlines('MPI.Finalize()')
 
     # Kernel methods
             
