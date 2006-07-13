@@ -1,4 +1,4 @@
-"""A Twisted Service Representation of the IPython Core
+"""A Twisted Service for the Controller
 
 TODO:
 
@@ -9,6 +9,13 @@ TODO:
 - Add an HTTP interface
 - Security!!!!!
 """
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
 
 import os, signal
 
@@ -21,78 +28,19 @@ from twisted.spread import pb
 from ipython1.kernel import engineservice
 from ipython1.kernel.remoteengine import RemoteEngine
 
-# Classes for the Kernel Service
-
-class Command(object):
-    """A command that will be sent to the Remote Engine."""
-    
-    def __init__(self, remoteMethod, *args):
-        """Build a new Command object."""
-        
-        self.remoteMethod = remoteMethod
-        self.args = args
-    
-    def setDeferred(self, d):
-        """Sets the deferred attribute of the Command."""
-        
-        self.deferred = d
-    
-    def __repr__(self):
-        return "Command: " + self.remoteMethod + repr(self.args)
-    
-    def handleResult(self, result):
-        """When the result is ready, relay it to self.deferred."""
-        
-        self.deferred.callback(result)
-    
-    def handleError(self, reason):
-        """When an error has occured, relay it to self.deferred."""
-        log.msg("Traceback from remote host: " + reason.getErrorMessage())
-        self.deferred.errback(reason)
-    
-
-class RemoteEngineProcessProtocol(protocol.ProcessProtocol):
-    
-    def __init__(self):
-        self.service = service
-        self.engine = None
-    
-    def connectionMade(self):
-        """Called when the Ke process is running.
-        
-        This should immediately trigger a connection to the kenel engine process
-        over a socket.
-        """
-        
-        self.engine = self.factory.connectedRemoteEngine(self)
-    
-    def outReceived(self, data):
-        """Let the service decide what to do."""
-        
-        self.service.outReceived(self.engine.id, data)
-    
-    def errReceived(self, data):
-        """Let the service decide what to do."""
-        
-        self.service.errReceived(self.engine.id, data)
-    
-    def processEnded(self, status):
-        """Let the service decide what to do."""
-        
-        self.service.handleRemoteEngineProcessEnding(self.engine.id, status)
-    
+# Classes for the Controller Service
 
 class IControllerService(engineservice.IEngine):
     """Adds a few control methods to the IPythonCoreService API"""
     
-    def restart_engine(self, id):
-        """Stops and restarts the kernel engine process."""
+    def restartEngine(self, id):
+        """Stops and restarts an engine process."""
         
     def clean_queue(self, id):
-        """Cleans out pending commands in the kernel's queue."""
+        """Cleans out pending commands in an engine's queue."""
         
     def interrupt_engine(self, id):
-        """Send SIGINT to the kernel engine."""
+        """Send SIGINT to the engine."""
         
 class ControllerService(service.Service):
     """This service listens for kernel engines and talks to them over PB.
@@ -107,16 +55,19 @@ class ControllerService(service.Service):
 
     implements(IControllerService)
     
-    def __init__(self, port, factory):
-        
-        self.port = port
-        self.factory = factory
-        factory.service = self
-        
+    def __init__(self, controlPort, controlFactory, remoteEnginePort, 
+            remoteEngineFactory):
+        """controlFactory listens for users, 
+        remoteEngineFactory listens for engines"""
+        self.controlFactory = controlFactory
+        controlFactory.service = self
+        self.remoteEngineFactory = remoteEngineFactory
+        remoteEngineFactory.service = self
         self.engine = {}
         self.availableId = range(128,0,-1)
         
-        reactor.listenTCP(port, factory)
+        reactor.listenTCP(controlPort, controlFactory)
+        reactor.listenTCP(remoteEnginePort, remoteEngineFactory)
     
     def outReceived(self, id, data):
         """Called when the Kernel Engine process writes to stdout."""
@@ -171,37 +122,36 @@ class ControllerService(service.Service):
         
     # Methods to manage the PB connection to the Remote Engine Process 
         
-    def connectRemoteEngineProcess(self, protocol):
+    def connectedRemoteEngineProcess(self, protocol):
         id = self.availableId.pop()
-        self.engine[id] = RemoteEngine(id)
-        self.engine[id].PBFactory = pb.PBClientFactory()
+        self.engine[id] = RemoteEngine(id, protocol, self.factory)
         #reactor.connectTCP("127.0.0.1", self.port, self.engine[id]nginePBFactory)
-        self.engine[id].PBFactory.getRootObject().addCallbacks(self.engine[id].gotRoot,
+        self.engine[id].factory.getRootObject().addCallbacks(self.engine[id].gotRoot,
                                                     self.engine[id].gotNoRoot)
                                                                                    
         
     def testCommands(self, id):
 
-        d = self.execute("import time")
+        d = self.engine[id].execute("import time")
         d.addCallback(self.printer)
-        d = self.execute("time.sleep(10)")
+        d = self.engine[id].execute("time.sleep(10)")
         d.addCallback(self.printer)        
-        reactor.callLater(3,self.interrupt_engine)
+        reactor.callLater(3,self.interrupt_engine, id)
         
-        d = self.execute("a = 5")
+        d = self.engine[id].execute("a = 5")
         d.addCallback(self.printer)
-        d = self.execute("b = 10")
+        d = self.engine[id].execute("b = 10")
         d.addCallback(self.printer)
-        d = self.execute("c = a + b")
+        d = self.engine[id].execute("c = a + b")
         d.addCallback(self.printer)
-        d = self.execute("print c")
+        d = self.engine[id].execute("print c")
         d.addCallback(self.printer)
         
     def printer(self, stuff):
         log.msg("Completed: " + repr(stuff))
 
     def disconnectKernelEngineProcess(self, id):
-        if self.engine[id].PBFactory:
+        if self.engine[id].factory:
             self.engine[id].PBFactory.disconnect()
         #self.currentCommand = None
         self.rootObject = None

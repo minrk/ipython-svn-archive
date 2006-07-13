@@ -14,31 +14,65 @@ from zope.interface import implements
 
 from ipython1.kernel import engineservice
 
+class Command(object):
+    """A command that will be sent to the Remote Engine."""
+    
+    def __init__(self, remoteMethod, *args):
+        """Build a new Command object."""
+        
+        self.remoteMethod = remoteMethod
+        self.args = args
+    
+    def setDeferred(self, d):
+        """Sets the deferred attribute of the Command."""
+        
+        self.deferred = d
+    
+    def __repr__(self):
+        return "Command: " + self.remoteMethod + repr(self.args)
+    
+    def handleResult(self, result):
+        """When the result is ready, relay it to self.deferred."""
+        
+        self.deferred.callback(result)
+    
+    def handleError(self, reason):
+        """When an error has occured, relay it to self.deferred."""
+        log.msg("Traceback from remote host: " + reason.getErrorMessage())
+        self.deferred.errback(reason)
+    
+
+
 class IRemoteEngine(engineservice.IEngine):
     """add some methods to IEngine interface"""
     
     def submitCommand(self, cmd):
+        """submitCommand"""
     
     def runCurrentCommand(self):
+        """runCurrentCommand"""
     
     def _flushQueue(self):
+        """_flushQueue"""
     
     def finishCommand(self, result):
+        """finishCommand"""
     
     def abortCommand(self, reason):
+        """aportCommand"""
     
 
-#now the implementation of RemoteEngine
-
+#now the actual implementation of RemoteEngine
 class RemoteEngine(object):
     
     implements(IRemoteEngine)
     
-    def __init__(self):
+    def __init__(self, id, protocol=None, factory=None):
+        self.id = id
+        self.protocol = protocol
+        self.factory = factory
         self.autoStart = True
-        self.kernelEngineProcessProtocol = None
         self.rootObject = None
-        self.kernelEnginePBFactory = None
         self.queued = []
         self.currentCommand = None
     

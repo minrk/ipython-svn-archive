@@ -9,20 +9,20 @@
 #*****************************************************************************
 
 from twisted.application import internet, service
-
+from twisted.spread import pb
 try:
 	from ipython1.kernel.engineservice import EngineService
-	from ipython1.kernel.engine import EngineTCPFactory
+	from ipython1.kernel import enginepb
 except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
 
 #init service:
 es = EngineService()
-es.add_f(EngineFactory())
 
 application = service.Application('engine', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
 
-cs.setServiceParent(serviceCollection)
-internet.TCPClient(10201, es.factory_list[0]
-			).setServiceParent(serviceCollection)
+pbfact = pb.PBClientFactory(enginepb.IPerspectiveEngine(es))
+
+kspb = internet.TCPClient('127.0.0.1', 10105, pbfact)
+kspb.setServiceParent(application)

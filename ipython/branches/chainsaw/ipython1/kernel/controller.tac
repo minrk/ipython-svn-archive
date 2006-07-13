@@ -9,24 +9,25 @@
 #*****************************************************************************
 
 from twisted.application import internet, service
-try:
-	from ipython1.kernel.controllerservice import ControllerService
-	from ipython1.kernel.controller import ControllerFactory
-	from ipython1.kernel.engineclient import EngineClientFactory
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
+#try:
+from ipython1.kernel.controllerservice import ControllerService
+from ipython1.kernel.remoteengineprocess import RemoteEngineProcessFactory as REPFactory
+#	from ipython1.kernel.engineclient import EngineClientFactory
+#except ImportError:
+#    print "ipython1 needs to be in your PYTHONPATH"
 
 
 #init service:
-cs = controllerservice()
-cs.add_f(ControllerFactory())
-cs.add_f(EngineClientFactory())
 application = service.Application('controller', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
 
+f = REPFactory()
+f2 = REPFactory()
+cs = ControllerService(10105, f, 10106, f2)
+
 cs.setServiceParent(serviceCollection)
 
-internet.TCPServer(10105, cs.factory_list[0]
-                   ).setServiceParent(serviceCollection)
-internet.TCPServer(10201, cs.factory_list[1]
-                   ).setServiceParent(serviceCollection)
+#internet.TCPServer(10105, cs.factory_list[0]
+#                  ).setServiceParent(serviceCollection)
+#internet.TCPServer(10201, cs.factory_list[1]
+#                   ).setServiceParent(serviceCollection)
