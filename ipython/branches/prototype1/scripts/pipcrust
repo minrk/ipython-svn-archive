@@ -1,4 +1,0 @@
-#!/usr/bin/env pythonw
-
-from ipython1.sandbox.wxshell.PIPCrust import main
-main()

@@ -1,4 +1,0 @@
-#!/usr/bin/env pythonw
-
-from ipython1.sandbox.wxshell.PIPShell import main
-main()
