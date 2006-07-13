@@ -19,7 +19,7 @@ from twisted.python import components
 from twisted.web import xmlrpc
 from zope.interface import Interface, implements
 
-from ipython1.kernel import kernelservice
+from ipython1.kernel2p import kernelservice
 
 # Expose a PB interface to the KernelService
      

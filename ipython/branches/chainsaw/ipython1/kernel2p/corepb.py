@@ -20,7 +20,7 @@ from twisted.spread import pb
 from twisted.spread.pb import Error
 from zope.interface import Interface, implements
 
-from ipython1.kernel import coreservice
+from ipython1.kernel2p import coreservice
      
 class MyError(pb.Error):
     pass

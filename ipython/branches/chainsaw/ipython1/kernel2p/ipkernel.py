@@ -2,7 +2,7 @@ from twisted.application import service, internet
 from twisted.spread import pb
 from twisted.web import server, xmlrpc
 
-from ipython1.kernel import kernelservice, kernelpb, kernelxmlrpc
+from ipython1.kernel2p import kernelservice, kernelpb, kernelxmlrpc
 from ipython1.bonjour.twistbonjour import PBServerFactoryBonjour
 
 application = service.Application('ipkernel')

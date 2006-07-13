@@ -18,7 +18,7 @@ from twisted.python import log
 from zope.interface import Interface, implements
 from twisted.spread import pb
 
-from ipython1.kernel import coreservice
+from ipython1.kernel2p import coreservice
 
 # Classes for the Kernel Service
 
