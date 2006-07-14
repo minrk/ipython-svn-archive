@@ -12,16 +12,17 @@ from twisted.application import internet, service
 from twisted.spread import pb
 #try:
 from ipython1.kernel.controllerservice import ControllerService
+from ipython1.kernel import controllerpb
 from ipython1.kernel.remoteengineprocess import RemoteEngineProcessFactory as REPFactory
 
 
 #init service:
 application = service.Application('controller', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
-
 cf = REPFactory()
-ef = pb.PBServerFactory(pb.Root())
-cs = ControllerService(10105, f, 10106, ef)
+cs = ControllerService(10105, cf, 10106, cf)#see 2 lines down
+ef = pb.PBServerFactory(controllerpb.PerspectiveControllerFromService(cs))
+cs.remoteEngineFactory = ef #this is just because ef needs cs to exist for its pb constructor
 
 cs.setServiceParent(serviceCollection)
 

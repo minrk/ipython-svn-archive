@@ -38,7 +38,7 @@ TODO:
 import os, signal
 
 from twisted.application import service
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from twisted.python import log
 from zope.interface import Interface, implements
 
@@ -94,7 +94,7 @@ class EngineService(InteractiveShell, service.Service):
 
     implements(IEngine)
     
-    def __init__(self, port, controllerAddress, factory, locals=None, filename="<console>"):
+    def __init__(self, controllerAddress, port, factory, locals=None, filename="<console>"):
         self.factory = factory
         InteractiveShell.__init__(self, locals, filename)
         

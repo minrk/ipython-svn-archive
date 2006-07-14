@@ -22,11 +22,8 @@ application = service.Application('engine', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
 
 pbfact = pb.PBClientFactory()
-es = EngineService(10105, pbf)
-cs.setServiceParent(serviceCollection)
+es = EngineService('localhost', 10106, pbfact)
+es.setServiceParent(serviceCollection)
 
-#pbfact._root = enginepb.PerspectiveEngineFromService(es)
-es.factory = pbfact
-
-kspb = internet.TCPClient('127.0.0.1', 10105, pbfact)
-kspb.setServiceParent(application)
+pEngine = enginepb.PerspectiveEngineFromService(es)
+pbfact.getRootObject().addCallbacks(pEngine._success, pEngine._failure)

@@ -21,3 +21,41 @@ from ipython1.kernel import enginepb
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
+
+from twisted.python import components
+from twisted.spread import pb
+from zope.interface import Interface, implements
+
+from ipython1.kernel import controllerservice
+
+# Expose a PB interface to the EngineService
+     
+class IPerspectiveController(Interface):
+    
+    def remote_registerEngine(self, protocol):
+        """register new engine on controller"""
+    
+    def remote_getEngineReference(self, engine):
+        """get Engine Referenceable object"""
+    
+
+class PerspectiveControllerFromService(pb.Root):
+    
+    implements(IPerspectiveController)
+    
+    def __init__(self, service):
+        self.service = service
+    
+    def remote_registerEngine(self, protocol=None):
+        """register new engine on controller"""
+        self.id = self.service.registerEngine(protocol)
+        return self.id
+    
+    def remote_getPerspectiveEngine(self, engine):
+        """get Engine Referenceable object"""
+        self.perspectiveEngine = engine
+
+
+components.registerAdapter(PerspectiveControllerFromService,
+                           controllerservice.ControllerService,
+                           IPerspectiveController)

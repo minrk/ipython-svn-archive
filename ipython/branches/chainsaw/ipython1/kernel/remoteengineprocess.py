@@ -14,9 +14,14 @@
 #*****************************************************************************
 
 from twisted.internet import protocol
+from zope.interface import implements
 from ipython1.kernel import networkinterfaces
+
+
 class RemoteEngineProcessProtocol(protocol.ProcessProtocol):
+    
     implements(networkinterfaces.IREProtocol)
+    
     def __init__(self):
         pass
     
@@ -46,7 +51,9 @@ class RemoteEngineProcessProtocol(protocol.ProcessProtocol):
 
 class RemoteEngineProcessFactory(protocol.ServerFactory):
     """factory that passes everything to service"""
+    
     implements(networkinterfaces.IREFactory)
+    
     protocol = RemoteEngineProcessProtocol
     def __init__(self):
         pass
@@ -66,8 +73,8 @@ class RemoteEngineProcessFactory(protocol.ServerFactory):
         
         self.service.handleRemoteEngineProcessEnding(self.engine.id, status)
     
-    def registerEngine(protocol):
+    def registerEngine(self, protocol):
         """Let the service decide what to do."""
         
-        return self.service.connectedRemoteEngine(protocol)
+        return self.service.registerEngine(protocol)
     

@@ -62,41 +62,36 @@ class ControllerService(service.Service):
             remoteEngineFactory):
         """controlFactory listens for users, 
         remoteEngineFactory listens for engines"""
+        self.controlPort = controlPort
         self.controlFactory = controlFactory
         controlFactory.service = self
+        self.remoteEnginePort = remoteEnginePort
         self.remoteEngineFactory = remoteEngineFactory
         remoteEngineFactory.service = self
         self.engine = {}
         self.availableId = range(128,0,-1)
-        
-        reactor.listenTCP(controlPort, controlFactory)
-        reactor.listenTCP(remoteEnginePort, remoteEngineFactory)
     
     def outReceived(self, id, data):
         """Called when the Kernel Engine process writes to stdout."""
         #log.msg(data)
-     
+    
     def errReceived(self, id, data):
         """Called when the Kernel Engine process writes to stdout."""
         log.msg("%r:" %id  +data)   
-
-    # Methods to manage the Kernel Engine Process 
-
+    
+    # Methods to manage the Engines
+    
     def startService(self):
         service.Service.startService(self)
-        # I seem to need this to ensure the reactor is running before
-        # spawnProcess is called
-        #reactor.callLater(2,self.startKernelEngineProcess)
-        #reactor.callLater(10,self.restartKernelEngineProcess)
-        
-#    def startKernelEngineProcess(self):
-#        self.kernelEngineProcessProtocol = KernelEngineProcessProtocol(self)
-#        reactor.spawnProcess(self.kernelEngineProcessProtocol,
-#            'ipengine',
-#            args=['ipengine','-p %i' % self.port],
-#            env = os.environ)
-#        self.autoStart = True  # autoStart by default
-        
+        reactor.listenTCP(self.controlPort, self.controlFactory)
+        reactor.listenTCP(self.remoteEnginePort, self.remoteEngineFactory)
+    
+    
+    def registerEngine(self, protocol):
+        id = self.availableId.pop()
+        log.msg("registering engine %r" %id)
+        self.engine[id] = RemoteEngine(id, protocol, self.remoteEngineFactory)
+    
     def stopRemoteEngineProcess(self, id):
         self.engine[id].autoStart = False   # Don't restart automatically after killing
         self.disconnectRemoteEngineProcess(id)
@@ -124,14 +119,6 @@ class ControllerService(service.Service):
             log.msg("Kernel Engine Process Stopped")
         
     # Methods to manage the PB connection to the Remote Engine Process 
-        
-    def registerEngine(self, protocol):
-        id = self.availableId.pop()
-        self.engine[id] = RemoteEngine(id, protocol, self.factory)
-        #reactor.connectTCP("127.0.0.1", self.port, self.engine[id]nginePBFactory)
-        #self.engine[id].factory.getRootObject().addCallbacks(self.engine[id].gotRoot,
-        #                                           self.engine[id].gotNoRoot)
-                                                                                   
         
     def testCommands(self, id):
 
