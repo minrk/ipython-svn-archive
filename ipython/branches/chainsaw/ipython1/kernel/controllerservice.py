@@ -36,11 +36,14 @@ class IControllerService(engineservice.IEngine):
     def restartEngine(self, id):
         """Stops and restarts an engine process."""
         
-    def clean_queue(self, id):
+    def cleanQueue(self, id):
         """Cleans out pending commands in an engine's queue."""
         
-    def interrupt_engine(self, id):
+    def interruptEngine(self, id):
         """Send SIGINT to the engine."""
+    
+    def registerEngine(self, protocol):
+        """register new engine connection"""
         
 class ControllerService(service.Service):
     """This service listens for kernel engines and talks to them over PB.
@@ -122,12 +125,12 @@ class ControllerService(service.Service):
         
     # Methods to manage the PB connection to the Remote Engine Process 
         
-    def connectedRemoteEngineProcess(self, protocol):
+    def registerEngine(self, protocol):
         id = self.availableId.pop()
         self.engine[id] = RemoteEngine(id, protocol, self.factory)
         #reactor.connectTCP("127.0.0.1", self.port, self.engine[id]nginePBFactory)
-        self.engine[id].factory.getRootObject().addCallbacks(self.engine[id].gotRoot,
-                                                    self.engine[id].gotNoRoot)
+        #self.engine[id].factory.getRootObject().addCallbacks(self.engine[id].gotRoot,
+        #                                           self.engine[id].gotNoRoot)
                                                                                    
         
     def testCommands(self, id):
