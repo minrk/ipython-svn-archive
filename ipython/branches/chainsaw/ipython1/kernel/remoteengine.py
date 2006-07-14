@@ -67,10 +67,9 @@ class RemoteEngine(object):
     
     implements(IRemoteEngine)
     
-    def __init__(self, id, protocol=None, factory=None):
+    def __init__(self, id, protocol=None):
         self.id = id
         self.protocol = protocol
-        self.factory = factory
         self.autoStart = True
         self.rootObject = None
         self.queued = []

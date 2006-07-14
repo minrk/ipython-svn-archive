@@ -25,25 +25,35 @@ from twisted.python import log
 from zope.interface import Interface, implements
 from twisted.spread import pb
 
-from ipython1.kernel import engineservice
 from ipython1.kernel.remoteengine import RemoteEngine
 
-# Classes for the Controller Service
+# Interface for the Controller Service
 
-class IControllerService(engineservice.IEngine):
+class IControllerService(Interface):
     """Adds a few control methods to the IPythonCoreService API"""
     
     def restartEngine(self, id):
         """Stops and restarts an engine process."""
-        
+    
     def cleanQueue(self, id):
         """Cleans out pending commands in an engine's queue."""
-        
-    def interruptEngine(self, id):
-        """Send SIGINT to the engine."""
     
     def registerEngine(self, protocol):
         """register new engine connection"""
+    
+    def unregisterEngine(self, id):
+        """"""
+    
+    def reconnectEngine(self, id):
+        """"""
+    
+    def disconnectEngine(self, id):
+        """"""
+    
+    def interruptEngine(self, id):
+        """"""
+    
+#implementation of the Controller Service
         
 class ControllerService(service.Service):
     """This service listens for kernel engines and talks to them over PB.
@@ -55,70 +65,69 @@ class ControllerService(service.Service):
     will be a fatal error.  This needs to be fixed by having the PB Factory
     automatically reconnect.
     """
-
+    
     implements(IControllerService)
     
-    def __init__(self, controlPort, controlFactory, remoteEnginePort, 
-            remoteEngineFactory):
+    def __init__(self, cPort, cFactory, rEPort, rEFactory):
         """controlFactory listens for users, 
         remoteEngineFactory listens for engines"""
-        self.controlPort = controlPort
-        self.controlFactory = controlFactory
+        self.controlPort = cPort
+        self.controlFactory = cFactory
         controlFactory.service = self
-        self.remoteEnginePort = remoteEnginePort
-        self.remoteEngineFactory = remoteEngineFactory
+        self.remoteEnginePort = rEPort
+        self.remoteEngineFactory = rEFactory
         remoteEngineFactory.service = self
         self.engine = {}
         self.availableId = range(128,0,-1)
-    
-    def outReceived(self, id, data):
-        """Called when the Kernel Engine process writes to stdout."""
-        #log.msg(data)
-    
-    def errReceived(self, id, data):
-        """Called when the Kernel Engine process writes to stdout."""
-        log.msg("%r:" %id  +data)   
-    
-    # Methods to manage the Engines
     
     def startService(self):
         service.Service.startService(self)
         reactor.listenTCP(self.controlPort, self.controlFactory)
         reactor.listenTCP(self.remoteEnginePort, self.remoteEngineFactory)
     
-    
     def registerEngine(self, protocol):
         id = self.availableId.pop()
-        log.msg("registering engine %r" %id)
-        self.engine[id] = RemoteEngine(id, protocol, self.remoteEngineFactory)
+        self.engine[id] = RemoteEngine(id, protocol)
+        return id
+        log.msg("registered engine %r" %id)
     
-    def stopRemoteEngineProcess(self, id):
-        self.engine[id].autoStart = False   # Don't restart automatically after killing
-        self.disconnectRemoteEngineProcess(id)
-        #os.kill(self.kernelEngineProcessProtocol.transport.pid, 
-        #    signal.SIGKILL)
+    def unregisterEngine(self, id):
+        (key, engine) = self.engine.pop(id)
+        del engine
+        self.availableId.append(key)#need to be able to choose this
+        log.msg("unregistered engine %r" %id)
+    
+    def reconnectEngine(self, id, protocol):
+        #if we want to keep the engine, reconnect to it - for now,a new one
+        self.engine[id] = RemoteEngine(protocol)
+        log.msg("reconnected engine %r" %id)
+    
+    def disconnectEngine(self, id):
+        #do I want to keep the RemoteEngine or not?
+        #for now, no
+        self.engine[id] = None
+        log.msg("disconnected engine %r" %id)
 
-    def restartRemoteEngineProcess(self, id):
-        self.engine[id].autoStart = True
-#todo   send restart notify
-        self.disconnectRemoteEngineProcess(id)
-        #os.kill(self.kernelEngineProcessProtocol.transport.pid, 
-        #    signal.SIGKILL)
-
-    def handleRemoteEngineProcessEnding(self, id, status):
-        """Called when the kenel engine process ends & decides to restart.
-        
-        The status object has info about the exit code, but currently I am
-        not using it.
-        """
-        
-        if self.engine[id].autoStart:
-#todo            self.startKernelEngineProcess()
-            log.msg("Kernel Engine Process Restarting")
-        else:
-            log.msg("Kernel Engine Process Stopped")
-        
-    # Methods to manage the PB connection to the Remote Engine Process 
+    def restartEngine(self, id):
+        """Stops and restarts the kernel engine process."""
+        #send restart command
+        self.disconnectEngine(id)
+        log.msg("restarting engine %r" %id)
+    
+    def cleanQueue(self, id):
+        """Cleans out pending commands in the kernel's queue."""
+        self.engine[id].queued = []
+        log.msg("cleaned queue %r" %id)
+    
+    def interruptEngine(self, id):
+        """Send SIGUSR1 to the kernel engine to stop the current command."""
+        if self.engine[id].currentCommand:
+            pass
+            #do we still want this?
+        log.msg("interrupted engine %r" %id)
+    
+    
+    # extra methods for testing, inherited from kernel2p.kernelservice
         
     def testCommands(self, id):
 
@@ -139,27 +148,3 @@ class ControllerService(service.Service):
         
     def printer(self, stuff):
         log.msg("Completed: " + repr(stuff))
-
-    def disconnectKernelEngineProcess(self, id):
-        if self.engine[id].factory:
-            self.engine[id].PBFactory.disconnect()
-        #self.currentCommand = None
-        self.rootObject = None
-        self.kernelEnginePBFactory = None
-
-    # Interface methods unique to the IControllerService interface
-    
-    def restartEngine(self, id):
-        """Stops and restarts the kernel engine process."""
-        self.cleanQueue(id)
-        self.restartKernelEngineProcess(id)
-        
-    def cleanQueue(self, id):
-        """Cleans out pending commands in the kernel's queue."""
-        self.engine[id].queued = []
-
-    def interruptEngine(self, id):
-        """Send SIGUSR1 to the kernel engine to stop the current command."""
-        if self.engine[id].currentCommand:
-            pass
-            #os.kill(self.kernelEngineProcessProtocol.transport.pid, signal.SIGUSR1)
