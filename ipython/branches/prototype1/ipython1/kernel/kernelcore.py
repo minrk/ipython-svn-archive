@@ -22,6 +22,7 @@ import sys
 
 from ipython1.core.shell import QueuedInteractiveConsole
 from ipython1.core.shell import TrappingInteractiveConsole
+from ipython1.startup import callback
 
 # modified from twisted.mail.imap4.LiteralString
 class LiteralString:
@@ -591,9 +592,10 @@ class KernelFactoryBase:
 class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
     protocol = KernelTCPProtocol
     
-    def __init__(self, allow=[], notify=[], mpi=False):
+    def __init__(self, allow=[], notify=[], mpi=False, callbackAddr=None):
         self.qic = QueuedInteractiveConsole()
         self.qic.start_work()
+        self.callbackAddr = callbackAddr
         self.mpi =  mpi
         if self.mpi:
             self.qic.execute('from mpi4py import MPI')
@@ -603,6 +605,11 @@ class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
         if self.mpi:
             self.qic.execute('MPI.Finalize()')
 
+    def startFactory(self):
+        if self.callbackAddr:
+            ccb = callback.CallbackClientFactory(('192.168.0.1',10105),tries=3)
+            reactor.connectTCP('127.0.0.1', 12001, ccb)
+        
     # Kernel methods
             
     def get_ticket(self):
