@@ -26,4 +26,4 @@ es = EngineService('localhost', 10106, pbfact)
 es.setServiceParent(serviceCollection)
 
 pEngine = enginepb.PerspectiveEngineFromService(es)
-pbfact.getRootObject().addCallbacks(pEngine._success, pEngine._failure)
+pbfact.getRootObject().addCallbacks(pEngine._connect, pEngine._failure)

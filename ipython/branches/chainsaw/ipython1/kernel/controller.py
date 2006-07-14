@@ -1,7 +1,7 @@
 """The Twisted core of the ipython controller.
 
-This module contains the Twisted protocols, factories, services, etc. used to
-implement the ipython engine.  This module only contains the network related
+This module contains the Twisted protocols, factories, etc. used to
+implement the ipython controller.  This module only contains the network related
 parts of the controller.
 """
 #*****************************************************************************

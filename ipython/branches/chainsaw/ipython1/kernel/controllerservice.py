@@ -17,7 +17,6 @@ TODO:
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import os, signal
 
 from twisted.application import service
 from twisted.internet import protocol, reactor, defer
@@ -38,7 +37,7 @@ class IControllerService(Interface):
     def cleanQueue(self, id):
         """Cleans out pending commands in an engine's queue."""
     
-    def registerEngine(self, protocol):
+    def registerEngine(self, connection):
         """register new engine connection"""
     
     def unregisterEngine(self, id):
@@ -73,10 +72,10 @@ class ControllerService(service.Service):
         remoteEngineFactory listens for engines"""
         self.controlPort = cPort
         self.controlFactory = cFactory
-        controlFactory.service = self
+        self.controlFactory.service = self
         self.remoteEnginePort = rEPort
         self.remoteEngineFactory = rEFactory
-        remoteEngineFactory.service = self
+        self.remoteEngineFactory.service = self
         self.engine = {}
         self.availableId = range(128,0,-1)
     
@@ -85,11 +84,11 @@ class ControllerService(service.Service):
         reactor.listenTCP(self.controlPort, self.controlFactory)
         reactor.listenTCP(self.remoteEnginePort, self.remoteEngineFactory)
     
-    def registerEngine(self, protocol):
+    def registerEngine(self, connection):
         id = self.availableId.pop()
-        self.engine[id] = RemoteEngine(id, protocol)
-        return id
+        self.engine[id] = RemoteEngine(id, connection)
         log.msg("registered engine %r" %id)
+        return id
     
     def unregisterEngine(self, id):
         (key, engine) = self.engine.pop(id)
@@ -97,9 +96,9 @@ class ControllerService(service.Service):
         self.availableId.append(key)#need to be able to choose this
         log.msg("unregistered engine %r" %id)
     
-    def reconnectEngine(self, id, protocol):
+    def reconnectEngine(self, id, connection):
         #if we want to keep the engine, reconnect to it - for now,a new one
-        self.engine[id] = RemoteEngine(protocol)
+        self.engine[id] = RemoteEngine(connection)
         log.msg("reconnected engine %r" %id)
     
     def disconnectEngine(self, id):
@@ -135,8 +134,6 @@ class ControllerService(service.Service):
         d.addCallback(self.printer)
         d = self.engine[id].execute("time.sleep(10)")
         d.addCallback(self.printer)        
-        reactor.callLater(3,self.interrupt_engine, id)
-        
         d = self.engine[id].execute("a = 5")
         d.addCallback(self.printer)
         d = self.engine[id].execute("b = 10")

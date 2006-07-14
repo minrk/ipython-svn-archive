@@ -23,7 +23,7 @@ from ipython1.kernel import enginepb
 #*****************************************************************************
 
 
-from twisted.python import components
+from twisted.python import components, log
 from twisted.spread import pb
 from zope.interface import Interface, implements
 
@@ -74,18 +74,16 @@ class PerspectiveEngineFromService(pb.Referenceable):
     def __init__(self, service):
         self.service = service
     
-    def _success(self, obj):
+    def _connect(self, obj):
         self.root = obj
-        self.root.callRemote('getPerspectiveEngine', self).addCallbacks(self._success2, self._failure)
-    
-    def _success2(self, _):
-        self.root.callRemote('registerEngine').addCallbacks(self.gotId, self._failure)
+        self.root.callRemote('registerEngine', self).addCallbacks(self.gotId, self._failure)
     
     def _failure(self, reason):
         raise reason
     
     def gotId(self, id):
         self.id = id
+        log.msg("got ID: %r" %id)
     
     def remote_execute(self, lines):
         return self.service.execute(lines)

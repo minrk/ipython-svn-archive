@@ -10,6 +10,8 @@
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
+from twisted.internet import defer
+from twisted.python import log
 from zope.interface import implements
 
 from ipython1.kernel import engineservice
@@ -59,7 +61,7 @@ class IRemoteEngine(engineservice.IEngine):
         """finishCommand"""
     
     def abortCommand(self, reason):
-        """aportCommand"""
+        """abortCommand"""
     
 
 #now the actual implementation of RemoteEngine
@@ -67,11 +69,9 @@ class RemoteEngine(object):
     
     implements(IRemoteEngine)
     
-    def __init__(self, id, protocol=None):
+    def __init__(self, id, connection=None):
         self.id = id
-        self.protocol = protocol
-        self.autoStart = True
-        self.rootObject = None
+        self.connection = connection
         self.queued = []
         self.currentCommand = None
     
@@ -93,7 +93,7 @@ class RemoteEngine(object):
         
         cmd = self.currentCommand
         log.msg("Starting: " + repr(self.currentCommand))
-        d = self.rootObject.callRemote(cmd.remoteMethod, *(cmd.args))
+        d = self.connection.callRemote(cmd.remoteMethod, *(cmd.args))
         d.addCallback(self.finishCommand)
         d.addErrback(self.abortCommand)
     
@@ -122,7 +122,7 @@ class RemoteEngine(object):
     
     #methods from IEngine
     
-    def execute(self, id, lines):
+    def execute(self, lines):
         """Execute lines of Python code."""
         
         d = self.submitCommand(Command("execute", lines))

@@ -22,11 +22,15 @@ class IControlProtocol(Interface):
     pass
 class IControlFactory(Interface):
     pass
+
 class IREProtocol(Interface):
-    def registerEngine(self, protocol):
+    def registerEngine(self):
         """registerEngine to service"""
+    def callRemote(remoteMethod, *args):
+        """make remote call, should function like pb.Root.callRemote"""
+        
 class IREFactory(Interface):
-    def registerEngine(self, protocol):
+    def registerEngine(self, connection):
         """registerEngine to service"""
 
 #interfaces for Engine network components
