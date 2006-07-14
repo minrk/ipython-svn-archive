@@ -18,7 +18,7 @@ TODO:
 #*****************************************************************************
 
 
-from twisted.application import service
+from twisted.application import service, internet
 from twisted.internet import protocol, reactor, defer
 from twisted.python import log
 from zope.interface import Interface, implements
@@ -54,15 +54,9 @@ class IControllerService(Interface):
     
 #implementation of the Controller Service
         
-class ControllerService(service.Service):
-    """This service listens for kernel engines and talks to them over PB.
+class ControllerService(internet.TCPServer):
+    """This service listens for kernel engines and control clients.
     
-    There are two steps in starting the kernel engine.  First, spawnProcess
-    is called to start the actual process.  Then it can be connected to over
-    PB.  If the process dies, it will automatically be restarted and re-
-    connected to.  But if the connection fails, but the process doesn't, there
-    will be a fatal error.  This needs to be fixed by having the PB Factory
-    automatically reconnect.
     """
     
     implements(IControllerService)
@@ -77,7 +71,7 @@ class ControllerService(service.Service):
         self.remoteEngineFactory = rEFactory
         self.remoteEngineFactory.service = self
         self.engine = {}
-        self.availableId = range(128,0,-1)
+        self.availableId = range(128,-1,-1)
     
     def startService(self):
         service.Service.startService(self)
@@ -97,7 +91,7 @@ class ControllerService(service.Service):
         log.msg("unregistered engine %r" %id)
     
     def reconnectEngine(self, id, connection):
-        #if we want to keep the engine, reconnect to it - for now,a new one
+        #if we want to keep the engine, reconnect to it, for now get a new one|
         self.engine[id] = RemoteEngine(connection)
         log.msg("reconnected engine %r" %id)
     

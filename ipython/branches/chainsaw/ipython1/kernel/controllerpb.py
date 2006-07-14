@@ -51,11 +51,26 @@ class PerspectiveControllerFromService(pb.Root):
         id = self.service.registerEngine(perspectiveEngine)
         return id
     
+    #should I separate the two root objects (Remote, Control)?
     def remote_submitCommand(self, id, cmd):
         self.service.engine[id].submitCommmand(cmd)
+    
+    def remote_testCommands(self, id):
+        self.service.testCommands(id)
     
 
 
 components.registerAdapter(PerspectiveControllerFromService,
                            controllerservice.ControllerService,
                            IPerspectiveController)
+
+class PBRemoteEngineServerFactory(pb.PBServerFactory):
+    
+    def buildProtocol(self, addr):
+        p = self.protocol()
+        p.factory = self
+        p.notifyOnDisconnect(self)
+        return p
+
+    
+    
