@@ -30,5 +30,5 @@ setup(name             = 'ipython1',
       packages         = ['ipython1','ipython1.kernel','ipython1.core',
                           'ipython1.startup'],
       scripts          = ['scripts/ipkernel','scripts/ipkernelwx',
-                          'scripts/ipresults'],
+                          'scripts/ipresults','scripts/ipcontroller'],
       )
