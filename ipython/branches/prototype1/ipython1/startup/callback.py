@@ -32,10 +32,11 @@ class CallbackFactory(protocol.ServerFactory):
         self.kernels = []
         self.kernelCount = kernelCount
         self.filename = filename
-        self.actualFile = file(self.filename,'w')
         
     def _writeAddrToFile(self, addr):
+        self.actualFile = file(self.filename,'a')
         self.actualFile.write("%s %i\n" % (addr[0], addr[1]))
+        self.actualFile.close()
     
     def registerKernel(self,addr):
         log.msg("Kernel found: %s %i" % (addr[0], addr[1]))
@@ -47,7 +48,8 @@ class CallbackFactory(protocol.ServerFactory):
             reactor.stop()
 
     def stopFactory(self):
-        self.actualFile.close()
+        pass
+        #self.actualFile.close()
 
 class CallbackClientProtocol(basic.LineReceiver):
         

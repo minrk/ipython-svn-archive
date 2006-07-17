@@ -51,7 +51,9 @@ def try_ports(port, allow_list, mpi, factory_class, controllerIP,
             p = reactor.listenTCP(port + k, 
             factory_class(allow=allow_list, mpi=mpi))
         except error.CannotListenError:
-            continue
+            if k == 15:
+                log.msg("Cannot start kernel")
+                reactor.stop()
         else:
             break
     
@@ -68,7 +70,7 @@ def main(port, allow_ip, threads, mpi, controllerIP, controllerPort):
     else:
         factory_class = ThreadlessKernelTCPFactory
         
-    allow_list = ['127.0.0.1']
+    allow_list = ['127.0.0.1',socket.gethostbyname(socket.gethostname())]
     if allow_ip is not None:
         allow_list.extend(allow_ip.split(":"))
     log.startLogging(sys.stdout)
@@ -77,7 +79,7 @@ def main(port, allow_ip, threads, mpi, controllerIP, controllerPort):
     log.msg(allow_list)
     reactor.run()
 
-def start(port=10105, controllerIP="", controllerPort=13451):
+def start(port=10105, controllerIP="", controllerPort=12001):
     parser = OptionParser()
     parser.set_defaults(port=port, controllerIP=controllerIP,
         controllerPort=controllerPort)

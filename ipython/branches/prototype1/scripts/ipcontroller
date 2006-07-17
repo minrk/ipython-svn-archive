@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+from optparse import OptionParser
+import sys
+
+from twisted.internet import reactor
+from ipython1.startup import callback
+from twisted.python import log
+
+def main(port, kernelCount, filename):
+    if filename:
+        log.startLogging(sys.stdout)
+        callbackFactory = callback.CallbackFactory(kernelCount=kernelCount,
+            filename=filename)
+        server = reactor.listenTCP(port, callbackFactory)
+        reactor.run()
+    
+def start():
+    parser = OptionParser()
+    parser.add_option("-p", "--port", type="int", dest="port",
+        default=12001,
+        help="the TCP port the controller will to listen on")
+    parser.add_option("-n", "--kernel-count", type="int",
+        dest="kernelCount", default=-1,
+        help="number of kernels to wait for before quitting.  Set to -1 to continue forever")
+    parser.add_option("-f","--filename",type="string",
+        dest="filename", default="kernel_list.txt",
+        help="file to store the kernel information")
+
+    (options, args) = parser.parse_args()
+    
+    main(options.port, options.kernelCount, options.filename)
+    
+if __name__ == "__main__":
+    start()

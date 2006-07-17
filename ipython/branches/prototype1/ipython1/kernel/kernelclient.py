@@ -19,6 +19,7 @@ import time, os
 
 from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
+from IPython.genutils import get_home_dir, file_readlines, filefind
 
 from ipython1.kernel.scatter import *
 from ipython1.kernel.parallelfunction import ParallelFunction
@@ -689,11 +690,12 @@ class InteractiveCluster(object):
         @arg cluster_name:
             A string to name the file
         """
-        path_base = os.path.expanduser("~/.ipython")
-        file_path = path_base + "/" + cluster_name
+        path_base = get_home_dir()
+        file_path = path_base + "/.ipython/" + cluster_name
         f = open(file_path,'w')
         print "Saving to: ", file_path
-        pickle.dump(self.kernel_addrs, f, 1)
+        for a in self.kernel_aadr:
+            f.write("%s %i" % (a[0], a[1]))
         f.close()
         
     def load(self, cluster_name):
@@ -702,41 +704,24 @@ class InteractiveCluster(object):
         @arg cluster_name:
             The filename of the saved cluster as a string
         """
-        path_base = os.path.expanduser("~/.ipython")
-        file_path = path_base + "/" + cluster_name
-        try:
-            f = open(file_path,'r')
-        except IOError:
-            print "Saved cluster not found"
-        else:
-            print "Loading from: ", file_path
-            addrs = pickle.load(f)
-            f.close()
-            self.start(addrs)        
-
-    # XXX - fperez: finish after scipy, b/c I'll make use of changed
-    # functionality in genutils, only available to svn users
-    def __load00(self, cluster_name):
-        """Loads a saved cluster.
         
-        @arg cluster_name:
-            The filename of the saved cluster as a string
-        """
         isfile = os.path.isfile
         if isfile(cluster_name):
             file_path = cluster_name
         else:
-            path_base = os.path.expanduser("~/.ipython")
-            file_path = path_base + "/" + cluster_name
+            path_base = get_home_dir()
+            file_path = path_base + "/.ipython/" + cluster_name
         try:
-            f = open(file_path,'r')
+            raw_cluster_info = file_readlines(file_path)
         except IOError:
             print "Saved cluster not found"
         else:
             print "Loading from: ", file_path
-            addrs = pickle.load(f)
-            f.close()
-            self.start(addrs)        
+            def process_line(line):
+                tmp = line.strip().split(" ")
+                return (tmp[0], int(tmp[1])) 
+            addrs = [process_line(x) for x in raw_cluster_info]
+            self.start(addrs)
         
     def __getitem__(self, key):
         if isinstance(key, int):
