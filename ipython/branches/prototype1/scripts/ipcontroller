@@ -19,13 +19,13 @@ def start():
     parser = OptionParser()
     parser.add_option("-p", "--port", type="int", dest="port",
         default=12001,
-        help="the TCP port the controller will to listen on")
+        help="The TCP port the controller will to listen on.  Default = 12001")
     parser.add_option("-n", "--kernel-count", type="int",
         dest="kernelCount", default=-1,
-        help="number of kernels to wait for before quitting.  Set to -1 to continue forever")
+        help="Number of kernels to wait for before quitting.  Set to -1 to continue waiting forever.")
     parser.add_option("-f","--filename",type="string",
         dest="filename", default="kernel_list.txt",
-        help="file to store the kernel information")
+        help="Kernel information will be written to the file: ~/.ipython/filename.  Default = ~/.ipython/kernel_list.txt")
 
     (options, args) = parser.parse_args()
     

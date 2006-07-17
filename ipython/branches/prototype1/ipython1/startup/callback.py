@@ -11,6 +11,8 @@ from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 from twisted.python import log
 
+from IPython.genutils import get_home_dir
+
 class CallbackProtocol(basic.LineReceiver):
                 
     def lineReceived(self, line):
@@ -31,7 +33,7 @@ class CallbackFactory(protocol.ServerFactory):
     def __init__(self, kernelCount=-1, filename=""):
         self.kernels = []
         self.kernelCount = kernelCount
-        self.filename = filename
+        self.filename = get_home_dir() + "/.ipython/" + filename
         
     def _writeAddrToFile(self, addr):
         self.actualFile = file(self.filename,'a')

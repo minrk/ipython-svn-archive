@@ -641,6 +641,7 @@ class InteractiveCluster(object):
         # Let everyone know about each other
         self._cluster()
         self.activate()
+        self.set_block(True)
                     
         return True
     
