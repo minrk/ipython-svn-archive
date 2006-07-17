@@ -1,27 +1,35 @@
-"""This file contains unittests for the coreservice.py module.
+"""This file contains unittests for the engineservice.py module.
 
 Things that should be tested:
-- Should the CoreService return Deferred objects?
+- Should the EngineService return Deferred objects?
 - Run the same tests that are run in shell.py.
 - Make sure that the Interface is really implemented.
 - The startService and stopService methods.
 """
 
 from twisted.trial import unittest
-from twisted.internet import defer
+from twisted.internet import defer, protocol, reactor
+from twisted.protocols import basic
+from twisted.application import internet
 
-from ipython1.kernel2p import coreservice, corepb
+from ipython1.kernel import engineservice
 from ipython1.test.util import DeferredTestCase
 from ipython1.kernel1p.kernelerror import NotDefined
 
-class BasicCoreServiceTest(DeferredTestCase):
+class BasicEngineServiceTest(DeferredTestCase):
 
     def setUp(self):
-        self.s = coreservice.CoreService()
+        self.sf = protocol.ServerFactory()
+        self.sf.protocol = basic.LineReceiver
+        self.server = reactor.listenTCP(10201, self.sf)
+        self.f = protocol.ClientFactory()
+        self.f.protocol = basic.LineReceiver
+        self.s = engineservice.EngineService('localhost',10202, self.f)
         self.s.startService()
         
     def tearDown(self):
         self.s.stopService()
+        return self.server.stopListening()
                 
     def testExecute(self):
         commands = [(0,"a = 5","",""),
@@ -70,4 +78,3 @@ class BasicCoreServiceTest(DeferredTestCase):
         package = self.s.get_pickle("a")
         final_value = pickle.loads(package)
         self.assertEquals(final_value, good_pickle)
-        

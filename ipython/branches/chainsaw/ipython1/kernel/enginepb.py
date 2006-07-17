@@ -73,17 +73,19 @@ class PerspectiveEngineFromService(pb.Referenceable):
     
     def __init__(self, service):
         self.service = service
+        self.id = None
     
     def _connect(self, obj):
         self.root = obj
-        self.root.callRemote('registerEngine', self).addCallbacks(self.gotId, self._failure)
+        self.root.callRemote('registerEngine', self).addCallbacks(self._gotId, self._failure)
     
     def _failure(self, reason):
         raise reason
     
-    def gotId(self, id):
+    def _gotId(self, id):
         self.id = id
         log.msg("got ID: %r" %id)
+        return id
     
     def remote_execute(self, lines):
         return self.service.execute(lines)

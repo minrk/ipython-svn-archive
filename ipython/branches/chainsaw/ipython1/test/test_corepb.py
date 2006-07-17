@@ -13,7 +13,7 @@ import twisted.spread.pb
 from twisted.internet import reactor
 
 from ipython1.test.util import DeferredTestCase
-from ipython1.kernel import coreservice, corepb
+from ipython1.kernel2p import coreservice, corepb
 
 class CorePBTest(DeferredTestCase):
 
@@ -58,11 +58,11 @@ class CorePBTest(DeferredTestCase):
 
     def testPut(self):
         d1 = self.r.callRemote("put",10,10)
-        def fprint(f):
-            print " .type =", f.type
-            print " .value =", f.value
-            print " .tb = ", f.tb
-            return f
+        #def fprint(f):
+        #    print " .type =", f.type
+        #    print " .value =", f.value
+        #    print " .tb = ", f.tb
+        #    return f
         #d1.addBoth(fprint)
         d = self.assertDeferredRaises(d1, twisted.spread.pb.Error)
         #d = self.assertDeferredEquals(self.r.callRemote("get","a"),10,d)

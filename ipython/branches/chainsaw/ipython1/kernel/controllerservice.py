@@ -75,8 +75,13 @@ class ControllerService(internet.TCPServer):
     
     def startService(self):
         service.Service.startService(self)
-        reactor.listenTCP(self.controlPort, self.controlFactory)
-        reactor.listenTCP(self.remoteEnginePort, self.remoteEngineFactory)
+        self.controlServer = reactor.listenTCP(self.controlPort, self.controlFactory)
+        self.engineServer = reactor.listenTCP(self.remoteEnginePort, self.remoteEngineFactory)
+    
+    def stopService(self):
+        self.controlServer.stopListening()
+        self.engineServer.stopListening()
+        service.Service.stopService(self)
     
     def registerEngine(self, connection):
         id = self.availableId.pop()
