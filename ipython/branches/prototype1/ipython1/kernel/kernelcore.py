@@ -93,9 +93,10 @@ class KernelTCPProtocol(basic.LineReceiver):
         self.state = 'init'
         self.work_vars = {}
         peer = self.transport.getPeer()
-        if not self.factory.is_allowed(peer.host):
-            log.msg("Denied Client: %s" % peer.host)
-            self.transport.loseConnection()
+        # I have turned off the ip address based secutiry because it is crap!
+        #if not self.factory.is_allowed(peer.host):
+        #    log.msg("Denied Client: %s" % peer.host)
+        #    self.transport.loseConnection()
             
     def lineReceived(self, line):
         split_line = line.split(" ", 1)
@@ -548,12 +549,12 @@ class KernelFactoryBase:
     def allow_client(self, c):
         if c not in self._allowed_clients:
             self._allowed_clients.append(c)
-        print "Allowed: ", self._allowed_clients
+        #print "Allowed: ", self._allowed_clients
             
     def deny_client(self, c):
         if c in self._allowed_clients:
             del self._allowed_clients[self._allowed_clients.index(c)]
-        print "Allowed: ", self._allowed_clients
+        #print "Allowed: ", self._allowed_clients
             
     def is_allowed(self, c):
         if c in self._allowed_clients or 'all' in self._allowed_clients:

@@ -385,6 +385,7 @@ class RemoteKernel(object):
             An ip address to allow.
         @type ip: str
         """
+        raise NotImplemented
         self._check_connection()
         
         self.es.write_line("ALLOW TRUE %s" % ip)
@@ -404,6 +405,7 @@ class RemoteKernel(object):
             An ip address to deny.
         @type ip: str 
         """
+        raise NotImplemented
         self._check_connection()
         
         self.es.write_line("ALLOW FALSE %s" % ip)
@@ -885,12 +887,14 @@ class InteractiveCluster(object):
 
     def allow(self, ip, kernels=None):
         """Instruct a set of kernels to allow connections from an ip."""
+        raise NotImplemented
         kernel_numbers = self._parse_kernels_arg(kernels)
         for w in kernel_numbers:
             self.kernels[w].allow(ip)
 
     def deny(self, ip, kernels=None):
         """Instruc a set of kernels to deny connections from an ip."""
+        raise NotImplemented
         kernel_numbers = self._parse_kernels_arg(kernels)
         for w in kernel_numbers:
             self.kernels[w].deny(ip)

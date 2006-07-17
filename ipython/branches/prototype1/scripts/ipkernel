@@ -43,13 +43,13 @@ from ipython1.kernel.kernelcore import KernelTCPFactory
 from ipython1.kernel.kernelcore import ThreadlessKernelTCPFactory
 from ipython1.startup.callback import CallbackClientFactory
 
-def try_ports(port, allow_list, mpi, factory_class, controllerIP,
+def try_ports(port, mpi, factory_class, controllerIP,
     controllerPort):
     
     for k in range(16):
         try:
             p = reactor.listenTCP(port + k, 
-            factory_class(allow=allow_list, mpi=mpi))
+            factory_class(mpi=mpi))
         except error.CannotListenError:
             if k == 15:
                 log.msg("Cannot start kernel")
@@ -64,17 +64,14 @@ def try_ports(port, allow_list, mpi, factory_class, controllerIP,
             tries=3, delay=5.0)
         reactor.connectTCP(controllerIP, controllerPort, ccf) 
     
-def main(port, allow_ip, threads, mpi, controllerIP, controllerPort):
+def main(port, threads, mpi, controllerIP, controllerPort):
     if threads:
         factory_class = KernelTCPFactory
     else:
         factory_class = ThreadlessKernelTCPFactory
         
-    allow_list = ['127.0.0.1',socket.gethostbyname(socket.gethostname())]
-    if allow_ip is not None:
-        allow_list.extend(allow_ip.split(":"))
     log.startLogging(sys.stdout)
-    reactor.callWhenRunning(try_ports, port, allow_list, 
+    reactor.callWhenRunning(try_ports, port, 
         mpi, factory_class, controllerIP, controllerPort)
     log.msg(allow_list)
     reactor.run()
@@ -85,8 +82,6 @@ def start(port=10105, controllerIP="", controllerPort=12001):
         controllerPort=controllerPort)
     parser.add_option("-p", "--port", type="int", dest="port",
         help="the TCP port the kernel will try to listen on")
-    parser.add_option("-a", "--allow", type="string", dest="allow_ip",
-        help="an IP address to allow to connect to the kernel")
     parser.add_option("--threadless",
         action="store_false",dest="threads",default=True,
         help="start single thread kernel")
@@ -101,7 +96,7 @@ def start(port=10105, controllerIP="", controllerPort=12001):
 
     (options, args) = parser.parse_args()
     
-    main(options.port, options.allow_ip, options.threads, options.mpi,
+    main(options.port, options.threads, options.mpi,
         options.controllerIP, options.controllerPort)
     
 if __name__ == "__main__":
