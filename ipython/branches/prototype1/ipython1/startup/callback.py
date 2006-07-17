@@ -12,10 +12,7 @@ from twisted.protocols import basic
 from twisted.python import log
 
 class CallbackProtocol(basic.LineReceiver):
-        
-    def connectionMade(self):
-        log.msg("Connection Made")
-        
+                
     def lineReceived(self, line):
         split_line = line.split(" ",1)
         if len(split_line) == 2:
@@ -31,9 +28,9 @@ class CallbackProtocol(basic.LineReceiver):
 class CallbackFactory(protocol.ServerFactory):
     protocol = CallbackProtocol
     
-    def __init__(self, kernel_count, filename):
+    def __init__(self, kernelCount=-1, filename=""):
         self.kernels = []
-        self.kernel_count = kernel_count
+        self.kernelCount = kernelCount
         self.filename = filename
         self.actualFile = file(self.filename,'w')
         
@@ -41,11 +38,12 @@ class CallbackFactory(protocol.ServerFactory):
         self.actualFile.write("%s %i\n" % (addr[0], addr[1]))
     
     def registerKernel(self,addr):
+        log.msg("Kernel found: %s %i" % (addr[0], addr[1]))
         self.kernels.append(addr)
         self._writeAddrToFile(addr)
-        if len(self.kernels) == self.kernel_count:
-            print "Kernels found, quiting..."
-            #self.actualFile.close()
+        if len(self.kernels) == self.kernelCount:
+            log.msg("%i kernels have replied, I am going to quit" % \
+                len(self.kernels))
             reactor.stop()
 
     def stopFactory(self):
@@ -73,9 +71,12 @@ class CallbackClientFactory(protocol.ClientFactory):
         return self.addr
 
     def clientConnectionFailed(self, connector, reason):
-        print reason
+        #print reason
         if self.tries > 1:
             reactor.callLater(self.delay, connector.connect)
             self.tries -= 1
+            
+    def startedConnecting(self, connector):
+        log.msg("Attempting to callback controller...")
 
 

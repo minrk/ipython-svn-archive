@@ -34,26 +34,35 @@ won't result in a running kernel instance.
 import cPickle as pickle
 import sys
 from optparse import OptionParser
+import socket
 
 from twisted.internet import reactor, error
 from twisted.python import log
 
 from ipython1.kernel.kernelcore import KernelTCPFactory
 from ipython1.kernel.kernelcore import ThreadlessKernelTCPFactory
+from ipython1.startup.callback import CallbackClientFactory
 
-def try_ports(port, allow_list, mpi, factory_class):
-    try:
-        d = reactor.listenTCP(port, 
-            factory_class(allow=allow_list, mpi=mpi))
-    except error.CannotListenError:
-        log.msg("Trying the next port")
+def try_ports(port, allow_list, mpi, factory_class, controllerIP,
+    controllerPort):
+    
+    for k in range(16):
         try:
-            d = reactor.listenTCP(port+1, 
-                factory_class(allow=allow_list, mpi=mpi))
+            p = reactor.listenTCP(port + k, 
+            factory_class(allow=allow_list, mpi=mpi))
         except error.CannotListenError:
-            raise
-
-def main(port, allow_ip, threads, mpi):
+            continue
+        else:
+            break
+    
+    if controllerIP:
+        myIPAddress = socket.gethostbyname(socket.gethostname())
+        myPort = p.getHost().port
+        ccf = CallbackClientFactory((myIPAddress, myPort), 
+            tries=3, delay=5.0)
+        reactor.connectTCP(controllerIP, controllerPort, ccf) 
+    
+def main(port, allow_ip, threads, mpi, controllerIP, controllerPort):
     if threads:
         factory_class = KernelTCPFactory
     else:
@@ -63,15 +72,17 @@ def main(port, allow_ip, threads, mpi):
     if allow_ip is not None:
         allow_list.extend(allow_ip.split(":"))
     log.startLogging(sys.stdout)
-    reactor.callLater(1.0, try_ports, port, allow_list, mpi, factory_class)
+    reactor.callWhenRunning(try_ports, port, allow_list, 
+        mpi, factory_class, controllerIP, controllerPort)
     log.msg(allow_list)
     reactor.run()
 
-def start(port=10105):
+def start(port=10105, controllerIP="", controllerPort=13451):
     parser = OptionParser()
-    parser.set_defaults(port=port)
+    parser.set_defaults(port=port, controllerIP=controllerIP,
+        controllerPort=controllerPort)
     parser.add_option("-p", "--port", type="int", dest="port",
-        help="the TCP port the kernel will listen on")
+        help="the TCP port the kernel will try to listen on")
     parser.add_option("-a", "--allow", type="string", dest="allow_ip",
         help="an IP address to allow to connect to the kernel")
     parser.add_option("--threadless",
@@ -79,9 +90,17 @@ def start(port=10105):
         help="start single thread kernel")
     parser.add_option("--mpi", action="store_true", default=False,
         dest="mpi", help="Start with mpi4py loaded")
+    parser.add_option("-C","--controller-ip",type="string",
+        dest="controllerIP",
+        help="ip address of the controller that should be notified")
+    parser.add_option("-L","--controller-port",type="int",
+        dest="controllerPort",
+        help="port of the controller that should be notified")
+
     (options, args) = parser.parse_args()
-    print "Starting the kernel on port %i" % options.port
-    main(options.port, options.allow_ip, options.threads, options.mpi)
+    
+    main(options.port, options.allow_ip, options.threads, options.mpi,
+        options.controllerIP, options.controllerPort)
     
 if __name__ == "__main__":
     start()

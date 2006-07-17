@@ -1,13 +1,17 @@
 from twisted.internet import reactor
 from ipython1.startup import callback
+from twisted.python import log
+
+import sys
 
 # Parameters
 port = 12001
-kernel_count = 4
+kernelCount = 4
 filename = "myfile.txt"
-callbackAddr = ('192.168.0.1',10105)
         
 # Server
-callbackFactory = callback.CallbackFactory(kernel_count, filename)
+callbackFactory = callback.CallbackFactory(kernelCount=kernelCount,
+    filename=filename)
 server = reactor.listenTCP(port, callbackFactory)
+log.startLogging(sys.stdout)
 reactor.run()
