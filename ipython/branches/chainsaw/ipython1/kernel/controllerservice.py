@@ -54,25 +54,33 @@ class IControllerService(Interface):
     
 #implementation of the Controller Service
         
-class ControllerService(internet.TCPServer):
+class ControllerService(service.Service):
     """This service listens for kernel engines and control clients.
     
     """
     
     implements(IControllerService)
     
-    def __init__(self, cPort, cFactory, rEPort, rEFactory):
+    def __init__(self, cPort=None, cFactory=None, rEPort=None, rEFactory=None):
         """controlFactory listens for users, 
         remoteEngineFactory listens for engines"""
-        self.controlPort = cPort
-        self.controlFactory = cFactory
-        self.controlFactory.service = self
-        self.remoteEnginePort = rEPort
-        self.remoteEngineFactory = rEFactory
-        self.remoteEngineFactory.service = self
+        if None not in [cPort, cFactory]:
+            self.setupControlFactory(cPort, cFactory)
+        if None not in [rEPort, rEFactory]:
+            self.setupRemoteEngineFactory(rEPort, rEFactory)
         self.engine = {}
         self.availableId = range(128,-1,-1)
     
+    def setupControlFactory(self, cPort, cFactory):
+        self.controlPort = cPort
+        self.controlFactory = cFactory
+        self.controlFactory.service = self
+    
+    def setupRemoteEngineFactory(self, rEPort, rEFactory):
+        self.remoteEnginePort = rEPort
+        self.remoteEngineFactory = rEFactory
+        self.remoteEngineFactory.service = self
+        
     def startService(self):
         service.Service.startService(self)
         self.controlServer = reactor.listenTCP(self.controlPort, self.controlFactory)
@@ -85,7 +93,7 @@ class ControllerService(internet.TCPServer):
     
     def registerEngine(self, connection):
         id = self.availableId.pop()
-        self.engine[id] = RemoteEngine(id, connection)
+        self.engine[id] = RemoteEngine(self, id, connection)
         log.msg("registered engine %r" %id)
         return id
     

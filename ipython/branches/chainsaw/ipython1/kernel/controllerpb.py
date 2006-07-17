@@ -47,8 +47,9 @@ class PerspectiveControllerFromService(pb.Root):
     def __init__(self, service):
         self.service = service
     
-    def remote_registerEngine(self, perspectiveEngine):
-        id = self.service.registerEngine(perspectiveEngine)
+    def remote_registerEngine(self, engineReference):
+        id = self.service.registerEngine(engineReference)
+        engineReference.broker.notifyOnDisconnect(self.service.engine[id].handleDisconnect)
         return id
     
     #should I separate the two root objects (Remote, Control)?
@@ -64,13 +65,3 @@ components.registerAdapter(PerspectiveControllerFromService,
                            controllerservice.ControllerService,
                            IPerspectiveController)
 
-class PBRemoteEngineServerFactory(pb.PBServerFactory):
-    
-    def buildProtocol(self, addr):
-        p = self.protocol()
-        p.factory = self
-        p.notifyOnDisconnect(self)
-        return p
-
-    
-    

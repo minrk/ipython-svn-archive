@@ -77,7 +77,7 @@ class PerspectiveEngineFromService(pb.Referenceable):
     
     def _connect(self, obj):
         self.root = obj
-        self.root.callRemote('registerEngine', self).addCallbacks(self._gotId, self._failure)
+        return self.root.callRemote('registerEngine', self).addCallbacks(self._gotId, self._failure)
     
     def _failure(self, reason):
         raise reason

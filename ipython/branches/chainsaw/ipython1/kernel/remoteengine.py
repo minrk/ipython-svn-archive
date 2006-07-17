@@ -48,6 +48,9 @@ class Command(object):
 class IRemoteEngine(engineservice.IEngine):
     """add some methods to IEngine interface"""
     
+    def handleDisconnect(self):
+        """handle disconnection from remote engine"""
+    
     def submitCommand(self, cmd):
         """submitCommand"""
     
@@ -69,14 +72,19 @@ class RemoteEngine(object):
     
     implements(IRemoteEngine)
     
-    def __init__(self, id, connection=None):
+    def __init__(self, service, id, connection, restart=False):
+        self.service = service
         self.id = id
         self.connection = connection
+        self.restart = restart
         self.queued = []
         self.currentCommand = None
     
     #methods from IRemoteEngine:
     
+    def handleDisconnect(self):
+        self.service.disconnectEngine(self.id)
+        
     def submitCommand(self, cmd):
         
         d = defer.Deferred()
