@@ -56,7 +56,7 @@ The latest prototype of the IPython kernel can be retrieved from the IPython sub
 
 ::
 
-    svn co http://ipython.scipy.org/svn/ipython/branches/prototype1 ipython1
+    svn co http://ipython.scipy.org/svn/ipython/ipython/branches/prototype1 ipython1
     cd ipython1
     python setup.py build
     python setup.py install
