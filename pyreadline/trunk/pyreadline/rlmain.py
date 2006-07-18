@@ -179,7 +179,7 @@ class Readline:
                 self.next_meta = False
                 control, meta, shift, code = event.keyinfo
                 event.keyinfo = (control, True, shift, code)
-
+            log("event:%s,%s"%(str(event.keyinfo),event.char))
             #Process exit keys. Only exit on empty line
             if event.keyinfo in self.exit_dispatch:
                 if len(self.line_buffer) == 0:
@@ -1119,6 +1119,9 @@ class Readline:
         file. This command is unbound by default.'''
         pass
 
+    def NOP(self,e):
+        pass
+
     def _bind_key(self, key, func):
         '''setup the mapping from key to call the function.'''
         keyinfo = key_text_to_keyinfo(key)
@@ -1138,6 +1141,7 @@ class Readline:
         self._bind_exit_key('Control-z')
 
         # I often accidentally hold the shift or control while typing space
+        self._bind_key('Tab',               self.NOP)
         self._bind_key('Shift-space',       self.self_insert)
         self._bind_key('Control-space',     self.self_insert)
         self._bind_key('Return',            self.accept_line)

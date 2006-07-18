@@ -155,6 +155,8 @@ key_modifiers = { VK_SHIFT:1,
                   VK_MENU:1, # alt key
                   0x5b:1, # windows key
                  }
+from ansi import AnsiState,AnsiWriter
+
 
 class Console(object):
     '''Console driver for Windows.
@@ -183,6 +185,13 @@ class Console(object):
         self.GetConsoleScreenBufferInfo(self.hout, byref(info))
         self.attr = info.wAttributes
         self.saveattr = info.wAttributes # remember the initial colors
+        
+        self.defaultstate=AnsiState()
+        self.defaultstate.winattr=info.wAttributes
+        
+        self.ansiwriter=AnsiWriter(self.defaultstate)
+        
+        
         log('initial attr=%x' % self.attr)
 
         self.hin = self.GetStdHandle(STD_INPUT_HANDLE)
@@ -201,7 +210,11 @@ class Console(object):
             self.FreeConsole()
         import atexit
         atexit.register(exit)
-            
+        
+        
+        
+        
+        
 
     def __del__(self):
         '''Cleanup the console when finished.'''
@@ -338,6 +351,16 @@ class Console(object):
             n += len(chunk)
             log('attr=%s' % attr)
             self.SetConsoleTextAttribute(self.hout, attr)
+            self.WriteConsoleA(self.hout, chunk, len(chunk), byref(junk), None)
+        return n
+
+    def write_color(self, text, attr=None):
+        n,res= self.ansiwriter.write_color(text,attr)
+        junk = c_int(0)
+        for attr,chunk in res:
+            log(str(attr))
+            log(str(chunk))
+            self.SetConsoleTextAttribute(self.hout, attr.winattr)
             self.WriteConsoleA(self.hout, chunk, len(chunk), byref(junk), None)
         return n
 

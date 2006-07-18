@@ -1,3 +1,8 @@
+2006-07-18 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Added AnsiState class to simplify work with getting the aansi color handling to work properly
+	* Added NOP function to readline class to have an empty function to bind to tab completion
+	* Tab completion bound to do nothing method NOP by default. 
+	
 2006-06-27 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Changes from yesterday were not correct. Resulted in invisible docstrings
 	  when using ? in ipython.
