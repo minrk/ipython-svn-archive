@@ -72,11 +72,13 @@ class RemoteEngine(object):
     
     implements(IRemoteEngine)
     
-    def __init__(self, service, id, connection, restart=False):
+    def __init__(self, service, id, connection, restart=False, holdID=False):
         self.service = service
         self.id = id
         self.connection = connection
+        connection.engine = self
         self.restart = restart
+        self.holdID = holdID
         self.queued = []
         self.currentCommand = None
     

@@ -32,8 +32,11 @@ from ipython1.kernel import controllerservice
      
 class IPerspectiveController(Interface):
     
-    def remote_registerEngine(self, perspectiveEngine):
+    def remote_registerEngine(self, engineReference):
         """register new engine on controller"""
+    
+    def remote_reconnectEngine(self, id, engineReference):
+        """reconnect an engine"""
     
     def remote_submitCommand(self, id, cmd):
         """submitCommand to engine #id"""
@@ -49,8 +52,15 @@ class PerspectiveControllerFromService(pb.Root):
     
     def remote_registerEngine(self, engineReference):
         id = self.service.registerEngine(engineReference)
-        engineReference.broker.notifyOnDisconnect(self.service.engine[id].handleDisconnect)
-        return id
+        e = self.service.engine[id]
+        engineReference.broker.notifyOnDisconnect(e.handleDisconnect)
+        return (id, e.restart, e.holdID)
+
+    def remote_reconnectEngine(self, id, engineReference):
+        self.service.reconnectEngine(id, engineReference)
+        e = self.service.engine[id]
+        engineReference.broker.notifyOnDisconnect(e.handleDisconnect)
+        return (e.restart, e.holdID)
     
     #should I separate the two root objects (Remote, Control)?
     def remote_submitCommand(self, id, cmd):

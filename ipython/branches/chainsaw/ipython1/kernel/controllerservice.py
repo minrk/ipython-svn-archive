@@ -69,7 +69,7 @@ class ControllerService(service.Service):
         if None not in [rEPort, rEFactory]:
             self.setupRemoteEngineFactory(rEPort, rEFactory)
         self.engine = {}
-        self.availableId = range(128,-1,-1)
+        self.availableID = range(128,-1,-1)#[128,...,0]
     
     def setupControlFactory(self, cPort, cFactory):
         self.controlPort = cPort
@@ -82,42 +82,48 @@ class ControllerService(service.Service):
         self.remoteEngineFactory.service = self
         
     def startService(self):
-        service.Service.startService(self)
         self.controlServer = reactor.listenTCP(self.controlPort, self.controlFactory)
         self.engineServer = reactor.listenTCP(self.remoteEnginePort, self.remoteEngineFactory)
+        service.Service.startService(self)
     
     def stopService(self):
         self.controlServer.stopListening()
         self.engineServer.stopListening()
-        service.Service.stopService(self)
+        d = service.Service.stopService(self)
+        return d
     
     def registerEngine(self, connection):
-        id = self.availableId.pop()
+        id = self.availableID.pop()
         self.engine[id] = RemoteEngine(self, id, connection)
         log.msg("registered engine %r" %id)
         return id
     
     def unregisterEngine(self, id):
-        (key, engine) = self.engine.pop(id)
-        del engine
-        self.availableId.append(key)#need to be able to choose this
+        _ = self.engine.pop(id)
+        self.availableID.append(id)#need to be able to choose this
         log.msg("unregistered engine %r" %id)
     
     def reconnectEngine(self, id, connection):
         #if we want to keep the engine, reconnect to it, for now get a new one|
-        self.engine[id] = RemoteEngine(connection)
+        if self.engine[id] is 'restarting':
+            self.engine[id] = RemoteEngine(connection)
+        else:
+            raise 'illegal reconnect'
         log.msg("reconnected engine %r" %id)
     
     def disconnectEngine(self, id):
-        #do I want to keep the RemoteEngine or not?
+        #do I want to keep the RemoteEngine object or not?
         #for now, no
-        self.engine[id] = None
-        log.msg("disconnected engine %r" %id)
+        log.msg("engine %r disconnected" %id)
+        if not self.engine[id].holdID:
+            self.unregisterEngine(id)
+        elif self.engine[id].restart:
+            self.engine[id] = 'restarting'
+            log.msg("expecting reconnect")
 
     def restartEngine(self, id):
         """Stops and restarts the kernel engine process."""
         #send restart command
-        self.disconnectEngine(id)
         log.msg("restarting engine %r" %id)
     
     def cleanQueue(self, id):

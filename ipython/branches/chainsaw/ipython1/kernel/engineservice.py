@@ -90,17 +90,26 @@ class IEngine(Interface):
     
 
 # Now the actual EngineService implementation                   
-#EngineService = internet.TCPClient
-class EngineService(InteractiveShell, internet.TCPClient):
+class EngineService(InteractiveShell, service.Service):
     
     implements(IEngine)
     
-    def __init__(self, controllerAddress, port, factory, locals=None, \
-                filename="<console>"):
-        internet.TCPClient.__init__(self, controllerAddress, port, factory)
+    def __init__(self,address,port,factory,locals=None,filename="<console>"):
         InteractiveShell.__init__(self, locals, filename)
-#        self.factory = factory
-        
+        self.address = address
+        self.port = port
+        self.factory = factory
+    
+    def startService(self):
+        service.Service.startService(self)
+        self._connection = reactor.connectTCP(self.address, self.port, self.factory)
+    
+    def stopService(self):
+        service.Service.stopService(self)
+        if self._connection is not None:
+            self._connection.disconnect()
+            del self._connection
+    
     def put_pickle(self, key, package):
         value = pickle.loads(package)
         return self.put(key, value)
