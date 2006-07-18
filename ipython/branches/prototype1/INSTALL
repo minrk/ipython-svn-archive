@@ -1,62 +1,86 @@
-Date:  2006-02-11
-Author:  Brian E. Granger (ellisonbg@gmail.com)
+===========================
+IPython Kernel Installation
+===========================
 
-This file describes the steps required to install the ipython kernel.  The
-current kernel requires four things:
+:Author:  Brian E. Granger
+:Contact: ellisonbg@gmail.com
+:Date: July, 2006
 
-- The current version of IPython from svn trunk
-- Zope Interface
-- Twisted
-- The ipython1 kernel itself
+.. contents::
 
-For a description of the kernel, see the README file in this directory.
+Introduction
+============
 
-For now, the kernel works with the current ipython release or the current 
-SVN trunk.
+This INSTALL file describes the steps required to install the ipython kernel.  For a description of the kernel, see the README file in this directory.
 
-Eventually, the kernel -will be- ipython itself.  But for now you can use
-the kernel within the standard IPython.  
+The current kernel requires four things:
 
-= Installation Instructions =
+1. A current version of IPython.
+2. Zope Interface
+3. Twisted
+4. The kernel itself
 
-1.  Download and install the current version of ipython
+For MPI support, two additional things are needed:
 
-    svn co http://ipython.scipy.org/svn/ipython/ipython/trunk ipython
-    cd ipython
-    python setup.py build
-    sudo python setup.py install
+1. An MPi implementation
+2. The mpi4py package
 
-2.  Download and install the zope.interface package
+Installation Instructions
+=========================
 
-    See the Zope 3 interface web site for instuctions.  
+IPython
+-------
 
-    http://www.zope.org/Products/ZopeInterface
+First, download and install the current version of ipython:
 
-3.  Download and install the latest SVN version of Twisted
+http://ipython.scipy.org
 
-    You can check out the SVN trunk using the subversion command:
+Zope Interface
+--------------
 
-    svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted
-    cd Twisted
-    python setup.py all build
-    sudo python setup.py all install
+Next, download and install the zope.interface package:
+
+http://www.zope.org/Products/ZopeInterface
+
+Twisted
+-------
+
+Download and install the latest version of Twisted:
+
+http://www.twistedmatrix.com
     
-    The extra 'all' in these commands instructs distutils to install all of 
-    Twisted.  It may not be needed.
-    
-4.  Install the kernel from ipython1
+IPython Kernel
+--------------
 
-    While in the ipython1 source directory issue:
+The latest prototype of the IPython kernel can be retrieved from the IPython subversion repository with the command.
 
+::
+
+    svn co http://ipython.scipy.org/svn/ipython/branches/prototype1 ipython1
+    cd ipython1
     python setup.py build
     python setup.py install
 
-    After this, the scipts to start the kernel should be installed and you
-    should be able to use the kernelclient from within the standard ipython.
-    
-NOTE:  If you are installing this on Mac OS X, you need to provide the
---install-scripts /usr/local/bin flag to have the scripts put in the correct
-location.  Replace /usr/local/bin by the appropriate directory for your system.
+In addition to installing the ipython1 python package, this will also install
+a few scripts for starting the kernel into an appropriate location.  To control
+where these scripts are installed, you can do the following:
 
-An easier way of intalling on Mac OS X is using the bdist_mpkg command of
-PyObjC.
+::
+
+    python setup.py install_scripts --install-dir=/some/other/bin
+    
+MPI Support
+-----------
+
+The IPython kernel includes MPI support thgrough the mpi4py module:
+
+http://www.cimec.org.ar/python/mpi4py.html
+
+Follow the build instructions at this location to get mpi4py working.  
+
+Note:
+
+- it is not required to recompile python itself to use mpi4py.
+- The MPI support is options and can be added at any time without
+  reinstalling the ipython kernel.
+  

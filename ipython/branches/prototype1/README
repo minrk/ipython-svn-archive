@@ -1,12 +1,20 @@
-Date:  9/5/2005
-Author:  Brian E. Granger (bgranger@scu.edu)
+===========================
+IPython Kernel Readme
+===========================
+
+:Author:  Brian E. Granger
+:Contact: ellisonbg@gmail.com
+:Date: July, 2006
+
+.. contents::
+
+Overview
+========
 
 This file gives an overview of the ipython kernel and the ipython kernel
 interface.
 
 For installation instructions, see the INSTALL file in this directory.
-
-= Overview =
 
 The ipython kernel opens up the door for the following:
 
@@ -27,39 +35,39 @@ the user in a separate python interpreter.  The kernel client
 consists of a set of python objects that allow the user to interact with one 
 or more kernels simultaneously.  
 
-NOTE:   If you run code on the kernel that i) calls C/C++/fortran and ii)
-        does not release Python's Global Interpreter Lock (GIL), the kernel
-        will become unresponsive while the code runs.  We are fixing this
-        problem in a future release.
+**NOTE:**  If you run code on the kernel that i) calls C/C++/fortran and ii) does not release Python's Global Interpreter Lock (GIL), the kernel will become unresponsive while the code runs.  We are fixing this problem in a future release.
 
-= Basic Usage =
+Basic usage
+===========
 
+Starting the kernel
+-------------------
 
-== Starting the kernel ==
+The ipython kernel is a python VM that listens on a network port.  The kernel is started using the ipkernel command.  To see the command line options for
+ipkernel issue the command:
 
-The basic ipython kernel is contained in the module kernel.py.  The 
-kernel can be started using the command:
+::
 
-    ipkernel
-
-NOTE: It may not be possible to run the kernel in the background currently. 
-Thus if you try python kernel.py &, the kernel will not work.  This has to do with the deep inner workings of Twisted.  In the future you will be able to do
-this.
+    ipkernel -h
 
 Be default, the kernel listens on TCP port 10105.  To specify what TCP port
 the kernel should listen on, use the -p (or --port) option:
 
+::
+
     ipkernel --port 10106
+    
+To enable MPI support, call ipkernel with the --mpi flag:
 
-For security reasons, the kernel can be configured to allow or deny connections
-from specific ip addresses.  The default is to allow connections only from the
-localhost (127.0.0.1).  To allow an additional ip address to connect to the
-kernel, use the option -a (or --allow):
+::
 
-    ipkernel --port 10106 --allow 168.169.170.171:192.169.0.1
+    ipkernel --mpi
 
-To allow (deny) additional hosts to connect to the kernel see the allow (deny)
-method of the RemoteKernel or InteractiveCluster classes.
+By default, the IPython kernel has two threads, one for executing user commands and a second for handling network calls.  The multi-threaded version has a command queue so that multiple commands can be sent to a kernel while it is working.  To start a single thread version with no queue:
+
+::
+
+    ipkernel --threadless
 
 The basic kernel does not support interactive calls to GUI toolkits (tk, wx,
 qt, Cocoa, etc.).  This is because each GUI toolkit has its own event loop that 
@@ -71,23 +79,67 @@ To start this kernel, use ipkernelwx rather than ipkernel in the above
 command.  The GUI kernel accept the same command line options.  On Mac OS X
 the GUI kernels must be started with the command pythonw rather than python.
 
-NOTE: Do not run the GUI kernel unless you really need it.  This is because
+**NOTE:**  Do not run the GUI kernel unless you really need it.  This is because
 the GUI kernel lacks some of the features of the basic kernel.  Most importantly
 the basic kernel is multithreaded and has a queue, whereas the GUI kernels have
 only a single user thread and no queue.  The queue allow multiple python 
 commands to be sent to the kernel while previous commands are still executing.
 
-== Monitoring the kernels ==
+**NOTE:**  It may not be possible to run the kernel in the background currently. 
+Thus if you try python kernel.py &, the kernel will not work.  This has to do with the deep inner workings of Twisted.  In the future you will be able to do
+this.
+
+Using the kernel controller
+---------------------------
+
+The IPython kernel controller is a separate process that uses a simple network protocol to keep track of where various kernels are running.  It saves this information to a file that can be loaded into IPython to access the kernels interactively.  There is a couple of situations where this capability is useful:
+
+1.  In some computing environments, it is not easy to tell what ip and port a
+    kernel has started on.  Many batch submission systems like PBS, Torque or
+    Xgrid don't allow you to specify what node a process will run on.
+    Thus you need a way of finding out where a kernel is running.
+    
+2.  Second, even if you know the ip address of a kernel, you may not know the
+    port it is listening on.  The reason is that when there are multiple 
+    kernels running on a single node, the kernel is smart and picks a port 
+    that is not already being using by another kernel.
+    
+3.  It is a royal pain to manually enter the (ip, port) of each running kernel.
+    The kernel controller maintains a list of the kernel in the proper format
+    to be read by IPython.
+    
+To use the kernel controller you start it **before** starting the kernels and tell the kernels to notify the controller that they have started:
+
+::
+
+    ipcontroller -n 16 -f mycluster
+    ipkernel -C ip_of_controller
+    ipkernel -C ip_of_controller
+    ... 16 times
+    
+At the end of this process, the controller will create a file ~/.ipython/mycluster with the list of the kernels' IP addresses and ports.  This file
+can then be loaded in an interactive python/IPython session:
+
+>>> ic = InteractiveCluster
+>>> ic.load("mycluster")
+    
+    
+Monitoring kernels
+------------------
 
 To monitor the stdin, stdout and stderr of the kernels, you must start a
 ResultGatherer class.  This class is bound to a UDP port and receives UDP
 datagrams from the kernels when results are ready.  To start a ResultGatherer
 run the following command from the command line:
 
+::
+
 	ipresults
 
 This will start a ResultGatherer bound to port 10104.  To change the port,
 use the -p options:
+
+::
 
 	ipresults -p 10101
 
@@ -97,7 +149,8 @@ method of the RemoteKernel or InteractiveCluster class.
 
 See below for examples of this.
 
-== Using the kernel ==
+Using the kernel
+================
 
 The kernel interface is implemented in the kernelclient.py module.  This module
 contains two main classes that allow the user to interact with the kernel:
@@ -105,11 +158,14 @@ RemoteKernel and InteractiveCluster.  This README focuses on parallel
 computations using the InteractiveCluster class, but the interface for working
 with a single kernel (RemoteKernel) is almost identical.
 
-==== Create an InteractiveCluster object ===
+Create an InteractiveCluster object
+-----------------------------------
 
 Begin by creating an InteractiveCluster object in ipython.  Then you tell the
 object where two kernels are running and what ResultGatherer the kernels should
 be notifying of results:
+
+::
 
     In [1]: from ipython1.kernel1p.kernelclient import *
 
@@ -126,29 +182,35 @@ Now the InteractiveCluster object is ready to use.  If there is a problem
 connecting to the kernels, you either the kernels are not actually running
 or you have a networking problems (like a closed firewall).
 
-=== Executing Commands on the kernels ===
+Executing commands on the kernels
+---------------------------------
 
 Python commands can be executed on the kernels using the execute() method:
 
+::
+
     In [5]: ic.execute('a = 5')             # a = 5 on all kernels
-
     In [6]: ic.execute('b = 10')            # b = 10 on all kernels
-
     In [7]: ic.execute('c = 30',0)          # c = 30 on kernel 0
-
     In [8]: ic.execute('c = 40',1)          # d = 40 on kernel 1
 
 You can also access individual kernsl using a list syntax:
 
+::
+
     In [9]: ic[0].execute('d = 10')         # Same as execute('d=10',0)
 
 Lastly, there are ipython magics for "parallel execution":
+
+::
 
     In [10]: %px c = 30                     # Like execute('c = 30')
     Executing command on cluster
 
 To have every command entered automatically prefixed by %px, enter 
 autoparallel mode:
+
+::
 
     In [11]: %autopx
     Auto Parallel Enabled
@@ -167,13 +229,18 @@ Every command entered while in autoparallel mode is executed on all kernels.
 If you have more that one InteractiveCluster object, you can make a given one 
 active for the %px magics using the activate command on the cluster:
 
+::
+
     In [16]: ic.activate()
 
-=== Moving python object around ===
+Moving python objecst around
+----------------------------
 
 In addition to being able to execute python code on the kernels, you can move
 arbitrary (OK, not arbitrary, the objects need to be pickleable) python
 objects around.  This is done using the push() and pull() methods:
+
+::
 
     In [17]: ic.push('a',10)            # Send 10 to all kernels as 'a'
 
@@ -187,6 +254,8 @@ In this form, push() acts like an MPI broadcast and pull acts like an MPI
 gather.  But push and pull support a much richer interface for more complicated
 data movement:
 
+::
+
     In [20]: ic.push('a',10,0)          # Push to only kernel 0
     
     In [21]: ic.push('a',20,1)          # Push to only kernel 1
@@ -196,12 +265,16 @@ data movement:
 
 You can also give push and pull a list of kernel to work with:
 
+::
+
     In [23]: ic.push('a',10,[0,1])
 
     In [24]: ic.pull('a',[0,1])
     Out[24]: [10, 10]
 
 You can also use the list syntax:
+
+::
 
     In [25]: ic[0].push('a',10)
     Out[25]: True
@@ -210,6 +283,8 @@ You can also use the list syntax:
     Out[26]: 10
 
 Best of all, push and pull have convenient dictionary style interfaces:
+
+::
 
     In [27]: ic['a'] = 10
 
@@ -226,6 +301,8 @@ Best of all, push and pull have convenient dictionary style interfaces:
 You can partition and distribute a python sequence (an MPI scatter) to the 
 kernels by pushing a Scatter object initialized with the sequence:
 
+::
+
     In [5]: ic.push('a',Scatter(range(10)))
 
     In [6]: ic.pull('a')
@@ -233,9 +310,13 @@ kernels by pushing a Scatter object initialized with the sequence:
 
 Or use the dictionary interface:
 
+::
+
     In [7]: ic['a'] = Scatter(range(10))
 
 By default, Scatter treats unit length sequences as lists:
+
+::
 
     In [7]: ic['a'] = Scatter(range(2))
 
@@ -245,22 +326,20 @@ By default, Scatter treats unit length sequences as lists:
 To scatter length one lists as scalars, set the flatten flag on the Scatter
 object:
 
+::
+
     In [9]: ic['a'] = Scatter(range(2),True)
 
     In [10]: ic['a']
     Out[10]: [0, 1]
 
 
-NOTE:  While you can do things like ic[0]['a'] = ic[1]['b'], these types of
-       data movements have not been optimized.  Currently the python object
-       would come back to you  from kernel 1 and then be sent out to kernel 
-       0.  Eventually we will implement a move() method for moving objects
-       directly from one kernel to another.
+**NOTE:**  While you can do things like ic[0]['a'] = ic[1]['b'], these types of data movements have not been optimized.  Currently the python object would come back to you  from kernel 1 and then be sent out to kernel 0.  Eventually we will implement a move() method for moving objects directly from one kernel to another.
 
-NOTE:  Because push and pull use the pickle module, you cannot push and pull
-       python functions to the kernels and back.
+**NOTE:**  Because push and pull use the pickle module, you cannot push and pull python functions to the kernels and back.
 
-=== The map and parallelize commands ===
+The map and parallelize commands
+--------------------------------
 
 With the basic commands (push, pull and execute) higher level constructs
 can be build.  The map() and parallelize() methods of InteractiveCluster are
@@ -269,11 +348,15 @@ examples of this.
 The map() method work just like the builtin python map, but the calling 
 convention differs slightly.
 
+::
+
     In [14]: map(lambda x: x*x,range(10))
     Out[14]: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
 
 The same thing on the cluster is called by giving the function to call
 as a string:
+
+::
 
     In [15]: ic.map('lambda x: x*x',range(10))
     Out[15]: [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]
@@ -283,6 +366,8 @@ and then each kernel maps part of the list in parallel.  This is the most
 trivial way of parallelizing a simple algorithm. 
 
 There are a number of similar ways of accomplishing the same thing:
+
+::
 
     In [23]: ic.push('a', Scatter(range(10)))
 
@@ -294,6 +379,8 @@ There are a number of similar ways of accomplishing the same thing:
 
 Or, there is a powerful VectorFunction object:
 
+::
+
     In [26]: f = ic.parallelize('lambda x: x*x')
 
     In [27]: f(range(10))
@@ -302,35 +389,36 @@ Or, there is a powerful VectorFunction object:
 The function f is a ParallelFunction object that exists in the local namespace.
 It basically is a wrapper for the parallelized map() method of the cluster.
 
-NOTE:  The functions used by map and parallelize must already be defined in the
-       namespace of each kernel!  You cannot pass functions to the kernels.
+**NOTE:**  The functions used by map and parallelize must already be defined in the namespace of each kernel!  You cannot pass functions to the kernels.
 
 
-=== Other commands ===
+Other commands
+--------------
 
 You can reset the kernel's namespaces:
+
+::
 
     In [32]: ic.reset()
 
 You can disconnect from the kernels:
+
+::
 
     In [34]: ic.disconnect() 
 
 Calling any method on the InteractiveCluster object that requires a kernel
 connection will cause an automatic reconnect:
 
+::
+
     In [35]: ic.execute('a = 5')
     Connecting to kernel:  ('127.0.0.1', 10105)
     Connecting to kernel:  ('127.0.0.1', 10106)
 
-To allow or deny a specific ip address to connect to the cluster use
-the allow() and deny() methods:
-
-    In [36]: ic.allow('121.122.123.124')
-
-    In [37]: ic.deny('121.122.123.124')
-
 To kill the kernels for good, use kill():
+
+::
 
     In [38]: ic.kill()
 
