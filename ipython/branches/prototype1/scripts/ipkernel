@@ -73,7 +73,6 @@ def main(port, threads, mpi, controllerIP, controllerPort):
     log.startLogging(sys.stdout)
     reactor.callWhenRunning(try_ports, port, 
         mpi, factory_class, controllerIP, controllerPort)
-    log.msg(allow_list)
     reactor.run()
 
 def start(port=10105, controllerIP="", controllerPort=12001):
