@@ -568,7 +568,7 @@ class KernelFactoryBase:
         self._cluster_addrs = ca_list
         for ca in self._cluster_addrs:
             self.allow_client(ca[0]) # Just the ip address
-        print "Cluster: ", self._cluster_addrs
+        #print "Cluster: ", self._cluster_addrs
 
     def clear_cluster(self):
         for ca in self._cluster_addrs:
