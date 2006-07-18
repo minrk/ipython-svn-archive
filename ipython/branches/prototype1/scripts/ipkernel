@@ -50,7 +50,7 @@ def try_ports(port, mpi, factory_class, controllerIP,
         try:
             p = reactor.listenTCP(port + k, 
             factory_class(mpi=mpi))
-        except error.CannotListenError, socket.error:
+        except (error.CannotListenError, socket.error):
             if k == 15:
                 log.msg("Cannot start kernel")
                 reactor.stop()
