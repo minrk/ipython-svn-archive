@@ -22,7 +22,7 @@ name = 'pyreadline'
 
 branch = 'trunk'
 
-version = '1.3'
+version = '1.3.1.svn'
 
 revision = '$Revision$'
 

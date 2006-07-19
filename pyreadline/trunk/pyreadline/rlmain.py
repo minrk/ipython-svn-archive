@@ -33,7 +33,9 @@ class ReadlineError(exceptions.Exception):
 def inword(buffer,point):
     return buffer[point:point+1] in [A-Za-z0-9]
 
-config_path=os.path.expanduser("~/pyreadlineconfig.ini")
+config_path=os.environ.get("PYREADLINECONFIGFILE",
+                           os.path.normpath(os.path.expanduser("~/pyreadlineconfig.ini")))
+pyreadlinedebug=os.environ.get("PYREADLINEDEBUG",False)
 
 class Readline:
     def __init__(self):
@@ -1252,18 +1254,35 @@ class Readline:
              "history_length":sethistorylength,
              "set_prompt_color":set_prompt_color,
              "set_input_color":set_input_color,}
-        if os.path.isfile(inputrcpath): 
+        if os.path.isdir(inputrcpath):
+            print >>sys.stderr, "A directory is present with the name of the configuration file:\n  '%s'"%inputrcpath
+            return
+        elif not os.path.isfile(inputrcpath) and not pyreadlinedebug:
+            configfilename=os.path.join(os.path.split(__file__)[0],"configuration\\pyreadlineconfig.ini")
+            print "Could not find pyreadline configfile at default location:\n  '%s'.\nCreating a default file."%inputrcpath
             try:
-                execfile(inputrcpath,loc,loc)
-            except Exception,x:
-                import traceback
-                print >>sys.stderr, "Error reading .pyinputrc"
-                filepath,lineno=traceback.extract_tb(sys.exc_traceback)[1][:2]
-                print >>sys.stderr, "Line: %s in file %s"%(lineno,filepath)
-                print >>sys.stderr, x
-                raise ReadlineError("Error reading .pyinputrc")
-
-
+                configfile=open(configfilename)
+                conf=configfile.read()
+                configfile.close()
+            except IOError:
+                print "could not find the default configuration template."
+                print "Tried looking at:\n  ",configfilename
+                return 
+            fil=open(inputrcpath,"w")
+            fil.write(conf)
+            fil.close()
+        try:
+            execfile(inputrcpath,loc,loc)
+        except IOError:
+            pass
+        except Exception,x:
+            raise
+            import traceback
+            print >>sys.stderr, "Error reading .pyinputrc"
+            filepath,lineno=traceback.extract_tb(sys.exc_traceback)[1][:2]
+            print >>sys.stderr, "Line: %s in file %s"%(lineno,filepath)
+            print >>sys.stderr, x
+            raise ReadlineError("Error reading .pyinputrc")
 
 def CTRL(c):
     '''make a control character'''
