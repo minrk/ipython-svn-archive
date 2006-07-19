@@ -21,14 +21,14 @@ from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 from IPython.genutils import get_home_dir, file_readlines, filefind
 
-from ipython1.kernel.scatter import *
+import ipython1.kernel.scatter as scatter
 from ipython1.kernel.parallelfunction import ParallelFunction
 
 from ipython1.kernel.esocket import LineSocket
 import ipython1.kernel.kernel_magic
 from ipython1.kernel.kernelerror import NotDefined
            
-def _tar_module(mod):
+def _tarModule(mod):
     """Makes a tarball (as a string) of a locally imported module.
         
     This method looks at the __file__ attribute of an imported module
@@ -105,7 +105,7 @@ class RemoteKernel(object):
     def __del__(self):
         self.disconnect()
         
-    def is_connected(self):
+    def isConnected(self):
         """Are we connected to the kernel?""" 
         if hasattr(self, 's'):
             try:
@@ -115,9 +115,9 @@ class RemoteKernel(object):
             else:
                 return True
                 
-    def _check_connection(self):
+    def _checkConnection(self):
         """Are we connected to the kernel, if not reconnect."""
-        if not self.is_connected():
+        if not self.isConnected():
             self.connect()
             
     def connect(self):
@@ -146,7 +146,7 @@ class RemoteKernel(object):
         @arg source:
             A string containing valid python code
         """
-        self._check_connection()
+        self._checkConnection()
         if self.block or block:
             self.es.write_line("EXECUTE BLOCK %s" % source)
             line, self.extra = self.es.read_line(self.extra)
@@ -223,7 +223,7 @@ class RemoteKernel(object):
             Boolean that determines if the object should be forwarded
             Not implemented.
         """
-        self._check_connection()
+        self._checkConnection()
         try:
             package = pickle.dumps(value, 2)
         except pickle.PickleError, e:
@@ -273,7 +273,7 @@ class RemoteKernel(object):
         @arg key:
             The name of the python object to get        
         """
-        self._check_connection()    
+        self._checkConnection()    
     
         self.es.write_line("PULL %s" % key)
         line, self.extra = self.es.read_line(self.extra)
@@ -305,7 +305,7 @@ class RemoteKernel(object):
 
     def result(self, number=None):
         """Gets a specific result from the kernel, returned as a tuple."""
-        self._check_connection()    
+        self._checkConnection()    
     
         if number is None:
             self.es.write_line("RESULT")
@@ -340,14 +340,14 @@ class RemoteKernel(object):
         
         Not implemented.
         """
-        self._check_connection()
+        self._checkConnection()
         print "Mpve is not implemented yet."
         #write_line("MOVE %s %s %" % (keya, keyb, target))
         #read_line()
 
     def status(self):
         """Check the status of the kernel."""
-        self._check_connection()
+        self._checkConnection()
 
         self.es.write_line("STATUS")
         line, self.extra = self.es.read_line(self.extra)
@@ -374,47 +374,6 @@ class RemoteKernel(object):
             # For other data types
             pass
 
-    def allow(self, ip):
-        """Instruct the kernel to allow connections from an ip address.
-                
-        By default kernels allow only connections from the localhost and one
-        other ip address specified when the kernel is started.  Thus, this 
-        method must be used to add other allowed ip addresses.
-
-        @arg ip:
-            An ip address to allow.
-        @type ip: str
-        """
-        raise NotImplemented
-        self._check_connection()
-        
-        self.es.write_line("ALLOW TRUE %s" % ip)
-        line, self.extra = self.es.read_line(self.extra)
-        if line == "ALLOW OK":
-            return True
-        else:
-            return False      
-
-    def deny(self, ip):
-        """Instruct the kernel to not allow connections from an ip address.
-        
-        IP addresses are denied by default, so this method only needs to be
-        called to deny access to an ip that was allowed with allow().
-
-        @arg ip:
-            An ip address to deny.
-        @type ip: str 
-        """
-        raise NotImplemented
-        self._check_connection()
-        
-        self.es.write_line("ALLOW FALSE %s" % ip)
-        line, self.extra = self.es.read_line(self.extra)
-        if line == "ALLOW OK":
-            return True
-        else:
-            return False      
-
     def notify(self, addr=None, flag=True):
         """Instruct the kernel to notify a result gatherer.
         
@@ -439,7 +398,7 @@ class RemoteKernel(object):
         @arg flag:
             A boolean to turn notification on (True) or off (False) 
         """
-        self._check_connection()
+        self._checkConnection()
 
         if addr == None:
             host = socket.gethostbyname(socket.gethostname())
@@ -469,7 +428,7 @@ class RemoteKernel(object):
         @arg addrs:
             A list of (ip, port) tuples of the other kernels in the cluster
         """
-        self._check_connection()
+        self._checkConnection()
         if addrs is None:
             self.es.write_line("CLUSTER CLEAR")
             line, self.extra = self.es.read_line(self.extra)
@@ -495,7 +454,7 @@ class RemoteKernel(object):
 
     def reset(self):
         """Clear the namespace if the kernel."""
-        self._check_connection()
+        self._checkConnection()
             
         self.es.write_line("RESET")
         line, self.extra = self.es.read_line(self.extra)
@@ -506,7 +465,7 @@ class RemoteKernel(object):
                            
     def kill(self):
         """Kill the kernel completely."""
-        self._check_connection()    
+        self._checkConnection()    
     
         self.es.write_line("KILL")
         self.s.close()
@@ -516,7 +475,7 @@ class RemoteKernel(object):
 
     def disconnect(self):
         """Disconnect from the kernel, but leave it running."""
-        if self.is_connected():
+        if self.isConnected():
             self.es.write_line("DISCONNECT")
             line, self.extra = self.es.read_line(self.extra)
             if line == "DISCONNECT OK":
@@ -529,7 +488,7 @@ class RemoteKernel(object):
         else:
             return True
           
-    def push_module(self, mod):
+    def pushModule(self, mod):
         """Send a locally imported module to a kernel.
         
         This method makes a tarball of an imported module that exists 
@@ -554,10 +513,10 @@ class RemoteKernel(object):
         - There are cross platform issues. 
         """
         
-        tarball_name, file_string = _tar_module(mod)
-        self._push_module_string(tarball_name, file_string)
+        tarball_name, file_string = _tarModule(mod)
+        self._pushModuleString(tarball_name, file_string)
             
-    def _push_module_string(self, tarball_name, file_string):
+    def _pushModuleString(self, tarball_name, file_string):
         """This method send a tarball'd module to a kernel."""
         
         self.push('tar_file_string',file_string)
@@ -574,7 +533,7 @@ class InteractiveCluster(object):
         """Create an empty cluster object."""
         self.count = 0
         self.kernels = []
-        self.kernel_addrs = []
+        self.kernelAddrs = []
         self._block = False
         
     def __add__(first, second):
@@ -591,30 +550,30 @@ class InteractiveCluster(object):
             ic.kernels.append(w)
         for w in second.kernels:
             ic.kernels.append(w)
-        ic.kernel_addrs = first.kernel_addrs + second.kernel_addrs
+        ic.kernelAddrs = first.kernelAddrs + second.kernelAddrs
         ic.count = len(ic.kernels)
         ic._cluster()
         return ic
         
-    def set_block(self, block):
+    def setBlock(self, block):
         self._block = block
         for k in self.kernels:
             k.block = self._block
         
-    def get_block(self):
+    def getBlock(self):
         return self._block
         
-    block = property(get_block, set_block, doc="Toggles blocking execution")
+    block = property(getBlock, setBlock, doc="Toggles blocking execution")
         
-    def subcluster(self, kernel_list):
+    def subcluster(self, kernelList):
         ic = InteractiveCluster()
-        for w in kernel_list:
+        for w in kernelList:
             ic.kernels.append(self.kernels[w])
-            ic.kernel_addrs.append(self.kernel_addrs[w])
+            ic.kernelAddrs.append(self.kernelAddrs[w])
         ic.count= len(ic.kernels)
         return ic
         
-    def _parse_kernels_arg(self, kernels):
+    def _parseKernelsArg(self, kernels):
         if kernels is None:
             return range(self.count)
         elif isinstance(kernels, list) or isinstance(kernels, tuple):
@@ -625,9 +584,13 @@ class InteractiveCluster(object):
     def _cluster(self):
         """Notify each kernel in the cluster about the other kernels."""
         for w in self.kernels:
-            w.cluster(self.kernel_addrs)
+            w.cluster(self.kernelAddrs)
+        
+        self.execute("from IPython.ipstruct import Struct")
+        self.execute("cluster = Struct()")
+        self.scatter("rank",range(self.count)) 
               
-    def start(self, addr_list):
+    def start(self, addrList):
         """Add already running kernels to the cluster.
         
         This method can be called anytime to add new kernels to the cluster.
@@ -635,19 +598,19 @@ class InteractiveCluster(object):
         @arg addr_list:
             A list of (ip, port) tuples of running kernels
         """
-        for a in addr_list:
-            self.kernel_addrs.append(a)
+        for a in addrList:
+            self.kernelAddrs.append(a)
             self.kernels.append(RemoteKernel(a))
         self.count = len(self.kernels)
         
         # Let everyone know about each other
         self._cluster()
         self.activate()
-        self.set_block(True)
+        self.setBlock(True)
                     
         return True
     
-    def remove(self, kernel_to_remove):
+    def remove(self, kernel):
         """Remove a specific kernel from the cluster.
         
         This does not kill the kernel, it just stops using it.
@@ -655,9 +618,9 @@ class InteractiveCluster(object):
         @arg kernel_to_remove:
             An integer specifying which kernel to remove
         """
-        del self.kernels[kernel_to_remove]
-        del self.kernel_addrs[kernel_to_remove]
-        self.count = len(self.kernel_addrs)
+        del self.kernels[kernel]
+        del self.kernelAddrs[kernel]
+        self.count = len(self.kernelAddrs)
         self._cluster()
         
     def activate(self):
@@ -683,7 +646,7 @@ class InteractiveCluster(object):
         except NameError:
             print "The %px and %autopx magic's are not active."
                 
-    def save(self, cluster_name):
+    def save(self, clusterName):
         """Saves the cluster information to a file in ~/.ipython.
         
         This method is used to save a cluster and reload it later.  During
@@ -694,14 +657,14 @@ class InteractiveCluster(object):
             A string to name the file
         """
         path_base = get_home_dir()
-        file_path = path_base + "/.ipython/" + cluster_name
+        file_path = path_base + "/.ipython/" + clusterName
         f = open(file_path,'w')
         print "Saving to: ", file_path
-        for a in self.kernel_aadr:
+        for a in self.kernelAadrs:
             f.write("%s %i" % (a[0], a[1]))
         f.close()
         
-    def load(self, cluster_name):
+    def load(self, clusterName):
         """Loads a saved cluster.
         
         @arg cluster_name:
@@ -709,21 +672,21 @@ class InteractiveCluster(object):
         """
         
         isfile = os.path.isfile
-        if isfile(cluster_name):
-            file_path = cluster_name
+        if isfile(clusterName):
+            filePath = clusterName
         else:
-            path_base = get_home_dir()
-            file_path = path_base + "/.ipython/" + cluster_name
+            pathBase = get_home_dir()
+            filePath = pathBase + "/.ipython/" + clusterName
         try:
-            raw_cluster_info = file_readlines(file_path)
+            rawClusterInfo = file_readlines(filePath)
         except IOError:
             print "Saved cluster not found"
         else:
-            print "Loading from: ", file_path
-            def process_line(line):
+            print "Loading from: ", filePath
+            def processLine(line):
                 tmp = line.strip().split(" ")
                 return (tmp[0], int(tmp[1])) 
-            addrs = [process_line(x) for x in raw_cluster_info]
+            addrs = [processLine(x) for x in rawClusterInfo]
             self.start(addrs)
         
     def __getitem__(self, key):
@@ -765,17 +728,42 @@ class InteractiveCluster(object):
         @arg kernels:
             Which kernels to push to.
         """
-        kernel_numbers = self._parse_kernels_arg(kernels)
-        n_kernels = len(kernel_numbers)
+        kernelNumbers = self._parseKernelsArg(kernels)
+        nKernels = len(kernelNumbers)
         
         if isinstance(value, Scatter):
-            for index, item in enumerate(kernel_numbers):
+            for index, item in enumerate(kernelNumbers):
                 self.kernels[item].push(key,
-                    value.partition(index,n_kernels))
+                    value.partition(index,nKernels))
         else:
-            for w in kernel_numbers:
+            for w in kernelNumbers:
                 self.kernels[w].push(key, value)
                 
+    def scatter(self, key, seq, kernels=None, style='basic', flatten=False):
+    
+        kernelNumbers = self._parseKernelsArg(kernels)
+        nKernels = len(kernelNumbers)
+        
+        scatterClass = scatter.styles[style]
+        scatterObject = scatterClass(seq, flatten)
+        
+        for index, item in enumerate(kernelNumbers):
+            self.kernels[item].push(key,
+                    scatterObject.partition(index,nKernels))
+                   
+    def gather(self, key, kernels=None, style='basic'):
+    
+        kernelNumbers = self._parseKernelsArg(kernels)
+        nKernels = len(kernelNumbers)
+                
+        gatheredData = []
+        for w in kernelNumbers:
+            gatheredData.append(self.kernels[w].pull(key))
+        
+        scatterClass = scatter.styles[style]
+        scatterObject = scatterClass(gatheredData, False)
+        return scatterObject.departition()
+                                       
     def __setitem__(self, key, value):
         if isinstance(key, str):
             self.push(key, value)
@@ -785,9 +773,9 @@ class InteractiveCluster(object):
     def update(self, dict, kernels=None):
         """Send the dict of key, value pairs to the kernels."""
         
-        kernel_numbers = self._parse_kernels_arg(kernels)
-        n_kernels = len(kernel_numbers)
-        for w in kernel_numbers:
+        kernelNumbers = self._parseKernelsArg(kernels)
+        nKernels = len(kernelNumbers)
+        for w in kernelNumbers:
             self.kernels[w].update(dict)
             
     def pull(self, key, flatten=False, kernels=None):
@@ -820,8 +808,8 @@ class InteractiveCluster(object):
             Which kernels to get the object from to.
         """    
         results = []
-        kernel_numbers = self._parse_kernels_arg(kernels)
-        for w in kernel_numbers:
+        kernelNumbers = self._parseKernelsArg(kernels)
+        for w in kernelNumbers:
             results.append(self.kernels[w].pull(key))
         if flatten:
             return genutil_flatten(results)
@@ -854,13 +842,13 @@ class InteractiveCluster(object):
         @arg kernels:
             Which kernels to get the object from to.
         """
-        kernel_numbers = self._parse_kernels_arg(kernels)
-        for w in kernel_numbers:
+        kernelNumbers = self._parseKernelsArg(kernels)
+        for w in kernelNumbers:
             self.kernels[w].execute(source,block=block)
 
     def run(self, fname, kernels=None):
         """Run a file on a set of kernels."""
-        kernel_numbers = self._parse_kernels_arg(kernels)
+        kernelNumbers = self._parseKernelsArg(kernels)
         fileobj = open(fname,'r')
         source = fileobj.read()
         fileobj.close()
@@ -868,50 +856,36 @@ class InteractiveCluster(object):
         code = compile(source,fname,'exec')
         
         # Now run the code
-        for w in kernel_numbers:
+        for w in kernelNumbers:
             self.kernels[w].execute(source)
 
     def status(self, kernels=None):
         """Get the status of a set of kernels."""
-        kernel_numbers = self._parse_kernels_arg(kernels)
+        kernelNumbers = self._parseKernelsArg(kernels)
         result = []
-        for w in kernel_numbers:
+        for w in kernelNumbers:
             result.append(self.kernels[w].status())
         return result
         
     def notify(self, addr=None, flag=True, kernels=None):
         """Instruct a set of kernels to notify a result gatherer."""
-        kernel_numbers = self._parse_kernels_arg(kernels)
-        for w in kernel_numbers:
+        kernelNumbers = self._parseKernelsArg(kernels)
+        for w in kernelNumbers:
             self.kernels[w].notify(addr, flag)
-
-    def allow(self, ip, kernels=None):
-        """Instruct a set of kernels to allow connections from an ip."""
-        raise NotImplemented
-        kernel_numbers = self._parse_kernels_arg(kernels)
-        for w in kernel_numbers:
-            self.kernels[w].allow(ip)
-
-    def deny(self, ip, kernels=None):
-        """Instruc a set of kernels to deny connections from an ip."""
-        raise NotImplemented
-        kernel_numbers = self._parse_kernels_arg(kernels)
-        for w in kernel_numbers:
-            self.kernels[w].deny(ip)
 
     def reset(self, kernels=None):
         """Reset the namespace of a set of kernels."""
-        kernel_numbers = self._parse_kernels_arg(kernels)
-        for w in kernel_numbers:
+        kernelNumbers = self._parseKernelsArg(kernels)
+        for w in kernelNumbers:
             self.kernels[w].reset()
             
     def disconnect(self, kernels=None):
         """Disconnect from a set of kernels."""
-        kernel_numbers = self._parse_kernels_arg(kernels)
-        for w in kernel_numbers:
+        kernelNumbers = self._parseKernelsArg(kernels)
+        for w in kernelNumbers:
             self.kernels[w].disconnect()    
 
-    def push_module(self, mod):
+    def pushModule(self, mod):
         """Send a locally imported module to a kernel.
         
         This method makes a tarball of an imported module that exists 
@@ -936,11 +910,11 @@ class InteractiveCluster(object):
         - There are cross platform issues. 
         """
     
-        tarball_name, file_string = _tar_module(mod)
+        tarballName, fileString = _tarModule(mod)
         for w in self.kernels:
-            w._push_module_string(tarball_name, file_string)
+            w._pushModuleString(tarballName, fileString)
     
-    def map(self, func_code, seq):
+    def map(self, functionCode, seq):
         """A parallelized version of python's builtin map.
         
         This version of map is designed to work similarly to python's
@@ -957,10 +931,10 @@ class InteractiveCluster(object):
             A python sequence to call the callable on
         """
         self.push('_ipython_map_seq', Scatter(seq))
-        source_to_run = \
+        sourceToRun = \
             '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
-            func_code
-        self.execute(source_to_run)
+            functionCode
+        self.execute(sourceToRun)
         return self.pull('_ipython_map_seq_result',flatten=True)
         
     def msg(self, txt):
@@ -974,7 +948,7 @@ class InteractiveCluster(object):
         self.kernels[0].push('__ipmsg',"[%s]: %s" % (user, txt))
         self.kernels[0].execute("print __ipmsg,")
         
-    def parallelize(self, func_name):
+    def parallelize(self, functionName):
         """Contruct and return a parallelized function.
         
         The resulting ParallelFunction object is a callable that can operates 
@@ -984,6 +958,6 @@ class InteractiveCluster(object):
             The name of the function to parallelize.  
             It must be defined in the namespace of the kernel.
         """
-        return ParallelFunction(func_name, self)
+        return ParallelFunction(functionName, self)
     
                   

@@ -11,22 +11,18 @@ pieces to individual nodes in a cluster.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-
-class Scatter:
-    def __init__(self,seq,flatten=False):
-        self.flatten = flatten
-        self.seq = seq
+class Map:
             
-    def partition(self, p, q):
-        """Returns the pth partition of q partitions."""
+    def getPartition(self, seq, p, q):
+        """Returns the pth partition of q partitions of seq."""
         
         # Test for error conditions here
         if p<0 or p>=q:
           print "No partition exists."
           return
           
-        remainder = len(self.seq)%q
-        basesize = len(self.seq)/q
+        remainder = len(seq)%q
+        basesize = len(seq)/q
         hi = []
         lo = []
         for n in range(q):
@@ -38,12 +34,12 @@ class Scatter:
                 hi.append(lo[-1] + basesize)
 
         result = self.seq[lo[p]:hi[p]]
-        if self.flatten and len(result) ==  1:
-            return result[0]
-        else:          
-            return result            
+   
 
-class RoundScatter(Scatter):
+    def joinPartitions(self, listOfPartitions):
+        return listOfSequences
+
+class RoundRobinScatter(BasicScatter):
 
     def partition(self, p, q):
         result = []
@@ -53,3 +49,11 @@ class RoundScatter(Scatter):
             return result[0]
         else:          
             return result          
+
+    def departition(self, listOfSequences, flatten=True):
+        return listOfSequences
+
+styles = {'basic':BasicScatter, 'roundrobin':RoundRobinScatter}
+
+    
+    

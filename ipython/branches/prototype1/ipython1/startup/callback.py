@@ -32,16 +32,21 @@ class CallbackFactory(protocol.ServerFactory):
     
     def __init__(self, kernelCount=-1, filename=""):
         self.kernels = []
+        self.count = 0
         self.kernelCount = kernelCount
         self.filename = get_home_dir() + "/.ipython/" + filename
         
     def _writeAddrToFile(self, addr):
-        self.actualFile = file(self.filename,'a')
+        if self.count == 1:
+            self.actualFile = file(self.filename,'w')
+        else:
+            self.actualFile = file(self.filename,'a')            
         self.actualFile.write("%s %i\n" % (addr[0], addr[1]))
         self.actualFile.close()
     
     def registerKernel(self,addr):
         log.msg("Kernel found: %s %i" % (addr[0], addr[1]))
+        self.count += 1
         self.kernels.append(addr)
         self._writeAddrToFile(addr)
         if len(self.kernels) == self.kernelCount:
