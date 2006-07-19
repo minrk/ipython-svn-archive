@@ -21,7 +21,7 @@ from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 from IPython.genutils import get_home_dir, file_readlines, filefind
 
-import ipython1.kernel.scatter as scatter
+import ipython1.kernel.map as map
 from ipython1.kernel.parallelfunction import ParallelFunction
 
 from ipython1.kernel.esocket import LineSocket
@@ -731,25 +731,23 @@ class InteractiveCluster(object):
         kernelNumbers = self._parseKernelsArg(kernels)
         nKernels = len(kernelNumbers)
         
-        if isinstance(value, Scatter):
-            for index, item in enumerate(kernelNumbers):
-                self.kernels[item].push(key,
-                    value.partition(index,nKernels))
-        else:
-            for w in kernelNumbers:
-                self.kernels[w].push(key, value)
+        for w in kernelNumbers:
+            self.kernels[w].push(key, value)
                 
     def scatter(self, key, seq, kernels=None, style='basic', flatten=False):
     
         kernelNumbers = self._parseKernelsArg(kernels)
         nKernels = len(kernelNumbers)
         
-        scatterClass = scatter.styles[style]
-        scatterObject = scatterClass(seq, flatten)
+        mapClass = map.styles[style]
+        mapObject = mapClass()
         
         for index, item in enumerate(kernelNumbers):
-            self.kernels[item].push(key,
-                    scatterObject.partition(index,nKernels))
+            partition = mapObject.getPartition(seq, index, nKernels)
+            if flatten and len(partition) ==1:    
+                self.kernels[item].push(key, partition[0])
+            else:
+                self.kernels[item].push(key, partition)                
                    
     def gather(self, key, kernels=None, style='basic'):
     
@@ -760,9 +758,9 @@ class InteractiveCluster(object):
         for w in kernelNumbers:
             gatheredData.append(self.kernels[w].pull(key))
         
-        scatterClass = scatter.styles[style]
-        scatterObject = scatterClass(gatheredData, False)
-        return scatterObject.departition()
+        mapClass = map.styles[style]
+        mapObject = mapClass()
+        return mapObject.joinPartitions(gatheredData)
                                        
     def __setitem__(self, key, value):
         if isinstance(key, str):
