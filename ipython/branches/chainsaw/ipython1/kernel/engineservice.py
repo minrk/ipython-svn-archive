@@ -35,7 +35,7 @@ TODO:
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import os, signal
+import os, signal, time
 
 from twisted.application import service, internet
 from twisted.internet import defer, reactor
@@ -94,21 +94,27 @@ class EngineService(InteractiveShell, service.Service):
     
     implements(IEngine)
     
-    def __init__(self,address,port,factory,locals=None,filename="<console>"):
+    def __init__(self, addr, port, factory, id=None, locals=None,
+                    filename="<console>", restart=False, saveID=False):
+                    
         InteractiveShell.__init__(self, locals, filename)
-        self.address = address
+        self.addr = addr
         self.port = port
+        self.id = id
         self.factory = factory
+        self.restart = restart
+        self.saveID = saveID
     
     def startService(self):
         service.Service.startService(self)
-        self._connection = reactor.connectTCP(self.address, self.port, self.factory)
+        self._con = reactor.connectTCP(self.addr,self.port,self.factory)
     
     def stopService(self):
-        service.Service.stopService(self)
-        if self._connection is not None:
-            self._connection.disconnect()
-            del self._connection
+        d = service.Service.stopService(self)
+        if self._con is not None:
+            self._con.disconnect()
+            del self._con
+        return d
     
     def put_pickle(self, key, package):
         value = pickle.loads(package)
@@ -123,3 +129,14 @@ class EngineService(InteractiveShell, service.Service):
         value = pickle.loads(package)
         return self.update(value)
     
+    def restart_engine(self):
+        d = self.stopService()
+        if d is not None:
+            d.addCallback(self.startService)
+            d.addCallback(self.connection.__init__(self))
+        else:
+            self.startService()
+            self.connection.__init__(self)
+            
+        return d
+        

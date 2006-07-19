@@ -48,6 +48,12 @@ class Command(object):
 class IRemoteEngine(engineservice.IEngine):
     """add some methods to IEngine interface"""
     
+    def setState(self, s):
+        """set restart, saveID"""
+
+    def setRemoteState(self, s):
+        """set restart, saveID"""
+    
     def handleDisconnect(self):
         """handle disconnection from remote engine"""
     
@@ -72,21 +78,33 @@ class RemoteEngine(object):
     
     implements(IRemoteEngine)
     
-    def __init__(self, service, id, connection, restart=False, holdID=False):
+    def __init__(self, service, id, connection, restart=False, saveID=False):
         self.service = service
         self.id = id
         self.connection = connection
         connection.engine = self
         self.restart = restart
-        self.holdID = holdID
+        self.saveID = saveID
         self.queued = []
         self.currentCommand = None
     
     #methods from IRemoteEngine:
     
+    def setState(self, s):
+        self.restart = s[0]
+        self.saveID = s[1]
+    
+    def setRemoteState(self, s):
+        self.setState(s)
+        return self.connection.callRemote('set_state', s)
+    
     def handleDisconnect(self):
         self.service.disconnectEngine(self.id)
-        
+    
+    def restartEngine(self):
+        self.connection.callRemote('restart_engine')
+    
+    #command methods:
     def submitCommand(self, cmd):
         
         d = defer.Deferred()

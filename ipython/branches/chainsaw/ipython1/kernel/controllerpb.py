@@ -29,23 +29,40 @@ from zope.interface import Interface, implements
 from ipython1.kernel import controllerservice
 
 # Expose a PB interface to the ControllerService
-     
-class IPerspectiveController(Interface):
+    
+class IRemoteEngineRoot(Interface):
+    """Root object for the controller service Remote Engine server factory"""
     
     def remote_registerEngine(self, engineReference):
         """register new engine on controller"""
     
     def remote_reconnectEngine(self, id, engineReference):
         """reconnect an engine"""
+        
+    def remote_setState(self, id, s):
+        """set state of remote engine id"""
+    
+
+class IControlRoot(Interface):
+    """the Control Root for the controller service server factory"""
     
     def remote_submitCommand(self, id, cmd):
         """submitCommand to engine #id"""
     
-
-
-class PerspectiveControllerFromService(pb.Root):
+    def remote_restartEngine(self, id):
+        """Stops and restarts the kernel engine process."""
     
-    implements(IPerspectiveController)
+    def remote_cleanQueue(self, id):
+        """Cleans out pending commands in the kernel's queue."""
+    
+    def remote_interruptEngine(self, id):
+        """Send SIGUSR1 to the kernel engine to stop the current command."""
+    
+
+
+class RemoteEngineRoot(pb.Root):
+    
+    implements(IRemoteEngineRoot)
     
     def __init__(self, service):
         self.service = service
@@ -54,24 +71,49 @@ class PerspectiveControllerFromService(pb.Root):
         id = self.service.registerEngine(engineReference)
         e = self.service.engine[id]
         engineReference.broker.notifyOnDisconnect(e.handleDisconnect)
-        return (id, e.restart, e.holdID)
-
+        return (id, e.restart, e.saveID)
+    
     def remote_reconnectEngine(self, id, engineReference):
-        self.service.reconnectEngine(id, engineReference)
+        d = self.service.reconnectEngine(id, engineReference)
         e = self.service.engine[id]
         engineReference.broker.notifyOnDisconnect(e.handleDisconnect)
-        return (e.restart, e.holdID)
+        return d
     
-    #should I separate the two root objects (Remote, Control)?
+    def remote_setState(self, id, s):
+        self.service.engine[id].setState(s)
+    
+    
+
+class ControlRoot(pb.Root):
+    """the Control Root for the controller service server factory"""
+    
+    implements(IControlRoot)
+    
+    def __init__(self, service):
+        self.service = service
+    
     def remote_submitCommand(self, id, cmd):
-        self.service.engine[id].submitCommmand(cmd)
+        """submitCommand to engine #<id>"""
+        return self.service.submitCommand(id, cmd)
     
-    def remote_testCommands(self, id):
-        self.service.testCommands(id)
+    def remote_restartEngine(self, id):
+        """Stops and restarts the kernel engine process."""
+        return self.service.restartEngine(id)
+    
+    def cleanQueue(self, id):
+        """Cleans out pending commands in the kernel's queue."""
+        return self.service.cleanQueue(id)
+    
+    def interruptEngine(self, id):
+        """Send SIGUSR1 to the kernel engine to stop the current command."""
+        return self.service.interruptEngine(id)
     
 
+components.registerAdapter(RemoteEngineRoot,
+                        controllerservice.ControllerService,
+                        IRemoteEngineRoot)
 
-components.registerAdapter(PerspectiveControllerFromService,
-                           controllerservice.ControllerService,
-                           IPerspectiveController)
+components.registerAdapter(ControlRoot,
+                        controllerservice.ControllerService,
+                        IControlRoot)
 

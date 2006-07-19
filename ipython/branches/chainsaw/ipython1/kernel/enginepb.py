@@ -32,7 +32,16 @@ from ipython1.kernel import engineservice
 # Expose a PB interface to the EngineService
      
 class IPerspectiveEngine(Interface):
+    """Twisted Perspective Broker remote interface for engine service."""
     
+    #get/set methods for state variables
+    def remote_get_state(self):
+        """get restart, saveID"""
+    
+    def remote_set_state(self, r, s):
+        """set restart, saveID"""
+        
+    #remote methods for engine service
     def remote_execute(self, lines):
         """Execute lines of Python code."""
     
@@ -59,44 +68,60 @@ class IPerspectiveEngine(Interface):
     
     def remote_restart_engine(self):
         """Stops and restarts the kernel engine process."""
-    
-    def remote_clean_queue(self):
-        """Cleans out pending commands in the kernel's queue."""
-    
+        
     def remote_interrupt_engine(self):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
     
 
-class PerspectiveEngineFromService(pb.Referenceable):
+class PerspectiveEngine(pb.Referenceable):
     
     implements(IPerspectiveEngine)
     
     def __init__(self, service):
         self.service = service
-        self.id = None
-        self.restart = False
-        self.saveID = False
+        self.service.connection = self
+        self.d = self.service.factory.getRootObject()
+        self.d.addCallbacks(self._connect, self._failure)
     
     def _connect(self, obj):
+        """callback for pb.PBClientFactory.getRootObject"""
         self.root = obj
-        if self.restart:
-            d = self.root.callRemote('reconnectEngine', self.id, self)
+        if self.service.restart:
+            d = self.root.callRemote('reconnectEngine', self.service.id, self)
+            d.addErrback(self._failure2)
         else:
             d = self.root.callRemote('registerEngine', self)
-        d.addCallbacks(self._gotID, self._failure)
-        
+            d.addCallbacks(self._connected, self._failure)
         return d
     
     def _failure(self, reason):
-        raise reason
+        """callback for pb.PBClientFactory.getRootObject"""
+        raise Exception(reason)
     
-    def _gotID(self, arg):
+    def _failure2(self, reason):
+        """callback for pb.PBClientFactory.getRootObject"""
+        raise Exception(reason)
+    
+    def _connected(self, arg):
         """arg = (id, restart, saveID)"""
-        self.id = arg[0]
-        self.restart = arg[1]
-        self.saveID = arg[2]
-        log.msg("got ID: %r" %self.id)
-        return self.id
+        self.service.id = arg[0]
+        self.service.restart = arg[1]
+        self.service.saveID = arg[2]
+        log.msg("got ID: %r" %self.service.id)
+        return self.service.id
+    
+    def remote_get_state(self):
+        return (self.service.restart, self.service.saveID)
+    
+    def remote_set_state(self, s):
+        self.service.restart = s[0]
+        self.service.saveID = s[1]
+    
+    def remote_get_saveID(self):
+        return self.service.saveID
+    
+    def remote_set_saveID(self,s):
+        self.service.saveID = s
     
     def remote_execute(self, lines):
         return self.service.execute(lines)
@@ -125,13 +150,10 @@ class PerspectiveEngineFromService(pb.Referenceable):
     def remote_restart_engine(self):
         return self.service.restart_engine()
     
-    def remote_clean_queue(self):
-        return self.service.clean_queue()
-    
     def remote_interrupt_engine(self):
         return self.service.interrupt_engine()
     
 
-components.registerAdapter(PerspectiveEngineFromService,
+components.registerAdapter(PerspectiveEngine,
                            engineservice.EngineService,
                            IPerspectiveEngine)

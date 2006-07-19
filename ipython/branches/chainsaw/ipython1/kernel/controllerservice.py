@@ -29,7 +29,7 @@ from ipython1.kernel.remoteengine import RemoteEngine
 # Interface for the Controller Service
 
 class IControllerService(Interface):
-    """Adds a few control methods to the IPythonCoreService API"""
+    """The Interface for the IP Controller Service"""
     
     def restartEngine(self, id):
         """Stops and restarts an engine process."""
@@ -69,7 +69,7 @@ class ControllerService(service.Service):
         if None not in [rEPort, rEFactory]:
             self.setupRemoteEngineFactory(rEPort, rEFactory)
         self.engine = {}
-        self.availableID = range(128,-1,-1)#[128,...,0]
+        self.availableID = range(127,-1,-1)#[127,...,0]
     
     def setupControlFactory(self, cPort, cFactory):
         self.controlPort = cPort
@@ -87,9 +87,9 @@ class ControllerService(service.Service):
         service.Service.startService(self)
     
     def stopService(self):
-        self.controlServer.stopListening()
-        self.engineServer.stopListening()
-        d = service.Service.stopService(self)
+        self.controlServer.stopListening()#.addCallback(lambda _:d2)
+        d  = self.engineServer.stopListening()#.addCallback(lambda _:d1)
+        service.Service.stopService(self)
         return d
     
     def registerEngine(self, connection):
@@ -105,17 +105,26 @@ class ControllerService(service.Service):
     
     def reconnectEngine(self, id, connection):
         #if we want to keep the engine, reconnect to it, for now get a new one|
-        if self.engine[id] is 'restarting':
-            self.engine[id] = RemoteEngine(connection)
-        else:
-            raise 'illegal reconnect'
-        log.msg("reconnected engine %r" %id)
+        try:
+            if self.engine[id] is 'restarting':
+                self.engine[id] = RemoteEngine(self, id, connection)
+                d = connection.callRemote('get_state'
+                    ).addCallback(self.engine[id].setState)
+                log.msg("reconnected engine %r" %id)
+                return d
+            else:
+                raise Exception('illegal reconnect')
+        except KeyError:
+            raise Exception('illegal reconnect id')
+        except:
+            raise
     
     def disconnectEngine(self, id):
         #do I want to keep the RemoteEngine object or not?
         #for now, no
         log.msg("engine %r disconnected" %id)
-        if not self.engine[id].holdID:
+        #del self.engine[id].connection
+        if not self.engine[id].saveID:
             self.unregisterEngine(id)
         elif self.engine[id].restart:
             self.engine[id] = 'restarting'
@@ -123,8 +132,12 @@ class ControllerService(service.Service):
 
     def restartEngine(self, id):
         """Stops and restarts the kernel engine process."""
-        #send restart command
+        d = self.engine[id].setRemoteState((True, True))
+        print self.engine[id]
+        d.addCallback(lambda _:self.engine[id].restartEngine())
+#        d.addCallback(lambda _:self.disconnectEngine(id))
         log.msg("restarting engine %r" %id)
+        return d
     
     def cleanQueue(self, id):
         """Cleans out pending commands in the kernel's queue."""
