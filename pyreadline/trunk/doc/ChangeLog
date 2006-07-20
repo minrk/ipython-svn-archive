@@ -1,3 +1,6 @@
+2006-07-20 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Fix for cursor position when tab is inserted
+
 2006-07-19 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Added creation of default configuration file if missing.
 	* There may still be issues with config file creation for movpy, py2exe and similar systems.

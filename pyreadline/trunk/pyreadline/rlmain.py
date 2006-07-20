@@ -141,6 +141,7 @@ class Readline:
         xc, yc = self.prompt_end_pos
         w, h = c.size()
         xc += reduce(operator.add, self.line_char_width[0:self.line_cursor], 0)
+        xc += self.line_buffer[:self.line_cursor].count("\t")*7
         while(xc > w):
             xc -= w
             yc += 1

@@ -96,6 +96,7 @@ class AnsiWriter(object):
                     elif len(part) == 2 and "40" <= part <= "47": # set background color
                         attr.color = trtable[int(part)-40]
                 continue
+            n += len(chunk)
             if True:
                 res.append((attr.copy(),chunk))
         return n,res
@@ -106,7 +107,7 @@ class AnsiWriter(object):
 
 def write_color(text,attr=None):
     a=AnsiWriter(defaultstate)
-    return a.write_color(text,attr)[1]
+    return a.write_color(text,attr)
 
 def write_color_old( text, attr=None):
     '''write text at current cursor position and interpret color escapes.
@@ -146,7 +147,7 @@ def write_color_old( text, attr=None):
 
 #trtable={0:"black",1:"red",2:"green",3:"yellow",4:"blue",5:"magenta",6:"cyan",7:"white"}
 
-if __name__=="__main__x":
+if __name__=="__main__":
     import startup
     s="\033[0;31mred\033[0;32mgreen\033[0;33myellow\033[0;34mblue\033[0;35mmagenta\033[0;36mcyan\033[0;37mwhite\033[0m"
     pprint (write_color(s))    
