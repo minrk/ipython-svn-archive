@@ -5,7 +5,7 @@ from twisted.trial import unittest
 from twisted.internet import defer
 
 class DeferredTestCase(unittest.TestCase):
-
+    
     def assertDeferredEquals(self, deferred, expectedResult,
 	                              chainDeferred=None):
         """Calls assertEquals on the result of the deferred and expectedResult.
@@ -21,6 +21,7 @@ class DeferredTestCase(unittest.TestCase):
 	       
         def gotResult(actualResult):
             self.assertEquals(actualResult, expectedResult)
+        
         deferred.addCallback(gotResult)
                     
         return chainDeferred.addCallback(lambda _: deferred)
@@ -46,7 +47,8 @@ class DeferredTestCase(unittest.TestCase):
             print " .tb = ", f.tb
             self.assertRaises(expectedException, f.raiseException)
             #return f
-        deferred.addErrback(gotFailure)
+        
+        deferred.addBoth(gotFailure)
             
         return chainDeferred.addCallback(lambda _: deferred)
-        
+

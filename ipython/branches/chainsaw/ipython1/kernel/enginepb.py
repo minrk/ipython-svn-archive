@@ -35,10 +35,10 @@ class IPerspectiveEngine(Interface):
     """Twisted Perspective Broker remote interface for engine service."""
     
     #get/set methods for state variables
-    def remote_get_state(self):
+    def remote_getState(self):
         """get restart, saveID"""
     
-    def remote_set_state(self, r, s):
+    def remote_setState(self, r, s):
         """set restart, saveID"""
         
     #remote methods for engine service
@@ -48,28 +48,28 @@ class IPerspectiveEngine(Interface):
     def remote_put(self, key, value):
         """Put value into locals namespace with name key."""
     
-    def remote_put_pickle(self, key, package):
+    def remote_putPickle(self, key, package):
         """Unpickle package and put into the locals namespace with name key."""
     
     def remote_get(self, key):
         """Gets an item out of the self.locals dict by key."""
     
-    def remote_get_pickle(self, key):
+    def remote_getPickle(self, key):
         """Gets an item out of the self.locals dist by key and pickles it."""
     
     def remote_reset(self):
         """Reset the InteractiveShell."""
     
-    def remote_get_command(self, i=None):
+    def remote_getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
     
-    def remote_get_last_command_index(self):
+    def remote_getLastCommandIndex(self):
         """Get the index of the last command."""
     
-    def remote_restart_engine(self):
-        """Stops and restarts the kernel engine process."""
+    def remote_restartEngine(self):
+        """Stops and restarts the engine service."""
         
-    def remote_interrupt_engine(self):
+    def remote_interruptEngine(self):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
     
 
@@ -87,40 +87,37 @@ class PerspectiveEngine(pb.Referenceable):
         """callback for pb.PBClientFactory.getRootObject"""
         self.root = obj
         if self.service.restart:
-            d = self.root.callRemote('reconnectEngine', self.service.id, self)
-            d.addErrback(self._failure2)
+            d = self.root.callRemote('reconnectEngine', self.service.id, self
+            ).addCallbacks(self._reconnected, self._failure)
         else:
             d = self.root.callRemote('registerEngine', self)
             d.addCallbacks(self._connected, self._failure)
         return d
     
     def _failure(self, reason):
-        """callback for pb.PBClientFactory.getRootObject"""
-        raise Exception(reason)
-    
-    def _failure2(self, reason):
-        """callback for pb.PBClientFactory.getRootObject"""
-        raise Exception(reason)
+        """errback for pb.PBClientFactory.getRootObject"""
+        reason.raiseException()
     
     def _connected(self, arg):
-        """arg = (id, restart, saveID)"""
+        """arg = (id, restart)"""
         self.service.id = arg[0]
         self.service.restart = arg[1]
-        self.service.saveID = arg[2]
         log.msg("got ID: %r" %self.service.id)
         return self.service.id
     
-    def remote_get_state(self):
-        return (self.service.restart, self.service.saveID)
+    def _reconnected(self, _):
+        log.msg("reconnected to controller")
     
-    def remote_set_state(self, s):
-        self.service.restart = s[0]
-        self.service.saveID = s[1]
+    def remote_getRestart(self):
+        return self.service.restart
     
-    def remote_get_saveID(self):
+    def remote_setRestart(self, r):
+        self.service.restart = r
+    
+    def remote_getSaveID(self):
         return self.service.saveID
     
-    def remote_set_saveID(self,s):
+    def remote_setSaveID(self,s):
         self.service.saveID = s
     
     def remote_execute(self, lines):
@@ -129,29 +126,29 @@ class PerspectiveEngine(pb.Referenceable):
     def remote_put(self, key, value):
         return self.service.put(key, value)
     
-    def remote_put_pickle(self, key, package):
-        return self.service.put_pickle(key, package)
+    def remote_putPickle(self, key, package):
+        return self.service.putPickle(key, package)
     
     def remote_get(self, key):
         return self.service.get(key)
     
-    def remote_get_pickle(self, key):
-        return self.service.get_pickle(key)
+    def remote_getPickle(self, key):
+        return self.service.getPickle(key)
     
     def remote_reset(self):
         return self.service.reset()
     
-    def remote_get_command(self, i=None):
-        return self.service.get_command(i)
+    def remote_getCommand(self, i=None):
+        return self.service.getCommand(i)
     
-    def remote_get_last_command_index(self):
-        return self.service.get_last_command_index()
+    def remote_getLastCommandIndex(self):
+        return self.service.getLastCommandIndex()
     
-    def remote_restart_engine(self):
-        return self.service.restart_engine()
+    def remote_restartEngine(self):
+        return self.service.restartEngine()
     
-    def remote_interrupt_engine(self):
-        return self.service.interrupt_engine()
+    def remote_interruptEngine(self):
+        return self.service.interruptEngine()
     
 
 components.registerAdapter(PerspectiveEngine,

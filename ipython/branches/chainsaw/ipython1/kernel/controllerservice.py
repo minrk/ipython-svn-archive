@@ -41,16 +41,16 @@ class IControllerService(Interface):
         """register new engine connection"""
     
     def unregisterEngine(self, id):
-        """"""
+        """eliminate remote engine object"""
     
     def reconnectEngine(self, id):
-        """"""
+        """handle reconnecting engine"""
     
     def disconnectEngine(self, id):
-        """"""
+        """handle disconnecting engine"""
     
     def interruptEngine(self, id):
-        """"""
+        """send interrupt signal to engine"""
     
 #implementation of the Controller Service
         
@@ -61,15 +61,18 @@ class ControllerService(service.Service):
     
     implements(IControllerService)
     
-    def __init__(self, cPort=None, cFactory=None, rEPort=None, rEFactory=None):
+    def __init__(self, cPort=None, cFactory=None, rEPort=None, rEFactory=None,
+                    saveIDs=False):
         """controlFactory listens for users, 
         remoteEngineFactory listens for engines"""
         if None not in [cPort, cFactory]:
             self.setupControlFactory(cPort, cFactory)
         if None not in [rEPort, rEFactory]:
             self.setupRemoteEngineFactory(rEPort, rEFactory)
+        self.saveIDs = saveIDs
         self.engine = {}
         self.availableID = range(127,-1,-1)#[127,...,0]
+        
     
     def setupControlFactory(self, cPort, cFactory):
         self.controlPort = cPort
@@ -82,15 +85,24 @@ class ControllerService(service.Service):
         self.remoteEngineFactory.service = self
         
     def startService(self):
-        self.controlServer = reactor.listenTCP(self.controlPort, self.controlFactory)
-        self.engineServer = reactor.listenTCP(self.remoteEnginePort, self.remoteEngineFactory)
+        self.controlServer = reactor.listenTCP(self.controlPort,
+                        self.controlFactory)
+        self.engineServer = reactor.listenTCP(self.remoteEnginePort, 
+                        self.remoteEngineFactory)
         service.Service.startService(self)
     
     def stopService(self):
-        self.controlServer.stopListening()#.addCallback(lambda _:d2)
-        d  = self.engineServer.stopListening()#.addCallback(lambda _:d1)
-        service.Service.stopService(self)
-        return d
+        d0 = self.controlServer.stopListening()
+        d1 = self.engineServer.stopListening()
+        d2 = service.Service.stopService(self)
+        l = []
+        for d in [d0, d1, d2]:
+            if d is not None:
+                l.append(d)
+        if l:
+            return defer.DeferredList(l)
+        else:
+             return None
     
     def registerEngine(self, connection):
         id = self.availableID.pop()
@@ -99,18 +111,18 @@ class ControllerService(service.Service):
         return id
     
     def unregisterEngine(self, id):
+        log.msg("unregistered engine %r" %id)
         _ = self.engine.pop(id)
         self.availableID.append(id)#need to be able to choose this
-        log.msg("unregistered engine %r" %id)
     
     def reconnectEngine(self, id, connection):
         #if we want to keep the engine, reconnect to it, for now get a new one|
         try:
             if self.engine[id] is 'restarting':
-                self.engine[id] = RemoteEngine(self, id, connection)
-                d = connection.callRemote('get_state'
-                    ).addCallback(self.engine[id].setState)
                 log.msg("reconnected engine %r" %id)
+                self.engine[id] = RemoteEngine(self, id, connection)
+                d = connection.callRemote('getRestart'
+                    ).addCallback(self.engine[id].setRestart)
                 return d
             else:
                 raise Exception('illegal reconnect')
@@ -123,33 +135,44 @@ class ControllerService(service.Service):
         #do I want to keep the RemoteEngine object or not?
         #for now, no
         log.msg("engine %r disconnected" %id)
-        #del self.engine[id].connection
-        if not self.engine[id].saveID:
+        if not self.saveIDs:
             self.unregisterEngine(id)
         elif self.engine[id].restart:
-            self.engine[id] = 'restarting'
             log.msg("expecting reconnect")
-
-    def restartEngine(self, id):
-        """Stops and restarts the kernel engine process."""
-        d = self.engine[id].setRemoteState((True, True))
-        print self.engine[id]
-        d.addCallback(lambda _:self.engine[id].restartEngine())
-#        d.addCallback(lambda _:self.disconnectEngine(id))
-        log.msg("restarting engine %r" %id)
-        return d
+            self.engine[id] = 'restarting'
     
-    def cleanQueue(self, id):
+    def submitCommand(self, cmd, id=None):
+        if id is not None:
+            log.msg("submitting command: %r to #%i" %(cmd, id))
+            return self.engine[id].submitCommand(cmd)
+        else:
+            log.msg("submitting command: %r to all" %cmd)
+            l = []
+            for e in self.engine.values():
+                if e not in [None, 'restarting']:
+                    d = e.submitCommand(cmd)
+                    l.append(d)
+            return defer.DeferredList(l)
+                
+        
+    def restartEngine(self, id=None):
+        if id is not None:
+            log.msg("restarting engine %r" %id)
+            d = self.engine[id].setRestart(True)
+            d.addCallback(lambda _:self.engine[id].restartEngine())
+            return d
+    
+    def cleanQueue(self, id=None):
         """Cleans out pending commands in the kernel's queue."""
-        self.engine[id].queued = []
         log.msg("cleaned queue %r" %id)
+        self.engine[id].queued = []
     
-    def interruptEngine(self, id):
+    def interruptEngine(self, id=None):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
+        log.msg("interrupted engine %r" %id)
         if self.engine[id].currentCommand:
             pass
             #do we still want this?
-        log.msg("interrupted engine %r" %id)
     
     
     # extra methods for testing, inherited from kernel2p.kernelservice

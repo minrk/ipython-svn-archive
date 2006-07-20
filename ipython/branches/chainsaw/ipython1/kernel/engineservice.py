@@ -64,28 +64,28 @@ class IEngine(Interface):
     def put(self, key, value):
         """Put value into locals namespace with name key."""
     
-    def put_pickle(self, key, package):
+    def putPickle(self, key, package):
         """Unpickle package and put into the locals namespace with name key."""
     
     def get(self, key):
         """Gets an item out of the self.locals dict by key."""
     
-    def get_pickle(self, key):
+    def getPickle(self, key):
         """Gets an item out of the self.locals dist by key and pickles it."""
     
     def update(self, dict_of_data):
         """Updates the self.locals dict with the dict_of_data."""
     
-    def update_pickle(self, dict_pickle):
+    def updatePickle(self, dict_pickle):
         """Updates the self.locals dict with the pickled dict."""
     
     def reset(self):
         """Reset the InteractiveShell."""
     
-    def get_command(self, i=None):
+    def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
     
-    def get_last_command_index(self):
+    def getLastCommandIndex(self):
         """Get the index of the last command."""
     
 
@@ -95,7 +95,7 @@ class EngineService(InteractiveShell, service.Service):
     implements(IEngine)
     
     def __init__(self, addr, port, factory, id=None, locals=None,
-                    filename="<console>", restart=False, saveID=False):
+                    filename="<console>", restart=False):
                     
         InteractiveShell.__init__(self, locals, filename)
         self.addr = addr
@@ -103,7 +103,6 @@ class EngineService(InteractiveShell, service.Service):
         self.id = id
         self.factory = factory
         self.restart = restart
-        self.saveID = saveID
     
     def startService(self):
         service.Service.startService(self)
@@ -116,27 +115,31 @@ class EngineService(InteractiveShell, service.Service):
             del self._con
         return d
     
-    def put_pickle(self, key, package):
+    def putPickle(self, key, package):
         value = pickle.loads(package)
         return self.put(key, value)
     
-    def get_pickle(self, key):
+    def getPickle(self, key):
         value = self.get(key)
         package = pickle.dumps(value, 2)
         return package
     
-    def update_pickle(self, dict_pickle):
+    def updatePickle(self, dict_pickle):
         value = pickle.loads(package)
         return self.update(value)
     
-    def restart_engine(self):
+    def restartEngine(self):
+        log.msg("restarting engine")
+        self.reset()
         d = self.stopService()
-        if d is not None:
-            d.addCallback(self.startService)
-            d.addCallback(self.connection.__init__(self))
-        else:
-            self.startService()
-            self.connection.__init__(self)
-            
+        reactor.callLater(0.001, self.startService)
         return d
-        
+    
+    #some redirects for the conflicting code styles
+    def getCommand(self, i=None):
+        return self.get_command(i)
+    
+    def getLastCommandIndex(self):
+        return self.get_last_command_index()
+    
+    

@@ -1,4 +1,4 @@
-"""perspective broker controller from kernel2p.kernelpb"""
+# -*- test-case-name: ipython1.test.test_controllerpb -*-
 """Expose the IPython Controller Service using Twisted's Perspective Broker.
 
 This module specifies the IPerspectiveKenel Interface and its implementation
@@ -39,23 +39,23 @@ class IRemoteEngineRoot(Interface):
     def remote_reconnectEngine(self, id, engineReference):
         """reconnect an engine"""
         
-    def remote_setState(self, id, s):
+    def remote_setRestart(self, id, s):
         """set state of remote engine id"""
     
 
 class IControlRoot(Interface):
     """the Control Root for the controller service server factory"""
     
-    def remote_submitCommand(self, id, cmd):
+    def remote_submitCommand(self, cmd, id=None):
         """submitCommand to engine #id"""
     
-    def remote_restartEngine(self, id):
+    def remote_restartEngine(self, id=None):
         """Stops and restarts the kernel engine process."""
     
-    def remote_cleanQueue(self, id):
+    def remote_cleanQueue(self, id=None):
         """Cleans out pending commands in the kernel's queue."""
     
-    def remote_interruptEngine(self, id):
+    def remote_interruptEngine(self, id=None):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
     
 
@@ -71,7 +71,7 @@ class RemoteEngineRoot(pb.Root):
         id = self.service.registerEngine(engineReference)
         e = self.service.engine[id]
         engineReference.broker.notifyOnDisconnect(e.handleDisconnect)
-        return (id, e.restart, e.saveID)
+        return (id, e.restart)
     
     def remote_reconnectEngine(self, id, engineReference):
         d = self.service.reconnectEngine(id, engineReference)
@@ -80,7 +80,7 @@ class RemoteEngineRoot(pb.Root):
         return d
     
     def remote_setState(self, id, s):
-        self.service.engine[id].setState(s)
+        return self.service.engine[id].setLocalState(s)
     
     
 
@@ -92,19 +92,19 @@ class ControlRoot(pb.Root):
     def __init__(self, service):
         self.service = service
     
-    def remote_submitCommand(self, id, cmd):
+    def remote_submitCommand(self, cmd, id=None):
         """submitCommand to engine #<id>"""
-        return self.service.submitCommand(id, cmd)
+        return self.service.submitCommand(cmd, id)
     
-    def remote_restartEngine(self, id):
+    def remote_restartEngine(self, id=None):
         """Stops and restarts the kernel engine process."""
         return self.service.restartEngine(id)
     
-    def cleanQueue(self, id):
+    def cleanQueue(self, id=None):
         """Cleans out pending commands in the kernel's queue."""
         return self.service.cleanQueue(id)
     
-    def interruptEngine(self, id):
+    def interruptEngine(self, id=None):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
         return self.service.interruptEngine(id)
     

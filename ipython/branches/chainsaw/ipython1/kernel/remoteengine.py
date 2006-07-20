@@ -48,11 +48,11 @@ class Command(object):
 class IRemoteEngine(engineservice.IEngine):
     """add some methods to IEngine interface"""
     
-    def setState(self, s):
-        """set restart, saveID"""
+    def setRestart(self, r):
+        """set restart"""
 
-    def setRemoteState(self, s):
-        """set restart, saveID"""
+    def setRemoteRestart(self, r):
+        """set restart on remote engine"""
     
     def handleDisconnect(self):
         """handle disconnection from remote engine"""
@@ -78,31 +78,29 @@ class RemoteEngine(object):
     
     implements(IRemoteEngine)
     
-    def __init__(self, service, id, connection, restart=False, saveID=False):
+    def __init__(self, service, id, connection, restart=False):
         self.service = service
         self.id = id
         self.connection = connection
         connection.engine = self
         self.restart = restart
-        self.saveID = saveID
         self.queued = []
         self.currentCommand = None
     
     #methods from IRemoteEngine:
     
-    def setState(self, s):
-        self.restart = s[0]
-        self.saveID = s[1]
-    
-    def setRemoteState(self, s):
-        self.setState(s)
-        return self.connection.callRemote('set_state', s)
+    def setRestart(self, r):
+        self.restart = r
+        return self.setRemoteRestart(r)
+        
+    def setRemoteRestart(self, r):
+        return self.connection.callRemote('setRestart', r)
     
     def handleDisconnect(self):
         self.service.disconnectEngine(self.id)
     
     def restartEngine(self):
-        self.connection.callRemote('restart_engine')
+        self.connection.callRemote('restartEngine')
     
     #command methods:
     def submitCommand(self, cmd):
@@ -162,10 +160,10 @@ class RemoteEngine(object):
         d = self.submitCommand(Command("put", key, value))
         return d
     
-    def put_pickle(self, key, package):
+    def putPickle(self, key, package):
         """Unpickle package and put into the locals namespace with name key."""
         
-        d = self.submitCommand(Command("put_pickle", key, package))
+        d = self.submitCommand(Command("putPickle", key, package))
         return d
     
     def get(self, key):
@@ -174,10 +172,10 @@ class RemoteEngine(object):
         d = self.submitCommand(Command("get", key))
         return d
     
-    def get_pickle(self, key):
+    def getPickle(self, key):
         """Gets an item out of the self.locals dist by key and pickles it."""
         
-        d = self.submitCommand(Command("get_pickle", key))
+        d = self.submitCommand(Command("getPickle", key))
         return d
     
     def reset(self):
@@ -186,15 +184,15 @@ class RemoteEngine(object):
         d = self.submitCommand(Command("reset"))
         return d
     
-    def get_command(self, i=None):
+    def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
         
-        d = self.submitCommand(Command("get_command", i))
+        d = self.submitCommand(Command("getCommand", i))
         return d
     
-    def get_last_command_index(self):
+    def getLastCommandIndex(self):
         """Get the index of the last command."""
         
-        d = self.submitCommand(Command("get_last_command_index"))
+        d = self.submitCommand(Command("getLastCommandIndex"))
         return d
     
