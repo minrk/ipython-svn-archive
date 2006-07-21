@@ -79,8 +79,8 @@ class RemoteEngineRoot(pb.Root):
         engineReference.broker.notifyOnDisconnect(e.handleDisconnect)
         return d
     
-    def remote_setState(self, id, s):
-        return self.service.engine[id].setLocalState(s)
+    def remote_setRestart(self, id, r):
+        self.service.engine[id].restart = r
     
     
 

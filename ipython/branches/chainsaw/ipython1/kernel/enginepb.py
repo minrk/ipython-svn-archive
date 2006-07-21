@@ -1,4 +1,3 @@
-"""perspective broker engine from kernel2p.kernelpb"""
 """Expose the IPython Kernel Service using Twisted's Perspective Broker.
 
 This module specifies the IPerspectiveEngine Interface and its implementation
@@ -35,11 +34,11 @@ class IPerspectiveEngine(Interface):
     """Twisted Perspective Broker remote interface for engine service."""
     
     #get/set methods for state variables
-    def remote_getState(self):
-        """get restart, saveID"""
+    def remote_getRestart(self):
+        """get restart"""
     
-    def remote_setState(self, r, s):
-        """set restart, saveID"""
+    def remote_setRestart(self, r):
+        """set restart"""
         
     #remote methods for engine service
     def remote_execute(self, lines):
@@ -80,10 +79,17 @@ class PerspectiveEngine(pb.Referenceable):
     def __init__(self, service):
         self.service = service
         self.service.connection = self
-        self.d = self.service.factory.getRootObject()
-        self.d.addCallbacks(self._connect, self._failure)
     
-    def _connect(self, obj):
+    def _connect(self):
+        d = self.service.factory.getRootObject()
+        d.addCallbacks(self._connecting, self._failure)
+        return d
+    
+    def _failure(self, reason):
+        """errback for pb.PBClientFactory.getRootObject"""
+        reason.raiseException()
+    
+    def _connecting(self, obj):
         """callback for pb.PBClientFactory.getRootObject"""
         self.root = obj
         if self.service.restart:
@@ -93,10 +99,6 @@ class PerspectiveEngine(pb.Referenceable):
             d = self.root.callRemote('registerEngine', self)
             d.addCallbacks(self._connected, self._failure)
         return d
-    
-    def _failure(self, reason):
-        """errback for pb.PBClientFactory.getRootObject"""
-        reason.raiseException()
     
     def _connected(self, arg):
         """arg = (id, restart)"""
@@ -113,12 +115,6 @@ class PerspectiveEngine(pb.Referenceable):
     
     def remote_setRestart(self, r):
         self.service.restart = r
-    
-    def remote_getSaveID(self):
-        return self.service.saveID
-    
-    def remote_setSaveID(self,s):
-        self.service.saveID = s
     
     def remote_execute(self, lines):
         return self.service.execute(lines)

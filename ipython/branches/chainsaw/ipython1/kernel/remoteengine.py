@@ -35,11 +35,11 @@ class Command(object):
     
     def handleResult(self, result):
         """When the result is ready, relay it to self.deferred."""
-        
         self.deferred.callback(result)
     
     def handleError(self, reason):
         """When an error has occured, relay it to self.deferred."""
+#        print "Command: " + self.remoteMethod + repr(self.args)
         log.msg("Traceback from remote host: " + reason.getErrorMessage())
         self.deferred.errback(reason)
     
@@ -100,7 +100,7 @@ class RemoteEngine(object):
         self.service.disconnectEngine(self.id)
     
     def restartEngine(self):
-        self.connection.callRemote('restartEngine')
+        return self.connection.callRemote('restartEngine')
     
     #command methods:
     def submitCommand(self, cmd):

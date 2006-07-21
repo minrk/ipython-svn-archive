@@ -18,9 +18,8 @@ from ipython1.kernel import engineservice, controllerservice, enginepb, controll
 from ipython1.kernel.remoteengine import Command
 from ipython1.test.util import DeferredTestCase
 
-#import sys
-#from twisted.python import log
-#log.startLogging(sys.stdout)
+import sys
+from twisted.python import log
 
 class BasicControllerServiceTest(DeferredTestCase):
     
@@ -59,17 +58,24 @@ class BasicControllerServiceTest(DeferredTestCase):
         dl = defer.DeferredList(l)
         return dl
     
-    def newEngine(self):
-        f = pb.PBClientFactory()
-        self.factories.append(f)
-        es = engineservice.EngineService('localhost', 10201, f)
-        self.services.append(es)
-        engine = enginepb.PerspectiveEngine(es)
-        d = es.startService()
-        return (d,es)
+    def newEngine(self, n=1):
+        dl = []
+        for i in range(n):
+            f = pb.PBClientFactory()
+            self.factories.append(f)
+            es = engineservice.EngineService('localhost', 10201, f)
+            self.services.append(es)
+            engine = enginepb.PerspectiveEngine(es)
+            d = es.startService()
+            dl.append(d)
+        if n is not 1:
+            es = self.services[-n:]
+            d = defer.DeferredList(dl)
+        return (d, es)
     
     def printer(self, p):
         print p
+        return p
     
     def testRegistration(self):
         (d1, es) = self.newEngine()
@@ -99,10 +105,10 @@ class BasicControllerServiceTest(DeferredTestCase):
             l1.append(d)
         dl1 = defer.DeferredList(l1)
         dl1.addCallback(lambda _:defer.DeferredList(
-                map(sc,map(Command, ["get"]*len(key), key))))
-        dl1.addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r)))
-        dl1.addCallback(lambda r: map(list.__getitem__, r, [0]*len(r)))
-        dl1.addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r)))
+                map(sc,map(Command, ["get"]*len(key), key)))
+        ).addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r))
+        ).addCallback(lambda r: map(list.__getitem__, r, [0]*len(r))
+        ).addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r)))
         d = self.assertDeferredEquals(dl1, value)
         return d
     
@@ -119,27 +125,27 @@ class BasicControllerServiceTest(DeferredTestCase):
             l1.append(d)
         dl1 = defer.DeferredList(l1)
         dl1.addCallback(lambda _:defer.DeferredList(
-                map(sc,map(Command, ["getPickle"]*len(key), key))))
-        dl1.addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r)))
-        dl1.addCallback(lambda r: map(list.__getitem__, r, [0]*len(r)))
-        dl1.addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r)))
-        dl1.addCallback(lambda r: map(pickle.loads, r))
+                map(sc,map(Command, ["getPickle"]*len(key), key)))
+        ).addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r))
+        ).addCallback(lambda r: map(list.__getitem__, r, [0]*len(r))
+        ).addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r))
+        ).addCallback(lambda r: map(pickle.loads, r))
         d = self.assertDeferredEquals(dl1, value)
         return d
+    
     #copied from ipython1.test.test_corepb
     def testExecute(self):
-        return
         commands = [(0,"a = 5","",""),
             (1,"b = 10","",""),
             (2,"c = a + b","",""),
             (3,"print c","15\n",""),
             (4,"import math","",""),
             (5,"2.0*math.pi","6.2831853071795862\n","")]            
-
+            
         dlist = []
         for id in self.cs.engine.keys():
-            if self.cs.engine[id] not in [None, 'restarting']:
-                d = None
+            if self.cs.engine[id] is not 'restarting':
+                d = defer.succeed(None)
                 for c in commands:
                     d = self.assertDeferredEquals(self.cs.submitCommand(
                             Command("execute",c[1]), id), c, chainDeferred=d)
@@ -147,7 +153,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         d = defer.DeferredList(dlist)
         return d
     
-    def testScale(self, n=96):#123 is max, >=124 causes socket too many files error
+    def testScale(self, n=32):#>=124 causes socket.24 too many files error
         dlist = []
         for i in range(1,n):
             (d1, es) = self.newEngine()
@@ -157,8 +163,21 @@ class BasicControllerServiceTest(DeferredTestCase):
         d = self.assertDeferredEquals(d, range(n))
         return d
     
-#    def testScalePutGet(self):
-#        d = self.testScale(2)
-#        d.addCallback(lambda _:self.testPutGet())
-#        return d
+    def testScaleExecute(self):
+        (d, _) = self.newEngine(16)
+        d.addCallback(lambda _:self.testExecute())
+        return d
     
+    def testScalePutGet(self):
+        (d, _) = self.newEngine(16)
+        d.addCallback(lambda _:self.testPutGet())
+        return d
+    
+    def testTellAll(self):
+        (d, _) = self.newEngine(16)
+        sc = self.cs.submitCommand
+        d.addCallback(lambda _:sc(Command("put", 'a', 5)))
+        return d
+    
+
+

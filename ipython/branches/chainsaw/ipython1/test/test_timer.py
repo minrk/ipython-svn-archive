@@ -41,7 +41,7 @@ class ControllerTimerTest(DeferredTestCase):
                 pass
         return defer.DeferredList(dl)
     
-    def newEngine(self, n):
+    def newEngine(self, n=1):
         dl = []
         for i in range(n):
             f = pb.PBClientFactory()
@@ -49,8 +49,7 @@ class ControllerTimerTest(DeferredTestCase):
             es = engineservice.EngineService('localhost', 10201, f)
             self.services.append(es)
             engine = enginepb.PerspectiveEngine(es)
-            es.startService()
-            dl.append(engine.d)
+            dl.append(es.startService())
         return defer.DeferredList(dl)
     
     def printTime(self, t):

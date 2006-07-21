@@ -107,6 +107,10 @@ class EngineService(InteractiveShell, service.Service):
     def startService(self):
         service.Service.startService(self)
         self._con = reactor.connectTCP(self.addr,self.port,self.factory)
+        try: 
+            return self.connection._connect()
+        except AttributeError:
+            return
     
     def stopService(self):
         d = service.Service.stopService(self)
