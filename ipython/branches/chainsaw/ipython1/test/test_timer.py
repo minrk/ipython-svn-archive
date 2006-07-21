@@ -3,7 +3,7 @@ testing execution times for 16*n for n = 1...7
 """
 import time
 
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from twisted.spread import pb
 
 from ipython1.kernel import engineservice, controllerservice, enginepb, controllerpb
@@ -18,39 +18,54 @@ class ControllerTimerTest(DeferredTestCase):
     
     def setUp(self):
         
+        self.servers = []
+        self.clients = []
         self.cs = controllerservice.ControllerService()
-        self.croot = controllerpb.ControlRoot(self.cs)
-        self.eroot = controllerpb.RemoteEngineRoot(self.cs)
+        self.croot = controllerpb.CRootFromService(self.cs)
+        self.eroot = controllerpb.RERootFromService(self.cs)
         self.cf = pb.PBServerFactory(self.croot)
         self.ef = pb.PBServerFactory(self.eroot)
-        self.cs.setupControlFactory(10105, self.cf)
-        self.cs.setupRemoteEngineFactory(10201, self.ef)
+        
+        self.servers.append(reactor.listenTCP(10105, self.cf))
+        self.servers.append(reactor.listenTCP(10201, self.ef))
         
         self.services = [self.cs]
         self.factories = [self.cf, self.ef]
         self.cs.startService()
     
     def tearDown(self):
-        dl = []
-        for s in self.services:
+        l = []
+        for s in self.servers:
             try:
-                d = s.stopService()
+                d = s.stopListening()
                 if d is not None:
-                    dl.append(d)
+                    l.append(d)
             except:
                 pass
-        return defer.DeferredList(dl)
+        for c in self.clients:
+            c.disconnect()
+            del c
+        dl = defer.DeferredList(l)
+        return dl
     
     def newEngine(self, n=1):
         dl = []
         for i in range(n):
+            es = engineservice.EngineService()
+            engine = enginepb.PBEngineFromService(es)
             f = pb.PBClientFactory()
+            client = reactor.connectTCP('localhost', 10201, f)
+            d = engine.connect(f)
+            es.startService()
+            
+            self.clients.append(client)
             self.factories.append(f)
-            es = engineservice.EngineService('localhost', 10201, f)
             self.services.append(es)
-            engine = enginepb.PerspectiveEngine(es)
-            dl.append(es.startService())
-        return defer.DeferredList(dl)
+
+            dl.append(d)
+        if n is not 1:
+            d = defer.DeferredList(dl)
+        return d
     
     def printTime(self, t):
         print "%3.0fms " %(t*1000),

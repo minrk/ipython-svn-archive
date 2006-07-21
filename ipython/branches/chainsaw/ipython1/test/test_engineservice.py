@@ -24,11 +24,13 @@ class BasicEngineServiceTest(DeferredTestCase):
         self.server = reactor.listenTCP(10201, self.sf)
         self.f = protocol.ClientFactory()
         self.f.protocol = basic.LineReceiver
-        self.s = engineservice.EngineService('localhost',10202, self.f)
+        self.s = engineservice.EngineService()
+        self.client = reactor.connectTCP('localhost',10202, self.f)
         self.s.startService()
         
     def tearDown(self):
-        self.s.stopService()
+        self.client.disconnect()
+        del self.client
         return self.server.stopListening()
                 
     def testExecute(self):

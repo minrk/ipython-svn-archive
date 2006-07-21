@@ -27,10 +27,11 @@ from twisted.spread import pb
 from zope.interface import Interface, implements
 
 from ipython1.kernel import controllerservice
+from ipython1.kernel.remoteengine import RemoteEngineFromReference
 
 # Expose a PB interface to the ControllerService
     
-class IRemoteEngineRoot(Interface):
+class IRERootFromService(Interface):
     """Root object for the controller service Remote Engine server factory"""
     
     def remote_registerEngine(self, engineReference):
@@ -43,14 +44,11 @@ class IRemoteEngineRoot(Interface):
         """set state of remote engine id"""
     
 
-class IControlRoot(Interface):
+class ICRootFromService(Interface):
     """the Control Root for the controller service server factory"""
     
     def remote_submitCommand(self, cmd, id=None):
         """submitCommand to engine #id"""
-    
-    def remote_restartEngine(self, id=None):
-        """Stops and restarts the kernel engine process."""
     
     def remote_cleanQueue(self, id=None):
         """Cleans out pending commands in the kernel's queue."""
@@ -60,21 +58,23 @@ class IControlRoot(Interface):
     
 
 
-class RemoteEngineRoot(pb.Root):
+class RERootFromService(pb.Root):
     
-    implements(IRemoteEngineRoot)
+    implements(IRERootFromService)
     
     def __init__(self, service):
         self.service = service
     
     def remote_registerEngine(self, engineReference):
-        id = self.service.registerEngine(engineReference)
+        id = self.service.registerEngine(RemoteEngineFromReference(engineReference))
         e = self.service.engine[id]
         engineReference.broker.notifyOnDisconnect(e.handleDisconnect)
         return (id, e.restart)
     
     def remote_reconnectEngine(self, id, engineReference):
-        d = self.service.reconnectEngine(id, engineReference)
+        remoteEngine = RemoteEngineFromReference(engineReference)
+        remoteEngine.id = id
+        d = self.service.reconnectEngine(remoteEngine)
         e = self.service.engine[id]
         engineReference.broker.notifyOnDisconnect(e.handleDisconnect)
         return d
@@ -84,10 +84,10 @@ class RemoteEngineRoot(pb.Root):
     
     
 
-class ControlRoot(pb.Root):
+class CRootFromService(pb.Root):
     """the Control Root for the controller service server factory"""
     
-    implements(IControlRoot)
+    implements(ICRootFromService)
     
     def __init__(self, service):
         self.service = service
@@ -95,10 +95,6 @@ class ControlRoot(pb.Root):
     def remote_submitCommand(self, cmd, id=None):
         """submitCommand to engine #<id>"""
         return self.service.submitCommand(cmd, id)
-    
-    def remote_restartEngine(self, id=None):
-        """Stops and restarts the kernel engine process."""
-        return self.service.restartEngine(id)
     
     def cleanQueue(self, id=None):
         """Cleans out pending commands in the kernel's queue."""
@@ -109,11 +105,11 @@ class ControlRoot(pb.Root):
         return self.service.interruptEngine(id)
     
 
-components.registerAdapter(RemoteEngineRoot,
+components.registerAdapter(RERootFromService,
                         controllerservice.ControllerService,
-                        IRemoteEngineRoot)
+                        IRERootFromService)
 
-components.registerAdapter(ControlRoot,
+components.registerAdapter(CRootFromService,
                         controllerservice.ControllerService,
-                        IControlRoot)
+                        ICRootFromService)
 

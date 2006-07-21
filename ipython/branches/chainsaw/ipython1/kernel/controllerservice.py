@@ -43,9 +43,6 @@ class IControllerService(Interface):
     def disconnectEngine(self, id):
         """handle disconnecting engine"""
     
-    def restartEngine(self, id):
-        """Stops and restarts an engine process."""
-    
     def cleanQueue(self, id):
         """Cleans out pending commands in an engine's queue."""
     
@@ -62,53 +59,21 @@ class ControllerService(service.Service):
     
     implements(IControllerService)
     
-    def __init__(self, cPort=None, cFactory=None,       #):
-                rEPort=None, rEFactory=None,saveIDs=False):
+    def __init__(self, saveIDs=False):
         """controlFactory listens for users, 
         remoteEngineFactory listens for engines"""
-        if None not in [cPort, cFactory]:
-            self.setupControlFactory(cPort, cFactory)
-        if None not in [rEPort, rEFactory]:
-            self.setupRemoteEngineFactory(rEPort, rEFactory)
         self.saveIDs = saveIDs
         self.engine = {}
-        self.availableID = range(127,-1,-1)#[127,...,0]
+        self.availableID = range(255,-1,-1)#[255,...,0]
     
     
-    def setupControlFactory(self, cPort, cFactory):
-        self.controlPort = cPort
-        self.controlFactory = cFactory
-        self.controlFactory.service = self
-    
-    def setupRemoteEngineFactory(self, rEPort, rEFactory):
-        self.remoteEnginePort = rEPort
-        self.remoteEngineFactory = rEFactory
-        self.remoteEngineFactory.service = self
-    
-    def startService(self):
-        self.controlServer = reactor.listenTCP(self.controlPort,
-                        self.controlFactory)
-        self.engineServer = reactor.listenTCP(self.remoteEnginePort, 
-                        self.remoteEngineFactory)
-        service.Service.startService(self)
-    
-    def stopService(self):
-        d0 = self.controlServer.stopListening()
-        d1 = self.engineServer.stopListening()
-        d2 = service.Service.stopService(self)
-        l = []
-        for d in [d0, d1, d2]:
-            if d is not None:
-                l.append(d)
-        if l:
-            return defer.DeferredList(l)
-        else:
-             return None
-    
-    def registerEngine(self, connection):
+    def registerEngine(self, remoteEngine):
         """register new engine connection"""
         id = self.availableID.pop()
-        self.engine[id] = RemoteEngine(self, id, connection)
+        remoteEngine.service = self
+        remoteEngine.id = id
+        remoteEngine.restart = False
+        self.engine[id] = remoteEngine
         log.msg("registered engine %i" %id)
         return id
     
@@ -121,14 +86,16 @@ class ControllerService(service.Service):
             log.msg("preserving id %i" %id)
             self.availableID.append(id)
     
-    def reconnectEngine(self, id, connection):
+    def reconnectEngine(self, remoteEngine):
         """handle reconnecting engine"""
         #if we want to keep the engine, reconnect to it, for now get a new one|
+        id = remoteEngine.id
         try:
             if self.engine[id] is 'restarting':
+                remoteEngine.service = self
+                remoteEngine.restart = True
+                self.engine[id] = remoteEngine
                 log.msg("reconnected engine %i" %id)
-                self.engine[id] = RemoteEngine(self, id, connection, 
-                        restart=True)
             else:
                 raise Exception('illegal reconnect')
         except KeyError:
@@ -159,24 +126,8 @@ class ControllerService(service.Service):
                     d = e.submitCommand(command)
                     l.append(d)
             return defer.DeferredList(l)
-    
+    #add tellAll method
     tellAll = submitCommand
-    def restartEngine(self, id='all'):
-        """Stops and restarts an engine service."""
-        log.msg("restarting engine: %s" %id)
-        self.cleanQueue(id)
-        if id is not 'all':
-            d = self.engine[id].setRestart(True)
-            d.addCallback(lambda _:self.engine[id].restartEngine())
-            return d
-        else:
-            l = []
-            for e in self.engine.values():
-                if e is not 'restarting':
-                    d = e.setRestart(True)
-                    d.addCallback(lambda _:e.restartEngine())
-                    l.append(d)
-            return defer.DeferredList(l)
     
     def cleanQueue(self, id='all'):
         """Cleans out pending commands in the kernel's queue."""

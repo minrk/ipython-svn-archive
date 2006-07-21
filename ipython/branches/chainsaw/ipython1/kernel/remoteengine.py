@@ -48,6 +48,9 @@ class Command(object):
 class IRemoteEngine(engineservice.IEngine):
     """add some methods to IEngine interface"""
     
+    def callRemote(self, cmd):
+        """make remote call"""
+    
     def setRestart(self, r):
         """set restart"""
 
@@ -78,11 +81,11 @@ class RemoteEngine(object):
     
     implements(IRemoteEngine)
     
-    def __init__(self, service, id, connection, restart=False):
+    def __init__(self, service, id, remoteEngine=None, restart=False):
+        if remoteEngine is not None:
+            self = remoteEngine
         self.service = service
         self.id = id
-        self.connection = connection
-        connection.engine = self
         self.restart = restart
         self.queued = []
         self.currentCommand = None
@@ -94,13 +97,13 @@ class RemoteEngine(object):
         return self.setRemoteRestart(r)
         
     def setRemoteRestart(self, r):
-        return self.connection.callRemote('setRestart', r)
+        return self.callRemote('setRestart', r)
     
     def handleDisconnect(self):
         self.service.disconnectEngine(self.id)
     
     def restartEngine(self):
-        return self.connection.callRemote('restartEngine')
+        return self.callRemote('restartEngine')
     
     #command methods:
     def submitCommand(self, cmd):
@@ -119,7 +122,7 @@ class RemoteEngine(object):
         
         cmd = self.currentCommand
         log.msg("Starting: " + repr(self.currentCommand))
-        d = self.connection.callRemote(cmd.remoteMethod, *(cmd.args))
+        d = self.callRemote(cmd.remoteMethod, *(cmd.args))
         d.addCallback(self.finishCommand)
         d.addErrback(self.abortCommand)
     
@@ -196,3 +199,13 @@ class RemoteEngine(object):
         d = self.submitCommand(Command("getLastCommandIndex"))
         return d
     
+#now for adapters
+class RemoteEngineFromReference(RemoteEngine):
+    
+    implements(IRemoteEngine)
+    
+    def __init__(self, reference):
+        self.callRemote = reference.callRemote
+        self.queued = []
+        self.currentCommand = None
+        

@@ -80,20 +80,20 @@ class InteractiveShell(InteractiveConsole):
         self._stderr = []
         self._namespace_lock = threading.Lock()
         self._command_lock = threading.Lock()
-        self.last_command_index = -1
+        self.lastCommandIndex = -1
         # I am using this user defined signal to interrupt the currently 
         # running command.  I am not sure if this is the best way, but
         # it is working!
-        signal.signal(signal.SIGUSR1, self._handle_SIGUSR1)
+        signal.signal(signal.SIGUSR1, self._handleSIGUSR1)
 
-    def _handle_SIGUSR1(self, signum, frame):
+    def _handleSIGUSR1(self, signum, frame):
         """Handle the SIGUSR1 signal by printing to stderr."""
         print>>sys.stderr, "Command stopped."
         
     def _prefilter(self, line, more):
         return line
 
-    def _trap_runlines(self, lines):
+    def _trapRunlines(self, lines):
         """
         This executes the python source code, source, in the
         self.locals namespace and traps stdout and stderr.  Upon
@@ -106,7 +106,7 @@ class InteractiveShell(InteractiveConsole):
         self._trap.flush()
         self._trap.trap()
         self._runlines(lines)
-        self.last_command_index += 1
+        self.lastCommandIndex += 1
         self._trap.release()
         self._namespace_lock.release()
                 
@@ -166,8 +166,8 @@ class InteractiveShell(InteractiveConsole):
     # Methods for running code
     
     def execute(self, lines):
-        self._trap_runlines(lines)
-        return self.get_command()
+        self._trapRunlines(lines)
+        return self.getCommand()
         
     # Methods for working with the namespace
 
@@ -197,12 +197,12 @@ class InteractiveShell(InteractiveConsole):
         self._namespace_lock.release()
         return result
 
-    def update(self, dict_of_data):
+    def update(self, dictOfData):
         """Loads a dict of key value pairs into the self.locals namespace."""
-        if not isinstance(dict_of_data, dict):
+        if not isinstance(dictOfData, dict):
             raise TypeError, "update() takes a dict object."
         self._namespace_lock.acquire()
-        self.locals.update(dict_of_data)
+        self.locals.update(dictOfData)
         self._namespace_lock.release()
         
     # Methods for getting stdout/stderr/stdin
@@ -214,44 +214,44 @@ class InteractiveShell(InteractiveConsole):
         self._stdin = []
         self._stdout = []
         self._stderr = []
-        self.last_command_index = -1
+        self.lastCommandIndex = -1
         self._command_lock.release()
 
         self._namespace_lock.acquire()        
         self.locals = {}
         self._namespace_lock.release()
                 
-    def get_command(self,i=None):
+    def getCommand(self,i=None):
         """Get the stdin/stdout/stderr of command i."""
         
         self._command_lock.acquire()
         
-        if i in range(self.last_command_index + 1):
-            in_result = self._stdin[i]
-            out_result = self._stdout[i]
-            err_result = self._stderr[i]
-            cmd_num = i
-        elif i is None and self.last_command_index >= 0:
-            in_result = self._stdin[self.last_command_index]
-            out_result = self._stdout[self.last_command_index]
-            err_result = self._stderr[self.last_command_index]
-            cmd_num = self.last_command_index
+        if i in range(self.lastCommandIndex + 1):
+            inResult = self._stdin[i]
+            outResult = self._stdout[i]
+            errResult = self._stderr[i]
+            cmdNum = i
+        elif i is None and self.lastCommandIndex >= 0:
+            inResult = self._stdin[self.lastCommandIndex]
+            outResult = self._stdout[self.lastCommandIndex]
+            errResult = self._stderr[self.lastCommandIndex]
+            cmdNum = self.lastCommandIndex
         else:
-            in_result = None
-            out_result = None
-            err_result = None
+            inResult = None
+            outResult = None
+            errResult = None
         
         self._command_lock.release()
         
-        if in_result:
-            return (cmd_num, in_result, out_result, err_result)
+        if inResult:
+            return (cmdNum, inResult, outResult, errResult)
         else:
             raise IndexError, "Command with index does not exist."
             
-    def get_last_command_index(self):
+    def getLastCommandIndex(self):
         """Get the index of the last command."""
         self._command_lock.acquire()
-        ind = self.last_command_index
+        ind = self.lastCommandIndex
         self._command_lock.release()
         return ind
 

@@ -54,20 +54,20 @@ class BasicCoreServiceTest(DeferredTestCase):
         self.assertRaises(TypeError, self.s.update, [1,2,2])
         
     def testCommand(self):
-        self.assertRaises(IndexError,self.s.get_command)
+        self.assertRaises(IndexError,self.s.getCommand)
         self.s.execute("a = 5")
-        self.assertEquals(self.s.get_command(),(0,"a = 5","",""))
-        self.assertEquals(self.s.get_command(0),(0,"a = 5","",""))
+        self.assertEquals(self.s.getCommand(),(0,"a = 5","",""))
+        self.assertEquals(self.s.getCommand(0),(0,"a = 5","",""))
         self.s.reset()
-        self.assertEquals(self.s.get_last_command_index(),-1)
-        self.assertRaises(IndexError,self.s.get_command)
+        self.assertEquals(self.s.getLastCommandIndex(),-1)
+        self.assertRaises(IndexError,self.s.getCommand)
         
     def testPickle(self):
         good_pickle = 1.5647654
         import pickle
         package = pickle.dumps(good_pickle,2)
-        self.assertEquals(self.s.put_pickle("a",package),None)
-        package = self.s.get_pickle("a")
+        self.assertEquals(self.s.putPickle("a",package),None)
+        package = self.s.getPickle("a")
         final_value = pickle.loads(package)
         self.assertEquals(final_value, good_pickle)
         

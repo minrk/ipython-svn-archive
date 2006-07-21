@@ -11,7 +11,7 @@ import time, exceptions
 import cPickle as pickle
 
 from twisted.trial import unittest
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from twisted.spread import pb
 
 from ipython1.kernel import engineservice, controllerservice, enginepb, controllerpb
@@ -27,46 +27,62 @@ class BasicControllerServiceTest(DeferredTestCase):
         #start one controller and connect one engine
         self.services = []
         self.factories = []
+        self.clients = []
+        self.servers = []
         self.cs = controllerservice.ControllerService()
-        self.croot = controllerpb.ControlRoot(self.cs)
-        self.eroot = controllerpb.RemoteEngineRoot(self.cs)
+        self.croot = controllerpb.CRootFromService(self.cs)
+        self.eroot = controllerpb.RERootFromService(self.cs)
         self.cf = pb.PBServerFactory(self.croot)
         self.ef = pb.PBServerFactory(self.eroot)
-        self.cs.setupControlFactory(10105, self.cf)
-        self.cs.setupRemoteEngineFactory(10201, self.ef)
+        self.servers.append(reactor.listenTCP(10105, self.cf))
+        self.servers.append(reactor.listenTCP(10201, self.ef))
         
-        self.f = pb.PBClientFactory()
-        self.es = engineservice.EngineService('localhost', 10201, self.f)
-        self.engine = enginepb.PerspectiveEngine(self.es)
-        
+        self.es = engineservice.EngineService()
+        self.engine = enginepb.PBEngineFromService(self.es)
+        f = pb.PBClientFactory()
+        client = reactor.connectTCP('127.0.0.1', 10201, f)
+        d = self.engine.connect(f)
+
+        self.factories.append(f)
+        self.clients.append(client)
         self.services.append(self.es)
         self.services.append(self.cs)
         
         self.cs.startService()
+        self.es.startService()
         
-        return self.es.startService()
+        return d
+        
     
     def tearDown(self):
         l = []
-        for s in self.services:
+        for s in self.servers:
             try:
-                d = s.stopService()
+                d = s.stopListening()
                 if d is not None:
                     l.append(d)
             except:
                 pass
+        for c in self.clients:
+            c.disconnect()
+            del c
         dl = defer.DeferredList(l)
         return dl
     
     def newEngine(self, n=1):
         dl = []
         for i in range(n):
+            es = engineservice.EngineService()
+            engine = enginepb.PBEngineFromService(es)
             f = pb.PBClientFactory()
+            client = reactor.connectTCP('localhost', 10201, f)
+            d = engine.connect(f)
+            es.startService()
+            
+            self.clients.append(client)
             self.factories.append(f)
-            es = engineservice.EngineService('localhost', 10201, f)
             self.services.append(es)
-            engine = enginepb.PerspectiveEngine(es)
-            d = es.startService()
+
             dl.append(d)
         if n is not 1:
             es = self.services[-n:]
@@ -106,6 +122,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         dl1 = defer.DeferredList(l1)
         dl1.addCallback(lambda _:defer.DeferredList(
                 map(sc,map(Command, ["get"]*len(key), key)))
+#        ).addCallback(self.printer)
         ).addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r))
         ).addCallback(lambda r: map(list.__getitem__, r, [0]*len(r))
         ).addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r)))

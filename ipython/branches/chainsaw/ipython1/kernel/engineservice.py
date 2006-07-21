@@ -73,10 +73,10 @@ class IEngine(Interface):
     def getPickle(self, key):
         """Gets an item out of the self.locals dist by key and pickles it."""
     
-    def update(self, dict_of_data):
-        """Updates the self.locals dict with the dict_of_data."""
+    def update(self, dictOfData):
+        """Updates the self.locals dict with the dictOfData."""
     
-    def updatePickle(self, dict_pickle):
+    def updatePickle(self, dictPickle):
         """Updates the self.locals dict with the pickled dict."""
     
     def reset(self):
@@ -94,30 +94,11 @@ class EngineService(InteractiveShell, service.Service):
     
     implements(IEngine)
     
-    def __init__(self, addr, port, factory, id=None, locals=None,
+    def __init__(self, locals=None,
                     filename="<console>", restart=False):
                     
         InteractiveShell.__init__(self, locals, filename)
-        self.addr = addr
-        self.port = port
-        self.id = id
-        self.factory = factory
         self.restart = restart
-    
-    def startService(self):
-        service.Service.startService(self)
-        self._con = reactor.connectTCP(self.addr,self.port,self.factory)
-        try: 
-            return self.connection._connect()
-        except AttributeError:
-            return
-    
-    def stopService(self):
-        d = service.Service.stopService(self)
-        if self._con is not None:
-            self._con.disconnect()
-            del self._con
-        return d
     
     def putPickle(self, key, package):
         value = pickle.loads(package)
@@ -128,22 +109,7 @@ class EngineService(InteractiveShell, service.Service):
         package = pickle.dumps(value, 2)
         return package
     
-    def updatePickle(self, dict_pickle):
-        value = pickle.loads(package)
+    def updatePickle(self, dictPickle):
+        value = pickle.loads(dictPickle)
         return self.update(value)
-    
-    def restartEngine(self):
-        log.msg("restarting engine")
-        self.reset()
-        d = self.stopService()
-        reactor.callLater(0.001, self.startService)
-        return d
-    
-    #some redirects for the conflicting code styles
-    def getCommand(self, i=None):
-        return self.get_command(i)
-    
-    def getLastCommandIndex(self):
-        return self.get_last_command_index()
-    
     

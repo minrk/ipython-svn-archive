@@ -1,6 +1,6 @@
 """Expose the IPython Kernel Service using Twisted's Perspective Broker.
 
-This module specifies the IPerspectiveEngine Interface and its implementation
+This module specifies the IPBEngineFromService Interface and its implementation
 as an Adapter from the IEngineService Interface.  This adapter wraps
 EngineService instance into something that inherits from pb.Referenceable.  This makes
 is callable using Perspective Broker.
@@ -30,7 +30,7 @@ from ipython1.kernel import engineservice
 
 # Expose a PB interface to the EngineService
      
-class IPerspectiveEngine(Interface):
+class IPBEngineFromService(Interface):
     """Twisted Perspective Broker remote interface for engine service."""
     
     #get/set methods for state variables
@@ -65,23 +65,19 @@ class IPerspectiveEngine(Interface):
     def remote_getLastCommandIndex(self):
         """Get the index of the last command."""
     
-    def remote_restartEngine(self):
-        """Stops and restarts the engine service."""
-        
     def remote_interruptEngine(self):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
     
 
-class PerspectiveEngine(pb.Referenceable):
+class PBEngineFromService(pb.Referenceable):
     
-    implements(IPerspectiveEngine)
+    implements(IPBEngineFromService)
     
     def __init__(self, service):
         self.service = service
-        self.service.connection = self
     
-    def _connect(self):
-        d = self.service.factory.getRootObject()
+    def connect(self, factory):
+        d = factory.getRootObject()
         d.addCallbacks(self._connecting, self._failure)
         return d
     
@@ -140,13 +136,10 @@ class PerspectiveEngine(pb.Referenceable):
     def remote_getLastCommandIndex(self):
         return self.service.getLastCommandIndex()
     
-    def remote_restartEngine(self):
-        return self.service.restartEngine()
-    
     def remote_interruptEngine(self):
         return self.service.interruptEngine()
     
 
-components.registerAdapter(PerspectiveEngine,
+components.registerAdapter(PBEngineFromService,
                            engineservice.EngineService,
-                           IPerspectiveEngine)
+                           IPBEngineFromService)

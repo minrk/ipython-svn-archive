@@ -57,28 +57,28 @@ class ICoreService(Interface):
     def put(self, key, value):
         """Put value into locals namespace with name key."""
         
-    def put_pickle(self, key, package):
+    def putPickle(self, key, package):
         """Unpickle package and put into the locals namespace with name key."""
         
     def get(self, key):
         """Gets an item out of the self.locals dict by key."""
 
-    def get_pickle(self, key):
+    def getPickle(self, key):
         """Gets an item out of the self.locals dist by key and pickles it."""
 
-    def update(self, dict_of_data):
-        """Updates the self.locals dict with the dict_of_data."""
+    def update(self, dictOfData):
+        """Updates the self.locals dict with the dictOfData."""
         
-    def update_pickle(self, dict_pickle):
+    def updatePickle(self, dictPickle):
         """Updates the self.locals dict with the pickled dict."""
         
     def reset(self):
         """Reset the InteractiveShell."""
         
-    def get_command(self, i=None):
+    def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
 
-    def get_last_command_index(self):
+    def getLastCommandIndex(self):
         """Get the index of the last command."""
 
 # Now the actual CoreService implementation                   
@@ -87,15 +87,15 @@ class CoreService(InteractiveShell, service.Service):
 
     implements(ICoreService)
     
-    def put_pickle(self, key, package):
+    def putPickle(self, key, package):
         value = pickle.loads(package)
         return self.put(key, value)
         
-    def get_pickle(self, key):
+    def getPickle(self, key):
         value = self.get(key)
         package = pickle.dumps(value, 2)
         return package
         
-    def update_pickle(self, dict_pickle):
+    def updatePickle(self, dictPickle):
         value = pickle.loads(package)
         return self.update(value)    
