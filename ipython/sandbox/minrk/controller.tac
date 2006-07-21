@@ -10,29 +10,29 @@
 
 from twisted.application import internet, service
 from twisted.spread import pb
-from twisted.internet.protocol import Factory
+from twisted.internet import reactor
 
 from ipython1.kernel.controllerservice import ControllerService
 from ipython1.kernel import controllerpb
-
-#from ipython1.kernel.remoteengineprocess import RemoteEngineProcessFactory as REPFactory
 
 
 #init service:
 application = service.Application('controller', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
-#the following is convoluted because cs init needs cf,ef which need root which needs cs
-f = Factory()
-cs = ControllerService(10105, f, 10106, f)
-root = controllerpb.PerspectiveControllerFromService(cs)
-cf = pb.PBServerFactory(root)
-ef = pb.PBServerFactory(root)
-cs.__init__(10105, cf, 10106, ef)
-del f
 
-cs.remoteEngineFactory = ef #this is just because ef needs cs to exist for its pb constructor
+cs = ControllerService()
+croot = controllerpb.ControlRoot(cs)
+eroot = controllerpb.RemoteEngineRoot(cs)
+
+cf = pb.PBServerFactory(croot)
+ef = pb.PBServerFactory(eroot)
+cs.setupControlFactory(10105, cf)
+cs.setupRemoteEngineFactory(10201, ef)
 
 cs.setServiceParent(serviceCollection)
+
+reactor.callLater(10,cs.restartEngine,0)
+
 
 #internet.TCPServer(10105, cs.factory_list[0]
 #                  ).setServiceParent(serviceCollection)

@@ -10,20 +10,15 @@
 
 from twisted.application import internet, service
 from twisted.spread import pb
-try:
-	from ipython1.kernel.engineservice import EngineService
-	from ipython1.kernel import enginepb
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
 
-#init service:
+from ipython1.kernel.engineservice import EngineService
+from ipython1.kernel import enginepb
 
 application = service.Application('engine', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
 
 pbfact = pb.PBClientFactory()
-es = EngineService('localhost', 10106, pbfact)
+es = EngineService('localhost', 10201, pbfact)
 es.setServiceParent(serviceCollection)
 
-pEngine = enginepb.PerspectiveEngineFromService(es)
-pbfact.getRootObject().addCallbacks(pEngine._connect, pEngine._failure)
+pEngine = enginepb.PerspectiveEngine(es)
