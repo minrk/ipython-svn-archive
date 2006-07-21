@@ -57,8 +57,7 @@ class IControllerService(Interface):
         
 class ControllerService(service.Service):
     """This service listens for kernel engines and control clients.
-        It manages the command queues for the 
-    
+        It manages the command queues for the engines.
     """
     
     implements(IControllerService)
@@ -161,7 +160,7 @@ class ControllerService(service.Service):
                     l.append(d)
             return defer.DeferredList(l)
     
-    self.tellAll = self.submitCommand
+    tellAll = submitCommand
     def restartEngine(self, id='all'):
         """Stops and restarts an engine service."""
         log.msg("restarting engine: %s" %id)

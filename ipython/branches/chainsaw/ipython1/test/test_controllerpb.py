@@ -124,6 +124,7 @@ class BasicControllerServiceTest(DeferredTestCase):
             d = sc(Command("putPickle", key[n], pValue[n]))
             l1.append(d)
         dl1 = defer.DeferredList(l1)
+#        ).addCallback(self.printer)
         dl1.addCallback(lambda _:defer.DeferredList(
                 map(sc,map(Command, ["getPickle"]*len(key), key)))
         ).addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r))

@@ -15,11 +15,11 @@ parts of the controller.
 
 from twisted.internet import basic
 
-def ControllerProtocol(basic.LineReceiver):
+class ControllerProtocol(basic.LineReceiver):
 	"""the controller protocol"""
 	pass
 
-def ControllerFactory(protocol.ServerFactory):
+class ControllerFactory(protocol.ServerFactory):
 	"""the controller factory"""
 	protocol = ControllerProtocol
 	pass
