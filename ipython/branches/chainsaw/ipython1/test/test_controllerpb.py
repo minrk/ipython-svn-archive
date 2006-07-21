@@ -8,11 +8,10 @@ Things that should be tested:
 """
 import random
 import time, exceptions
+import cPickle as pickle
 
 from twisted.trial import unittest
-from twisted.internet import defer, protocol, reactor
-from twisted.protocols import basic
-from twisted.application import internet
+from twisted.internet import defer
 from twisted.spread import pb
 
 from ipython1.kernel import engineservice, controllerservice, enginepb, controllerpb
@@ -45,9 +44,8 @@ class BasicControllerServiceTest(DeferredTestCase):
         self.services.append(self.cs)
         
         self.cs.startService()
-        self.es.startService()
         
-        return self.engine.d
+        return self.es.startService()
     
     def tearDown(self):
         l = []
@@ -67,8 +65,8 @@ class BasicControllerServiceTest(DeferredTestCase):
         es = engineservice.EngineService('localhost', 10201, f)
         self.services.append(es)
         engine = enginepb.PerspectiveEngine(es)
-        es.startService()
-        return (engine.d,es)
+        d = es.startService()
+        return (d,es)
     
     def printer(self, p):
         print p
@@ -108,6 +106,26 @@ class BasicControllerServiceTest(DeferredTestCase):
         d = self.assertDeferredEquals(dl1, value)
         return d
     
+    def testPutGetPickle(self):
+        l1 = []
+        l2 = []
+        value = [1.1231232323, (1,'asdf',[2]),'another variable', 
+                    [1,2,3,4], {'a':3, 1:'asdf'}]
+        pValue = map(pickle.dumps, value, [2]*len(value))
+        key = 'abcde'
+        sc = self.cs.submitCommand
+        for n in range(0,5):
+            d = sc(Command("putPickle", key[n], pValue[n]))
+            l1.append(d)
+        dl1 = defer.DeferredList(l1)
+        dl1.addCallback(lambda _:defer.DeferredList(
+                map(sc,map(Command, ["getPickle"]*len(key), key))))
+        dl1.addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r)))
+        dl1.addCallback(lambda r: map(list.__getitem__, r, [0]*len(r)))
+        dl1.addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r)))
+        dl1.addCallback(lambda r: map(pickle.loads, r))
+        d = self.assertDeferredEquals(dl1, value)
+        return d
     #copied from ipython1.test.test_corepb
     def testExecute(self):
         return
@@ -129,7 +147,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         d = defer.DeferredList(dlist)
         return d
     
-    def testScale(self, n=64):#123 is max, >=124 causes socket too many files error
+    def testScale(self, n=96):#123 is max, >=124 causes socket too many files error
         dlist = []
         for i in range(1,n):
             (d1, es) = self.newEngine()
