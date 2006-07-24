@@ -47,8 +47,8 @@ class Command(object):
 class IRemoteEngine(engineservice.IEngine):
     """add some methods to IEngine interface"""
     
-    def callRemote(self, cmd):
-        """make remote call, must be overridden by adapter"""
+    def handleDisconnect(self):
+        """handle disconnection from remote engine"""
     
     def setRestart(self, r):
         """set restart"""
@@ -56,8 +56,8 @@ class IRemoteEngine(engineservice.IEngine):
     def setRemoteRestart(self, r):
         """set restart on remote engine"""
     
-    def handleDisconnect(self):
-        """handle disconnection from remote engine"""
+    def callRemote(self, cmd):
+        """make remote call, must be overridden by adapter"""
     
     def submitCommand(self, cmd):
         """submitCommand"""
@@ -80,7 +80,7 @@ class RemoteEngine(object):
     
     implements(IRemoteEngine)
     
-    def __init__(self, service, id, remoteEngine=None, restart=False):
+    def __init__(self, service, id, restart=False):
         self.service = service
         self.id = id
         self.restart = restart
@@ -89,19 +89,22 @@ class RemoteEngine(object):
     
     #methods from IRemoteEngine:
     
+    def handleDisconnect(self):
+        """handle disconnecting engine"""
+        return self.service.disconnectEngine(self.id)
+    
     def setRestart(self, r):
+        """set local and remote restart value"""
         self.restart = r
         return self.setRemoteRestart(r)
     
     def setRemoteRestart(self, r):
+        """set remote restart value"""
         return self.callRemote('setRestart', r)
-    
-    def handleDisconnect(self):
-        return self.service.disconnectEngine(self.id)
     
     #command methods:
     def submitCommand(self, cmd):
-        
+        """submit command to queue"""
         d = defer.Deferred()
         cmd.setDeferred(d)
         if self.currentCommand is not None:
@@ -113,7 +116,7 @@ class RemoteEngine(object):
         return d
     
     def runCurrentCommand(self):
-        
+        """run current command"""
         cmd = self.currentCommand
         log.msg("Starting: " + repr(self.currentCommand))
         d = self.callRemote(cmd.remoteMethod, *(cmd.args))
@@ -121,13 +124,13 @@ class RemoteEngine(object):
         d.addErrback(self.abortCommand)
     
     def _flushQueue(self):
-        
+        """pop next command in queue, run it"""
         if len(self.queued) > 0:
             self.currentCommand = self.queued.pop(0)
             self.runCurrentCommand()
     
     def finishCommand(self, result):
-        
+        """finish currrent command"""
         log.msg("Finishing: " + repr(self.currentCommand) + repr(result))
         self.currentCommand.handleResult(result)
         del self.currentCommand
@@ -136,7 +139,7 @@ class RemoteEngine(object):
         return result
     
     def abortCommand(self, reason):
-        
+        """abort current command"""
         self.currentCommand.handleError(reason)
         del self.currentCommand
         self.currentCommand = None

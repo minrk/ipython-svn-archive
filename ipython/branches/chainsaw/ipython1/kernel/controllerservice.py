@@ -65,12 +65,10 @@ class ControllerService(service.Service):
     
     implements(IControllerService)
     
-    def __init__(self, saveIDs=False):
-        """controlFactory listens for users, 
-        remoteEngineFactory listens for engines"""
+    def __init__(self, maxEngines=255, saveIDs=False):
         self.saveIDs = saveIDs
         self.engine = {}
-        self.availableID = range(255,-1,-1)#[255,...,0]
+        self.availableID = range(maxEngines,-1,-1)#[255,...,0]
     
     
     def registerEngine(self, remoteEngine):
@@ -78,7 +76,7 @@ class ControllerService(service.Service):
         id = self.availableID.pop()
         remoteEngine.service = self
         remoteEngine.id = id
-        remoteEngine.restart = False
+        remoteEngine.setRestart(False)
         self.engine[id] = remoteEngine
         log.msg("registered engine %i" %id)
         return id
@@ -106,8 +104,6 @@ class ControllerService(service.Service):
                 raise Exception('illegal reconnect')
         except KeyError:
             raise Exception('illegal reconnect id')
-        except:
-            raise
     
     def disconnectEngine(self, id):
         """handle disconnecting engine"""

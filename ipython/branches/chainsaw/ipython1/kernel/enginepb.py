@@ -24,13 +24,51 @@ from ipython1.kernel import enginepb
 
 from twisted.python import components, log
 from twisted.spread import pb
+from twisted.internet import defer
 from zope.interface import Interface, implements
 
 from ipython1.kernel import engineservice
 
+
+class PBEngineClientFactory(pb.PBClientFactory):
+    
+    def __init__(self, service):
+        self._reset()
+        self.service = service
+        self.engineReference = PBEngineReferenceFromService(service)
+        self.deferred = self.getRootObject()
+        self.deferred.addCallbacks(self._gotRoot, self._getRootFailure)
+ 
+    def _getRootFailure(self, reason):
+        """errback for pb.PBClientFactory.getRootObject"""
+        reason.raiseException()
+    
+    def _gotRoot(self, obj):
+        """callback for pb.PBClientFactory.getRootObject"""
+        self.rootObject = obj
+        if self.service.restart:
+            d = self.rootObject.callRemote('reconnectEngine', self.service.id, self.engineReference
+            ).addCallbacks(self._referenceResent, self._getRootFailure)
+        else:
+            d = self.rootObject.callRemote('registerEngine', self.engineReference)
+            d.addCallbacks(self._referenceSent, self._getRootFailure)
+        return d
+    
+    def _referenceSent(self, arg):
+        """arg = (id, restart)"""
+        self.service.id = arg[0]
+        self.service.restart = arg[1]
+        log.msg("got ID: %r" %self.service.id)
+        return self.service.id
+    
+    def _referenceResent(self, _):
+        log.msg("reconnected to controller")
+
+        
+
 # Expose a PB interface to the EngineService
      
-class IPBEngineFromService(Interface):
+class IPBEngine(Interface):
     """Twisted Perspective Broker remote interface for engine service."""
     
     #get/set methods for state variables
@@ -69,42 +107,12 @@ class IPBEngineFromService(Interface):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
     
 
-class PBEngineFromService(pb.Referenceable):
+class PBEngineReferenceFromService(pb.Referenceable):
     
-    implements(IPBEngineFromService)
+    implements(IPBEngine)
     
     def __init__(self, service):
         self.service = service
-    
-    def connect(self, factory):
-        d = factory.getRootObject()
-        d.addCallbacks(self._connecting, self._failure)
-        return d
-    
-    def _failure(self, reason):
-        """errback for pb.PBClientFactory.getRootObject"""
-        reason.raiseException()
-    
-    def _connecting(self, obj):
-        """callback for pb.PBClientFactory.getRootObject"""
-        self.root = obj
-        if self.service.restart:
-            d = self.root.callRemote('reconnectEngine', self.service.id, self
-            ).addCallbacks(self._reconnected, self._failure)
-        else:
-            d = self.root.callRemote('registerEngine', self)
-            d.addCallbacks(self._connected, self._failure)
-        return d
-    
-    def _connected(self, arg):
-        """arg = (id, restart)"""
-        self.service.id = arg[0]
-        self.service.restart = arg[1]
-        log.msg("got ID: %r" %self.service.id)
-        return self.service.id
-    
-    def _reconnected(self, _):
-        log.msg("reconnected to controller")
     
     def remote_getRestart(self):
         return self.service.restart
@@ -140,6 +148,6 @@ class PBEngineFromService(pb.Referenceable):
         return self.service.interruptEngine()
     
 
-components.registerAdapter(PBEngineFromService,
+components.registerAdapter(PBEngineReferenceFromService,
                            engineservice.EngineService,
-                           IPBEngineFromService)
+                           IPBEngine)

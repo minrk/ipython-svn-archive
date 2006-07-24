@@ -29,9 +29,9 @@ from zope.interface import Interface, implements
 from ipython1.kernel import controllerservice
 from ipython1.kernel.remoteengine import IRemoteEngine, RemoteEngine
 
-# Expose a PB interface to the ControllerService
+# Root object for remote Engine server factory
     
-class IRERoot(Interface):
+class IPBRERoot(Interface):
     """Root object for the controller service Remote Engine server factory"""
     
     def remote_registerEngine(self, engineReference):
@@ -44,9 +44,10 @@ class IRERoot(Interface):
         """set state of remote engine id"""
     
 
-class RERootFromService(pb.Root):
-        
-    implements(IRERoot)
+class PBRERootFromService(pb.Root):
+    """Perspective Broker Root object adapter for Controller Service 
+    Remote Engine connection"""
+    implements(IPBRERoot)
     
     def __init__(self, service):
         self.service = service
@@ -69,12 +70,13 @@ class RERootFromService(pb.Root):
         self.service.engine[id].restart = r
     
 
-components.registerAdapter(RERootFromService,
+components.registerAdapter(PBRERootFromService,
                         controllerservice.ControllerService,
-                        IRERoot)
+                        IPBRERoot)
 
-class ICRoot(Interface):
-    """the Control Root for the controller service server factory"""
+#root object for control factory
+class IPBCRoot(Interface):
+    """the Control PB Root object for the controller service server factory"""
     
     def remote_submitCommand(self, cmd, id='all'):
         """submitCommand to engine #id"""
@@ -89,10 +91,10 @@ class ICRoot(Interface):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
     
 
-class CRootFromService(pb.Root):
-    """the Control Root for the controller service server factory"""
+class PBCRootFromService(pb.Root):
+    """Perspective Broker Root object adapter for Controller Service"""
     
-    implements(ICRoot)
+    implements(IPBCRoot)
     
     def __init__(self, service):
         self.service = service
@@ -114,9 +116,9 @@ class CRootFromService(pb.Root):
         return self.service.interruptEngine(id)
     
 
-components.registerAdapter(CRootFromService,
+components.registerAdapter(PBCRootFromService,
                         controllerservice.ControllerService,
-                        ICRoot)
+                        IPBCRoot)
 
 #now remote engine adapter
 class RemoteEngineFromReference(RemoteEngine):

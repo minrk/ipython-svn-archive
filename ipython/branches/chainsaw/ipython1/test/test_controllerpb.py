@@ -25,26 +25,24 @@ class BasicControllerServiceTest(DeferredTestCase):
     
     def setUp(self):
         #start one controller and connect one engine
-
+        
         self.services = []
         self.factories = []
         self.clients = []
         self.servers = []
         self.cs = controllerservice.ControllerService()
-        self.croot = controllerpb.CRootFromService(self.cs)
-        self.eroot = controllerpb.RERootFromService(self.cs)
+        self.croot = controllerpb.PBCRootFromService(self.cs)
+        self.reroot = controllerpb.PBRERootFromService(self.cs)
         self.cf = pb.PBServerFactory(self.croot)
-        self.ef = pb.PBServerFactory(self.eroot)
+        self.ref = pb.PBServerFactory(self.reroot)
         self.servers.append(reactor.listenTCP(10105, self.cf))
-        self.servers.append(reactor.listenTCP(10201, self.ef))
+        self.servers.append(reactor.listenTCP(10201, self.ref))
         
         self.es = engineservice.EngineService()
-        self.engine = enginepb.PBEngineFromService(self.es)
-        f = pb.PBClientFactory()
-        client = reactor.connectTCP('127.0.0.1', 10201, f)
-        d = self.engine.connect(f)
+        ef = enginepb.PBEngineClientFactory(self.es)
+        client = reactor.connectTCP('127.0.0.1', 10201, ef)
 
-        self.factories.append(f)
+        self.factories.append(ef)
         self.clients.append(client)
         self.services.append(self.es)
         self.services.append(self.cs)
@@ -52,7 +50,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         self.cs.startService()
         self.es.startService()
         
-        return d
+        return ef.deferred
         
     
     def tearDown(self):
@@ -74,10 +72,10 @@ class BasicControllerServiceTest(DeferredTestCase):
         dl = []
         for i in range(n):
             es = engineservice.EngineService()
-            engine = enginepb.PBEngineFromService(es)
-            f = pb.PBClientFactory()
+            f = enginepb.PBEngineClientFactory(es)
             client = reactor.connectTCP('localhost', 10201, f)
-            d = engine.connect(f)
+            d = f.deferred
+
             es.startService()
             
             self.clients.append(client)
@@ -143,7 +141,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         d = self.assertDeferredEquals(dl1, value)
         return d
     
-    #copied from ipython1.test.test_corepb
+    #adapted from ipython1.test.test_corepb
     def testExecute(self):
         commands = [(0,"a = 5","",""),
             (1,"b = 10","",""),
@@ -163,7 +161,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         d = defer.DeferredList(dlist)
         return d
     
-    def testScale(self, n=32):#>=124 causes socket.24 too many files error
+    def testScale(self, n=32):
         dlist = []
         for i in range(1,n):
             (d1, es) = self.newEngine()

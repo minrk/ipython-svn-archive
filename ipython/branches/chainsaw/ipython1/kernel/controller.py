@@ -13,10 +13,12 @@ parts of the controller.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
+#this file is just a placeholder for now
+
 from twisted.internet import protocol
 from twisted.protocols import basic
 
-class ControllerProtocol(basic.LineReceiver):
+class ControllerProtocol(basic.Int32StringReceiver):
 	"""the controller protocol"""
 	pass
 
