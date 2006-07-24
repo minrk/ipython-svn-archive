@@ -92,21 +92,8 @@ class IEngine(Interface):
 class IQueuedEngine(IEngine):
     """add some queue methods to IEngine interface"""
     
-    def submitCommand(self, cmd):
-        """submitCommand"""
-    
-    def runCurrentCommand(self):
-        """runCurrentCommand"""
-    
-    def _flushQueue(self):
-        """_flushQueue"""
-    
-    def finishCommand(self, result):
-        """finishCommand"""
-    
-    def abortCommand(self, reason):
-        """abortCommand"""
-    
+    def clearQueue(self):
+        """clear the queue"""
 
 class QueuedEngine(object):
     
@@ -118,8 +105,11 @@ class QueuedEngine(object):
         self.currentCommand = None
     
     #methods from IQueuedEngine:
-        
-    #command methods:
+    def clearQueue(self):
+        """clear the queue"""
+        self.queued = []
+    
+    #queue methods:
     def submitCommand(self, cmd):
         """submit command to queue"""
         d = defer.Deferred()

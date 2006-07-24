@@ -98,7 +98,7 @@ class PBEngineReferenceFromService(pb.Referenceable):
     
     def __init__(self, service):
         self.service = service
-        self.id = None
+#        self.id = None
     
     def remote_execute(self, lines):
         return self.service.execute(lines)
