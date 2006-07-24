@@ -115,6 +115,12 @@ class PBEngineReferenceFromService(pb.Referenceable):
     def remote_getPickle(self, key):
         return self.service.getPickle(key)
     
+    def remote_update(self, dictOfData):
+        return self.service.update(dictOfData)
+    
+    def remote_updatePickle(self, dictPickle):
+        return self.service.updatePickle(dictPickle)
+    
     def remote_reset(self):
         return self.service.reset()
     
@@ -123,9 +129,6 @@ class PBEngineReferenceFromService(pb.Referenceable):
     
     def remote_getLastCommandIndex(self):
         return self.service.getLastCommandIndex()
-    
-    def remote_interruptEngine(self):
-        return self.service.interruptEngine()
     
 
 components.registerAdapter(PBEngineReferenceFromService,

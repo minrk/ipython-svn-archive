@@ -194,6 +194,16 @@ class QueuedEngine(object):
         d = self.submitCommand(Command("getPickle", key))
         return d
     
+    def update(self, dictOfData):
+        """Gets an item out of the self.locals dict by key."""
+        d = self.submitCommand(Command("update", dictOfData))
+        return d
+    
+    def updatePickle(self, dictPickle):
+        """Gets an item out of the self.locals dist by key and pickles it."""
+        d = self.submitCommand(Command("updatePickle", dictPickle))
+        return d
+    
     def reset(self):
         """Reset the InteractiveShell."""
         d = self.submitCommand(Command("reset"))

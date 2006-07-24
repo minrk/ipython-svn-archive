@@ -117,7 +117,8 @@ class BasicControllerServiceTest(DeferredTestCase):
             l1.append(d)
         dl1 = defer.DeferredList(l1)
         dl1.addCallback(lambda _:defer.gatherResults(
-                map(self.cs.get, key, [0]*cnt)))
+                map(self.cs.get, key, [0]*cnt))
+        )
         d = self.assertDeferredEquals(dl1, value)
         return d
     
@@ -160,6 +161,19 @@ class BasicControllerServiceTest(DeferredTestCase):
         d = defer.DeferredList(dlist)
         return d
     
+    def testUpdate(self):
+        d = self.cs.update({'a':1}, 0)
+        return d
+    def testUpdatePickle(self):
+        p = pickle.dumps({'a': 1}, 2)
+        d = self.cs.updatePickle(p, 0)
+        return d
+    def testReset(self):
+        d = self.cs.reset(0)
+        return d
+    def testGetLastCommandIndex(self):
+        d = self.cs.getLastCommandIndex(0)
+        return d
     def testScale(self, n=32):
         dlist = []
         for i in range(1,n):
