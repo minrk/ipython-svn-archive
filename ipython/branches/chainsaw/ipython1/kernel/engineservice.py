@@ -39,7 +39,7 @@ import os, signal, time
 
 from twisted.application import service, internet
 from twisted.internet import defer, reactor
-from twisted.python import log
+from twisted.python import log, failure
 from zope.interface import Interface, implements
 
 import cPickle as pickle
@@ -89,7 +89,162 @@ class IEngine(Interface):
         """Get the index of the last command."""
     
 
-# Now the actual EngineService implementation                   
+class IQueuedEngine(IEngine):
+    """add some queue methods to IEngine interface"""
+    
+    def submitCommand(self, cmd):
+        """submitCommand"""
+    
+    def runCurrentCommand(self):
+        """runCurrentCommand"""
+    
+    def _flushQueue(self):
+        """_flushQueue"""
+    
+    def finishCommand(self, result):
+        """finishCommand"""
+    
+    def abortCommand(self, reason):
+        """abortCommand"""
+    
+
+class QueuedEngine(object):
+    
+    implements(IQueuedEngine)
+    
+    def __init__(self, engine):
+        self.engine = engine
+        self.queued = []
+        self.currentCommand = None
+    
+    #methods from IQueuedEngine:
+        
+    #command methods:
+    def submitCommand(self, cmd):
+        """submit command to queue"""
+        d = defer.Deferred()
+        cmd.setDeferred(d)
+        if self.currentCommand is not None:
+            log.msg("Queueing: " + repr(cmd))
+            self.queued.append(cmd)
+            return d
+        self.currentCommand = cmd
+        self.runCurrentCommand()
+        return d
+    
+    def runCurrentCommand(self):
+        """run current command"""
+        cmd = self.currentCommand
+        log.msg("Starting: " + repr(self.currentCommand))
+        f = getattr(self.engine, cmd.remoteMethod, None)
+        if f:
+            try:
+                d = f(*cmd.args)
+            except Exception, inst:
+                self.abortCommand(failure.Failure(inst))
+                return
+            if isinstance(d, defer.Deferred):
+                d.addCallback(self.finishCommand)
+                d.addErrback(self.abortCommand)
+            else:
+                #if d is not a deferred, it is the actual result of f
+                self.finishCommand(d)
+        else:
+            raise 'no such method'
+    
+    def _flushQueue(self):
+        """pop next command in queue, run it"""
+        if len(self.queued) > 0:
+            self.currentCommand = self.queued.pop(0)
+            self.runCurrentCommand()
+    
+    def finishCommand(self, result):
+        """finish currrent command"""
+        log.msg("Finishing: " + repr(self.currentCommand) + repr(result))
+        self.currentCommand.handleResult(result)
+        del self.currentCommand
+        self.currentCommand = None
+        self._flushQueue()
+        return result
+    
+    def abortCommand(self, reason):
+        """abort current command"""
+        self.currentCommand.handleError(reason)
+        del self.currentCommand
+        self.currentCommand = None
+        self._flushQueue()
+        #return reason
+    
+    #methods from IEngine
+    
+    def execute(self, lines):
+        """Execute lines of Python code."""
+        d = self.submitCommand(Command("execute", lines))
+        return d
+    
+    def put(self, key, value):
+        """Put value into locals namespace with name key."""
+        d = self.submitCommand(Command("put", key, value))
+        return d
+    
+    def putPickle(self, key, package):
+        """Unpickle package and put into the locals namespace with name key."""
+        d = self.submitCommand(Command("putPickle", key, package))
+        return d
+    
+    def get(self, key):
+        """Gets an item out of the self.locals dict by key."""
+        d = self.submitCommand(Command("get", key))
+        return d
+    
+    def getPickle(self, key):
+        """Gets an item out of the self.locals dist by key and pickles it."""
+        d = self.submitCommand(Command("getPickle", key))
+        return d
+    
+    def reset(self):
+        """Reset the InteractiveShell."""
+        d = self.submitCommand(Command("reset"))
+        return d
+    
+    def getCommand(self, i=None):
+        """Get the stdin/stdout/stderr of command i."""
+        d = self.submitCommand(Command("getCommand", i))
+        return d
+    
+    def getLastCommandIndex(self):
+        """Get the index of the last command."""
+        d = self.submitCommand(Command("getLastCommandIndex"))
+        return d
+
+#Command object for queued Engines
+class Command(object):
+    """A command that will be sent to the Remote Engine."""
+    
+    def __init__(self, remoteMethod, *args):
+        """Build a new Command object."""
+        
+        self.remoteMethod = remoteMethod
+        self.args = args
+    
+    def setDeferred(self, d):
+        """Sets the deferred attribute of the Command."""    
+        self.deferred = d
+    
+    def __repr__(self):
+        return "Command: " + self.remoteMethod + repr(self.args)
+    
+    def handleResult(self, result):
+        """When the result is ready, relay it to self.deferred."""
+        self.deferred.callback(result)
+    
+    def handleError(self, reason):
+        """When an error has occured, relay it to self.deferred."""
+        log.msg("Traceback from remote host: " + reason.getErrorMessage())
+        self.deferred.errback(reason)
+    
+
+# Now the actual EngineService
 class EngineService(InteractiveShell, service.Service):
     
     implements(IEngine)

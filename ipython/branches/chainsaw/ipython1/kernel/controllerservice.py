@@ -24,7 +24,7 @@ from twisted.python import log
 from zope.interface import Interface, implements
 from twisted.spread import pb
 
-from ipython1.kernel.remoteengine import RemoteEngine, Command
+from ipython1.kernel.engineservice import Command
 
 # Interface for the Controller Service
 
@@ -52,9 +52,6 @@ class IControllerService(Interface):
     def cleanQueue(self, id='all'):
         """Cleans out pending commands in an engine's queue."""
     
-    def interruptEngine(self, id='all'):
-        """Send SIGUSR1 to the kernel engine to stop the current command."""
-    
 
 #implementation of the Controller Service
         
@@ -71,12 +68,20 @@ class ControllerService(service.Service):
         self.availableID = range(maxEngines,-1,-1)#[255,...,0]
     
     
-    def registerEngine(self, remoteEngine):
+    def registerEngine(self, remoteEngine, id):
         """register new engine connection"""
-        id = self.availableID.pop()
+        if id in self.engine.keys():
+            raise 'id in use'
+            return
+
+        if id in self.availableID:
+            remoteEngine.id = id
+            self.availableID.remove(id)
+        else:
+            id = self.availableID.pop()
+            remoteEngine.id = id
+
         remoteEngine.service = self
-        remoteEngine.id = id
-        remoteEngine.setRestart(False)
         self.engine[id] = remoteEngine
         log.msg("registered engine %i" %id)
         return id
@@ -86,35 +91,17 @@ class ControllerService(service.Service):
         log.msg("unregistered engine %i" %id)
         e = self.engine.pop(id)
         del e
-        if self.saveIDs:
-            log.msg("preserving id %i" %id)
-            self.availableID.append(id)
-    
-    def reconnectEngine(self, remoteEngine):
-        """handle reconnecting engine"""
-        #if we want to keep the engine, reconnect to it, for now get a new one|
-        id = remoteEngine.id
-        try:
-            if self.engine[id] is 'restarting':
-                remoteEngine.service = self
-                remoteEngine.restart = True
-                self.engine[id] = remoteEngine
-                log.msg("reconnected engine %i" %id)
-            else:
-                raise Exception('illegal reconnect')
-        except KeyError:
-            raise Exception('illegal reconnect id')
     
     def disconnectEngine(self, id):
         """handle disconnecting engine"""
         #do I want to keep the RemoteEngine object or not?
         #for now, no
         log.msg("engine %i disconnected" %id)
-        if self.engine[id].restart:
-            log.msg("expecting reconnect")
-            self.engine[id] = 'restarting'
+        if not self.saveIDs:
+            self.availableID.append(id)
         else:
-            self.unregisterEngine(id)
+            log.msg("preserving id %i" %id)
+        self.unregisterEngine(id)
     
     def submitCommand(self, cmd, id='all'):
         """submit command to engine(s)"""
@@ -124,10 +111,9 @@ class ControllerService(service.Service):
         else:
             l = []
             for e in self.engine.values():
-                if e is not 'restarting':
-                    command = Command(cmd.remoteMethod, *cmd.args)
-                    d = e.submitCommand(command)
-                    l.append(d)
+                command = Command(cmd.remoteMethod, *cmd.args)
+                d = e.submitCommand(command)
+                l.append(d)
             return defer.gatherResults(l)
     
     def tellAll(self, cmd):
@@ -141,8 +127,7 @@ class ControllerService(service.Service):
             self.engine[id].queued = []
         else:
             for e in self.engine.values():
-                if e is not 'restarting':
-                    e.queued = []
+                e.queued = []
     
     def interruptEngine(self, id='all'):
         """Send SIGUSR1 to the kernel engine to stop the current command."""

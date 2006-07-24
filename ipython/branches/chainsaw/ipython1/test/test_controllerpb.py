@@ -15,24 +15,24 @@ from twisted.internet import defer, reactor
 from twisted.spread import pb
 
 from ipython1.kernel import engineservice, controllerservice, enginepb, controllerpb
-from ipython1.kernel.remoteengine import Command
+from ipython1.kernel.engineservice import Command
 from ipython1.test.util import DeferredTestCase
 
 import sys
 from twisted.python import log
+#log.startLogging(sys.stdout)
 
 class BasicControllerServiceTest(DeferredTestCase):
     
     def setUp(self):
         #start one controller and connect one engine
-        
         self.services = []
         self.factories = []
         self.clients = []
         self.servers = []
         self.cs = controllerservice.ControllerService()
-        self.croot = controllerpb.IPBCRoot(self.cs)
-        self.reroot = controllerpb.IPBRERoot(self.cs)
+        self.croot = controllerpb.IPBControlRoot(self.cs)
+        self.reroot = controllerpb.IPBRemoteEngineRoot(self.cs)
         self.cf = pb.PBServerFactory(self.croot)
         self.ref = pb.PBServerFactory(self.reroot)
         self.servers.append(reactor.listenTCP(10105, self.cf))

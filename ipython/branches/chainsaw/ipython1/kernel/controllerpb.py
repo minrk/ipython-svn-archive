@@ -27,55 +27,41 @@ from twisted.spread import pb
 from zope.interface import Interface, implements
 
 from ipython1.kernel import controllerservice
-from ipython1.kernel.remoteengine import IRemoteEngine, RemoteEngine
-
+from ipython1.kernel.engineservice import IEngine, QueuedEngine
 # Root object for remote Engine server factory
     
-class IPBRERoot(Interface):
+class IPBRemoteEngineRoot(Interface):
     """Root object for the controller service Remote Engine server factory"""
     
     def remote_registerEngine(self, engineReference):
         """register new engine on controller"""
     
-    def remote_reconnectEngine(self, id, engineReference):
-        """reconnect an engine"""
-    
-    def remote_setRestart(self, id, s):
-        """set state of remote engine id"""
-    
 
-class PBRERootFromService(pb.Root):
+class PBRemoteEngineRootFromService(pb.Root):
     """Perspective Broker Root object adapter for Controller Service 
     Remote Engine connection"""
-    implements(IPBRERoot)
+    implements(IPBRemoteEngineRoot)
     
     def __init__(self, service):
         self.service = service
     
-    def remote_registerEngine(self, engineReference):
-        id = self.service.registerEngine(RemoteEngineFromReference(engineReference))
+    def remote_registerEngine(self, engineReference, id):
+        engine = IEngine(engineReference)
+        remoteEngine = QueuedEngine(engine)
+        id = self.service.registerEngine(remoteEngine, id)
         e = self.service.engine[id]
-        engineReference.broker.notifyOnDisconnect(e.handleDisconnect)
-        return (id, e.restart)
-    
-    def remote_reconnectEngine(self, id, engineReference):
-        remoteEngine = RemoteEngineFromReference(engineReference)
-        remoteEngine.id = id
-        d = self.service.reconnectEngine(remoteEngine)
-        e = self.service.engine[id]
-        engineReference.broker.notifyOnDisconnect(e.handleDisconnect)
-        return d
-    
-    def remote_setRestart(self, id, r):
-        self.service.engine[id].restart = r
+        def notify():
+            lambda : self.service.disconnectEngine(id)
+        engineReference.broker.notifyOnDisconnect(notify)
+        return id
     
 
-components.registerAdapter(PBRERootFromService,
+components.registerAdapter(PBRemoteEngineRootFromService,
                         controllerservice.ControllerService,
-                        IPBRERoot)
+                        IPBRemoteEngineRoot)
 
 #root object for control factory
-class IPBCRoot(Interface):
+class IPBControlRoot(Interface):
     """the Control PB Root object for the controller service server factory"""
     
     def remote_submitCommand(self, cmd, id='all'):
@@ -91,10 +77,10 @@ class IPBCRoot(Interface):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
     
 
-class PBCRootFromService(pb.Root):
+class PBControlRootFromService(pb.Root):
     """Perspective Broker Root object adapter for Controller Service"""
     
-    implements(IPBCRoot)
+    implements(IPBControlRoot)
     
     def __init__(self, service):
         self.service = service
@@ -116,22 +102,6 @@ class PBCRootFromService(pb.Root):
         return self.service.interruptEngine(id)
     
 
-components.registerAdapter(PBCRootFromService,
+components.registerAdapter(PBControlRootFromService,
                         controllerservice.ControllerService,
-                        IPBCRoot)
-
-#now remote engine adapter
-class RemoteEngineFromReference(RemoteEngine):
-    
-    implements(IRemoteEngine)
-    
-    def __init__(self, reference):
-        self.callRemote = reference.callRemote
-        self.queued = []
-        self.currentCommand = None
-    
-
-components.registerAdapter(RemoteEngineFromReference,
-                        pb.RemoteReference,
-                        IRemoteEngine)
-
+                        IPBControlRoot)

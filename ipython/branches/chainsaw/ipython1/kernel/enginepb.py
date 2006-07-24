@@ -27,18 +27,20 @@ from twisted.spread import pb
 from twisted.internet import defer
 from zope.interface import Interface, implements
 
-from ipython1.kernel import engineservice
+from ipython1.kernel.engineservice import EngineService, IEngine, Command
 
 
 class PBEngineClientFactory(pb.PBClientFactory):
     
     def __init__(self, service):
-        self._reset()
+        
+        pb.PBClientFactory.__init__(self)
+        
         self.service = service
         self.engineReference = IPBEngine(service)
         self.deferred = self.getRootObject()
         self.deferred.addCallbacks(self._gotRoot, self._getRootFailure)
- 
+    
     def _getRootFailure(self, reason):
         """errback for pb.PBClientFactory.getRootObject"""
         reason.raiseException()
@@ -46,38 +48,21 @@ class PBEngineClientFactory(pb.PBClientFactory):
     def _gotRoot(self, obj):
         """callback for pb.PBClientFactory.getRootObject"""
         self.rootObject = obj
-        if self.service.restart:
-            d = self.rootObject.callRemote('reconnectEngine', self.service.id, self.engineReference
-            ).addCallbacks(self._referenceResent, self._getRootFailure)
-        else:
-            d = self.rootObject.callRemote('registerEngine', self.engineReference)
-            d.addCallbacks(self._referenceSent, self._getRootFailure)
+        d = self.rootObject.callRemote('registerEngine', self.engineReference, None)
+        d.addCallbacks(self._referenceSent, self._getRootFailure)
         return d
     
-    def _referenceSent(self, arg):
-        """arg = (id, restart)"""
-        self.service.id = arg[0]
-        self.service.restart = arg[1]
-        log.msg("got ID: %r" %self.service.id)
-        return self.service.id
+    def _referenceSent(self, id):
+        self.service.id = id
+        log.msg("got ID: %r" % id)
+        return id
     
-    def _referenceResent(self, _):
-        log.msg("reconnected to controller")
-
-        
 
 # Expose a PB interface to the EngineService
      
 class IPBEngine(Interface):
     """Twisted Perspective Broker remote interface for engine service."""
     
-    #get/set methods for state variables
-    def remote_getRestart(self):
-        """get restart"""
-    
-    def remote_setRestart(self, r):
-        """set restart"""
-        
     #remote methods for engine service
     def remote_execute(self, lines):
         """Execute lines of Python code."""
@@ -113,12 +98,7 @@ class PBEngineReferenceFromService(pb.Referenceable):
     
     def __init__(self, service):
         self.service = service
-    
-    def remote_getRestart(self):
-        return self.service.restart
-    
-    def remote_setRestart(self, r):
-        self.service.restart = r
+        self.id = None
     
     def remote_execute(self, lines):
         return self.service.execute(lines)
@@ -149,5 +129,60 @@ class PBEngineReferenceFromService(pb.Referenceable):
     
 
 components.registerAdapter(PBEngineReferenceFromService,
-                           engineservice.EngineService,
+                           EngineService,
                            IPBEngine)
+
+#now engine-reference adapter
+class EngineFromReference(object):
+    
+    implements(IEngine)
+    
+    def __init__(self, reference):
+        self.callRemote = reference.callRemote
+        self.currentCommand = None
+    #
+    def execute(self, lines):
+        """Execute lines of Python code."""
+        return self.callRemote('execute', lines)
+    
+    def put(self, key, value):
+        """Put value into locals namespace with name key."""
+        return self.callRemote('put', key, value)
+    
+    def putPickle(self, key, package):
+        """Unpickle package and put into the locals namespace with name key."""
+        return self.callRemote('putPickle', key, package)
+    
+    def get(self, key):
+        """Gets an item out of the self.locals dict by key."""
+        return self.callRemote('get', key)
+    
+    def getPickle(self, key):
+        """Gets an item out of the self.locals dist by key and pickles it."""
+        return self.callRemote('getPickle', key)
+    
+    def update(self, dictOfData):
+        """Updates the self.locals dict with the dictOfData."""
+        return self.callRemote('update', dictOfData)
+    
+    def updatePickle(self, dictPickle):
+        """Updates the self.locals dict with the pickled dict."""
+        return self.callRemote('updatePickle', dictPickle)
+    
+    def reset(self):
+        """Reset the InteractiveShell."""
+        return self.callRemote('reset')
+    
+    def getCommand(self, i=None):
+        """Get the stdin/stdout/stderr of command i."""
+        return self.callRemote('getCommand', i)
+    
+    def getLastCommandIndex(self):
+        """Get the index of the last command."""
+        return self.callRemote('getLastCommandIndex')
+    
+
+components.registerAdapter(EngineFromReference,
+                        pb.RemoteReference,
+                        IEngine)
+
