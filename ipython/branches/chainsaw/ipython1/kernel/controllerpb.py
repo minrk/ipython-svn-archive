@@ -27,11 +27,11 @@ from twisted.spread import pb
 from zope.interface import Interface, implements
 
 from ipython1.kernel import controllerservice
-from ipython1.kernel.remoteengine import RemoteEngineFromReference
+from ipython1.kernel.remoteengine import IRemoteEngine, RemoteEngine
 
 # Expose a PB interface to the ControllerService
     
-class IRERootFromService(Interface):
+class IRERoot(Interface):
     """Root object for the controller service Remote Engine server factory"""
     
     def remote_registerEngine(self, engineReference):
@@ -39,28 +39,14 @@ class IRERootFromService(Interface):
     
     def remote_reconnectEngine(self, id, engineReference):
         """reconnect an engine"""
-        
+    
     def remote_setRestart(self, id, s):
         """set state of remote engine id"""
     
 
-class ICRootFromService(Interface):
-    """the Control Root for the controller service server factory"""
-    
-    def remote_submitCommand(self, cmd, id=None):
-        """submitCommand to engine #id"""
-    
-    def remote_cleanQueue(self, id=None):
-        """Cleans out pending commands in the kernel's queue."""
-    
-    def remote_interruptEngine(self, id=None):
-        """Send SIGUSR1 to the kernel engine to stop the current command."""
-    
-
-
 class RERootFromService(pb.Root):
-    
-    implements(IRERootFromService)
+        
+    implements(IRERoot)
     
     def __init__(self, service):
         self.service = service
@@ -82,34 +68,68 @@ class RERootFromService(pb.Root):
     def remote_setRestart(self, id, r):
         self.service.engine[id].restart = r
     
+
+components.registerAdapter(RERootFromService,
+                        controllerservice.ControllerService,
+                        IRERoot)
+
+class ICRoot(Interface):
+    """the Control Root for the controller service server factory"""
+    
+    def remote_submitCommand(self, cmd, id='all'):
+        """submitCommand to engine #id"""
+    
+    def remote_tellAll(self, cmd):
+        """submit command to all available engines"""
+    
+    def remote_cleanQueue(self, id='all'):
+        """Cleans out pending commands in the kernel's queue."""
+    
+    def remote_interruptEngine(self, id='all'):
+        """Send SIGUSR1 to the kernel engine to stop the current command."""
     
 
 class CRootFromService(pb.Root):
     """the Control Root for the controller service server factory"""
     
-    implements(ICRootFromService)
+    implements(ICRoot)
     
     def __init__(self, service):
         self.service = service
     
-    def remote_submitCommand(self, cmd, id=None):
+    def remote_submitCommand(self, cmd, id='all'):
         """submitCommand to engine #<id>"""
         return self.service.submitCommand(cmd, id)
     
-    def cleanQueue(self, id=None):
+    def remote_tellAll(self, cmd):
+        """submit command to all available engine(s)"""
+        return self.service.tellAll(cmd)
+    
+    def remote_cleanQueue(self, id='all'):
         """Cleans out pending commands in the kernel's queue."""
         return self.service.cleanQueue(id)
     
-    def interruptEngine(self, id=None):
+    def remote_interruptEngine(self, id='all'):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
         return self.service.interruptEngine(id)
     
 
-components.registerAdapter(RERootFromService,
-                        controllerservice.ControllerService,
-                        IRERootFromService)
-
 components.registerAdapter(CRootFromService,
                         controllerservice.ControllerService,
-                        ICRootFromService)
+                        ICRoot)
+
+#now remote engine adapter
+class RemoteEngineFromReference(RemoteEngine):
+    
+    implements(IRemoteEngine)
+    
+    def __init__(self, reference):
+        self.callRemote = reference.callRemote
+        self.queued = []
+        self.currentCommand = None
+    
+
+components.registerAdapter(RemoteEngineFromReference,
+                        pb.RemoteReference,
+                        IRemoteEngine)
 

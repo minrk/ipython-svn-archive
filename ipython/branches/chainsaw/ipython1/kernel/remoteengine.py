@@ -11,10 +11,11 @@
 #*****************************************************************************
 
 from twisted.internet import defer
-from twisted.python import log
+from twisted.python import log, components
 from zope.interface import implements
 
 from ipython1.kernel import engineservice
+
 
 class Command(object):
     """A command that will be sent to the Remote Engine."""
@@ -26,8 +27,7 @@ class Command(object):
         self.args = args
     
     def setDeferred(self, d):
-        """Sets the deferred attribute of the Command."""
-        
+        """Sets the deferred attribute of the Command."""    
         self.deferred = d
     
     def __repr__(self):
@@ -44,16 +44,15 @@ class Command(object):
         self.deferred.errback(reason)
     
 
-
 class IRemoteEngine(engineservice.IEngine):
     """add some methods to IEngine interface"""
     
     def callRemote(self, cmd):
-        """make remote call"""
+        """make remote call, must be overridden by adapter"""
     
     def setRestart(self, r):
         """set restart"""
-
+    
     def setRemoteRestart(self, r):
         """set restart on remote engine"""
     
@@ -82,8 +81,6 @@ class RemoteEngine(object):
     implements(IRemoteEngine)
     
     def __init__(self, service, id, remoteEngine=None, restart=False):
-        if remoteEngine is not None:
-            self = remoteEngine
         self.service = service
         self.id = id
         self.restart = restart
@@ -95,15 +92,12 @@ class RemoteEngine(object):
     def setRestart(self, r):
         self.restart = r
         return self.setRemoteRestart(r)
-        
+    
     def setRemoteRestart(self, r):
         return self.callRemote('setRestart', r)
     
     def handleDisconnect(self):
-        self.service.disconnectEngine(self.id)
-    
-    def restartEngine(self):
-        return self.callRemote('restartEngine')
+        return self.service.disconnectEngine(self.id)
     
     #command methods:
     def submitCommand(self, cmd):
@@ -199,13 +193,3 @@ class RemoteEngine(object):
         d = self.submitCommand(Command("getLastCommandIndex"))
         return d
     
-#now for adapters
-class RemoteEngineFromReference(RemoteEngine):
-    
-    implements(IRemoteEngine)
-    
-    def __init__(self, reference):
-        self.callRemote = reference.callRemote
-        self.queued = []
-        self.currentCommand = None
-        

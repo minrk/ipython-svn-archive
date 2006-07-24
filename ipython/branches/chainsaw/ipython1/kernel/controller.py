@@ -13,7 +13,8 @@ parts of the controller.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-from twisted.internet import basic
+from twisted.internet import protocol
+from twisted.protocols import basic
 
 class ControllerProtocol(basic.LineReceiver):
 	"""the controller protocol"""
@@ -23,4 +24,4 @@ class ControllerFactory(protocol.ServerFactory):
 	"""the controller factory"""
 	protocol = ControllerProtocol
 	pass
-	
+

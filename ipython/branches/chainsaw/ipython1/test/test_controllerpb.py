@@ -25,6 +25,7 @@ class BasicControllerServiceTest(DeferredTestCase):
     
     def setUp(self):
         #start one controller and connect one engine
+
         self.services = []
         self.factories = []
         self.clients = []
@@ -103,29 +104,22 @@ class BasicControllerServiceTest(DeferredTestCase):
         dl = defer.DeferredList([d,d2])
         return dl
     
-    def testDisconnect(self):
-        del self.es
-        print 'broken ',
-#        self.assertEquals(self.cs.engine, {})
-        return
-    
     def testPutGet(self):
         l1 = []
         l2 = []
-        value = [1.1231232323, (1,'asdf',[2]),'another variable', 
-                    [1,2,3,4], {'a':3, 1:'asdf'}]
-        key = 'abcde'
+#        value = [1.1231232323, (1,'asdf',[2]),'another variable', 
+#                    [1,2,3,4], {d = 'a':3, 1:'asdf'}]
+        value = sys.argv[:8]
+        cnt = len(value)
+        key = 'abcdefg'
+        key = key[:cnt]
         sc = self.cs.submitCommand
-        for n in range(0,5):
-            d = sc(Command("put", key[n], value[n]))
+        for n in range(cnt):
+            d = sc(Command("put", key[n], value[n]), 0)
             l1.append(d)
         dl1 = defer.DeferredList(l1)
-        dl1.addCallback(lambda _:defer.DeferredList(
-                map(sc,map(Command, ["get"]*len(key), key)))
-#        ).addCallback(self.printer)
-        ).addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r))
-        ).addCallback(lambda r: map(list.__getitem__, r, [0]*len(r))
-        ).addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r)))
+        dl1.addCallback(lambda _:defer.gatherResults(
+                map(sc,map(Command, ["get"]*cnt, key), [0]*cnt)))
         d = self.assertDeferredEquals(dl1, value)
         return d
     
@@ -134,19 +128,17 @@ class BasicControllerServiceTest(DeferredTestCase):
         l2 = []
         value = [1.1231232323, (1,'asdf',[2]),'another variable', 
                     [1,2,3,4], {'a':3, 1:'asdf'}]
-        pValue = map(pickle.dumps, value, [2]*len(value))
-        key = 'abcde'
+        cnt = len(value)
+        pValue = map(pickle.dumps, value, [2]*cnt)
+        key = 'abcdefg'
+        key = key[:cnt]
         sc = self.cs.submitCommand
-        for n in range(0,5):
-            d = sc(Command("putPickle", key[n], pValue[n]))
+        for n in range(cnt):
+            d = sc(Command("putPickle", key[n], pValue[n]), 0)
             l1.append(d)
         dl1 = defer.DeferredList(l1)
-#        ).addCallback(self.printer)
-        dl1.addCallback(lambda _:defer.DeferredList(
-                map(sc,map(Command, ["getPickle"]*len(key), key)))
-        ).addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r))
-        ).addCallback(lambda r: map(list.__getitem__, r, [0]*len(r))
-        ).addCallback(lambda r: map(tuple.__getitem__, r, [1]*len(r))
+        dl1.addCallback(lambda _:defer.gatherResults(
+                map(sc,map(Command, ["getPickle"]*cnt, key), [0]*cnt))
         ).addCallback(lambda r: map(pickle.loads, r))
         d = self.assertDeferredEquals(dl1, value)
         return d
@@ -193,8 +185,7 @@ class BasicControllerServiceTest(DeferredTestCase):
     
     def testTellAll(self):
         (d, _) = self.newEngine(16)
-        sc = self.cs.submitCommand
-        d.addCallback(lambda _:sc(Command("put", 'a', 5)))
+        d.addCallback(lambda _:self.cs.tellAll(Command("put", 'a', 5)))
         return d
     
 

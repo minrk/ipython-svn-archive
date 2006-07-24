@@ -31,8 +31,8 @@ from ipython1.kernel.remoteengine import RemoteEngine, Command
 class IControllerService(Interface):
     """The Interface for the IP Controller Service"""
     
-    def registerEngine(self, connection):
-        """register new engine connection"""
+    def registerEngine(self, remoteEngine):
+        """register new remote engine"""
     
     def unregisterEngine(self, id):
         """eliminate remote engine object"""
@@ -43,10 +43,16 @@ class IControllerService(Interface):
     def disconnectEngine(self, id):
         """handle disconnecting engine"""
     
-    def cleanQueue(self, id):
+    def submitCommand(self, cmd, id='all'):
+        """submit command to engine(s)"""
+    
+    def tellAll(self, cmd):
+        """submit command to all available engines"""
+    
+    def cleanQueue(self, id='all'):
         """Cleans out pending commands in an engine's queue."""
     
-    def interruptEngine(self, id):
+    def interruptEngine(self, id='all'):
         """Send SIGUSR1 to the kernel engine to stop the current command."""
     
 
@@ -115,7 +121,8 @@ class ControllerService(service.Service):
             self.unregisterEngine(id)
     
     def submitCommand(self, cmd, id='all'):
-        log.msg("submitting command: %s to #%s" %(cmd, id))
+        """submit command to engine(s)"""
+        log.msg("submitting command: %s to %s" %(cmd, id))
         if id is not 'all':
             return self.engine[id].submitCommand(cmd)
         else:
@@ -125,9 +132,12 @@ class ControllerService(service.Service):
                     command = Command(cmd.remoteMethod, *cmd.args)
                     d = e.submitCommand(command)
                     l.append(d)
-            return defer.DeferredList(l)
-    #add tellAll method
-    tellAll = submitCommand
+            return defer.gatherResults(l)
+    
+
+    def tellAll(self, cmd):
+        """submit command to all available engines"""
+        return self.submitCommand(cmd)
     
     def cleanQueue(self, id='all'):
         """Cleans out pending commands in the kernel's queue."""
