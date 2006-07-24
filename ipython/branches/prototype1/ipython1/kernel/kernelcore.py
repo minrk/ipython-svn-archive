@@ -593,18 +593,19 @@ class KernelFactoryBase:
 class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
     protocol = KernelTCPProtocol
     
-    def __init__(self, allow=[], notify=[], mpi=False, callbackAddr=None):
+    def __init__(self, allow=[], notify=[], mpi=None, callbackAddr=None):
         self.qic = QueuedInteractiveConsole()
         self.qic.start_work()
         self.callbackAddr = callbackAddr
         self.mpi =  mpi
         if self.mpi:
-            self.qic.execute('from mpi4py import MPI')
+            self.qic.push('mpi',mpi)
         KernelFactoryBase.__init__(self, allow, notify)
 
     def stopFactory(self):
-        if self.mpi:
-            self.qic.execute('MPI.Finalize()')
+        pass
+        #if self.mpi:
+        #    self.qic.execute('MPI.Finalize()')
 
     def startFactory(self):
         if self.callbackAddr:
@@ -687,16 +688,17 @@ class KernelTCPFactoryGUI(protocol.ServerFactory, KernelFactoryBase):
 class ThreadlessKernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
     protocol = KernelTCPProtocol
     
-    def __init__(self, allow=[], notify=[], mpi=False):
+    def __init__(self, allow=[], notify=[], mpi=None):
         self.tic = TrappingInteractiveConsole()
         self.mpi =  mpi
         if self.mpi:
-            self.tic.runlines('from mpi4py import MPI')
+            self.qic.push('mpi',mpi)
         KernelFactoryBase.__init__(self, allow, notify)
 
     def stopFactory(self):
-        if self.mpi:
-            self.tic.runlines('MPI.Finalize()')
+        pass
+        #if self.mpi:
+        #    self.tic.runlines('MPI.Finalize()')
 
     # Kernel methods
             

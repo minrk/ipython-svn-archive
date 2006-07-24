@@ -1,0 +1,102 @@
+#!/usr/bin/env python
+"""The basic ipython computational kernel.
+
+This module is meant to be run from the command line.  To start the kernel,
+issue the command:
+
+    python kernel.py
+
+This will start the kernel listening on port 10105 (the default) and will allow
+connections from only the localhost (127.0.0.1).  Here is an example that starts
+the kernel on port 10106 and allows connections from the localhost and 
+121.122.123.124:
+
+    python kernel.py -p 10106 -a 121.122.123.124
+
+For more information on the command line options, run:
+
+    python kernel.py -h
+
+NOTE:  The kernel cannot currently be run in the background, so:
+
+    python kernel.py &
+
+won't result in a running kernel instance.
+"""
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+import ipython1.mpi as mpi
+#import mpi4py.MPI as mpi
+import cPickle as pickle
+import sys
+from optparse import OptionParser
+import socket
+
+from twisted.internet import reactor, error
+from twisted.python import log
+
+from ipython1.kernel.kernelcore import KernelTCPFactory
+from ipython1.kernel.kernelcore import ThreadlessKernelTCPFactory
+from ipython1.startup.callback import CallbackClientFactory
+
+def try_ports(port, factory_class, controllerIP,
+    controllerPort):
+    
+    for k in range(16):
+        try:
+            p = reactor.listenTCP(port + k, 
+            factory_class(mpi=mpi))
+        except (error.CannotListenError, socket.error):
+            if k == 15:
+                log.msg("Cannot start kernel")
+                reactor.stop()
+        else:
+            break
+    
+    if controllerIP:
+        myIPAddress = socket.gethostbyname(socket.gethostname())
+        myPort = p.getHost().port
+        ccf = CallbackClientFactory((myIPAddress, myPort), 
+            tries=3, delay=5.0)
+        reactor.connectTCP(controllerIP, controllerPort, ccf) 
+    
+def main(port, threads, controllerIP, controllerPort):
+    if threads:
+        factory_class = KernelTCPFactory
+    else:
+        factory_class = ThreadlessKernelTCPFactory
+        
+    log.startLogging(sys.stdout)
+    reactor.callWhenRunning(try_ports, port, 
+        factory_class, controllerIP, controllerPort)
+    reactor.run()
+
+def start(port=10105, controllerIP="", controllerPort=12001):
+    parser = OptionParser()
+    parser.set_defaults(port=port, controllerIP=controllerIP,
+        controllerPort=controllerPort)
+    parser.add_option("-p", "--port", type="int", dest="port",
+        help="the TCP port the kernel will try to listen on")
+    parser.add_option("--threadless",
+        action="store_false",dest="threads",default=True,
+        help="start single thread kernel")
+    parser.add_option("-C","--controller-ip",type="string",
+        dest="controllerIP",
+        help="ip address of the controller that should be notified")
+    parser.add_option("-L","--controller-port",type="int",
+        dest="controllerPort",
+        help="port of the controller that should be notified")
+
+    (options, args) = parser.parse_args()
+    
+    main(options.port, options.threads,
+        options.controllerIP, options.controllerPort)
+    
+if __name__ == "__main__":
+    start()
