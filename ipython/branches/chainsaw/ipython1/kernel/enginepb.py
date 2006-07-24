@@ -35,7 +35,7 @@ class PBEngineClientFactory(pb.PBClientFactory):
     def __init__(self, service):
         self._reset()
         self.service = service
-        self.engineReference = PBEngineReferenceFromService(service)
+        self.engineReference = IPBEngine(service)
         self.deferred = self.getRootObject()
         self.deferred.addCallbacks(self._gotRoot, self._getRootFailure)
  

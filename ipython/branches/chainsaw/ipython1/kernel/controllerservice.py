@@ -130,7 +130,6 @@ class ControllerService(service.Service):
                     l.append(d)
             return defer.gatherResults(l)
     
-
     def tellAll(self, cmd):
         """submit command to all available engines"""
         return self.submitCommand(cmd)
