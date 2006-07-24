@@ -46,6 +46,7 @@ setup(name             = 'ipython1',
       packages         = ['ipython1','ipython1.kernel','ipython1.core',
                           'ipython1.startup'],
       scripts          = ['scripts/ipkernel','scripts/ipkernelwx',
-                          'scripts/ipresults','scripts/ipcontroller'],
+                          'scripts/ipresults','scripts/ipcontroller',
+                          'scripts/ipkernel-mpi'],
       ext_modules=[e]
       )
