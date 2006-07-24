@@ -21,17 +21,15 @@ application = service.Application('controller', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
 
 cs = ControllerService()
-croot = controllerpb.ControlRoot(cs)
-eroot = controllerpb.RemoteEngineRoot(cs)
+croot = controllerpb.CRootFromService(cs)
+eroot = controllerpb.RERootFromService(cs)
 
 cf = pb.PBServerFactory(croot)
 ef = pb.PBServerFactory(eroot)
-cs.setupControlFactory(10105, cf)
-cs.setupRemoteEngineFactory(10201, ef)
+reactor.listenTCP(10105, cf)
+reactor.listenTCP(10201, ef)
 
 cs.setServiceParent(serviceCollection)
-
-reactor.callLater(10,cs.restartEngine,0)
 
 
 #internet.TCPServer(10105, cs.factory_list[0]
