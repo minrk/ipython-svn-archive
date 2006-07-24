@@ -111,13 +111,13 @@ class BasicControllerServiceTest(DeferredTestCase):
         cnt = len(value)
         key = 'abcdefg'
         key = key[:cnt]
-        sc = self.cs.submitCommand
+
         for n in range(cnt):
-            d = sc(Command("put", key[n], value[n]), 0)
+            d = self.cs.put(key[n], value[n], 0)
             l1.append(d)
         dl1 = defer.DeferredList(l1)
         dl1.addCallback(lambda _:defer.gatherResults(
-                map(sc,map(Command, ["get"]*cnt, key), [0]*cnt)))
+                map(self.cs.get, key, [0]*cnt)))
         d = self.assertDeferredEquals(dl1, value)
         return d
     
@@ -155,8 +155,7 @@ class BasicControllerServiceTest(DeferredTestCase):
             if self.cs.engine[id] is not 'restarting':
                 d = defer.succeed(None)
                 for c in commands:
-                    d = self.assertDeferredEquals(self.cs.submitCommand(
-                            Command("execute",c[1]), id), c, chainDeferred=d)
+                    d = self.assertDeferredEquals(self.cs.execute(c[1], id), c, chainDeferred=d)
                 dlist.append(d)
         d = defer.DeferredList(dlist)
         return d
@@ -179,11 +178,6 @@ class BasicControllerServiceTest(DeferredTestCase):
     def testScalePutGet(self):
         (d, _) = self.newEngine(16)
         d.addCallback(lambda _:self.testPutGet())
-        return d
-    
-    def testTellAll(self):
-        (d, _) = self.newEngine(16)
-        d.addCallback(lambda _:self.cs.tellAll(Command("put", 'a', 5)))
         return d
     
 

@@ -138,17 +138,9 @@ class QueuedEngine(object):
         log.msg("Starting: " + repr(self.currentCommand))
         f = getattr(self.engine, cmd.remoteMethod, None)
         if f:
-            try:
-                d = f(*cmd.args)
-            except Exception, inst:
-                self.abortCommand(failure.Failure(inst))
-                return
-            if isinstance(d, defer.Deferred):
-                d.addCallback(self.finishCommand)
-                d.addErrback(self.abortCommand)
-            else:
-                #if d is not a deferred, it is the actual result of f
-                self.finishCommand(d)
+            d = f(*cmd.args)
+            d.addCallback(self.finishCommand)
+            d.addErrback(self.abortCommand)
         else:
             raise 'no such method'
     
@@ -248,23 +240,36 @@ class Command(object):
 class EngineService(InteractiveShell, service.Service):
     
     implements(IEngine)
-    
-    def __init__(self, locals=None,
-                    filename="<console>", restart=False):
-                    
-        InteractiveShell.__init__(self, locals, filename)
-        self.restart = restart
+        
+    def put(self, key, value):
+        return defer.succeed(InteractiveShell.put(self, key, value))
     
     def putPickle(self, key, package):
         value = pickle.loads(package)
         return self.put(key, value)
     
+    def get(self, key):
+        return defer.succeed(InteractiveShell.get(self, key))
+    
     def getPickle(self, key):
         value = self.get(key)
-        package = pickle.dumps(value, 2)
-        return package
+        value.addCallback(lambda v: pickle.dumps(v, 2))
+        return value
+    
+    def update(self, dictOfData):
+        return defer.succeed(InteractiveShell.update(self, dictOfData))
     
     def updatePickle(self, dictPickle):
         value = pickle.loads(dictPickle)
         return self.update(value)
+    
+    def reset(self):
+        return defer.succeed(InteractiveShell.reset(self))
+    
+    def getCommand(self, i=None):
+        return defer.succeed(InteractiveShell.getCommand(self, i))
+    
+    def getLastCommandIndex(self):
+        return defer.succeed(InteractiveShell.getLastCommandIndex(self))
+    
     

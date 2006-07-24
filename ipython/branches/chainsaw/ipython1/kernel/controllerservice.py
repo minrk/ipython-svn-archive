@@ -28,7 +28,7 @@ from ipython1.kernel.engineservice import Command
 
 # Interface for the Controller Service
 
-class IControllerService(Interface):
+class IController(Interface):
     """The Interface for the IP Controller Service"""
     
     def registerEngine(self, remoteEngine):
@@ -43,14 +43,39 @@ class IControllerService(Interface):
     def disconnectEngine(self, id):
         """handle disconnecting engine"""
     
-    def submitCommand(self, cmd, id='all'):
-        """submit command to engine(s)"""
-    
-    def tellAll(self, cmd):
-        """submit command to all available engines"""
-    
     def cleanQueue(self, id='all'):
         """Cleans out pending commands in an engine's queue."""
+    
+    #IEngine multiplexer methods
+    def execute(self, lines, id='all'):
+        """Execute lines of Python code."""
+    
+    def put(self, key, value, id='all'):
+        """Put value into locals namespace with name key."""
+    
+    def putPickle(self, key, package, id='all'):
+        """Unpickle package and put into the locals namespace with name key."""
+    
+    def get(self, key, id='all'):
+        """Gets an item out of the self.locals dict by key."""
+    
+    def getPickle(self, key, id='all'):
+        """Gets an item out of the self.locals dist by key and pickles it."""
+    
+    def update(self, dictOfData, id='all'):
+        """Updates the self.locals dict with the dictOfData."""
+    
+    def updatePickle(self, dictPickle, id='all'):
+        """Updates the self.locals dict with the pickled dict."""
+    
+    def reset(self, id='all'):
+        """Reset the InteractiveShell."""
+    
+    def getCommand(self, i=None, id='all'):
+        """Get the stdin/stdout/stderr of command i."""
+    
+    def getLastCommandIndex(self, id='all'):
+        """Get the index of the last command."""
     
 
 #implementation of the Controller Service
@@ -60,7 +85,7 @@ class ControllerService(service.Service):
         It manages the command queues for the engines.
     """
     
-    implements(IControllerService)
+    implements(IController)
     
     def __init__(self, maxEngines=255, saveIDs=False):
         self.saveIDs = saveIDs
@@ -73,14 +98,14 @@ class ControllerService(service.Service):
         if id in self.engine.keys():
             raise 'id in use'
             return
-
+            
         if id in self.availableID:
             remoteEngine.id = id
             self.availableID.remove(id)
         else:
             id = self.availableID.pop()
             remoteEngine.id = id
-
+            
         remoteEngine.service = self
         self.engine[id] = remoteEngine
         log.msg("registered engine %i" %id)
@@ -116,10 +141,6 @@ class ControllerService(service.Service):
                 l.append(d)
             return defer.gatherResults(l)
     
-    def tellAll(self, cmd):
-        """submit command to all available engines"""
-        return self.submitCommand(cmd)
-    
     def cleanQueue(self, id='all'):
         """Cleans out pending commands in the kernel's queue."""
         log.msg("cleaning queue %s" %id)
@@ -129,10 +150,186 @@ class ControllerService(service.Service):
             for e in self.engine.values():
                 e.queued = []
     
-    def interruptEngine(self, id='all'):
-        """Send SIGUSR1 to the kernel engine to stop the current command."""
-        log.msg("(did not) interrupted engine %s" %id)
-        if self.engine[id].currentCommand:
-            pass
-            #not implemented
+    #IEngine multiplexer methods
+    def execute(self, lines, id='all'):
+        """Execute lines of Python code."""
+        log.msg("executing %s on %s" %(lines, id))
+        if type(id) is int:
+            return self.engine[id].execute(lines)
+            
+        if id is 'all':
+            engines = self.engine.keys()
+        else:
+            engines = []
+            for i in id:
+                engines.append(self.engine[i])
+        l = []
+        for e in engines:
+            d = e.execute(lines)
+            l.append(d)
+            return defer.gatherResults(l)
+        
     
+    def put(self, key, value, id='all'):
+        """Put value into locals namespace with name key."""
+        log.msg("putting %s=%s on %s" %(key, value, id))
+        if type(id) is int:
+            return self.engine[id].put(key, value)
+            
+        if id is 'all':
+            engines = self.engine.keys()
+        else:
+            engines = []
+            for i in id:
+                engines.append(self.engine[i])
+        l = []
+        for e in engines:
+            d = e.put(key, value)
+            l.append(d)
+            return defer.gatherResults(l)
+    
+    def putPickle(self, key, package, id='all'):
+        """Unpickle package and put into the locals namespace with name key."""
+        log.msg("putting pickle %s=%s on %s" %(key, value, id))
+        if type(id) is int:
+            return self.engine[id].putPickle(key, value)
+            
+        if id is 'all':
+            engines = self.engine.keys()
+        else:
+            engines = []
+            for i in id:
+                engines.append(self.engine[i])
+        l = []
+        for e in engines:
+            d = e.putPickle(key, value)
+            l.append(d)
+            return defer.gatherResults(l)
+    
+    def get(self, key, id='all'):
+        """Gets an item out of the self.locals dict by key."""
+        log.msg("getting %s from %s" %(key, id))
+        if type(id) is int:
+            return self.engine[id].get(key)
+            
+        if id is 'all':
+            engines = self.engine.keys()
+        else:
+            engines = []
+            for i in id:
+                engines.append(self.engine[i])
+        l = []
+        for e in engines:
+            d = e.get(key)
+            l.append(d)
+            return defer.gatherResults(l)
+    
+    def getPickle(self, key, id='all'):
+        """Gets an item out of the self.locals dist by key and pickles it."""
+        log.msg("getting pickle %s from %s" %(key, id))
+        if type(id) is int:
+            return self.engine[id].getPickle(key)
+            
+        if id is 'all':
+            engines = self.engine.keys()
+        else:
+            engines = []
+            for i in id:
+                engines.append(self.engine[i])
+        l = []
+        for e in engines:
+            d = e.getPickle(key)
+            l.append(d)
+            return defer.gatherResults(l)
+    
+    def update(self, dictOfData, id='all'):
+        """Updates the self.locals dict with the dictOfData."""
+        log.msg("updating %s with %s" %(id, dict))
+        if type(id) is int:
+            return self.engine[id].update(dictOfData)
+            
+        if id is 'all':
+            engines = self.engine.keys()
+        else:
+            engines = []
+            for i in id:
+                engines.append(self.engine[i])
+        l = []
+        for e in engines:
+            d = e.update(dictOfData)
+            l.append(d)
+            return defer.gatherResults(l)
+    
+    def updatePickle(self, dictPickle, id='all'):
+        """Updates the self.locals dict with the pickled dict."""
+        log.msg("updating %s with pickle %s" %(id, dictPickle))
+        if type(id) is int:
+            return self.engine[id].updatePickle(dictPickle)
+            
+        if id is 'all':
+            engines = self.engine.keys()
+        else:
+            engines = []
+            for i in id:
+                engines.append(self.engine[i])
+        l = []
+        for e in engines:
+            d = e.updatePickle(dictPickle)
+            l.append(d)
+            return defer.gatherResults(l)
+    
+    def reset(self, id='all'):
+        """Reset the InteractiveShell."""
+        log.msg("resetting %s" %(id))
+        if type(id) is int:
+            return self.engine[id].reset()
+            
+        if id is 'all':
+            engines = self.engine.keys()
+        else:
+            engines = []
+            for i in id:
+                engines.append(self.engine[i])
+        l = []
+        for e in engines:
+            d = e.reset()
+            l.append(d)
+            return defer.gatherResults(l)
+    
+    def getCommand(self, i=None, id='all'):
+        """Get the stdin/stdout/stderr of command i."""
+        log.msg("getting command %s from %s" %(i, id))
+        if type(id) is int:
+            return self.engine[id].getCommand(i)
+            
+        if id is 'all':
+            engines = self.engine.keys()
+        else:
+            engines = []
+            for i in id:
+                engines.append(self.engine[i])
+        l = []
+        for e in engines:
+            d = e.getCommand(i)
+            l.append(d)
+            return defer.gatherResults(l)
+    
+    def getLastCommandIndex(self, id='all'):
+        """Get the index of the last command."""
+        log.msg("getting last command index from %s" %(id))
+        if type(id) is int:
+            return self.engine[id].getLastCommandIndex()
+            
+        if id is 'all':
+            engines = self.engine.keys()
+        else:
+            engines = []
+            for i in id:
+                engines.append(self.engine[i])
+        l = []
+        for e in engines:
+            d = e.getLastCommandIndex()
+            l.append(d)
+            return defer.gatherResults(l)
+    
+
