@@ -16,7 +16,23 @@ import os
 # update it when the contents of directories change.
 if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
-from distutils.core import setup
+from distutils.core import setup, Extension
+
+mpi_incdirs = ['/usr/local/openmpi-1.1/include',
+    '/usr/local/openmpi-1.1/include/openmpi']
+mpi_libs = ['mpi', 'orte', 'opal', 'dl']
+mpi_macros = [('_REENTRANT',None)]
+mpi_libdirs = ['/usr/local/openmpi-1.1/lib']
+mpi_link = ['-Wl,-u,_munmap', '-Wl,-multiply_defined,suppress']
+
+e = Extension('ipython1.mpi',
+    ['ipython1/mpi/mpi.c'],
+    include_dirs=mpi_incdirs,
+    define_macros=mpi_macros,
+    libraries=mpi_libs,
+    library_dirs=mpi_libdirs,
+    extra_link_args=mpi_link
+)
 
 # Call the setup() routine which does most of the work
 setup(name             = 'ipython1',
@@ -31,4 +47,5 @@ setup(name             = 'ipython1',
                           'ipython1.startup'],
       scripts          = ['scripts/ipkernel','scripts/ipkernelwx',
                           'scripts/ipresults','scripts/ipcontroller'],
+      ext_modules=[e]
       )
