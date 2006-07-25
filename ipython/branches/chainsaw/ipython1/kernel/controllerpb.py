@@ -26,7 +26,7 @@ from twisted.python import components, log
 from twisted.spread import pb
 from zope.interface import Interface, implements
 
-from ipython1.kernel import controllerservice
+from ipython1.kernel import controllerservice, enginepb
 from ipython1.kernel.engineservice import IEngine, QueuedEngine
 # Root object for remote Engine server factory
     
@@ -44,16 +44,19 @@ class PBRemoteEngineRootFromService(pb.Root):
     
     def __init__(self, service):
         self.service = service
+        self.id = None
     
     def remote_registerEngine(self, engineReference, id):
         engine = IEngine(engineReference)
         remoteEngine = QueuedEngine(engine)
         id = self.service.registerEngine(remoteEngine, id)
         e = self.service.engine[id]
-        def notify():
-            lambda : self.service.disconnectEngine(id)
+        def notify(*args):
+            return self.service.disconnectEngine(id)
+        
         engineReference.broker.notifyOnDisconnect(notify)
         return id
+
     
 
 components.registerAdapter(PBRemoteEngineRootFromService,

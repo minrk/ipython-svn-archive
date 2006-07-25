@@ -96,9 +96,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         (d1, es) = self.newEngine()
         d = self.assertDeferredEquals(d1, 1)
         (d2, es2) = self.newEngine()
-        es2.restart = True
         es2.id = 2
-        self.cs.engine[2] = 'restarting'
         dl = defer.DeferredList([d,d2])
         return dl
     
@@ -118,7 +116,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         dl1 = defer.DeferredList(l1)
         dl1.addCallback(lambda _:defer.gatherResults(
                 map(self.cs.get, key, [0]*cnt))
-        )
+        ).addCallback(lambda l: map(list.__getitem__, l, [0]*cnt))
         d = self.assertDeferredEquals(dl1, value)
         return d
     
@@ -131,14 +129,14 @@ class BasicControllerServiceTest(DeferredTestCase):
         pValue = map(pickle.dumps, value, [2]*cnt)
         key = 'abcdefg'
         key = key[:cnt]
-        sc = self.cs.submitCommand
         for n in range(cnt):
-            d = sc(Command("putPickle", key[n], pValue[n]), 0)
+            d = self.cs.putPickle(key[n], pValue[n], 0)
             l1.append(d)
         dl1 = defer.DeferredList(l1)
         dl1.addCallback(lambda _:defer.gatherResults(
-                map(sc,map(Command, ["getPickle"]*cnt, key), [0]*cnt))
-        ).addCallback(lambda r: map(pickle.loads, r))
+                map(self.cs.getPickle, key, [0]*cnt))
+        ).addCallback(lambda r: map(pickle.loads, 
+                map(list.__getitem__, r, [0]*cnt)))
         d = self.assertDeferredEquals(dl1, value)
         return d
     
@@ -153,11 +151,10 @@ class BasicControllerServiceTest(DeferredTestCase):
             
         dlist = []
         for id in self.cs.engine.keys():
-            if self.cs.engine[id] is not 'restarting':
-                d = defer.succeed(None)
-                for c in commands:
-                    d = self.assertDeferredEquals(self.cs.execute(c[1], id), c, chainDeferred=d)
-                dlist.append(d)
+            d = defer.succeed(None)
+            for c in commands:
+                d = self.assertDeferredEquals(self.cs.execute(c[1], id), [c], chainDeferred=d)
+            dlist.append(d)
         d = defer.DeferredList(dlist)
         return d
     

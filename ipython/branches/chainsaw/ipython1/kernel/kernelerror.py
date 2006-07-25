@@ -19,3 +19,5 @@ class NotDefined:
     def __repr__(self):
         return '<NotDefined: %s>' % self.name
 
+class IdInUse(Exception):
+    pass

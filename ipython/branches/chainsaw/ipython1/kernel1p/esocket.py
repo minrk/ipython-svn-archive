@@ -88,6 +88,7 @@ class Int32Socket(object):
             return ""
             
         # Now read the rest, discarding any extra
+        justRecvd = 0
         while soFar < total:
             buf = self.sock.recv(size)
             justRecvd = len(buf)
