@@ -162,128 +162,104 @@ class ControllerService(service.Service):
             return defer.succeed(None)
         l = []
         for e in engines:
-            d = e.cleanQueue()
-            l.append(d)
-            return defer.gatherResults(l)
+            l.append(e.cleanQueue())
+        return defer.gatherResults(l)
     
     def execute(self, lines, id='all'):
         """Execute lines of Python code."""
         log.msg("executing %s on %s" %(lines, id))
         engines = self.engineList(id)
-        if not engines:
-            return defer.succeed(None)
         l = []
         for e in engines:
-            d = e.execute(lines)
-            l.append(d)
-            return defer.gatherResults(l)        
+            l.append(e.execute(lines))
+        return defer.gatherResults(l)        
     
     def put(self, key, value, id='all'):
         """Put value into locals namespace with name key."""
         log.msg("putting %s=%s on %s" %(key, value, id))
         engines = self.engineList(id)
-        if not engines:
-            return defer.succeed(None)
         l = []
         for e in engines:
-            d = e.put(key, value)
-            l.append(d)
-            return defer.gatherResults(l)
+            l.append(e.put(key, value))
+        return defer.gatherResults(l)
     
     def putPickle(self, key, package, id='all'):
         """Unpickle package and put into the locals namespace with name key."""
         log.msg("putting pickle %s=%s on %s" %(key, package, id))
         engines = self.engineList(id)
-        if not engines:
-            return defer.succeed(None)
         l = []
         for e in engines:
-            d = e.putPickle(key, package)
-            l.append(d)
-            return defer.gatherResults(l)
+            l.append(e.putPickle(key, package))
+        return defer.gatherResults(l)
     
     def get(self, key, id='all'):
         """Gets an item out of the self.locals dict by key."""
         log.msg("getting %s from %s" %(key, id))
         engines = self.engineList(id)
-        if not engines:
-            return defer.succeed(None)
         l = []
         for e in engines:
-            d = e.get(key)
-            l.append(d)
-            return defer.gatherResults(l)
+            l.append(e.get(key))
+        return defer.gatherResults(l)
     
     def getPickle(self, key, id='all'):
         """Gets an item out of the self.locals dist by key and pickles it."""
         log.msg("getting pickle %s from %s" %(key, id))
         engines = self.engineList(id)
-        if not engines:
-            return defer.succeed(None)
         l = []
         for e in engines:
-            d = e.getPickle(key)
-            l.append(d)
-            return defer.gatherResults(l)
+            l.append(e.getPickle(key))
+        return defer.gatherResults(l)
     
     def update(self, dictOfData, id='all'):
         """Updates the self.locals dict with the dictOfData."""
         log.msg("updating %s with %s" %(id, dict))
         engines = self.engineList(id)
-        if not engines:
-            return defer.succeed(None)
         l = []
         for e in engines:
-            d = e.update(dictOfData)
-            l.append(d)
-            return defer.gatherResults(l)
+            l.append(e.update(dictOfData))
+        return defer.gatherResults(l)
     
     def updatePickle(self, dictPickle, id='all'):
         """Updates the self.locals dict with the pickled dict."""
         log.msg("updating %s with pickle %s" %(id, dictPickle))
         engines = self.engineList(id)
-        if not engines:
-            return defer.succeed(None)
         l = []
         for e in engines:
-            d = e.updatePickle(dictPickle)
-            l.append(d)
-            return defer.gatherResults(l)
+            l.append(e.updatePickle(dictPickle))
+        return defer.gatherResults(l)
     
     def reset(self, id='all'):
         """Reset the InteractiveShell."""
         log.msg("resetting %s" %(id))
         engines = self.engineList(id)
-        if not engines:
-            return defer.succeed(None)
         l = []
         for e in engines:
-            d = e.reset()
-            l.append(d)
-            return defer.gatherResults(l)
-    
+            l.append(e.reset())
+        return defer.gatherResults(l)
+    def kill(self, id='all'):
+        log.msg("resetting %s" %(id))
+        engines = self.engineList(id)
+        l = []
+        for e in engines:
+            l.append(e.kill())
+        return defer.gatherResults(l)
+        
     def getCommand(self, i=None, id='all'):
         """Get the stdin/stdout/stderr of command i."""
         log.msg("getting command %s from %s" %(i, id))
         engines = self.engineList(id)
-        if not engines:
-            return defer.succeed(None)
         l = []
         for e in engines:
-            d = e.getCommand(i)
-            l.append(d)
-            return defer.gatherResults(l)
+            l.append(e.getCommand(i))
+        return defer.gatherResults(l)
     
     def getLastCommandIndex(self, id='all'):
         """Get the index of the last command."""
         log.msg("getting last command index from %s" %(id))
-        if not engines:
-            return defer.succeed(None)
         engines = self.engineList(id)
         l = []
         for e in engines:
-            d = e.getLastCommandIndex()
-            l.append(d)
-            return defer.gatherResults(l)
+            l.append(e.getLastCommandIndex())
+        return defer.gatherResults(l)
     
 

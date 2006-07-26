@@ -12,7 +12,7 @@ NotDefined -- A class to represent a nonexistant python variable.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-class NotDefined:
+class NotDefined(Exception):
     def __init__(self, name):
         self.name = name
 

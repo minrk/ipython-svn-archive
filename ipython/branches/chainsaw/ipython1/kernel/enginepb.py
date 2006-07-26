@@ -81,7 +81,10 @@ class IPBEngine(Interface):
     
     def remote_reset(self):
         """Reset the InteractiveShell."""
-    
+
+    def remote_kill(self):
+        """kill the InteractiveShell."""
+
     def remote_getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
     
@@ -93,9 +96,9 @@ class IPBEngine(Interface):
     
 
 class PBEngineReferenceFromService(pb.Referenceable):
-    
+        
     implements(IPBEngine)
-    
+        
     def __init__(self, service):
         self.service = service
 #        self.id = None
@@ -123,6 +126,9 @@ class PBEngineReferenceFromService(pb.Referenceable):
     
     def remote_reset(self):
         return self.service.reset()
+
+    def remote_kill(self):
+        reactor.stop()
     
     def remote_getCommand(self, i=None):
         return self.service.getCommand(i)

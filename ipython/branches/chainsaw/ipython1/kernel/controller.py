@@ -82,33 +82,31 @@ class ControlTCPProtocol(basic.LineReceiver):
         if len(split_line) == 1:
             cmd = split_line[0]
             args = None
+            id = None
         elif len(split_line) == 2:
             cmd = split_line[0]
-            args = split_line[1]
+            arglist = split_line[1].split('::')
+            if len(arglist) > 1:
+                id = self.parseID(arglist[1:])
+            else:
+                id = 'all'
+            args = arglist[0]
             
         f = getattr(self, 'handle_%s_%s' %
                     (self.state, cmd), None)            
         if f:
             # Handler resolved with state and cmd 
-            f(args)
+            f(args, id)
         else:
             f = getattr(self, 'handle_%s' %
                 (cmd), None)
             if f:
                 # Handler resolved with only cmd
-                f(args)
+                f(args, id)
             else:
-                f = getattr(self, 'handle_%s' %
-                    (self.state), None)
-                if f:
-                    # Handler resolve with only self.state
-                    # Pass the entire line rather than just args
-                    f(line)
-                else:
-                    # No handler resolved
-                    self.sendLine("BAD")
-                    self.state = 'init'
-                    self.reset_work_vars()
+                self.sendLine("BAD")
+                self.state = 'init'
+                self.reset_work_vars()
     
     # Copied from twisted.mail.imap4
     def rawDataReceived(self, data):
@@ -136,27 +134,15 @@ class ControlTCPProtocol(basic.LineReceiver):
             except:
                 return 'all'
     
-    def handle_init_PUSH(self, args):
+    def handle_init_PUSH(self, args, id):
         
         # Parse the args
         if not args:
             self.push_finish("FAIL")
             return
         else:
-            argsList = args.split('::')
-                                            
-        args_str = argsList[0]
-        if len(argsList) > 1:
-            id = self.parseID(argsList[1:])
-        else:
-            id = 'all'
+            args_str = args
 
-        if 'FORWARD' in args_str:
-            self.work_vars['push_forward'] = True
-            args_str.replace("FORWARD ","")
-        else:
-            self.work_vars['push_forward'] = False
-        
         self.work_vars['push_name'] = args_str
         self.work_vars['push_id'] = id
         # Setup to process the command
@@ -173,7 +159,7 @@ class ControlTCPProtocol(basic.LineReceiver):
         self.sendLine("PUSH %s" % msg)
         self._reset()
     
-    def handle_pushing_PICKLE(self, size_str):
+    def handle_pushing_PICKLE(self, size_str, id):
         try:
             size = int(size_str)
         except (ValueError, TypeError):
@@ -197,20 +183,15 @@ class ControlTCPProtocol(basic.LineReceiver):
     ##### The PULL command
     #####
     
-    def handle_init_PULL(self, args):
+    def handle_init_PULL(self, args, id):
         
         # Parse the args
         if not args:
             self.pull_finish("FAIL")
             return
         else:
-            args_list = args.split("::")
-            
-        pull_name = args_list[0]
-        if len(args_list) is not 0:
-            id = self.parseID(args_list[1:])
-        else:
-            id = 'all'
+            pull_name = args
+
         self.work_vars['pull_type'] = 'PICKLE'
         d = self.factory.pull(pull_name, id)
                 
@@ -236,52 +217,13 @@ class ControlTCPProtocol(basic.LineReceiver):
         self._reset()
     
     #####
-    ##### The RESULT command
-    #####
-    
-    def handle_init_RESULT(self, args):
-        
-        if args is None:
-            d = self.factory.get_last_result()
-        else:
-            try:
-                cmd_num = int(args)
-            except (ValueError, TypeError):
-                self.result_finish("FAIL")
-                return
-            else:
-                d = self.factory.get_result(cmd_num)
-                                
-        d.addCallback(self.result_ok)
-        d.addErrback(self.result_fail)
-    
-    def result_ok(self, result):
-        # Add error code here and chain the callbacks
-        try:
-            presult = pickle.dumps(result, 2)
-        except pickle.PickleError:
-            self.result_finish("FAIL")
-        else:
-            self.sendLine("PICKLE %s" % len(presult))
-            self.transport.write(presult)
-            self.result_finish("OK")
-    
-    def result_fail(self, failure):
-        self.result_finish("FAIL")
-    
-    def result_finish(self, msg):
-        self.sendLine("RESULT %s" % msg)
-        self._reset()
-    
-    #####
     ##### The EXECUTE command
     #####
     
-    def handle_init_EXECUTE(self, args):
+    def handle_init_EXECUTE(self, args, id):
         """Handle the EXECUTE command."""
                 
         # Parse the args
-        print args
         if not args:
             self.execute_finish("FAIL")
             return
@@ -292,10 +234,6 @@ class ControlTCPProtocol(basic.LineReceiver):
         else:
             block = False
             execute_cmd = args
-        cmdList = execute_cmd.split('::')
-        print cmdList
-        execute_cmd = cmdList[0]
-        id = self.parseID(cmdList[1:])
         
         if not execute_cmd:
             self.execute_finish("FAIL")
@@ -308,6 +246,7 @@ class ControlTCPProtocol(basic.LineReceiver):
         else:                   
             self.execute_finish("OK")   
             d.addCallback(self.execute_ok)
+        return d
     
     def execute_ok(self, result):
         for tonotify in self.factory.notifiers():
@@ -325,99 +264,44 @@ class ControlTCPProtocol(basic.LineReceiver):
             self.execute_ok(result)
     
     def execute_fail(self, f):
-        pass
+        self.execute_finish("FAIL")
     
     def execute_finish(self, msg):
         self.sendLine("EXECUTE %s" % msg)
         self._reset()
     
     #####
-    ##### The MOVE command
+    ##### GETCOMMAND command
     #####
     
-    def handle_init_MOVE(self, args):
-        """Handle a MOVE commmand."""
+    def handle_init_GETCOMMAND(self, args, id):
         
-        print "Moving: ", args
-        
-        self.work_vars['move_target_addrs'] = []
-        self.work_vars['move_failures'] = []            
-        
-        # Process args
-        args_split = args.split(" ", 2)
-        if len(args_split) < 3:
-            self.finish_move("FAIL")
-        # No test is done to see if these are valid python variable names
-        self.work_vars['move_source_key'] = args_split[0]
-        self.work_vars['move_target_key'] = args_split[1]
+        d = self.factory.getCommand(int(args), id)
+        d.addCallbacks(self.getCommand_ok, self.getCommand_fail)
+    
+    def getCommand_ok(self, result):
         try:
-            self.work_vars['move_targets'] = \
-                map(int,args_split[2].split(" "))
-        except:
-            self.move_finish("FAIL")
+            package = pickle.dumps(result, 2)
+        except pickle.PickleError:
+            self.getCommand_finish("FAIL")
         else:
-            # Lookup the addresses and fail one any don't exist        
-            for t in self.work_vars['move_targets']:
-                t_addr = self.factory.get_cluster_addr(t)
-                if t_addr is None:
-                    self.work_vars['move_failures'].append(t)                    
-                self.work_vars['move_target_addrs'].append(t_addr)
-            if None in self.work_vars['move_target_addrs']:
-                self.move_finish("FAIL")
-            else: # All addresses are present in the cluster
-                print "Targets: ", self.work_vars['move_targets']
-                print "Targets: ", self.work_vars['move_target_addrs']                
-                d = self.factory.pull(pull_name)
-                d.addCallback(self.move_pull_ok)
-                d.addErrback(self.move_pull_fail)
+            self.sendLine("PICKLE %i" % len(package))
+            self.transport.write(package)
+            self.getCommand_finish("OK")
     
-    def move_pull_ok(self, result):
-        # Add error code here and chain the callbacks
-        print "move_pull_ok", result
-        try:
-            self.work_vars['move_pickle'] = pickle.dumps(result, 2)
-        except:
-            self.move_finish("FAIL")
-        else:
-            for t in self.work_vars['move_targets']:
-                t_addr = self.factory.get_cluster_addr(t)
-                c = ClientCreator(reactor, Mover)
-                d = c.connectTCP(t_addr[0], t_addr[1])
-                d.addCallback(self.move_push)
+    def getCommand_fail(self, f):
+        self.execute_finish("FAIL")
     
-    def move_pull_fail(self, f):
-        print f.getTrackback()
-        self.move_finish("FAIL")
-    
-    def move_push(self, proto):
-        d = proto.push(self.work_vars['move_target_key'], 
-            self.work_vars['move_pickle'])
-        
-        def handle_move_push(result):
-            if result:
-                self.move_finish("OK")
-            else:
-                self.move_finish("FAIL")
-        
-        d.addCallback(handle_move_push)
-    
-    def move_push(self):
-        pass
-    
-    def move_finish(self, msg):
-        flist = map(str, self.work_vars['move_failures'])
-        fstr = " ".join(flist)
-        self.sendLine("MOVE %s %s" % (msg, fstr))
-        self._reset()
-    
-    
+    def getCommand_finish(self, msg):
+        self.sendLine("GETCOMMAND %s", msg)
+
     #####
     ##### Kernel control commands
     #####
     
-    def handle_init_STATUS(self, args):
+    def handle_init_STATUS(self, args, id):
         
-        status = self.factory.status()
+        status = self.factory.status(id)
         result = (status, self.state)    
                 
         try:
@@ -429,22 +313,7 @@ class ControlTCPProtocol(basic.LineReceiver):
             self.transport.write(package)
             self.sendLine('STATUS OK')
     
-    def handle_init_ALLOW(self, args):
-        args_split = args.split(" ")
-        if len(args_split) == 2:
-            action, host = args_split
-            if action == "TRUE":
-                self.factory.allow_client(host)
-                self.sendLine('ALLOW OK')
-            elif action == "FALSE":
-                self.factory.deny_client(host)
-                self.sendLine('ALLOW OK')
-            else:
-                self.sendLine('ALLOW FAIL')
-        else:
-            self.sendLine('ALLOW FAIL')
-    
-    def handle_init_NOTIFY(self, args):
+    def handle_init_NOTIFY(self, args, id):
         args_split = args.split(" ")
         if len(args_split) == 3:
             action, host, port = args_split
@@ -464,52 +333,19 @@ class ControlTCPProtocol(basic.LineReceiver):
         else:
             self.sendLine('NOTIFY FAIL')
     
-    # The CLUSTER command
-    
-    def handle_init_CLUSTER(self, args):
-        if args == "CLEAR":
-            self.factory.clear_cluster()
-            self.cluster_finish("OK")
-        elif args == "CREATE":
-            self.state = 'cluster'
-        else:
-            self.cluster_finish('FAIL')
-    
-    def cluster_finish(self,msg):
-        self.sendLine("CLUSTER %s" % msg)
-        self._reset()
-    
-    def handle_cluster_PICKLE(self, size_str):
-        try:
-            size = int(size_str)
-        except (ValueError, TypeError):
-            self.cluster_finish("FAIL")
-        else:         
-            d = self.setup_literal(size)
-            d.addCallback(self.cluster_process_pickle)
-    
-    def cluster_process_pickle(self, package):
-        try:
-            data = pickle.loads(package)
-        except pickle.PickleError:
-            self.cluster_finish("FAIL")
-        else:
-            self.factory.create_cluster(data)
-            self.cluster_finish("OK")        
-    
     # The RESET, KILL and DISCONNECT commands
     
-    def handle_RESET(self, args):
-        log.msg("Resettng the kernel...")
-        self.factory.reset()
+    def handle_RESET(self, args, id):
+        log.msg("Resettng engine %s" %id)
+        self.factory.reset(id)
         self.sendLine('RESET OK')
         self._reset()
     
-    def handle_KILL(self, args):
-        log.msg("Killing the kernel...")
-        reactor.stop()
+    def handle_KILL(self, args, id):
+        log.msg("Killing engine %s" %id)
+        self.factory.kill(id)
     
-    def handle_DISCONNECT(self,args):
+    def handle_DISCONNECT(self, args, id):
         log.msg("Disconnecting client...")
         self.sendLine("DISCONNECT OK")
         self.transport.loseConnection()
@@ -579,29 +415,21 @@ class ControlFactoryFromService(protocol.ServerFactory):
         """Put value into locals namespace with name key."""
         return self.service.put(key, value, id)
     
-    def pushPickle(self, key, package, id='all'):
-        """Unpickle package and put into the locals namespace with name key."""
-        return self.service.putPickle(key, package, id)
-    
     def pull(self, key, id='all'):
         """Gets an item out of the self.locals dict by key."""
         return self.service.get(key, id)
-    
-    def pullPickle(self, key, id='all'):
-        """Gets an item out of the self.locals dist by key and pickles it."""
-        return self.service.getPickle(key, id)
     
     def update(self, dictOfData, id='all'):
         """Updates the self.locals dict with the dictOfData."""
         return self.service.update(dictOfData, id)
     
-    def updatePickle(self, dictPickle, id='all'):
-        """Updates the self.locals dict with the pickled dict."""
-        return self.service.updatePickle(dictPickle, id)
-    
     def reset(self, id='all'):
         """Reset the InteractiveShell."""
         return self.service.reset(id)
+    
+    def kill(self, id='all'):
+        """kill an engine"""
+        return self.service.kill(id)
     
     def getCommand(self, i=None, id='all'):
         """Get the stdin/stdout/stderr of command i."""
