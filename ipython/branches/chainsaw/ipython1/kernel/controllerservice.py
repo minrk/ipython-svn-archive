@@ -158,6 +158,8 @@ class ControllerService(service.Service):
         """Cleans out pending commands in the kernel's queue."""
         log.msg("cleaning queue %s" %id)
         engines = self.engineList(id)
+        if not engines:
+            return defer.succeed(None)
         l = []
         for e in engines:
             d = e.cleanQueue()
@@ -168,6 +170,8 @@ class ControllerService(service.Service):
         """Execute lines of Python code."""
         log.msg("executing %s on %s" %(lines, id))
         engines = self.engineList(id)
+        if not engines:
+            return defer.succeed(None)
         l = []
         for e in engines:
             d = e.execute(lines)
@@ -178,6 +182,8 @@ class ControllerService(service.Service):
         """Put value into locals namespace with name key."""
         log.msg("putting %s=%s on %s" %(key, value, id))
         engines = self.engineList(id)
+        if not engines:
+            return defer.succeed(None)
         l = []
         for e in engines:
             d = e.put(key, value)
@@ -188,6 +194,8 @@ class ControllerService(service.Service):
         """Unpickle package and put into the locals namespace with name key."""
         log.msg("putting pickle %s=%s on %s" %(key, package, id))
         engines = self.engineList(id)
+        if not engines:
+            return defer.succeed(None)
         l = []
         for e in engines:
             d = e.putPickle(key, package)
@@ -198,6 +206,8 @@ class ControllerService(service.Service):
         """Gets an item out of the self.locals dict by key."""
         log.msg("getting %s from %s" %(key, id))
         engines = self.engineList(id)
+        if not engines:
+            return defer.succeed(None)
         l = []
         for e in engines:
             d = e.get(key)
@@ -208,6 +218,8 @@ class ControllerService(service.Service):
         """Gets an item out of the self.locals dist by key and pickles it."""
         log.msg("getting pickle %s from %s" %(key, id))
         engines = self.engineList(id)
+        if not engines:
+            return defer.succeed(None)
         l = []
         for e in engines:
             d = e.getPickle(key)
@@ -218,6 +230,8 @@ class ControllerService(service.Service):
         """Updates the self.locals dict with the dictOfData."""
         log.msg("updating %s with %s" %(id, dict))
         engines = self.engineList(id)
+        if not engines:
+            return defer.succeed(None)
         l = []
         for e in engines:
             d = e.update(dictOfData)
@@ -228,6 +242,8 @@ class ControllerService(service.Service):
         """Updates the self.locals dict with the pickled dict."""
         log.msg("updating %s with pickle %s" %(id, dictPickle))
         engines = self.engineList(id)
+        if not engines:
+            return defer.succeed(None)
         l = []
         for e in engines:
             d = e.updatePickle(dictPickle)
@@ -238,6 +254,8 @@ class ControllerService(service.Service):
         """Reset the InteractiveShell."""
         log.msg("resetting %s" %(id))
         engines = self.engineList(id)
+        if not engines:
+            return defer.succeed(None)
         l = []
         for e in engines:
             d = e.reset()
@@ -248,6 +266,8 @@ class ControllerService(service.Service):
         """Get the stdin/stdout/stderr of command i."""
         log.msg("getting command %s from %s" %(i, id))
         engines = self.engineList(id)
+        if not engines:
+            return defer.succeed(None)
         l = []
         for e in engines:
             d = e.getCommand(i)
@@ -257,6 +277,8 @@ class ControllerService(service.Service):
     def getLastCommandIndex(self, id='all'):
         """Get the index of the last command."""
         log.msg("getting last command index from %s" %(id))
+        if not engines:
+            return defer.succeed(None)
         engines = self.engineList(id)
         l = []
         for e in engines:

@@ -78,6 +78,7 @@ class ControlTCPProtocol(basic.LineReceiver):
     
     def lineReceived(self, line):
         split_line = line.split(" ", 1)
+        print split_line
         if len(split_line) == 1:
             cmd = split_line[0]
             args = None

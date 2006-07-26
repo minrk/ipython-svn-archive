@@ -1,3 +1,4 @@
+# -*- test-case-name: ipython1.test.test_controllerclient -*-
 """The kernel interface.
 
 The kernel interface is a set of classes that provide a high level interface
@@ -98,15 +99,15 @@ def _tar_module(mod):
     
     return tarball_name, file_string
                     
-class RemoteKernel(object):
+class RemoteController(object):
     """A high level interface to a remotely running ipython kernel."""
     
     def __init__(self, addr):
-        """Create a RemoteKernel instance pointed at a specific kernel.
+        """Create a RemoteController instance pointed at a specific kernel.
         
-        Upon creation, the RemoteKernel class knows about, but is not
+        Upon creation, the RemoteController class knows about, but is not
         connected to the kernel.  The connection occurs automatically when
-        other methods of RemoteKernel are called.
+        other methods of RemoteController are called.
         
         @arg addr:
             The (ip,port) tuple of the kernel.  The ip in a string
@@ -117,7 +118,8 @@ class RemoteKernel(object):
         self.block = False
         
     def __del__(self):
-        self.disconnect()
+        print 'del'
+        return self.disconnect()
         
     def is_connected(self):
         """Are we connected to the kernel?""" 
@@ -135,9 +137,9 @@ class RemoteKernel(object):
             self.connect()
             
     def connect(self):
-        """Initiate a new connection to the kernel."""
+        """Initiate a new connection to the controller."""
         
-        print "Connecting to kernel: ", self.addr
+        print "Connecting to controller: ", self.addr
         try:
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         except socket.error, e:
@@ -201,8 +203,12 @@ class RemoteKernel(object):
                 data = None
                 line = ""
         else:
-            self.es.write_line("EXECUTE %s::%s" % (source, id))
+            string = "EXECUTE %s::%s" % (source, id)
+            print string
+            self.es.write_line(string)
+            print 'a'
             line, self.extra = self.es.read_line(self.extra)
+            print 'b'
             data = None
              
         if line == "EXECUTE OK":
@@ -222,14 +228,14 @@ class RemoteKernel(object):
         # Now run the code
         self.execute(source)
         
-    def push(self, key, value, id, forward=False):
+    def push(self, key, value, id='all', forward=False):
         """Send a python object to the namespace of a kernel.
         
         There is also a dictionary style interface to the push command:
                 
-        >>> rk = RemoteKernel(addr)
+        >>> rc = RemoteController(addr)
         
-        >>> rk['a'] = 10    # Same as rk.push('a', 10)
+        >>> rc['a'] = 10    # Same as rc.push('a', 10)
         
         @arg value:
             The python object to send
@@ -262,8 +268,8 @@ class RemoteKernel(object):
     def update(self,dict):
         """Send the dict of key value pairs to the kernel's namespace.
         
-        >>> rk = RemoteKernel(addr)
-        >>> rk.update({'a':1,'b':2,'c':'mystring})    
+        >>> rc = RemoteController(addr)
+        >>> rc.update({'a':1,'b':2,'c':'mystring})    
         # sends a, b and c to the kernel
         
         @arg dict:
@@ -283,9 +289,9 @@ class RemoteKernel(object):
         
         Like push, pull also has a dictionary interface:
 
-        >>> rk = RemoteKernel(addr)
-        >>> rk['a'] = 10    # Same as rk.push('a', 10)
-        >>> rk['a']         # Same as rk.pull('a')
+        >>> rc = RemoteController(addr)
+        >>> rc['a'] = 10    # Same as rc.push('a', 10)
+        >>> rc['a']         # Same as rc.pull('a')
         10
         
         @arg key:
@@ -532,15 +538,20 @@ class RemoteKernel(object):
 
     def disconnect(self):
         """Disconnect from the kernel, but leave it running."""
+        print 'disconnect'
         if self.is_connected():
             self.es.write_line("DISCONNECT")
-            line, self.extra = self.es.read_line(self.extra)
+            print 'disconnecting'
+            line, self.extra = self.es.read_line()#self.extra)
             if line == "DISCONNECT OK":
+                print line
                 self.s.close()
                 del self.s
                 del self.es
+                print 'aok'
                 return True
             else:
+                print line
                 return False
         else:
             return True
@@ -600,7 +611,7 @@ class InteractiveCluster(object):
         
         Currently, this addition does not eliminate duplicates.
         """
-        # Don't simply call start() as I want references to the RemoteKernel
+        # Don't simply call start() as I want references to the RemoteController
         # objects and not copies.  This preserves connections.
         ic = InteractiveCluster()
         for w in first.kernels:
@@ -653,7 +664,7 @@ class InteractiveCluster(object):
         """
         for a in addr_list:
             self.kernel_addrs.append(a)
-            self.kernels.append(RemoteKernel(a))
+            self.kernels.append(RemoteController(a))
         self.count = len(self.kernels)
         
         # Let everyone know about each other
