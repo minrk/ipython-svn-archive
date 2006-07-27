@@ -28,6 +28,24 @@ from twisted.spread import pb
 from ipython1.kernel.engineservice import Command
 from ipython1.kernel.kernelerror import *
 
+class ResultReporterProtocol(protocol.DatagramProtocol):
+    
+    def __init__(self, result, addr):
+        self.result = result
+        self.addr = addr
+    
+    def startProtocol(self):
+        package = pickle.dumps(self.result, 2)
+        self.transport.write("RESULT %i %s" % (len(package), package), 
+            self.addr)
+        self.tried = True
+    
+    def datagramReceived(self,data, sending_addr):
+        if sending_addr == self.addr and data == "RESULT OK":
+            self.transport.stopListening()
+    
+
+
 # Interface for the Controller Service
 
 class IRemoteController(Interface):
@@ -98,6 +116,7 @@ class ControllerService(service.Service):
     
     def __init__(self, maxEngines=255, saveIDs=False):
         self.saveIDs = saveIDs
+        self._notifiers = []
         self.engine = {}
         self.availableID = range(maxEngines,-1,-1)#[255,...,0]
     
@@ -192,8 +211,8 @@ class ControllerService(service.Service):
         engines = self.engineList(id)
         l = []
         for e in engines:
-            l.append(e.execute(lines))
-        return defer.gatherResults(l)        
+            l.append(e.execute(lines).addCallback(self.notify))
+        return defer.gatherResults(l)
     
     def put(self, key, value, id='all'):
         """Put value into locals namespace with name key."""
@@ -269,7 +288,7 @@ class ControllerService(service.Service):
         return defer.gatherResults(l)
     
     def kill(self, id='all'):
-        log.msg("resetting %s" %(id))
+        log.msg("killing %s" %(id))
         engines = self.engineList(id)
         l = []
         for e in engines:
@@ -293,5 +312,30 @@ class ControllerService(service.Service):
         for e in engines:
             l.append(e.getLastCommandIndex())
         return defer.gatherResults(l)
+        
+    
+    #notification methods
+
+    def notifiers(self):
+        return self._notifiers
+    
+    def addNotifier(self, n):
+        if n not in self._notifiers:
+            self._notifiers.append(n)
+        print "Notifiers: ", self._notifiers
+    
+    def delNotifier(self, n):
+        if n in self._notifiers:
+            del self._notifiers[self._notifiers.index(n)]
+        print "Notifiers: ", self._notifiers
+    
+    def notify(self, result):
+        for tonotify in self.notifiers():
+            reactor.listenUDP(0,ResultReporterProtocol(result, tonotify))
+        return result
+    
+    
+    
+    
     
 

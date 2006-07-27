@@ -24,13 +24,18 @@ from ipython1.kernel import engineservice, enginepb
 
 
 def main(controller, port, n):
-    log.startLogging(sys.stdout)
     for i in range(n):
         service = engineservice.EngineService()
         reactor.connectTCP(controller, port,
-            enginepb.PBEngineClientFactory(service))
+            enginepb.PBEngineClientFactory(service))#.addErrback(
+#                lambda _: tryAagain(controller, port, n))            
         service.startService()
     reactor.run()
+
+def tryAgain(controller, port, n):
+    print "connection refused, trying again..."
+    time.sleep(1)
+    main(controller, port, n)
 
 def start(port=10201, controller = '127.0.0.1', n=1):
     parser = OptionParser()
@@ -45,6 +50,7 @@ def start(port=10201, controller = '127.0.0.1', n=1):
         help="the number of engines to start")
     (options, args) = parser.parse_args()
     print "Connecting the engine to %s:%i" % (options.controller,options.port)
+    log.startLogging(sys.stdout)
     main(options.controller, options.port, options.n)
     
 if __name__ == "__main__":

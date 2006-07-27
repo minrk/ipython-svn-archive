@@ -15,7 +15,7 @@ parts of the controller.
 
 import cPickle as pickle
 
-from twisted.internet import protocol, defer
+from twisted.internet import protocol, defer, reactor
 from twisted.protocols import basic
 from twisted.python import components, log
 
@@ -46,24 +46,6 @@ class LiteralString:
         return passon
     
 
-class ResultReporterProtocol(protocol.DatagramProtocol):
-    
-    def __init__(self, result, addr):
-        self.result = result
-        self.addr = addr
-    
-    def startProtocol(self):
-        package = pickle.dumps(self.result, 2)
-        self.transport.write("RESULT %i %s" % (len(package), package), 
-            self.addr)
-        self.tried = True
-    
-    def datagramReceived(self,data, sending_addr):
-        if sending_addr == self.addr and data == "RESULT OK":
-            self.transport.stopListening()
-    
-
-
 class ControlTCPProtocol(basic.LineReceiver):
     
     def connectionMade(self):
@@ -71,10 +53,6 @@ class ControlTCPProtocol(basic.LineReceiver):
         self.transport.setTcpNoDelay(True)
         self.state = 'init'
         self.work_vars = {}
-        peer = self.transport.getPeer()
-#        if not self.factory.is_allowed(peer.host):
-#            log.msg("Denied Client: %s" % peer.host)
-#            self.transport.loseConnection()
     
     def lineReceived(self, line):
         split_line = line.split(" ", 1)
@@ -288,18 +266,19 @@ class ControlTCPProtocol(basic.LineReceiver):
             self.execute_finish("FAIL")
             return
         
-        d = self.factory.execute(execute_cmd, id)
-        d.addErrback(self.execute_fail)
         if block:
+            d = self.factory.execute(execute_cmd, id)
             d.addCallback(self.execute_ok_block)
         else:                   
             self.execute_finish("OK")   
-            d.addCallback(self.execute_ok)
+            d = self.factory.execute(execute_cmd, id)
+        d.addErrback(self.execute_fail)
         return d
     
     def execute_ok(self, result):
-        for tonotify in self.factory.notifiers():
-            reactor.listenUDP(0,ResultReporterProtocol(result, tonotify) )
+        return
+#        for tonotify in self.factory.notifiers():
+#            reactor.listenUDP(0,ResultReporterProtocol(result, tonotify))
     
     def execute_ok_block(self, result):
         try:
@@ -414,14 +393,12 @@ class ControlTCPProtocol(basic.LineReceiver):
     # The RESET, KILL and DISCONNECT commands
     
     def handle_RESET(self, args, id):
-        log.msg("Resettng engine %s" %id)
         self.factory.reset(id)
         self.sendLine('RESET OK')
         self._reset()
     
     def handle_KILL(self, args, id):
-        log.msg("Killing engine %s" %id)
-        self.factory.kill(id)
+        return self.factory.kill(id).addErrback(lambda _: 7)
     
     def handle_DISCONNECT(self, args, id):
         log.msg("Disconnecting client...")
@@ -484,7 +461,12 @@ class ControlFactoryFromService(protocol.ServerFactory):
     
     def __init__(self, service):
         self.service = service
-        self.notifiers = list
+    
+    def add_notifier(self, n):
+        return self.service.addNotifier(n)
+    
+    def del_notifier(self, n):
+        return self.service.delNotifier(self, n)
     
     #IQueuedEngine multiplexer methods
     def cleanQueue(self, id='all'):

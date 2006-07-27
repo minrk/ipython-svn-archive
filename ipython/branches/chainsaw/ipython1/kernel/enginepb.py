@@ -21,6 +21,7 @@ from ipython1.kernel import enginepb
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
+import time
 
 from twisted.python import components, log
 from twisted.spread import pb
@@ -56,6 +57,11 @@ class PBEngineClientFactory(pb.PBClientFactory):
         self.service.id = id
         log.msg("got ID: %r" % id)
         return id
+    
+    def clientConnectionFailed(self, connector, reason):
+        log.msg("connection failed, retrying...")
+        time.sleep(2)
+        connector.connect()
     
 
 # Expose a PB interface to the EngineService
@@ -127,7 +133,7 @@ class PBEngineReferenceFromService(pb.Referenceable):
         return self.service.reset()
 
     def remote_kill(self):
-        self.service.kill()
+        return self.service.kill()
     
     def remote_getCommand(self, i=None):
         return self.service.getCommand(i)
@@ -183,8 +189,7 @@ class EngineFromReference(object):
 
     def kill(self):
         """Reset the InteractiveShell."""
-        self.callRemote('kill')
-        return defer.succeed(None)
+        return self.callRemote('kill').addErrback(lambda _:defer.succeed(None))
     
     def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
