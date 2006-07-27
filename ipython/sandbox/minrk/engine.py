@@ -7,27 +7,18 @@
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 import cPickle as pickle
-import sys
 
-from twisted.internet import protocol, reactor, threads, defer
 from twisted.protocols import basic
-from twisted.python.runtime import seconds
-from twisted.python import log
-from twisted.python import failure
-from zope.interface import implements
 
-from ipython1.kernel import networkinterfaces as NI
-
-class EngineProtocol(basic.Int32StringReceiver):
-    implements(NI.IEngineProtocol)
+class ControlProtocol(basic.Int32StringReceiver):
     
     def connectionMade(self):
         log.msg("Connection Made...")
         self.transport.setTcpNoDelay(True)
         peer = self.transport.getPeer()
-        if not self.factory.is_allowed(peer.host):
-            log.msg("Denied Client: %s" % peer.host)
-            self.transport.loseConnection()
+#        if not self.factory.is_allowed(peer.host):
+#            log.msg("Denied Client: %s" % peer.host)
+#            self.transport.loseConnection()
     
     def stringReceived(self, string):
         split_string = string.split(" ", 1)
@@ -38,27 +29,14 @@ class EngineProtocol(basic.Int32StringReceiver):
             cmd = split_string[0]
             args = split_string[1]
             
-        f = getattr(self, 'handle_%s_%s' %
-                    (self.state, cmd), None)            
-        if f:
-            # Handler resolved with state and cmd 
-            f(args)
-        else:
             f = getattr(self, 'handle_%s' %
                 (cmd), None)
             if f:
-                # Handler resolved with only cmd
+                # Handler resolved with cmd
                 f(args)
             else:
-                f = getattr(self, 'handle_%s' %
-                    (self.state), None)
-                if f:
-                    # Handler resolve with only self.state
-                    # Pass the entire line rather than just args
-                    f(string)
-                else:
-                    # No handler resolved
-                    self.sendString("FAIL")
+                # No handler resolved
+                self.sendString("FAIL")
     
     def _reset(self):
         self.work_vars = {}
@@ -76,8 +54,8 @@ class EngineProtocol(basic.Int32StringReceiver):
             return
         else:
             try: 
-                (key, value) = args.split(' ')
-                self.service.put(key,value)
+                (key, value) = args.split('=')
+                self.factory.put(key,value)
             except:
                 self.put_finish("FAIL")
                 return
@@ -88,15 +66,23 @@ class EngineProtocol(basic.Int32StringReceiver):
         self.sendString("PUT %s" % msg)
         self._reset()
     
-    def handle_put_pickle(self, string):
-        package = pickle.dumps(string, 2)
-        try:
-            self.service.put_pickle(package)
-        except pickle.PickleError:
-            self.put_finish("FAIL")
+    def handle_putPickle(self, string):
+        if not args:
+            self.putPickle_finish("FAIL")
             return
-        
-        self.put_finish("OK")
+        else:
+            try: 
+                (key, value) = args.split('=')
+                self.factory.putPickle(key,pickle.dumps(value, 2))
+            except:
+                self.putPickle_finish("FAIL")
+                return
+                
+            self.put_finish("OK")
+    
+    def putPickle_finish(self,msg):
+        self.sendString("PUTPICKLE %s" % msg)
+        self._reset()
     
     #####
     ##### The get command
@@ -110,7 +96,7 @@ class EngineProtocol(basic.Int32StringReceiver):
             return
         else:
             try:
-                package = self.service.get_pickle(args)
+                package = self.factory.getPickle(args)
             except:
                 self.get_finish("FAIL")
                 return
@@ -133,7 +119,7 @@ class EngineProtocol(basic.Int32StringReceiver):
             self.execute_finish("FAIL")
             return
         else:
-            ret = self.service.execute(args)
+            ret = self.factory.execute(args)
             response = "OK"
             if ret not None:
                 package = pickle.dumps(ret,2)
@@ -146,18 +132,18 @@ class EngineProtocol(basic.Int32StringReceiver):
         self._reset()
     
     
-    def handle_RESET(self, args):
-        log.msg("Resettng the kernel...")
-        self.factory.reset()
-        self.sendString('RESET OK')
-        self._reset()
+#    def handle_RESET(self, args):
+#        log.msg("Resettng the kernel...")
+#        self.factory.reset()
+#        self.sendString('RESET OK')
+#        self._reset()
     
-    def handle_KILL(self, args):
-        log.msg("Killing the kernel...")
-        reactor.stop()
+#    def handle_KILL(self, args):
+#        log.msg("Killing the kernel...")
+#        reactor.stop()
     
-    def handle_DISCONNECT(self,args):
-        log.msg("Disconnecting client...")
-        self.sendString("DISCONNECT OK")
-        self.transport.loseConnection()
+#    def handle_DISCONNECT(self,args):
+#        log.msg("Disconnecting client...")
+#        self.sendString("DISCONNECT OK")
+#        self.transport.loseConnection()
     

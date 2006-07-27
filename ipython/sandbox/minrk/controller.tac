@@ -13,7 +13,7 @@ from twisted.spread import pb
 from twisted.internet import reactor
 
 from ipython1.kernel.controllerservice import ControllerService
-from ipython1.kernel import controllerpb
+from ipython1.kernel import controllerpb, controller
 
 
 #init service:
@@ -21,18 +21,12 @@ application = service.Application('controller', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
 
 cs = ControllerService()
-croot = controllerpb.CRootFromService(cs)
-eroot = controllerpb.RERootFromService(cs)
 
-cf = pb.PBServerFactory(croot)
-ef = pb.PBServerFactory(eroot)
-reactor.listenTCP(10105, cf)
-reactor.listenTCP(10201, ef)
+reroot = controllerpb.IPBRemoteEngineRoot(cs)
+cf = controller.IControlFactory(cs)
+ref = pb.PBServerFactory(reroot)
+
+reactor.listenTCP(10101, cf)
+reactor.listenTCP(10102, ref)
 
 cs.setServiceParent(serviceCollection)
-
-
-#internet.TCPServer(10105, cs.factory_list[0]
-#                  ).setServiceParent(serviceCollection)
-#internet.TCPServer(10201, cs.factory_list[1]
-#                   ).setServiceParent(serviceCollection)

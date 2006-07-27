@@ -18,12 +18,11 @@ from ipython1.kernel import enginepb
 application = service.Application('engine', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
 
-es = EngineService()
-pEngine = enginepb.PBEngineFromService(es)
-pbfact = pb.PBClientFactory()
-
-reactor.connectTCP('localhost', 10201, pbfact)
-pEngine.connect(pbfact)
-
-es.setServiceParent(serviceCollection)
+service = []
+factory = []
+for i in range(64):
+    es = EngineService()
+    f = enginepb.PBEngineClientFactory(es)
+    reactor.connectTCP('localhost', 10102, f)
+    es.setServiceParent(serviceCollection)
 
