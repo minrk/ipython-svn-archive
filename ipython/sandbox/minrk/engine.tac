@@ -18,9 +18,7 @@ from ipython1.kernel import enginepb
 application = service.Application('engine', uid=1, gid=1)
 serviceCollection = service.IServiceCollection(application)
 
-service = []
-factory = []
-for i in range(64):
+for i in range(32):
     es = EngineService()
     f = enginepb.PBEngineClientFactory(es)
     reactor.connectTCP('localhost', 10102, f)
