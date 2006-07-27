@@ -509,7 +509,6 @@ class RemoteController(object):
                 del self.es
                 return True
             else:
-                print line
                 return False
         else:
             return True

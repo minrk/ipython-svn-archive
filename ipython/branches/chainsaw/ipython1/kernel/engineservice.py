@@ -99,7 +99,7 @@ class IQueuedEngine(IEngine):
         """clear the queue"""
     
     def status(self):
-        """return status"""
+        """return queue and history"""
     
 
 class QueuedEngine(object):
@@ -109,6 +109,7 @@ class QueuedEngine(object):
     def __init__(self, engine):
         self.engine = engine
         self.queued = []
+        self.history = {}
         self.currentCommand = None
     
     #methods from IQueuedEngine:
@@ -117,7 +118,7 @@ class QueuedEngine(object):
         self.queued = []
     
     def status(self):
-        return self.queued
+        return {'queue':self.queued, 'history':self.history}
     
     #queue methods:
     def submitCommand(self, cmd):
@@ -139,6 +140,8 @@ class QueuedEngine(object):
         f = getattr(self.engine, cmd.remoteMethod, None)
         if f:
             d = f(*cmd.args)
+            if cmd.remoteMethod is 'execute':
+                d.addCallback(self.saveResult)
             d.addCallback(self.finishCommand)
             d.addErrback(self.abortCommand)
         else:
@@ -149,6 +152,12 @@ class QueuedEngine(object):
         if len(self.queued) > 0:
             self.currentCommand = self.queued.pop(0)
             self.runCurrentCommand()
+    
+    
+    def saveResult(self, result):
+        """put the result in the history"""
+        self.history[result[0]] = result
+        return result
     
     def finishCommand(self, result):
         """finish currrent command"""
@@ -211,18 +220,19 @@ class QueuedEngine(object):
     
     def kill(self):
         """kill the InteractiveShell."""
+        self.clearQueue()
         d = self.submitCommand(Command("kill"))
         return d
-
+    
     def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
-        d = self.submitCommand(Command("getCommand", i))
-        return d
+#        d = self.submitCommand(Command("getCommand", i))
+        return defer.succeed(self.history[i])
     
     def getLastCommandIndex(self):
         """Get the index of the last command."""
-        d = self.submitCommand(Command("getLastCommandIndex"))
-        return d
+#        d = self.submitCommand(Command("getLastCommandIndex"))
+        return defer.succeed(max(self.history.keys()+[-1]))
     
 
 #Command object for queued Engines

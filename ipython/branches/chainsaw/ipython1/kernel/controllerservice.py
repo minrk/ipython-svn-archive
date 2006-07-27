@@ -17,6 +17,7 @@ TODO:
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
+import cPickle as pickle
 
 from twisted.application import service, internet
 from twisted.internet import protocol, reactor, defer
@@ -72,6 +73,9 @@ class IMultiEngine(Interface):
     def reset(self, id='all'):
         """Reset the InteractiveShell."""
     
+    def status(self, id='all'):
+        """Return the status of engines"""
+
     def getCommand(self, i=None, id='all'):
         """Get the stdin/stdout/stderr of command i."""
     
@@ -152,7 +156,8 @@ class ControllerService(service.Service):
         return engines
     
     def keyList(self, id):
-        """parse an id list into list of engines"""
+        """parse an id list into list of engine ids"""
+        print id
         if type(id) is int:
             if id not in self.engine.keys():
                 log.msg("id %i not registered" %i)
@@ -201,7 +206,7 @@ class ControllerService(service.Service):
     
     def putPickle(self, key, package, id='all'):
         """Unpickle package and put into the locals namespace with name key."""
-        log.msg("putting pickle %s=%s on %s" %(key, package, id))
+        log.msg("putting pickle %s=%s on %s" %(key, pickle.loads(package), id))
         engines = self.engineList(id)
         l = []
         for e in engines:
@@ -237,7 +242,7 @@ class ControllerService(service.Service):
     
     def updatePickle(self, dictPickle, id='all'):
         """Updates the self.locals dict with the pickled dict."""
-        log.msg("updating %s with pickle %s" %(id, dictPickle))
+        log.msg("updating %s with pickle %s" %(id, pickle.loads(dictPickle)))
         engines = self.engineList(id)
         l = []
         for e in engines:
@@ -246,6 +251,8 @@ class ControllerService(service.Service):
     
     def status(self, id='all'):
         log.msg("retrieving status of %s" %id)
+#        if id is None:
+#            return self.engine.keys()
         keys = self.keyList(id)
         d = {}
         for k in keys:

@@ -23,25 +23,29 @@ from twisted.python import log
 from ipython1.kernel import engineservice, enginepb
 
 
-def main(controller, port):
+def main(controller, port, n):
     log.startLogging(sys.stdout)
-    service = engineservice.EngineService()
-    service.startService()
-    d = reactor.connectTCP(controller, port,
-        enginepb.PBEngineClientFactory(service))
+    for i in range(n):
+        service = engineservice.EngineService()
+        reactor.connectTCP(controller, port,
+            enginepb.PBEngineClientFactory(service))
+        service.startService()
     reactor.run()
 
-def start(port=10201, controller = '127.0.0.1'):
+def start(port=10201, controller = '127.0.0.1', n=1):
     parser = OptionParser()
     parser.set_defaults(port=port)
     parser.set_defaults(controller=controller)
+    parser.set_defaults(n=n)
     parser.add_option("-p", "--port", type="int", dest="port",
         help="the TCP port the controller listens on")
     parser.add_option("-c", "--controller", type="str", dest="host",
         help="the address of the controller")
+    parser.add_option("-n", "--num", type="int", dest="n",
+        help="the number of engines to start")
     (options, args) = parser.parse_args()
     print "Connecting the engine to %s:%i" % (options.controller,options.port)
-    main(options.controller, options.port)
+    main(options.controller, options.port, options.n)
     
 if __name__ == "__main__":
     start()

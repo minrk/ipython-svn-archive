@@ -78,7 +78,6 @@ class ControlTCPProtocol(basic.LineReceiver):
     
     def lineReceived(self, line):
         split_line = line.split(" ", 1)
-        print split_line
         if len(split_line) == 1:
             cmd = split_line[0]
             args = None
@@ -260,7 +259,6 @@ class ControlTCPProtocol(basic.LineReceiver):
             self.pull_finish("OK")
     
     def pull_fail(self, failure):
-        print failure
         self.pull_finish("FAIL")
     
     def pull_finish(self, msg):
@@ -382,8 +380,7 @@ class ControlTCPProtocol(basic.LineReceiver):
     
     def handle_init_STATUS(self, args, id):
         
-        status = self.factory.status(id)
-        result = (status, self.state)    
+        result = self.factory.status(id)
                 
         try:
             package = pickle.dumps(result, 2)
