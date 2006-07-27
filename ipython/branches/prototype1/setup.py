@@ -18,66 +18,35 @@ if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
 from distutils.core import setup, Extension
 from distutils import sysconfig
-
-def customize_compiler(compiler):
-    """Do any platform-specific customization of a CCompiler instance.
-
-    Mainly needed on Unix, so we can plug in the information that
-    varies across Unices and is stored in Python's Makefile.
-    """
-    if compiler.compiler_type == "unix":
-        (cc, cxx, opt, basecflags, ccshared, ldshared, so_ext) = \
-            get_config_vars('CC', 'CXX', 'OPT', 'BASECFLAGS', 'CCSHARED', 'LDSHARED', 'SO')
-
-        if os.environ.has_key('CC'):
-            cc = os.environ['CC']
-        if os.environ.has_key('CXX'):
-            cxx = os.environ['CXX']
-        if os.environ.has_key('LDSHARED'):
-            ldshared = os.environ['LDSHARED']
-        if os.environ.has_key('CPP'):
-            cpp = os.environ['CPP']
-        else:
-            cpp = cc + " -E"           # not always
-        if os.environ.has_key('LDFLAGS'):
-            ldshared = ldshared + ' ' + os.environ['LDFLAGS']
-        if basecflags:
-            opt = basecflags + ' ' + opt
-        if os.environ.has_key('CFLAGS'):
-            opt = opt + ' ' + os.environ['CFLAGS']
-            ldshared = ldshared + ' ' + os.environ['CFLAGS']
-        if os.environ.has_key('CPPFLAGS'):
-            cpp = cpp + ' ' + os.environ['CPPFLAGS']
-            opt = opt + ' ' + os.environ['CPPFLAGS']
-            ldshared = ldshared + ' ' + os.environ['CPPFLAGS']
-
-        cc_cmd = cc + ' ' + opt
-        compiler.set_executables(
-            preprocessor=cpp,
-            compiler=cc_cmd,
-            compiler_so=cc_cmd + ' ' + ccshared,
-            compiler_cxx=cxx,
-            linker_so=ldshared,
-            linker_exe=cc)
-
-        compiler.shared_lib_extension = so_ext
-
-__customize_compiler = sysconfig.customize_compiler
-
-sysconfig.customize_compiler = customize_compiler
+import distutils.unixccompiler
 
 # Configure distutils to use mpicc/mpicxx for building    
 mpi_base = ''
 mpicc = mpi_base + 'mpicc'
 mpicxx = mpi_base + 'mpic++'
 
+# hack into distutils to replace the compiler in "linker_so" with mpicc_bin
+
+class MPI_UnixCCompiler(distutils.unixccompiler.UnixCCompiler):
+    __set_executable = distutils.unixccompiler.UnixCCompiler.set_executable
+
+    def set_executable(self,key,value):
+        if key == 'linker_so' and type(value) == str:
+            value = mpicc + ' ' + ' '.join(value.split()[1:])
+
+        return self.__set_executable(key,value)
+
+distutils.unixccompiler.UnixCCompiler = MPI_UnixCCompiler 
+
+
+
 # Swap out just the binary of the linker, but keep the flags
-ldshared = sysconfig.get_config_var('LDSHARED')
-ldshared = mpicc + ' ' + ldshared.split(' ',1)[1]
+#ldshared = sysconfig.get_config_var('LDSHARED')
+#ldshared = mpicc + ' ' + ldshared.split(' ',1)[1]
 
 os.environ['CC'] = mpicc
 os.environ['CXX'] = mpicxx
-os.environ['LDSHARED'] = ldshared
+#os.environ['LDSHARED'] = ldshared
 
 e = Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])
 
