@@ -17,22 +17,22 @@ import os
 if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
 from distutils.core import setup, Extension
+from distutils import sysconfig
 
-mpi_incdirs = ['/usr/local/openmpi-1.1/include',
-    '/usr/local/openmpi-1.1/include/openmpi']
-mpi_libs = ['mpi', 'orte', 'opal', 'dl']
-mpi_macros = [('_REENTRANT',None)]
-mpi_libdirs = ['/usr/local/openmpi-1.1/lib']
-mpi_link = ['-Wl,-u,_munmap', '-Wl,-multiply_defined,suppress']
+# Configure distutils to use mpicc/mpicxx for building    
+mpi_base = ''
+mpicc = mpi_base + 'mpicc'
+mpicxx = mpi_base + 'mpic++'
 
-e = Extension('ipython1.mpi',
-    ['ipython1/mpi/mpi.c'],
-    include_dirs=mpi_incdirs,
-    define_macros=mpi_macros,
-    libraries=mpi_libs,
-    library_dirs=mpi_libdirs,
-    extra_link_args=mpi_link
-)
+# Swap out just the binary of the linker, but keep the flags
+ldshared = sysconfig.get_config_var('LDSHARED')
+ldshared = mpicc + ' ' + ldshared.split(' ',1)[1]
+
+os.environ['CC'] = mpicc
+os.environ['CXX'] = mpicxx
+os.environ['LDSHARED'] = ldshared
+
+e = Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])
 
 # Call the setup() routine which does most of the work
 setup(name             = 'ipython1',
