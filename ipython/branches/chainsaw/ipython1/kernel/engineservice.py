@@ -82,6 +82,9 @@ class IEngine(Interface):
     def reset(self):
         """Reset the InteractiveShell."""
     
+    def kill(self):
+        """kill the process"""
+    
     def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
     
@@ -94,6 +97,10 @@ class IQueuedEngine(IEngine):
     
     def clearQueue(self):
         """clear the queue"""
+    
+    def status(self):
+        """return status"""
+    
 
 class QueuedEngine(object):
     
@@ -108,6 +115,9 @@ class QueuedEngine(object):
     def clearQueue(self):
         """clear the queue"""
         self.queued = []
+    
+    def status(self):
+        return self.queued
     
     #queue methods:
     def submitCommand(self, cmd):
@@ -199,6 +209,11 @@ class QueuedEngine(object):
         d = self.submitCommand(Command("reset"))
         return d
     
+    def kill(self):
+        """kill the InteractiveShell."""
+        d = self.submitCommand(Command("kill"))
+        return d
+
     def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
         d = self.submitCommand(Command("getCommand", i))
@@ -208,6 +223,7 @@ class QueuedEngine(object):
         """Get the index of the last command."""
         d = self.submitCommand(Command("getLastCommandIndex"))
         return d
+    
 
 #Command object for queued Engines
 class Command(object):
@@ -265,6 +281,9 @@ class EngineService(InteractiveShell, service.Service):
     
     def reset(self):
         return defer.succeed(InteractiveShell.reset(self))
+    
+    def kill(self):
+        reactor.stop()
     
     def getCommand(self, i=None):
         return defer.succeed(InteractiveShell.getCommand(self, i))

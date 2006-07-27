@@ -31,11 +31,8 @@ class BasicControllerServiceTest(DeferredTestCase):
         self.clients = []
         self.servers = []
         self.cs = controllerservice.ControllerService()
-        self.croot = controllerpb.IPBControlRoot(self.cs)
         self.reroot = controllerpb.IPBRemoteEngineRoot(self.cs)
-        self.cf = pb.PBServerFactory(self.croot)
         self.ref = pb.PBServerFactory(self.reroot)
-        self.servers.append(reactor.listenTCP(10105, self.cf))
         self.servers.append(reactor.listenTCP(10201, self.ref))
         
         self.es = engineservice.EngineService()

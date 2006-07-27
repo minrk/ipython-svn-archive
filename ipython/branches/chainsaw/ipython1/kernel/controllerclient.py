@@ -70,7 +70,7 @@ def _tar_module(mod):
     if not isinstance(mod, types.ModuleType):
         raise TypeError, "Pass an imported module to push_module"
     module_dir, module_file = os.path.split(mod.__file__)
-
+    
     # Figure out what the module is called and where it is
     print "Locating the module..."
     if "__init__.py" in module_file:  # package
@@ -100,7 +100,8 @@ def _tar_module(mod):
     #os.system("rm %s" % tarball_name)
     
     return tarball_name, file_string
-                    
+
+
 class RemoteController(object):
     """A high level interface to a remotely running ipython kernel."""
     
@@ -118,10 +119,10 @@ class RemoteController(object):
         self.addr = addr
         self.extra = ''
         self.block = False
-        
+    
     def __del__(self):
         return self.disconnect()
-        
+    
     def is_connected(self):
         """Are we connected to the kernel?""" 
         if hasattr(self, 's'):
@@ -131,12 +132,12 @@ class RemoteController(object):
                 return False
             else:
                 return True
-                
+    
     def _check_connection(self):
         """Are we connected to the kernel, if not reconnect."""
         if not self.is_connected():
             self.connect()
-            
+    
     def connect(self):
         """Initiate a new connection to the controller."""
         
@@ -156,7 +157,7 @@ class RemoteController(object):
         self.es = LineSocket(self.s)
         # Turn of Nagle's algorithm to prevent the 200 ms delay :)
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
-        
+    
     def execute(self, source, id='all', block=False):
         """Execute python source code on the ipython kernel.
         
@@ -214,10 +215,10 @@ class RemoteController(object):
             return None
         else:
             return False
-
+    
     def run(self, fname):
         """Run a file on the kernel."""
-
+        
         fileobj = open(fname,'r')
         source = fileobj.read()
         fileobj.close()
@@ -226,7 +227,7 @@ class RemoteController(object):
         
         # Now run the code
         self.execute(source)
-        
+    
     def push(self, key, value, id='all'):
         """Send a python object to the namespace of a kernel.
         
@@ -257,23 +258,37 @@ class RemoteController(object):
             return True
         if line == "PUSH FAIL":
             return False
-        
-    def update(self,dict):
+    
+    def update(self, dic, id='all'):
         """Send the dict of key value pairs to the kernel's namespace.
         
         >>> rc = RemoteController(addr)
-        >>> rc.update({'a':1,'b':2,'c':'mystring})    
-        # sends a, b and c to the kernel
+        >>> rc.update({'a':1,'b':2,'c':'mystring}, [1,2,3])    
+        # sends a, b and c to the engines 1,2,3
         
-        @arg dict:
+        @arg dic:
             A dictionary of key, value pairs to send to the kernel
         """
-        for key in dict.keys():
-            return self.push(key,dict[key])
-        
+        self._check_connection()
+        if isinstance(id, list):
+            id = '::'.join(map(str, id))
+        try:
+            package = pickle.dumps(dic, 2)
+        except pickle.PickleError, e:
+            print "Object cannot be pickled: ", e
+            return False
+        self.es.write_line("UPDATE %s::%s" % (dic, id))
+        self.es.write_line("PICKLE %i" % len(package))
+        self.es.write_bytes(package)
+        line, self.extra = self.es.read_line(self.extra)
+        if line == "UPDATE OK":
+            return True
+        if line == "UPDATE FAIL":
+            return False
+    
     def __setitem__(self, key, value):
         self.push(key, value)
-        
+    
     def pull(self, key, id = 'all'):
         """Get a python object from a remote kernel.
                 
@@ -281,7 +296,7 @@ class RemoteController(object):
         object will be returned.
         
         Like push, pull also has a dictionary interface:
-
+        
         >>> rc = RemoteController(addr)
         >>> rc['a'] = 10    # Same as rc.push('a', 10)
         >>> rc['a']         # Same as rc.pull('a')
@@ -318,10 +333,10 @@ class RemoteController(object):
         else:
             # For other data types
             pass
-
+    
     def __getitem__(self, key):
         return self.pull(key)
-
+    
     def getCommand(self, number=None, id='all'):
         """Gets a specific result from the kernel, returned as a tuple."""
         self._check_connection()    
@@ -355,7 +370,38 @@ class RemoteController(object):
         else:
             # For other data types
             return False
-        
+    
+    def getLastCommandIndex(self, id='all'):
+        """Gets the index of the last command."""
+        self._check_connection()    
+        if isinstance(id, list):
+            id = '::'.join(map(str, id))
+
+        self.es.write_line("GETLASTCOMMANDINDEX ::%s" %id)
+        line, self.extra = self.es.read_line(self.extra)
+        line_split = line.split(" ", 1)
+        if line_split[0] == "PICKLE":
+            try:
+                nbytes = int(line_split[1])
+            except (ValueError, TypeError):
+                raise
+            else:
+                package, self.extra = self.es.read_bytes(nbytes, self.extra)
+                line, self.extra = self.es.read_line(self.extra)
+                try:
+                    data = pickle.loads(package)
+                except pickle.PickleError, e:
+                    print "Error unpickling object: ", e
+                    return None
+                else:
+                    if line == "GETLASTCOMMANDINDEX OK":
+                        return data
+                    else:
+                        return None
+        else:
+            # For other data types
+            return False
+
     def status(self, id='all'):
         """Check the status of the kernel."""
         self._check_connection()
@@ -386,7 +432,7 @@ class RemoteController(object):
         else:
             # For other data types
             pass
-
+    
     def notify(self, addr=None, flag=True):
         """Instruct the kernel to notify a result gatherer.
         
@@ -412,14 +458,14 @@ class RemoteController(object):
             A boolean to turn notification on (True) or off (False) 
         """
         self._check_connection()
-
+        
         if addr == None:
             host = socket.gethostbyname(socket.gethostname())
             port = 10104
             print "Kernel notification: ", host, port, flag
         else:
             host, port = addr
-
+            
         if flag:
             self.es.write_line("NOTIFY TRUE %s %s" % (host, port))
         else:
@@ -429,7 +475,7 @@ class RemoteController(object):
             return True
         else:
             return False        
-       
+    
     def reset(self, id='all'):
         """Clear the namespace if the kernel."""
         self._check_connection()
@@ -442,7 +488,7 @@ class RemoteController(object):
             return True
         else:
             return False      
-                           
+    
     def kill(self, id='all'):
         """Kill the engine completely."""
         self._check_connection()    
@@ -451,7 +497,7 @@ class RemoteController(object):
         
         self.es.write_line("KILL ::%s" %id)
         return True   
-
+    
     def disconnect(self):
         """Disconnect from the kernel, but leave it running."""
         if self.is_connected():
@@ -506,4 +552,6 @@ class RemoteController(object):
         self.execute("tar_file.close()", block=False)
         self.execute("import os", block=False)
         self.execute("os.system('tar -xf %s')" % tarball_name)        
+    
+
     

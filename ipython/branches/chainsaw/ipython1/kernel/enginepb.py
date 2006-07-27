@@ -24,7 +24,7 @@ from ipython1.kernel import enginepb
 
 from twisted.python import components, log
 from twisted.spread import pb
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from zope.interface import Interface, implements
 
 from ipython1.kernel.engineservice import EngineService, IEngine, Command
@@ -101,7 +101,6 @@ class PBEngineReferenceFromService(pb.Referenceable):
         
     def __init__(self, service):
         self.service = service
-#        self.id = None
     
     def remote_execute(self, lines):
         return self.service.execute(lines)
@@ -128,7 +127,7 @@ class PBEngineReferenceFromService(pb.Referenceable):
         return self.service.reset()
 
     def remote_kill(self):
-        reactor.stop()
+        self.service.kill()
     
     def remote_getCommand(self, i=None):
         return self.service.getCommand(i)
@@ -181,6 +180,11 @@ class EngineFromReference(object):
     def reset(self):
         """Reset the InteractiveShell."""
         return self.callRemote('reset')
+
+    def kill(self):
+        """Reset the InteractiveShell."""
+        self.callRemote('kill')
+        return defer.succeed(None)
     
     def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""

@@ -121,10 +121,6 @@ class ControlTCPProtocol(basic.LineReceiver):
         self.work_vars = {}
         self.state = 'init'
     
-    #####   
-    ##### The PUSH command
-    #####
-    
     def parseID(self, idList):
         if len(idList) is 0:
             return 'all'
@@ -133,6 +129,10 @@ class ControlTCPProtocol(basic.LineReceiver):
                 return map(int, idList)
             except:
                 return 'all'
+    
+    #####   
+    ##### The PUSH command
+    #####
     
     def handle_init_PUSH(self, args, id):
         
@@ -166,18 +166,67 @@ class ControlTCPProtocol(basic.LineReceiver):
             self.push_finish("FAIL")
         else:         
             d = self.setup_literal(size)
-            d.addCallback(self.process_pickle)
+            d.addCallback(self.put_pickle)
     
-    def process_pickle(self, package):
+    def put_pickle(self, package):
         try:
             data = pickle.loads(package)
         except pickle.PickleError:
             self.push_finish("FAIL")
         else:
             # What if this fails?  When could it?
-            self.factory.push(self.work_vars['push_name'],
-                data, self.work_vars['push_id'])
+            self.factory.pushPickle(self.work_vars['push_name'],
+                package, self.work_vars['push_id'])
             self.push_finish("OK")
+    
+    #####   
+    ##### The UPDATE command
+    #####
+    
+    def handle_init_UPDATE(self, args, id):
+        
+        # Parse the args
+        if not args:
+            self.update_finish("FAIL")
+            return
+        else:
+            args_str = args
+
+        self.work_vars['update_dict'] = args_str
+        self.work_vars['push_id'] = id
+        # Setup to process the command
+        self.state = 'updating'
+    
+    def setup_literal(self, size):
+        """Called by data command handlers."""
+        d = defer.Deferred()
+        self._pendingLiteral = LiteralString(size, d)
+        self.setRawMode()
+        return d        
+    
+    def update_finish(self,msg):
+        self.sendLine("UPDATE %s" % msg)
+        self._reset()
+    
+    def handle_updating_PICKLE(self, size_str, id):
+        try:
+            size = int(size_str)
+        except (ValueError, TypeError):
+            self.update_finish("FAIL")
+        else:         
+            d = self.setup_literal(size)
+            d.addCallback(self.update_pickle)
+    
+    def update_pickle(self, package):
+        try:
+            data = pickle.loads(package)
+        except pickle.PickleError:
+            self.update_finish("FAIL")
+        else:
+            # What if this fails?  When could it?
+            self.factory.updatePickle(self.work_vars['update_name'],
+                package, self.work_vars['update_id'])
+            self.update_finish("OK")
     
     #####
     ##### The PULL command
@@ -191,16 +240,17 @@ class ControlTCPProtocol(basic.LineReceiver):
             return
         else:
             pull_name = args
-
+            
         self.work_vars['pull_type'] = 'PICKLE'
-        d = self.factory.pull(pull_name, id)
+        d = self.factory.pullPickle(pull_name, id)
                 
         d.addCallback(self.pull_ok)
         d.addErrback(self.pull_fail)
     
-    def pull_ok(self, result):
+    def pull_ok(self, resultList):
         # Add error code here and chain the callbacks
         try:
+            result = map(pickle.loads,resultList)
             presult = pickle.dumps(result, 2)
         except pickle.PickleError:
             self.pull_finish("FAIL")
@@ -210,6 +260,7 @@ class ControlTCPProtocol(basic.LineReceiver):
             self.pull_finish("OK")
     
     def pull_fail(self, failure):
+        print failure
         self.pull_finish("FAIL")
     
     def pull_finish(self, msg):
@@ -276,7 +327,11 @@ class ControlTCPProtocol(basic.LineReceiver):
     
     def handle_init_GETCOMMAND(self, args, id):
         
-        d = self.factory.getCommand(int(args), id)
+        try: 
+            index = int(args)
+        except:
+            index = None
+        d = self.factory.getCommand(index, id)
         d.addCallbacks(self.getCommand_ok, self.getCommand_fail)
     
     def getCommand_ok(self, result):
@@ -290,11 +345,37 @@ class ControlTCPProtocol(basic.LineReceiver):
             self.getCommand_finish("OK")
     
     def getCommand_fail(self, f):
-        self.execute_finish("FAIL")
+        self.getCommand_finish("FAIL")
     
     def getCommand_finish(self, msg):
-        self.sendLine("GETCOMMAND %s", msg)
-
+        self.sendLine("GETCOMMAND %s" %msg)
+    
+    
+    #####
+    ##### GETLASTCOMMANDINDEX command
+    #####
+    
+    def handle_init_GETLASTCOMMANDINDEX(self, args, id):
+        
+        d = self.factory.getLastCommandIndex(id)
+        d.addCallbacks(self.getLastCommandIndex_ok, self.getLastCommandIndex_fail)
+    
+    def getLastCommandIndex_ok(self, result):
+        try:
+            package = pickle.dumps(result, 2)
+        except pickle.PickleError:
+            self.getLastCommandIndex_finish("FAIL")
+        else:
+            self.sendLine("PICKLE %i" % len(package))
+            self.transport.write(package)
+            self.getLastCommandIndex_finish("OK")
+    
+    def getLastCommandIndex_fail(self, f):
+        self.getLastCommandIndex_finish("FAIL")
+    
+    def getLastCommandIndex_finish(self, msg):
+        self.sendLine("GETLASTCOMMANDINDEX %s" %msg)
+    
     #####
     ##### Kernel control commands
     #####
@@ -380,8 +461,14 @@ class IControlFactory(Interface):
     def updatePickle(self, dictPickle, id='all'):
         """Updates the self.locals dict with the pickled dict."""
     
+    def status(self, id='all'):
+        """status of engines"""
+    
     def reset(self, id='all'):
         """Reset the InteractiveShell."""
+    
+    def kill(self, id='all'):
+        """kill engines"""
     
     def getCommand(self, i=None, id='all'):
         """Get the stdin/stdout/stderr of command i."""
@@ -401,6 +488,7 @@ class ControlFactoryFromService(protocol.ServerFactory):
     def __init__(self, service):
         self.service = service
         self.notifiers = list
+    
     #IQueuedEngine multiplexer methods
     def cleanQueue(self, id='all'):
         """Cleans out pending commands in an engine's queue."""
@@ -415,13 +503,29 @@ class ControlFactoryFromService(protocol.ServerFactory):
         """Put value into locals namespace with name key."""
         return self.service.put(key, value, id)
     
+    def pushPickle(self, key, value, id='all'):
+        """Put value into locals namespace with name key."""
+        return self.service.putPickle(key, value, id)
+    
     def pull(self, key, id='all'):
         """Gets an item out of the self.locals dict by key."""
         return self.service.get(key, id)
     
+    def pullPickle(self, key, id='all'):
+        """Gets an item out of the self.locals dict by key."""
+        return self.service.getPickle(key, id)
+    
     def update(self, dictOfData, id='all'):
         """Updates the self.locals dict with the dictOfData."""
         return self.service.update(dictOfData, id)
+    
+    def updatePickle(self, dictOfData, id='all'):
+        """Updates the self.locals dict with the dictOfData."""
+        return self.service.updatePickle(dictOfData, id)
+    
+    def status(self, id='all'):
+        """status of engines"""
+        return self.service.status(id)
     
     def reset(self, id='all'):
         """Reset the InteractiveShell."""

@@ -120,18 +120,16 @@ class ControllerService(service.Service):
         """eliminate remote engine object"""
         log.msg("unregistered engine %i" %id)
         del self.engine[id]
-        
+        if not self.saveIDs:
+            self.availableID.append(id)
+        else:
+            log.msg("preserving id %i" %id)
     
     def disconnectEngine(self, id):
         """handle disconnecting engine"""
         #do I want to keep the RemoteEngine object or not?
         #for now, no
         log.msg("engine %i disconnected" %id)
-        if not self.saveIDs:
-            self.availableID.append(id)
-            log.msg("freeing id %i" %id)
-        else:
-            log.msg("preserving id %i" %id)
         self.unregisterEngine(id)
     
     def engineList(self, id):
@@ -152,7 +150,25 @@ class ControllerService(service.Service):
                 else:
                     log.msg("id %i not registered" %i)
         return engines
-
+    
+    def keyList(self, id):
+        """parse an id list into list of engines"""
+        if type(id) is int:
+            if id not in self.engine.keys():
+                log.msg("id %i not registered" %i)
+                return                
+            return [id]
+        if id is 'all':
+            keys = self.engine.keys()
+        else:
+            keys = []
+            for i in id:
+                if i in self.engine.keys():
+                    keys.append(i)
+                else:
+                    log.msg("id %i not registered" %i)
+        return keys
+    
     #IMultiEngine methods
     def cleanQueue(self, id='all'):
         """Cleans out pending commands in the kernel's queue."""
@@ -228,6 +244,14 @@ class ControllerService(service.Service):
             l.append(e.updatePickle(dictPickle))
         return defer.gatherResults(l)
     
+    def status(self, id='all'):
+        log.msg("retrieving status of %s" %id)
+        keys = self.keyList(id)
+        d = {}
+        for k in keys:
+            d[k] = self.engine[k].status()
+        return d
+        
     def reset(self, id='all'):
         """Reset the InteractiveShell."""
         log.msg("resetting %s" %(id))
@@ -236,6 +260,7 @@ class ControllerService(service.Service):
         for e in engines:
             l.append(e.reset())
         return defer.gatherResults(l)
+    
     def kill(self, id='all'):
         log.msg("resetting %s" %(id))
         engines = self.engineList(id)
