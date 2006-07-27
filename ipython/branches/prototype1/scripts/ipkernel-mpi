@@ -32,6 +32,8 @@ won't result in a running kernel instance.
 #*****************************************************************************
 
 import ipython1.mpi as mpi
+print mpi.rank, mpi.size
+
 #import mpi4py.MPI as mpi
 import cPickle as pickle
 import sys

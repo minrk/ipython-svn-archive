@@ -599,7 +599,8 @@ class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
         self.callbackAddr = callbackAddr
         self.mpi =  mpi
         if self.mpi:
-            self.qic.push('mpi',mpi)
+            self.qic.push('mpirank',self.mpi.rank)
+            self.qic.push('mpisize',self.mpi.size)            
         KernelFactoryBase.__init__(self, allow, notify)
 
     def stopFactory(self):
