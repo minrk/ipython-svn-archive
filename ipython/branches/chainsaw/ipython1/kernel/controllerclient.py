@@ -1,7 +1,7 @@
 # -*- test-case-name: ipython1.test.test_controllerclient -*-
 """The kernel interface.
 
-The kernel interface is a set of classes that provide a high level interface
+The kernel interface is a set of classes that providse a high level interface
 to a running ipython kernel instance.  Currently these classes use blocking
 sockets and thus, do not require Twisted.  
 """
@@ -158,24 +158,24 @@ class RemoteController(object):
         # Turn of Nagle's algorithm to prevent the 200 ms delay :)
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
     
-    def execute(self, source, id='all', block=False):
+    def execute(self, source, ids='all', block=False):
         """Execute python source code on the ipython kernel.
         
         @arg source:
-            A string containing valid python code
+            A string containing valids python code
         """
         self._check_connection()
-        if isinstance(id, list):
-            id = '::'.join(map(str, id))
+        if isinstance(ids, list):
+            ids = '::'.join(map(str, ids))
         if self.block or block:
-            self.es.write_line("EXECUTE BLOCK %s::%s" % (source, id))
+            self.es.write_line("EXECUTE BLOCK %s::%s" % (source, ids))
             line, self.extra = self.es.read_line(self.extra)
             line_split = line.split(" ")
             if line_split[0] == "PICKLE" and len(line_split) == 2:
                 try:
                     nbytes = int(line_split[1])
                 except:
-                    print "Server did not return the length of data."
+                    print "Server dids not return the length of data."
                     return False
                 package, self.extra = self.es.read_bytes(nbytes, self.extra)
                 data = pickle.loads(package)
@@ -187,27 +187,27 @@ class RemoteController(object):
                 red = TermColors.Red
                 green = TermColors.Green
                 for d in data:
-                    (id, cmd) = d
+                    (ids, cmd) = d
                     cmd_num = cmd[0]
                     cmd_stdin = cmd[1]
                     cmd_stdout = cmd[2][:-1]
                     cmd_stderr = cmd[3][:-1]
                     print "%s[%s]:[%i]%s In [%i]:%s %s" % \
-                        (green, self.addr[0], id,
+                        (green, self.addr[0], ids,
                         blue, cmd_num, normal, cmd_stdin)
                     if cmd_stdout:
                         print "%s[%s]:[%i]%s Out[%i]:%s %s" % \
-                            (green, self.addr[0], id,
+                            (green, self.addr[0], ids,
                             red, cmd_num, normal, cmd_stdout)
                     if cmd_stderr:
                         print "%s[%s]:[%i]%s Err[%i]:\n%s %s" % \
-                            (green, self.addr[0], id,
+                            (green, self.addr[0], ids,
                             red, cmd_num, normal, cmd_stderr)
             else:
                 data = None
                 line = ""
         else:
-            string = "EXECUTE %s::%s" % (source, id)
+            string = "EXECUTE %s::%s" % (source, ids)
             self.es.write_line(string)
             line, self.extra = self.es.read_line(self.extra)
             data = None
@@ -230,7 +230,7 @@ class RemoteController(object):
         # Now run the code
         self.execute(source)
     
-    def push(self, key, value, id='all'):
+    def push(self, key, value, ids='all'):
         """Send a python object to the namespace of a kernel.
         
         There is also a dictionary style interface to the push command:
@@ -245,14 +245,14 @@ class RemoteController(object):
             What to name the object in the kernel' namespace
         """
         self._check_connection()
-        if isinstance(id, list):
-            id = '::'.join(map(str, id))
+        if isinstance(ids, list):
+            ids = '::'.join(map(str, ids))
         try:
             package = pickle.dumps(value, 2)
         except pickle.PickleError, e:
             print "Object cannot be pickled: ", e
             return False
-        self.es.write_line("PUSH %s::%s" % (key, id))
+        self.es.write_line("PUSH %s::%s" % (key, ids))
         self.es.write_line("PICKLE %i" % len(package))
         self.es.write_bytes(package)
         line, self.extra = self.es.read_line(self.extra)
@@ -261,7 +261,7 @@ class RemoteController(object):
         if line == "PUSH FAIL":
             return False
     
-    def update(self, dic, id='all'):
+    def update(self, dic, ids='all'):
         """Send the dict of key value pairs to the kernel's namespace.
         
         >>> rc = RemoteController(addr)
@@ -272,14 +272,14 @@ class RemoteController(object):
             A dictionary of key, value pairs to send to the kernel
         """
         self._check_connection()
-        if isinstance(id, list):
-            id = '::'.join(map(str, id))
+        if isinstance(ids, list):
+            ids = '::'.join(map(str, ids))
         try:
             package = pickle.dumps(dic, 2)
         except pickle.PickleError, e:
             print "Object cannot be pickled: ", e
             return False
-        self.es.write_line("UPDATE %s::%s" % (dic, id))
+        self.es.write_line("UPDATE ::%s" % (ids))
         self.es.write_line("PICKLE %i" % len(package))
         self.es.write_bytes(package)
         line, self.extra = self.es.read_line(self.extra)
@@ -291,7 +291,7 @@ class RemoteController(object):
     def __setitem__(self, key, value):
         self.push(key, value)
     
-    def pull(self, key, id = 'all'):
+    def pull(self, key, ids = 'all'):
         """Get a python object from a remote kernel.
                 
         If the object does not exist in the kernel's namespace a NotDefined
@@ -308,10 +308,10 @@ class RemoteController(object):
             The name of the python object to get        
         """
         self._check_connection()    
-        if isinstance(id, list):
-            id = '::'.join(map(str, id))
+        if isinstance(ids, list):
+            ids = '::'.join(map(str, ids))
         
-        self.es.write_line("PULL %s::%s" % (key, id))
+        self.es.write_line("PULL %s::%s" % (key, ids))
         line, self.extra = self.es.read_line(self.extra)
         line_split = line.split(" ", 1)
         if line_split[0] == "PICKLE":
@@ -339,16 +339,16 @@ class RemoteController(object):
     def __getitem__(self, key):
         return self.pull(key)
     
-    def getCommand(self, number=None, id='all'):
+    def getCommand(self, number=None, ids='all'):
         """Gets a specific result from the kernel, returned as a tuple."""
         self._check_connection()    
-        if isinstance(id, list):
-            id = '::'.join(map(str, id))
+        if isinstance(ids, list):
+            ids = '::'.join(map(str, ids))
         
         if number is None:
-            self.es.write_line("GETCOMMAND ::%s" %id)
+            self.es.write_line("GETCOMMAND ::%s" %ids)
         else:
-            self.es.write_line("GETCOMMAND %i::%s" % (number, id))
+            self.es.write_line("GETCOMMAND %i::%s" % (number, ids))
         line, self.extra = self.es.read_line(self.extra)
         line_split = line.split(" ", 1)
         if line_split[0] == "PICKLE":
@@ -373,13 +373,13 @@ class RemoteController(object):
             # For other data types
             return False
     
-    def getLastCommandIndex(self, id='all'):
+    def getLastCommandIndex(self, ids='all'):
         """Gets the index of the last command."""
         self._check_connection()    
-        if isinstance(id, list):
-            id = '::'.join(map(str, id))
+        if isinstance(ids, list):
+            ids = '::'.join(map(str, ids))
 
-        self.es.write_line("GETLASTCOMMANDINDEX ::%s" %id)
+        self.es.write_line("GETLASTCOMMANDINDEX ::%s" %ids)
         line, self.extra = self.es.read_line(self.extra)
         line_split = line.split(" ", 1)
         if line_split[0] == "PICKLE":
@@ -404,13 +404,13 @@ class RemoteController(object):
             # For other data types
             return False
 
-    def status(self, id='all'):
+    def status(self, ids='all'):
         """Check the status of the kernel."""
         self._check_connection()
-        if isinstance(id, list):
-            id = '::'.join(map(str, id))
+        if isinstance(ids, list):
+            ids = '::'.join(map(str, ids))
         
-        self.es.write_line("STATUS ::%s" %id)
+        self.es.write_line("STATUS ::%s" %ids)
         line, self.extra = self.es.read_line(self.extra)
         line_split = line.split(" ", 1)
         if line_split[0] == "PICKLE":
@@ -461,7 +461,7 @@ class RemoteController(object):
         """
         self._check_connection()
         
-        if addr == None:
+        if addr is None:
             host = socket.gethostbyname(socket.gethostname())
             port = 10104
             print "Kernel notification: ", host, port, flag
@@ -476,29 +476,34 @@ class RemoteController(object):
         if line == "NOTIFY OK":
             return True
         else:
-            return False        
+            print line
+            return False
     
-    def reset(self, id='all'):
+    def reset(self, ids='all'):
         """Clear the namespace if the kernel."""
         self._check_connection()
-        if isinstance(id, list):
-            id = '::'.join(map(str, id))
+        if isinstance(ids, list):
+            ids = '::'.join(map(str, ids))
         
-        self.es.write_line("RESET ::%s" %id)
+        self.es.write_line("RESET ::%s" %ids)
         line, self.extra = self.es.read_line(self.extra)
         if line == "RESET OK":
             return True
         else:
             return False      
     
-    def kill(self, id='all'):
+    def kill(self, ids='all'):
         """Kill the engine completely."""
         self._check_connection()    
-        if isinstance(id, list):
-            id = '::'.join(map(str, id))
+        if isinstance(ids, list):
+            ids = '::'.join(map(str, ids))
         
-        self.es.write_line("KILL ::%s" %id)
-        return True   
+        self.es.write_line("KILL ::%s" %ids)
+        line, self.extra = self.es.read_line(self.extra)
+        if line == "KILL OK":
+            return True
+        else:
+            return False      
     
     def disconnect(self):
         """Disconnect from the kernel, but leave it running."""

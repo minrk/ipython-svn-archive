@@ -324,12 +324,12 @@ class ControllerService(service.Service):
     def addNotifier(self, n):
         if n not in self._notifiers:
             self._notifiers.append(n)
-        print "Notifiers: ", self._notifiers
+        log.msg("Notifiers: %s" % self._notifiers)
     
     def delNotifier(self, n):
         if n in self._notifiers:
             del self._notifiers[self._notifiers.index(n)]
-        print "Notifiers: ", self._notifiers
+        log.msg("Notifiers: %s" % self._notifiers)
     
     def notify(self, result):
         for tonotify in self.notifiers():

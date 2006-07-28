@@ -26,14 +26,43 @@ from zope.interface import Interface, implements
 from ipython1.kernel import controllerservice
 
 
-class LineProducer:
+class NonBlockingProducer:
     
     implements(IProducer)
     
-    def __init__(self, line):
-        self.line = line
-        self.deferred = defer.Deferred()
-        
+    def __init__(self, protocol):
+        self.factory = protocol.factory
+        self._reset()
+    
+    def _reset(self):
+        self.consumer = None
+        self.deferred = None
+        self.firstCall = True
+    
+    def register(self, consumer, deferred):
+        print 'noblock'
+        self.consumer = consumer
+        self.deferred = deferred
+        consumer.registerProducer(self, False)
+    
+    def resumeProducing(self):
+        print 'resume'
+        if self.firstCall:
+            self.firstCall = False
+            return
+        self.deferred.callback(None)
+        self.consumer.unregisterProducer()
+        self._reset()
+        return self.deferred
+    
+    def pauseProducing(self):
+        print 'pause'
+        pass
+    
+    def stopProducing(self):
+        log.msg("stopped producing!")
+        self._reset()
+    
 
 class LiteralString:
     def __init__(self, size, defered):
@@ -66,35 +95,17 @@ class ControlTCPProtocol(basic.LineReceiver):
         log.msg("Connection Made...")
         self.transport.setTcpNoDelay(True)
         self.state = 'init'
-        self.work_vars = {}
-        self.deferred = None
+        self.workVars = {}
+        self.producer = NonBlockingProducer(self)
     
-#    def sendLine(self, line):
-#        self.line = line
-#        self.deferred = defer.Deferred()
-#        self.transport.registerProducer(self, False)
-#        return self.deferred
-#    
-#    def resumeProducing(self):
-#        self.transport.write(self.line + self.delimiter)
-#        self.transport.unregisterProducer()
-#        self.deferred.callback(None)
-#        return
-#    
-#    def pauseProducing(self):
-#        pass
-#    
-#    def stopProducing(self):
-#        if self.deferred:
-#            self.deferred.errback('StoppedProducing')
     
     def lineReceived(self, line):
         split_line = line.split(" ", 1)
-        if len(split_line) == 1:
+        if len(split_line) is 1:
             cmd = split_line[0]
             args = None
             ids = 'all'
-        elif len(split_line) == 2:
+        elif len(split_line) is 2:
             cmd = split_line[0]
             arglist = split_line[1].split('::')
             if len(arglist) > 1:
@@ -106,7 +117,7 @@ class ControlTCPProtocol(basic.LineReceiver):
         if not self.factory.verifyIds(ids):
             self.sendLine("BAD")
             self.state = 'init'
-            self.reset_work_vars()
+            self.resetWorkVars()
             return
         f = getattr(self, 'handle_%s_%s' %
                     (self.state, cmd), None)            
@@ -122,7 +133,7 @@ class ControlTCPProtocol(basic.LineReceiver):
             else:
                 self.sendLine("BAD")
                 self.state = 'init'
-                self.reset_work_vars()
+                self.resetWorkVars()
     
     # Copied from twisted.mail.imap4
     def rawDataReceived(self, data):
@@ -130,11 +141,11 @@ class ControlTCPProtocol(basic.LineReceiver):
         if passon is not None:
             self.setLineMode(passon) # should I reset the state here?
     
-    def reset_work_vars(self):
-        self.work_vars = {}
+    def resetWorkVars(self):
+        self.workVars = {}
     
     def _reset(self):
-        self.work_vars = {}
+        self.workVars = {}
         self.state = 'init'
     
     def parseIds(self, idsList):
@@ -154,24 +165,24 @@ class ControlTCPProtocol(basic.LineReceiver):
         
         # Parse the args
         if not args:
-            self.push_finish("FAIL")
+            self.pushFinish("FAIL")
             return
         else:
             args_str = args
 
-        self.work_vars['push_name'] = args_str
-        self.work_vars['push_ids'] = ids
+        self.workVars['push_name'] = args_str
+        self.workVars['push_ids'] = ids
         # Setup to process the command
         self.state = 'pushing'
     
-    def setup_literal(self, size):
+    def setupLiteral(self, size):
         """Called by data command handlers."""
         d = defer.Deferred()
         self._pendingLiteral = LiteralString(size, d)
         self.setRawMode()
         return d        
     
-    def push_finish(self,msg):
+    def pushFinish(self,msg):
         self.sendLine("PUSH %s" % msg)
         self._reset()
     
@@ -179,21 +190,30 @@ class ControlTCPProtocol(basic.LineReceiver):
         try:
             size = int(size_str)
         except (ValueError, TypeError):
-            self.push_finish("FAIL")
+            self.pushFinish("FAIL")
         else:         
-            d = self.setup_literal(size)
-            d.addCallback(self.put_pickle)
+            d = self.setupLiteral(size)
+            d.addCallback(self.pushPickle)
     
-    def put_pickle(self, package):
+    def pushPickle(self, package):
         try:
             data = pickle.loads(package)
+            self.workVars['push_package'] = package
         except pickle.PickleError:
-            self.push_finish("FAIL")
+            self.pushFinish("FAIL")
         else:
             # What if this fails?  When could it?
-            self.factory.pushPickle(self.work_vars['push_name'],
-                package, self.work_vars['push_ids'])
-            self.push_finish("OK")
+            d = defer.Deferred().addCallback(self.pushCallback)
+            self.producer.register(self.transport, d)
+            self.sendLine("PUSH OK")
+        return d
+    
+    def pushCallback(self, _):
+        name = self.workVars['push_name']
+        package = self.workVars['push_package']
+        ids = self.workVars['push_ids']
+        self._reset()
+        return self.factory.pushPickle(name, package, ids)
     
     #####   
     ##### The UPDATE command
@@ -201,19 +221,11 @@ class ControlTCPProtocol(basic.LineReceiver):
     
     def handle_init_UPDATE(self, args, ids):
         
-        # Parse the args
-        if not args:
-            self.update_finish("FAIL")
-            return
-        else:
-            args_str = args
-
-        self.work_vars['update_dict'] = args_str
-        self.work_vars['push_ids'] = ids
+        self.workVars['update_ids'] = ids
         # Setup to process the command
         self.state = 'updating'
     
-    def update_finish(self,msg):
+    def updateFinish(self,msg):
         self.sendLine("UPDATE %s" % msg)
         self._reset()
     
@@ -221,21 +233,29 @@ class ControlTCPProtocol(basic.LineReceiver):
         try:
             size = int(size_str)
         except (ValueError, TypeError):
-            self.update_finish("FAIL")
+            self.updateFinish("FAIL")
         else:         
-            d = self.setup_literal(size)
-            d.addCallback(self.update_pickle)
+            d = self.setupLiteral(size)
+            d.addCallback(self.updatePickle)
     
-    def update_pickle(self, package):
+    def updatePickle(self, package):
         try:
             data = pickle.loads(package)
+            self.workVars['update_package'] = package
         except pickle.PickleError:
-            self.update_finish("FAIL")
+            self.updateFinish("FAIL")
         else:
             # What if this fails?  When could it?
-            self.factory.updatePickle(self.work_vars['update_name'],
-                package, self.work_vars['update_ids'])
-            self.update_finish("OK")
+            d = defer.Deferred().addCallback(self.updateCallback)
+            self.producer.register(self.transport, d)
+            self.sendLine("UPDATE OK")
+            return d
+    
+    def updateCallback(self, _):
+        package = self.workVars['update_package']
+        ids = self.workVars['update_ids']
+        self._reset()
+        return self.factory.updatePickle(package, ids)
     
     #####
     ##### The PULL command
@@ -245,33 +265,33 @@ class ControlTCPProtocol(basic.LineReceiver):
         
         # Parse the args
         if not args:
-            self.pull_finish("FAIL")
+            self.pullFinish("FAIL")
             return
         else:
             pull_name = args
             
-        self.work_vars['pull_type'] = 'PICKLE'
+        self.workVars['pull_type'] = 'PICKLE'
         d = self.factory.pullPickle(pull_name, ids)
                 
-        d.addCallback(self.pull_ok)
-        d.addErrback(self.pull_fail)
+        d.addCallback(self.pullOk)
+        d.addErrback(self.pullFail)
     
-    def pull_ok(self, resultList):
+    def pullOk(self, resultList):
         # Add error code here and chain the callbacks
         try:
             result = map(pickle.loads,resultList)
             presult = pickle.dumps(result, 2)
         except pickle.PickleError:
-            self.pull_finish("FAIL")
+            self.pullFinish("FAIL")
         else:
             self.sendLine("PICKLE %s" % len(presult))
             self.transport.write(presult)
-            self.pull_finish("OK")
+            self.pullFinish("OK")
     
-    def pull_fail(self, failure):
-        self.pull_finish("FAIL")
+    def pullFail(self, failure):
+        self.pullFinish("FAIL")
     
-    def pull_finish(self, msg):
+    def pullFinish(self, msg):
         self.sendLine("PULL %s" % msg)
         self._reset()
     
@@ -284,9 +304,10 @@ class ControlTCPProtocol(basic.LineReceiver):
                 
         # Parse the args
         if not args:
-            self.execute_finish("FAIL")
+            self.executeFinish("FAIL")
             return
-            
+        
+        self.state = 'executing'
         if "BLOCK" in args:
             block = True
             execute_cmd = args[6:]
@@ -295,35 +316,43 @@ class ControlTCPProtocol(basic.LineReceiver):
             execute_cmd = args
         
         if not execute_cmd:
-            self.execute_finish("FAIL")
+            self.executeFinish("FAIL")
             return
         
         if block:
             d = self.factory.execute(execute_cmd, ids)
-            d.addCallback(self.execute_ok_block)
-            d.addErrback(self.execute_fail)
-            return d
+            d.addCallback(self.executeOkBlock)
+            d.addErrback(self.executeFail)
         else:
-            self.execute_finish('OK')
-            return self.factory.execute(execute_cmd, ids)
+            self.workVars['execute_cmd'] = execute_cmd
+            self.workVars['execute_ids'] = ids
+            d = defer.Deferred().addCallback(self.executeCallback)
+            self.producer.register(self.transport, d)
+            self.sendLine('EXECUTE OK')
+            return d
     
-    def execute_ok_block(self, result):
+    def executeCallback(self, _):
+        execute_cmd = self.workVars['execute_cmd']
+        ids = self.workVars['execute_ids']
+        self._reset()
+        return self.factory.execute(execute_cmd, ids)
+    
+    def executeOkBlock(self, result):
         try:
             package = pickle.dumps(result, 2)
         except pickle.PickleError:
-            self.execute_finish("FAIL")
+            self.executeFinish("FAIL")
         else:
             self.sendLine("PICKLE %i" % len(package))
             self.transport.write(package)
-            self.execute_finish("OK")
+            self.executeFinish("OK")
     
-    def execute_fail(self, f):
-        self.execute_finish("FAIL")
+    def executeFail(self, f):
+        self.executeFinish("FAIL")
     
-    def execute_finish(self, msg):
-        s = "EXECUTE %s" % msg
+    def executeFinish(self, msg):
+        self.sendLine("EXECUTE %s" % msg)
         self._reset()
-        return self.sendLine(s)
     
     #####
     ##### GETCOMMAND command
@@ -336,22 +365,22 @@ class ControlTCPProtocol(basic.LineReceiver):
         except:
             index = None
         d = self.factory.getCommand(index, ids)
-        d.addCallbacks(self.getCommand_ok, self.getCommand_fail)
+        d.addCallbacks(self.getCommandOk, self.getCommandFail)
     
-    def getCommand_ok(self, result):
+    def getCommandOk(self, result):
         try:
             package = pickle.dumps(result, 2)
         except pickle.PickleError:
-            self.getCommand_finish("FAIL")
+            self.getCommandFinish("FAIL")
         else:
             self.sendLine("PICKLE %i" % len(package))
             self.transport.write(package)
-            self.getCommand_finish("OK")
+            self.getCommandFinish("OK")
     
-    def getCommand_fail(self, f):
-        self.getCommand_finish("FAIL")
+    def getCommandFail(self, f):
+        self.getCommandFinish("FAIL")
     
-    def getCommand_finish(self, msg):
+    def getCommandFinish(self, msg):
         self.sendLine("GETCOMMAND %s" %msg)
     
     
@@ -362,22 +391,22 @@ class ControlTCPProtocol(basic.LineReceiver):
     def handle_init_GETLASTCOMMANDINDEX(self, args, ids):
         
         d = self.factory.getLastCommandIndex(ids)
-        d.addCallbacks(self.getLastCommandIndex_ok, self.getLastCommandIndex_fail)
+        d.addCallbacks(self.getLastCommandIndexOk, self.getLastCommandIndexFail)
     
-    def getLastCommandIndex_ok(self, result):
+    def getLastCommandIndexOk(self, result):
         try:
             package = pickle.dumps(result, 2)
         except pickle.PickleError:
-            self.getLastCommandIndex_finish("FAIL")
+            self.getLastCommandIndexFinish("FAIL")
         else:
             self.sendLine("PICKLE %i" % len(package))
             self.transport.write(package)
-            self.getLastCommandIndex_finish("OK")
+            self.getLastCommandIndexFinish("OK")
     
-    def getLastCommandIndex_fail(self, f):
-        self.getLastCommandIndex_finish("FAIL")
+    def getLastCommandIndexFail(self, f):
+        self.getLastCommandIndexFinish("FAIL")
     
-    def getLastCommandIndex_finish(self, msg):
+    def getLastCommandIndexFinish(self, msg):
         self.sendLine("GETLASTCOMMANDINDEX %s" %msg)
     
     #####
@@ -399,38 +428,51 @@ class ControlTCPProtocol(basic.LineReceiver):
     
     def handle_init_NOTIFY(self, args, ids):
         if not args:
-            self.sendLine('NOTIFY FAIL')
+            self.notifyFail()
             return
         else:
             args_split = args.split(" ")
+            print args_split
         
-        if len(args_split) == 3:
+        if len(args_split) is 3:
             action, host, port = args_split
             try:
                 port = int(port)
             except (ValueError, TypeError):
-                self.sendLine("NOTIFY FAIL")
+                print port
+                self.notifyFail()
             else:
+                print action
                 if action == "TRUE":
-                    self.factory.add_notifier((host, port))
-                    self.sendLine('NOTIFY OK')
+                    self.notifyFinish("OK")
+                    self.factory.addNotifier((host, port))
                 elif action == "FALSE":
-                    self.factory.del_notifier((host, port))
-                    self.sendLine('NOTIFY OK')
+                    self.notifyFinish("OK")
+                    self.factory.delNotifier((host, port))
                 else:
-                    self.sendLine('NOTIFY FAIL')
+                    print action
+                    self.notifyFail()
         else:
-            self.sendLine('NOTIFY FAIL')
+            print 'else'
+            self.notifyFail()
     
+    def notifyFail(self, f=None):
+        self.notifyFinish("FAIL")
+    
+    def notifyFinish(self, msg):
+        self._reset()
+        self.sendLine("NOTIFY %s" % msg)
     # The RESET, KILL and DISCONNECT commands
     
     def handle_RESET(self, args, ids):
-        self.factory.reset(ids)
         self.sendLine('RESET OK')
         self._reset()
+        return self.factory.reset(ids)
     
     def handle_KILL(self, args, ids):
-        return self.factory.kill(ids).addErrback(lambda _: 7)
+        self.sendLine('KILL OK')
+        self._reset()
+        return self.factory.kill(ids)
     
     def handle_DISCONNECT(self, args, ids):
         log.msg("Disconnecting client...")
@@ -494,10 +536,10 @@ class ControlFactoryFromService(protocol.ServerFactory):
     def __init__(self, service):
         self.service = service
     
-    def add_notifier(self, n):
+    def addNotifier(self, n):
         return self.service.addNotifier(n)
     
-    def del_notifier(self, n):
+    def delNotifier(self, n):
         return self.service.delNotifier(n)
     
     def verifyIds(self, ids):
