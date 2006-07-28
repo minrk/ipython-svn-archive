@@ -63,6 +63,8 @@ class PBEngineClientFactory(pb.PBClientFactory):
         time.sleep(2)
         connector.connect()
     
+    def clientConnectionLost(self, connector, reason=0):
+        self.service.kill()
 
 # Expose a PB interface to the EngineService
      
@@ -70,6 +72,12 @@ class IPBEngine(Interface):
     """Twisted Perspective Broker remote interface for engine service."""
     
     #remote methods for engine service
+    def remote_getID(self):
+        """return this.id"""
+    
+    def remote_setID(self, id):
+        """set this.id"""
+
     def remote_execute(self, lines):
         """Execute lines of Python code."""
     
@@ -107,6 +115,12 @@ class PBEngineReferenceFromService(pb.Referenceable):
         
     def __init__(self, service):
         self.service = service
+    
+    def remote_getID(self):
+        return self.service.getID()
+    
+    def remote_setID(self, id):
+        return self.service.setID(id)
     
     def remote_execute(self, lines):
         return self.service.execute(lines)
@@ -153,8 +167,17 @@ class EngineFromReference(object):
     
     def __init__(self, reference):
         self.callRemote = reference.callRemote
+        self.id = None
         self.currentCommand = None
     #
+    def getID(self):
+        """return this.id"""
+        return self.callRemote('getID')
+    
+    def setID(self, id):
+        """set this.id"""
+        return self.callRemote('setID', id)
+    
     def execute(self, lines):
         """Execute lines of Python code."""
         return self.callRemote('execute', lines)

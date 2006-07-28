@@ -38,7 +38,7 @@ from optparse import OptionParser
 from IPython.ColorANSI import *
 
 try:
-    from ipython1.kernel1p.results import ResultGatherer
+    from ipython1.kernel.results import ResultGatherer
 except:
     print "ipython1 needs to be in your PYTHONPATH"
      

@@ -147,10 +147,10 @@ class BasicControllerServiceTest(DeferredTestCase):
             (5,"2.0*math.pi","6.2831853071795862\n","")]            
             
         dlist = []
-        for id in self.cs.engine.keys():
+        for id in self.cs.engines.keys():
             d = defer.succeed(None)
             for c in commands:
-                d = self.assertDeferredEquals(self.cs.execute(c[1], id), [c], chainDeferred=d)
+                d = self.assertDeferredEquals(self.cs.execute(c[1], id), [(id,c)], chainDeferred=d)
             dlist.append(d)
         d = defer.DeferredList(dlist)
         return d
@@ -174,7 +174,7 @@ class BasicControllerServiceTest(DeferredTestCase):
             (d1, es) = self.newEngine()
             dlist.append(d1)
         d = defer.DeferredList(dlist)
-        d.addCallback(lambda _: self.cs.engine.keys())
+        d.addCallback(lambda _: self.cs.engines.keys())
         d = self.assertDeferredEquals(d, range(n))
         return d
     

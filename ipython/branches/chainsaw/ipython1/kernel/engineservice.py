@@ -57,6 +57,11 @@ class IEngine(Interface):
     raised in these methods, they must be allowed to propagate.  That is, they
     must not be caught.
     """
+    def getID(self):
+        """return this.id"""
+    
+    def setID(self, id):
+        """set this.id"""
     
     def execute(self, lines):
         """Execute lines of Python code."""
@@ -108,6 +113,7 @@ class QueuedEngine(object):
     
     def __init__(self, engine):
         self.engine = engine
+        self.id = engine.id
         self.queued = []
         self.history = {}
         self.currentCommand = None
@@ -153,7 +159,6 @@ class QueuedEngine(object):
             self.currentCommand = self.queued.pop(0)
             self.runCurrentCommand()
     
-    
     def saveResult(self, result):
         """put the result in the history"""
         self.history[result[0]] = result
@@ -178,10 +183,16 @@ class QueuedEngine(object):
     
     #methods from IEngine
     
+    def getID(self):
+        return self.id
+    
+    def setID(self, id):
+        self.id = id
+        return self.submitCommand(Command("setID", id))
+    
     def execute(self, lines):
         """Execute lines of Python code."""
-        d = self.submitCommand(Command("execute", lines))
-        return d
+        return self.submitCommand(Command("execute", lines))
     
     def put(self, key, value):
         """Put value into locals namespace with name key."""
@@ -226,8 +237,10 @@ class QueuedEngine(object):
     
     def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
-#        d = self.submitCommand(Command("getCommand", i))
-        return defer.succeed(self.history[i])
+        try:
+            return defer.succeed(self.history[i])
+        except KeyError:
+            return defer.succeed(None)
     
     def getLastCommandIndex(self):
         """Get the index of the last command."""
@@ -266,7 +279,15 @@ class Command(object):
 class EngineService(InteractiveShell, service.Service):
     
     implements(IEngine)
-        
+    
+    id = None
+    
+    def getID(self):
+        return self.id
+    
+    def setID(self, id):
+        self.id = id
+    
     def put(self, key, value):
         return defer.succeed(InteractiveShell.put(self, key, value))
     
@@ -293,7 +314,10 @@ class EngineService(InteractiveShell, service.Service):
         return defer.succeed(InteractiveShell.reset(self))
     
     def kill(self):
-        reactor.stop()
+        try:
+            reactor.stop()
+        except RuntimeError:
+            log.msg("Can't stop reactor, probably already stopped")
     
     def getCommand(self, i=None):
         return defer.succeed(InteractiveShell.getCommand(self, i))
