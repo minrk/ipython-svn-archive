@@ -16,41 +16,33 @@ import os
 # update it when the contents of directories change.
 if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
-from distutils.core import setup, Extension
-from distutils import sysconfig
-import distutils.unixccompiler
+# This is needed to monkey patch sysconfig.customize_compiler for
+# Python 2.3 so that the default LDSHARED can be overridden by the
+# environmental variable below.
+import ipython1.distutils.sysconfig
 
-# Configure distutils to use mpicc/mpicxx for building    
+
+from distutils import sysconfig
+from distutils.core import setup, Extension
+
+# Set the paths for the mpi compiler binaries
 mpi_base = ''
 mpicc = mpi_base + 'mpicc'
 mpicxx = mpi_base + 'mpic++'
 
-# hack into distutils to replace the compiler in "linker_so" with mpicc_bin
-
-class MPI_UnixCCompiler(distutils.unixccompiler.UnixCCompiler):
-    __set_executable = distutils.unixccompiler.UnixCCompiler.set_executable
-
-    def set_executable(self,key,value):
-        if key == 'linker_so' and type(value) == str:
-            value = mpicc + ' ' + ' '.join(value.split()[1:])
-
-        return self.__set_executable(key,value)
-
-distutils.unixccompiler.UnixCCompiler = MPI_UnixCCompiler 
-
-
-
 # Swap out just the binary of the linker, but keep the flags
-#ldshared = sysconfig.get_config_var('LDSHARED')
-#ldshared = mpicc + ' ' + ldshared.split(' ',1)[1]
+ldshared = sysconfig.get_config_var('LDSHARED')
+ldshared = mpicc + ' ' + ldshared.split(' ',1)[1]
 
+# Override the default compiler with the mpi one
 os.environ['CC'] = mpicc
 os.environ['CXX'] = mpicxx
-#os.environ['LDSHARED'] = ldshared
+os.environ['LDSHARED'] = ldshared
+
+# Now build IPython
 
 e = Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])
 
-# Call the setup() routine which does most of the work
 setup(name             = 'ipython1',
       version          = '0.1',
       description      = 'Newly Redesigned IPython',
