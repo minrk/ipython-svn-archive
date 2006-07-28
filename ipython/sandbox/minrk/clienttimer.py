@@ -5,7 +5,7 @@ import time, sys
 
 from ipython1.kernel.controllerclient import RemoteController
 
-rc = RemoteController(('127.0.0.1', 10101))
+rc = RemoteController(('127.0.0.1', 10105))
 rc.connect()
 nonblock = ''
 block = ''

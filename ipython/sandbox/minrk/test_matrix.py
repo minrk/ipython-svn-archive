@@ -58,10 +58,15 @@ def main(port, host):
     rc['v'] = []
     for c in range(n):
         rc.execute("v.append(dot(r,M.getCol(%i)))" %c)
-    N = Matrix()
-    N.load(rc['v'])
-    print N
-    
+
+    n = rc['v']
+    try:
+        N = Matrix()
+        N.load()
+        print N
+    except:
+        print n
+
 
 
 def start(port=10105, host='127.0.0.1'):

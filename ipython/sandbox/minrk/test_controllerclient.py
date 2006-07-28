@@ -9,6 +9,12 @@ from ipython1.kernel.controllerclient import RemoteController
     
 def main(port, host):
     rc = RemoteController((host, port))
+    id =  rc.status().keys()
+    print rc.status()
+    rc['a'] = 5
+    rc.push('a', 6, id[3])
+    rc.push('b', 4, id[2:4])
+    rc.execute('a*b', id[:6], block=True)
     print rc.status()
     
     
