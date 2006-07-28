@@ -62,28 +62,6 @@ class ResultReporterProtocol(protocol.DatagramProtocol):
     def datagramReceived(self,data, sending_addr):
         if sending_addr == self.addr and data == "RESULT OK":
             self.transport.stopListening()
-
-class Mover(basic.LineReceiver):
-
-    def connectionMade(self):
-        self.transport.setTcpNoDelay(True)
-        self.state = 'init'
-        
-    def push(self, key, data_pickle):
-        self.d = defer.deferred()
-        self.sendLine("PUSH %s" % key)
-        self.sendLine("PICKLE %s" % len(self.data_pickle))
-        self.transport.write(self.data_pickle)
-        self.state = 'PUSH'
-        return self.d
-     
-    def lineReceived(self, line):
-        line_split = line.split(" ")
-        if line_split[0] == self.state and line_split[1] == "OK":
-            self.d.callback(True)
-        else:
-            self.d.callback(False)
-        self.transport.loseConnection()
             
 class KernelTCPProtocol(basic.LineReceiver):
 
@@ -93,10 +71,6 @@ class KernelTCPProtocol(basic.LineReceiver):
         self.state = 'init'
         self.work_vars = {}
         peer = self.transport.getPeer()
-        # I have turned off the ip address based secutiry because it is crap!
-        #if not self.factory.is_allowed(peer.host):
-        #    log.msg("Denied Client: %s" % peer.host)
-        #    self.transport.loseConnection()
             
     def lineReceived(self, line):
         split_line = line.split(" ", 1)
@@ -156,12 +130,6 @@ class KernelTCPProtocol(basic.LineReceiver):
             return
         else:
             args_str = args
-                                            
-        if 'FORWARD' in args_str:
-            self.work_vars['push_forward'] = True
-            args_str.replace("FORWARD ","")
-        else:
-            self.work_vars['push_forward'] = False
 
         self.work_vars['push_name'] = args_str
 
@@ -338,88 +306,6 @@ class KernelTCPProtocol(basic.LineReceiver):
         self._reset()
 
     #####
-    ##### The MOVE command
-    #####
-
-    def handle_init_MOVE(self, args):
-        """Handle a MOVE commmand."""
-        
-        print "Moving: ", args
-
-        self.work_vars['move_target_addrs'] = []
-        self.work_vars['move_failures'] = []            
-
-        # Process args
-        args_split = args.split(" ", 2)
-        if len(args_split) < 3:
-            self.finish_move("FAIL")
-        # No test is done to see if these are valid python variable names
-        self.work_vars['move_source_key'] = args_split[0]
-        self.work_vars['move_target_key'] = args_split[1]
-        try:
-            self.work_vars['move_targets'] = \
-                map(int,args_split[2].split(" "))
-        except:
-            self.move_finish("FAIL")
-        else:
-            # Lookup the addresses and fail one any don't exist        
-            for t in self.work_vars['move_targets']:
-                t_addr = self.factory.get_cluster_addr(t)
-                if t_addr is None:
-                    self.work_vars['move_failures'].append(t)                    
-                self.work_vars['move_target_addrs'].append(t_addr)
-            if None in self.work_vars['move_target_addrs']:
-                self.move_finish("FAIL")
-            else: # All addresses are present in the cluster
-                print "Targets: ", self.work_vars['move_targets']
-                print "Targets: ", self.work_vars['move_target_addrs']                
-                self.work_vars['current_ticket'] = \
-                    self.factory.get_ticket()
-                d = self.factory.pull(pull_name, 
-                    self.work_vars['current_ticket'])                   
-                d.addCallback(self.move_pull_ok)
-                d.addErrback(self.move_pull_fail)
-                 
-    def move_pull_ok(self, result):
-        # Add error code here and chain the callbacks
-        print "move_pull_ok", result
-        try:
-            self.work_vars['move_pickle'] = pickle.dumps(result, 2)
-        except:
-            self.move_finish("FAIL")
-        else:
-            for t in self.work_vars['move_targets']:
-                t_addr = self.factory.get_cluster_addr(t)
-                c = ClientCreator(reactor, Mover)
-                d = c.connectTCP(t_addr[0], t_addr[1])
-                d.addCallback(self.move_push)
-
-    def move_pull_fail(self, f):
-        print f.getTrackback()
-        self.move_finish("FAIL")
-                   
-    def move_push(self, proto):
-        d = proto.push(self.work_vars['move_target_key'], 
-            self.work_vars['move_pickle'])
-        
-        def handle_move_push(result):
-            if result:
-                self.move_finish("OK")
-            else:
-                self.move_finish("FAIL")
-        d.addCallback(handle_move_push)
-    
-    def move_push(self):
-        pass
-           
-    def move_finish(self, msg):
-        flist = map(str, self.work_vars['move_failures'])
-        fstr = " ".join(flist)
-        self.sendLine("MOVE %s %s" % (msg, fstr))
-        self._reset()
-
-
-    #####
     ##### Kernel control commands
     #####
     
@@ -436,21 +322,6 @@ class KernelTCPProtocol(basic.LineReceiver):
             self.sendLine("PICKLE %s" % len(package))
             self.transport.write(package)
             self.sendLine('STATUS OK')
-        
-    def handle_init_ALLOW(self, args):
-        args_split = args.split(" ")
-        if len(args_split) == 2:
-            action, host = args_split
-            if action == "TRUE":
-                self.factory.allow_client(host)
-                self.sendLine('ALLOW OK')
-            elif action == "FALSE":
-                self.factory.deny_client(host)
-                self.sendLine('ALLOW OK')
-            else:
-                self.sendLine('ALLOW FAIL')
-        else:
-            self.sendLine('ALLOW FAIL')
         
     def handle_init_NOTIFY(self, args):
         args_split = args.split(" ")
@@ -471,21 +342,6 @@ class KernelTCPProtocol(basic.LineReceiver):
                     self.sendLine('NOTIFY FAIL')
         else:
             self.sendLine('NOTIFY FAIL')
-
-    # The CLUSTER command
-
-    def handle_init_CLUSTER(self, args):
-        if args == "CLEAR":
-            self.factory.clear_cluster()
-            self.cluster_finish("OK")
-        elif args == "CREATE":
-            self.state = 'cluster'
-        else:
-            self.cluster_finish('FAIL')
-
-    def cluster_finish(self,msg):
-        self.sendLine("CLUSTER %s" % msg)
-        self._reset()
     
     def handle_cluster_PICKLE(self, size_str):
         try:
@@ -522,12 +378,22 @@ class KernelTCPProtocol(basic.LineReceiver):
         self.sendLine("DISCONNECT OK")
         self.transport.loseConnection()
    
-class KernelFactoryBase:
-
-    def __init__(self, allow=[], notify=[]):
+class KernelFactoryBase(protocol.ServerFactory):
+    protocol = KernelTCPProtocol
+    
+    def __init__(self, notify=[], mpi=None):
         self._notifiers = notify
-        self._allowed_clients = allow
-        self._cluster_addrs = []
+        self.mpi = mpi
+        self.createShell()
+        self.initMPI()
+        
+    def createShell(self):
+        "set the self.shell attribute"
+        raise NotImplemented("Use of sublcass of KernelFactory Base")
+        
+    def initMPI(self):
+        "Use self.mpi to setup mpi in the users namespace"
+        self.push('mpi', self.mpi)
         
     # Command notification addresses
         
@@ -543,163 +409,53 @@ class KernelFactoryBase:
         if n in self._notifiers:
             del self._notifiers[self._notifiers.index(n)]
         print "Notifiers: ", self._notifiers
-            
-    # Client validation addresses
-            
-    def allow_client(self, c):
-        if c not in self._allowed_clients:
-            self._allowed_clients.append(c)
-        #print "Allowed: ", self._allowed_clients
-            
-    def deny_client(self, c):
-        if c in self._allowed_clients:
-            del self._allowed_clients[self._allowed_clients.index(c)]
-        #print "Allowed: ", self._allowed_clients
-            
-    def is_allowed(self, c):
-        if c in self._allowed_clients or 'all' in self._allowed_clients:
-            return True
-        else:
-            return False
-            
-    # Cluster addresses
-            
-    def create_cluster(self, ca_list):
-        self._cluster_addrs = ca_list
-        for ca in self._cluster_addrs:
-            self.allow_client(ca[0]) # Just the ip address
-        #print "Cluster: ", self._cluster_addrs
-
-    def clear_cluster(self):
-        for ca in self._cluster_addrs:
-            self.deny_client(ca[0])
-        self._cluster_addrs = []
-            
-    def cluster_addrs(self):
-        return self._cluster_addrs
         
-    def get_cluster_addr(self, i):
-        try:
-            wa = self._cluster_addrs[i]
-        except:
-            return None
-        else:
-            return wa
-            
-    def cluster_count(self):
-        return len(self._cluster_addrs)
-
-   
-class KernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
-    protocol = KernelTCPProtocol
     
-    def __init__(self, allow=[], notify=[], mpi=None, callbackAddr=None):
-        self.qic = QueuedInteractiveConsole()
-        self.qic.start_work()
-        self.callbackAddr = callbackAddr
-        self.mpi =  mpi
-        if self.mpi:
-            self.qic.push('mpirank',self.mpi.rank)
-            self.qic.push('mpisize',self.mpi.size)            
-        KernelFactoryBase.__init__(self, allow, notify)
-
-    def stopFactory(self):
-        pass
-        #if self.mpi:
-        #    self.qic.execute('MPI.Finalize()')
-
-    def startFactory(self):
-        if self.callbackAddr:
-            ccb = callback.CallbackClientFactory(('192.168.0.1',10105),tries=3)
-            reactor.connectTCP('127.0.0.1', 12001, ccb)
+ 
+class KernelTCPFactory(KernelFactoryBase):
+        
+    def createShell(self):
+        self.shell = QueuedInteractiveConsole()
+        self.shell.start_work()          
         
     # Kernel methods
             
     def get_ticket(self):
-        return self.qic.get_ticket()
+        return self.shell.get_ticket()
         
     def push(self, key, value, ticket=None):
-        self.qic.push(key, value, ticket)
+        self.shell.push(key, value, ticket)
         
     def pull(self, key, ticket):
-        d = threads.deferToThread(self.qic.pull, key, ticket)
+        d = threads.deferToThread(self.shell.pull, key, ticket)
         return d
         
     def execute(self, source, ticket):
-        d = threads.deferToThread(self.qic.execute, source, ticket)
+        d = threads.deferToThread(self.shell.execute, source, ticket)
         return d
         
     def execute_block(self, source, ticket):
-        result = self.qic.execute(source, ticket, block=True)
+        result = self.shell.execute(source, ticket, block=True)
         return defer.succeed(result)
         
     def status(self):
-        return self.qic.status()
+        return self.shell.status()
         
     def reset(self):
-        self.qic.reset()
+        self.shell.reset()
         
     def get_result(self, i):
-        d = threads.deferToThread(self.qic.get_result, i)
+        d = threads.deferToThread(self.shell.get_result, i)
         return d
         
     def get_last_result(self):
-        d = threads.deferToThread(self.qic.get_last_result)
+        d = threads.deferToThread(self.shell.get_last_result)
         return d
-        
-class KernelTCPFactoryGUI(protocol.ServerFactory, KernelFactoryBase):
-    protocol = KernelTCPProtocol
-
-    def __init__(self, allow=[], notify=[]):
-        self.tic = TrappingInteractiveConsole()
-        KernelFactoryBase.__init__(self, allow, notify)
-
-    # Kernel methods
-            
-    def get_ticket(self):
-        return 0
-        
-    def push(self, key, value, ticket=None):
-        self.tic.update({key:value})
-        
-    def pull(self, key, ticket=None):
-        value = self.tic.get(key)
-        return defer.succeed(value)
-
-    def execute(self, source, ticket=None):
-        return self.execute_block(source)
                 
-    def execute_block(self, source, ticket=None):
-        self.tic.runlines(source)
-        result = self.tic.get_last_result()
-        return defer.succeed(result)
-        
-    def status(self):
-        return 0
-        
-    def reset(self):
-        self.tic.locals = {}
-        
-    def get_result(self, i):
-        return self.tic.get_result(i)
-        
-    def get_last_result(self):
-        return self.tic.get_last_result()
-        
-class ThreadlessKernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
-    protocol = KernelTCPProtocol
-    
-    def __init__(self, allow=[], notify=[], mpi=None):
-        self.tic = TrappingInteractiveConsole()
-        self.mpi =  mpi
-        if self.mpi:
-            self.qic.push('mpi',mpi)
-        KernelFactoryBase.__init__(self, allow, notify)
-
-    def stopFactory(self):
-        pass
-        #if self.mpi:
-        #    self.tic.runlines('MPI.Finalize()')
+class ThreadlessKernelTCPFactory(KernelFactoryBase):
+ 
+    def createShell(self):
+        self.shell = TrappingInteractiveConsole()
 
     # Kernel methods
             
@@ -707,15 +463,15 @@ class ThreadlessKernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
         return 0
         
     def push(self, key, value, ticket=None):
-        self.tic.update({key:value})
+        self.shell.update({key:value})
         
     def pull(self, key, ticket):
-        data = self.tic.get(key)
+        data = self.shell.get(key)
         return defer.succeed(data)
         
     def execute(self, source, ticket):
-        self.tic.runlines(source)
-        result = self.tic.get_last_result()
+        self.shell.runlines(source)
+        result = self.shell.get_last_result()
         return defer.succeed(result)
         
     def execute_block(self, source, ticket):
@@ -725,15 +481,15 @@ class ThreadlessKernelTCPFactory(protocol.ServerFactory, KernelFactoryBase):
         return 0
         
     def reset(self):
-        del self.tic
-        self.tic = TrappingInteractiveConsole()
+        del self.shell
+        self.shell = TrappingInteractiveConsole()
         
     def get_result(self, i):
-        result = self.tic.get_result(i)
+        result = self.shell.get_result(i)
         return defer.succeed(result)
         
     def get_last_result(self):
-        result = self.tic.get_last_result()
+        result = self.shell.get_last_result()
         return defer.succeed(result)
         
         

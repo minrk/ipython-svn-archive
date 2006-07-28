@@ -585,10 +585,6 @@ class InteractiveCluster(object):
         """Notify each kernel in the cluster about the other kernels."""
         for w in self.kernels:
             w.cluster(self.kernelAddrs)
-        
-        self.execute("from IPython.ipstruct import Struct")
-        self.execute("cluster = Struct()")
-        self.scatter("rank",range(self.count)) 
               
     def start(self, addrList):
         """Add already running kernels to the cluster.

@@ -93,7 +93,7 @@ def main(port, allow_ip=None):
         allow_list.append(allow_ip)    
     log.startLogging(sys.stdout)
     reactor.listenTCP(port, 
-        KernelTCPFactoryGUI(allow=allow_list))
+        ThreadlessKernelTCPFactory(allow=allow_list))
     # Start wx, which start the reactor using reactor.interleave
     app = MyApp(0)
     app.MainLoop()

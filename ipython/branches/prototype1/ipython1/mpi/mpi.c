@@ -1,6 +1,8 @@
 #include <Python.h>
 #include "mpi.h"
 
+/* This code was taken from Lisandro Dalcin's mpi4py. */
+
 static int module_called_init = 0;
 static int module_called_finalize = 0;
 
