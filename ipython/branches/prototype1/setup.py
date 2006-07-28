@@ -24,24 +24,71 @@ import ipython1.distutils.sysconfig
 
 from distutils import sysconfig
 from distutils.core import setup, Extension
+import sys
 
-# Set the paths for the mpi compiler binaries
-mpi_base = ''
-mpicc = mpi_base + 'mpicc'
-mpicxx = mpi_base + 'mpic++'
+# Functions for parsing additional command line arguments
 
-# Swap out just the binary of the linker, but keep the flags
-ldshared = sysconfig.get_config_var('LDSHARED')
-ldshared = mpicc + ' ' + ldshared.split(' ',1)[1]
+def parse_bool_option(name):
+    result = False
+    if name in sys.argv:
+        result = True
+        sys.argv.remove(name)
+    return result
+    
 
-# Override the default compiler with the mpi one
-os.environ['CC'] = mpicc
-os.environ['CXX'] = mpicxx
-os.environ['LDSHARED'] = ldshared
+def parse_option(name, default):
+    result = None
+    for arg in sys.argv:
+        if arg.startswith(name):
+            result = arg.split('=', 1)[1]
+            sys.argv.remove(arg)
+    if result is None:
+        return default
+    else:
+        return result
+
+# Parse additional command line options
+
+use_mpi = parse_bool_option('--mpi')
+mpicc = parse_option('--mpicc', 'mpicc')
+mpicxx = parse_option('--mpicxx', 'mpic++')
+
+# Packages and libraries to build
+
+with_packages = ['ipython1',
+                 'ipython1.kernel',
+                 'ipython1.core',
+                 'ipython1.startup']
+                
+with_scripts =  ['scripts/ipkernel',
+                 'scripts/ipkernelwx',
+                 'scripts/ipresults',
+                 'scripts/ipcontroller']
+
+with_ext_modules = []
+
+# Conditional MPI support
+
+if use_mpi:
+
+    print 'Building with mpi support:'
+    print 'mpicc =' + mpicc
+    print 'mpicxx =' + mpicxx 
+
+    # Swap out just the binary of the linker, but keep the flags
+    ldshared = sysconfig.get_config_var('LDSHARED')
+    ldshared = mpicc + ' ' + ldshared.split(' ',1)[1]
+
+    # Override the default compiler with the mpi one
+    os.environ['CC'] = mpicc
+    os.environ['CXX'] = mpicxx
+    os.environ['LDSHARED'] = ldshared
+    
+    e = Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])
+    with_ext_modules.append(e)
+    with_scripts.append('scripts/ipkernel-mpi')
 
 # Now build IPython
-
-e = Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])
 
 setup(name             = 'ipython1',
       version          = '0.1',
@@ -51,10 +98,7 @@ setup(name             = 'ipython1',
       author_email     = 'Fernando.Perez@colorado.edu / ellisonbg@gmail.com',
       url              = 'http://ipython.scipy.org',
       license          = 'BSD',
-      packages         = ['ipython1','ipython1.kernel','ipython1.core',
-                          'ipython1.startup'],
-      scripts          = ['scripts/ipkernel','scripts/ipkernelwx',
-                          'scripts/ipresults','scripts/ipcontroller',
-                          'scripts/ipkernel-mpi'],
-      ext_modules=[e]
+      packages         = with_packages,
+      scripts          = with_scripts,
+      ext_modules      = with_ext_modules
       )
