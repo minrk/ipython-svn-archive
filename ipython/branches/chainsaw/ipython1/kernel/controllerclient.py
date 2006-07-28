@@ -215,6 +215,7 @@ class RemoteController(object):
         if line == "EXECUTE OK":
             return None
         else:
+            print line
             return False
     
     def run(self, fname):

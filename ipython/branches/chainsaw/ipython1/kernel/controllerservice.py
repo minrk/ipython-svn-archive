@@ -167,14 +167,14 @@ class ControllerService(service.Service):
     def verifyIds(self, ids):
         if isinstance(ids, int):
             if ids not in self.engines.keys():
-                log.msg("id %i not registered" %i)
+                log.msg("id %i not registered" %ids)
                 return False
             else: 
                 return True
         elif isinstance(ids, list):
             for id in ids:
-                if ids not in self.engines.keys():
-                    log.msg("id %i not registered" %i)
+                if id not in self.engines.keys():
+                    log.msg("id %i not registered" %id)
                     return False
                 else: 
                     return True
@@ -211,9 +211,10 @@ class ControllerService(service.Service):
         log.msg("executing %s on %s" %(lines, ids))
         engines = self.engineList(ids)
         l = []
+        id = 1
         for e in engines:
-            l.append(e.execute(lines).addCallback(
-                lambda r:self.notify((e.getID(), r))))
+            id = id+4
+            l.append(e.execute(lines).addCallback(self.notify))
         return defer.gatherResults(l)
     
     def put(self, key, value, ids='all'):
@@ -313,6 +314,7 @@ class ControllerService(service.Service):
             l.append(e.getLastCommandIndex())
         return defer.gatherResults(l)
         
+    
     
     #notification methods
     

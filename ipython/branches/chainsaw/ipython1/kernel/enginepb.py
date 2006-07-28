@@ -36,7 +36,7 @@ class PBEngineClientFactory(pb.PBClientFactory):
     def __init__(self, service):
         
         pb.PBClientFactory.__init__(self)
-        
+        self.attempt = 0
         self.service = service
         self.engineReference = IPBEngine(service)
         self.deferred = self.getRootObject()
@@ -51,17 +51,20 @@ class PBEngineClientFactory(pb.PBClientFactory):
         self.rootObject = obj
         d = self.rootObject.callRemote('registerEngine', self.engineReference, None)
         d.addCallbacks(self._referenceSent, self._getRootFailure)
+
         return d
     
     def _referenceSent(self, id):
         self.service.id = id
         log.msg("got ID: %r" % id)
+#        self.attempt = 0
         return id
     
     def clientConnectionFailed(self, connector, reason):
         log.msg("connection failed, retrying...")
         time.sleep(2)
         connector.connect()
+            
     
     def clientConnectionLost(self, connector, reason=0):
         self.service.kill()

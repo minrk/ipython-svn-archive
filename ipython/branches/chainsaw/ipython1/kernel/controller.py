@@ -14,14 +14,26 @@ parts of the controller.
 #*****************************************************************************
 
 import cPickle as pickle
+import time
 
 from twisted.internet import protocol, defer, reactor
+from twisted.internet.interfaces import IProducer
 from twisted.protocols import basic
 from twisted.python import components, log
 
 from zope.interface import Interface, implements
 
 from ipython1.kernel import controllerservice
+
+
+class LineProducer:
+    
+    implements(IProducer)
+    
+    def __init__(self, line):
+        self.line = line
+        self.deferred = defer.Deferred()
+        
 
 class LiteralString:
     def __init__(self, size, defered):
@@ -48,11 +60,33 @@ class LiteralString:
 
 class ControlTCPProtocol(basic.LineReceiver):
     
+#    implements(IProducer)
+    
     def connectionMade(self):
         log.msg("Connection Made...")
         self.transport.setTcpNoDelay(True)
         self.state = 'init'
         self.work_vars = {}
+        self.deferred = None
+    
+#    def sendLine(self, line):
+#        self.line = line
+#        self.deferred = defer.Deferred()
+#        self.transport.registerProducer(self, False)
+#        return self.deferred
+#    
+#    def resumeProducing(self):
+#        self.transport.write(self.line + self.delimiter)
+#        self.transport.unregisterProducer()
+#        self.deferred.callback(None)
+#        return
+#    
+#    def pauseProducing(self):
+#        pass
+#    
+#    def stopProducing(self):
+#        if self.deferred:
+#            self.deferred.errback('StoppedProducing')
     
     def lineReceived(self, line):
         split_line = line.split(" ", 1)
@@ -64,7 +98,7 @@ class ControlTCPProtocol(basic.LineReceiver):
             cmd = split_line[0]
             arglist = split_line[1].split('::')
             if len(arglist) > 1:
-                ids = self.parseids(arglist[1:])
+                ids = self.parseIds(arglist[1:])
             else:
                 ids = 'all'
             args = arglist[0]
@@ -103,7 +137,7 @@ class ControlTCPProtocol(basic.LineReceiver):
         self.work_vars = {}
         self.state = 'init'
     
-    def parseids(self, idsList):
+    def parseIds(self, idsList):
         if len(idsList) is 0:
             return 'all'
         else:
@@ -178,13 +212,6 @@ class ControlTCPProtocol(basic.LineReceiver):
         self.work_vars['push_ids'] = ids
         # Setup to process the command
         self.state = 'updating'
-    
-    def setup_literal(self, size):
-        """Called by data command handlers."""
-        d = defer.Deferred()
-        self._pendingLiteral = LiteralString(size, d)
-        self.setRawMode()
-        return d        
     
     def update_finish(self,msg):
         self.sendLine("UPDATE %s" % msg)
@@ -274,11 +301,11 @@ class ControlTCPProtocol(basic.LineReceiver):
         if block:
             d = self.factory.execute(execute_cmd, ids)
             d.addCallback(self.execute_ok_block)
-        else:                   
-            self.execute_finish("OK")   
-            d = self.factory.execute(execute_cmd, ids)
-        d.addErrback(self.execute_fail)
-        return d
+            d.addErrback(self.execute_fail)
+            return d
+        else:
+            self.execute_finish('OK')
+            return self.factory.execute(execute_cmd, ids)
     
     def execute_ok_block(self, result):
         try:
@@ -294,8 +321,9 @@ class ControlTCPProtocol(basic.LineReceiver):
         self.execute_finish("FAIL")
     
     def execute_finish(self, msg):
-        self.sendLine("EXECUTE %s" % msg)
+        s = "EXECUTE %s" % msg
         self._reset()
+        return self.sendLine(s)
     
     #####
     ##### GETCOMMAND command
