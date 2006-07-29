@@ -2,31 +2,228 @@
 """timer test for controllerclient"""
 
 import time, sys
+from StringIO import StringIO
 
 from ipython1.kernel.controllerclient import RemoteController
 
-rc = RemoteController(('24.6.186.70', 10105))
+swapStream = StringIO()
+def swap():
+    global swapStream
+    tmp = sys.stdout
+    sys.stdout = swapStream
+    swapStream = tmp
+
+tests = 8
+failures = []
+
+#rc = RemoteController(('24.6.186.70', 10105))
+rc = RemoteController(('127.0.0.1', 10105))
 rc.connect()
-nonblock = ''
-block = ''
-c = 1
-b = 2
-for i in range(8):
-#    time.sleep(1)
-#    start  = time.time()
-#    rc.execute('c=%i' %c, block=True)
-#    split1 = time.time()
-    time.sleep(1)
-    split2 = time.time()
-    rc.execute('b=%i' %b)
-    stop = time.time()
-#    block += "%.1f " %(1000*(split1-start))
-    nonblock += "%.2f " %(1000*(stop-split2))
-#    assert(rc.pull('c', 0) is c)
-#    assert(rc.pull('b', 0) is b)
-#    c+=1
-    b+=2
 
-#print "block (in ms): ", block
-print "nonblock (in ms): ", nonblock
+n = len(rc.status().keys())
+timer = max(n/64, .1)
 
+log = open('%03.fnodeTimerTest.txt' %n, 'a')
+stdout = sys.stdout
+sys.stdout = log
+print "Running Timing Tests on %i Nodes" %n
+print "will run each test %i times" %tests
+print
+print "all times given in ms"
+print
+
+cmd = 'a=5'
+print "Non Blocking Execute %s: " %cmd
+try:
+    for i in range(tests):
+        time.sleep(timer)
+        start = time.time()
+        assert(rc.execute(cmd))
+        stop = time.time()
+        print "%.2f" %(1000*(stop - start)),
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+print "Non Blocking Execute with notify %s: " %cmd
+try:
+    assert(rc.notify())
+    for i in range(tests):
+        time.sleep(timer)
+        start = time.time()
+        assert(rc.execute(cmd))
+        stop = time.time()
+        print "%.2f" %(1000*(stop - start)),
+    time.sleep(timer)
+    assert(rc.notify(flag=False))
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+print "Blocking Execute %s: " %cmd
+try:
+    for i in range(tests):
+        time.sleep(timer)
+        swap()
+        start = time.time()
+        assert(rc.execute(cmd, block=True))
+        stop = time.time()
+        swap()
+        print "%.2f" %(1000*(stop - start)),
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+print "Blocking Execute with Notify %s: " %cmd
+try:
+    assert(rc.notify())
+    for i in range(tests):
+        time.sleep(timer)
+        swap()
+        start = time.time()
+        assert(rc.execute(cmd, block=True))
+        stop = time.time()
+        swap()
+        print "%.2f" %(1000*(stop - start)),
+    assert(rc.notify(flag=False))
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+key = 'a'
+value = 'fun'
+print "Pushing %s = %s: " %(key, value)
+try:
+    for i in range(tests):
+        time.sleep(timer)
+        start = time.time()
+        assert(rc.push(key, value))
+        stop = time.time()
+        print "%.2f" %(1000*(stop - start)),
+    time.sleep(timer)
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+print "Pulling %s: " %(key)
+try:
+    for i in range(tests):
+        time.sleep(timer)
+        start = time.time()
+        assert(rc.pull(key) or n is 0)
+        stop = time.time()
+        print "%.2f" %(1000*(stop - start)),
+    time.sleep(timer)
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+dikt = {'a':2, 'b':'123'}
+print "Updating with %s: " %dikt
+try:
+    for i in range(tests):
+        time.sleep(timer)
+        start = time.time()
+        assert(rc.update(dikt))
+        stop = time.time()
+        print "%.2f" %(1000*(stop - start)),
+    time.sleep(timer)
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+print "Getting Last Command: "
+try:
+    for i in range(tests):
+        time.sleep(timer)
+        start = time.time()
+        assert(rc.getCommand() or n is 0)
+        stop = time.time()
+        print "%.2f" %(1000*(stop - start)),
+    time.sleep(timer)
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+print "Getting Last Command Index: "
+try:
+    for i in range(tests):
+        time.sleep(timer)
+        start = time.time()
+        assert(rc.getLastCommandIndex() or n is 0)
+        stop = time.time()
+        print "%.2f" %(1000*(stop - start)),
+    time.sleep(timer)
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+print "Resetting: "
+try:
+    for i in range(tests):
+        time.sleep(timer)
+        start = time.time()
+        assert(rc.reset())
+        stop = time.time()
+        print "%.2f" %(1000*(stop - start)),
+    time.sleep(timer)
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+print "Getting Status: "
+try:
+    for i in range(tests):
+        time.sleep(timer)
+        start = time.time()
+        assert(rc.status() or n is 0)
+        stop = time.time()
+        print "%.2f" %(1000*(stop - start)),
+    time.sleep(timer)
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+print "Killing: "
+try:
+    for i in range(tests):
+        time.sleep(timer)
+        start = time.time()
+        assert(rc.kill())
+        stop = time.time()
+        print "%.2f" %(1000*(stop - start)),
+    time.sleep(timer)
+except AssertionError:
+    raise
+except Exception, e:
+    failures.append(e)
+print
+
+if not failures:
+    print "\nSUCCESS!"
+else:
+    for e in failures:
+        raise e
+    print "FAILED!"
