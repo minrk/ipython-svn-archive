@@ -36,7 +36,7 @@ class PBEngineClientFactory(pb.PBClientFactory):
     def __init__(self, service):
         
         pb.PBClientFactory.__init__(self)
-        self.attempt = 0
+        self.reconnect = True
         self.service = service
         self.engineReference = IPBEngine(service)
         self.deferred = self.getRootObject()
@@ -57,17 +57,13 @@ class PBEngineClientFactory(pb.PBClientFactory):
     def _referenceSent(self, id):
         self.service.id = id
         log.msg("got ID: %r" % id)
-#        self.attempt = 0
         return id
     
     def clientConnectionFailed(self, connector, reason):
-        log.msg("connection failed, retrying...")
-        time.sleep(2)
-        connector.connect()
+        log.msg("connection failed")
             
-    
-    def clientConnectionLost(self, connector, reason=0):
-        self.service.kill()
+    def clientConnectionLost(self, connector, reason):
+        log.msg("connection lost")
 
 # Expose a PB interface to the EngineService
      
@@ -169,10 +165,16 @@ class EngineFromReference(object):
     implements(IEngine)
     
     def __init__(self, reference):
-        self.callRemote = reference.callRemote
+        self.reference = reference
         self.id = None
         self.currentCommand = None
-    #
+    
+    def callRemote(self, *args, **kwargs):
+        try:
+            return self.reference.callRemote(*args, **kwargs)
+        except pb.DeadReferenceError:
+            return defer.fail()
+    
     def getID(self):
         """return this.id"""
         return self.callRemote('getID')

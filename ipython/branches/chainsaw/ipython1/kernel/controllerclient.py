@@ -213,9 +213,8 @@ class RemoteController(object):
             data = None
              
         if line == "EXECUTE OK":
-            return None
+            return True
         else:
-            print line
             return False
     
     def run(self, fname):
@@ -326,15 +325,20 @@ class RemoteController(object):
                     data = pickle.loads(package)
                 except pickle.PickleError, e:
                     print "Error unpickling object: ", e
-                    return None
+                    return False
                 else:
                     if line == "PULL OK":
                         return data
                     else:
-                        return None
+                        return False
         else:
             # For other data types
-            pass
+            data = line_split[1]
+            line, self.extra = self.es.read_line(self.extra)
+            if line == "PULL OK":
+                return data
+            else:
+                return False
     
     def __getitem__(self, key):
         return self.pull(key)
@@ -363,12 +367,12 @@ class RemoteController(object):
                     data = pickle.loads(package)
                 except pickle.PickleError, e:
                     print "Error unpickling object: ", e
-                    return None
+                    return False
                 else:
                     if line == "GETCOMMAND OK":
                         return data
                     else:
-                        return None
+                        return False
         else:
             # For other data types
             return False
@@ -378,7 +382,7 @@ class RemoteController(object):
         self._check_connection()    
         if isinstance(ids, list):
             ids = '::'.join(map(str, ids))
-
+        
         self.es.write_line("GETLASTCOMMANDINDEX ::%s" %ids)
         line, self.extra = self.es.read_line(self.extra)
         line_split = line.split(" ", 1)
@@ -394,16 +398,16 @@ class RemoteController(object):
                     data = pickle.loads(package)
                 except pickle.PickleError, e:
                     print "Error unpickling object: ", e
-                    return None
+                    return False
                 else:
                     if line == "GETLASTCOMMANDINDEX OK":
                         return data
                     else:
-                        return None
+                        return False
         else:
             # For other data types
             return False
-
+    
     def status(self, ids='all'):
         """Check the status of the kernel."""
         self._check_connection()
@@ -425,12 +429,12 @@ class RemoteController(object):
                     data = pickle.loads(package)
                 except pickle.PickleError, e:
                     print "Error unpickling object: ", e
-                    return None
+                    return False
                 else:
                     if line == "STATUS OK":
                         return data
                     else:
-                        return None
+                        return False
         else:
             # For other data types
             pass
@@ -464,7 +468,7 @@ class RemoteController(object):
         if addr is None:
             host = socket.gethostbyname(socket.gethostname())
             port = 10104
-            print "Kernel notification: ", host, port, flag
+#            print "Kernel notification: ", host, port, flag
         else:
             host, port = addr
             
@@ -476,7 +480,6 @@ class RemoteController(object):
         if line == "NOTIFY OK":
             return True
         else:
-            print line
             return False
     
     def reset(self, ids='all'):

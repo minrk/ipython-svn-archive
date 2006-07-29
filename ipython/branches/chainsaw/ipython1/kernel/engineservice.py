@@ -237,6 +237,9 @@ class QueuedEngine(object):
     
     def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
+        if i is None:
+            i = self.getLastCommandIndex()
+            
         try:
             return defer.succeed(self.history[i])
         except KeyError:

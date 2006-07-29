@@ -21,6 +21,7 @@ import cPickle as pickle
 
 from twisted.application import service, internet
 from twisted.internet import protocol, reactor, defer
+from twisted.protocols import basic
 from twisted.python import log
 from zope.interface import Interface, implements
 from twisted.spread import pb
@@ -122,7 +123,8 @@ class ControllerService(service.Service):
     
     def __init__(self, maxEngines=255, saveIDs=False):
         self.saveIDs = saveIDs
-        self._notifiers = []
+        self.notifierFactory = NotifierFactory(self)
+        self._notifiers = {}
         self.engines = {}
         self.availableIDS = range(maxEngines,-1,-1)#[255,...,0]
     
@@ -318,22 +320,45 @@ class ControllerService(service.Service):
     
     #notification methods
     
+        
     def notifiers(self):
         return self._notifiers
     
     def addNotifier(self, n):
         if n not in self._notifiers:
-            self._notifiers.append(n)
-        log.msg("Notifiers: %s" % self._notifiers)
+            self._notifiers[n] = reactor.connectTCP(n[0], n[1], self.notifierFactory)
+            self.notifierFactory.lastNotifier = n
+            log.msg("Notifiers: %s" % self._notifiers)
+        return defer.succeed("OK")
     
     def delNotifier(self, n):
         if n in self._notifiers:
-            del self._notifiers[self._notifiers.index(n)]
-        log.msg("Notifiers: %s" % self._notifiers)
+            self._notifiers[n].disconnect()
+            del self._notifiers[n]
+            log.msg("Notifiers: %s" % self._notifiers)
+        return defer.succeed("OK")
     
     def notify(self, result):
-        for tonotify in self.notifiers():
-            reactor.listenUDP(0,ResultReporterProtocol(result, tonotify))
+        package = pickle.dumps(result, 2)
+        for tonotify in self.notifiers().values():
+            if tonotify.transport.protocol is not None:
+                tonotify.transport.protocol.sendLine(
+                        "RESULT %i %s" %(len(package), package))
+            else:
+                log.msg("Notifier connection not ready for RESULT " + str(result))
         return result
     
 
+class NotifierFactory(protocol.ClientFactory):
+    """A small client factory and protocol for the tcp results gatherer"""
+    protocol = basic.LineReceiver
+    protocol.lineReceived = lambda _,__: None
+    lastNotifier = None
+    def __init__(self, service):
+        self.service = service
+    
+    def clientConnectionLost(self, connector, reason):
+        self.service.delNotifier((connector.host, connector.port))
+    
+    clientConnectionFailed = clientConnectionLost
+    

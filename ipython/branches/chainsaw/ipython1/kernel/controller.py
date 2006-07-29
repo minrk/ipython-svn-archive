@@ -40,13 +40,11 @@ class NonBlockingProducer:
         self.firstCall = True
     
     def register(self, consumer, deferred):
-        print 'noblock'
         self.consumer = consumer
         self.deferred = deferred
         consumer.registerProducer(self, False)
     
     def resumeProducing(self):
-        print 'resume'
         if self.firstCall:
             self.firstCall = False
             return
@@ -56,7 +54,6 @@ class NonBlockingProducer:
         return self.deferred
     
     def pauseProducing(self):
-        print 'pause'
         pass
     
     def stopProducing(self):
@@ -262,7 +259,6 @@ class ControlTCPProtocol(basic.LineReceiver):
     #####
     
     def handle_init_PULL(self, args, ids):
-        
         # Parse the args
         if not args:
             self.pullFinish("FAIL")
@@ -274,14 +270,14 @@ class ControlTCPProtocol(basic.LineReceiver):
         d = self.factory.pullPickle(pull_name, ids)
                 
         d.addCallback(self.pullOk)
-        d.addErrback(self.pullFail)
+#        d.addErrback(self.pullFail)
     
     def pullOk(self, resultList):
-        # Add error code here and chain the callbacks
         try:
-            result = map(pickle.loads,resultList)
+            result = map(pickle.loads, 
+                    map(tuple.__getitem__, resultList, [1]*len(resultList)))
             presult = pickle.dumps(result, 2)
-        except pickle.PickleError:
+        except pickle.PickleError, TypeError:
             self.pullFinish("FAIL")
         else:
             self.sendLine("PICKLE %s" % len(presult))
@@ -432,28 +428,23 @@ class ControlTCPProtocol(basic.LineReceiver):
             return
         else:
             args_split = args.split(" ")
-            print args_split
         
         if len(args_split) is 3:
             action, host, port = args_split
             try:
                 port = int(port)
             except (ValueError, TypeError):
-                print port
                 self.notifyFail()
             else:
-                print action
                 if action == "TRUE":
-                    self.notifyFinish("OK")
-                    self.factory.addNotifier((host, port))
+                    return self.factory.addNotifier((host, port)
+                    ).addCallback(self.notifyFinish)
                 elif action == "FALSE":
-                    self.notifyFinish("OK")
-                    self.factory.delNotifier((host, port))
+                    return self.factory.delNotifier((host, port)
+                    ).addCallback(self.notifyFinish)
                 else:
-                    print action
                     self.notifyFail()
         else:
-            print 'else'
             self.notifyFail()
     
     def notifyFail(self, f=None):
@@ -461,6 +452,8 @@ class ControlTCPProtocol(basic.LineReceiver):
     
     def notifyFinish(self, msg):
         self._reset()
+        if msg is None:
+            msg = "OK"
         self.sendLine("NOTIFY %s" % msg)
     # The RESET, KILL and DISCONNECT commands
     
