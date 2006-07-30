@@ -473,9 +473,9 @@ class RemoteController(object):
             host, port = addr
             
         if flag:
-            self.es.write_line("NOTIFY TRUE %s %s" % (host, port))
+            self.es.write_line("NOTIFY ADD %s %s" % (host, port))
         else:
-            self.es.write_line("NOTIFY FALSE %s %s" % (host, port))
+            self.es.write_line("NOTIFY DEL %s %s" % (host, port))
         line, self.extra = self.es.read_line(self.extra)
         if line == "NOTIFY OK":
             return True

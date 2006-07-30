@@ -152,6 +152,7 @@ class ControlTCPProtocol(basic.LineReceiver):
             try:
                 return map(int, idsList)
             except:
+                #defaults to all on bad idlist  should it do this?
                 return 'all'
     
     #####   
@@ -212,6 +213,45 @@ class ControlTCPProtocol(basic.LineReceiver):
         self._reset()
         return self.factory.pushPickle(name, package, ids)
     
+    #####
+    ##### The PULL command
+    #####
+
+    def handle_init_PULL(self, args, ids):
+        # Parse the args
+        if not args:
+            self.pullFinish("FAIL")
+            return
+        else:
+            pull_name = args
+
+        self.workVars['pull_type'] = 'PICKLE'
+        d = self.factory.pullPickle(pull_name, ids)
+
+        d.addCallback(self.pullOk)
+        d.addErrback(self.pullFail)
+    
+    def pullOk(self, pResultList):
+        try:
+            #get list of pickles, want pickled list
+            resultList = []
+            for t in pResultList:
+                resultList.append((t[0], pickle.loads(t[1])))
+            presult = pickle.dumps(resultList, 2)
+        except pickle.PickleError, TypeError:
+            self.pullFinish("FAIL")
+        else:
+            self.sendLine("PICKLE %s" % len(presult))
+            self.transport.write(presult)
+            self.pullFinish("OK")
+    
+    def pullFail(self, failure):
+        self.pullFinish("FAIL")
+    
+    def pullFinish(self, msg):
+        self.sendLine("PULL %s" % msg)
+        self._reset()
+    
     #####   
     ##### The UPDATE command
     #####
@@ -253,43 +293,6 @@ class ControlTCPProtocol(basic.LineReceiver):
         ids = self.workVars['update_ids']
         self._reset()
         return self.factory.updatePickle(package, ids)
-    
-    #####
-    ##### The PULL command
-    #####
-    
-    def handle_init_PULL(self, args, ids):
-        # Parse the args
-        if not args:
-            self.pullFinish("FAIL")
-            return
-        else:
-            pull_name = args
-            
-        self.workVars['pull_type'] = 'PICKLE'
-        d = self.factory.pullPickle(pull_name, ids)
-                
-        d.addCallback(self.pullOk)
-#        d.addErrback(self.pullFail)
-    
-    def pullOk(self, resultList):
-        try:
-            result = map(pickle.loads, 
-                    map(tuple.__getitem__, resultList, [1]*len(resultList)))
-            presult = pickle.dumps(result, 2)
-        except pickle.PickleError, TypeError:
-            self.pullFinish("FAIL")
-        else:
-            self.sendLine("PICKLE %s" % len(presult))
-            self.transport.write(presult)
-            self.pullFinish("OK")
-    
-    def pullFail(self, failure):
-        self.pullFinish("FAIL")
-    
-    def pullFinish(self, msg):
-        self.sendLine("PULL %s" % msg)
-        self._reset()
     
     #####
     ##### The EXECUTE command
@@ -436,10 +439,10 @@ class ControlTCPProtocol(basic.LineReceiver):
             except (ValueError, TypeError):
                 self.notifyFail()
             else:
-                if action == "TRUE":
+                if action == "ADD":
                     return self.factory.addNotifier((host, port)
                     ).addCallback(self.notifyFinish)
-                elif action == "FALSE":
+                elif action == "DEL":
                     return self.factory.delNotifier((host, port)
                     ).addCallback(self.notifyFinish)
                 else:
