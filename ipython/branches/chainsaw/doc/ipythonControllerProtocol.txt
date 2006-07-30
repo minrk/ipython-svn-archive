@@ -1,0 +1,252 @@
+===========================================
+Network Protocol For The IPython Controller
+===========================================
+
+Outline
+-------
+
+I. Design_
+    The abstract design of the protocol.
+#. Specification_
+    The basic behaviors of the protocol.
+#. Examples_
+    Good and bad Client-Server communication examples.
+
+
+.. _Design:
+
+
+I. Design
+------------
+
+    The Controller Protocol, which is the upward listening protocol of the 
+    ipython Controller, is a readline protocol.  Communications are typically
+    suffixed with '\r\n'.  For any communication line receives, the controller
+    will give one or more response lines indicating the success/failure of the
+    command, and if the command returns data, that is contained in a line in
+    addition to the command status reply.  As presently implemented, the
+    protocol instance on the Controller inherits from 
+    twisted.protocols.basic.LineReceiver.
+
+.. _Specification:
+
+II. Specification
+------------------
+
+    0. General Command Line Form
+        Syntax
+            `COMMAND [OPTION [args [::idlist]]]`
+        
+        Blocking/Non Blocking
+            A command may wait for the return of data (Blocking),
+            or return as quickly as possible (Non Blocking).
+        
+        `COMMAND`
+            The command to be executed.
+            
+        `OPTION`
+            Some commands have options, e.g. 
+                `EXECUTE BLOCK...`
+                
+        `args`
+            The arguments to be passed to the command.
+            If `args` is not specified, most commands will fail.
+            
+        `::`
+            The `idlist` delimiter
+            
+        `idlist`
+            The list of node ids as targets of 'COMMAND', separated by '`::`'.
+            i.e. 1::2::3::5...
+            If `idlist` is not specified, COMMAND is sent to all nodes by default.
+            
+        Reply Statement:
+            On success, the line `COMMAND OK` is sent.
+            
+            On failure, the line `COMMAND FAIL` is sent.
+            
+            If COMMAND is not recongized, or is otherwise invalid, `BAD` is the reply.
+            
+            Data retrieval methods (`PULL, STATUS, GETCOMMAND, GETLASTCOMANDINDEX`)
+            have an extra reply statement given *before* the standard success/failure reply.
+        
+        
+    #. EXECUTE
+        Executes args on idlist
+        
+        Syntax
+            `EXECUTE [BLOCK] args [::idlist]`
+        
+        Blocking OR Non Blocking
+        
+        `BLOCK`
+            Indicates whether to wait for response of execute commands.  
+            If 'BLOCK' is not specified, the command returns as soon as the message is received.
+            If `BLOCK` is specified, the stdin,stdout,stderr are printed once they are returned.
+            
+    #. PUSH
+        `PUSH` is a two line command.  The first line sets the commmand, the key, and the idlist.
+        The second line sends the pickled value to be sent to the engines.
+        
+        Syntax
+            `PUSH key [::idlist]`
+            
+            `PICKLE pickledValue`
+        
+        Non Blocking
+        
+        Assigns a value to `key` on `idlist`.
+        
+        `key`
+            The key to which a value will be assigned.
+            
+        `pickledValue`
+            The value to be assigned to `key` on `idlist`, serialized by pickle.
+        
+    #. PULL
+        Pulls the value of `key` from `idlist`.
+        
+        Syntax
+            `PULL key [::idlist]`
+        
+        Blocking
+        
+        `key`
+            As in PUSH, the key whose value will be returned.
+            
+        Reply
+            `PICKLE pickledValue`
+
+            pickledValue
+                The a list of values at `key` on `idlist`, serialized by pickle.
+            
+            
+    #. UPDATE
+        Updates the `locals` namespace on `idlist`
+    
+        Syntax
+            `UPDATE dict [::idlist]`
+        
+        Non Blocking
+        
+        `dict`
+            A dictionary, serialized by pickle, with which `locals` will be updated.
+        
+    #. GETCOMMAND
+        Gets the `stdin/out/err` of command `cmdID`.
+    
+        Syntax
+            `GETCOMMAND [cmdID] [::idlist]`
+        
+        Blocking
+        
+        `cmdID`
+            The id of the command whose `stdin/out/err` is to be returned.
+            If cmdID is not specified, the most recent command is returned.
+        
+        Reply
+            `PICKLE pickleCommand`
+            
+            `pickleCommand`
+                A list of command response tuples, serialized by pickle.
+        
+    #. GETLASTCOMMANDINDEX
+        Gets the index of the last executed command.
+    
+        Syntax
+            `GETLASTCOMMANDINDEX [::idlist]`
+        
+        Blocking
+        
+        Reply
+            `PICKLE pickleIndex`
+            
+            `pickleIndex`
+                A list of the indices of most recent executed commands on `idlist`,
+                serialized by pickle.
+            
+        
+    #. STATUS
+        Returns the status of `idlist` in a dictionary.
+    
+        Syntax
+            `STATUS [::idlist]`
+        
+        Blocking
+        
+        Reply
+            `PICKLE pickledStatus`
+            
+            `pickledStatus`
+                A dictionary, serialized by pickle, containing the status of remote engines
+                in the following form:
+                
+                `{nodeID: {'queue':[queuedCommands], 'history':{cmdID:(command),...}},...}`
+                
+                `nodeID`
+                    The integer id of each node.
+                    
+                `'queue'`
+                    A list of enqueued commands.
+                
+                `'history'`
+                    A dictionary of the execute return of all `EXECUTE` commands,
+                    indexed by the command id (`cmdID`).
+                
+            
+        
+    #. NOTIFY
+        Adds(or Removes) a results gatherer for the controller to notify of executed commands.
+    
+        Syntax
+            `NOTIFY ADD/DEL host port`
+        
+        Blocking
+        
+        `ADD/DEL`
+            `ADD`
+                Adds a gatherer to notify.
+                
+            `DEL`
+                Removes an existing gatherer from notifier list.
+            
+        `host`
+            the ip string (`127.0.0.1`) of a results gatherer.
+        
+        `port`
+            the port on which the results gatherer at `host` is listening.
+        
+    #. RESET
+        Resets the namespace of `idlist`.
+    
+        Syntax
+            `RESET [::idlist]`
+        
+        Blocking
+        
+    #. KILL
+        Kills the process of `idlist`.
+
+        Syntax
+            `KILL [::idlist]`
+        
+        Blocking
+        
+
+    
+    #. DISCONNECT
+        Syntax
+            `DISCONNECT`
+        
+        Non Blocking
+        
+        Disconnects client from controller.
+    
+    
+.. _Examples:
+
+
+III. Examples
+------------
+
+    To be written
