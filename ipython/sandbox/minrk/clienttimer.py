@@ -21,7 +21,7 @@ rc = RemoteController(('127.0.0.1', 10105))
 rc.connect()
 
 n = len(rc.status().keys())
-timer = max(n/32, .1)
+timer = max(n/64, 1)
 
 if 'log' in sys.argv:
     logfile = open('%03.fnodeTimerTest.txt' %n, 'a')
@@ -43,9 +43,8 @@ try:
         assert(rc.execute(cmd))
         stop = time.time()
         print "%.2f" %(1000*(stop - start)),
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
@@ -60,9 +59,8 @@ try:
         print "%.2f" %(1000*(stop - start)),
     time.sleep(timer)
     assert(rc.notify(flag=False))
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
@@ -76,9 +74,8 @@ try:
         stop = time.time()
         swap()
         print "%.2f" %(1000*(stop - start)),
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
@@ -94,9 +91,8 @@ try:
         swap()
         print "%.2f" %(1000*(stop - start)),
     assert(rc.notify(flag=False))
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
@@ -111,9 +107,8 @@ try:
         stop = time.time()
         print "%.2f" %(1000*(stop - start)),
     time.sleep(timer)
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
@@ -126,9 +121,8 @@ try:
         stop = time.time()
         print "%.2f" %(1000*(stop - start)),
     time.sleep(timer)
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
@@ -142,9 +136,8 @@ try:
         stop = time.time()
         print "%.2f" %(1000*(stop - start)),
     time.sleep(timer)
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
@@ -157,9 +150,8 @@ try:
         stop = time.time()
         print "%.2f" %(1000*(stop - start)),
     time.sleep(timer)
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
@@ -172,9 +164,8 @@ try:
         stop = time.time()
         print "%.2f" %(1000*(stop - start)),
     time.sleep(timer)
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
@@ -187,9 +178,8 @@ try:
         stop = time.time()
         print "%.2f" %(1000*(stop - start)),
     time.sleep(timer)
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
@@ -202,9 +192,8 @@ try:
         stop = time.time()
         print "%.2f" %(1000*(stop - start)),
     time.sleep(timer)
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
@@ -217,9 +206,8 @@ try:
         stop = time.time()
         print "%.2f" %(1000*(stop - start)),
     time.sleep(timer)
-except AssertionError:
-    raise
-except Exception, e:
+except AssertionError, e:
+    print "Command Failed"
     failures.append(e)
 print
 
