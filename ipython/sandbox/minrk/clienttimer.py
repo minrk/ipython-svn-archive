@@ -4,6 +4,7 @@
 import time, sys
 from StringIO import StringIO
 
+#from twisted.python import log
 from ipython1.kernel.controllerclient import RemoteController
 
 swapStream = StringIO()
@@ -16,16 +17,17 @@ def swap():
 tests = 8
 failures = []
 
-#rc = RemoteController(('24.6.186.70', 10105))
 rc = RemoteController(('127.0.0.1', 10105))
 rc.connect()
 
 n = len(rc.status().keys())
-timer = max(n/64, .1)
+timer = max(n/32, .1)
 
-log = open('%03.fnodeTimerTest.txt' %n, 'a')
-stdout = sys.stdout
-sys.stdout = log
+if 'log' in sys.argv:
+    logfile = open('%03.fnodeTimerTest.txt' %n, 'a')
+    stdout = sys.stdout
+    sys.stdout = logfile
+
 print "Running Timing Tests on %i Nodes" %n
 print "will run each test %i times" %tests
 print
