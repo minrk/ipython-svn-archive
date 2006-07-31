@@ -13,8 +13,7 @@ I. Design_
     Good and bad Client-Server communication examples.
 
 
-.. _Design:
-
+    .. _Design:
 
 I. Design
 ------------
@@ -28,225 +27,424 @@ I. Design
     protocol instance on the Controller inherits from 
     twisted.protocols.basic.LineReceiver.
 
-.. _Specification:
+    .. _Specification:
 
 II. Specification
 ------------------
 
+    0. `General`_
+    
+    #. `EXECUTE`_
+    #. `PUSH`_
+    #. `PULL`_
+    #. `UPDATE`_
+    #. `GETCOMMAND`_
+    #. GETLASTCOMMANDINDEX_
+    #. STATUS_
+    #. RESET_
+    #. KILL_
+    #. DISCONNECT_
+
+    .. _General:
+    
     0. General Command Line Form
         Syntax
-            `COMMAND [OPTION [args [::idlist]]]`
+            ``COMMAND [OPTION [args[::idlist]]]``
         
         Blocking/Non Blocking
             A command may wait for the return of data (Blocking),
             or return as quickly as possible (Non Blocking).
         
-        `COMMAND`
+        ``COMMAND``
             The command to be executed.
             
-        `OPTION`
+        ``OPTION``
             Some commands have options, e.g. 
-                `EXECUTE BLOCK...`
+                ``EXECUTE BLOCK...``
                 
-        `args`
+        ``args``
             The arguments to be passed to the command.
-            If `args` is not specified, most commands will fail.
+            If ``args`` is not specified, most commands will fail.
             
-        `::`
-            The `idlist` delimiter
+        ``::``
+            The ``idlist`` delimiter
             
-        `idlist`
-            The list of node ids as targets of 'COMMAND', separated by '`::`'.
-            i.e. 1::2::3::5...
-            If `idlist` is not specified, COMMAND is sent to all nodes by default.
+        ``idlist``
+            The list of node ids as targets of '``COMMAND``', separated by '``::``'.
+            i.e. ``1::2::3::5``...
+            
+            If ``idlist`` is not specified, COMMAND is sent to all nodes by default.
+        
+        delimiters
+            The protocol expects a single space between ``COMMAND``, ``OPTION``, and ``args``.
+            But no space between ``args`` and ``::idlist``
+            
+            example:
+            ``EXECUTE BLOCK a=5::1::7::0``
             
         Reply Statement:
-            On success, the line `COMMAND OK` is sent.
+            On success, the line ``COMMAND OK`` is sent.
             
-            On failure, the line `COMMAND FAIL` is sent.
+            On failure, the line ``COMMAND FAIL`` is sent.
             
-            If COMMAND is not recongized, or is otherwise invalid, `BAD` is the reply.
+            If COMMAND is not recongized, or is otherwise invalid, ``BAD`` is the reply.
             
-            Data retrieval methods (`PULL, STATUS, GETCOMMAND, GETLASTCOMANDINDEX`)
+            Data retrieval methods (``EXECUTE BLOCK, PULL, STATUS, GETCOMMAND, GETLASTCOMANDINDEX``)
             have an extra reply statement given *before* the standard success/failure reply.
+            It is in the form of a single line ``PICKLE n``, where n is an integer, followed by
+            a string that is n bytes in length, which is the data retrieved by the command,
+            serialized by pickle.  All commands that retrieve data return a list, except for STATUS,
+            which returns a dictionary.  The elements of each list are the outputs of each engine
+            receiving the given command.  NOTE: A command sent to a single engine returns a one element
+            list.  The order of the idlist given by the client is exactly the order of the elements
+            returned to the client.
         
-        
+        .. _EXECUTE:
     #. EXECUTE
         Executes args on idlist
         
         Syntax
-            `EXECUTE [BLOCK] args [::idlist]`
-        
+            ``EXECUTE [BLOCK] args[::idlist]``
+            
+            EXECUTE_Examples_
+            
         Blocking OR Non Blocking
         
-        `BLOCK`
-            Indicates whether to wait for response of execute commands.  
-            If 'BLOCK' is not specified, the command returns as soon as the message is received.
-            If `BLOCK` is specified, the stdin,stdout,stderr are printed once they are returned.
+        ``BLOCK``
+            Indicates whether to wait for response of execute commands.
             
+            If ``BLOCK`` is not given, the controller replies normally as quickly as possible
+            (before calling execute)
+            
+                ``EXECUTE OK/FAIL``
+            
+            If ``BLOCK`` is given, the controller waits for the output of the executes,
+            and replies
+            
+                ``PICKLE n`` *pickledCommand*
+                
+                ``n``
+                    the length of *pickledCommand* in bytes
+                    
+                *pickledCommand*
+                    a list of tuples of the form (nodeID, (cmdID, stdin, stdout, stderr),...),
+                    serialized by pickle.
+                    
+
+        .. _PUSH:
     #. PUSH
-        `PUSH` is a two line command.  The first line sets the commmand, the key, and the idlist.
+        ``PUSH`` is a two line command.  The first line sets the commmand, the key, and the idlist.
         The second line sends the pickled value to be sent to the engines.
         
         Syntax
-            `PUSH key [::idlist]`
+            ``PUSH key[::idlist]``
             
-            `PICKLE pickledValue`
+            ``PICKLE n`` *pickledValue*
         
+            PUSH_Examples_
+            
         Non Blocking
         
-        Assigns a value to `key` on `idlist`.
+        Assigns a value to ``key`` on ``idlist``.
         
-        `key`
+        ``key``
             The key to which a value will be assigned.
             
-        `pickledValue`
-            The value to be assigned to `key` on `idlist`, serialized by pickle.
+        ``n``
+            the length of *pickledValue* in bytes
+        *pickledValue*
+            The value to be assigned to ``key`` on ``idlist``, serialized by pickle.
         
+        .. _PULL:
     #. PULL
-        Pulls the value of `key` from `idlist`.
+        Pulls the value of ``key`` from ``idlist``.
         
         Syntax
-            `PULL key [::idlist]`
+            ``PULL key[::idlist]``
         
+            PULL_Examples_
+            
         Blocking
-        
-        `key`
+
+        ``key``
             As in PUSH, the key whose value will be returned.
             
         Reply
-            `PICKLE pickledValue`
+            ``PICKLE n`` *pickledValue*
 
-            pickledValue
-                The a list of values at `key` on `idlist`, serialized by pickle.
+            ``n``
+                the length of *pickledValue* in bytes
+            *pickledValue*
+                The a list of values found at ``key`` on ``idlist``, serialized by pickle.
             
-            
+        .. _UPDATE:
     #. UPDATE
-        Updates the `locals` namespace on `idlist`
+        Updates the ``locals`` dictionary on ``idlist``
     
         Syntax
-            `UPDATE dict [::idlist]`
-        
+            ``UPDATE [::idlist]``
+            
+            ``PICKLE n`` *pickleDict*
+            
+            UPDATE_Examples_
+            
         Non Blocking
         
-        `dict`
-            A dictionary, serialized by pickle, with which `locals` will be updated.
+        ``n``
+            the length of *pickleDict* in bytes
+        *pickleDict*
+            A dictionary, serialized by pickle, with which ``locals`` will be updated.
         
+        .. _GETCOMMAND:
     #. GETCOMMAND
-        Gets the `stdin/out/err` of command `cmdID`.
+        Gets the ``stdin/out/err`` of command ``cmdID``.
     
         Syntax
-            `GETCOMMAND [cmdID] [::idlist]`
+            ``GETCOMMAND [cmdID][::idlist]``
         
+            GETCOMMAND_Examples_
+            
         Blocking
         
-        `cmdID`
-            The id of the command whose `stdin/out/err` is to be returned.
+        ``cmdID``
+            The id of the command whose ``stdin/out/err`` is to be returned.
             If cmdID is not specified, the most recent command is returned.
         
         Reply
-            `PICKLE pickleCommand`
+            ``PICKLE n`` *pickleCommand*
             
-            `pickleCommand`
-                A list of command response tuples, serialized by pickle.
+            ``n``
+                the length of pickleCommand in bytes
+            *pickleCommand*
+                A list of command response tuples '(cmdID, stdin, stdout, stderr)', serialized by pickle.
         
+        .. _GETLASTCOMMANDINDEX: 
     #. GETLASTCOMMANDINDEX
         Gets the index of the last executed command.
     
         Syntax
-            `GETLASTCOMMANDINDEX [::idlist]`
+            ``GETLASTCOMMANDINDEX [::idlist]``
         
+            GETLASTCOMMANDINDEX_Examples_
+            
         Blocking
         
         Reply
-            `PICKLE pickleIndex`
+            ``PICKLE n`` *pickleIndex*
             
-            `pickleIndex`
-                A list of the indices of most recent executed commands on `idlist`,
-                serialized by pickle.
+            ``n``
+                the length of *pickleIndex* in bytes
+            *pickleIndex*
+                A list of the indices of most recent executed commands on ``idlist``,
+                serialized by pickle.  If no commands have been executed on an engine, it returns -1.
             
-        
+        .. _STATUS: 
     #. STATUS
-        Returns the status of `idlist` in a dictionary.
+        Returns the status of ``idlist`` in a dictionary.
     
         Syntax
-            `STATUS [::idlist]`
-        
+            ``STATUS [::idlist]``
+            
+            STATUS_Examples_
+            
         Blocking
         
         Reply
-            `PICKLE pickledStatus`
+            ``PICKLE n`` *pickledStatus*
             
-            `pickledStatus`
+            *pickledStatus*
                 A dictionary, serialized by pickle, containing the status of remote engines
                 in the following form:
                 
-                `{nodeID: {'queue':[queuedCommands], 'history':{cmdID:(command),...}},...}`
+                ``{nodeID: {'queue':[queuedCommands], 'history':{cmdID:(command),...}},...}``
                 
-                `nodeID`
+                ``nodeID``
                     The integer id of each node.
                     
-                `'queue'`
+                ``'queue'``
                     A list of enqueued commands.
                 
-                `'history'`
-                    A dictionary of the execute return of all `EXECUTE` commands,
-                    indexed by the command id (`cmdID`).
-                
-            
-        
+                ``'history'``
+                    A dictionary of the execute return of all ``EXECUTE`` commands,
+                    indexed by the command id ``cmdID``.
+
+        .. _NOTIFY:
     #. NOTIFY
         Adds(or Removes) a results gatherer for the controller to notify of executed commands.
     
         Syntax
-            `NOTIFY ADD/DEL host port`
-        
+            ``NOTIFY ADD/DEL host port``
+            
+            NOTIFY_Examples_
+            
         Blocking
         
-        `ADD/DEL`
-            `ADD`
+        ``ADD/DEL``
+            ``ADD``
                 Adds a gatherer to notify.
-                
-            `DEL`
+            
+            ``DEL``
                 Removes an existing gatherer from notifier list.
             
-        `host`
-            the ip string (`127.0.0.1`) of a results gatherer.
+        ``host``
+            the ip string (``127.0.0.1``) of a results gatherer.
         
-        `port`
-            the port on which the results gatherer at `host` is listening.
+        ``port``
+            the port on which the results gatherer at ``host`` is listening.
         
+        .. _RESET:
     #. RESET
-        Resets the namespace of `idlist`.
+        Resets the namespace of ``idlist``.
     
         Syntax
-            `RESET [::idlist]`
+            ``RESET [::idlist]``
+            
+            RESET_Examples_
         
         Blocking
         
+        .. _KILL:
     #. KILL
-        Kills the process of `idlist`.
+        Kills the process of ``idlist``.
 
         Syntax
-            `KILL [::idlist]`
+            ``KILL [::idlist]``
         
+            KILL_Examples_
+            
         Blocking
         
-
-    
+        .. _DISCONNECT:
     #. DISCONNECT
         Syntax
-            `DISCONNECT`
+            ``DISCONNECT``
         
         Non Blocking
         
-        Disconnects client from controller.
-    
-    
+        Cleanly disconnects client from controller.
+        
 .. _Examples:
 
-
 III. Examples
-------------
+--------------
+    A set of example Client-Server communications using the Controller Protocol.
+    Unless otherwise specified, the server has nodes connected at ids 0-15.
+    
+    0. GENERAL_Examples_
+    #. EXECUTE_Examples_
+    #. PUSH_Examples_
+    #. PULL_Examples_
+    #. UPDATE_Examples_
+    #. GETCOMMAND_Examples_
+    #. GETLASTCOMMANDINDEX_Examples_
+    #. STATUS_Examples_
+    #. NOTIFY_Examples_
+    #. RESET_Examples_
+    #. KILL_Examples_
+    
+.. _GENERAL_Examples:
 
-    To be written
+    0. GENERAL
+        - description
+            C: ``CLIENT COMMAND example``
+            
+            S: ``SERVER REPLY line``
+        
+        - data example
+            C: ``PUSH a::1``
+            
+            C: ``PICKLE pickle(value)``
+                 pickle(value) represents value serialized by pickle
+                
+            S: ``PUSH OK``
+        
+        - invalid idlists will not ever execute
+            C: ``EXECUTE a=5::badlist``
+            
+            S: ``BAD ID LIST``
+            
+            C: ``KILL ::12::31``
+                this server has only registered 0-15
+                
+            S: ``BAD ID LIST``
+            
+            C: ``RESET ::1::2:3``
+                must have ``::`` delimiter between each id
+                
+            S: ``BAD ID LIST``
+            
+            C: ``RESET ::1::4::12::2``
+            
+            S: ``RESET OK``
+            
+            C: ``EXECUTEa=5::1::3``
+                must have space after command, before args
+
+            S: ``BAD COMMAND``
+
+        ..  _EXECUTE_Examples:
+    
+    #. EXECUTE
+        - Some good examples
+            C: ``EXECUTE a=1::1::2::3``
+            
+            S: ``EXECUTE OK``
+            
+        - Empty argument (0-1 spaces after ``EXECUTE``) will fail
+            C: ``EXECUTE``
+    
+            S: ``EXECUTE FAIL``
+        
+            C: ``EXECUTE ::1``
+        
+            S: ``EXECUTE FAIL``
+
+            C: ``EXECUTE BLOCK``
+    
+            S: ``EXECUTE FAIL``
+        
+            C: ``EXECUTE BLOCK ::1``
+        
+            S: ``EXECUTE FAIL``
+            
+        - Invalid execution argument will not fail, the bad string is passed to engines
+            C: ``EXECUTE this command is invalid``
+        
+            S: ``EXECUTE OK``
+            
+            C: ``EXECUTE BLOCK 1=2::7``
+            
+            S: ``PICKLE 173`` 
+            
+            S: *[(0, (14, '1=2', '', TypeError instance)), (1, (14, '1=2', '', TypeError instance)),...]*
+            
+            S: ``EXECUTE OK``
+
+        ..  _PUSH_Examples:
+    #. PUSH
+        
+        ..  _PULL_Examples:
+    #. PULL
+    
+        ..  _UPDATE_Examples:
+    #. UPDATE
+    
+        ..  _GETCOMMAND_Examples:
+    #. GETCOMMAND
+    
+        ..  _GETLASTCOMMANDINDEX_Examples:
+    #. GETLASTCOMMANDINDEX
+    
+        ..  _STATUS_Examples:
+    #. STATUS
+    
+        ..  _NOTIFY_Examples:
+    #. NOTFIY
+    
+        ..  _RESET_Examples:
+    #. RESET
+    
+        ..  _KILL_Examples:
+    #. KILL
+        
+        
