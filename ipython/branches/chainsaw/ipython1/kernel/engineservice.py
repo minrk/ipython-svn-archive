@@ -167,7 +167,7 @@ class QueuedEngine(object):
     def finishCommand(self, result):
         """finish currrent command"""
         log.msg("Finishing: " + repr(self.currentCommand) + ':' + repr(result))
-        self.currentCommand.handleResult((self.id, result))
+        self.currentCommand.handleResult(result)
         del self.currentCommand
         self.currentCommand = None
         self._flushQueue()

@@ -27,7 +27,8 @@ from ipython1.kernel import controllerservice
 
 
 class NonBlockingProducer:
-    
+    """A producer for nonblocking commands.  It waits for the consumer to 
+    perform its next write, then makes a callback."""
     implements(IProducer)
     
     def __init__(self, protocol):
@@ -85,8 +86,9 @@ class LiteralString:
     
 
 class ControlTCPProtocol(basic.LineReceiver):
-    
-#    implements(IProducer)
+    """The control protocol for the Controller.  It listens for clients to
+    connect, and relays commands to the controller service.
+    A line based protocol."""
     
     def connectionMade(self):
         log.msg("Connection Made...")
@@ -112,10 +114,10 @@ class ControlTCPProtocol(basic.LineReceiver):
             args = arglist[0]
         
         if not self.factory.verifyIds(ids):
-            self.sendLine("BAD")
-            self.state = 'init'
-            self.resetWorkVars()
+            self.sendLine("BAD ID LIST")
+            self._reset()
             return
+        
         f = getattr(self, 'handle_%s_%s' %
                     (self.state, cmd), None)            
         if f:
@@ -128,32 +130,30 @@ class ControlTCPProtocol(basic.LineReceiver):
                 # Handler resolved with only cmd
                 f(args, ids)
             else:
-                self.sendLine("BAD")
-                self.state = 'init'
-                self.resetWorkVars()
-    
+                self.sendLine("BAD COMMAND")
+                self._reset()
     # Copied from twisted.mail.imap4
     def rawDataReceived(self, data):
         passon = self._pendingLiteral.write(data)
         if passon is not None:
             self.setLineMode(passon) # should I reset the state here?
     
-    def resetWorkVars(self):
-        self.workVars = {}
-    
     def _reset(self):
         self.workVars = {}
         self.state = 'init'
     
     def parseIds(self, idsList):
+        
         if len(idsList) is 0:
             return 'all'
         else:
+            if idsList[0] == 'all':
+                return 'all'
             try:
                 return map(int, idsList)
             except:
-                #defaults to all on bad idlist  should it do this?
-                return 'all'
+                #defaults to all on bad idlist  should it do this
+                return None
     
     #####   
     ##### The PUSH command
@@ -234,9 +234,7 @@ class ControlTCPProtocol(basic.LineReceiver):
     def pullOk(self, pResultList):
         try:
             #get list of pickles, want pickled list
-            resultList = []
-            for t in pResultList:
-                resultList.append((t[0], pickle.loads(t[1])))
+            resultList = map(pickle.loads, pResultList)
             presult = pickle.dumps(resultList, 2)
         except pickle.PickleError, TypeError:
             self.pullFinish("FAIL")

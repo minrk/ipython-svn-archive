@@ -102,6 +102,51 @@ def _tar_module(mod):
     return tarball_name, file_string
 
 
+class EngineProxy(object):
+    """an object to interact directly to a remote engine through a Remote 
+    Controller object"""
+    
+    def __init__(self, rc, id):
+        self.id = id
+        self.rc = rc
+    
+    def execute(self, lines, block=False):
+        if block:
+            return self.rc.execute(lines, self.id, block=True)[0]
+        else:
+            return self.rc.execute(lines, self.id)
+    
+    def push(self, key, value):
+        return self.rc.push(key, value, self.id)
+    
+    def __setitem__(self, key, value):
+        return self.push(key, value)
+    
+    def pull(self, key):
+        return self.rc.pull(key, self.id)[0]
+    
+    def __getitem__(self, key):
+        return self.pull(key)
+    
+    def update(self, dic):
+        return self.rc.update(dic, self.id)
+    
+    def status(self):
+        return self.rc.status(self.id)[0][1]
+    
+    def getCommand(self, n=None):
+        return self.rc.getCommand(n,self.id)[0]
+    
+    def getLastCommandIndex(self):
+        return self.rc.getLastCommandindex(self.id)[0]
+    
+    def reset(self):
+        return self.rc.reset(self.id)
+    
+    def kill(self):
+        return self.rc.kill(self.id)
+    
+
 class RemoteController(object):
     """A high level interface to a remotely running ipython kernel."""
     
@@ -154,9 +199,9 @@ class RemoteController(object):
         except socket.error, e:
             print "Connection error: %s" % e
                 
-        self.es = LineSocket(self.s)
-        # Turn of Nagle's algorithm to prevent the 200 ms delay :)
+        # Turn off Nagle's algorithm to prevent the 200 ms delay :)
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
+        self.es = LineSocket(self.s)
     
     def execute(self, source, ids='all', block=False):
         """Execute python source code on the ipython kernel.
@@ -288,7 +333,10 @@ class RemoteController(object):
             return False
     
     def __setitem__(self, key, value):
-        self.push(key, value)
+        if len(key) is 1:
+            return self.push(key, value)
+        else:
+             return False
     
     def pull(self, key, ids = 'all'):
         """Get a python object from a remote kernel.
@@ -333,6 +381,9 @@ class RemoteController(object):
                         return False
         else:
             # For other data types
+            #this will never happen
+            if line == "PULL FAIL":
+                return False
             data = line_split[1]
             line, self.extra = self.es.read_line(self.extra)
             if line == "PULL OK":
@@ -340,9 +391,8 @@ class RemoteController(object):
             else:
                 return False
     
-    def __getitem__(self, key):
-        return self.pull(key)
-    
+    def __getitem__(self, id):
+        return EngineProxy(self, id)
     def getCommand(self, number=None, ids='all'):
         """Gets a specific result from the kernel, returned as a tuple."""
         self._check_connection()    

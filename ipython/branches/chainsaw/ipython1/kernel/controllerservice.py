@@ -18,7 +18,7 @@ TODO:
 #*****************************************************************************
 
 import cPickle as pickle
-
+import copy
 from twisted.application import service, internet
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
@@ -100,7 +100,7 @@ class IMultiEngine(Interface):
     
     def status(self, ids='all'):
         """Return the status of engines"""
-
+    
     def getCommand(self, i=None, ids='all'):
         """Get the stdin/stdout/stderr of command i."""
     
@@ -111,7 +111,7 @@ class IMultiEngine(Interface):
 #the controller interface implements both IEngineController, IMultiEngine
 class IController(IRemoteController, IMultiEngine):
     pass
-    
+
 #implementation of the Controller Service
         
 class ControllerService(service.Service):
@@ -213,10 +213,9 @@ class ControllerService(service.Service):
         log.msg("executing %s on %s" %(lines, ids))
         engines = self.engineList(ids)
         l = []
-        id = 1
         for e in engines:
-            id = id+4
-            l.append(e.execute(lines).addCallback(self.notify))
+            #the id passing is broken here
+            l.append(e.execute(lines).addCallback(lambda r:self.notify(e.id, r)))
         return defer.gatherResults(l)
     
     def put(self, key, value, ids='all'):
@@ -334,18 +333,21 @@ class ControllerService(service.Service):
     def delNotifier(self, n):
         if n in self._notifiers:
             self._notifiers[n].disconnect()
-            del self._notifiers[n]
+            try:
+                del self._notifiers[n]
+            except KeyError:
+                pass
             log.msg("Notifiers: %s" % self._notifiers)
         return defer.succeed("OK")
     
-    def notify(self, result):
-        package = pickle.dumps(result, 2)
+    def notify(self, id, result):
+        package = pickle.dumps((id, result), 2)
         for tonotify in self.notifiers().values():
             if tonotify.transport.protocol is not None:
                 tonotify.transport.protocol.sendLine(
                         "RESULT %i %s" %(len(package), package))
             else:
-                log.msg("Notifier connection not ready for RESULT " + str(result))
+                log.msg("Notifier connection not ready for RESULT " + str((id, result)))
         return result
     
 
