@@ -61,7 +61,7 @@ with_packages = ['ipython1',
                  'ipython1.startup']
                 
 with_scripts =  ['scripts/ipkernel',
-                 'scripts/ipkernelwx',
+                 'scripts/ipkernel-wx',
                  'scripts/ipresults',
                  'scripts/ipcontroller']
 
@@ -86,7 +86,6 @@ if use_mpi:
     
     e = Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])
     with_ext_modules.append(e)
-    with_scripts.append('scripts/ipkernel-mpi')
 
 # Now build IPython
 

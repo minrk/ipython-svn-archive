@@ -32,20 +32,21 @@ won't result in a running kernel instance.
 #*****************************************************************************
 
 # MPI module should be loaded first and passed to the factory
-# below
 
+import sys
 from IPython.genutils import get_home_dir
-import os
-
+ipython_path = get_home_dir() + '/.ipython'
+sys.path.append(ipython_path)
 try:
     import mpi_init_module
 except ImportError:
     mpi_module = None
 else:
     mpi_module = mpi_init_module.mpi
+    print mpi_init_module.mpi.rank, mpi_init_module, size
             
 import cPickle as pickle
-import sys
+#import sys
 from optparse import OptionParser
 import socket
 
