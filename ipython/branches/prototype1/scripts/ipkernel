@@ -43,7 +43,7 @@ from ipython1.kernel.kernelcore import KernelTCPFactory
 from ipython1.kernel.kernelcore import ThreadlessKernelTCPFactory
 from ipython1.startup.callback import CallbackClientFactory
 
-MAX_PORT_TRIES = 128
+MAX_PORT_TRIES = 256
 
 def try_ports(port, mpi, factory_class, controllerIP,
     controllerPort):
@@ -66,13 +66,14 @@ def try_ports(port, mpi, factory_class, controllerIP,
             tries=3, delay=5.0)
         reactor.connectTCP(controllerIP, controllerPort, ccf) 
     
-def main(port, threads, mpi, controllerIP, controllerPort):
+def main(port, threads, controllerIP, controllerPort):
     if threads:
         factory_class = KernelTCPFactory
     else:
         factory_class = ThreadlessKernelTCPFactory
         
     log.startLogging(sys.stdout)
+    mpi = None
     reactor.callWhenRunning(try_ports, port, 
         mpi, factory_class, controllerIP, controllerPort)
     reactor.run()
@@ -86,8 +87,6 @@ def start(port=10105, controllerIP="", controllerPort=12001):
     parser.add_option("--threadless",
         action="store_false",dest="threads",default=True,
         help="start single thread kernel")
-    parser.add_option("--mpi", action="store_true", default=False,
-        dest="mpi", help="Start with mpi4py loaded")
     parser.add_option("-C","--controller-ip",type="string",
         dest="controllerIP",
         help="ip address of the controller that should be notified")
@@ -97,8 +96,8 @@ def start(port=10105, controllerIP="", controllerPort=12001):
 
     (options, args) = parser.parse_args()
     
-    main(options.port, options.threads, options.mpi,
-        options.controllerIP, options.controllerPort)
+    main(options.port, options.threads, options.controllerIP, 
+        options.controllerPort)
     
 if __name__ == "__main__":
     start()

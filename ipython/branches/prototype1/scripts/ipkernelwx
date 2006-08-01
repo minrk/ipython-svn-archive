@@ -16,10 +16,9 @@ issue the command:
 
 This will start the kernel listening on port 10105 (the default) and will allow
 connections from only the localhost (127.0.0.1).  Here is an example that starts
-the kernel on port 10106 and allows connections from the localhost and 
-121.122.123.124:
+the kernel on port 10106
 
-    python kernelwx.py -p 10106 -a 121.122.123.124
+    python kernelwx.py -p 10106
 
 For more information on the command line options, run:
 
@@ -41,8 +40,10 @@ NOTE:  On Mac OS X, the command pythonw must be used instead of python.
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
-from optparse import OptionParser
+import cPickle as pickle
 import sys
+from optparse import OptionParser
+import socket
 
 from wxPython.wx import *
 
@@ -51,8 +52,10 @@ threadedselectreactor.install()
 from twisted.internet import reactor
 from twisted.python import log
 
+from ipython1.kernel.kernelcore import ThreadlessKernelTCPFactory
+from ipython1.startup.callback import CallbackClientFactory
 
-from ipython1.kernel.kernelcore import KernelTCPFactoryGUI
+MAX_PORT_TRIES = 256
 
 # Here are the classes for wxPython
 
@@ -86,26 +89,57 @@ class MyApp(wxApp):
         return true
 
 
-def main(port, allow_ip=None):
-    # Setp the twisted server
-    allow_list = ['127.0.0.1']
-    if allow_ip is not None:
-        allow_list.append(allow_ip)    
+def try_ports(port, mpi, factory_class, controllerIP,
+    controllerPort):
+
+    for k in range(MAX_PORT_TRIES):
+        try:
+            p = reactor.listenTCP(port + k, 
+            factory_class(mpi=mpi))
+        except (error.CannotListenError, socket.error):
+            if k == MAX_PORT_TRIES - 1:
+                log.msg("Cannot start kernel")
+                reactor.stop()
+        else:
+            break
+
+    if controllerIP:
+        myIPAddress = socket.gethostbyname(socket.gethostname())
+        myPort = p.getHost().port
+        ccf = CallbackClientFactory((myIPAddress, myPort), 
+            tries=3, delay=5.0)
+        reactor.connectTCP(controllerIP, controllerPort, ccf)
+
+def main(port, controllerIP, controllerPort):
+    factory_class = ThreadlessKernelTCPFactory
     log.startLogging(sys.stdout)
-    reactor.listenTCP(port, 
-        ThreadlessKernelTCPFactory(allow=allow_list))
+    mpi = None
+    reactor.callWhenRunning(try_ports, port, 
+        mpi, factory_class, controllerIP, controllerPort)
+        
     # Start wx, which start the reactor using reactor.interleave
     app = MyApp(0)
     app.MainLoop()
 
+def start(port=10105, controllerIP="", controllerPort=12001):
+    parser = OptionParser()
+    parser.set_defaults(port=port, controllerIP=controllerIP,
+        controllerPort=controllerPort)
+    parser.add_option("-p", "--port", type="int", dest="port",
+        help="the TCP port the kernel will try to listen on")
+    parser.add_option("-C","--controller-ip",type="string",
+        dest="controllerIP",
+        help="ip address of the controller that should be notified")
+    parser.add_option("-L","--controller-port",type="int",
+        dest="controllerPort",
+        help="port of the controller that should be notified")
+
+    (options, args) = parser.parse_args()
+
+    main(options.port, options.controllerIP, 
+        options.controllerPort)
 
 if __name__ == '__main__':
-    parser = OptionParser()
-    parser.set_defaults(port=10105)
-    parser.add_option("-p", "--port", type="int", dest="port",
-        help="the TCP port the kernel will listen on")
-    parser.add_option("-a", "--allow", dest="allow_ip",
-        help="an IP address to allow to connect to the kernel")
-    (options, args) = parser.parse_args()
-    print "Starting the kernel on port %i" % options.port
-    main(options.port, options.allow_ip)
+    start()
+    
+ 
