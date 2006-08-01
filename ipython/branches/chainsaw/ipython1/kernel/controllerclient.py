@@ -300,7 +300,9 @@ class RemoteController(object):
                 red = TermColors.Red
                 green = TermColors.Green
                 for d in data:
-                    (ids, cmd) = d
+#                    (ids, cmd) = d
+                    cmd = d
+                    ids = 0
                     cmd_num = cmd[0]
                     cmd_stdin = cmd[1]
                     cmd_stdout = cmd[2][:-1]
