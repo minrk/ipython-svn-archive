@@ -132,13 +132,13 @@ class EngineProxy(object):
         return self.rc.update(dic, self.id)
     
     def status(self):
-        return self.rc.status(self.id)[0][1]
+        return self.rc.status(self.id)[self.id]
     
     def getCommand(self, n=None):
         return self.rc.getCommand(n,self.id)[0]
     
     def getLastCommandIndex(self):
-        return self.rc.getLastCommandindex(self.id)[0]
+        return self.rc.getLastCommandIndex(self.id)[0]
     
     def reset(self):
         return self.rc.reset(self.id)
@@ -146,6 +146,67 @@ class EngineProxy(object):
     def kill(self):
         return self.rc.kill(self.id)
     
+
+
+class SubCluster(object):
+    """A set of EngineProxy objects for RemoteController.__getitem__"""
+    def __init__(self, rc, ids):
+        self.rc = rc
+        idlist = rc.status().keys()
+        if ids.step is None:
+            step = 1
+        else:
+            step = ids.step
+        if ids.start is None:
+            start = min(idlist)
+        else:
+            start = ids.start
+        if ids.stop is None:
+            stop = max(idlist)
+        else:
+            stop = ids.stop
+        self.ids = range(start, stop, step)
+    
+    def execute(self, lines, block=False):
+            return self.rc.execute(lines, self.ids, block)
+    
+    def push(self, key, value):
+        return self.rc.push(key, value, self.ids)
+    
+    def __setitem__(self, key, value):
+        return self.push(key, value)
+    
+    def pull(self, key):
+        return self.rc.pull(key, self.ids)
+    
+    def __getitem__(self, id):
+        if isinstance(id, slice):
+            return SubCluster(self.rc, id)
+        elif isinstance(id, int):
+            return EngineProxy(self.rc, id)
+        else:
+            raise TypeError("__getitem__ only takes ints and slices")
+    
+    def update(self, dic):
+        return self.rc.update(dic, self.ids)
+    
+    def status(self):
+        return self.rc.status(self.ids)
+    
+    def getCommand(self, n=None):
+        return self.rc.getCommand(n,self.ids)
+    
+    def getLastCommandIndex(self):
+        return self.rc.getLastCommandIndex(self.ids)
+    
+    def reset(self):
+        return self.rc.reset(self.ids)
+    
+    def kill(self):
+        return self.rc.kill(self.ids)
+    
+    
+        
 
 class RemoteController(object):
     """A high level interface to a remotely running ipython kernel."""
@@ -392,7 +453,12 @@ class RemoteController(object):
                 return False
     
     def __getitem__(self, id):
-        return EngineProxy(self, id)
+        if isinstance(id, slice):
+            return SubCluster(self, id)
+        elif isinstance(id, int):
+            return EngineProxy(self, id)
+        else:
+            raise TypeError("__getitem__ only takes ints and slices")
     def getCommand(self, number=None, ids='all'):
         """Gets a specific result from the kernel, returned as a tuple."""
         self._check_connection()    

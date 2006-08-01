@@ -217,7 +217,7 @@ class ControllerService(service.Service):
             #the id passing is broken here
             l.append(e.execute(lines).addCallback(lambda r:self.notify(e.id, r)))
         return defer.gatherResults(l)
-    
+
     def put(self, key, value, ids='all'):
         """Put value into locals namespace with name key."""
         log.msg("putting %s=%s on %s" %(key, value, ids))
