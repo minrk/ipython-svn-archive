@@ -51,16 +51,12 @@ from ipython1.core.shell import InteractiveShell
 class IEngine(Interface):
     """The Interface for the IPython Engine.
     
-    For now, the methods in this interface must not return deferreds.  This is
-    because the EngineService will be adapted to different protocols, each of
-    which need to handle errors in different ways.  Thus, when esceptions are
-    raised in these methods, they must be allowed to propagate.  That is, they
-    must not be caught.
+    All these methods must return deferreds I think.
     """
-    def getID(self):
-        """return this.id"""
+    def getID():
+        """return deferred to this.id"""
     
-    def setID(self, id):
+    def setID(id):
         """set this.id"""
     
     def execute(lines):
@@ -68,37 +64,104 @@ class IEngine(Interface):
     
     def push(**namespace):
         """Put value into locals namespace with name key."""
+        
+    def pushPickle(**pickleNamespace):
+        """Unpickle package and put into the locals namespace with name key."""
 
     def pull(*keys):
         """Gets an item out of the self.locals dict by key."""
-    
-    def pushPickle(**pickleNamespace):
-        """Unpickle package and put into the locals namespace with name key."""
-    
+        
     def pullPickle(*keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
     
-    
-    def reset(self):
+    def reset():
         """Reset the InteractiveShell."""
     
-    def kill(self):
+    def kill():
         """kill the process"""
     
-    def getCommand(self, i=None):
+    def getCommand(i=None):
         """Get the stdin/stdout/stderr of command i."""
     
-    def getLastCommandIndex(self):
+    def getLastCommandIndex():
         """Get the index of the last command."""
     
+# Now the actual EngineService
+class EngineService(service.Service):
+
+    implements(IEngine)
+
+    id = None
+
+    def __init__(self):
+        self.shell = InteractiveShell()    # let's use containment, not inheritance
+
+    # The IEngine methods
+
+    def getID(self):
+        return defer.succeed(self.id)
+
+    def setID(self, id):
+        self.id = id
+        return defer.succeed(None)
+
+    def execute(self, lines):
+        return defer.execute(self.shell.execute, lines)
+
+    def push(self, **namespace):
+        return defer.execute(self.shell.update, namespace)
+
+    def pushPickle(self, **pickleNamespace):
+        values = {}
+        for key, pickledValue in pickleNamespace.iteritems():
+            value = pickle.loads(pickledValue)
+            values[key] = value
+        return self.push(**values)
+
+    def pull(self, *keys):
+        result = []
+        for key in keys:
+            result.append(self.shell.get(key))
+        return defer.succeed(tuple(result))
+
+    def pullPickle(self, *keys):
+        d = self.pull(*keys)
+        def pickleTheValues(values):
+            pickleNamespace = {}
+            for k, v in zip(keys, values):
+                pickleNamespace[k] = pickle.dumps(v,2)
+            return pickleNamespace
+        d.addCallback(pickleTheValues)
+        return d
+
+    def reset(self):
+        return defer.execute(self.shell.reset)
+
+    def kill(self):
+        try:
+            reactor.stop()
+        except RuntimeError:
+            log.msg('The reactor was not running apparently.')
+            return defer.fail()
+        else:
+            return defer.succeed()
+
+    def getCommand(self, i=None):
+        return defer.execute(self.shell.getCommand, i)
+
+    def getLastCommandIndex(self):
+        return defer.execute(self.shell.getLastCommandIndex)
+
+
+# Now the interface and implementation of the QueuedEngine
 
 class IQueuedEngine(IEngine):
     """add some queue methods to IEngine interface"""
     
-    def clearQueue(self):
+    def clearQueue():
         """clear the queue"""
     
-    def status(self):
+    def status():
         """return queue and history"""
     
 
@@ -140,7 +203,7 @@ class QueuedEngine(object):
         log.msg("Starting: " + repr(self.currentCommand))
         f = getattr(self.engine, cmd.remoteMethod, None)
         if f:
-            d = f(*cmd.args)
+            d = f(*cmd.args, **cmd.kwargs)
             if cmd.remoteMethod is 'execute':
                 d.addCallback(self.saveResult)
             d.addCallback(self.finishCommand)
@@ -179,8 +242,9 @@ class QueuedEngine(object):
     #methods from IEngine
     
     def getID(self):
+        # cached copy
         return self.id
-    
+            
     def setID(self, id):
         self.id = id
         return self.submitCommand(Command("setID", id))
@@ -188,61 +252,48 @@ class QueuedEngine(object):
     def execute(self, lines):
         """Execute lines of Python code."""
         return self.submitCommand(Command("execute", lines))
-    
-    def put(self, key, value):
+        
+    def push(self, **namespace):
         """Put value into locals namespace with name key."""
-        d = self.submitCommand(Command("put", key, value))
-        return d
+        return self.submitCommand(Command("push", **namespace))
+
     
-    def putPickle(self, key, package):
+    def pushPickle(self, **pickleNamespace):
         """Unpickle package and put into the locals namespace with name key."""
-        d = self.submitCommand(Command("putPickle", key, package))
-        return d
+        return self.submitCommand(Command("pushPickle", **pickleNamespace))
     
-    def get(self, key):
+    def pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
-        d = self.submitCommand(Command("get", key))
-        return d
+        return self.submitCommand(Command("pull", *keys))
     
-    def getPickle(self, key):
+    def pullPickle(self, *keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
-        d = self.submitCommand(Command("getPickle", key))
-        return d
-    
-    def update(self, dictOfData):
-        """Gets an item out of the self.locals dict by key."""
-        d = self.submitCommand(Command("update", dictOfData))
-        return d
-    
-    def updatePickle(self, dictPickle):
-        """Gets an item out of the self.locals dist by key and pickles it."""
-        d = self.submitCommand(Command("updatePickle", dictPickle))
-        return d
+        return self.submitCommand(Command("pullPickle", *keys))
     
     def reset(self):
         """Reset the InteractiveShell."""
-        d = self.submitCommand(Command("reset"))
-        return d
+        self.history = {}  # reset the cache - I am not sure we should do this
+        return self.submitCommand(Command("reset"))
     
     def kill(self):
         """kill the InteractiveShell."""
         self.clearQueue()
-        d = self.submitCommand(Command("kill"))
-        return d
+        return self.submitCommand(Command("kill"))
     
     def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
         if i is None:
-            i = self.getLastCommandIndex()
+            i = max(self.history.keys()+[-1])  # should call self.getLastCommand()
             
         try:
             return defer.succeed(self.history[i])
         except KeyError:
-            return defer.succeed(None)
+            return defer.fail()
     
     def getLastCommandIndex(self):
         """Get the index of the last command."""
 #        d = self.submitCommand(Command("getLastCommandIndex"))
+        # Use the cached copy
         return defer.succeed(max(self.history.keys()+[-1]))
     
 
@@ -250,18 +301,19 @@ class QueuedEngine(object):
 class Command(object):
     """A command that will be sent to the Remote Engine."""
     
-    def __init__(self, remoteMethod, *args):
+    def __init__(self, remoteMethod, *args, **kwargs):
         """Build a new Command object."""
         
         self.remoteMethod = remoteMethod
         self.args = args
+        self.kwargs = kwargs
     
     def setDeferred(self, d):
         """Sets the deferred attribute of the Command."""    
         self.deferred = d
     
     def __repr__(self):
-        return "Command: " + self.remoteMethod + repr(self.args)
+        return "Command: " + self.remoteMethod + repr(self.args) + repr(self.kwargs)
     
     def handleResult(self, result):
         """When the result is ready, relay it to self.deferred."""
@@ -273,54 +325,3 @@ class Command(object):
         self.deferred.errback(reason)
     
 
-# Now the actual EngineService
-class EngineService(InteractiveShell, service.Service):
-    
-    implements(IEngine)
-    
-    id = None
-    
-    def getID(self):
-        return self.id
-    
-    def setID(self, id):
-        self.id = id
-    
-    def put(self, key, value):
-        return defer.succeed(InteractiveShell.put(self, key, value))
-    
-    def putPickle(self, key, package):
-        value = pickle.loads(package)
-        return self.put(key, value)
-    
-    def get(self, key):
-        return defer.succeed(InteractiveShell.get(self, key))
-    
-    def getPickle(self, key):
-        value = self.get(key)
-        value.addCallback(lambda v: pickle.dumps(v, 2))
-        return value
-    
-    def update(self, dictOfData):
-        return defer.succeed(InteractiveShell.update(self, dictOfData))
-    
-    def updatePickle(self, dictPickle):
-        value = pickle.loads(dictPickle)
-        return self.update(value)
-    
-    def reset(self):
-        return defer.succeed(InteractiveShell.reset(self))
-    
-    def kill(self):
-        try:
-            reactor.stop()
-        except RuntimeError:
-            log.msg("Can't stop reactor, probably already stopped")
-    
-    def getCommand(self, i=None):
-        return defer.succeed(InteractiveShell.getCommand(self, i))
-    
-    def getLastCommandIndex(self):
-        return defer.succeed(InteractiveShell.getLastCommandIndex(self))
-    
-    
