@@ -63,26 +63,21 @@ class IEngine(Interface):
     def setID(self, id):
         """set this.id"""
     
-    def execute(self, lines):
+    def execute(lines):
         """Execute lines of Python code."""
     
-    def put(self, key, value):
+    def push(**namespace):
         """Put value into locals namespace with name key."""
-    
-    def putPickle(self, key, package):
-        """Unpickle package and put into the locals namespace with name key."""
-    
-    def get(self, key):
+
+    def pull(*keys):
         """Gets an item out of the self.locals dict by key."""
     
-    def getPickle(self, key):
+    def pushPickle(**pickleNamespace):
+        """Unpickle package and put into the locals namespace with name key."""
+    
+    def pullPickle(*keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
     
-    def update(self, dictOfData):
-        """Updates the self.locals dict with the dictOfData."""
-    
-    def updatePickle(self, dictPickle):
-        """Updates the self.locals dict with the pickled dict."""
     
     def reset(self):
         """Reset the InteractiveShell."""

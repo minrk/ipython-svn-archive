@@ -30,7 +30,8 @@ won't result in a running kernel instance.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import sys
+import sys, time
+time.sleep(10)
 from optparse import OptionParser
 
 from twisted.internet import reactor, error

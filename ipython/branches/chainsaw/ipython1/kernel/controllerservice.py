@@ -74,28 +74,32 @@ class IMultiEngine(Interface):
         """Cleans out pending commands in an engine's queue."""
     
     #IEngine multiplexer methods
-    def execute(self, lines, ids='all'):
+    def execute(lines):
         """Execute lines of Python code."""
     
-    def put(self, key, value, ids='all'):
+    def executeAll(targets, lines):
+
+    def push(targets, **namespace):
         """Put value into locals namespace with name key."""
-    
-    def putPickle(self, key, package, ids='all'):
+  
+    def pushAll(**namespace):
+          
+    def pushPickle(targets, **pickleNamespace):
         """Unpickle package and put into the locals namespace with name key."""
+
+    def pushAllPickle(**pickleNamespace):
     
-    def get(self, key, ids='all'):
+    def pull(targets, *keys):
         """Gets an item out of the self.locals dict by key."""
     
-    def getPickle(self, key, ids='all'):
+    def pullAll(*keys):
+    
+    def pullPickle(targets, *keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
     
-    def update(self, dictOfData, ids='all'):
-        """Updates the self.locals dict with the dictOfData."""
+    def pullAllPickle(*keys):
     
-    def updatePickle(self, dictPickle, ids='all'):
-        """Updates the self.locals dict with the pickled dict."""
-    
-    def reset(self, ids='all'):
+    def reset(targets='all'):
         """Reset the InteractiveShell."""
     
     def status(self, ids='all'):
