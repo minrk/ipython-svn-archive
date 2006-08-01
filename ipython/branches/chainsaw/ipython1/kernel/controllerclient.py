@@ -152,20 +152,25 @@ class SubCluster(object):
     """A set of EngineProxy objects for RemoteController.__getitem__"""
     def __init__(self, rc, ids):
         self.rc = rc
-        idlist = rc.status().keys()
-        if ids.step is None:
-            step = 1
+        if isinstance(ids, slice):
+            idlist = rc.status().keys()
+            if ids.step is None:
+                step = 1
+            else:
+                step = ids.step
+            if ids.start is None:
+                start = min(idlist)
+            else:
+                start = ids.start
+            if ids.stop is None:
+                stop = max(idlist)
+            else:
+                stop = ids.stop
+            self.ids = range(start, stop, step)
+        elif isinstance(ids, list):
+            self.ids = ids
         else:
-            step = ids.step
-        if ids.start is None:
-            start = min(idlist)
-        else:
-            start = ids.start
-        if ids.stop is None:
-            stop = max(idlist)
-        else:
-            stop = ids.stop
-        self.ids = range(start, stop, step)
+            raise TypeError("SubCluster requires slice or list")
     
     def execute(self, lines, block=False):
             return self.rc.execute(lines, self.ids, block)
@@ -181,11 +186,13 @@ class SubCluster(object):
     
     def __getitem__(self, id):
         if isinstance(id, slice):
-            return SubCluster(self.rc, id)
+            return SubCluster(self.rc, self.ids[id])
         elif isinstance(id, int):
-            return EngineProxy(self.rc, id)
+            return EngineProxy(self.rc, self.ids[id])
+        elif isinstance(id, str):
+            return self.pull(id)
         else:
-            raise TypeError("__getitem__ only takes ints and slices")
+            raise TypeError("__getitem__ only takes strs, ints, and slices")
     
     def update(self, dic):
         return self.rc.update(dic, self.ids)
@@ -394,10 +401,7 @@ class RemoteController(object):
             return False
     
     def __setitem__(self, key, value):
-        if len(key) is 1:
             return self.push(key, value)
-        else:
-             return False
     
     def pull(self, key, ids = 'all'):
         """Get a python object from a remote kernel.
@@ -457,8 +461,11 @@ class RemoteController(object):
             return SubCluster(self, id)
         elif isinstance(id, int):
             return EngineProxy(self, id)
+        elif isinstance(id, str):
+            return self.pull(id)
         else:
-            raise TypeError("__getitem__ only takes ints and slices")
+            raise TypeError("__getitem__ only takes strs, ints, and slices")
+    
     def getCommand(self, number=None, ids='all'):
         """Gets a specific result from the kernel, returned as a tuple."""
         self._check_connection()    

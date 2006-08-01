@@ -214,10 +214,14 @@ class ControllerService(service.Service):
         engines = self.engineList(ids)
         l = []
         for e in engines:
-            #the id passing is broken here
-            l.append(e.execute(lines).addCallback(lambda r:self.notify(e.id, r)))
+            d = e.execute(lines)
+            self.executeCallback(e.id, d)
+            l.append(d)
         return defer.gatherResults(l)
-
+    
+    def executeCallback(self, id, d):
+        d.addCallback(lambda r:self.notify(id, r))
+    
     def put(self, key, value, ids='all'):
         """Put value into locals namespace with name key."""
         log.msg("putting %s=%s on %s" %(key, value, ids))
@@ -299,7 +303,10 @@ class ControllerService(service.Service):
     
     def getCommand(self, i=None, ids='all'):
         """Get the stdin/stdout/stderr of command i."""
-        log.msg("getting command %s from %s" %(i, ids))
+        if i is not None:
+            log.msg("getting command %s from %s" %(i, ids))
+        else:
+            log.msg("getting last command %s from %s" %ids)
         engines = self.engineList(ids)
         l = []
         for e in engines:
