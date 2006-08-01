@@ -31,6 +31,19 @@ won't result in a running kernel instance.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
+# MPI module should be loaded first and passed to the factory
+# below
+
+from IPython.genutils import get_home_dir
+import os
+
+try:
+    import mpi_init_module
+except ImportError:
+    mpi_module = None
+else:
+    mpi_module = mpi_init_module.mpi
+            
 import cPickle as pickle
 import sys
 from optparse import OptionParser
@@ -45,13 +58,13 @@ from ipython1.startup.callback import CallbackClientFactory
 
 MAX_PORT_TRIES = 256
 
-def try_ports(port, mpi, factory_class, controllerIP,
+def try_ports(port, factory_class, controllerIP,
     controllerPort):
     
     for k in range(MAX_PORT_TRIES):
         try:
             p = reactor.listenTCP(port + k, 
-            factory_class(mpi=mpi))
+            factory_class(mpi=mpi_module))
         except (error.CannotListenError, socket.error):
             if k == MAX_PORT_TRIES - 1:
                 log.msg("Cannot start kernel")
@@ -73,9 +86,9 @@ def main(port, threads, controllerIP, controllerPort):
         factory_class = ThreadlessKernelTCPFactory
         
     log.startLogging(sys.stdout)
-    mpi = None
+
     reactor.callWhenRunning(try_ports, port, 
-        mpi, factory_class, controllerIP, controllerPort)
+        factory_class, controllerIP, controllerPort)
     reactor.run()
 
 def start(port=10105, controllerIP="", controllerPort=12001):

@@ -1,28 +1,38 @@
-#!/usr/bin/env python
-"""The basic ipython computational kernel.
+#!/usr/bin/env pythonw
+"""An ipython kernel that is integrated with the wxPython event loop.
+
+This kernel is designed for users who want to use wxPython interactively from
+within ipython.  When this kernel is running, the user can import wx and then
+interactively create and use wx widgets.  
+
+This kernel should only be used if wx integration is needed.  This is because
+this kernel lacks many features that the default kernel has, such as being
+multithreaded and having a computational queue.
 
 This module is meant to be run from the command line.  To start the kernel,
 issue the command:
 
-    python kernel.py
+    python kernelwx.py
 
 This will start the kernel listening on port 10105 (the default) and will allow
 connections from only the localhost (127.0.0.1).  Here is an example that starts
-the kernel on port 10106 and allows connections from the localhost and 
-121.122.123.124:
+the kernel on port 10106
 
-    python kernel.py -p 10106 -a 121.122.123.124
+    python kernelwx.py -p 10106
 
 For more information on the command line options, run:
 
-    python kernel.py -h
+    python kernelwx.py -h
 
 NOTE:  The kernel cannot currently be run in the background, so:
 
-    python kernel.py &
+    python kernelwx.py &
 
 won't result in a running kernel instance.
+
+NOTE:  On Mac OS X, the command pythonw must be used instead of python.
 """
+
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
 #                           Fernando Perez. <fperez@colorado.edu>
@@ -31,53 +41,93 @@ won't result in a running kernel instance.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import ipython1.mpi as mpi
-print mpi.rank, mpi.size
+# MPI module should be loaded first and passed to the factory
+try:
+    import mpi_init_module
+except ImportError:
+    mpi_module = None
+else:
+    mpi_module = mpi_init_module.mpi
 
-#import mpi4py.MPI as mpi
 import cPickle as pickle
 import sys
 from optparse import OptionParser
 import socket
 
-from twisted.internet import reactor, error
+from wxPython.wx import *
+
+from twisted.internet import threadedselectreactor, protocol, defer
+threadedselectreactor.install()
+from twisted.internet import reactor
 from twisted.python import log
 
-from ipython1.kernel.kernelcore import KernelTCPFactory
 from ipython1.kernel.kernelcore import ThreadlessKernelTCPFactory
 from ipython1.startup.callback import CallbackClientFactory
 
+MAX_PORT_TRIES = 256
+
+# Here are the classes for wxPython
+
+ID_EXIT  = 101
+
+class MyFrame(wxFrame):
+    def __init__(self, parent, ID, title):
+        wxFrame.__init__(self, parent, ID, title, wxDefaultPosition, 
+            wxSize(300, 200))
+        menu = wxMenu()
+        menu.Append(ID_EXIT, "E&xit", "Terminate the program")
+        menuBar = wxMenuBar()
+        menuBar.Append(menu, "&File")
+        self.SetMenuBar(menuBar)
+        EVT_MENU(self, ID_EXIT,  self.DoExit)
+
+        reactor.interleave(wxCallAfter)
+
+    def DoExit(self, event):
+        print true
+        reactor.addSystemEventTrigger('after', 'shutdown', self.Close, true)
+        reactor.stop()
+
+
+class MyApp(wxApp):
+
+    def OnInit(self):
+        frame = MyFrame(NULL, -1, "IPython Kernel: wxPython Enabled")
+        frame.Show(true)
+        self.SetTopWindow(frame)
+        return true
+
+
 def try_ports(port, factory_class, controllerIP,
     controllerPort):
-    
-    for k in range(16):
+
+    for k in range(MAX_PORT_TRIES):
         try:
             p = reactor.listenTCP(port + k, 
-            factory_class(mpi=mpi))
+            factory_class(mpi=mpi_module))
         except (error.CannotListenError, socket.error):
-            if k == 15:
+            if k == MAX_PORT_TRIES - 1:
                 log.msg("Cannot start kernel")
                 reactor.stop()
         else:
             break
-    
+
     if controllerIP:
         myIPAddress = socket.gethostbyname(socket.gethostname())
         myPort = p.getHost().port
         ccf = CallbackClientFactory((myIPAddress, myPort), 
             tries=3, delay=5.0)
-        reactor.connectTCP(controllerIP, controllerPort, ccf) 
-    
-def main(port, threads, controllerIP, controllerPort):
-    if threads:
-        factory_class = KernelTCPFactory
-    else:
-        factory_class = ThreadlessKernelTCPFactory
-        
+        reactor.connectTCP(controllerIP, controllerPort, ccf)
+
+def main(port, controllerIP, controllerPort):
+    factory_class = ThreadlessKernelTCPFactory
     log.startLogging(sys.stdout)
     reactor.callWhenRunning(try_ports, port, 
         factory_class, controllerIP, controllerPort)
-    reactor.run()
+        
+    # Start wx, which start the reactor using reactor.interleave
+    app = MyApp(0)
+    app.MainLoop()
 
 def start(port=10105, controllerIP="", controllerPort=12001):
     parser = OptionParser()
@@ -85,9 +135,6 @@ def start(port=10105, controllerIP="", controllerPort=12001):
         controllerPort=controllerPort)
     parser.add_option("-p", "--port", type="int", dest="port",
         help="the TCP port the kernel will try to listen on")
-    parser.add_option("--threadless",
-        action="store_false",dest="threads",default=True,
-        help="start single thread kernel")
     parser.add_option("-C","--controller-ip",type="string",
         dest="controllerIP",
         help="ip address of the controller that should be notified")
@@ -96,9 +143,11 @@ def start(port=10105, controllerIP="", controllerPort=12001):
         help="port of the controller that should be notified")
 
     (options, args) = parser.parse_args()
-    
-    main(options.port, options.threads,
-        options.controllerIP, options.controllerPort)
-    
-if __name__ == "__main__":
+
+    main(options.port, options.controllerIP, 
+        options.controllerPort)
+
+if __name__ == '__main__':
     start()
+    
+ 
