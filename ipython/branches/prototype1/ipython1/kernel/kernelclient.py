@@ -194,7 +194,7 @@ class RemoteKernel(object):
         else:
             return False
 
-    def run(self, fname):
+    def run(self, filename):
         """Run a file on the kernel."""
 
         fileobj = open(fname,'r')
@@ -335,16 +335,6 @@ class RemoteKernel(object):
             # For other data types
             return False
         
-    def move(keya, keyb, target):
-        """Move a python object from one kernel to another.
-        
-        Not implemented.
-        """
-        self._checkConnection()
-        print "Mpve is not implemented yet."
-        #write_line("MOVE %s %s %" % (keya, keyb, target))
-        #read_line()
-
     def status(self):
         """Check the status of the kernel."""
         self._checkConnection()
@@ -417,41 +407,6 @@ class RemoteKernel(object):
         else:
             return False        
        
-    def cluster(self, addrs=None):
-        """Instruct the kernel to participate in a cluster.
-        
-        IPython kernels can be grouped into clusters.  This is typically
-        done using InteractiveCluster intances.  The cluster() method is
-        provided to allow each kernel to be notified of the addresses of 
-        the other kernels in its cluster.
-   
-        @arg addrs:
-            A list of (ip, port) tuples of the other kernels in the cluster
-        """
-        self._checkConnection()
-        if addrs is None:
-            self.es.write_line("CLUSTER CLEAR")
-            line, self.extra = self.es.read_line(self.extra)
-            if line == "CLUSTER OK":
-                return True
-            if line == "CLUSTER FAIL":
-                return False
-        else:
-            try:
-                package = pickle.dumps(addrs, 2)
-            except pickle.PickleError, e:
-                print "Pass a valid python list of addresses: ", e
-                return False
-            else:
-                self.es.write_line("CLUSTER CREATE")
-                self.es.write_line("PICKLE %i" % len(package))
-                self.es.write_bytes(package)
-                line, self.extra = self.es.read_line(self.extra)
-                if line == "CLUSTER OK":
-                    return True
-                if line == "CLUSTER FAIL":
-                    return False
-
     def reset(self):
         """Clear the namespace if the kernel."""
         self._checkConnection()
@@ -529,6 +484,7 @@ class RemoteKernel(object):
             
 class InteractiveCluster(object):
     """An interface to a set of ipython kernels for parallel computation."""
+    
     def __init__(self):
         """Create an empty cluster object."""
         self.count = 0
@@ -552,7 +508,6 @@ class InteractiveCluster(object):
             ic.kernels.append(w)
         ic.kernelAddrs = first.kernelAddrs + second.kernelAddrs
         ic.count = len(ic.kernels)
-        ic._cluster()
         return ic
         
     def setBlock(self, block):
@@ -580,12 +535,7 @@ class InteractiveCluster(object):
             return kernels
         elif isinstance(kernels, int):
             return [kernels]
-     
-    def _cluster(self):
-        """Notify each kernel in the cluster about the other kernels."""
-        for w in self.kernels:
-            w.cluster(self.kernelAddrs)
-              
+                   
     def start(self, addrList):
         """Add already running kernels to the cluster.
         
@@ -600,9 +550,8 @@ class InteractiveCluster(object):
         self.count = len(self.kernels)
         
         # Let everyone know about each other
-        self._cluster()
         self.activate()
-        self.setBlock(True)
+        self.setBlock(False)
                     
         return True
     
@@ -617,7 +566,6 @@ class InteractiveCluster(object):
         del self.kernels[kernel]
         del self.kernelAddrs[kernel]
         self.count = len(self.kernelAddrs)
-        self._cluster()
         
     def activate(self):
         """Make this cluster the active one for ipython magics.

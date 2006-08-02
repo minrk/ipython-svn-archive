@@ -31,7 +31,7 @@ won't result in a running kernel instance.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-# MPI module should be loaded first and passed to the factory
+# MPI module should be loaded first
 
 import sys
 from IPython.genutils import get_home_dir
@@ -43,10 +43,8 @@ except ImportError:
     mpi_module = None
 else:
     mpi_module = mpi_init_module.mpi
-    print mpi_init_module.mpi.rank, mpi_init_module, size
             
 import cPickle as pickle
-#import sys
 from optparse import OptionParser
 import socket
 

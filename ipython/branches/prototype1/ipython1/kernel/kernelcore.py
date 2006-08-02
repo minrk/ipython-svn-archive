@@ -72,7 +72,12 @@ class KernelTCPProtocol(basic.LineReceiver):
         self.work_vars = {}
         peer = self.transport.getPeer()
             
+    #def sendLine(self, line):
+    #    log.msg('S: ' + line)
+    #    basic.LineReceiver.sendLine(self, line)
+            
     def lineReceived(self, line):
+        #log.msg('C: ' + line)
         split_line = line.split(" ", 1)
         if len(split_line) == 1:
             cmd = split_line[0]
@@ -269,12 +274,14 @@ class KernelTCPProtocol(basic.LineReceiver):
             return
         
         if self.work_vars['execute_block']:
+            #log.msg('Blocking execute')
             self.work_vars['current_ticket'] = self.factory.get_ticket()        
             d = self.factory.execute_block(execute_cmd,
                 self.work_vars['current_ticket'])
             d.addCallback(self.execute_ok_block)
             d.addErrback(self.execute_fail)
-        else:                   
+        else:
+            #log.msg('Blocking execute')                   
             self.execute_finish("OK")   
             # The deferToThread in this call costs 2 ms currently :(
             self.work_vars['current_ticket'] = self.factory.get_ticket()
@@ -382,6 +389,7 @@ class KernelFactoryBase(protocol.ServerFactory):
     protocol = KernelTCPProtocol
     
     def __init__(self, notify=[], mpi=None):
+        #log.msg("In __init__:")
         self._notifiers = notify
         self.mpi = mpi
         self.createShell()
@@ -415,6 +423,7 @@ class KernelFactoryBase(protocol.ServerFactory):
 class KernelTCPFactory(KernelFactoryBase):
         
     def createShell(self):
+        #log.msg('KernelTCPFactory.createShell')
         self.shell = QueuedInteractiveConsole()
         self.shell.start_work()          
         
@@ -431,10 +440,12 @@ class KernelTCPFactory(KernelFactoryBase):
         return d
         
     def execute(self, source, ticket):
+        #log.msg('KernelTCPFactory.execute')
         d = threads.deferToThread(self.shell.execute, source, ticket)
         return d
         
     def execute_block(self, source, ticket):
+        #log.msg('KernelTCPFactory.execute')
         result = self.shell.execute(source, ticket, block=True)
         return defer.succeed(result)
         
