@@ -41,6 +41,8 @@ from twisted.application import service, internet
 from twisted.internet import defer, reactor
 from twisted.python import log, failure
 from zope.interface import Interface, implements
+from zope.interface.interface import Attribute
+#Atttribute = zope.interface.Attribute
 
 import cPickle as pickle
 
@@ -53,32 +55,28 @@ class IEngine(Interface):
     
     All these methods should return deferreds.
     """
+#    id = Attribute("the id of the Engine object")
+    
     def getID():
         """return deferred to this.id"""
     
     def setID(id):
-        """set this.id"""
+        """set this.id, return deferred"""
     
     def execute(lines):
         """Execute lines of Python code."""
     
     def push(**namespace):
         """Put value into locals namespace with name key."""
-        
-    def pushPickle(**pickleNamespace):
+    
+    def pushPickle(pickledNamespace):
         """Unpickle package and put into the locals namespace with name key."""
-
+    
     def pull(*keys):
         """Gets an item out of the self.locals dict by key."""
-        
+    
     def pullPickle(*keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
-    
-    def reset():
-        """Reset the InteractiveShell."""
-    
-    def kill():
-        """kill the process"""
     
     def getCommand(i=None):
         """Get the stdin/stdout/stderr of command i."""
@@ -86,57 +84,48 @@ class IEngine(Interface):
     def getLastCommandIndex():
         """Get the index of the last command."""
     
+    def reset():
+        """Reset the InteractiveShell."""
+    
+    def kill():
+        """kill the process"""
+    
+    def status():
+        """return status of engine"""
+    
+
 # Now the actual EngineService
 class EngineService(service.Service):
-
+    
     implements(IEngine)
-
-    id = None
-
+    
+    id = None    
     def __init__(self):
         self.shell = InteractiveShell()    # let's use containment, not inheritance
-
+    
     # The IEngine methods
-
-    def getID(self):
-        return defer.succeed(self.id)
-
-    def setID(self, id):
-        self.id = id
-        return defer.succeed(None)
-
+    
     def execute(self, lines):
         return defer.execute(self.shell.execute, lines)
-
+    
     def push(self, **namespace):
         return defer.execute(self.shell.update, namespace)
-
-    def pushPickle(self, **pickleNamespace):
-        values = {}
-        for key, pickledValue in pickleNamespace.iteritems():
-            value = pickle.loads(pickledValue)
-            values[key] = value
-        return self.push(**values)
-
+    
+    def pushPickle(self, pickledNamespace):
+        return self.push(**pickle.loads(pickledNamespace))
+    
     def pull(self, *keys):
         result = []
         for key in keys:
             result.append(self.shell.get(key))
         return defer.succeed(tuple(result))
-
+    
     def pullPickle(self, *keys):
-        d = self.pull(*keys)
-        def pickleTheValues(values):
-            pickleNamespace = {}
-            for k, v in zip(keys, values):
-                pickleNamespace[k] = pickle.dumps(v,2)
-            return pickleNamespace
-        d.addCallback(pickleTheValues)
-        return d
-
+        return self.pull(*keys).addCallback(lambda v: pickle.dumps(v,2))
+    
     def reset(self):
         return defer.execute(self.shell.reset)
-
+    
     def kill(self):
         try:
             reactor.stop()
@@ -144,14 +133,14 @@ class EngineService(service.Service):
             log.msg('The reactor was not running apparently.')
             return defer.fail()
         else:
-            return defer.succeed()
-
+            return defer.succeed(None)
+    
     def getCommand(self, i=None):
         return defer.execute(self.shell.getCommand, i)
-
+    
     def getLastCommandIndex(self):
         return defer.execute(self.shell.getLastCommandIndex)
-
+    
 
 # Now the interface and implementation of the QueuedEngine
 
@@ -252,15 +241,14 @@ class QueuedEngine(object):
     def execute(self, lines):
         """Execute lines of Python code."""
         return self.submitCommand(Command("execute", lines))
-        
+    
     def push(self, **namespace):
         """Put value into locals namespace with name key."""
         return self.submitCommand(Command("push", **namespace))
 
-    
-    def pushPickle(self, **pickleNamespace):
+    def pushPickle(self, pickleNamespace):
         """Unpickle package and put into the locals namespace with name key."""
-        return self.submitCommand(Command("pushPickle", **pickleNamespace))
+        return self.submitCommand(Command("pushPickle", pickleNamespace))
     
     def pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
@@ -296,8 +284,6 @@ class QueuedEngine(object):
     
     def getLastCommandIndex(self):
         """Get the index of the last command."""
-#        d = self.submitCommand(Command("getLastCommandIndex"))
-        # Use the cached copy
         return defer.succeed(max(self.history.keys()+[-1]))
     
 

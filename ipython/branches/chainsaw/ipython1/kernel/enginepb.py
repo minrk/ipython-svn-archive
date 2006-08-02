@@ -28,7 +28,9 @@ from twisted.spread import pb
 from twisted.internet import defer, reactor
 from zope.interface import Interface, implements
 
-from ipython1.kernel.engineservice import EngineService, IEngine, Command
+from ipython1.kernel.engineservice import EngineService, IEngine
+from ipython1.kernel.engineservice import QueuedEngine,Command
+from ipython1.kernel import controllerservice
 
 
 class PBEngineClientFactory(pb.PBClientFactory):
@@ -36,7 +38,6 @@ class PBEngineClientFactory(pb.PBClientFactory):
     def __init__(self, service):
         
         pb.PBClientFactory.__init__(self)
-        self.reconnect = True
         self.service = service
         self.engineReference = IPBEngine(service)
         self.deferred = self.getRootObject()
@@ -51,7 +52,7 @@ class PBEngineClientFactory(pb.PBClientFactory):
         self.rootObject = obj
         d = self.rootObject.callRemote('registerEngine', self.engineReference, None)
         d.addCallbacks(self._referenceSent, self._getRootFailure)
-
+        
         return d
     
     def _referenceSent(self, id):
@@ -61,9 +62,10 @@ class PBEngineClientFactory(pb.PBClientFactory):
     
     def clientConnectionFailed(self, connector, reason):
         log.msg("connection failed")
-            
+    
     def clientConnectionLost(self, connector, reason):
         log.msg("connection lost")
+    
 
 # Expose a PB interface to the EngineService
      
@@ -76,71 +78,63 @@ class IPBEngine(Interface):
     
     def remote_setID(self, id):
         """set this.id"""
-
+    
     def remote_execute(self, lines):
         """Execute lines of Python code."""
     
-    def remote_put(self, key, value):
+    def remote_push(self, **namespace):
         """Put value into locals namespace with name key."""
     
-    def remote_putPickle(self, key, package):
+    def remote_pushPickle(self, pickledNamespace):
         """Unpickle package and put into the locals namespace with name key."""
     
-    def remote_get(self, key):
+    def remote_pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
     
-    def remote_getPickle(self, key):
+    def remote_pullPickle(self, *keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
     
     def remote_reset(self):
         """Reset the InteractiveShell."""
-
+    
     def remote_kill(self):
         """kill the InteractiveShell."""
-
+    
     def remote_getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
     
     def remote_getLastCommandIndex(self):
         """Get the index of the last command."""
     
-    def remote_interruptEngine(self):
-        """Send SIGUSR1 to the kernel engine to stop the current command."""
-    
 
 class PBEngineReferenceFromService(pb.Referenceable):
+    #object necessary for id property
         
     implements(IPBEngine)
-        
+    
     def __init__(self, service):
         self.service = service
     
     def remote_getID(self):
-        return self.service.getID()
+        return self.service.id
     
     def remote_setID(self, id):
-        return self.service.setID(id)
+        self.service.id = id
     
     def remote_execute(self, lines):
         return self.service.execute(lines)
     
-    def remote_put(self, key, value):
-        return self.service.put(key, value)
+    def remote_push(self, **namespace):
+        return self.service.push(**namespace)
     
-    def remote_putPickle(self, key, package):
-        return self.service.putPickle(key, package)
+    def remote_pushPickle(self, pickledNamespace):
+        return self.service.pushPickle(pickledNamespace)
     
-    def remote_get(self, key):
-        return self.service.get(key)
+    def remote_pull(self, *keys):
+        return self.service.pull(*keys)
     
-    def remote_getPickle(self, key):
-        return self.service.getPickle(key)
-    
-    def remote_update(self, dictOfData):
-        return self.service.update(dictOfData)
-    
-    def remote_updatePickle(self, dictPickle):
-        return self.service.updatePickle(dictPickle)
+    def remote_pullPickle(self, *keys):
+        return self.service.pullPickle(*keys)
     
     def remote_reset(self):
         return self.service.reset()
@@ -166,7 +160,7 @@ class EngineFromReference(object):
     
     def __init__(self, reference):
         self.reference = reference
-        self.id = None
+        self._id = None
         self.currentCommand = None
     
     def callRemote(self, *args, **kwargs):
@@ -177,39 +171,34 @@ class EngineFromReference(object):
     
     def getID(self):
         """return this.id"""
-        return self.callRemote('getID')
+        return self._id
     
     def setID(self, id):
         """set this.id"""
+        self._id = id
         return self.callRemote('setID', id)
+    
+    id = property(getID, setID)
     
     def execute(self, lines):
         """Execute lines of Python code."""
         return self.callRemote('execute', lines)
     
-    def put(self, key, value):
+    def push(self, **namespace):
         """Put value into locals namespace with name key."""
-        return self.callRemote('put', key, value)
+        return self.callRemote('push', **namespace)
     
-    def putPickle(self, key, package):
+    def pushPickle(self, pickledNamespace):
         """Unpickle package and put into the locals namespace with name key."""
-        return self.callRemote('putPickle', key, package)
+        return self.callRemote('pushPickle', pickledNamespace)
     
-    def get(self, key):
+    def pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
-        return self.callRemote('get', key)
+        return self.callRemote('pull', *keys)
     
-    def getPickle(self, key):
+    def pullPickle(self, *keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
-        return self.callRemote('getPickle', key)
-    
-    def update(self, dictOfData):
-        """Updates the self.locals dict with the dictOfData."""
-        return self.callRemote('update', dictOfData)
-    
-    def updatePickle(self, dictPickle):
-        """Updates the self.locals dict with the pickled dict."""
-        return self.callRemote('updatePickle', dictPickle)
+        return self.callRemote('pullPickle', *keys)
     
     def reset(self):
         """Reset the InteractiveShell."""
@@ -231,4 +220,38 @@ class EngineFromReference(object):
 components.registerAdapter(EngineFromReference,
                         pb.RemoteReference,
                         IEngine)
+
+#for the controller:
+
+class IPBRemoteEngineRoot(Interface):
+    """Root object for the controller service Remote Engine server factory"""
+    
+    def remote_registerEngine(self, engineReference):
+        """register new engine on controller"""
+    
+
+class PBRemoteEngineRootFromService(pb.Root):
+    """Perspective Broker Root object adapter for Controller Service 
+    Remote Engine connection"""
+    implements(IPBRemoteEngineRoot)
+    
+    def __init__(self, service):
+        self.service = service
+    
+    def remote_registerEngine(self, engineReference, id):
+        engine = IEngine(engineReference)
+        remoteEngine = QueuedEngine(engine)
+        id = self.service.registerEngine(remoteEngine, id)
+        def notify(*args):
+            return self.service.disconnectEngine(id)
+        
+        engineReference.broker.notifyOnDisconnect(notify)
+        return id
+
+    
+
+components.registerAdapter(PBRemoteEngineRootFromService,
+                        controllerservice.ControllerService,
+                        IPBRemoteEngineRoot)
+
 

@@ -43,41 +43,33 @@ class BasicEngineServiceTest(DeferredTestCase):
         for c in commands:
             result = self.s.execute(c[1])
             self.assertDeferredEquals(result, c)
-            
-    def testPutGet(self):
+    
+    def testPushPull(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
         for o in objs:
-            self.s.put("key",o)
-            value = self.s.get("key")
-            self.assertDeferredEquals(value,o)
-        self.assertRaises(TypeError,self.s.put,10)
-        self.assertRaises(TypeError,self.s.get,10)
+            self.s.push(key=o)
+            value = self.s.pull('key')
+            self.assertDeferredEquals(value,(o,))
+#        self.assertRaises(TypeError,self.s.push,10)
+#        self.assertRaises(TypeError,self.s.pull,10)
         self.s.reset()
-        self.s.get("a").addCallback(lambda nd:
-            self.assert_(isinstance(nd,NotDefined)))
-        
-    def testUpdate(self):
-        d = {"a": 10, "b": 34.3434, "c": "hi there"}
-        self.s.update(d)
-        for k in d.keys():
-            value = self.s.get(k)
-            self.assertDeferredEquals(value, d[k])
-        self.assertRaises(TypeError, self.s.update, [1,2,2])
-        
+        self.s.pull("a").addCallback(lambda nd:
+            self.assert_(isinstance(nd[0],NotDefined)))
+    
     def testCommand(self):
-        self.assertRaises(IndexError,self.s.getCommand)
-        self.s.execute("a = 5")
-        self.assertDeferredEquals(self.s.getCommand(),(0,"a = 5","",""))
-        self.assertDeferredEquals(self.s.getCommand(0),(0,"a = 5","",""))
-        self.s.reset()
-        self.assertDeferredEquals(self.s.getLastCommandIndex(),-1)
         #self.assertRaises(IndexError,self.s.getCommand)
-        
+        d = self.s.execute("a = 5")
+        d = self.assertDeferredEquals(self.s.getCommand(),(0,"a = 5","",""), d)
+        d = self.assertDeferredEquals(self.s.getCommand(0),(0,"a = 5","",""), d)
+        d.addCallback(lambda _:self.s.reset())
+        return self.assertDeferredEquals(self.s.getLastCommandIndex(),-1, d)
+        #self.assertRaises(IndexError,self.s.getCommand)
+    
     def testPickle(self):
         goodPickle = 1.5647654
         import pickle
         pickle.dumps(NotDefined('a'), 2)
-        package = pickle.dumps(goodPickle,2)
-        self.assertDeferredEquals(self.s.putPickle("a",package),None)
-        finalValue = self.s.getPickle("a").addCallback(pickle.loads)
-        self.assertDeferredEquals(finalValue, goodPickle)
+        package = pickle.dumps(dict(a=goodPickle),2)
+        self.assertDeferredEquals(self.s.pushPickle(package),None)
+        finalValue = self.s.pullPickle("a").addCallback(pickle.loads)
+        self.assertDeferredEquals(finalValue, (goodPickle,))

@@ -112,30 +112,27 @@ class EngineProxy(object):
     
     def execute(self, lines, block=False):
         if block:
-            return self.rc.execute(lines, self.id, block=True)[0]
+            return self.rc.execute(self.id, lines, block=True)[0]
         else:
-            return self.rc.execute(lines, self.id)
+            return self.rc.execute(self.id, lines)
     
-    def push(self, key, value):
-        return self.rc.push(key, value, self.id)
+    def push(self, **namespace):
+        return self.rc.push(self.id, **namespace)
     
     def __setitem__(self, key, value):
-        return self.push(key, value)
+        return self.push(**dict(key=value))
     
-    def pull(self, key):
-        return self.rc.pull(key, self.id)[0]
+    def pull(self, *keys):
+        return self.rc.pull(self.id, *keys)[0]
     
     def __getitem__(self, key):
-        return self.pull(key)
-    
-    def update(self, dic):
-        return self.rc.update(dic, self.id)
+        return self.pull(*(key))
     
     def status(self):
         return self.rc.status(self.id)[self.id]
     
     def getCommand(self, n=None):
-        return self.rc.getCommand(n,self.id)[0]
+        return self.rc.getCommand(self.id, n)[0]
     
     def getLastCommandIndex(self):
         return self.rc.getLastCommandIndex(self.id)[0]
@@ -153,6 +150,7 @@ class SubCluster(object):
     def __init__(self, rc, ids):
         self.rc = rc
         if isinstance(ids, slice):
+            #parse slice
             idlist = rc.status().keys()
             if ids.step is None:
                 step = 1
@@ -173,15 +171,15 @@ class SubCluster(object):
             raise TypeError("SubCluster requires slice or list")
     
     def execute(self, lines, block=False):
-            return self.rc.execute(lines, self.ids, block)
+            return self.rc.execute(self.ids, lines, block)
     
-    def push(self, key, value):
-        return self.rc.push(key, value, self.ids)
+    def push(self, **namespace):
+        return self.rc.push(self.ids, **namespace)
     
     def __setitem__(self, key, value):
-        return self.push(key, value)
+        return self.push(**dict(key, value))
     
-    def pull(self, key):
+    def pull(self, *keys):
         return self.rc.pull(key, self.ids)
     
     def __getitem__(self, id):
@@ -190,18 +188,15 @@ class SubCluster(object):
         elif isinstance(id, int):
             return EngineProxy(self.rc, self.ids[id])
         elif isinstance(id, str):
-            return self.pull(id)
+            return self.pull(*(id))
         else:
             raise TypeError("__getitem__ only takes strs, ints, and slices")
-    
-    def update(self, dic):
-        return self.rc.update(dic, self.ids)
     
     def status(self):
         return self.rc.status(self.ids)
     
     def getCommand(self, n=None):
-        return self.rc.getCommand(n,self.ids)
+        return self.rc.getCommand(self.ids, n)
     
     def getLastCommandIndex(self):
         return self.rc.getLastCommandIndex(self.ids)
@@ -212,8 +207,6 @@ class SubCluster(object):
     def kill(self):
         return self.rc.kill(self.ids)
     
-    
-        
 
 class RemoteController(object):
     """A high level interface to a remotely running ipython kernel."""
@@ -271,24 +264,24 @@ class RemoteController(object):
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
         self.es = LineSocket(self.s)
     
-    def execute(self, source, ids='all', block=False):
+    def execute(self, targets, source, block=False):
         """Execute python source code on the ipython kernel.
         
         @arg source:
-            A string containing valids python code
+            A string containing valtargets python code
         """
         self._check_connection()
-        if isinstance(ids, list):
-            ids = '::'.join(map(str, ids))
+        if isinstance(targets, list):
+            targets = '::'.join(map(str, targets))
         if self.block or block:
-            self.es.write_line("EXECUTE BLOCK %s::%s" % (source, ids))
+            self.es.write_line("EXECUTE BLOCK %s::%s" % (source, targets))
             line, self.extra = self.es.read_line(self.extra)
             line_split = line.split(" ")
             if line_split[0] == "PICKLE" and len(line_split) == 2:
                 try:
                     nbytes = int(line_split[1])
                 except:
-                    print "Server dids not return the length of data."
+                    print "Server dtargets not return the length of data."
                     return False
                 package, self.extra = self.es.read_bytes(nbytes, self.extra)
                 data = pickle.loads(package)
@@ -300,29 +293,29 @@ class RemoteController(object):
                 red = TermColors.Red
                 green = TermColors.Green
                 for d in data:
-#                    (ids, cmd) = d
+#                    (targets, cmd) = d
                     cmd = d
-                    ids = 0
+                    targets = 0
                     cmd_num = cmd[0]
                     cmd_stdin = cmd[1]
                     cmd_stdout = cmd[2][:-1]
                     cmd_stderr = cmd[3][:-1]
                     print "%s[%s]:[%i]%s In [%i]:%s %s" % \
-                        (green, self.addr[0], ids,
+                        (green, self.addr[0], targets,
                         blue, cmd_num, normal, cmd_stdin)
                     if cmd_stdout:
                         print "%s[%s]:[%i]%s Out[%i]:%s %s" % \
-                            (green, self.addr[0], ids,
+                            (green, self.addr[0], targets,
                             red, cmd_num, normal, cmd_stdout)
                     if cmd_stderr:
                         print "%s[%s]:[%i]%s Err[%i]:\n%s %s" % \
-                            (green, self.addr[0], ids,
+                            (green, self.addr[0], targets,
                             red, cmd_num, normal, cmd_stderr)
             else:
                 data = None
                 line = ""
         else:
-            string = "EXECUTE %s::%s" % (source, ids)
+            string = "EXECUTE %s::%s" % (source, targets)
             self.es.write_line(string)
             line, self.extra = self.es.read_line(self.extra)
             data = None
@@ -344,7 +337,7 @@ class RemoteController(object):
         # Now run the code
         self.execute(source)
     
-    def push(self, key, value, ids='all'):
+    def push(self, targets, **namespace):
         """Send a python object to the namespace of a kernel.
         
         There is also a dictionary style interface to the push command:
@@ -359,14 +352,14 @@ class RemoteController(object):
             What to name the object in the kernel' namespace
         """
         self._check_connection()
-        if isinstance(ids, list):
-            ids = '::'.join(map(str, ids))
+        if isinstance(targets, list):
+            targets = '::'.join(map(str, targets))
         try:
-            package = pickle.dumps(value, 2)
+            package = pickle.dumps(namespace, 2)
         except pickle.PickleError, e:
             print "Object cannot be pickled: ", e
             return False
-        self.es.write_line("PUSH %s::%s" % (key, ids))
+        self.es.write_line("PUSH ::%s" % targets)
         self.es.write_line("PICKLE %i" % len(package))
         self.es.write_bytes(package)
         line, self.extra = self.es.read_line(self.extra)
@@ -375,37 +368,10 @@ class RemoteController(object):
         if line == "PUSH FAIL":
             return False
     
-    def update(self, dic, ids='all'):
-        """Send the dict of key value pairs to the kernel's namespace.
-        
-        >>> rc = RemoteController(addr)
-        >>> rc.update({'a':1,'b':2,'c':'mystring}, [1,2,3])    
-        # sends a, b and c to the engines 1,2,3
-        
-        @arg dic:
-            A dictionary of key, value pairs to send to the kernel
-        """
-        self._check_connection()
-        if isinstance(ids, list):
-            ids = '::'.join(map(str, ids))
-        try:
-            package = pickle.dumps(dic, 2)
-        except pickle.PickleError, e:
-            print "Object cannot be pickled: ", e
-            return False
-        self.es.write_line("UPDATE ::%s" % (ids))
-        self.es.write_line("PICKLE %i" % len(package))
-        self.es.write_bytes(package)
-        line, self.extra = self.es.read_line(self.extra)
-        if line == "UPDATE OK":
-            return True
-        if line == "UPDATE FAIL":
-            return False
-    
     def __setitem__(self, key, value):
-            return self.push(key, value)
+            return self.push('all', **dict(key, value))
     
-    def pull(self, key, ids = 'all'):
+    def pull(self, targets, *keys):
         """Get a python object from a remote kernel.
                 
         If the object does not exist in the kernel's namespace a NotDefined
@@ -422,10 +388,17 @@ class RemoteController(object):
             The name of the python object to get        
         """
         self._check_connection()    
-        if isinstance(ids, list):
-            ids = '::'.join(map(str, ids))
+        if isinstance(targets, list):
+            targets = '::'.join(map(str, targets))
         
-        self.es.write_line("PULL %s::%s" % (key, ids))
+        try:
+            package = pickle.dumps(keys, 2)
+        except pickle.PickleError, e:
+            print "Object cannot be pickled: ", e
+            return False
+        self.es.write_bytes(package)
+        self.es.write_line("PULL ::%s" % targets)
+        self.es.write_line("PICKLE %i" % len(package))
         line, self.extra = self.es.read_line(self.extra)
         line_split = line.split(" ", 1)
         if line_split[0] == "PICKLE":
@@ -448,7 +421,7 @@ class RemoteController(object):
                         return False
         else:
             # For other data types
-            #this will never happen
+            #this should never happen
             if line == "PULL FAIL":
                 return False
             data = line_split[1]
@@ -464,20 +437,20 @@ class RemoteController(object):
         elif isinstance(id, int):
             return EngineProxy(self, id)
         elif isinstance(id, str):
-            return self.pull(id)
+            return self.pull('all', *(id))
         else:
             raise TypeError("__getitem__ only takes strs, ints, and slices")
     
-    def getCommand(self, number=None, ids='all'):
+    def getCommand(self, targets, number=None):
         """Gets a specific result from the kernel, returned as a tuple."""
         self._check_connection()    
-        if isinstance(ids, list):
-            ids = '::'.join(map(str, ids))
+        if isinstance(targets, list):
+            targets = '::'.join(map(str, targets))
         
         if number is None:
-            self.es.write_line("GETCOMMAND ::%s" %ids)
+            self.es.write_line("GETCOMMAND ::%s" %targets)
         else:
-            self.es.write_line("GETCOMMAND %i::%s" % (number, ids))
+            self.es.write_line("GETCOMMAND %i::%s" % (number, targets))
         line, self.extra = self.es.read_line(self.extra)
         line_split = line.split(" ", 1)
         if line_split[0] == "PICKLE":
@@ -502,13 +475,13 @@ class RemoteController(object):
             # For other data types
             return False
     
-    def getLastCommandIndex(self, ids='all'):
+    def getLastCommandIndex(self, targets):
         """Gets the index of the last command."""
         self._check_connection()    
-        if isinstance(ids, list):
-            ids = '::'.join(map(str, ids))
+        if isinstance(targets, list):
+            targets = '::'.join(map(str, targets))
         
-        self.es.write_line("GETLASTCOMMANDINDEX ::%s" %ids)
+        self.es.write_line("GETLASTCOMMANDINDEX ::%s" %targets)
         line, self.extra = self.es.read_line(self.extra)
         line_split = line.split(" ", 1)
         if line_split[0] == "PICKLE":
@@ -533,13 +506,13 @@ class RemoteController(object):
             # For other data types
             return False
     
-    def status(self, ids='all'):
+    def status(self, targets):
         """Check the status of the kernel."""
         self._check_connection()
-        if isinstance(ids, list):
-            ids = '::'.join(map(str, ids))
+        if isinstance(targets, list):
+            targets = '::'.join(map(str, targets))
         
-        self.es.write_line("STATUS ::%s" %ids)
+        self.es.write_line("STATUS ::%s" %targets)
         line, self.extra = self.es.read_line(self.extra)
         line_split = line.split(" ", 1)
         if line_split[0] == "PICKLE":
@@ -607,26 +580,26 @@ class RemoteController(object):
         else:
             return False
     
-    def reset(self, ids='all'):
+    def reset(self, targets):
         """Clear the namespace if the kernel."""
         self._check_connection()
-        if isinstance(ids, list):
-            ids = '::'.join(map(str, ids))
+        if isinstance(targets, list):
+            targets = '::'.join(map(str, targets))
         
-        self.es.write_line("RESET ::%s" %ids)
+        self.es.write_line("RESET ::%s" %targets)
         line, self.extra = self.es.read_line(self.extra)
         if line == "RESET OK":
             return True
         else:
             return False      
     
-    def kill(self, ids='all'):
+    def kill(self, targets):
         """Kill the engine completely."""
         self._check_connection()    
-        if isinstance(ids, list):
-            ids = '::'.join(map(str, ids))
+        if isinstance(targets, list):
+            targets = '::'.join(map(str, targets))
         
-        self.es.write_line("KILL ::%s" %ids)
+        self.es.write_line("KILL ::%s" %targets)
         line, self.extra = self.es.read_line(self.extra)
         if line == "KILL OK":
             return True

@@ -4,21 +4,21 @@
 This module is meant to be run from the command line.  To start the controller,
 issue the command:
 
-    python ipcontrollerpb
+    python ipenginepb
 
 This will start the kernel listening on port 10105 for control and 10201 for
 engine connections (the default).  Here is an example that starts
 the kernel on port 10106 for control, and 10202 for engines:
 
-    python ipcontrollerpb -c 10106 -e 10202
+    python ipenginepb -c 10106 -e 10202
 
 For more information on the command line options, run:
 
-    python ipcontrollerpb -h
+    python ipenginepb -h
 
 NOTE:  The kernel cannot currently be run in the background, so:
 
-    python ipcontrollerpb &
+    python ipenginepb &
 
 won't result in a running kernel instance.
 """
@@ -31,14 +31,14 @@ won't result in a running kernel instance.
 #*****************************************************************************
 
 import sys, time
-time.sleep(10)
+#time.sleep(10)
 from optparse import OptionParser
 
 from twisted.internet import reactor, error
 from twisted.spread import pb
 from twisted.python import log
 
-from ipython1.kernel import controllerservice, controllerpb, controller
+from ipython1.kernel import controllerservice, enginepb, controllervanilla
 
 
 def tryPorts(port, factory):
@@ -56,9 +56,8 @@ def main(cport, eport):
     log.startLogging(sys.stdout)
     
     cs = controllerservice.ControllerService()
-#    croot = controllerpb.IPBControlRoot(cs)
-    efac = pb.PBServerFactory(controllerpb.IPBRemoteEngineRoot(cs))
-    cfac = controller.IControlFactory(cs)
+    efac = pb.PBServerFactory(enginepb.IPBRemoteEngineRoot(cs))
+    cfac = controllervanilla.IControlFactory(cs)
     reactor.callLater(1.0,tryPorts, eport, efac)
     reactor.callLater(2.0,tryPorts, cport, cfac)
     cs.startService()

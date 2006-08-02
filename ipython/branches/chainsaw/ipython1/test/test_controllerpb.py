@@ -97,44 +97,48 @@ class BasicControllerServiceTest(DeferredTestCase):
         dl = defer.DeferredList([d,d2])
         return dl
     
-    def testPutGet(self):
-        l1 = []
-        l2 = []
-#        value = [1.1231232323, (1,'asdf',[2]),'another variable', 
-#                    [1,2,3,4], {d = 'a':3, 1:'asdf'}]
-        value = sys.argv[:8]
+    def testPushPull(self):
+        status = {}
+        d = self.cs.statusAll()
+        d.addCallback(status.update)
+        value = [1.1231232323, (1,'asdf',[2]),'another variable', 
+                    [1,2,3,4], {'a':3, 1:'asdf'}]
+#        value = sys.argv[:8]
+        values = tuple(value)
         cnt = len(value)
         key = 'abcdefg'
-        key = key[:cnt]
-
+        key = key
+        keys = tuple(key[:cnt])
+        namespace = {}
+        
         for n in range(cnt):
-            d = self.cs.put(key[n], value[n], 0)
-            l1.append(d)
-        dl1 = defer.DeferredList(l1)
-        dl1.addCallback(lambda _:defer.gatherResults(
-                map(self.cs.get, key, [0]*cnt))
-        ).addCallback(lambda l: map(list.__getitem__, l, [0]*cnt))
-        d = self.assertDeferredEquals(dl1, value)
+            namespace[keys[n]] = values[n]
+        
+        d.addCallback(lambda _:self.cs.push('all', **namespace))
+#        d = self.cs.push('all', **namespace)
+        d.addCallback(lambda _:self.cs.pull('all', *keys))
+        d = self.assertDeferredEquals(d, [values]*len(status))
         return d
     
-    def testPutGetPickle(self):
+    def testPushPullPickle(self):
         l1 = []
         l2 = []
         value = [1.1231232323, (1,'asdf',[2]),'another variable', 
                     [1,2,3,4], {'a':3, 1:'asdf'}]
         cnt = len(value)
-        pValue = map(pickle.dumps, value, [2]*cnt)
+        #pValue = map(pickle.dumps, value, [2]*cnt)
         key = 'abcdefg'
-        key = key[:cnt]
+        keys = tuple(key[:cnt])
+        namespace = {}
+        
         for n in range(cnt):
-            d = self.cs.putPickle(key[n], pValue[n], 0)
-            l1.append(d)
-        dl1 = defer.DeferredList(l1)
-        dl1.addCallback(lambda _:defer.gatherResults(
-                map(self.cs.getPickle, key, [0]*cnt))
-        ).addCallback(lambda r: map(pickle.loads, 
-                map(list.__getitem__, r, [0]*cnt)))
-        d = self.assertDeferredEquals(dl1, value)
+            namespace[keys[n]] = value[n]
+        
+        pickledNamespace = pickle.dumps(namespace, 2)
+        d = self.cs.pushPickle(0, pickledNamespace)
+        d.addCallback(lambda _:self.cs.pullPickle(0, *keys))
+        d.addCallback(lambda pns:pickle.loads(pns[0]))
+        d = self.assertDeferredEquals(d, tuple(value))
         return d
     
     #adapted from ipython1.test.test_corepb
@@ -150,24 +154,19 @@ class BasicControllerServiceTest(DeferredTestCase):
         for id in self.cs.engines.keys():
             d = defer.succeed(None)
             for c in commands:
-                d = self.assertDeferredEquals(self.cs.execute(c[1], id), [c], chainDeferred=d)
+                d = self.assertDeferredEquals(self.cs.execute(id, c[1]), [c], chainDeferred=d)
             dlist.append(d)
         d = defer.DeferredList(dlist)
         return d
     
-    def testUpdate(self):
-        d = self.cs.update({'a':1}, 0)
-        return d
-    def testUpdatePickle(self):
-        p = pickle.dumps({'a': 1}, 2)
-        d = self.cs.updatePickle(p, 0)
-        return d
     def testReset(self):
         d = self.cs.reset(0)
         return d
+    
     def testGetLastCommandIndex(self):
         d = self.cs.getLastCommandIndex(0)
         return d
+    
     def testScale(self, n=32):
         dlist = []
         for i in range(1,n):
@@ -183,9 +182,9 @@ class BasicControllerServiceTest(DeferredTestCase):
         d.addCallback(lambda _:self.testExecute())
         return d
     
-    def testScalePutGet(self):
+    def testScalePushPull(self):
         (d, _) = self.newEngine(16)
-        d.addCallback(lambda _:self.testPutGet())
+        d.addCallback(lambda _:self.testPushPull())
         return d
     
 
