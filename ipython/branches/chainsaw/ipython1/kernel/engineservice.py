@@ -51,7 +51,7 @@ from ipython1.core.shell import InteractiveShell
 class IEngine(Interface):
     """The Interface for the IPython Engine.
     
-    All these methods must return deferreds I think.
+    All these methods should return deferreds.
     """
     def getID():
         """return deferred to this.id"""
@@ -243,7 +243,7 @@ class QueuedEngine(object):
     
     def getID(self):
         # cached copy
-        return self.id
+        return defer.succeed(self.id)
             
     def setID(self, id):
         self.id = id
@@ -283,12 +283,16 @@ class QueuedEngine(object):
     def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
         if i is None:
-            i = max(self.history.keys()+[-1])  # should call self.getLastCommand()
-            
-        try:
-            return defer.succeed(self.history[i])
-        except KeyError:
-            return defer.fail()
+            d = self.getLastCommandIndex()
+            d.addCallback(lambda i: self.history[i])
+            return d
+        else:
+            try:
+                cmd = self.history[i]
+            except KeyError:
+                return defer.fail()
+            else:
+                return defer.succeed(cmd)
     
     def getLastCommandIndex(self):
         """Get the index of the last command."""
