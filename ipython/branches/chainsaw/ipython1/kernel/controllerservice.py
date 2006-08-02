@@ -341,7 +341,7 @@ class ControllerService(service.Service):
         if i is not None:
             log.msg("getting command %s from %s" %(i, targets))
         else:
-            log.msg("getting last command %s from %s" %targets)
+            log.msg("getting last command from %s" %targets)
         engines = self.engineList(targets)
         l = []
         for e in engines:
