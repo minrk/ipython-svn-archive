@@ -141,6 +141,8 @@ class EngineService(service.Service):
     def getLastCommandIndex(self):
         return defer.execute(self.shell.getLastCommandIndex)
     
+    def status(self):
+        return defer.succeed(None)
 
 # Now the interface and implementation of the QueuedEngine
 

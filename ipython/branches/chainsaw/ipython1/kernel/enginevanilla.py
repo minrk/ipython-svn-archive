@@ -4,14 +4,6 @@ from twisted.python import components
 from ipython1.kernel.engineservice import EngineService, IEngine, Command
 from ipython1.kernel.controllerservice import ControllerService
 
-"""We need
-
-- protocol class
-- EngineService -> Client Factory Adapter
-- ControllerService -> Server Factory Adaptor
-- Server Factory -> IEngine adaptor"""
-
-
 # Engine side of things
 
 class IVanillaEngineClientProtocol(Interface):
