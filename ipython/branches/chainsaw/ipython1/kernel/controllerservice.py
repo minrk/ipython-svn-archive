@@ -317,7 +317,7 @@ class ControllerService(service.Service):
         dikt = {}
         for e in engines:
             dikt[e.id] = e.status()
-        return defer.succeed(dikt)
+        return dikt
     
     def reset(self, targets):
         """Reset the InteractiveShell."""
