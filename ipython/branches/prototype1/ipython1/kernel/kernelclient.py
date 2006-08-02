@@ -28,6 +28,8 @@ from ipython1.kernel.esocket import LineSocket
 import ipython1.kernel.kernel_magic
 from ipython1.kernel.kernelerror import NotDefined
            
+# Utility functions
+           
 def _tarModule(mod):
     """Makes a tarball (as a string) of a locally imported module.
         
@@ -83,6 +85,8 @@ def _tarModule(mod):
     #os.system("rm %s" % tarball_name)
     
     return tarball_name, file_string
+               
+# The main classes
                     
 class RemoteKernel(object):
     """A high level interface to a remotely running ipython kernel."""
@@ -139,8 +143,10 @@ class RemoteKernel(object):
         self.es = LineSocket(self.s)
         # Turn of Nagle's algorithm to prevent the 200 ms delay :)
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
+
+    # Methods in the Interface
         
-    def execute(self, source, block=False):
+    def execute(self, lines, block=False):
         """Execute python source code on the ipython kernel.
         
         @arg source:
@@ -148,7 +154,7 @@ class RemoteKernel(object):
         """
         self._checkConnection()
         if self.block or block:
-            self.es.write_line("EXECUTE BLOCK %s" % source)
+            self.es.write_line("EXECUTE BLOCK %s" % lines)
             line, self.extra = self.es.read_line(self.extra)
             line_split = line.split(" ")
             if line_split[0] == "PICKLE" and len(line_split) == 2:
@@ -185,7 +191,7 @@ class RemoteKernel(object):
                 data = None
                 line = ""
         else:
-            self.es.write_line("EXECUTE %s" % source)
+            self.es.write_line("EXECUTE %s" % lines)
             line, self.extra = self.es.read_line(self.extra)
             data = None
              
@@ -206,7 +212,7 @@ class RemoteKernel(object):
         # Now run the code
         self.execute(source)
         
-    def push(self, key, value, forward=False):
+    def _push(self, key, value):
         """Send a python object to the namespace of a kernel.
         
         There is also a dictionary style interface to the push command:
@@ -229,10 +235,7 @@ class RemoteKernel(object):
         except pickle.PickleError, e:
             print "Object cannot be pickled: ", e
             return False
-        if forward:
-            self.es.write_line("PUSH FORWARD %s" % key)
-        else:
-            self.es.write_line("PUSH %s" % key )
+        self.es.write_line("PUSH %s" % key )
         self.es.write_line("PICKLE %i" % len(package))
         self.es.write_bytes(package)
         line, self.extra = self.es.read_line(self.extra)
@@ -241,7 +244,7 @@ class RemoteKernel(object):
         if line == "PUSH FAIL":
             return False
         
-    def update(self,dict):
+    def push(self, **namespace):
         """Send the dict of key value pairs to the kernel's namespace.
         
         >>> rk = RemoteKernel(addr)
@@ -251,13 +254,19 @@ class RemoteKernel(object):
         @arg dict:
             A dictionary of key, value pairs to send to the kernel
         """
-        for key in dict.keys():
-            self.push(key,dict[key])
+        for key, value in namespace.iteritems():
+            self._push(key, value)
         
-    def __setitem__(self, key, value):
-        self.push(key, value)
+    def pull(self, *keys):
+        result = []
+        for k in keys:
+            result.append(self._pull(k))
+        if len(keys) == 1:
+            return result[0]
+        else:
+            return tuple(result)
         
-    def pull(self, key):
+    def _pull(self, key):
         """Get a python object from a remote kernel.
                 
         If the object does not exist in the kernel's namespace a NotDefined
@@ -299,9 +308,6 @@ class RemoteKernel(object):
         else:
             # For other data types
             pass
-
-    def __getitem__(self, key):
-        return self.pull(key)
 
     def result(self, number=None):
         """Gets a specific result from the kernel, returned as a tuple."""
@@ -482,6 +488,15 @@ class RemoteKernel(object):
         self.execute("import os", block=False)
         self.execute("os.system('tar -xf %s')" % tarball_name)        
             
+    # Additional features
+
+    def __getitem__(self, key):
+        return self.pull(key)
+        
+    def __setitem__(self, key, value):
+        d = {key: value}
+        self.push(**d)
+
 class InteractiveCluster(object):
     """An interface to a set of ipython kernels for parallel computation."""
     
@@ -520,21 +535,23 @@ class InteractiveCluster(object):
         
     block = property(getBlock, setBlock, doc="Toggles blocking execution")
         
-    def subcluster(self, kernelList):
+    def subcluster(self, targets):
         ic = InteractiveCluster()
-        for w in kernelList:
+        for w in targets:
             ic.kernels.append(self.kernels[w])
             ic.kernelAddrs.append(self.kernelAddrs[w])
         ic.count= len(ic.kernels)
         return ic
         
-    def _parseKernelsArg(self, kernels):
-        if kernels is None:
+    def _parseTargetsArg(self, targets):
+        if targets is 'all':
             return range(self.count)
-        elif isinstance(kernels, list) or isinstance(kernels, tuple):
-            return kernels
-        elif isinstance(kernels, int):
-            return [kernels]
+        elif isinstance(targets, list) or isinstance(targets, tuple):
+            return targets
+        elif isinstance(targets, int):
+            return [targets]
+        else:
+            raise TypeError("Invalid targets specifier")
                    
     def start(self, addrList):
         """Add already running kernels to the cluster.
@@ -550,12 +567,14 @@ class InteractiveCluster(object):
         self.count = len(self.kernels)
         
         # Let everyone know about each other
+        for k in self.kernels:
+            k.connect()
         self.activate()
         self.setBlock(False)
                     
         return True
     
-    def remove(self, kernel):
+    def remove(self, target):
         """Remove a specific kernel from the cluster.
         
         This does not kill the kernel, it just stops using it.
@@ -563,8 +582,8 @@ class InteractiveCluster(object):
         @arg kernel_to_remove:
             An integer specifying which kernel to remove
         """
-        del self.kernels[kernel]
-        del self.kernelAddrs[kernel]
+        del self.kernels[target]
+        del self.kernelAddrs[target]
         self.count = len(self.kernelAddrs)
         
     def activate(self):
@@ -633,21 +652,18 @@ class InteractiveCluster(object):
             addrs = [processLine(x) for x in rawClusterInfo]
             self.start(addrs)
         
-    def __getitem__(self, key):
-        if isinstance(key, int):
-            return self.kernels[key]
-        elif isinstance(key, str):
-            return self.pull(key)
-            
-    def __len__(self):
-        return self.count
+    # Methods in the official Interface
         
-    def kill(self):
+    def kill(self, targets):
         """Kill all the kernels in the cluster."""
-        for w in self.kernels:
-            w.kill()
+        kernelNumbers = self._parseTargetsArg(targets)
+        for w in kernelNumbers:
+            self.kernels[w].kill()
             
-    def push(self, key, value, kernels=None):
+    def killAll(self):
+        return self.kill(targets='all')
+            
+    def push(self, targets, **namespace):
         """Send a python object to the namespace of some kernels.
                 
         The kernels argument is used to select which kernels are sent the 
@@ -672,15 +688,18 @@ class InteractiveCluster(object):
         @arg kernels:
             Which kernels to push to.
         """
-        kernelNumbers = self._parseKernelsArg(kernels)
+        kernelNumbers = self._parseTargetsArg(targets)
         nKernels = len(kernelNumbers)
         
         for w in kernelNumbers:
-            self.kernels[w].push(key, value)
+            self.kernels[w].push(**namespace)
+             
+    def pushAll(self, **namespace):
+        return self.push('all', **namespace)
                 
-    def scatter(self, key, seq, kernels=None, style='basic', flatten=False):
+    def scatter(self, targets, key, seq, style='basic', flatten=False):
     
-        kernelNumbers = self._parseKernelsArg(kernels)
+        kernelNumbers = self._parseTargetsArg(targets)
         nKernels = len(kernelNumbers)
         
         mapClass = map.styles[style]
@@ -689,13 +708,16 @@ class InteractiveCluster(object):
         for index, item in enumerate(kernelNumbers):
             partition = mapObject.getPartition(seq, index, nKernels)
             if flatten and len(partition) ==1:    
-                self.kernels[item].push(key, partition[0])
+                self.kernels[item].push(**{key: partition[0]})
             else:
-                self.kernels[item].push(key, partition)                
+                self.kernels[item].push(**{key: partition})                
+               
+    def scatterAll(self, key, seq, style='basic', flatten=False):
+        return self.scatter('all', key, seq, style, flatten)
                    
-    def gather(self, key, kernels=None, style='basic'):
+    def gather(self, targets, key, style='basic'):
     
-        kernelNumbers = self._parseKernelsArg(kernels)
+        kernelNumbers = self._parseTargetsArg(targets)
         nKernels = len(kernelNumbers)
                 
         gatheredData = []
@@ -705,22 +727,11 @@ class InteractiveCluster(object):
         mapClass = map.styles[style]
         mapObject = mapClass()
         return mapObject.joinPartitions(gatheredData)
-                                       
-    def __setitem__(self, key, value):
-        if isinstance(key, str):
-            self.push(key, value)
-        else:
-            raise ValueError
+                    
+    def gatherAll(self, key, style='basic'):
+        return self.gather('all', key, style)
             
-    def update(self, dict, kernels=None):
-        """Send the dict of key, value pairs to the kernels."""
-        
-        kernelNumbers = self._parseKernelsArg(kernels)
-        nKernels = len(kernelNumbers)
-        for w in kernelNumbers:
-            self.kernels[w].update(dict)
-            
-    def pull(self, key, flatten=False, kernels=None):
+    def pull(self, targets, *keys, **options):
         """Get a python object from some kernels.
         
         The kernels argument is used to select which kernels are sent the 
@@ -748,17 +759,21 @@ class InteractiveCluster(object):
             The name of the python object to get
         @arg kernels:
             Which kernels to get the object from to.
-        """    
+        """
+        flatten = options.get('flatten', None)    
         results = []
-        kernelNumbers = self._parseKernelsArg(kernels)
+        kernelNumbers = self._parseTargetsArg(targets)
         for w in kernelNumbers:
-            results.append(self.kernels[w].pull(key))
+            results.append(self.kernels[w].pull(*keys))
         if flatten:
             return genutil_flatten(results)
         else:
             return results
             
-    def execute(self, source, block=False, kernels=None):
+    def pullAll(self, *keys, **options):
+        return self.pull('all', *keys, **options)
+            
+    def execute(self, targets, lines, block=False):
         """Execute python source code on the ipython kernel.
                 
         The kernels argument is used to select which kernels are sent the 
@@ -784,48 +799,66 @@ class InteractiveCluster(object):
         @arg kernels:
             Which kernels to get the object from to.
         """
-        kernelNumbers = self._parseKernelsArg(kernels)
+        kernelNumbers = self._parseTargetsArg(targets)
         for w in kernelNumbers:
-            self.kernels[w].execute(source,block=block)
+            self.kernels[w].execute(lines, block=block)
 
-    def run(self, fname, kernels=None):
+    def executeAll(self, lines, block=False):
+        return self.execute('all', lines, block=block)
+
+    def run(self, targets, filename):
         """Run a file on a set of kernels."""
-        kernelNumbers = self._parseKernelsArg(kernels)
-        fileobj = open(fname,'r')
+        kernelNumbers = self._parseTargetsArg(targets)
+        fileobj = open(filename, 'r')
         source = fileobj.read()
         fileobj.close()
         # if the compilation blows, we get a local error right away
-        code = compile(source,fname,'exec')
+        code = compile(source, filename, 'exec')
         
         # Now run the code
         for w in kernelNumbers:
             self.kernels[w].execute(source)
 
-    def status(self, kernels=None):
+    def runAll(self, filename):
+        return self.run('all', filename)
+
+    def status(self, targets):
         """Get the status of a set of kernels."""
-        kernelNumbers = self._parseKernelsArg(kernels)
+        kernelNumbers = self._parseTargetsArg(targets)
         result = []
         for w in kernelNumbers:
             result.append(self.kernels[w].status())
         return result
         
-    def notify(self, addr=None, flag=True, kernels=None):
+    def statusAll(self):
+        return self.status('all')
+        
+    def notify(self, targets, addr=None, flag=True):
         """Instruct a set of kernels to notify a result gatherer."""
-        kernelNumbers = self._parseKernelsArg(kernels)
+        kernelNumbers = self._parseTargetsArg(targets)
         for w in kernelNumbers:
             self.kernels[w].notify(addr, flag)
 
-    def reset(self, kernels=None):
+    def notifyAll(self, addr=None, flag=True):
+        return self.notify('all', addr, flag)
+
+    def reset(self, targets):
         """Reset the namespace of a set of kernels."""
-        kernelNumbers = self._parseKernelsArg(kernels)
+        kernelNumbers = self._parseTargetsArg(targets)
         for w in kernelNumbers:
             self.kernels[w].reset()
             
-    def disconnect(self, kernels=None):
+    def resetAll(self):
+        return self.reset('all')
+            
+    def disconnect(self, targets):
         """Disconnect from a set of kernels."""
-        kernelNumbers = self._parseKernelsArg(kernels)
+        kernelNumbers = self._parseTargetsArg(targets)
         for w in kernelNumbers:
             self.kernels[w].disconnect()    
+
+    def disconnectAll(self):
+        return self.disconnect('all')
 
     def pushModule(self, mod):
         """Send a locally imported module to a kernel.
@@ -856,7 +889,26 @@ class InteractiveCluster(object):
         for w in self.kernels:
             w._pushModuleString(tarballName, fileString)
     
-    def map(self, functionCode, seq):
+    # Additional features that might end up in the interface
+    
+    def __setitem__(self, key, value):
+        if isinstance(key, str):
+            self._push(key, value)
+        else:
+            raise ValueError
+        
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self.kernels[key]
+        elif isinstance(key, str):
+            return self.pull(key)
+        elif isinstance(key, slice):
+            return self.subcluster(range(*key.indices(self.count)))
+            
+    def __len__(self):
+        return self.count
+        
+    def map(self, targets, functionSource, seq, style='basic'):
         """A parallelized version of python's builtin map.
         
         This version of map is designed to work similarly to python's
@@ -867,29 +919,28 @@ class InteractiveCluster(object):
         >>> map('lambda x: x*x', range(10000))
 
         @arg func_code:
-            A string of python code representing a callable.
+            A string of python code representing a cdallable.
             It must be defined in the kernels namespace.
         @arg seq:
             A python sequence to call the callable on
         """
-        self.push('_ipython_map_seq', Scatter(seq))
+        self.scatter(targets, '_ipython_map_seq', seq, style='basic')
         sourceToRun = \
             '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
-            functionCode
-        self.execute(sourceToRun)
-        return self.pull('_ipython_map_seq_result',flatten=True)
+            functionSource
+        self.execute(targets, sourceToRun)
+        return self.gather(targets, '_ipython_map_seq_result', style='basic')
         
-    def msg(self, txt):
-        # XXX getlogin is very mysteriously failing under ubuntu.  Protect 
-        # with a hack for now
-        try:
-            user = os.getlogin()
-        except:
-            user = 'user'
+    def mapAll(self, functionSource, seq, style='basic'):
+        return self.map('all', functionSource, seq, style)
         
-        self.kernels[0].push('__ipmsg',"[%s]: %s" % (user, txt))
-        self.kernels[0].execute("print __ipmsg,")
-        
+    def reduce(self, targets, localFunction, sequenceName):
+        result = self.gather(targets, sequenceName)
+        return reduce(localFunction, result)
+                
+    def reduceAll(self, localFunction, sequenceName):
+        return self.reduce('all', localFunction, sequenceName)
+                
     def parallelize(self, functionName):
         """Contruct and return a parallelized function.
         
@@ -902,4 +953,14 @@ class InteractiveCluster(object):
         """
         return ParallelFunction(functionName, self)
     
+    def msg(self, txt):
+        # XXX getlogin is very mysteriously failing under ubuntu.  Protect 
+        # with a hack for now
+        try:
+            user = os.getlogin()
+        except:
+            user = 'user'
+
+        self.kernels[0].push('__ipmsg',"[%s]: %s" % (user, txt))
+        self.kernels[0].execute("print __ipmsg,")
                   

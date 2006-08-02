@@ -68,7 +68,7 @@ class Map:
     def concatenate(self, listOfPartitions):
         testObject = listOfPartitions[0]
         for m in arrayModules:
-            print m
+            #print m
             if isinstance(testObject, m['type']):
                 return m['module'].concatenate(listOfPartitions)
         if isinstance(testObject, (types.ListType, types.TupleType)):

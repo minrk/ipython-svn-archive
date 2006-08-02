@@ -18,6 +18,6 @@ class ParallelFunction:
         self.cluster = cluster
         
     def __call__(self,sequence):
-        return self.cluster.map(self.funcname,sequence)
+        return self.cluster.mapAll(self.funcname,sequence)
 
 
