@@ -1,0 +1,110 @@
+=============================================
+Vanilla Engine to Controller Network Protocol
+=============================================
+
+execute()
+=========
+
+::
+
+	C: EXECUTE a = 5
+	E: PICKLE result 25
+	E: ########
+	E: PICKLE result 30
+	E: ########
+	E: EXECUTE OK
+
+::
+
+	C: EXECUTE
+	E: EXECUTE FAIL
+
+push()
+======
+
+::
+
+	C: PUSH
+	E: PUSH READY
+	C: PICKLE a 25
+	C: ####pickle######
+	C: ARRAY b 23 10000
+	C: shape
+	C: ####buffer####
+	C: PICKLE c
+	C: ###pickle##
+	C: PUSH DONE
+	E: PUSH OK
+
+::
+
+	C: PUSH
+	E: PUSH READY
+	C: PICKLE key 30
+	C: ########
+	C: PUSH DONE
+	E: PUSH OK
+
+pull()
+======
+
+::
+
+	C: PULL a::babycake::c
+	E: PICKLE a 30
+	E: ########
+	E: ARRAY babycake
+	E: shape
+	E: ######buffer#####
+	E: PICKLE c 30
+	E: #########
+	E: PULL OK
+
+getResult()
+===========
+
+::
+
+	C: GETRESULT 3
+	E: PICKLE result 24
+	E: ########
+	E: GETRESULT OK
+
+	C: GETRESULT
+	E: PICKLE result 24
+	E: ########
+	E: GETRESULT OK
+	
+	C: GETRESULT 10000000sadf
+	E: GETRESULT FAIL
+
+reset()
+=======
+
+::
+
+	C: RESET
+	E: RESET OK
+
+kill()
+======
+
+::
+
+	C: KILL
+	S: KILL OK
+
+status()
+========
+
+::
+
+	C: STATUS
+	E: STATUS OK state
+
+
+
+
+
+
+
