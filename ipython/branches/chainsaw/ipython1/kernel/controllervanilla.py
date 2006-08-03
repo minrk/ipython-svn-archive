@@ -85,7 +85,7 @@ class LiteralString:
         return passon
     
 
-class VanillaControllerProtocol(basic.LineReceiver):
+class VanillaControllerProtocol(basic.NetstringReceiver):
     """The control protocol for the Controller.  It listens for clients to
     connect, and relays commands to the controller service.
     A line based protocol."""
@@ -93,30 +93,32 @@ class VanillaControllerProtocol(basic.LineReceiver):
     def connectionMade(self):
         log.msg("Connection Made...")
         self.transport.setTcpNoDelay(True)
-        self.state = 'init'
-        self.workVars = {}
+        self._reset()
         self.producer = NonBlockingProducer(self)
     
     
-    def lineReceived(self, line):
-        split_line = line.split(" ", 1)
-        if len(split_line) is 1:
-            cmd = split_line[0]
+    def stringReceived(self, string):
+        split_string = string.split(" ", 1)
+        cmd = split_string[0]
+        if len(split_string) is 1:
             args = None
             targets = 'all'
-        elif len(split_line) is 2:
-            cmd = split_line[0]
-            arglist = split_line[1].split('::')
-            if len(arglist) > 1:
-                targets = self.parseTargets(arglist[1:])
+        elif len(split_string) is 2:
+            if self.state == 'init':
+                arglist = split_string[1].split('::')
+                if len(arglist) > 1:
+                    targets = self.parseTargets(arglist[1:])
+                    if not self.factory.verifyTargets(targets):
+                        self.sendString("BAD ID LIST")
+                        self._reset()
+                        return
+                else:
+                    targets = 'all'
+                args = arglist[0]
             else:
-                targets = 'all'
-            args = arglist[0]
+                args = split_string[1]
+                targets = None
         
-        if not self.factory.verifyTargets(targets):
-            self.sendLine("BAD ID LIST")
-            self._reset()
-            return
         
         f = getattr(self, 'handle_%s_%s' %
                     (self.state, cmd), None)            
@@ -130,14 +132,8 @@ class VanillaControllerProtocol(basic.LineReceiver):
                 # Handler resolved with only cmd
                 f(args, targets)
             else:
-                self.sendLine("BAD COMMAND")
+                self.sendString("BAD COMMAND")
                 self._reset()
-    
-    # Copied from twisted.mail.imap4
-    def rawDataReceived(self, data):
-        passon = self._pendingLiteral.write(data)
-        if passon is not None:
-            self.setLineMode(passon) # should I reset the state here?
     
     def _reset(self):
         self.workVars = {}
@@ -167,37 +163,11 @@ class VanillaControllerProtocol(basic.LineReceiver):
         # Setup to process the command
         self.state = 'pushing'
     
-    def setupLiteral(self, size):
-        """Called by data command handlers."""
-        d = defer.Deferred()
-        self._pendingLiteral = LiteralString(size, d)
-        self.setRawMode()
-        return d        
-    
-    def pushFinish(self,msg):
-        self.sendLine("PUSH %s" % msg)
-        self._reset()
-    
-    def handle_pushing_PICKLE(self, size_str, targets):
-        try:
-            size = int(size_str)
-        except (ValueError, TypeError):
-            self.pushFinish("FAIL")
-        else:         
-            d = self.setupLiteral(size)
-            d.addCallback(self.pushPickle)
-    
-    def pushPickle(self, pickledNamespace):
-        try:
-            data = pickle.loads(pickledNamespace)
-            self.workVars['push_pickledNamespace'] = pickledNamespace
-        except pickle.PickleError:
-            self.pushFinish("FAIL")
-        else:
-            # What if this fails?  When could it?
-            d = defer.Deferred().addCallback(self.pushCallback)
-            self.producer.register(self.transport, d)
-            self.sendLine("PUSH OK")
+    def handle_pushing_PICKLE(self, pickledNamespace, _):
+        self.workVars['push_pickledNamespace'] = pickledNamespace
+        d = defer.Deferred().addCallback(self.pushCallback)
+        self.producer.register(self.transport, d)
+        self.sendString("PUSH OK")
         return d
     
     def pushCallback(self, _):
@@ -206,55 +176,42 @@ class VanillaControllerProtocol(basic.LineReceiver):
         self._reset()
         return self.factory.pushPickle(targets, pickledNamespace)
     
+    def pushFinish(self,msg):
+        self.sendString("PUSH %s" % msg)
+        self._reset()
+    
     #####
     ##### The PULL command
     #####
 
     def handle_init_PULL(self, args, targets):
         # Parse the args
-        print args
-        print targets
-        self.workVars['pull_targets'] = targets
-        # Setup to process the command
-        self.state = 'pulling'
-    
-    def handle_pulling_PICKLE(self, size_str, targets):
         try:
-            size = int(size_str)
-        except (ValueError, TypeError):
-            self.pullFinish("FAIL")
-        else:         
-            d = self.setupLiteral(size)
-            d.addCallback(self.pullPickle)
-    
-    def pullPickle(self, pickledKeys):
-        try:
-            keys = pickle.loads(pickledKeys)
-        except pickle.PickleError:
-            self.pullFinish("FAIL")
+            keys = tuple(args.split(','))
+        except TypeError:
+            self.pushFinish('FAIL')
         else:
-            targets = self.workVars['pull_targets']
-            d = self.factory.pullPickle(targets, *keys).addCallbacks(
-                self.pullOk, self.pullFail)
-        return d
+            d = self.factory.pullPickle(targets, *keys)
+            d.addCallbacks(self.pullOK, self.pullFail)
+            return d
     
-    def pullOk(self, pResultList):
+    def pullOK(self, pResultList):
         try:
             #get list of pickles, want pickled list
+            #this is slow and not good
             resultList = map(pickle.loads, pResultList)
             presult = pickle.dumps(resultList, 2)
         except pickle.PickleError, TypeError:
             self.pullFinish("FAIL")
         else:
-            self.sendLine("PICKLE %s" % len(presult))
-            self.transport.write(presult)
+            self.sendString("PICKLE %s" % presult)
             self.pullFinish("OK")
     
     def pullFail(self, failure):
         self.pullFinish("FAIL")
     
     def pullFinish(self, msg):
-        self.sendLine("PULL %s" % msg)
+        self.sendString("PULL %s" % msg)
         self._reset()
     
     #####
@@ -290,7 +247,7 @@ class VanillaControllerProtocol(basic.LineReceiver):
             self.workVars['execute_targets'] = targets
             d = defer.Deferred().addCallback(self.executeCallback)
             self.producer.register(self.transport, d)
-            self.sendLine('EXECUTE OK')
+            self.sendString('EXECUTE OK')
             return d
     
     def executeCallback(self, _):
@@ -305,71 +262,44 @@ class VanillaControllerProtocol(basic.LineReceiver):
         except pickle.PickleError:
             self.executeFinish("FAIL")
         else:
-            self.sendLine("PICKLE %i" % len(package))
-            self.transport.write(package)
+            self.sendString("PICKLE %s" % package)
             self.executeFinish("OK")
     
     def executeFail(self, f):
         self.executeFinish("FAIL")
     
     def executeFinish(self, msg):
-        self.sendLine("EXECUTE %s" % msg)
+        self.sendString("EXECUTE %s" % msg)
         self._reset()
     
     #####
-    ##### GETCOMMAND command
+    ##### GETRESULT command
     #####
     
-    def handle_init_GETCOMMAND(self, args, targets):
+    def handle_init_GETRESULT(self, args, targets):
         
         try: 
             index = int(args)
         except:
             index = None
-        d = self.factory.getCommand(targets, index)
-        d.addCallbacks(self.getCommandOk, self.getCommandFail)
+        d = self.factory.getResult(targets, index)
+        d.addCallbacks(self.getResultOK, self.getResultFail)
     
-    def getCommandOk(self, result):
+    def getResultOK(self, result):
         try:
             package = pickle.dumps(result, 2)
         except pickle.PickleError:
-            self.getCommandFinish("FAIL")
+            self.getResultFinish("FAIL")
         else:
-            self.sendLine("PICKLE %i" % len(package))
-            self.transport.write(package)
-            self.getCommandFinish("OK")
+            self.sendString("PICKLE %s" % package)
+            self.getResultFinish("OK")
     
-    def getCommandFail(self, f):
-        self.getCommandFinish("FAIL")
+    def getResultFail(self, f):
+        self.getResultFinish("FAIL")
     
-    def getCommandFinish(self, msg):
-        self.sendLine("GETCOMMAND %s" %msg)
+    def getResultFinish(self, msg):
+        self.sendString("GETRESULT %s" %msg)
     
-    
-    #####
-    ##### GETLASTCOMMANDINDEX command
-    #####
-    
-    def handle_init_GETLASTCOMMANDINDEX(self, args, targets):
-        
-        d = self.factory.getLastCommandIndex(targets)
-        d.addCallbacks(self.getLastCommandIndexOk, self.getLastCommandIndexFail)
-    
-    def getLastCommandIndexOk(self, result):
-        try:
-            package = pickle.dumps(result, 2)
-        except pickle.PickleError:
-            self.getLastCommandIndexFinish("FAIL")
-        else:
-            self.sendLine("PICKLE %i" % len(package))
-            self.transport.write(package)
-            self.getLastCommandIndexFinish("OK")
-    
-    def getLastCommandIndexFail(self, f):
-        self.getLastCommandIndexFinish("FAIL")
-    
-    def getLastCommandIndexFinish(self, msg):
-        self.sendLine("GETLASTCOMMANDINDEX %s" %msg)
     
     #####
     ##### Kernel control commands
@@ -387,8 +317,7 @@ class VanillaControllerProtocol(basic.LineReceiver):
         except pickle.PickleError:
             self.statusFinish('FAIL')
         else:
-            self.sendLine("PICKLE %s" % len(package))
-            self.transport.write(package)
+            self.sendString("PICKLE %s" % package)
             self.statusFinish('OK')
     
     def statusFail(self, reason):
@@ -396,7 +325,7 @@ class VanillaControllerProtocol(basic.LineReceiver):
     
     def statusFinish(self, msg):
         self._reset()
-        self.sendLine("STATUS " + msg)
+        self.sendString("STATUS " + msg)
     
     def handle_init_NOTIFY(self, args, targets):
         if not args:
@@ -430,22 +359,22 @@ class VanillaControllerProtocol(basic.LineReceiver):
         self._reset()
         if msg is None:
             msg = "OK"
-        self.sendLine("NOTIFY %s" % msg)
+        self.sendString("NOTIFY %s" % msg)
     # The RESET, KILL and DISCONNECT commands
     
     def handle_RESET(self, args, targets):
-        self.sendLine('RESET OK')
+        self.sendString('RESET OK')
         self._reset()
         return self.factory.reset(targets)
     
     def handle_KILL(self, args, targets):
-        self.sendLine('KILL OK')
+        self.sendString('KILL OK')
         self._reset()
         return self.factory.kill(targets)
     
     def handle_DISCONNECT(self, args, targets):
         log.msg("Disconnecting client...")
-        self.sendLine("DISCONNECT OK")
+        self.sendString("DISCONNECT OK")
         self.transport.loseConnection()
     
 
@@ -481,18 +410,15 @@ class IVanillaControllerFactory(Interface):
     def kill(self, targets):
         """kill engines"""
     
-    def getCommand(self, targets, i=None):
+    def getResult(self, targets, i=None):
         """Get the stdin/stdout/stderr of command i."""
-    
-    def getLastCommandIndex(self, targets):
-        """Get the index of the last command."""
     
 
 
 class VanillaControllerFactoryFromService(protocol.ServerFactory):
     """the controller factory"""
     
-    implements(IControlFactory)
+    implements(IVanillaControllerFactory)
     
     protocol = VanillaControllerProtocol
     
@@ -546,13 +472,9 @@ class VanillaControllerFactoryFromService(protocol.ServerFactory):
         """kill an engine"""
         return self.service.kill(targets)
     
-    def getCommand(self, targets, i=None):
+    def getResult(self, targets, i=None):
         """Get the stdin/stdout/stderr of command i."""
-        return self.service.getCommand(targets, i)
-    
-    def getLastCommandIndex(self, targets):
-        """Get the index of the last command."""
-        return self.service.getLastCommandIndex(targets)
+        return self.service.getResult(targets, i)
     
 
 

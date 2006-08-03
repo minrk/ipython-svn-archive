@@ -23,28 +23,123 @@ from twisted.internet import defer
 from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 
-from ipython1.kernel1p.scatter import *
-from ipython1.kernel1p.parallelfunction import ParallelFunction
-
 try:
-    from ipython1.kernel1p.esocket import LineSocket
+    from ipython1.kernel.kernelerror import NotDefined
 except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
+
+#netstring code adapted from twisted.protocols.basic
+class NetstringParseError(ValueError):
+    """The incoming data is not in valid Netstring format."""
+    pass
+
+class NetstringSocket(object):
+    """A wrapper for a socket that reads/writes Netstrings.
     
-try:
-    import ipython1.kernel1p.kernel_magic
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
+    This sends and receives strings over a socket, prefixing them with 
+    a 4 byte integer specifying the length of the string.  This 4 byte
+    integer is encoded in network byte order.
+    
+    Notes
+    =====
+        1. If extra data is received by this class it is discarded.
+        2. This class might work with blocking/timeout'd sockets.
+        3. No socket related exceptions are caught.
+    """
+    
+    MAX_LENGTH = 99999999
+    
+    def __init__(self,sock):
+        """Wrap a socket object for int32 prefixed reading/writing.
+        
+        The wrapped socket must be setup already.
+        """
+        self.sock = sock
+        self._readerLength = 0
+        self.__data = ''
+        self.__buffer = ''
+    
+    def writeString(self,data):
+        """Writes data to the socket.
+        
+        Notes
+        =====
+        
+            1. This method uses buffers so substrings are not copied.
+            2. No errors are caught currently.
+        """
+        prefix = "%d:" % len(data)
+        
+        offset = 0
+        lengthToSend = len(prefix)
+        while offset < lengthToSend:
+            slice = buffer(prefix, offset, lengthToSend - offset)
+            amountWritten = self.sock.send(slice)
+            offset += amountWritten
+            
+        offset = 0
+        lengthToSend = len(data)
+        while offset < lengthToSend:
+            slice = buffer(data, offset, lengthToSend - offset)
+            amountWritten = self.sock.send(slice)
+            offset += amountWritten
+        
+        self.sock.send(',')
+    
+    
+    def recvData(self):
+        buffer,self.__data = self.__data[:self._readerLength],self.__data[self._readerLength:]
+        self._readerLength = self._readerLength - len(buffer)
+        self.__buffer = self.__buffer + buffer
+        if self._readerLength != 0:
+            return False
+        else:
+            return True
+    
+    def recvComma(self):
+        if self.__data[0] != ',':
+            raise NetstringParseError(repr(self.__data))
+        self.__data = self.__data[1:]
+        return True
+    
+    
+    def recvLength(self):
+        colon = self.__data.find(':')
+        if colon == -1:
+            return False
+        try:
+            self._readerLength = int(self.__data[:colon])
+        except TypeError:
+            return False
+        else:
+            self.__data = self.__data[colon+1:]
+            return True
+    
+        
+    def readString(self, size=2048):
+        """Reads an int32 prefixed string from the socket.
+        
+        THIS IS BROKEN RIGHT NOW!!
+        
+        Notes
+        =====
+            1. If there is an error, an error message is printed and
+                an empty string is returned.  Change over to using exceptions.
+            2. The received data is stored in a list to avoid copying strings.
+            3. No socket related errors are caught currently.
+        """
+        # Read until we have at least 4 bytes
+        while not self.recvLength():
+            self.__data += self.sock.recv(size)
+        while not self.recvData():
+            self.__data += self.sock.recv(size)
+        while not self.recvComma():
+            self.__data += self.sock.recv(size)
+        string = self.__buffer
+        self.__buffer = ''
+        return string
+    
 
-try:
-    from ipython1.kernel1p.kernelerror import NotDefined
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
-
-#from esocket import LineSocket
-#import kernel_magic
-#from kernelerror import NotDefined
-           
 def _tar_module(mod):
     """Makes a tarball (as a string) of a locally imported module.
         
@@ -93,13 +188,13 @@ def _tar_module(mod):
     # Read the tarball into a binary string        
     tarball_name = module_name + ".tar"
     tar_file = open(tarball_name,'rb')
-    file_string = tar_file.read()
+    fileString = tar_file.read()
     tar_file.close()
     
     # Remove the local copy of the tarball
     #os.system("rm %s" % tarball_name)
     
-    return tarball_name, file_string
+    return tarball_name, fileString
 
 
 class EngineProxy(object):
@@ -110,11 +205,11 @@ class EngineProxy(object):
         self.id = id
         self.rc = rc
     
-    def execute(self, lines, block=False):
+    def execute(self, strings, block=False):
         if block:
-            return self.rc.execute(self.id, lines, block=True)[0]
+            return self.rc.execute(self.id, strings, block=True)[0]
         else:
-            return self.rc.execute(self.id, lines)
+            return self.rc.execute(self.id, strings)
     
     def push(self, **namespace):
         return self.rc.push(self.id, **namespace)
@@ -131,11 +226,8 @@ class EngineProxy(object):
     def status(self):
         return self.rc.status(self.id)[self.id]
     
-    def getCommand(self, n=None):
-        return self.rc.getCommand(self.id, n)[0]
-    
-    def getLastCommandIndex(self):
-        return self.rc.getLastCommandIndex(self.id)[0]
+    def getResult(self, n=None):
+        return self.rc.getResult(self.id, n)[0]
     
     def reset(self):
         return self.rc.reset(self.id)
@@ -170,8 +262,8 @@ class SubCluster(object):
         else:
             raise TypeError("SubCluster requires slice or list")
     
-    def execute(self, lines, block=False):
-            return self.rc.execute(self.ids, lines, block)
+    def execute(self, strings, block=False):
+            return self.rc.execute(self.ids, strings, block)
     
     def push(self, **namespace):
         return self.rc.push(self.ids, **namespace)
@@ -195,11 +287,8 @@ class SubCluster(object):
     def status(self):
         return self.rc.status(self.ids)
     
-    def getCommand(self, n=None):
-        return self.rc.getCommand(self.ids, n)
-    
-    def getLastCommandIndex(self):
-        return self.rc.getLastCommandIndex(self.ids)
+    def getResult(self, n=None):
+        return self.rc.getResult(self.ids, n)
     
     def reset(self):
         return self.rc.reset(self.ids)
@@ -207,6 +296,7 @@ class SubCluster(object):
     def kill(self):
         return self.rc.kill(self.ids)
     
+
 
 class RemoteController(object):
     """A high level interface to a remotely running ipython kernel."""
@@ -223,7 +313,6 @@ class RemoteController(object):
             and the port is an int.
         """
         self.addr = addr
-        self.extra = ''
         self.block = False
     
     def __del__(self):
@@ -262,7 +351,7 @@ class RemoteController(object):
                 
         # Turn off Nagle's algorithm to prevent the 200 ms delay :)
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
-        self.es = LineSocket(self.s)
+        self.es = NetstringSocket(self.s)
     
     def execute(self, targets, source, block=False):
         """Execute python source code on the ipython kernel.
@@ -274,18 +363,17 @@ class RemoteController(object):
         if isinstance(targets, list):
             targets = '::'.join(map(str, targets))
         if self.block or block:
-            self.es.write_line("EXECUTE BLOCK %s::%s" % (source, targets))
-            line, self.extra = self.es.read_line(self.extra)
-            line_split = line.split(" ")
-            if line_split[0] == "PICKLE" and len(line_split) == 2:
+            self.es.writeString("EXECUTE BLOCK %s::%s" % (source, targets))
+            string = self.es.readString()
+            string_split = string.split(" ")
+            if string_split[0] == "PICKLE" and len(string_split) == 2:
+                package = string_split[1]
                 try:
-                    nbytes = int(line_split[1])
-                except:
-                    print "Server dtargets not return the length of data."
-                    return False
-                package, self.extra = self.es.read_bytes(nbytes, self.extra)
-                data = pickle.loads(package)
-                line, self.extra = self.es.read_line(self.extra)
+                    data = pickle.loads(package)
+                    string = self.es.readString()
+                except pickle.PickleError, e:
+                    print "Error unpickling object: ", e
+                    return False    
                 
                 # Now print data
                 blue = TermColors.Blue
@@ -313,14 +401,14 @@ class RemoteController(object):
                             red, cmd_num, normal, cmd_stderr)
             else:
                 data = None
-                line = ""
+                string = ""
         else:
             string = "EXECUTE %s::%s" % (source, targets)
-            self.es.write_line(string)
-            line, self.extra = self.es.read_line(self.extra)
+            self.es.writeString(string)
+            string = self.es.readString()
             data = None
              
-        if line == "EXECUTE OK":
+        if string == "EXECUTE OK":
             return True
         else:
             return False
@@ -359,13 +447,12 @@ class RemoteController(object):
         except pickle.PickleError, e:
             print "Object cannot be pickled: ", e
             return False
-        self.es.write_line("PUSH ::%s" % targets)
-        self.es.write_line("PICKLE %i" % len(package))
-        self.es.write_bytes(package)
-        line, self.extra = self.es.read_line(self.extra)
-        if line == "PUSH OK":
+        self.es.writeString("PUSH ::%s" % targets)
+        self.es.writeString("PICKLE %s" % package)
+        string = self.es.readString()
+        if string == "PUSH OK":
             return True
-        if line == "PUSH FAIL":
+        if string == "PUSH FAIL":
             return False
     
     def __setitem__(self, key, value):
@@ -390,43 +477,40 @@ class RemoteController(object):
         self._check_connection()    
         if isinstance(targets, list):
             targets = '::'.join(map(str, targets))
+        keystr = ','.join(keys)
         
         try:
             package = pickle.dumps(keys, 2)
         except pickle.PickleError, e:
             print "Object cannot be pickled: ", e
             return False
-        self.es.write_line("PULL ::%s" % targets)
-        self.es.write_line("PICKLE %i" % len(package))
-        self.es.write_bytes(package)
-        line, self.extra = self.es.read_line(self.extra)
-        line_split = line.split(" ", 1)
-        if line_split[0] == "PICKLE":
+        self.es.writeString("PULL %s::%s" % (keystr, targets))
+        string = self.es.readString()
+        string_split = string.split(" ", 1)
+        if string_split[0] == "PICKLE" and len(string_split) == 2:
             try:
-                nbytes = int(line_split[1])
-            except (ValueError, TypeError):
-                raise
-            else:
-                package, self.extra = self.es.read_bytes(nbytes, self.extra)
-                line, self.extra = self.es.read_line(self.extra)
+                package = string_split[1]
+                string = self.es.readString()
                 try:
                     data = pickle.loads(package)
                 except pickle.PickleError, e:
                     print "Error unpickling object: ", e
                     return False
                 else:
-                    if line == "PULL OK":
+                    if string == "PULL OK":
                         return data
                     else:
                         return False
+            except:
+                return False
         else:
             # For other data types
             #this should never happen
-            if line == "PULL FAIL":
+            if string == "PULL FAIL":
                 return False
-            data = line_split[1]
-            line, self.extra = self.es.read_line(self.extra)
-            if line == "PULL OK":
+            data = string_split[1]
+            string = self.es.readString()
+            if string == "PULL OK":
                 return data
             else:
                 return False
@@ -441,67 +525,31 @@ class RemoteController(object):
         else:
             raise TypeError("__getitem__ only takes strs, ints, and slices")
     
-    def getCommand(self, targets, number=None):
+    def getResult(self, targets, number=None):
         """Gets a specific result from the kernel, returned as a tuple."""
         self._check_connection()    
         if isinstance(targets, list):
             targets = '::'.join(map(str, targets))
         
         if number is None:
-            self.es.write_line("GETCOMMAND ::%s" %targets)
+            self.es.writeString("GETRESULT ::%s" %targets)
         else:
-            self.es.write_line("GETCOMMAND %i::%s" % (number, targets))
-        line, self.extra = self.es.read_line(self.extra)
-        line_split = line.split(" ", 1)
-        if line_split[0] == "PICKLE":
+            self.es.writeString("GETRESULT %i::%s" % (number, targets))
+        string = self.es.readString()
+        string_split = string.split(" ", 1)
+        if string_split[0] == "PICKLE" and len(string_split) == 2:
+            package = string_split[1]
+            string = self.es.readString()
             try:
-                nbytes = int(line_split[1])
-            except (ValueError, TypeError):
-                raise
+                data = pickle.loads(package)
+            except pickle.PickleError, e:
+                print "Error unpickling object: ", e
+                return False
             else:
-                package, self.extra = self.es.read_bytes(nbytes, self.extra)
-                line, self.extra = self.es.read_line(self.extra)
-                try:
-                    data = pickle.loads(package)
-                except pickle.PickleError, e:
-                    print "Error unpickling object: ", e
-                    return False
+                if string == "GETRESULT OK":
+                    return data
                 else:
-                    if line == "GETCOMMAND OK":
-                        return data
-                    else:
-                        return False
-        else:
-            # For other data types
-            return False
-    
-    def getLastCommandIndex(self, targets):
-        """Gets the index of the last command."""
-        self._check_connection()    
-        if isinstance(targets, list):
-            targets = '::'.join(map(str, targets))
-        
-        self.es.write_line("GETLASTCOMMANDINDEX ::%s" %targets)
-        line, self.extra = self.es.read_line(self.extra)
-        line_split = line.split(" ", 1)
-        if line_split[0] == "PICKLE":
-            try:
-                nbytes = int(line_split[1])
-            except (ValueError, TypeError):
-                raise
-            else:
-                package, self.extra = self.es.read_bytes(nbytes, self.extra)
-                line, self.extra = self.es.read_line(self.extra)
-                try:
-                    data = pickle.loads(package)
-                except pickle.PickleError, e:
-                    print "Error unpickling object: ", e
                     return False
-                else:
-                    if line == "GETLASTCOMMANDINDEX OK":
-                        return data
-                    else:
-                        return False
         else:
             # For other data types
             return False
@@ -512,27 +560,22 @@ class RemoteController(object):
         if isinstance(targets, list):
             targets = '::'.join(map(str, targets))
         
-        self.es.write_line("STATUS ::%s" %targets)
-        line, self.extra = self.es.read_line(self.extra)
-        line_split = line.split(" ", 1)
-        if line_split[0] == "PICKLE":
+        self.es.writeString("STATUS ::%s" %targets)
+        string = self.es.readString()
+        string_split = string.split(" ", 1)
+        if string_split[0] == "PICKLE" and len(string_split) == 2:
+            package = string_split[1]
+            string = self.es.readString()
             try:
-                nbytes = int(line_split[1])
-            except (ValueError, TypeError):
-                raise
+                data = pickle.loads(package)
+            except pickle.PickleError, e:
+                print "Error unpickling object: ", e
+                return False
             else:
-                package, self.extra = self.es.read_bytes(nbytes, self.extra)
-                line, self.extra = self.es.read_line(self.extra)
-                try:
-                    data = pickle.loads(package)
-                except pickle.PickleError, e:
-                    print "Error unpickling object: ", e
-                    return False
+                if string == "STATUS OK":
+                    return data
                 else:
-                    if line == "STATUS OK":
-                        return data
-                    else:
-                        return False
+                    return False
         else:
             # For other data types
             pass
@@ -571,11 +614,11 @@ class RemoteController(object):
             host, port = addr
             
         if flag:
-            self.es.write_line("NOTIFY ADD %s %s" % (host, port))
+            self.es.writeString("NOTIFY ADD %s %s" % (host, port))
         else:
-            self.es.write_line("NOTIFY DEL %s %s" % (host, port))
-        line, self.extra = self.es.read_line(self.extra)
-        if line == "NOTIFY OK":
+            self.es.writeString("NOTIFY DEL %s %s" % (host, port))
+        string = self.es.readString()
+        if string == "NOTIFY OK":
             return True
         else:
             return False
@@ -586,9 +629,9 @@ class RemoteController(object):
         if isinstance(targets, list):
             targets = '::'.join(map(str, targets))
         
-        self.es.write_line("RESET ::%s" %targets)
-        line, self.extra = self.es.read_line(self.extra)
-        if line == "RESET OK":
+        self.es.writeString("RESET ::%s" %targets)
+        string = self.es.readString()
+        if string == "RESET OK":
             return True
         else:
             return False      
@@ -599,9 +642,9 @@ class RemoteController(object):
         if isinstance(targets, list):
             targets = '::'.join(map(str, targets))
         
-        self.es.write_line("KILL ::%s" %targets)
-        line, self.extra = self.es.read_line(self.extra)
-        if line == "KILL OK":
+        self.es.writeString("KILL ::%s" %targets)
+        string = self.es.readString()
+        if string == "KILL OK":
             return True
         else:
             return False      
@@ -609,9 +652,9 @@ class RemoteController(object):
     def disconnect(self):
         """Disconnect from the kernel, but leave it running."""
         if self.is_connected():
-            self.es.write_line("DISCONNECT")
-            line, self.extra = self.es.read_line(self.extra)
-            if line == "DISCONNECT OK":
+            self.es.writeString("DISCONNECT")
+            string = self.es.readString()
+            if string == "DISCONNECT OK":
                 self.s.close()
                 del self.s
                 del self.es
@@ -646,16 +689,16 @@ class RemoteController(object):
         - There are cross platform issues. 
         """
         
-        tarball_name, file_string = _tar_module(mod)
-        self._push_module_string(tarball_name, file_string)
+        tarball_name, fileString = _tar_module(mod)
+        self._push_moduleString(tarball_name, fileString)
     
-    def _push_module_string(self, tarball_name, file_string):
+    def _push_moduleString(self, tarball_name, fileString):
         """This method send a tarball'd module to a kernel."""
         
-        self.push('tar_file_string',file_string)
+        self.push('tar_fileString',fileString)
         self.execute("tar_file = open('%s','wb')" % \
             tarball_name, block=False)
-        self.execute("tar_file.write(tar_file_string)", block=False)
+        self.execute("tar_file.write(tar_fileString)", block=False)
         self.execute("tar_file.close()", block=False)
         self.execute("import os", block=False)
         self.execute("os.system('tar -xf %s')" % tarball_name)        

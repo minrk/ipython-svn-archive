@@ -71,11 +71,8 @@ class IEngine(Interface):
     def pullPickle(*keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
     
-    def getCommand(i=None):
+    def getResult(i=None):
         """Get the stdin/stdout/stderr of command i."""
-    
-    def getLastCommandIndex():
-        """Get the index of the last command."""
     
     def reset():
         """Reset the InteractiveShell."""
@@ -128,8 +125,8 @@ class EngineService(service.Service):
         else:
             return defer.succeed(None)
     
-    def getCommand(self, i=None):
-        return defer.execute(self.shell.getCommand, i)
+    def getResult(self, i=None):
+        return defer.execute(self.shell.getResult, i)
     
     def getLastCommandIndex(self):
         return defer.execute(self.shell.getLastCommandIndex)
@@ -255,7 +252,7 @@ class QueuedEngine(object):
         """Get the status {queue, history} of the engine"""
         return defer.succeed({'queue':self.queued, 'history':self.history})
     
-    def getCommand(self, i=None):
+    def getResult(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
         if i is None:
             d = self.getLastCommandIndex()

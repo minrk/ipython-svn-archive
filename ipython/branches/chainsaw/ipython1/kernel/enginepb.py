@@ -100,11 +100,8 @@ class IPBEngine(Interface):
     def remote_kill(self):
         """kill the InteractiveShell."""
     
-    def remote_getCommand(self, i=None):
+    def remote_getResult(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
-    
-    def remote_getLastCommandIndex(self):
-        """Get the index of the last command."""
     
 
 class PBEngineReferenceFromService(pb.Referenceable):
@@ -142,11 +139,8 @@ class PBEngineReferenceFromService(pb.Referenceable):
     def remote_kill(self):
         return self.service.kill()
     
-    def remote_getCommand(self, i=None):
-        return self.service.getCommand(i)
-    
-    def remote_getLastCommandIndex(self):
-        return self.service.getLastCommandIndex()
+    def remote_getResult(self, i=None):
+        return self.service.getResult(i)
     
 
 components.registerAdapter(PBEngineReferenceFromService,
@@ -208,13 +202,9 @@ class EngineFromReference(object):
         """Reset the InteractiveShell."""
         return self.callRemote('kill').addErrback(lambda _:defer.succeed(None))
     
-    def getCommand(self, i=None):
+    def getResult(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
-        return self.callRemote('getCommand', i)
-    
-    def getLastCommandIndex(self):
-        """Get the index of the last command."""
-        return self.callRemote('getLastCommandIndex')
+        return self.callRemote('getResult', i)
     
 
 components.registerAdapter(EngineFromReference,

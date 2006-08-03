@@ -329,7 +329,7 @@ III. Examples
 --------------
     A set of example Client-Server communications using the Controller Protocol.
     Unless otherwise specified, the server has nodes connected at ids 0-15.
-    
+  
     0. GENERAL_Examples_
     #. EXECUTE_Examples_
     #. PUSH_Examples_
@@ -341,84 +341,82 @@ III. Examples
     #. NOTIFY_Examples_
     #. RESET_Examples_
     #. KILL_Examples_
+
     
 .. _GENERAL_Examples:
 
+
+
     0. GENERAL
         - description
-            C: ``CLIENT COMMAND example``
-            
-            S: ``SERVER REPLY line``
+            ::
+                
+                C: CLIENT COMMAND example
+                S: SERVER REPLY line
         
         - data example
-            C: ``PUSH a::1``
-            
-            C: ``PICKLE pickle(value)``
-                 pickle(value) represents value serialized by pickle
+            ::
                 
-            S: ``PUSH OK``
+                C: PUSH ::1
+                C: PICKLE 7
+                C: ###pickle### - a pickled object
+                S: PUSH OK
         
         - invalid idlists will not ever execute
-            C: ``EXECUTE a=5::badlist``
+            ::
             
-            S: ``BAD ID LIST``
+                C: EXECUTE a=5::badlist
+                S: BAD ID LIST
             
-            C: ``KILL ::12::31``
-                this server has only registered 0-15
-                
-            S: ``BAD ID LIST``
+                C: KILL ::12::31
+                    this server has only registered 0-15
+                S: BAD ID LIST
             
-            C: ``RESET ::1::2:3``
-                must have ``::`` delimiter between each id
-                
-            S: ``BAD ID LIST``
+                C: RESET ::1::2:3
+                    must have :: delimiter between each id
+                S: BAD ID LIST
             
-            C: ``RESET ::1::4::12::2``
+                C: RESET ::1::4::12::2
+                S: RESET OK
             
-            S: ``RESET OK``
-            
-            C: ``EXECUTEa=5::1::3``
-                must have space after command, before args
-
-            S: ``BAD COMMAND``
+                C: EXECUTEa=5::1::3
+                    must have space after command, before args
+                S: BAD COMMAND
 
         ..  _EXECUTE_Examples:
     
     #. EXECUTE
         - Some good examples
-            C: ``EXECUTE a=1::1::2::3``
+            ::
+                
+                C: EXECUTE a=1::1::2::3
+                S: EXECUTE OK
             
-            S: ``EXECUTE OK``
+        - Empty argument (0-1 spaces after EXECUTE) will fail
+            ::
+                
+                C: EXECUTE
+                S: EXECUTE FAIL
             
-        - Empty argument (0-1 spaces after ``EXECUTE``) will fail
-            C: ``EXECUTE``
-    
-            S: ``EXECUTE FAIL``
-        
-            C: ``EXECUTE ::1``
-        
-            S: ``EXECUTE FAIL``
+                C: EXECUTE ::1
+                S: EXECUTE FAIL
 
-            C: ``EXECUTE BLOCK``
-    
-            S: ``EXECUTE FAIL``
+                C: EXECUTE BLOCK
+                S: EXECUTE FAIL
         
-            C: ``EXECUTE BLOCK ::1``
-        
-            S: ``EXECUTE FAIL``
+                C: EXECUTE BLOCK ::1
+                S: EXECUTE FAIL
             
         - Invalid execution argument will not fail, the bad string is passed to engines
-            C: ``EXECUTE this command is invalid``
-        
-            S: ``EXECUTE OK``
+            ::
+                
+                C: EXECUTE this command is invalid
+                S: EXECUTE OK
             
-            C: ``EXECUTE BLOCK 1=2::7``
-            
-            S: ``PICKLE 173`` 
-            
-            S: *[(0, (14, '1=2', '', TypeError instance)), (1, (14, '1=2', '', TypeError instance)),...]*
-            
-            S: ``EXECUTE OK``
+                C: EXECUTE BLOCK 1=2::7
+                S: PICKLE 173 
+                S: ###pickle###
+                S: EXECUTE OK
 
         ..  _PUSH_Examples:
     #. PUSH

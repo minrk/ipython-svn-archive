@@ -116,16 +116,10 @@ class IMultiEngine(Interface):
     def pullPickleAll(*keys):
         """"""
     
-    def getCommand(targets, i=None):
+    def getResult(targets, i=None):
         """Get the stdin/stdout/stderr of command i."""
     
-    def getCommandAll(i=None):
-        """"""
-    
-    def getLastCommandIndex(targets):
-        """Get the index of the last command."""
-    
-    def getLastCommandIndexAll():
+    def getResultAll(i=None):
         """"""
     
     def reset(targets):
@@ -171,7 +165,7 @@ class ControllerService(service.Service):
     
     def setAllMethods(self):
         methods = ['execute', 'push', 'pushPickle', 'pull', 'pullPickle', 
-                'getCommand', 'getLastCommandIndex', 'status', 'reset', 'kill']
+                'getResult', 'status', 'reset', 'kill']
         for m in methods:
             setattr(self, m+'All', curry(getattr(self, m), 'all'))
     
@@ -338,7 +332,7 @@ class ControllerService(service.Service):
             l.append(e.kill())
         return defer.gatherResults(l)
     
-    def getCommand(self, targets, i=None):
+    def getResult(self, targets, i=None):
         """Get the stdin/stdout/stderr of command i."""
         if i is not None:
             log.msg("getting command %s from %s" %(i, targets))
@@ -347,17 +341,9 @@ class ControllerService(service.Service):
         engines = self.engineList(targets)
         l = []
         for e in engines:
-            l.append(e.getCommand(i))
+            l.append(e.getResult(i))
         return defer.gatherResults(l)
     
-    def getLastCommandIndex(self, targets):
-        """Get the index of the last command."""
-        log.msg("getting last command index from %s" %(targets))
-        engines = self.engineList(targets)
-        l = []
-        for e in engines:
-            l.append(e.getLastCommandIndex())
-        return defer.gatherResults(l)
     
     
     #notification methods    
