@@ -66,7 +66,7 @@ def _tar_module(mod):
       
     - There are cross platform issues. 
     """
-    
+     
     if not isinstance(mod, types.ModuleType):
         raise TypeError, "Pass an imported module to push_module"
     module_dir, module_file = os.path.split(mod.__file__)

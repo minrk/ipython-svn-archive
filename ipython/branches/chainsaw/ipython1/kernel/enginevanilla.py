@@ -1,3 +1,5 @@
+import cPickle as pickle
+
 from zope.interface import Interface, implements
 from twisted.python import components
 from twisted.internet import protocol, reactor, defer
@@ -12,9 +14,11 @@ from ipython1.kernel.controllerservice import ControllerService
 class IVanillaEngineClientProtocol(Interface):
     pass
     
-class VanillaEngineClientProtocol(basic.Int32StringReceiver):
+class VanillaEngineClientProtocol(basic.NetStringReceiver):
     
     implements(IVanillaEngineClientProtocol)
+
+    nextHandler = None
 
     def connectionMade(self):
         self.transport.setTcpNoDelay(True)
@@ -23,9 +27,17 @@ class VanillaEngineClientProtocol(basic.Int32StringReceiver):
             self.sendString("REGISTER %i" % desiredID)
         else:
             self.sendString("REGISTER")
-        self.state = 'REGISTERING'
+        self.nextHandler = self.handleRegister
 
     def stringReceived(self, msg):
+        
+        if self.nextHandler is None:
+            self.defaultHandler(msg)
+        else:
+            self.nextHandler(msg)
+            
+    def dispatch(self, msg):
+        # Try to parse out a command
         splitLine = msg.split(' ', 1)
         if len(splitLine) == 1:
             cmd = splitLine[0]
@@ -34,11 +46,84 @@ class VanillaEngineClientProtocol(basic.Int32StringReceiver):
             cmd = splitLine[0]
             args = splitLine[1:]
         
+        # Try to dispatch to a handle_READY_COMMAND method
+        f = getattr(self, 'handle_%s' %
+                    (cmd), None)            
+        if f:
+            # Handler resolved with state and cmd 
+            f(args)
+        else:
+            self.sendString('BAD COMMAND')
+            self._reset()
+            
+    # Utility methods
+            
+    def _reset(self):
+        self.nextHandler = self.dispatch
+
+    def handleUnexpectedData(self, args):
+        self.sendString('UNEXPECTED DATA')
+
+    def sendPickle(self, data, key):
+        try:
+            package = pickle.dumps(data, 2)
+        except pickle.PickleError:
+            return defer.fail()
+        else:
+            self.sendString('PICKLE %s' % key)
+            self.sendString(package)
+            return defer.succeed(None)
+    
+    def handleRegister(self, args):
+        # args = 'REGISTER id'
+        try:
+            id = int(args)
+        except TypeError:
+            raise
+        else:
+            self.factory.setID(id)
+            self._reset()
+            
+    # EXECUTE
+            
+    def handle_EXECUTE(self, lines):
+        d = self.factory.execute(lines)
+        d.addCallback(self.handleExecuteSuccess)
+        d.addErrback(self.executeFail)
+        self.nextHandler = self.handleUnexpectedData
         
-    # Handlers go here
+    def handleExecuteSuccess(self, result):
+        d = self.sendPickle(result, 'result')
+        d.addErrback(self.executeFail)
+        d.addCallback(self.executeOK)
+ 
+    def executeOK(self, args):
+        self.sendString('EXECUTE OK')
+        self._reset()
+         
+    def executeFail(self, reason):
+        self.sendString('EXECUTE FAIL')
+        self._reset()
     
+    # PUSH
     
+    def handle_READY_PUSH(self, args):
+        if args is not None:
+            self.sendString('BAD COMMAND')
+            self._reset()
+        else:
+            d = self.getIncomingData()
+            d.addCallback()
+            d.addErrback()
     
+    def getIncomingData(self):
+        self.nextHandler = self.handleIncomingData
+        
+        return d
+        
+    def handleIncomingData(self, data):
+        
+
 class IVanillaEngineClientFactory(IEngine):
     
     def getID():

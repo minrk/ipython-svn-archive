@@ -2,16 +2,42 @@
 Vanilla Engine to Controller Network Protocol
 =============================================
 
+Min,I did this last night.  I think it brings up some problems with our IEngine interface.  Have a look and see what you think.
+
+Did you tell him that we are in the process of making the kernels "IPython" kernels.
+
 execute()
 =========
 
 ::
 
 	C: EXECUTE a = 5
-	E: PICKLE result 25
+	
+	E: PICKLE result
+	E: ########=============================================
+Vanilla Engine to Controller Network Protocol
+=============================================
+
+Min,I did this last night.  I think it brings up some problems with our IEngine interface.  Have a look and see what you think.
+
+Did you tell him that we are in the process of making the kernels "IPython" kernels.
+
+execute()
+=========
+
+::
+
+	C: EXECUTE a = 5
+	
+	E: PICKLE result
 	E: ########
-	E: PICKLE result 30
+
+	E: PICKLE result
 	E: ########
+
+	E: PICKLE error
+	E: ########
+	
 	E: EXECUTE OK
 
 ::
@@ -26,13 +52,19 @@ push()
 
 	C: PUSH
 	E: PUSH READY
-	C: PICKLE a 25
+
+	C: PICKLE NAMESPACE
 	C: ####pickle######
-	C: ARRAY b 23 10000
+
+	C: ARRAY b
 	C: shape
+	C: asdfasdf asdf as df
 	C: ####buffer####
-	C: PICKLE c
-	C: ###pickle##
+	
+	C: ARRAY d
+	C: shape
+	C: ####buffer###
+
 	C: PUSH DONE
 	E: PUSH OK
 
@@ -40,8 +72,124 @@ push()
 
 	C: PUSH
 	E: PUSH READY
+
 	C: PICKLE key 30
 	C: ########
+
+	C: PUSH DONE
+	E: PUSH OK
+
+pull()
+======
+
+::
+
+	C: PULL a,babycake,c
+
+	E: PICKLE a
+	E: ########
+	
+	E: PICKLE b
+	E: ########
+
+	E: ARRAY babycake
+	E: shape
+	E: ######buffer#####
+
+	E: PULL OK
+
+getResult()
+===========
+
+::
+
+	C: GETRESULT 3
+	E: PICKLE result 24
+	E: ########
+	E: GETRESULT OK
+
+	C: GETRESULT
+	E: PICKLE result 24
+	E: ########
+	E: GETRESULT OK
+	
+	C: GETRESULT 10000000sadf
+	E: GETRESULT FAIL
+
+reset()
+=======
+
+::
+
+	C: RESET
+	E: RESET OK
+
+kill()
+======
+
+::
+
+	C: KILL
+	S: KILL OK
+
+status()
+========
+
+::
+
+	C: STATUS
+	E: STATUS OK state
+
+
+
+
+
+
+
+
+
+	E: PICKLE result
+	E: ########
+
+	E: PICKLE error
+	E: ########
+	
+	E: EXECUTE OK
+
+::
+
+	C: EXECUTE
+	E: EXECUTE FAIL
+
+push()
+======
+
+::
+
+	C: PUSH
+	E: PUSH READY
+
+	C: PICKLE a
+	C: ####pickle######
+
+	C: ARRAY b
+	C: shape
+	C: ####buffer####
+
+	C: PICKLE c
+	C: ###pickle##
+
+	C: PUSH DONE
+	E: PUSH OK
+
+::
+
+	C: PUSH
+	E: PUSH READY
+
+	C: PICKLE key 30
+	C: ########
+
 	C: PUSH DONE
 	E: PUSH OK
 
@@ -51,13 +199,17 @@ pull()
 ::
 
 	C: PULL a::babycake::c
+
 	E: PICKLE a 30
 	E: ########
+
 	E: ARRAY babycake
 	E: shape
 	E: ######buffer#####
+
 	E: PICKLE c 30
 	E: #########
+
 	E: PULL OK
 
 getResult()
