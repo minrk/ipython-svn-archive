@@ -50,11 +50,13 @@ class BasicEngineServiceTest(DeferredTestCase):
             self.s.push(key=o)
             value = self.s.pull('key')
             self.assertDeferredEquals(value,(o,))
-#        self.assertRaises(TypeError,self.s.push,10)
+#        self.assertRaises(SyntaxError, self.s.push(1=2))
+
 #        self.assertRaises(TypeError,self.s.pull,10)
         self.s.reset()
-        self.s.pull("a").addCallback(lambda nd:
+        d = self.s.pull("a").addCallback(lambda nd:
             self.assert_(isinstance(nd[0],NotDefined)))
+        return d
     
     def testCommand(self):
         #self.assertRaises(IndexError,self.s.getCommand)

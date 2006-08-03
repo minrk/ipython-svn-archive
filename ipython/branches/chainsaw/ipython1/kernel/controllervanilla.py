@@ -85,7 +85,7 @@ class LiteralString:
         return passon
     
 
-class ControlTCPProtocol(basic.LineReceiver):
+class VanillaControllerProtocol(basic.LineReceiver):
     """The control protocol for the Controller.  It listens for clients to
     connect, and relays commands to the controller service.
     A line based protocol."""
@@ -212,6 +212,8 @@ class ControlTCPProtocol(basic.LineReceiver):
 
     def handle_init_PULL(self, args, targets):
         # Parse the args
+        print args
+        print targets
         self.workVars['pull_targets'] = targets
         # Setup to process the command
         self.state = 'pulling'
@@ -231,8 +233,8 @@ class ControlTCPProtocol(basic.LineReceiver):
         except pickle.PickleError:
             self.pullFinish("FAIL")
         else:
-            # What if this fails?  When could it?
-            d = self.factory.pullPickle(*keys).addCallbacks(
+            targets = self.workVars['pull_targets']
+            d = self.factory.pullPickle(targets, *keys).addCallbacks(
                 self.pullOk, self.pullFail)
         return d
     
@@ -375,16 +377,26 @@ class ControlTCPProtocol(basic.LineReceiver):
     
     def handle_init_STATUS(self, args, targets):
         
-        result = self.factory.status(targets)
-                
+        d = self.factory.status(targets).addCallbacks(
+            self.statusOk, self.statusFail)
+        return d
+    
+    def statusOk(self, status):
         try:
-            package = pickle.dumps(result, 2)
+            package = pickle.dumps(status, 2)
         except pickle.PickleError:
-            self.sendLine('STATUS FAIL')
+            self.statusFinish('FAIL')
         else:
             self.sendLine("PICKLE %s" % len(package))
             self.transport.write(package)
-            self.sendLine('STATUS OK')
+            self.statusFinish('OK')
+    
+    def statusFail(self, reason):
+        self.statusFinish("FAIL")
+    
+    def statusFinish(self, msg):
+        self._reset()
+        self.sendLine("STATUS " + msg)
     
     def handle_init_NOTIFY(self, args, targets):
         if not args:
@@ -437,7 +449,7 @@ class ControlTCPProtocol(basic.LineReceiver):
         self.transport.loseConnection()
     
 
-class IControlFactory(Interface):
+class IVanillaControllerFactory(Interface):
     """interface to clients for controller"""
     
     #IQueuedEngine multiplexer methods
@@ -477,12 +489,12 @@ class IControlFactory(Interface):
     
 
 
-class ControlFactoryFromService(protocol.ServerFactory):
+class VanillaControllerFactoryFromService(protocol.ServerFactory):
     """the controller factory"""
     
     implements(IControlFactory)
     
-    protocol = ControlTCPProtocol
+    protocol = VanillaControllerProtocol
     
     def __init__(self, service):
         self.service = service
@@ -544,6 +556,6 @@ class ControlFactoryFromService(protocol.ServerFactory):
     
 
 
-components.registerAdapter(ControlFactoryFromService,
+components.registerAdapter(VanillaControllerFactoryFromService,
                         controllerservice.ControllerService,
-                        IControlFactory)
+                        IVanillaControllerFactory)

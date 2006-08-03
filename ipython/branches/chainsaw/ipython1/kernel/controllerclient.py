@@ -177,10 +177,10 @@ class SubCluster(object):
         return self.rc.push(self.ids, **namespace)
     
     def __setitem__(self, key, value):
-        return self.push(**dict(key, value))
+        return self.push(key=value)
     
     def pull(self, *keys):
-        return self.rc.pull(key, self.ids)
+        return self.rc.pull(self.ids, key)
     
     def __getitem__(self, id):
         if isinstance(id, slice):
@@ -396,9 +396,9 @@ class RemoteController(object):
         except pickle.PickleError, e:
             print "Object cannot be pickled: ", e
             return False
-        self.es.write_bytes(package)
         self.es.write_line("PULL ::%s" % targets)
         self.es.write_line("PICKLE %i" % len(package))
+        self.es.write_bytes(package)
         line, self.extra = self.es.read_line(self.extra)
         line_split = line.split(" ", 1)
         if line_split[0] == "PICKLE":

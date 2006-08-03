@@ -55,13 +55,7 @@ class IEngine(Interface):
     
     All these methods should return deferreds.
     """
-#    id = Attribute("the id of the Engine object")
-    
-    def getID():
-        """return deferred to this.id"""
-    
-    def setID(id):
-        """set this.id, return deferred"""
+    id = Attribute("the id of the Engine object")
     
     def execute(lines):
         """Execute lines of Python code."""
@@ -99,7 +93,7 @@ class EngineService(service.Service):
     
     implements(IEngine)
     
-    id = None    
+    id = None
     def __init__(self):
         self.shell = InteractiveShell()    # let's use containment, not inheritance
     
@@ -152,9 +146,6 @@ class IQueuedEngine(IEngine):
     def clearQueue():
         """clear the queue"""
     
-    def status():
-        """return queue and history"""
-    
 
 class QueuedEngine(object):
     
@@ -162,18 +153,17 @@ class QueuedEngine(object):
     
     def __init__(self, engine):
         self.engine = engine
-        self.id = engine.id
+        
         self.queued = []
         self.history = {}
         self.currentCommand = None
+    
+    
     
     #methods from IQueuedEngine:
     def clearQueue(self):
         """clear the queue"""
         self.queued = []
-    
-    def status(self):
-        return {'queue':self.queued, 'history':self.history}
     
     #queue methods:
     def submitCommand(self, cmd):
@@ -232,14 +222,6 @@ class QueuedEngine(object):
     
     #methods from IEngine
     
-    def getID(self):
-        # cached copy
-        return defer.succeed(self.id)
-            
-    def setID(self, id):
-        self.id = id
-        return self.submitCommand(Command("setID", id))
-    
     def execute(self, lines):
         """Execute lines of Python code."""
         return self.submitCommand(Command("execute", lines))
@@ -269,6 +251,9 @@ class QueuedEngine(object):
         """kill the InteractiveShell."""
         self.clearQueue()
         return self.submitCommand(Command("kill"))
+    
+    def status(self):
+        return defer.succeed({'queue':self.queued, 'history':self.history})
     
     def getCommand(self, i=None):
         """Get the stdin/stdout/stderr of command i."""

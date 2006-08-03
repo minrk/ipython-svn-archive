@@ -113,7 +113,7 @@ class IMultiEngine(Interface):
     def pullPickle(targets, *keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
     
-    def pullAllPickle(*keys):
+    def pullPickleAll(*keys):
         """"""
     
     def getCommand(targets, i=None):
@@ -314,10 +314,12 @@ class ControllerService(service.Service):
     def status(self, targets):
         log.msg("retrieving status of %s" %targets)
         engines = self.engineList(targets)
+        l = []
         dikt = {}
         for e in engines:
-            dikt[e.id] = e.status()
-        return dikt
+            l.append(e.status().addCallback(lambda s: 
+                            dikt.__setitem__(e.id, s)))
+        return defer.gatherResults(l).addCallback(lambda _: dikt)
     
     def reset(self, targets):
         """Reset the InteractiveShell."""

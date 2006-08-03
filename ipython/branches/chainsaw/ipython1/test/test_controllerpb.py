@@ -1,10 +1,18 @@
 """This file contains unittests for the controlllerservice.py module.
 
 Things that should be tested:
-- Should the EngineService return Deferred objects?
-- Run the same tests that are run in shell.py.
-- Make sure that the Interface is really implemented.
-- The startService and stopService methods.
+The methods of Controller Service:
+    registerEngine √
+    unregisterEngine √
+    execute/All √o
+    push/Pickle/All √/√/oo
+    pull/Pickle/All √/√/oo
+    getCommand/All √/o
+    getLastCommandIndex/All √/o
+    status/All oo
+    reset/All oo
+    *kill/All - do not test this, it calls reactor.stop
+
 """
 import random
 import time, exceptions
@@ -14,7 +22,7 @@ from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.spread import pb
 
-from ipython1.kernel import engineservice, controllerservice, enginepb, controllerpb
+from ipython1.kernel import engineservice, controllerservice, enginepb, enginepb
 from ipython1.kernel.engineservice import Command
 from ipython1.test.util import DeferredTestCase
 
@@ -31,7 +39,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         self.clients = []
         self.servers = []
         self.cs = controllerservice.ControllerService()
-        self.reroot = controllerpb.IPBRemoteEngineRoot(self.cs)
+        self.reroot = enginepb.IPBRemoteEngineRoot(self.cs)
         self.ref = pb.PBServerFactory(self.reroot)
         self.servers.append(reactor.listenTCP(10201, self.ref))
         
@@ -97,15 +105,14 @@ class BasicControllerServiceTest(DeferredTestCase):
         dl = defer.DeferredList([d,d2])
         return dl
     
-    def testPushPull(self):
+    def testPushPullAll(self):
         status = {}
         d = self.cs.statusAll()
         d.addCallback(status.update)
-        value = [1.1231232323, (1,'asdf',[2]),'another variable', 
-                    [1,2,3,4], {'a':3, 1:'asdf'}]
+        values = (1.1231232323, (1,'asdf',[2]),'another variable', 
+                    [1,2,3,4], {'a':3, 1:'asdf'})
 #        value = sys.argv[:8]
-        values = tuple(value)
-        cnt = len(value)
+        cnt = len(values)
         key = 'abcdefg'
         key = key
         keys = tuple(key[:cnt])
@@ -114,9 +121,9 @@ class BasicControllerServiceTest(DeferredTestCase):
         for n in range(cnt):
             namespace[keys[n]] = values[n]
         
-        d.addCallback(lambda _:self.cs.push('all', **namespace))
+        d.addCallback(lambda _:self.cs.pushAll(**namespace))
 #        d = self.cs.push('all', **namespace)
-        d.addCallback(lambda _:self.cs.pull('all', *keys))
+        d.addCallback(lambda _:self.cs.pullAll(*keys))
         d = self.assertDeferredEquals(d, [values]*len(status))
         return d
     
@@ -184,7 +191,7 @@ class BasicControllerServiceTest(DeferredTestCase):
     
     def testScalePushPull(self):
         (d, _) = self.newEngine(16)
-        d.addCallback(lambda _:self.testPushPull())
+        d.addCallback(lambda _:self.testPushPullAll())
         return d
     
 

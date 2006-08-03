@@ -57,7 +57,7 @@ def main(cport, eport):
     
     cs = controllerservice.ControllerService()
     efac = pb.PBServerFactory(enginepb.IPBRemoteEngineRoot(cs))
-    cfac = controllervanilla.IControlFactory(cs)
+    cfac = controllervanilla.IVanillaControllerFactory(cs)
     reactor.callLater(1.0,tryPorts, eport, efac)
     reactor.callLater(2.0,tryPorts, cport, cfac)
     cs.startService()
