@@ -42,7 +42,6 @@ from twisted.internet import defer, reactor
 from twisted.python import log, failure
 from zope.interface import Interface, implements
 from zope.interface.interface import Attribute
-#Atttribute = zope.interface.Attribute
 
 import cPickle as pickle
 
@@ -95,7 +94,7 @@ class EngineService(service.Service):
     
     id = None
     def __init__(self):
-        self.shell = InteractiveShell()    # let's use containment, not inheritance
+        self.shell = InteractiveShell()# let's use containment, not inheritance
     
     # The IEngine methods
     
@@ -253,6 +252,7 @@ class QueuedEngine(object):
         return self.submitCommand(Command("kill"))
     
     def status(self):
+        """Get the status {queue, history} of the engine"""
         return defer.succeed({'queue':self.queued, 'history':self.history})
     
     def getCommand(self, i=None):
