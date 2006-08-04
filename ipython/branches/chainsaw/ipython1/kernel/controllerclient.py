@@ -23,8 +23,13 @@ from twisted.internet import defer
 from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 
+try: 
+    import numpy
+except ImmportError:
+    numpy = None
+
 try:
-    from ipython1.kernel.kernelerror import NotDefined
+    from ipython1.kernel import serialized
 except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
 
@@ -211,23 +216,23 @@ class EngineProxy(object):
         else:
             return self.rc.execute(self.id, strings)
     
-    def push(self, **namespace):
-        return self.rc.push(self.id, **namespace)
+    def push(self, key, value):
+        return self.rc.push(self.id, key, value)
     
     def __setitem__(self, key, value):
-        return self.push(**dict(key=value))
+        return self.push(key,value)
     
     def pull(self, *keys):
-        return self.rc.pull(self.id, *keys)[0]
+        return self.rc.pull(self.id, *keys)
     
     def __getitem__(self, key):
         return self.pull(*(key))
     
     def status(self):
-        return self.rc.status(self.id)[self.id]
+        return self.rc.status(self.id)
     
     def getResult(self, n=None):
-        return self.rc.getResult(self.id, n)[0]
+        return self.rc.getResult(self.id, n)
     
     def reset(self):
         return self.rc.reset(self.id)
@@ -265,14 +270,14 @@ class SubCluster(object):
     def execute(self, strings, block=False):
             return self.rc.execute(self.ids, strings, block)
     
-    def push(self, **namespace):
-        return self.rc.push(self.ids, **namespace)
+    def push(self, key, value):
+        return self.rc.push(self.ids, key, value)
     
     def __setitem__(self, key, value):
-        return self.push(key=value)
+        return self.push(key,value)
     
     def pull(self, *keys):
-        return self.rc.pull(self.ids, key)
+        return self.rc.pull(self.ids, *keys)
     
     def __getitem__(self, id):
         if isinstance(id, slice):
@@ -365,9 +370,8 @@ class RemoteController(object):
         if self.block or block:
             self.es.writeString("EXECUTE BLOCK %s::%s" % (source, targets))
             string = self.es.readString()
-            string_split = string.split(" ")
-            if string_split[0] == "PICKLE" and len(string_split) == 2:
-                package = string_split[1]
+            if string == "PICKLE RESULT":
+                package = self.es.readString()
                 try:
                     data = pickle.loads(package)
                     string = self.es.readString()
@@ -425,7 +429,7 @@ class RemoteController(object):
         # Now run the code
         self.execute(source)
     
-    def push(self, targets, **namespace):
+    def push(self, targets, key, value):
         """Send a python object to the namespace of a kernel.
         
         There is also a dictionary style interface to the push command:
@@ -442,13 +446,24 @@ class RemoteController(object):
         self._check_connection()
         if isinstance(targets, list):
             targets = '::'.join(map(str, targets))
-        try:
-            package = pickle.dumps(namespace, 2)
-        except pickle.PickleError, e:
-            print "Object cannot be pickled: ", e
-            return False
+            
+        if isinstance(value, numpy.array):
+            try:
+                serialObject = serialized.ArraySerialized(key)
+                serialObject.packObj(value)
+            except Exception, e:
+                print "Object cannot be serialized: ", e
+                return False
+        else:    
+            try:
+                serialObject = serialized.PickleSerialized(key)
+                serialObject.packObj(value)
+            except pickle.PickleError, e:
+                print "Object cannot be pickled: ", e
+                return False
         self.es.writeString("PUSH ::%s" % targets)
-        self.es.writeString("PICKLE %s" % package)
+        for line in serialObject:
+            self.es.writeString(line)
         string = self.es.readString()
         if string == "PUSH OK":
             return True
@@ -456,7 +471,7 @@ class RemoteController(object):
             return False
     
     def __setitem__(self, key, value):
-            return self.push('all', **dict(key, value))
+            return self.push('all', key, value)
     
     def pull(self, targets, *keys):
         """Get a python object from a remote kernel.
@@ -477,44 +492,62 @@ class RemoteController(object):
         self._check_connection()    
         if isinstance(targets, list):
             targets = '::'.join(map(str, targets))
-        keystr = ','.join(keys)
-        
         try:
-            package = pickle.dumps(keys, 2)
-        except pickle.PickleError, e:
-            print "Object cannot be pickled: ", e
+            keystr = ','.join(keys)
+        except TypeError:
             return False
+        
         self.es.writeString("PULL %s::%s" % (keystr, targets))
         string = self.es.readString()
-        string_split = string.split(" ", 1)
-        if string_split[0] == "PICKLE" and len(string_split) == 2:
-            try:
-                package = string_split[1]
-                string = self.es.readString()
+        returns = []
+        perEngineReturns = []
+        elements = 0
+        nkeys = len(keys)
+        while string not in ['PULL OK', 'PULL FAIL']
+            elements++
+            print string
+            string_split = string.split(' ', 1)
+            if len(string_split) is not 2:
+                return False
+            if string_split[0] == "PICKLE":
+                #if it's a pickle
+                sPickle = serialized.PickleSerialized(string_split[1])
+                sPickle.addToPackage(self.es.readString())
                 try:
-                    data = pickle.loads(package)
+                    data = sPickle.unpack()
                 except pickle.PickleError, e:
                     print "Error unpickling object: ", e
                     return False
-                else:
-                    if string == "PULL OK":
-                        return data
-                    else:
-                        return False
-            except:
-                return False
-        else:
-            # For other data types
-            #this should never happen
-            if string == "PULL FAIL":
-                return False
-            data = string_split[1]
-            string = self.es.readString()
-            if string == "PULL OK":
-                return data
+            elif string_split[0] == 'ARRAY':
+                #if it's an array
+                try:
+                    sArray = serialized.ArraySerialized(string_split[1])
+                except NameError:
+                    return False    
+                for i in range(3):#arrays have a 3 line package
+                    sArray.addToPackage(self.es.readString())
+                data = sArray.unpack()
             else:
+                #we don't know how to handle it!
                 return False
-    
+            
+            #successful retrieval
+            perEngineReturns.append(data)
+            if elements is nkeys:
+                #finished results from one engine
+                elements = 0
+                returns.append(perEngineReturns)
+                perEngineReturns = []
+            
+            #get next string and reenter loop
+            string = self.es.readString()
+        
+        #finish command    
+        if string == 'PULL OK':
+            return returns
+        else:
+            return False
+        
     def __getitem__(self, id):
         if isinstance(id, slice):
             return SubCluster(self, id)
@@ -536,9 +569,8 @@ class RemoteController(object):
         else:
             self.es.writeString("GETRESULT %i::%s" % (number, targets))
         string = self.es.readString()
-        string_split = string.split(" ", 1)
-        if string_split[0] == "PICKLE" and len(string_split) == 2:
-            package = string_split[1]
+        if string == "PICKLE RESULT":
+            package = self.es.readString()
             string = self.es.readString()
             try:
                 data = pickle.loads(package)
@@ -562,9 +594,8 @@ class RemoteController(object):
         
         self.es.writeString("STATUS ::%s" %targets)
         string = self.es.readString()
-        string_split = string.split(" ", 1)
-        if string_split[0] == "PICKLE" and len(string_split) == 2:
-            package = string_split[1]
+        if string == "PICKLE STATUS":
+            package = self.es.readString()
             string = self.es.readString()
             try:
                 data = pickle.loads(package)

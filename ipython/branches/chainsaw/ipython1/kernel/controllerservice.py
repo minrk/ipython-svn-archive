@@ -17,7 +17,7 @@ TODO:
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import cPickle as pickle
+import cSerial as pickle
 
 from twisted.application import service, internet
 from twisted.internet import protocol, reactor, defer
@@ -98,10 +98,10 @@ class IMultiEngine(Interface):
     def pushAll(**namespace):
         """"""
     
-    def pushPickle(targets, pickledNamespace):
+    def pushSerial(targets, pickledNamespace):
         """Unpickle package and Push into the locals namespace with name key."""
     
-    def pushPickleAll(pickledNamespace):
+    def pushSerialAll(pickledNamespace):
         """"""
     
     def pull(targets, *keys):
@@ -110,10 +110,10 @@ class IMultiEngine(Interface):
     def pullAll(*keys):
         """"""
     
-    def pullPickle(targets, *keys):
+    def pullSerial(targets, *keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
     
-    def pullPickleAll(*keys):
+    def pullSerialAll(*keys):
         """"""
     
     def getResult(targets, i=None):
@@ -164,7 +164,7 @@ class ControllerService(service.Service):
         self.setAllMethods()
     
     def setAllMethods(self):
-        methods = ['execute', 'push', 'pushPickle', 'pull', 'pullPickle', 
+        methods = ['execute', 'push', 'pushSerial', 'pull', 'pullSerial', 
                 'getResult', 'status', 'reset', 'kill']
         for m in methods:
             setattr(self, m+'All', curry(getattr(self, m), 'all'))
@@ -277,33 +277,45 @@ class ControllerService(service.Service):
             l.append(e.push(**namespace))
         return defer.gatherResults(l)
     
-    def pushPickle(self, targets, pickledNamespace):
+    def pushSerial(self, targets, pickledNamespace):
         """Unpickle package and Push into the locals namespace with name key."""
         log.msg("pushing pickle %s on %s" 
                 %(pickle.loads(pickledNamespace), targets))
         engines = self.engineList(targets)
         l = []
         for e in engines:
-            l.append(e.pushPickle(pickledNamespace))
+            l.append(e.pushSerial(pickledNamespace))
         return defer.gatherResults(l)
     
     def pull(self, targets, *keys):
         """Gets an item out of the self.locals dict by key."""
         log.msg("getting %s from %s" %(keys, targets))
         engines = self.engineList(targets)
-        l = []
-        for e in engines:
-            l.append(e.pull(*keys))
-        return defer.gatherResults(l)
+        if len(engines) > 1:
+            l = []
+            for e in engines:
+                l.append(e.pull(*keys))
+            d = defer.gatherResults(l)
+            if len(keys) > 1:
+                d.addCallback(lambda resultList: zip(*resultList))
+        else:
+            d = engines[0].pull(*keys)
+        return d
     
-    def pullPickle(self, targets, *keys):
+    def pullSerial(self, targets, *keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
         log.msg("getting pickle %s from %s" %(keys, targets))
         engines = self.engineList(targets)
-        l = []
-        for e in engines:
-            l.append(e.pullPickle(*keys))
-        return defer.gatherResults(l)
+        if len(engines) > 1:
+            l = []
+            for e in engines:
+                l.append(e.pullSerial(*keys))
+            d = defer.gatherResults(l)
+            if len(keys) > 1:
+                d.addCallback(lambda resultList: zip(*resultList))
+        else:
+            d = engines[0].pullSerial(*keys)
+        return d
     
     def status(self, targets):
         log.msg("retrieving status of %s" %targets)

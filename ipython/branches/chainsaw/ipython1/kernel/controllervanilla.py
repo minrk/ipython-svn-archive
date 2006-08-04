@@ -13,7 +13,7 @@ parts of the controller.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import cPickle as pickle
+import cSerial as pickle
 import time
 
 from twisted.internet import protocol, defer, reactor
@@ -62,82 +62,56 @@ class NonBlockingProducer:
         self._reset()
     
 
-class LiteralString:
-    def __init__(self, size, defered):
-        self.size = size
-        self.data = []
-        self.defer = defered
-    
-    def write(self, data):
-        self.size -= len(data)
-        passon = None
-        if self.size > 0:
-            self.data.append(data)
-        else:
-            if self.size:
-                data, passon = data[:self.size], data[self.size:]
-            else:
-                passon = ''
-            if data:
-                self.data.append(data)
-            if passon == '':
-                self.defer.callback(''.join(self.data))
-        return passon
-    
-
 class VanillaControllerProtocol(basic.NetstringReceiver):
     """The control protocol for the Controller.  It listens for clients to
     connect, and relays commands to the controller service.
     A line based protocol."""
     
+    nextHandler = None
     def connectionMade(self):
         log.msg("Connection Made...")
         self.transport.setTcpNoDelay(True)
-        self._reset()
         self.producer = NonBlockingProducer(self)
+        self._reset()
     
     
     def stringReceived(self, string):
+        if self.nextHandler is None:
+            self.defaultHandler(string)
+        else:
+            self.nextHandler(string)
+    
+    def dispatch(self, string):
         split_string = string.split(" ", 1)
         cmd = split_string[0]
         if len(split_string) is 1:
             args = None
             targets = 'all'
         elif len(split_string) is 2:
-            if self.state == 'init':
-                arglist = split_string[1].split('::')
-                if len(arglist) > 1:
-                    targets = self.parseTargets(arglist[1:])
-                    if not self.factory.verifyTargets(targets):
-                        self.sendString("BAD ID LIST")
-                        self._reset()
-                        return
-                else:
-                    targets = 'all'
-                args = arglist[0]
+            arglist = split_string[1].split('::')
+            args = arglist[0]
+            if len(arglist) > 1:
+                targets = self.parseTargets(arglist[1:])
+                if not self.factory.verifyTargets(targets):
+                    self.sendString("BAD ID LIST")
+                    self._reset()
+                    return
             else:
-                args = split_string[1]
-                targets = None
-        
-        
-        f = getattr(self, 'handle_%s_%s' %
-                    (self.state, cmd), None)            
+                targets = 'all'
+        f = getattr(self, 'handle_%s' %(cmd), None)
         if f:
             # Handler resolved with state and cmd 
             f(args, targets)
         else:
-            f = getattr(self, 'handle_%s' %
-                (cmd), None)
-            if f:
-                # Handler resolved with only cmd
-                f(args, targets)
-            else:
-                self.sendString("BAD COMMAND")
-                self._reset()
+            self.sendString("BAD COMMAND")
+            self._reset()
+    
+    def handleUnexpectedData(self, args):
+        self.sendString('UNEXPECTED DATA')
     
     def _reset(self):
         self.workVars = {}
-        self.state = 'init'
+        self.nextHandler = self.dispatch
     
     def parseTargets(self, targetsList):
         
@@ -156,17 +130,30 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
     ##### The PUSH command
     #####
     
-    def handle_init_PUSH(self, args, targets):
-        
-        # Parse the args
+    def handle_PUSH(self, args, targets):
         self.workVars['push_targets'] = targets
-        # Setup to process the command
-        self.state = 'pushing'
+        self.nextHandler = self.handlePushing
+        self.sendString("PUSH READY")
     
-    def handle_pushing_PICKLE(self, pickledNamespace, _):
+    def handlePushing(self, args):
+        arglist = args.split(' ',1):
+        pushType = arglist[0]
+        if len(arglist) is 2:
+            self.workVars['push_key'] = arglist[1]
+        else:
+            self.workVars['push_key'] = None
+            
+        f = getattr(self, 'handlePushing_%s' %pushType, None)
+        if f is not None:
+            self.nextHandler = f
+        else:
+            self.pushFinish("FAIL")
+    
+    def handlePushing_PICKLE(self, pickledNamespace, _):
         self.workVars['push_pickledNamespace'] = pickledNamespace
         d = defer.Deferred().addCallback(self.pushCallback)
         self.producer.register(self.transport, d)
+        self.nextHandler = self.handleUnexpectedData
         self.sendString("PUSH OK")
         return d
     
@@ -174,7 +161,7 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
         pickledNamespace = self.workVars['push_pickledNamespace']
         targets = self.workVars['push_targets']
         self._reset()
-        return self.factory.pushPickle(targets, pickledNamespace)
+        return self.factory.pushSerial(targets, pickledNamespace)
     
     def pushFinish(self,msg):
         self.sendString("PUSH %s" % msg)
@@ -184,27 +171,27 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
     ##### The PULL command
     #####
 
-    def handle_init_PULL(self, args, targets):
+    def handle_PULL(self, args, targets):
         # Parse the args
         try:
-            keys = tuple(args.split(','))
+            keys = args.split(',')
         except TypeError:
-            self.pushFinish('FAIL')
+            self.pullFinish('FAIL')
         else:
-            d = self.factory.pullPickle(targets, *keys)
+            d = self.factory.pullSerial(targets, *keys)
             d.addCallbacks(self.pullOK, self.pullFail)
+            self.nextHandler = self.handleUnexpectedData
             return d
     
-    def pullOK(self, pResultList):
+    def pullOK(self, entireResultList):
         try:
-            #get list of pickles, want pickled list
-            #this is slow and not good
-            resultList = map(pickle.loads, pResultList)
-            presult = pickle.dumps(resultList, 2)
-        except pickle.PickleError, TypeError:
+            for perEngineResultList:
+                for serialResult in perEngineResultList:
+                    for line in serialResult:
+                        self.sendString(line)
+        except:
             self.pullFinish("FAIL")
         else:
-            self.sendString("PICKLE %s" % presult)
             self.pullFinish("OK")
     
     def pullFail(self, failure):
@@ -218,7 +205,7 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
     ##### The EXECUTE command
     #####
     
-    def handle_init_EXECUTE(self, args, targets):
+    def handle_EXECUTE(self, args, targets):
         """Handle the EXECUTE command."""
                 
         # Parse the args
@@ -226,7 +213,7 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
             self.executeFinish("FAIL")
             return
         
-        if "BLOCK" in args:
+        if args[:6] == "BLOCK":
             block = True
             execute_cmd = args[6:]
         else:
@@ -237,10 +224,11 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
             self.executeFinish("FAIL")
             return
         
-        self.state = 'executing'
+        self.nextHandler = self.handleUnexpectedData
+
         if block:
             d = self.factory.execute(targets,execute_cmd)
-            d.addCallback(self.executeOkBlock)
+            d.addCallback(self.executeBlockOK)
             d.addErrback(self.executeFail)
         else:
             self.workVars['execute_cmd'] = execute_cmd
@@ -256,13 +244,14 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
         self._reset()
         return self.factory.execute(targets, execute_cmd)
     
-    def executeOkBlock(self, result):
+    def executeBlockOK(self, result):
         try:
             package = pickle.dumps(result, 2)
-        except pickle.PickleError:
+        except pickle.SerialError:
             self.executeFinish("FAIL")
         else:
-            self.sendString("PICKLE %s" % package)
+            self.sendString("PICKLE RESULT")
+            self.sendString(package)
             self.executeFinish("OK")
     
     def executeFail(self, f):
@@ -276,22 +265,24 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
     ##### GETRESULT command
     #####
     
-    def handle_init_GETRESULT(self, args, targets):
+    def handle_GETRESULT(self, args, targets):
         
         try: 
             index = int(args)
-        except:
+        except TypeError:
             index = None
         d = self.factory.getResult(targets, index)
         d.addCallbacks(self.getResultOK, self.getResultFail)
+        self.nextHandler = self.handleUnexpectedData
     
     def getResultOK(self, result):
         try:
             package = pickle.dumps(result, 2)
-        except pickle.PickleError:
+        except pickle.SerialError:
             self.getResultFinish("FAIL")
         else:
-            self.sendString("PICKLE %s" % package)
+            self.sendString("PICKLE RESULT")
+            self.sendString(package)
             self.getResultFinish("OK")
     
     def getResultFail(self, f):
@@ -299,25 +290,27 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
     
     def getResultFinish(self, msg):
         self.sendString("GETRESULT %s" %msg)
+        self._reset()
     
     
     #####
     ##### Kernel control commands
     #####
     
-    def handle_init_STATUS(self, args, targets):
+    def handle_STATUS(self, args, targets):
         
         d = self.factory.status(targets).addCallbacks(
-            self.statusOk, self.statusFail)
+            self.statusOK, self.statusFail)
         return d
     
-    def statusOk(self, status):
+    def statusOK(self, status):
         try:
             package = pickle.dumps(status, 2)
-        except pickle.PickleError:
+        except pickle.SerialError:
             self.statusFinish('FAIL')
         else:
-            self.sendString("PICKLE %s" % package)
+            self.sendString("PICKLE")
+            self.sendString(package)
             self.statusFinish('OK')
     
     def statusFail(self, reason):
@@ -325,9 +318,9 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
     
     def statusFinish(self, msg):
         self._reset()
-        self.sendString("STATUS " + msg)
+        self.sendString("STATUS %s" % msg)
     
-    def handle_init_NOTIFY(self, args, targets):
+    def handle_NOTIFY(self, args, targets):
         if not args:
             self.notifyFail()
             return
@@ -343,22 +336,23 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
             else:
                 if action == "ADD":
                     return self.factory.addNotifier((host, port)
-                    ).addCallback(self.notifyFinish)
+                    ).addCallbacks(self.notifyOK, self.notifyFail)
                 elif action == "DEL":
                     return self.factory.delNotifier((host, port)
-                    ).addCallback(self.notifyFinish)
+                    ).addCallback(self.notifyOK, self.notifyFail)
                 else:
                     self.notifyFail()
         else:
             self.notifyFail()
+    
+    def notifyOK(self, s):
+        self.notifyFinish("OK")
     
     def notifyFail(self, f=None):
         self.notifyFinish("FAIL")
     
     def notifyFinish(self, msg):
         self._reset()
-        if msg is None:
-            msg = "OK"
         self.sendString("NOTIFY %s" % msg)
     # The RESET, KILL and DISCONNECT commands
     
@@ -375,6 +369,7 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
     def handle_DISCONNECT(self, args, targets):
         log.msg("Disconnecting client...")
         self.sendString("DISCONNECT OK")
+        self._reset()
         self.transport.loseConnection()
     
 
@@ -392,13 +387,13 @@ class IVanillaControllerFactory(Interface):
     def push(self, targets, **namespace):
         """push value into locals namespace with name key."""
     
-    def pushPickle(self, targets, pickledNamespace):
+    def pushSerial(self, targets, pickledNamespace):
         """Unpickle package and push into the locals namespace with name key."""
     
     def pull(self, targets, *keys):
         """Gets an item out of the self.locals dict by key."""
     
-    def pullPickle(self, targets, *keys):
+    def pullSerial(self, targets, *keys):
         """Gets an item out of the self.locals dist by key and pickles it."""
     
     def status(self, targets):
@@ -444,21 +439,21 @@ class VanillaControllerFactoryFromService(protocol.ServerFactory):
         """Execute lines of Python code."""
         return self.service.execute(targets, lines)
     
-    def push(self, targets, **namespace):
+    def push(self, targets, key, value):
         """Push value into locals namespace with name key."""
-        return self.service.push(targets, **namespace)
+        return self.service.push(targets, key, value)
     
-    def pushPickle(self, targets, pickledNamespace):
+    def pushSerial(self, targets, serializedNamespace):
         """Push value into locals namespace with name key."""
-        return self.service.pushPickle(targets, pickledNamespace)
+        return self.service.pushSerial(targets, serializedNamespace)
     
     def pull(self, targets, *keys):
-        """Gets an item out of the self.locals dict by key."""
+        """Gets an item out of the user namespace by key."""
         return self.service.pull(targets, *keys)
     
-    def pullPickle(self, targets, *keys):
-        """Gets an item out of the self.locals dict by key."""
-        return self.service.pullPickle(targets, *keys)
+    def pullSerial(self, targets, *keys):
+        """Gets an item out of the user namespace by key and serializes it."""
+        return self.service.pullSerial(targets, *keys)
     
     def status(self, targets):
         """status of engines"""
