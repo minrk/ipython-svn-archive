@@ -62,14 +62,14 @@ class IEngine(Interface):
     def push(**namespace):
         """Put value into locals namespace with name key."""
     
-    def pushPickle(pickledNamespace):
+    def pushSerialized(listOfSerialized):
         """Unpickle package and put into the locals namespace with name key."""
     
     def pull(*keys):
         """Gets an item out of the self.locals dict by key."""
     
-    def pullPickle(*keys):
-        """Gets an item out of the self.locals dist by key and pickles it."""
+    def pullSerialized(*keys):
+        """Return a list or tuple of Serialized."""
     
     def getResult(i=None):
         """Get the stdin/stdout/stderr of command i."""

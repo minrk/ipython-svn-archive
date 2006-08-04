@@ -52,7 +52,7 @@ else:
             p = []
             p.append(pickle.dumps(obj.shape, 2))
             p.append(obj.dtype.str)
-            p.append(numpy.getbuffer(obj)[:])   # I think we are making a copy!
+            p.append(numpy.getbuffer(obj))   # I think we are making a copy!
             self.package.extend(p)
         
         def unpack(self):

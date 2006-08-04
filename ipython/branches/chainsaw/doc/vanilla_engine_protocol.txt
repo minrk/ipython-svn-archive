@@ -2,26 +2,6 @@
 Vanilla Engine to Controller Network Protocol
 =============================================
 
-Min,I did this last night.  I think it brings up some problems with our IEngine interface.  Have a look and see what you think.
-
-Did you tell him that we are in the process of making the kernels "IPython" kernels.
-
-execute()
-=========
-
-::
-
-	C: EXECUTE a = 5
-	
-	E: PICKLE result
-	E: ########=============================================
-Vanilla Engine to Controller Network Protocol
-=============================================
-
-Min,I did this last night.  I think it brings up some problems with our IEngine interface.  Have a look and see what you think.
-
-Did you tell him that we are in the process of making the kernels "IPython" kernels.
-
 execute()
 =========
 
