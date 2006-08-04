@@ -59,16 +59,20 @@ class IEngine(Interface):
     def execute(lines):
         """Execute lines of Python code."""
     
-    def push(**namespace):
+    def push(key, value):
         """Put value into locals namespace with name key."""
-    
-    def pushSerialized(listOfSerialized):
-        """Unpickle package and put into the locals namespace with name key."""
-    
-    def pull(*keys):
+
+    def pushNamespace(namespace):
+
+    def pushSerialized(serialized):
+         """Unpickle package and put into the locals namespace with name key."""
+       
+    def pull(keys):
         """Gets an item out of the self.locals dict by key."""
+
+    def pullNamespace(namespace):
     
-    def pullSerialized(*keys):
+    def pullSerialized(key):
         """Return a list or tuple of Serialized."""
     
     def getResult(i=None):
