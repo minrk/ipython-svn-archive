@@ -109,10 +109,10 @@ class EngineService(service.Service):
             result = []
             for key in keys:
                 result.append(self.shell.get(key))
-            if len(result) is 1:
             return defer.succeed(tuple(result))
         else:
-            return defer.execute(self.shell.get(keys[0]))
+            return defer.execute(self.shell.get, keys[0])
+    
     def pullPickle(self, *keys):
         return self.pull(*keys).addCallback(lambda v: pickle.dumps(v,2))
     
