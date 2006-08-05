@@ -465,6 +465,8 @@ class RemoteController(object):
                     return False
             serializedNamespace.append(serialObject)
         self.es.writeString("PUSH ::%s" % targets)
+        if self.es.readString() != "PUSH READY":
+            return False
         for sObj in serializedNamespace:
             for line in sObj:
                 self.es.writeString(line)
@@ -472,8 +474,10 @@ class RemoteController(object):
         string = self.es.readString()
         if string == "PUSH OK":
             return True
-        if string == "PUSH FAIL":
+        elif string == "PUSH FAIL":
             return False
+        else:
+            return string
     
     def __setitem__(self, key, value):
             return self.push('all', key, value)
@@ -538,17 +542,17 @@ class RemoteController(object):
             results.append(data)
             #get next string and reenter loop
             string = self.es.readString()
-            if string == "PULL NEXT":
+            if string == "SEGMENT PULLED":
                 returns.append(results)
+                results = []
                 string = self.es.readString()
-        #finish command    
+        #finish command
+        if not returns:
+            #if it was not a nested list
+            returns = results   
         if string == 'PULL OK':
-            if len(results) is 1:
-                returns = results[0]
-            elif len(results) is len(keys):
-                returns = results
-            elif len(results) is 
-            for
+            if len(returns) is 1:
+                returns = returns[0]
             return returns
         else:
             return False

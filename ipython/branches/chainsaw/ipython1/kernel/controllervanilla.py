@@ -137,6 +137,8 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
         self.sendString("PUSH READY")
     
     def handlePushing(self, args):
+        if args == "PUSH DONE":
+            return self.handlePushingDone()
         arglist = args.split(' ',1)
         if len(arglist) is 2:
             pushType = arglist[0]
@@ -144,7 +146,7 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
         else:
             self.pushFinish("FAIL")
             return
-            
+        
         f = getattr(self, 'handlePushing_%s' %pushType, None)
         if f is not None:
             self.nextHandler = f
@@ -172,7 +174,7 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
         self.workVars['push_serialsList'].append(self.workVars['push_serial'])
         self.nextHandler = self.handlePushing
         
-    def handlePushing_PUSH(self, msg):
+    def handlePushingDone(self):
         self.nextHandler = self.handleUnexpectedData
         d = defer.Deferred().addCallback(self.pushCallback)
         self.producer.register(self.transport, d)
@@ -209,13 +211,22 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
     def pullOK(self, entireResultList):
         try:
             #can't do this anymore
-            for perObjectResultList in entireResultList:
-                for serialResult in perObjectResultList:
-                    for line in serialResult:
-                        self.sendString(line)
-                    self.sendString("PULL NEXT")
+            if isinstance(entireResultList,list):
+                if isinstance(entireResultList[0], tuple):
+                    for perObjectResultList in entireResultList:
+                        for serialResult in perObjectResultList:
+                            for line in serialResult:
+                                self.sendString(line)
+                        self.sendString("SEGMENT PULLED")
+                else:
+                    for serialResult in entireResultList:
+                        for line in serialResult:
+                            self.sendString(line)
+            else:
+                for line in entireResultList:
+                    self.sendString(line)
         except Exception, e:
-            print "loop failed: ", e
+            raise e
             self.pullFinish("FAIL")
         else:
             self.pullFinish("OK")

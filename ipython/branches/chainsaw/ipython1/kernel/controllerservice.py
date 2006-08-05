@@ -259,6 +259,7 @@ class ControllerService(service.Service):
     
     def push(self, targets, **namespace):
         """Push value into locals namespace with name key."""
+        log.msg("pushing to %s" % targets)
         engines = self.engineList(targets)
         l = []
         for e in engines:
@@ -269,7 +270,7 @@ class ControllerService(service.Service):
         """Gets an item out of the self.locals dict by key."""
         log.msg("getting %s from %s" %(keys, targets))
         engines = self.engineList(targets)
-        if len(engines) > 1:
+        if not isinstance(targets, int) and len(targets) > 1:
             l = []
             for e in engines:
                 l.append(e.pull(*keys))
