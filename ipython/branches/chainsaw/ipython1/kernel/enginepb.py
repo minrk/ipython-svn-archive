@@ -31,7 +31,7 @@ from zope.interface import Interface, implements
 
 from ipython1.kernel.engineservice import EngineService, IEngine
 from ipython1.kernel.engineservice import QueuedEngine,Command
-from ipython1.kernel import controllerservice
+from ipython1.kernel import controllerservice, serialized
 
 
 class PBEngineClientFactory(pb.PBClientFactory):
@@ -124,7 +124,22 @@ class PBEngineReferenceFromService(pb.Referenceable):
         return self.service.push(**namespace)
     
     def remote_pull(self, *keys):
-        return self.service.pull(*keys)
+        d = self.service.pull(*keys)
+        d.addCallback(lambda v: self.serializePull(keys, v))
+        d.addCallback(lambda l:pickle.dumps(l, 2))
+        return d
+    
+    def serializePull(self, keys, objects):
+        if len(keys) is 1:
+            serial = serialized.PickleSerialized(keys[0])
+            serial.packObject(objects)
+            return serial            
+        serializedList = []
+        for i in range(len(keys)):
+            serial = serialized.PickleSerialized(keys[i])
+            serial.packObject(objects[i])
+            serializedList.append(serial)
+        return serializedList
     
     def remote_reset(self):
         return self.service.reset()
@@ -177,7 +192,7 @@ class EngineFromReference(object):
     
     def pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
-        return self.callRemote('pull', *keys)
+        return self.callRemote('pull', *keys).addCallback(pickle.loads)
     
     def reset(self):
         """Reset the InteractiveShell."""
