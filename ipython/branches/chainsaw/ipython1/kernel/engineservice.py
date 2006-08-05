@@ -105,11 +105,14 @@ class EngineService(service.Service):
         return self.push(**pickle.loads(pickledNamespace))
     
     def pull(self, *keys):
-        result = []
-        for key in keys:
-            result.append(self.shell.get(key))
-        return defer.succeed(tuple(result))
-    
+        if len(keys) > 1:
+            result = []
+            for key in keys:
+                result.append(self.shell.get(key))
+            if len(result) is 1:
+            return defer.succeed(tuple(result))
+        else:
+            return defer.execute(self.shell.get(keys[0]))
     def pullPickle(self, *keys):
         return self.pull(*keys).addCallback(lambda v: pickle.dumps(v,2))
     
