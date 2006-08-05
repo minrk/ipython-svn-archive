@@ -22,6 +22,7 @@ from ipython1.kernel import enginepb
 #*****************************************************************************
 
 import time
+import cPickle as pickle
 
 from twisted.python import components, log
 from twisted.spread import pb
@@ -82,17 +83,11 @@ class IPBEngine(Interface):
     def remote_execute(self, lines):
         """Execute lines of Python code."""
     
-    def remote_push(self, **namespace):
+    def remote_push(self, namespace):
         """Put value into locals namespace with name key."""
-    
-    def remote_pushPickle(self, pickledNamespace):
-        """Unpickle package and put into the locals namespace with name key."""
     
     def remote_pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
-    
-    def remote_pullPickle(self, *keys):
-        """Gets an item out of the self.locals dist by key and pickles it."""
     
     def remote_reset(self):
         """Reset the InteractiveShell."""
@@ -121,17 +116,15 @@ class PBEngineReferenceFromService(pb.Referenceable):
     def remote_execute(self, lines):
         return self.service.execute(lines)
     
-    def remote_push(self, **namespace):
+    def remote_push(self, pNamespace):
+        serialsList = pickle.loads(pNamespace)
+        namespace = {}
+        for s in serialsList:
+            namespace[s.key] = s.unpack()
         return self.service.push(**namespace)
-    
-    def remote_pushPickle(self, pickledNamespace):
-        return self.service.pushPickle(pickledNamespace)
     
     def remote_pull(self, *keys):
         return self.service.pull(*keys)
-    
-    def remote_pullPickle(self, *keys):
-        return self.service.pullPickle(*keys)
     
     def remote_reset(self):
         return self.service.reset()
@@ -180,19 +173,11 @@ class EngineFromReference(object):
     
     def push(self, **namespace):
         """Put value into locals namespace with name key."""
-        return self.callRemote('push', **namespace)
-    
-    def pushPickle(self, pickledNamespace):
-        """Unpickle package and put into the locals namespace with name key."""
-        return self.callRemote('pushPickle', pickledNamespace)
+        return self.callRemote('push', pickle.dumps(namespace['vanillaNamespace'], 2))
     
     def pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
         return self.callRemote('pull', *keys)
-    
-    def pullPickle(self, *keys):
-        """Gets an item out of the self.locals dist by key and pickles it."""
-        return self.callRemote('pullPickle', *keys)
     
     def reset(self):
         """Reset the InteractiveShell."""

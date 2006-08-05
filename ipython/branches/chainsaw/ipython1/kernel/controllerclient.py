@@ -429,7 +429,7 @@ class RemoteController(object):
         # Now run the code
         self.execute(source)
     
-    def push(self, targets, key, value):
+    def push(self, targets, **namespace):
         """Send a python object to the namespace of a kernel.
         
         There is also a dictionary style interface to the push command:
@@ -446,24 +446,29 @@ class RemoteController(object):
         self._check_connection()
         if isinstance(targets, list):
             targets = '::'.join(map(str, targets))
-            
-        if isinstance(value, numpy.array):
-            try:
-                serialObject = serialized.ArraySerialized(key)
-                serialObject.packObj(value)
-            except Exception, e:
-                print "Object cannot be serialized: ", e
-                return False
-        else:    
-            try:
-                serialObject = serialized.PickleSerialized(key)
-                serialObject.packObj(value)
-            except pickle.PickleError, e:
-                print "Object cannot be pickled: ", e
-                return False
+        serializedNamespace = []
+        for key in namespace:
+            value = namespace[key]
+            if False:#this does not work yet; isinstance(value, numpy.array):
+                try:
+                    serialObject = serialized.ArraySerialized(key)
+                    serialObject.packObject(value)
+                except Exception, e:
+                    print "Object cannot be serialized: ", e
+                    return False
+            else:    
+                try:
+                    serialObject = serialized.PickleSerialized(key)
+                    serialObject.packObject(value)
+                except pickle.PickleError, e:
+                    print "Object cannot be pickled: ", e
+                    return False
+            serializedNamespace.append(serialObject)
         self.es.writeString("PUSH ::%s" % targets)
-        for line in serialObject:
-            self.es.writeString(line)
+        for sObj in serializedNamespace:
+            for line in sObj:
+                self.es.writeString(line)
+        self.es.writeString("PUSH DONE")
         string = self.es.readString()
         if string == "PUSH OK":
             return True
@@ -499,12 +504,10 @@ class RemoteController(object):
         
         self.es.writeString("PULL %s::%s" % (keystr, targets))
         string = self.es.readString()
+        results = []
         returns = []
-        perEngineReturns = []
-        elements = 0
         nkeys = len(keys)
-        while string not in ['PULL OK', 'PULL FAIL']
-            elements++
+        while string not in ['PULL OK', 'PULL FAIL']:
             print string
             string_split = string.split(' ', 1)
             if len(string_split) is not 2:
@@ -532,18 +535,20 @@ class RemoteController(object):
                 return False
             
             #successful retrieval
-            perEngineReturns.append(data)
-            if elements is nkeys:
-                #finished results from one engine
-                elements = 0
-                returns.append(perEngineReturns)
-                perEngineReturns = []
-            
+            results.append(data)
             #get next string and reenter loop
             string = self.es.readString()
-        
+            if string == "PULL NEXT":
+                returns.append(results)
+                string = self.es.readString()
         #finish command    
         if string == 'PULL OK':
+            if len(results) is 1:
+                returns = results[0]
+            elif len(results) is len(keys):
+                returns = results
+            elif len(results) is 
+            for
             return returns
         else:
             return False
