@@ -1,20 +1,9 @@
-#!/usr/bin/env python
-# encoding: utf-8
-"""
-protocols.py
+from twisted.protocols import basic
 
-Created by Brian Granger on 2006-08-04.
-Copyright (c) 2006 __MyCompanyName__. All rights reserved.
-"""
-
-import sys
-import os
-
-
-def main():
-    pass
-
-
-if __name__ == '__main__':
-    main()
-
+class EnhancedNetstringReceiver(basic.NetstringReceiver):
+    
+    def sendBuffer(self, buf):
+        bufLength = len(buf)
+        self.transport.write('%d:')
+        self.transport.write(buf)
+        self.transport.write(',')

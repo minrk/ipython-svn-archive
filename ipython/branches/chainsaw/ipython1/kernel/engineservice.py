@@ -26,6 +26,12 @@ TODO:
   getErrorMessage().
   
 - Security issues.  Turn on TLS an authentication.
+
+- Generate the IEngine interface as a set of disjoint mixins
+- Create a basic NotImplementedEngine
+- Make our engine inherit from that
+- 
+
 """
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
@@ -55,16 +61,25 @@ class IEngine(Interface):
     id = Attribute("the id of the Engine object")
     
     def execute(lines):
-        """Execute lines of Python code."""
+        """Execute lines of Python code.
+        
+        Returns deferred to tuple of (id, stdin, stdout, stderr)
+        """
     
-    def push(key, value):
-        """Put value into locals namespace with name key."""
+    def push(**namespace):
+        """Push dict namespace into the user's namespace.
+        
+        Returns deferred to None
+        """
 
-    def pull(keys):
-        """Gets an item out of the self.locals dict by key."""
+    def pull(*keys):
+        """Pulls values out of the user's namespace by keys.
+        
+        Returns deferred to tuple or object
+        """
     
-    def pullNamespace(namespace):
-        """"""
+    def pullNamespace(*keys):
+        """Pulls values by key from user's namespace as dict."""
     
     def getResult(i=None):
         """Get the stdin/stdout/stderr of command i."""
@@ -139,7 +154,6 @@ class IQueuedEngine(IEngine):
     
     def clearQueue():
         """clear the queue"""
-    
 
 class QueuedEngine(object):
     
@@ -151,9 +165,7 @@ class QueuedEngine(object):
         self.queued = []
         self.history = {}
         self.currentCommand = None
-    
-    
-    
+
     #methods from IQueuedEngine:
     def clearQueue(self):
         """clear the queue"""

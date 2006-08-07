@@ -32,10 +32,12 @@ push()
 
 	C: PUSH
 	E: PUSH READY
-
-	C: PICKLE NAMESPACE
+	C: PICKLE a
 	C: ####pickle######
-
+	C: PUSH DONE
+	E: PUSH OK
+	
+	
 	C: ARRAY b
 	C: shape
 	C: asdfasdf asdf as df

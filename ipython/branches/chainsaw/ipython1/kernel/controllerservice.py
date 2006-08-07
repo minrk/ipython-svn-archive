@@ -75,7 +75,9 @@ class IRemoteController(Interface):
     def disconnectEngine(id):
         """handle disconnecting engine"""
     
-
+    def registerSerializationTypes(self, *serialTypes):
+        """Register the set of allowed subclasses of Serialized."""
+        
 class IMultiEngine(Interface):
     """interface to multiple objects implementing IEngine"""
     
@@ -87,7 +89,7 @@ class IMultiEngine(Interface):
         """Cleans out pending commands in an engine's queue."""
     
     def cleanQueueAll():
-        """Cleans out pending commands in an engine's queue."""
+        """Cleans out pending commands in all queues."""
     
     #IEngine multiplexer methods
     def execute(targets, lines):
@@ -95,9 +97,6 @@ class IMultiEngine(Interface):
     
     def executeAll(lines):
         """Execute lines of Python code."""
-    
-    def executeAll(targets, lines):
-        """"""
     
     def push(targets, **namespace):
         """Push value into locals namespace with name key."""
@@ -200,6 +199,9 @@ class ControllerService(service.Service):
         log.msg("engine %i disconnected" %id)
         self.unregisterEngine(id)
     
+    def registerSerializationTypes(self, *serialTypes):
+        """Register the set of allowed subclasses of Serialized."""
+        self.serialTypes = serialTypes
     
     #ImultiEngine helper methods
     def engineList(self, targets):
@@ -269,6 +271,10 @@ class ControllerService(service.Service):
         log.msg("pushing to %s" % targets)
         engines = self.engineList(targets)
         l = []
+        # Call unpack on values that aren't registered as allowed Serialized types
+        for k, v in namespace.iteritems():
+            if not isinstance(v, self.serialTypes):
+                namespace[k] = v.unpack()
         for e in engines:
             l.append(e.push(**namespace))
         return defer.gatherResults(l)
