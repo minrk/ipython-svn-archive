@@ -35,8 +35,15 @@ def curry(f, *args, **kwargs):
         dikt = dict(more_kwargs)
         dikt.update(kwargs)
         return f(*(args+more_args), **dikt)
-    return curried
     
+    return curried
+
+def setAllMethods(obj):
+    methods = ['execute', 'push', 'pull', 'pullNamespace',
+            'getResult', 'status', 'reset', 'kill']
+    for m in methods:
+        setattr(obj, m+'All', curry(getattr(obj, m), 'all'))
+
 
 class ResultReporterProtocol(protocol.DatagramProtocol):
     
@@ -104,6 +111,12 @@ class IMultiEngine(Interface):
     def pullAll(*keys):
         """"""
     
+    def pullNamespace(targets, *keys):
+        """Gets a namespace dict from targets by keys."""
+    
+    def pullNamespaceAll(*keys):
+        """"""
+    
     def getResult(targets, i=None):
         """Get the stdin/stdout/stderr of command i."""
     
@@ -149,13 +162,7 @@ class ControllerService(service.Service):
         self._notifiers = {}
         self.engines = {}
         self.availableIDs = range(maxEngines,-1,-1)#[255,...,0]
-        self.setAllMethods()
-    
-    def setAllMethods(self):
-        methods = ['execute', 'push', 'pull', 
-                'getResult', 'status', 'reset', 'kill']
-        for m in methods:
-            setattr(self, m+'All', curry(getattr(self, m), 'all'))
+        setAllMethods(self)
     
     #IRemoteController
     
@@ -281,6 +288,21 @@ class ControllerService(service.Service):
             d = engines[0].pull(*keys)
         return d
     
+    def pullNamespace(self, targets, *keys):
+        """Gets an item out of the self.locals dict by key."""
+        log.msg("getting namespace %s from %s" %(keys, targets))
+        engines = self.engineList(targets)
+        if not isinstance(targets, int) and len(targets) > 1:
+            l = []
+            for e in engines:
+                l.append(e.pullNamespace(*keys))
+            d = defer.gatherResults(l)
+            if len(keys) > 1:
+                d.addCallback(lambda resultList: zip(*resultList))
+        else:
+            d = engines[0].pullNamespace(*keys)
+        return d
+    
     def status(self, targets):
         log.msg("retrieving status of %s" %targets)
         engines = self.engineList(targets)
@@ -311,9 +333,9 @@ class ControllerService(service.Service):
     def getResult(self, targets, i=None):
         """Get the stdin/stdout/stderr of command i."""
         if i is not None:
-            log.msg("getting command %s from %s" %(i, targets))
+            log.msg("getting result %s from %s" %(i, targets))
         else:
-            log.msg("getting last command from %s" %targets)
+            log.msg("getting last result from %s" %targets)
         engines = self.engineList(targets)
         l = []
         for e in engines:
@@ -332,7 +354,7 @@ class ControllerService(service.Service):
             self._notifiers[n] = reactor.connectTCP(n[0], n[1], self.notifierFactory)
             self.notifierFactory.lastNotifier = n
             log.msg("Notifiers: %s" % self._notifiers)
-        return defer.succeed("OK")
+        return defer.succeed(None)
     
     def delNotifier(self, n):
         if n in self._notifiers:
@@ -342,7 +364,7 @@ class ControllerService(service.Service):
             except KeyError:
                 pass
             log.msg("Notifiers: %s" % self._notifiers)
-        return defer.succeed("OK")
+        return defer.succeed(None)
     
     def notify(self, id, result):
         package = pickle.dumps((id, result), 2)

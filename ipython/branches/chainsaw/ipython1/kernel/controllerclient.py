@@ -30,6 +30,7 @@ except ImmportError:
 
 try:
     from ipython1.kernel import serialized
+    from ipython1.kernel.controllerservice import setAllMethods
 except ImportError:
     print "ipython1 needs to be in your PYTHONPATH"
 
@@ -216,17 +217,17 @@ class EngineProxy(object):
         else:
             return self.rc.execute(self.id, strings)
     
-    def push(self, key, value):
-        return self.rc.push(self.id, key, value)
+    def push(self, **namespace):
+        return self.rc.push(self.id, **namespace)
     
     def __setitem__(self, key, value):
-        return self.push(key,value)
+        return self.push(key=value)
     
     def pull(self, *keys):
         return self.rc.pull(self.id, *keys)
     
     def __getitem__(self, key):
-        return self.pull(*(key))
+        return self.pull(*(key,))
     
     def status(self):
         return self.rc.status(self.id)
@@ -248,7 +249,7 @@ class SubCluster(object):
         self.rc = rc
         if isinstance(ids, slice):
             #parse slice
-            idlist = rc.status().keys()
+            idlist = rc.statusAll().keys()
             if ids.step is None:
                 step = 1
             else:
@@ -266,15 +267,17 @@ class SubCluster(object):
             self.ids = ids
         else:
             raise TypeError("SubCluster requires slice or list")
+        
+        setAllMethods(self)
     
     def execute(self, strings, block=False):
             return self.rc.execute(self.ids, strings, block)
     
-    def push(self, key, value):
-        return self.rc.push(self.ids, key, value)
+    def push(self, **namespace):
+        return self.rc.push(self.ids, **namespace)
     
     def __setitem__(self, key, value):
-        return self.push(key,value)
+        return self.push(key=value)
     
     def pull(self, *keys):
         return self.rc.pull(self.ids, *keys)
@@ -285,7 +288,7 @@ class SubCluster(object):
         elif isinstance(id, int):
             return EngineProxy(self.rc, self.ids[id])
         elif isinstance(id, str):
-            return self.pull(*(id))
+            return self.pull(*(id,))
         else:
             raise TypeError("__getitem__ only takes strs, ints, and slices")
     
@@ -319,6 +322,7 @@ class RemoteController(object):
         """
         self.addr = addr
         self.block = False
+        setAllMethods(self)
     
     def __del__(self):
         return self.disconnect()
@@ -480,7 +484,7 @@ class RemoteController(object):
             return string
     
     def __setitem__(self, key, value):
-            return self.push('all', key, value)
+            return self.push('all', key=value)
     
     def pull(self, targets, *keys):
         """Get a python object from a remote kernel.
@@ -512,7 +516,6 @@ class RemoteController(object):
         returns = []
         nkeys = len(keys)
         while string not in ['PULL OK', 'PULL FAIL']:
-            print string
             string_split = string.split(' ', 1)
             if len(string_split) is not 2:
                 return False
@@ -556,16 +559,44 @@ class RemoteController(object):
             return returns
         else:
             return False
-        
+    
     def __getitem__(self, id):
         if isinstance(id, slice):
             return SubCluster(self, id)
         elif isinstance(id, int):
             return EngineProxy(self, id)
         elif isinstance(id, str):
-            return self.pull('all', *(id))
+            return self.pull('all', *(id,))
         else:
             raise TypeError("__getitem__ only takes strs, ints, and slices")
+    
+    def pullNamespace(self, targets, *keys):
+        """Gets a namespace dict with keys from targets"""
+        self._check_connection()    
+        if isinstance(targets, list):
+            targets = '::'.join(map(str, targets))
+        try:
+            keystr = ','.join(keys)
+        except TypeError:
+            return False
+            
+        self.es.writeString("PULLNAMESPACE %s::%s" %(keystr, targets))
+        string = self.es.readString()
+        results = []
+        while string not in ["PULLNAMESPACE OK", "PULLNAMESPACE FAIL"]:
+            if string == "PICKLE NAMESPACE":
+                pns = self.es.readString()
+                try: 
+                    data = pickle.loads(pns)
+                except pickle.PickleError:
+                    print "could not unpickle"
+                    return False
+                else:
+                    returns.append(data)
+        if len(results) is 1:
+            return results[0]
+        else:
+            return results        
     
     def getResult(self, targets, number=None):
         """Gets a specific result from the kernel, returned as a tuple."""
@@ -590,9 +621,11 @@ class RemoteController(object):
                 if string == "GETRESULT OK":
                     return data
                 else:
+                    print string
                     return False
         else:
             # For other data types
+            print string
             return False
     
     def status(self, targets):

@@ -89,6 +89,8 @@ class IPBEngine(Interface):
     def remote_pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
     
+    def remote_pullNamespace(self, *keys):
+        """Gets a namespace dict from keys"""
     def remote_reset(self):
         """Reset the InteractiveShell."""
     
@@ -140,6 +142,10 @@ class PBEngineReferenceFromService(pb.Referenceable):
             serial.packObject(objects[i])
             serializedList.append(serial)
         return serializedList
+    
+    def remote_pullNamespace(self, *keys):
+        d = self.service.pullNamespace(*keys)
+        return d.addCallback(lambda ns: pickle.dumps(ns, 2))
     
     def remote_reset(self):
         return self.service.reset()
@@ -193,6 +199,10 @@ class EngineFromReference(object):
     def pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
         return self.callRemote('pull', *keys).addCallback(pickle.loads)
+    
+    def pullNamespace(self, *keys):
+        """Gets an item out of the self.locals dict by key."""
+        return self.callRemote('pullNamespace', *keys)
     
     def reset(self):
         """Reset the InteractiveShell."""

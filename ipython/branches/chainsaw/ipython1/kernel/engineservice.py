@@ -43,8 +43,6 @@ from twisted.python import log, failure
 from zope.interface import Interface, implements
 from zope.interface.interface import Attribute
 
-import cPickle as pickle
-
 from ipython1.core.shell import InteractiveShell
 
 # Here is the interface specification for the IPythonCoreService
@@ -61,9 +59,6 @@ class IEngine(Interface):
     
     def push(key, value):
         """Put value into locals namespace with name key."""
-
-    def pushNamespace(namespace):
-        """"""
 
     def pull(keys):
         """Gets an item out of the self.locals dict by key."""
@@ -101,9 +96,6 @@ class EngineService(service.Service):
     def push(self, **namespace):
         return defer.execute(self.shell.update, namespace)
     
-    def pushPickle(self, pickledNamespace):
-        return self.push(**pickle.loads(pickledNamespace))
-    
     def pull(self, *keys):
         if len(keys) > 1:
             result = []
@@ -113,8 +105,11 @@ class EngineService(service.Service):
         else:
             return defer.execute(self.shell.get, keys[0])
     
-    def pullPickle(self, *keys):
-        return self.pull(*keys).addCallback(lambda v: pickle.dumps(v,2))
+    def pullNamespace(self, *keys):
+        ns = {}
+        for key in keys:
+            ns[key] = self.shell.get(key)
+        return defer.succeed(ns)
     
     def reset(self):
         return defer.execute(self.shell.reset)
@@ -229,17 +224,12 @@ class QueuedEngine(object):
         """Put value into locals namespace with name key."""
         return self.submitCommand(Command("push", **namespace))
 
-    def pushPickle(self, pickleNamespace):
-        """Unpickle package and put into the locals namespace with name key."""
-        return self.submitCommand(Command("pushPickle", pickleNamespace))
-    
     def pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
         return self.submitCommand(Command("pull", *keys))
     
-    def pullPickle(self, *keys):
-        """Gets an item out of the self.locals dist by key and pickles it."""
-        return self.submitCommand(Command("pullPickle", *keys))
+    def pullNamespace(self, *keys):
+        return self.submitCommand(Command("pullNamespace", *keys))
     
     def reset(self):
         """Reset the InteractiveShell."""
@@ -265,7 +255,7 @@ class QueuedEngine(object):
             try:
                 cmd = self.history[i]
             except KeyError:
-                return defer.fail()
+                return defer.succeed("Bad command index %s" %i)
             else:
                 return defer.succeed(cmd)
     
