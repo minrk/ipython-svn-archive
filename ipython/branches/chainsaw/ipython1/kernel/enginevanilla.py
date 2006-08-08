@@ -6,7 +6,8 @@ from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
 
-from ipython1.kernel.engineservice import EngineService, IEngine, Command
+from ipython1.kernel.engineservice import EngineService, IEngine
+from ipython1.kernel.engineservice import Command, NotImplementedEngine
 from ipython1.kernel.controllerservice import ControllerService
 
 # Engine side of things
@@ -127,10 +128,13 @@ class VanillaEngineClientProtocol(basic.NetStringReceiver):
 class IVanillaEngineClientFactory(IEngine):
     
     def getID():
+        """Get's the engines id."""
         
     def setID(id):
+        """Set's the engines id."""
 
-class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
+class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory,
+    NotImplementedEngine):
     
     implements(IVanillaEngineClientFactory)
     
@@ -139,32 +143,29 @@ class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
     def __init__(self, service):
         self.service = service
         
+    # From IVanillaEngineClientFactory
     def getID(self):
         return self.service.id
         
     def setID(self, id):
+        # Add some error checking.
         return self.service.id = id
         
+    # From IEngine
     def execute(self, lines):
         return self.service.execute(lines)
         
     def push(self, **namespace):
         return self.service.push(**namespace)
 
-    def pushPickle(pickledNamespace):
-        return self.service.pushPickle(pickledNamespace)
-
-    def pull(*keys):
+    def pull(self, *keys):
         return self.service.pull(*keys)
+        
+    def pullNamespace(self, *keys):
+        return self.service.pullNamespace(*keys)
 
-    def pullPickle(*keys):
-        return self.service.pullPickle(*keys)
-
-    def getCommand(i=None):
-        return self.service.getCommand(i)
-
-    def getLastCommandIndex():
-        return self.service.getLastCommandIndex()
+    def getResult(self, i=None):
+        return self.service.getResult(i)
 
     def reset():
         return self.service.reset()
@@ -175,7 +176,6 @@ class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
     def status():
         return self.service.status()
         
-    
 components.registerAdapter(VanillaEngineClientFactoryFromEngineService,
                            EngineService,
                            IVanillaEngineClientFactory)

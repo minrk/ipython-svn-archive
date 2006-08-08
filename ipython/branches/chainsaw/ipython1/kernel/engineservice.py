@@ -121,39 +121,39 @@ class NotImplementedEngine(object):
 
     # IEngineBase
     def execute(self, lines):
-        raise NotImplementedError('This method is not implemented by this Engine')
+        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
         
     def push(self, **namespace):
-        raise NotImplementedError('This method is not implemented by this Engine')
+        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
         
     def pull(self, *keys):
-        raise NotImplementedError('This method is not implemented by this Engine')
+        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
     
     def pullNamespace(self, *keys):
-        raise NotImplementedError('This method is not implemented by this Engine')
+        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
     
     def getResult(self, i=None):
-        raise NotImplementedError('This method is not implemented by this Engine')
+        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
     
     def reset(self):
-        raise NotImplementedError('This method is not implemented by this Engine')
+        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
     
     def kill(self):
-        raise NotImplementedError('This method is not implemented by this Engine')
+        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
     
     def status(self):
-        raise NotImplementedError('This method is not implemented by this Engine')
+        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
 
     # IRemoteEngine
     def pushSerialized(self, **namespace):
-        raise NotImplementedError('This method is not implemented by this Engine')
+        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
         
     def pullSerialized(self, *keys):
-        raise NotImplementedError('This method is not implemented by this Engine')
+        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
 
     # IQueuedEngine        
     def clearQueue(self):
-        raise NotImplementedError('This method is not implemented by this Engine')
+        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
 
 # Now the actual EngineService
 class EngineService(service.Service, NotImplementedEngine):
