@@ -21,37 +21,12 @@ if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 # environmental variable below.
 import ipython1.distutils.sysconfig
 
+from ipython1.distutils.commands import config, build, build_ext
 
 from distutils import sysconfig
 from distutils.core import setup, Extension
 import sys
 
-# Functions for parsing additional command line arguments
-
-def parse_bool_option(name):
-    result = False
-    if name in sys.argv:
-        result = True
-        sys.argv.remove(name)
-    return result
-    
-
-def parse_option(name, default):
-    result = None
-    for arg in sys.argv:
-        if arg.startswith(name):
-            result = arg.split('=', 1)[1]
-            sys.argv.remove(arg)
-    if result is None:
-        return default
-    else:
-        return result
-
-# Parse additional command line options
-
-use_mpi = parse_bool_option('--mpi')
-mpicc = parse_option('--mpicc', 'mpicc')
-mpicxx = parse_option('--mpicxx', 'mpic++')
 
 # Packages and libraries to build
 
@@ -65,27 +40,7 @@ with_scripts =  ['scripts/ipkernel',
                  'scripts/ipresults',
                  'scripts/ipcontroller']
 
-with_ext_modules = []
-
-# Conditional MPI support
-
-if use_mpi:
-
-    print 'Building with mpi support:'
-    print 'mpicc =' + mpicc
-    print 'mpicxx =' + mpicxx 
-
-    # Swap out just the binary of the linker, but keep the flags
-    ldshared = sysconfig.get_config_var('LDSHARED')
-    ldshared = mpicc + ' ' + ldshared.split(' ',1)[1]
-
-    # Override the default compiler with the mpi one
-    os.environ['CC'] = mpicc
-    os.environ['CXX'] = mpicxx
-    os.environ['LDSHARED'] = ldshared
-    
-    e = Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])
-    with_ext_modules.append(e)
+with_ext_modules = [Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])]
 
 # Now build IPython
 
@@ -99,5 +54,8 @@ setup(name             = 'ipython1',
       license          = 'BSD',
       packages         = with_packages,
       scripts          = with_scripts,
-      ext_modules      = with_ext_modules
+      ext_modules      = with_ext_modules,
+      cmdclass         = {'config': config,
+                          'build' : build,
+                          'build_ext' : build_ext}
       )
