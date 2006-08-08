@@ -46,8 +46,8 @@ import os, signal, time
 from twisted.application import service, internet
 from twisted.internet import defer, reactor
 from twisted.python import log, failure
-from zope.interface import Interface, implements
-from zope.interface.interface import Attribute
+from zope.interface import Interface, implements, interface
+#from zope.interface.interface import Attribute
 
 from ipython1.core.shell import InteractiveShell
 
@@ -58,7 +58,7 @@ class IEngineBase(Interface):
     
     All these methods should return deferreds.
     """
-    id = Attribute("the id of the Engine object")
+    id = interface.Attribute("the id of the Engine object")
     
     def execute(lines):
         """Execute lines of Python code.
@@ -206,7 +206,7 @@ class EngineService(service.Service, NotImplementedEngine):
     def status(self):
         return defer.succeed(None)
 
-# Now the interface and implementation of the QueuedEngine
+# Now the implementation of the QueuedEngine
 
 class QueuedEngine(object):
     
@@ -214,10 +214,10 @@ class QueuedEngine(object):
     
     def __init__(self, engine):
         self.engine = engine
-        
         self.queued = []
         self.history = {}
         self.currentCommand = None
+        self.registerMethods()
 
     #methods from IQueuedEngine:
     def clearQueue(self):
@@ -279,25 +279,23 @@ class QueuedEngine(object):
         self._flushQueue()
         #return reason
     
+    def registerMethods(self):
+        for m in dir(self.engine):
+            if m in IEngine and isinstance(IEngine[m], interface.Method)\
+                and not getattr(self, m, None):
+                # if m is a method of IEngine, and not already specified
+                    f = self.buildQueuedMethod(m)
+                    setattr(self, m, f)
+    
+    def buildQueuedMethod(self, m):
+        def f(*args, **kwargs):
+            return self.submitCommand(Command(m, *args, **kwargs))
+        return f
+    
     #methods from IEngine
-    
-    def execute(self, lines):
-        """Execute lines of Python code."""
-        return self.submitCommand(Command("execute", lines))
-    
-    def push(self, **namespace):
-        """Put value into locals namespace with name key."""
-        return self.submitCommand(Command("push", **namespace))
-
-    def pull(self, *keys):
-        """Gets an item out of the self.locals dict by key."""
-        return self.submitCommand(Command("pull", *keys))
-    
-    def pullNamespace(self, *keys):
-        return self.submitCommand(Command("pullNamespace", *keys))
-    
     def reset(self):
         """Reset the InteractiveShell."""
+        self.clearQueue()
         self.history = {}  # reset the cache - I am not sure we should do this
         return self.submitCommand(Command("reset"))
     
@@ -313,16 +311,13 @@ class QueuedEngine(object):
     def getResult(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
         if i is None:
-            d = defer.succeed(max(self.history.keys()+[-1]))
-            d.addCallback(lambda i: self.history[i])
-            return d
+            i = max(self.history.keys()+[None])
+        try:
+            cmd = self.history[i]
+        except KeyError:
+            return self.submitCommand(Command("getResult", i))
         else:
-            try:
-                cmd = self.history[i]
-            except KeyError:
-                return defer.succeed("Bad command index %s" %i)
-            else:
-                return defer.succeed(cmd)
+            return defer.succeed(cmd)
 
 #Command object for queued Engines
 class Command(object):
