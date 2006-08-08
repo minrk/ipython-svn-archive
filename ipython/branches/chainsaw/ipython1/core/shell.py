@@ -20,10 +20,7 @@ from StringIO import StringIO
 
 from IPython.OutputTrap import OutputTrap
 
-try:
-    from ipython1.kernel1p.kernelerror import NotDefined
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
+from ipython1.kernel.kernelerror import NotDefined
 
 class InteractiveShell(InteractiveConsole):
     """The Basic IPython Shell class.  

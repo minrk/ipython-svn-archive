@@ -93,7 +93,6 @@ class IEngineBase(Interface):
     def status():
         """return status of engine"""
     
-
 class IEngineSerialized(Interface):
     
     def pushSerialized(**namespace):

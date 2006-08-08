@@ -39,10 +39,7 @@ from twisted.internet import protocol, reactor
 
 from IPython.ColorANSI import *
 
-try:
-    from ipython1.kernel.results import TCPResultsProtocol
-except:
-    print "ipython1 needs to be in your PYTHONPATH"
+from ipython1.kernel.results import TCPResultsProtocol
 
 def printer(string):
     print string

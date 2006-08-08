@@ -1,25 +1,26 @@
 import cPickle as pickle
 
-from zope.interface import Interface, implements
+import zope.interface as zi
 from twisted.python import components
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
-
-from ipython1.kernel.engineservice import EngineService, IEngine
-from ipython1.kernel.engineservice import Command, NotImplementedEngine
 from ipython1.kernel.controllerservice import ControllerService
+from ipython1.kernel.protocols import EnhancedNetstringReceiver
+import ipython1.kernel.serialized as serialized
+import ipython1.kernel.engineservice as engineservice
 
 # Engine side of things
 
-class IVanillaEngineClientProtocol(Interface):
+class IVanillaEngineClientProtocol(zi.Interface):
     pass
     
-class VanillaEngineClientProtocol(basic.NetStringReceiver):
+class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     
-    implements(IVanillaEngineClientProtocol)
+    zi.implements(IVanillaEngineClientProtocol)
 
     nextHandler = None
+    workVars = {}
 
     def connectionMade(self):
         self.transport.setTcpNoDelay(True)
@@ -47,7 +48,7 @@ class VanillaEngineClientProtocol(basic.NetStringReceiver):
             cmd = splitLine[0]
             args = splitLine[1:]
         
-        # Try to dispatch to a handle_READY_COMMAND method
+        # Try to dispatch to a handle_COMMAND method
         f = getattr(self, 'handle_%s' %
                     (cmd), None)            
         if f:
@@ -58,45 +59,67 @@ class VanillaEngineClientProtocol(basic.NetStringReceiver):
             self._reset()
             
     # Utility methods
+        
+    def defaultHandler(self, msg):
+        log.msg('Unexpected message: ' + msg)
             
     def _reset(self):
+        self.workVars = {}
         self.nextHandler = self.dispatch
 
     def handleUnexpectedData(self, args):
         self.sendString('UNEXPECTED DATA')
+    
+    def sendPickleSerialized(self, p):
+        for line in p:
+            self.sendString(line)
+            
+    def sendArrarySerialized(self, a):
+        ia = iter(a)
+        self.sendString(ia.next())
+        self.sendString(ia.next())
+        self.sendBuffer(ia.next())
 
-    def sendPickle(self, data, key):
-        try:
-            package = pickle.dumps(data, 2)
-        except pickle.PickleError:
-            return defer.fail()
-        else:
-            self.sendString('PICKLE %s' % key)
-            self.sendString(package)
-            return defer.succeed(None)
+        
+    def sendSerialized(self, s):
+        if isinstance(s, PickleSerialized):
+            self.sendPickle(s)
+        elif isinstance(s, ArraySerialized):
+            self.sendArray(s)
+    
+    #####
+    ##### The REGISTER command
+    #####
     
     def handleRegister(self, args):
         # args = 'REGISTER id'
         try:
             id = int(args)
         except TypeError:
-            raise
+            self.sendString('BAD ID')
         else:
             self.factory.setID(id)
             self._reset()
             
-    # EXECUTE
+    #####
+    ##### The EXECUTE command
+    #####
             
     def handle_EXECUTE(self, lines):
         d = self.factory.execute(lines)
-        d.addCallback(self.handleExecuteSuccess)
+        d.addCallback(self.handleExecuteResult)
         d.addErrback(self.executeFail)
         self.nextHandler = self.handleUnexpectedData
         
-    def handleExecuteSuccess(self, result):
-        d = self.sendPickle(result, 'result')
-        d.addErrback(self.executeFail)
-        d.addCallback(self.executeOK)
+    def handleExecuteResult(self, result):
+        serial = serialized.PickleSerialized('result')
+        try:
+            serial.packObject(result)
+        except pickle.PickleError:
+            self.executeFail()
+        else:
+            self.sendPickleSerialized(serial)
+            d.addCallback(self.executeOK)
  
     def executeOK(self, args):
         self.sendString('EXECUTE OK')
@@ -106,26 +129,222 @@ class VanillaEngineClientProtocol(basic.NetStringReceiver):
         self.sendString('EXECUTE FAIL')
         self._reset()
     
-    # PUSH
+    #####   
+    ##### The PUSH command
+    #####
     
-    def handle_READY_PUSH(self, args):
+    def handle_PUSH(self, args):
         if args is not None:
             self.sendString('BAD COMMAND')
             self._reset()
         else:
-            d = self.getIncomingData()
-            d.addCallback()
-            d.addErrback()
+            self.nextHandler = handlePushing
+            self.workVars['pushSerialsList'] = []
+            self.sendString("PUSH READY")
     
-    def getIncomingData(self):
-        self.nextHandler = self.handleIncomingData
-        
-        return d
-        
-    def handleIncomingData(self, data):
-        
+    def handlePushing(self, msg):
+        if msg == 'PUSH DONE':
+            return self.handlePushDone()
+            
+        msgList = msg.split(' ', 1)
+        if len(msgList) == 2:
+            pushType = msgList[0]
+            self.workVars['pushKey'] = msgList[1]
+            f = getattr(self, 'handlePushing_%s' % pushType, None)
+            if f is not None:
+                self.nextHandler = f
+            else:
+                self.pushFail()
+        else:
+            self.pushFail()
+                
+    def handlePushing_PICKLE(self, package):
+        self.nextHandler = self.handlePushing
+        serial = serialized.PickleSerialized(self.workVars['pushKey'])
+        serial.addToPackage(package)
+        self.workVars['pushSerialsList'].append(serial)
+                
+    def handlePushing_ARRAY(self, pShape):
+        self.nextHandler = self.handlePushingArray_dtype
+        serial = serialized.ArraySerialized(self.workVars['pushKey'])
+        serial.addToPackage(pShape)
+        self.workVars['pushSerial'] = serial
+    
+    def handlePushingArray_dtype(self, dtype):
+        self.nextHandler = self.handlePushingArray_buffer
+        self.workVars['pushSerial'].addToPackage(dtype)
+    
+    def handlePushingArray_buffer(self, arrayBuffer):
+        self.nextHandler = self.handlePushing
+        self.workVars['pushSerial'].addToPackage(arrayBuffer)
+        self.workVars['pushSerialsList'].append(self.workVars['pushSerial'])
+                
+    def handlePushDone(self):
+        self.factory.pushSerialized(**self.workVars['pushSerialsList'])
+        self.pushOK()
+            
+    def pushOK(self, args):
+        self.sendString('PUSH OK')
+        self._reset()
+         
+    def pushFail(self, reason):
+        self.sendString('PUSH FAIL')
+        self._reset()
 
-class IVanillaEngineClientFactory(IEngine):
+    #####
+    ##### The PULL command
+    #####
+
+    def handle_PULL(self, args):
+
+        keys = args.split(',')
+        self.nextHandler = self.handleUnexpectedData
+        d = self.factory.pullSerialized(*keys)
+        d.addCallbacks(self.handlePullingDone, self.pullFail)
+        return d
+    
+    def handlePullingDone(self, oneOrMoreSerialized):
+        if isinstance(oneOrMoreSerialized, (list, tuple)):
+            for s in oneOrMoreSerialized:
+                self.sendSerialized(s)
+        else:
+            self.sendSerialized(oneOrMoreSerialized)
+        self.pullOK()
+    
+    def pullOK(self, args):
+        self.sendString('PULL OK')
+        self._reset()
+    
+    def pullFail(self, reason):
+        self.sendString('PULL FAIL')
+        self._reset()
+
+    #####
+    ##### The PULLNAMESPACE command
+    #####
+
+    def handle_PULLNAMESPACE(self, args):
+
+        keys = args.split(',')
+        self.nextHandler = self.handleUnexpectedData
+        d = self.factory.pullNamespaceSerialized(*keys)
+        d.addCallbacks(self.handleNamespacePulled, self.pullNamespaceFail)
+        return d
+    
+    def handleNamespacePulled(self, namespace):
+        for v in namespace.itervalues():
+            self.sendSerialized(v)
+        self.pullNamespaceOK()
+    
+    def pullNamespaceOK(self, args):
+        self.sendString('PULLNAMESPACE OK')
+        self._reset()
+    
+    def pullNamespaceFail(self, reason):
+        self.sendString('PULLNAMESPACE FAIL')
+        self._reset()
+
+    #####
+    ##### The GETRESULT command
+    #####
+
+    def handle_GETRESULT(self, args):
+        self.nextHandler = self.handleUnexpectedData
+        if args is None:
+            d = self.factory.getResult()
+        else:
+            try:
+                index = int(args)
+            except TypeError:
+                self.getResultFail()
+            else:
+                d = self.factory.getResult(index)
+        d.addCallbacks(self.handleResult, self.getResultFail)
+        
+    def handleResult(self, result):
+        serial = serialized.PickleSerialized('result')
+        try:
+            serial.packObject(result)
+        except pickle.PickleError:
+            self.getResultFail()
+        else:
+            self.sendPickleSerialized(serial)
+            self.getResultOK()
+            
+    def getResultOK(self, args):
+        self.sendString('GETRESULT OK')
+        self._reset()
+
+    def getResultFail(self, reason):
+        self.sendString('GETRESULT FAIL')
+        self._reset()
+            
+    #####
+    ##### The RESET command
+    #####   
+            
+    def handle_RESET(self, args):
+        d = self.factory.reset()
+        d.addCallbacks(self.resetOK, self.resetFail)
+
+    def resetOK(self, args):
+        self.sendString('RESET OK')
+        self._reset()
+
+    def resetFail(self, reason):
+        self.sendString('RESET FAIL')
+        self._reset()
+
+    #####
+    ##### The KILL command
+    #####   
+            
+    def handle_KILL(self, args):
+        d = self.factory.kill()
+        d.addCallbacks(self.killOK, self.killFail)
+
+    def killOK(self, args):
+        self.sendString('KILL OK')
+        self._reset()
+
+    def killFail(self, reason):
+        self.sendString('KILL FAIL')
+        self._reset()
+
+    #####
+    ##### The KILL command
+    #####   
+            
+    def handle_KILL(self, args):
+        d = self.factory.kill()
+        d.addCallbacks(self.killOK, self.killFail)
+
+    def killOK(self, args):
+        self.sendString('KILL OK')
+        self._reset()
+
+    def killFail(self, reason):
+        self.sendString('KILL FAIL')
+        self._reset()
+
+    #####
+    ##### The STATUS command
+    #####   
+            
+    def handle_STATUS(self, args):
+        d = self.factory.status()
+        d.addCallbacks(self.statusOK, self.statusFail)
+
+    def statusOK(self, args):
+        self.sendString('STATUS OK')
+        self._reset()
+
+    def statusFail(self, reason):
+        self.sendString('STATUS FAIL')
+        self._reset()
+
+
+class IVanillaEngineClientFactory(zi.Interface):
     
     def getID():
         """Get's the engines id."""
@@ -133,15 +352,15 @@ class IVanillaEngineClientFactory(IEngine):
     def setID(id):
         """Set's the engines id."""
 
-class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory,
-    NotImplementedEngine):
+class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
     
-    implements(IVanillaEngineClientFactory)
+    zi.implements(IVanillaEngineClientFactory)
     
     protocol = VanillaEngineClientProtocol
     
     def __init__(self, service):
         self.service = service
+        self.serviceInterfaces = list(zi.providedBy(service))
         
     # From IVanillaEngineClientFactory
     def getID(self):
@@ -149,9 +368,9 @@ class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory,
         
     def setID(self, id):
         # Add some error checking.
-        return self.service.id = id
+        self.service.id = id
         
-    # From IEngine
+    # Go through the methods of service and wrap automatically!!!
     def execute(self, lines):
         return self.service.execute(lines)
         
@@ -167,34 +386,44 @@ class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory,
     def getResult(self, i=None):
         return self.service.getResult(i)
 
-    def reset():
+    def reset(self):
         return self.service.reset()
 
-    def kill():
+    def kill(self):
         return self.service.kill()
 
-    def status():
+    def status(self):
         return self.service.status()
         
+    def pushSerialized(self, **namespace):
+        return self.service.pushSerialized(**namespace)
+
+    def pullSerialized(self, *keys):
+        return self.service.pullSerialized(*keys)
+        
+    def pullNamespaceSerialized(self, *keys):
+        return self.service.pullNamespaceSerialized(*keys)        
+    
 components.registerAdapter(VanillaEngineClientFactoryFromEngineService,
-                           EngineService,
+                           engineservice.EngineService,
                            IVanillaEngineClientFactory)
 
     
 # Controller side of things
 
-class IVanillaEngineServerProtocol(Interface):
+class IVanillaEngineServerProtocol(zi.Interface):
+    pass
     
-class VanillaEngineServerProtocol(basic.Int32StringReceiver):
+class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     
-    implements(IVanillaEngineServerProtocol)
+    zi.implements(IVanillaEngineServerProtocol)
 
-class IVanillaEngineServerFactory(Interface):
+class IVanillaEngineServerFactory(zi.Interface):
     """This is what the client factory should look like"""
 
 class VanillaEngineServerFactoryFromControllerService(protocol.ServerFactory):
     
-    implements(IVanillaEngineServerFactory)
+    zi.implements(IVanillaEngineServerFactory)
     
     protocol = VanillaEngineServerProtocol
     
@@ -202,13 +431,13 @@ components.registerAdapter(VanillaEngineServerFactoryFromControllerService,
                            ControllerService,
                            IVanillaEngineServerFactory)
     
-class EngineFromVanillaEngineServerProtocol():
+class EngineFromVanillaEngineServerProtocol(object):
 
-    implements(IEngine)
+    zi.implements(engineservice.IEngineBase)
     
     
 components.registerAdapter(EngineFromVanillaEngineServerProtocol,
                            VanillaEngineServerProtocol,
-                           IEngine)
+                           engineservice.IEngineBase)
 
     

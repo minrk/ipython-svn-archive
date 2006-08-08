@@ -28,11 +28,8 @@ try:
 except ImmportError:
     numpy = None
 
-try:
-    from ipython1.kernel import serialized
-    from ipython1.kernel.controllerservice import setAllMethods
-except ImportError:
-    print "ipython1 needs to be in your PYTHONPATH"
+from ipython1.kernel import serialized
+from ipython1.kernel.controllerservice import setAllMethods
 
 #netstring code adapted from twisted.protocols.basic
 class NetstringParseError(ValueError):

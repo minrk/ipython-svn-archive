@@ -11,12 +11,6 @@ execute()
 	
 	E: PICKLE result
 	E: ########
-
-	E: PICKLE result
-	E: ########
-
-	E: PICKLE error
-	E: ########
 	
 	E: EXECUTE OK
 
@@ -32,8 +26,10 @@ push()
 
 	C: PUSH
 	E: PUSH READY
+	
 	C: PICKLE a
 	C: ####pickle######
+
 	C: PUSH DONE
 	E: PUSH OK
 	
