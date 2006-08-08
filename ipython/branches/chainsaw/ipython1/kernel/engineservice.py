@@ -71,7 +71,7 @@ class IEngineBase(Interface):
         
         Returns deferred to None
         """
-
+    
     def pull(*keys):
         """Pulls values out of the user's namespace by keys.
         
@@ -93,72 +93,57 @@ class IEngineBase(Interface):
     def status():
         """return status of engine"""
     
-class IRemoteEngine(Interface):
+
+class IEngineSerialized(Interface):
     
     def pushSerialized(**namespace):
         """Push a dict of keys and Serialized to the user's namespace."""
-        
+    
     def pullSerialized(*keys):
         """Pull objects by key form the user's namespace as Serialized."""
     
-class IThreadedEngine(Interface):
-    pass
-    
-class IQueuedEngine(Interface):
-    """add some queue methods to IEngine interface"""
 
+class IEngineThreaded(Interface):
+    pass
+
+class IEngineQueued(Interface):
+    """add some queue methods to IEngine interface"""
+    
     def clearQueue():
         """clear the queue"""
+    
 
-class IEngine(IEngineBase, IRemoteEngine, IQueuedEngine, IThreadedEngine):
+class IEngineComplete(IEngineBase, IEngineSerialized, IEngineQueued, IEngineThreaded):
     pass
 
-class NotImplementedEngine(object):
+class CompleteEngine(object):
     
-    implements(IEngine)
+    implements(IEngineComplete)
+    
+    _notImplemented = defer.fail(NotImplementedError('This method is not implemented by this Engine'))
+    
+    def _notImplementedMethod(self, *args, **kwargs):
+        return self._notImplemented    
+    
+    def __init__(self, engine):
+        self.__doc__ = engine.__doc__
+        for method in dir(engine):
+            if method not in dir(self):
+                setattr(self, method, getattr(engine, method))
+        for method in IEngineComplete:
+            if getattr(self, method, 'NotDefined') == 'NotDefined':
+                #if not implemented, add filler
+                #could append self.notImplemented here
+                if callable(IEngineComplete[method]):
+                    setattr(self, method, self._notImplementedMethod)
+                else:
+                    setattr(self, method, self._notImplemented)
 
-    id = None
-
-    # IEngineBase
-    def execute(self, lines):
-        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
-        
-    def push(self, **namespace):
-        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
-        
-    def pull(self, *keys):
-        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
     
-    def pullNamespace(self, *keys):
-        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
-    
-    def getResult(self, i=None):
-        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
-    
-    def reset(self):
-        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
-    
-    def kill(self):
-        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
-    
-    def status(self):
-        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
-
-    # IRemoteEngine
-    def pushSerialized(self, **namespace):
-        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
-        
-    def pullSerialized(self, *keys):
-        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
-
-    # IQueuedEngine        
-    def clearQueue(self):
-        defer.fail(NotImplementedError('This method is not implemented by this Engine'))
-
 # Now the actual EngineService
-class EngineService(service.Service, NotImplementedEngine):
+class EngineService(service.Service):
     
-    implements(IEngine)
+    implements(IEngineBase)
     
     id = None
     
@@ -205,21 +190,23 @@ class EngineService(service.Service, NotImplementedEngine):
     
     def status(self):
         return defer.succeed(None)
+    
 
 # Now the implementation of the QueuedEngine
 
 class QueuedEngine(object):
     
-    implements(IEngine)
-    
+    implements(IEngineBase, IEngineQueued)
+    id = None
     def __init__(self, engine):
         self.engine = engine
+        self.id = engine.id
         self.queued = []
         self.history = {}
         self.currentCommand = None
         self.registerMethods()
-
-    #methods from IQueuedEngine:
+    
+    #methods from IEngineQueued:
     def clearQueue(self):
         """clear the queue"""
         self.queued = []
@@ -281,16 +268,16 @@ class QueuedEngine(object):
     
     def registerMethods(self):
         for m in dir(self.engine):
-            if m in IEngine and isinstance(IEngine[m], interface.Method)\
+            if m in IEngineComplete and callable(IEngineComplete[m])\
                 and not getattr(self, m, None):
                 # if m is a method of IEngine, and not already specified
                     f = self.buildQueuedMethod(m)
                     setattr(self, m, f)
     
     def buildQueuedMethod(self, m):
-        def f(*args, **kwargs):
+        def queuedMethod(*args, **kwargs):
             return self.submitCommand(Command(m, *args, **kwargs))
-        return f
+        return queuedMethod
     
     #methods from IEngine
     def reset(self):
