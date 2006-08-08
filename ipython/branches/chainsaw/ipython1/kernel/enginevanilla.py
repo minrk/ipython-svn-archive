@@ -411,15 +411,140 @@ components.registerAdapter(VanillaEngineClientFactoryFromEngineService,
     
 # Controller side of things
 
-class IVanillaEngineServerProtocol(zi.Interface):
-    pass
+class IVanillaEngineServerProtocol(engineservice.IEngineBase,
+    engineservice.IEngineSerialized, engineservice.IEngineThreaded):
     
 class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     
     zi.implements(IVanillaEngineServerProtocol)
+    
+    nextHandler = None
+    workVars = {}
+    self.id = None
+    
+    def connectionMade(self):
+        self.transport.setTcpNoDelay(True)
+        self.nextHandler = self.dispatch
+
+    def stringReceived(self, msg):
+        
+        if self.nextHandler is None:
+            self.defaultHandler(msg)
+        else:
+            self.nextHandler(msg)
+
+    def dispatch(self, msg):
+        # Try to parse out a command
+        splitLine = msg.split(' ', 1)
+        if len(splitLine) == 1:
+            cmd = splitLine[0]
+            args = None
+        else:
+            cmd = splitLine[0]
+            args = splitLine[1:]
+        
+        # Try to dispatch to a handle_COMMAND method
+        f = getattr(self, 'handle_%s' %
+                    (cmd), None)            
+        if f:
+            # Handler resolved with state and cmd 
+            f(args)
+        else:
+            self.sendString('BAD COMMAND')
+            self._reset()
+
+    # Utility methods
+        
+    def defaultHandler(self, msg):
+        log.msg('Unexpected message: ' + msg)
+            
+    def _reset(self):
+        self.workVars = {}
+        self.nextHandler = self.dispatch
+
+    def handleUnexpectedData(self, args):
+        self.sendString('UNEXPECTED DATA')
+    
+    def sendPickleSerialized(self, p):
+        for line in p:
+            self.sendString(line)
+            
+    def sendArrarySerialized(self, a):
+        ia = iter(a)
+        self.sendString(ia.next())
+        self.sendString(ia.next())
+        self.sendBuffer(ia.next())
+
+        
+    def sendSerialized(self, s):
+        if isinstance(s, PickleSerialized):
+            self.sendPickle(s)
+        elif isinstance(s, ArraySerialized):
+            self.sendArray(s)
+
+    # REGISTER
+
+    def handle_REGISTER(self, args):
+        self.nextHandler = self.handleUnexpectedData
+        desiredID = args
+        if desiredID is not None:
+            try:
+                desiredID = int(desiredID)
+            except TypeError:
+                desiredID = None
+        self.id = self.factory.registerEngine(engineservice.QueuedEngine(self), 
+            desiredID)
+        self.handleID(getID)
+        
+    def handleID(self, id):
+        self.sendString('REGISTER %i' % id)
+        self._reset()
+        
+    # IEngineBase Methods
+    
+    def execute(self, lines):
+        self.sendString('EXECUTE %s' % lines)
+        self.nextHandler = handleIncomingSerialized
+        
+    def handleExecuteResult(self, msg):
+        
+    
+    def push(self, **namespace):
+    
+    def pull(self, *keys):
+    
+    def pullNamespace(self, *keys):
+    
+    def getResult(self, i=None):
+    
+    def reset(self):
+    
+    def kill(self):
+    
+    def status(self):
+        
+    # IEngineSerialized Methods
+    
+    def pushSerialized(self, **namespace):
+    
+    def pullSerialized(self, *keys):
+        
+    def pullNamespaceSerialized(self, *keys):
+    
+    # IEngineThreadedMethods
+    
+    
+        
+        
 
 class IVanillaEngineServerFactory(zi.Interface):
     """This is what the client factory should look like"""
+    
+    def registerEngine(engine, id):
+        """Register an IEngineComplete with id."""
+        
+    def registerSerializationTypes(*serialTypes):
+        """Register the set of allowed subclasses of Serialized."""
 
 class VanillaEngineServerFactoryFromControllerService(protocol.ServerFactory):
     
@@ -427,17 +552,21 @@ class VanillaEngineServerFactoryFromControllerService(protocol.ServerFactory):
     
     protocol = VanillaEngineServerProtocol
     
+    def __init__(self, service):
+        self.service = service
+    
+    def registerEngine(self, engine, id):
+        self.service.registerEngine(engine, id)
+    
+    def registerSerializationTypes(self, *serialTypes):
+        self.service.registerSerializationTypes(*serialTypes)
+        
+    def startFactory(self):
+        self.service.registerSerializationTypes(serialized.PickleSerialized,
+            serialized.ArraySerialized)
+    
 components.registerAdapter(VanillaEngineServerFactoryFromControllerService,
                            ControllerService,
                            IVanillaEngineServerFactory)
-    
-class EngineFromVanillaEngineServerProtocol(object):
-
-    zi.implements(engineservice.IEngineBase)
-    
-    
-components.registerAdapter(EngineFromVanillaEngineServerProtocol,
-                           VanillaEngineServerProtocol,
-                           engineservice.IEngineBase)
 
     
