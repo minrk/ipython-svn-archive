@@ -53,7 +53,7 @@ from ipython1.core.shell import InteractiveShell
 
 # Here is the interface specification for the IPythonCoreService
 
-class IEngine(Interface):
+class IEngineBase(Interface):
     """The Interface for the IPython Engine.
     
     All these methods should return deferreds.
@@ -93,13 +93,75 @@ class IEngine(Interface):
     def status():
         """return status of engine"""
     
+class IRemoteEngine(Interface):
+    
+    def pushSerialized(**namespace):
+        """Push a dict of keys and Serialized to the user's namespace."""
+        
+    def pullSerialized(*keys):
+        """Pull objects by key form the user's namespace as Serialized."""
+    
+class IThreadedEngine(Interface):
+    pass
+    
+class IQueuedEngine(Interface):
+    """add some queue methods to IEngine interface"""
+
+    def clearQueue():
+        """clear the queue"""
+
+class IEngine(IEngineBase, IRemoteEngine, IQueuedEngine, IThreadedEngine):
+    pass
+
+class NotImplementedEngine(object):
+    
+    implements(IEngine)
+
+    id = None
+
+    # IEngineBase
+    def execute(self, lines):
+        raise NotImplementedError('This method is not implemented by this Engine')
+        
+    def push(self, **namespace):
+        raise NotImplementedError('This method is not implemented by this Engine')
+        
+    def pull(self, *keys):
+        raise NotImplementedError('This method is not implemented by this Engine')
+    
+    def pullNamespace(self, *keys):
+        raise NotImplementedError('This method is not implemented by this Engine')
+    
+    def getResult(self, i=None):
+        raise NotImplementedError('This method is not implemented by this Engine')
+    
+    def reset(self):
+        raise NotImplementedError('This method is not implemented by this Engine')
+    
+    def kill(self):
+        raise NotImplementedError('This method is not implemented by this Engine')
+    
+    def status(self):
+        raise NotImplementedError('This method is not implemented by this Engine')
+
+    # IRemoteEngine
+    def pushSerialized(self, **namespace):
+        raise NotImplementedError('This method is not implemented by this Engine')
+        
+    def pullSerialized(self, *keys):
+        raise NotImplementedError('This method is not implemented by this Engine')
+
+    # IQueuedEngine        
+    def clearQueue(self):
+        raise NotImplementedError('This method is not implemented by this Engine')
 
 # Now the actual EngineService
-class EngineService(service.Service):
+class EngineService(service.Service, NotImplementedEngine):
     
     implements(IEngine)
     
     id = None
+    
     def __init__(self):
         self.shell = InteractiveShell()# let's use containment, not inheritance
     
@@ -139,25 +201,16 @@ class EngineService(service.Service):
             return defer.succeed(None)
     
     def getResult(self, i=None):
-        return defer.execute(self.shell.getResult, i)
-    
-    def getLastCommandIndex(self):
-        return defer.execute(self.shell.getLastCommandIndex)
+        return defer.execute(self.shell.getCommand, i)
     
     def status(self):
         return defer.succeed(None)
 
 # Now the interface and implementation of the QueuedEngine
 
-class IQueuedEngine(IEngine):
-    """add some queue methods to IEngine interface"""
-    
-    def clearQueue():
-        """clear the queue"""
-
 class QueuedEngine(object):
     
-    implements(IQueuedEngine)
+    implements(IEngine)
     
     def __init__(self, engine):
         self.engine = engine
@@ -260,7 +313,7 @@ class QueuedEngine(object):
     def getResult(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
         if i is None:
-            d = self.getLastCommandIndex()
+            d = defer.succeed(max(self.history.keys()+[-1]))
             d.addCallback(lambda i: self.history[i])
             return d
         else:
@@ -270,11 +323,6 @@ class QueuedEngine(object):
                 return defer.succeed("Bad command index %s" %i)
             else:
                 return defer.succeed(cmd)
-    
-    def getLastCommandIndex(self):
-        """Get the index of the last command."""
-        return defer.succeed(max(self.history.keys()+[-1]))
-    
 
 #Command object for queued Engines
 class Command(object):
