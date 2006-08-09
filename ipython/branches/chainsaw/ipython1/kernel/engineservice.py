@@ -127,7 +127,7 @@ def completeEngine(engine):
         if getattr(engine, method, 'NotDefined') == 'NotDefined':
             #if not implemented, add filler
             #could append self.notImplemented here
-            if callable(ICompleteEngine[method]:
+            if callable(ICompleteEngine[method]):
                 setattr(engine, method, _notImplementedMethod)
             else:
                 setattr(engine, method, None)
