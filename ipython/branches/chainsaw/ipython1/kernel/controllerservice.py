@@ -186,7 +186,28 @@ class ControllerService(service.Service):
         self.engines = {}
         self.availableIDs = range(maxEngines,-1,-1)#[255,...,0]
         self.serialTypes = ()
+        self.setAutoMethods()
         setAllMethods(self)
+    
+    def setAutoMethods(self):
+        for m in IMultiEngine:
+            if callable(IMultiEngine[m]) and m[-3:] != 'All'\
+                and getattr(self, m, None) is None:
+                print m
+                setattr(self, m, curry(self.autoMethod, m))
+    
+    #a method template for dynamically building methods
+    def autoMethod(self, name, targets, *args, **kwargs):
+        log.msg("%s on %s" %(name, targets))
+        engines = self.engineList(targets)
+        l = []
+        if not isinstance(targets, int) and len(targets) > 1:
+            for e in engines:
+                l.append(getattr(e, name)(*args, **kwargs))
+            d = defer.gatherResults(l)
+        else:
+            d = getattr(engines[0], name)(*args, **kwargs)
+        return d
     
     #IRemoteController
     
@@ -262,51 +283,6 @@ class ControllerService(service.Service):
         else:
             return False
     
-    def clearQueue(self, targets):
-        """Clears out pending commands in the kernel's queue."""
-        log.msg("clearing queue %s" %targets)
-        engines = self.engineList(targets)
-        if not engines:
-            return defer.succeed(None)
-        l = []
-        for e in engines:
-            l.append(e.clearQueue())
-        return defer.gatherResults(l)
-    
-    def clearQueueAll(self):
-        return self.clearQueue('all')
-    
-    def execute(self, targets, lines):
-        """Execute lines of Python code."""
-        log.msg("executing %s on %s" %(lines, targets))
-        engines = self.engineList(targets)
-        if not isinstance(targets, int) and len(targets) > 1:
-            l = []
-            for e in engines:
-                d = e.execute(lines)
-                self.executeCallback(e.id, d)
-                l.append(d)
-            d = defer.gatherResults(l)
-        else:
-            d = engines[0].execute(lines)
-        return d
-    
-    def executeAll(self, lines):
-        return self.execute('all', lines)
-    
-    def executeCallback(self, id, d):
-        d.addCallback(lambda r:self.notify(id, r))
-    
-    def push(self, targets, **namespace):
-        """Push value into locals namespace with name key."""
-        log.msg("pushing to %s" % targets)
-        engines = self.engineList(targets)
-        l = []
-        # Call unpack on values that aren't registered as allowed Serialized types
-        for e in engines:
-            l.append(e.push(**namespace))
-        return defer.gatherResults(l)
-    
     def pushSerialized(self, targets, **namespace):
         """Push value into locals namespace with name key."""
         log.msg("pushing to %s" % targets)
@@ -351,32 +327,6 @@ class ControllerService(service.Service):
             d = engines[0].pullSerialized(*keys)
         return d
     
-    def pullNamespace(self, targets, *keys):
-        """Gets an item out of the self.locals dict by key."""
-        log.msg("getting namespace %s from %s" %(keys, targets))
-        engines = self.engineList(targets)
-        if not isinstance(targets, int) and len(targets) > 1:
-            l = []
-            for e in engines:
-                l.append(e.pullNamespace(*keys))
-            d = defer.gatherResults(l)
-        else:
-            d = engines[0].pullNamespace(*keys)
-        return d
-    
-    def pullNamespaceSerialized(self, targets, *keys):
-        """Gets an item out of the self.locals dict by key."""
-        log.msg("getting namespace %s from %s" %(keys, targets))
-        engines = self.engineList(targets)
-        if not isinstance(targets, int) and len(targets) > 1:
-            l = []
-            for e in engines:
-                l.append(e.pullNamespace(*keys))
-            d = defer.gatherResults(l)
-        else:
-            d = engines[0].pullNamespace(*keys)
-        return d
-    
     def status(self, targets):
         log.msg("retrieving status of %s" %targets)
         engines = self.engineList(targets)
@@ -391,54 +341,6 @@ class ControllerService(service.Service):
             d = engines[0].status()
         return d
     
-    def reset(self, targets):
-        """Reset the InteractiveShell."""
-        return self.autoMethod(targets, 'reset')
-        log.msg("resetting %s" %(targets))
-        engines = self.engineList(targets)
-        l = []
-        for e in engines:
-            l.append(e.reset())
-        return defer.gatherResults(l)
-    
-    def kill(self, targets):
-        log.msg("killing %s" %(targets))
-        engines = self.engineList(targets)
-        l = []
-        for e in engines:
-            l.append(e.kill())
-        return defer.gatherResults(l)
-    
-    def getResult(self, targets, i=None):
-        """Get the stdin/stdout/stderr of command i."""
-        if i is not None:
-            log.msg("getting result %s from %s" %(i, targets))
-        else:
-            log.msg("getting last result from %s" %targets)
-        engines = self.engineList(targets)
-        if not isinstance(targets, int) and len(targets) > 1:
-            l = []
-            for e in engines:
-                l.append(e.getResult(i))
-            d = defer.gatherResults(l)
-        else:
-            d = engines[0].getResult(i)
-        return d
-    
-    #a method template for dynamically building methods
-    def autoMethod(self, targets, name, *args, **kwargs):
-        log.msg("%s on %s" %(name, targets))
-        engines = self.engineList(targets)
-        l = []
-        if not isinstance(targets, int) and len(targets) > 1:
-            for e in engines:
-                l.append(getattr(e, name)(*args, **kwargs))
-            d = defer.gatherResults(l)
-        else:
-            d = getattr(engines[0], name)(*args, **kwargs)
-        return d
-        
-
     
     #notification methods    
         
