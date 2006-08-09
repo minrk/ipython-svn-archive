@@ -245,8 +245,7 @@ class PBRemoteEngineRootFromService(pb.Root):
     
     def remote_registerEngine(self, engineReference, id, *interfaces):
         engine = IEngineBase(engineReference)
-        remoteEngine = QueuedEngine(engine)
-        CompleteEngine(remoteEngine)
+        remoteEngine = completeEngine(QueuedEngine(engine))
         id = self.service.registerEngine(remoteEngine, id)
         def notify(*args):
             return self.service.disconnectEngine(id)

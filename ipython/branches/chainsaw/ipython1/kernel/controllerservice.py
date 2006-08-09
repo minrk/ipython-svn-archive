@@ -191,14 +191,11 @@ class ControllerService(service.Service):
     
     def registerEngine(self, remoteEngine, id):
         """register new engine connection"""
-        try:
-            assert(IEngineComplete.providedBy(remoteEngine))
-        except AssertionError:
-            raise
+        for base in IEngineComplete.getBases():
+            assert(base.providedBy(remoteEngine))
         
         if id in self.engines.keys():
             raise IdInUse
-            return
             
         if id in self.availableIDs:
             remoteEngine.id = id

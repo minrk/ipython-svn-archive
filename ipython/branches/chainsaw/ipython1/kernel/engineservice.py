@@ -1,4 +1,4 @@
-# -*- test-case-name: ipython1.test.test_coreservice -*-
+# -*- test-case-name: ipython1.test.test_engineservice -*-
 
 """A Twisted Service Representation of the IPython Core.
 
@@ -92,6 +92,7 @@ class IEngineBase(zi.Interface):
     def status():
         """return status of engine"""
     
+
 class IEngineSerialized(zi.Interface):
     
     def pushSerialized(**namespace):
@@ -114,9 +115,9 @@ class IEngineQueued(zi.Interface):
 class IEngineComplete(IEngineBase, IEngineSerialized, IEngineQueued, IEngineThreaded):
     pass
 
-def CompleteEngine(engine):
-    
-    zi.directlyProvides(engine, IEngineComplete)
+def completeEngine(engine):
+    """Completes an engine object"""
+    zi.alsoProvides(engine, IEngineComplete)
     
     def _notImplementedMethod(self, *args, **kwargs):
         return defer.fail(NotImplementedError(
@@ -128,6 +129,7 @@ def CompleteEngine(engine):
             #could append self.notImplemented here
             setattr(engine, method, _notImplementedMethod)
     assert(IEngineComplete.providedBy(engine))
+    return engine
 
     
 # Now the actual EngineService
@@ -215,8 +217,7 @@ class QueuedEngine(object):
         self.registerMethods()
     
     def registerMethods(self):
-        ifaces = self.engine.__provides__
-        zi.alsoProvides(self, *ifaces)
+        zi.alsoProvides(self, *self.engine.__provides__)
         for m in dir(self.engine):
             if m in IEngineComplete and callable(IEngineComplete[m])\
                 and not getattr(self, m, None):
@@ -316,6 +317,7 @@ class QueuedEngine(object):
             return self.submitCommand(Command("getResult", i))
         else:
             return defer.succeed(cmd)
+    
 
 #Command object for queued Engines
 class Command(object):

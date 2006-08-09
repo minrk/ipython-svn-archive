@@ -215,13 +215,15 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     
     def pullOK(self, entireResultList):
         try:
-            #can't do this anymore
             if isinstance(entireResultList,list):
                 if isinstance(entireResultList[0], tuple):
                     for perObjectResultList in entireResultList:
                         for serialResult in perObjectResultList:
-                            for line in serialResult:
-                                self.sendString(line)
+                            if serialResult[0].split(' ')[0] == 'ARRAY':
+                                self.sendArray(serialResult)
+                            else:
+                                for line in serialResult:
+                                    self.sendString(line)
                         self.sendString("SEGMENT PULLED")
                 else:
                     for serialResult in entireResultList:
@@ -236,6 +238,11 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
             self.pullFinish("FAIL")
         else:
             self.pullFinish("OK")
+    
+    def sendArray(self, sArray):
+        for line in sArray[:-1]
+            self.sendString(line)
+        self.sendBuffer(sArray[-1])
     
     def pullFail(self, failure):
         self.pullFinish("FAIL")
