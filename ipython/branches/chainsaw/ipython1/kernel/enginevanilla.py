@@ -5,7 +5,7 @@ from twisted.python import components, failure, log
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
-from ipython1.kernel.controllerservice import ControllerService
+from ipython1.kernel.controllerservice import ControllerService, IRemoteController
 from ipython1.kernel.protocols import EnhancedNetstringReceiver
 import ipython1.kernel.serialized as serialized
 import ipython1.kernel.engineservice as engineservice
@@ -19,7 +19,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     
     zi.implements(IVanillaEngineClientProtocol)
 
-    _nextHandler = None
+    nextHandler = None
     workVars = {}
 
     def connectionMade(self):
@@ -29,19 +29,15 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.sendString("REGISTER %i" % desiredID)
         else:
             self.sendString("REGISTER")
-        log.msg("E: connectionMade and REGISTER sent")
-        self.setNextHandler(self.handleRegister)
-
+        self.nextHandler = self.handleRegister)
+    
     def stringReceived(self, msg):
-        log.msg(msg + repr(self._nextHandler))
-        assert(self._nextHandler != self.handleUnexpectedData)
-        if self._nextHandler is None:
+        if self.nextHandler is None:
             self.defaultHandler(msg)
         else:
-            self._nextHandler(msg)
-            
+            self.nextHandler(msg)
+    
     def dispatch(self, msg):
-        log.msg("E: dispatching: %s" % msg)
         # Try to parse out a command
         splitLine = msg.split(' ', 1)
         if len(splitLine) == 1:
@@ -60,37 +56,30 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         else:
             self.sendString('BAD COMMAND')
             self._reset()
-            
+    
     # Utility methods
         
     def defaultHandler(self, msg):
         log.msg('Unexpected message: ' + msg)
-           
-    def setNextHandler(self, h):
-        log.msg("setNextHandler: " + repr(h))
-        self._nextHandler = h
-            
+    
     def _reset(self):
-        log.msg("E: _reset()")
         self.workVars = {}
-        self.setNextHandler(self.dispatch)
-        assert(self._nextHandler == self.dispatch)
-
+        self.nextHandler = self.dispatch
+    
     def handleUnexpectedData(self, args):
-        raise Exception()
-        self.sendString('UNEXPECTED DATA: ' + repr(args))
+        log.msg("Unexpected Data: %s" + args)
+        self.sendString('UNEXPECTED DATA')
     
     def sendPickleSerialized(self, p):
         for line in p:
             self.sendString(line)
-            
+    
     def sendArrarySerialized(self, a):
         ia = iter(a)
         self.sendString(ia.next())
         self.sendString(ia.next())
         self.sendBuffer(ia.next())
-
-        
+    
     def sendSerialized(self, s):
         if isinstance(s, PickleSerialized):
             self.sendPickle(s)
@@ -112,21 +101,18 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             else:
                 self.factory.setID(id)
                 self._reset()
-            
+    
     #####
     ##### The EXECUTE command
     #####
             
     def handle_EXECUTE(self, lines):
-        log.msg("E: handle_EXECUTE: %s" % lines)
-        d = self.factory.execute(lines)
-        log.msg("E: handle_EXECUTE: adding callbacks")
+        # This will block so callbacks are called immediately!
+        d = self.factory.execute(lines)  
         d.addCallback(self.handleExecuteResult)
         d.addErrback(self.executeFail)
-        self.setNextHandler(self.handleUnexpectedData)
         
     def handleExecuteResult(self, result):
-        log.msg("E: handleExecuteResult: " + repr(result))
         serial = serialized.PickleSerialized('result')
         try:
             serial.packObject(result)
@@ -137,13 +123,10 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.executeOK()
  
     def executeOK(self):
-        log.msg("executeOK()")
         self.sendString('EXECUTE OK')
         self._reset()
          
     def executeFail(self, reason):
-        log.msg("executeFail")
-        reason.printTraceback()
         self.sendString('EXECUTE FAIL')
         self._reset()
     
@@ -446,6 +429,9 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         self.transport.setTcpNoDelay(True)
         self.nextHandler = self.dispatch
 
+    def connectionLost(self, reason):
+        self.factory.unregisterEngine(self.id)
+
     def sendString(self, s):
         log.msg('C: %s' % s)
         EnhancedNetstringReceiver.sendString(self, s)
@@ -574,8 +560,8 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             except TypeError:
                 desiredID = None
         qe = engineservice.QueuedEngine(self)
-        engineservice.CompleteEngine(qe)
-        self.id = self.factory.registerEngine(qe, desiredID)
+        self.id = self.factory.registerEngine(engineservice.completeEngine(qe), 
+            desiredID)
         self.handleID(self.id)
         
     def handleID(self, id):
@@ -819,18 +805,10 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         
     # IEngineThreadedMethods
     
-    
-        
-        
-
-class IVanillaEngineServerFactory(zi.Interface):
+class IVanillaEngineServerFactory(IRemoteController):
     """This is what the client factory should look like"""
     
-    def registerEngine(engine, id):
-        """Register an IEngineComplete with id."""
-        
-    def registerSerializationTypes(*serialTypes):
-        """Register the set of allowed subclasses of Serialized."""
+    pass
 
 class VanillaEngineServerFactoryFromControllerService(protocol.ServerFactory):
     
@@ -844,9 +822,12 @@ class VanillaEngineServerFactoryFromControllerService(protocol.ServerFactory):
     def registerEngine(self, engine, id):
         return self.service.registerEngine(engine, id)
     
+    def unregisterEngine(self, id):
+        return self.service.unregisterEngine(id)
+    
     def registerSerializationTypes(self, *serialTypes):
         return self.service.registerSerializationTypes(*serialTypes)
-        
+                
     def startFactory(self):
         self.service.registerSerializationTypes(serialized.PickleSerialized,
             serialized.ArraySerialized)
