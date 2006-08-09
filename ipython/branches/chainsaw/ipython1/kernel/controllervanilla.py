@@ -23,7 +23,7 @@ from twisted.python import components, log
 
 from zope.interface import Interface, implements
 
-from ipython1.kernel import controllerservice, serialized
+from ipython1.kernel import controllerservice, serialized, protocols
 
 
 class NonBlockingProducer:
@@ -62,7 +62,7 @@ class NonBlockingProducer:
         self._reset()
     
 
-class VanillaControllerProtocol(basic.NetstringReceiver):
+class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     """The control protocol for the Controller.  It listens for clients to
     connect, and relays commands to the controller service.
     A line based protocol."""
@@ -82,13 +82,13 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
             self.nextHandler(string)
     
     def dispatch(self, string):
-        split_string = string.split(" ", 1)
-        cmd = split_string[0]
-        if len(split_string) is 1:
+        splitString = string.split(" ", 1)
+        cmd = splitString[0]
+        if len(splitString) is 1:
             args = None
             targets = 'all'
-        elif len(split_string) is 2:
-            arglist = split_string[1].split('::')
+        elif len(splitString) is 2:
+            arglist = splitString[1].split('::')
             args = arglist[0]
             if len(arglist) > 1:
                 targets = self.parseTargets(arglist[1:])
@@ -134,8 +134,8 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
     
     def handle_PUSH(self, args, targets):
         self.nextHandler = self.handlePushing
-        self.workVars['push_targets'] = targets
-        self.workVars['push_serialsList'] = []
+        self.workVars['pushTargets'] = targets
+        self.workVars['pushDict'] = {}
         self.sendString("PUSH READY")
     
     def handlePushing(self, args):
@@ -144,7 +144,7 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
         arglist = args.split(' ',1)
         if len(arglist) is 2:
             pushType = arglist[0]
-            self.workVars['push_key'] = arglist[1]
+            self.workVars['pushKey'] = arglist[1]
         else:
             self.pushFinish("FAIL")
             return
@@ -157,24 +157,27 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
     
     def handlePushing_PICKLE(self, package):
         self.nextHandler = self.handlePushing
-        serial = serialized.PickleSerialized(self.workVars['push_key'])
+        key = self.workVars['pushKey']
+        serial = serialized.PickleSerialized(key)
         serial.addToPackage(package)
-        self.workVars['push_serialsList'].append(serial)
+        self.workVars['pushDict'][key] = serial
     
     def handlePushing_ARRAY(self, pShape):
         self.nextHandler = self.handlePushingArray_dtype
-        serial = serialized.ArraySerialized(self.workVars['push_key'])
+        key = self.workVars['pushKey']
+        serial = serialized.ArraySerialized(key)
         serial.addToPackage(pShape)
-        self.workVars['push_serial'] = serial
+        self.workVars['pushSerial'] = serial
     
     def handlePushingArray_dtype(self, dtype):
         self.nextHandler = self.handlePushingArray_buffer
-        self.workVars['push_serial'].addToPackage(dtype)
+        self.workVars['pushSerial'].addToPackage(dtype)
     
     def handlePushingArray_buffer(self, arrayBuffer):
         self.nextHandler = self.handlePushing
-        self.workVars['push_serial'].addToPackage(arrayBuffer)
-        self.workVars['push_serialsList'].append(self.workVars['push_serial'])
+        key = self.workVars['pushKey']
+        self.workVars['pushSerial'].addToPackage(arrayBuffer)
+        self.workVars['pushDict'][key] = self.workVars['pushSerial']
     
     def handlePushingDone(self):
         self.nextHandler = self.handleUnexpectedData
@@ -184,11 +187,11 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
         return d
     
     def pushCallback(self, _):
-        serialsList = self.workVars['push_serialsList']
-        targets = self.workVars['push_targets']
+        dikt = self.workVars['pushDict']
+        targets = self.workVars['pushTargets']
         self._reset()
-        return self.factory.push(targets, 
-                    vanillaNamespace=serialsList)
+        return self.factory.pushSerialized(targets, 
+                    **dikt)
     
     def pushFinish(self,msg):
         self._reset()
@@ -206,7 +209,7 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
             self.pullFinish('FAIL')
         else:
             self.nextHandler = self.handleUnexpectedData
-            d = self.factory.pull(targets, *keys)
+            d = self.factory.pullSerialized(targets, *keys)
             d.addCallbacks(self.pullOK, self.pullFail)
             return d
     
@@ -250,23 +253,24 @@ class VanillaControllerProtocol(basic.NetstringReceiver):
         try:
             keys = args.split(',')
         except TypeError:
-            self.pullFinish('FAIL')
+            self.pullnsFinish('FAIL')
         else:
             self.nextHandler = self.handleUnexpectedData
-            d = self.factory.pullNamespace(targets, *keys)
+            d = self.factory.pullNamespaceSerialized(targets, *keys)
             d.addCallbacks(self.pullnsOK, self.pullnsFail)
             return d
     
     def pullnsOK(self, resultList):
         try:
             if isinstance(resultList, list):
-                for pickledNamespace in resultList:
-                    self.sendString("PICKLE NAMESPACE")
-                    self.sendString(pickledNamespace)
+                for serialNamespace in resultList:
+                    for line in serialNamespace:
+                        self.sendString(line)
             else:
-                pickledNamespace = resultList
-                self.sendString("PICKLE NAMESPACE")
-                self.sendString(pickledNamespace)
+                serialNamespace = resultList
+                for line in serialNamespace:
+                    #could be big
+                    self.sendString(line)
         except:
             self.pullnsFinish("FAIL")
         else:
@@ -464,10 +468,10 @@ class IVanillaControllerFactory(Interface):
     def execute(self, targets, lines):
         """Execute lines of Python code."""
     
-    def push(self, targets, **namespace):
+    def pushSerialized(self, targets, **namespace):
         """push value into locals namespace with name key."""
     
-    def pull(self, targets, *keys):
+    def pullSerialized(self, targets, *keys):
         """Gets an item out of the self.locals dict by key."""
     
     def pullNamespace(self, targets, *keys):
@@ -516,17 +520,17 @@ class VanillaControllerFactoryFromService(protocol.ServerFactory):
         """Execute lines of Python code."""
         return self.service.execute(targets, lines)
     
-    def push(self, targets, **namespace):
+    def pushSerialized(self, targets, **namespace):
         """Push value into locals namespace with name key."""
-        return self.service.push(targets, **namespace)
+        return self.service.pushSerialized(targets, **namespace)
     
-    def pull(self, targets, *keys):
+    def pullSerialized(self, targets, *keys):
         """Gets an item out of the user namespace by key."""
-        return self.service.pull(targets, *keys)
+        return self.service.pullSerialized(targets, *keys)
     
-    def pullNamespace(self, targets, *keys):
+    def pullNamespaceSerialized(self, targets, *keys):
         """Gets an item out of the user namespace by key."""
-        return self.service.pullNamespace(targets, *keys)
+        return self.service.pullNamespaceSerialized(targets, *keys)
     
     def status(self, targets):
         """status of engines"""

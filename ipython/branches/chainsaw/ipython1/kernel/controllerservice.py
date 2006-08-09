@@ -3,8 +3,7 @@
 TODO:
 
 - Use subclasses of pb.Error to pass exceptions back to the calling process.
-- Deal more carefully with the failure modes of the kernel engine.  The
-  PbFactory should be make to reconnect possibly.
+- Deal more carefully with the failure modes of the kernel engine.
 - Add an XML-RPC interface
 - Add an HTTP interface
 - Security!!!!!
@@ -26,8 +25,8 @@ from twisted.python import log
 from twisted.spread import pb
 from zope.interface import Interface, implements
 
-from ipython1.kernel.engineservice import Command
-from ipython1.kernel.kernelerror import *
+from ipython1.kernel.engineservice import Command, IEngineComplete
+from ipython1.kernel.serialized import Serialized
 
 #from the Python Cookbook:
 def curry(f, *args, **kwargs):
@@ -38,11 +37,17 @@ def curry(f, *args, **kwargs):
     
     return curried
 
-def setAllMethods(obj):
-    methods = ['execute', 'push', 'pull', 'pullNamespace',
-            'getResult', 'status', 'reset', 'kill']
+def setAllMethods(obj, methods=[]):
+    if not methods:
+        methods = ['execute', 'push','pushSerialized', 'pull','pullSerialized',
+            'pullNamespace', 'pullNamespaceSerialized','getResult', 'status', 
+            'reset', 'kill', 'clearQueue']
     for m in methods:
-        setattr(obj, m+'All', curry(getattr(obj, m), 'all'))
+        try:
+            setattr(obj, m+'All', curry(getattr(obj, m), 'all'))
+        except AttributeError:
+            #will only add All method if original method exists
+            pass
 
 
 class ResultReporterProtocol(protocol.DatagramProtocol):
@@ -71,7 +76,6 @@ class IRemoteController(Interface):
     def registerEngine(remoteEngine):
         """register new remote engine"""
     
-    #not sure if this one should be exposed in the interface
     def disconnectEngine(id):
         """handle disconnecting engine"""
     
@@ -79,19 +83,32 @@ class IRemoteController(Interface):
         """Register the set of allowed subclasses of Serialized."""
         
 class IMultiEngine(Interface):
-    """interface to multiple objects implementing IEngine"""
+    """interface to multiple objects implementing IEngineComplete"""
     
     def verifyTargets(targets):
-        """verify if ids is callable id list"""
+        """verify if targets is callable id list, id, or string 'all'"""
+    
+    #IRemoteEngine multiplexer methods
+    def pushSerialized(targets, **namespace):
+        """Push a dict of keys and Serialized to the user's namespace."""
+    
+    def pushSerializedAll(**namespace):
+        """Push a dict of keys and Serialized to the user's namespace."""
+    
+    def pullSerialized(targets, *keys):
+        """Pull objects by key form the user's namespace as Serialized."""
+    
+    def pullSerializedAll(*keys):
+        """Pull objects by key form the user's namespace as Serialized."""
     
     #IQueuedEngine multiplexer methods
-    def cleanQueue(targets):
-        """Cleans out pending commands in an engine's queue."""
+    def clearQueue(targets):
+        """Clears out pending commands in an engine's queue."""
     
-    def cleanQueueAll():
-        """Cleans out pending commands in all queues."""
+    def clearQueueAll():
+        """Clears out pending commands in all queues."""
     
-    #IEngine multiplexer methods
+    #IEngineCompleteBase multiplexer methods
     def execute(targets, lines):
         """Execute lines of Python code."""
     
@@ -114,6 +131,12 @@ class IMultiEngine(Interface):
         """Gets a namespace dict from targets by keys."""
     
     def pullNamespaceAll(*keys):
+        """"""
+    
+    def pullNamespaceSerialized(targets, *keys):
+        """Gets a serialized namespace dict from targets by keys."""
+    
+    def pullNamespaceSerializedAll(*keys):
         """"""
     
     def getResult(targets, i=None):
@@ -141,7 +164,7 @@ class IMultiEngine(Interface):
         """"""
     
 
-#the controller interface implements both IEngineController, IMultiEngine
+#the controller interface implements both IEngineCompleteController, IMultiEngine
 class IController(IRemoteController, IMultiEngine):
     
     pass 
@@ -161,12 +184,18 @@ class ControllerService(service.Service):
         self._notifiers = {}
         self.engines = {}
         self.availableIDs = range(maxEngines,-1,-1)#[255,...,0]
+        self.serialTypes = ()
         setAllMethods(self)
     
     #IRemoteController
     
     def registerEngine(self, remoteEngine, id):
         """register new engine connection"""
+        try:
+            assert(IEngineComplete.providedBy(remoteEngine))
+        except AssertionError:
+            return None
+        
         if id in self.engines.keys():
             raise IdInUse
             return
@@ -235,19 +264,19 @@ class ControllerService(service.Service):
         else:
             return False
     
-    def cleanQueue(self, targets):
-        """Cleans out pending commands in the kernel's queue."""
-        log.msg("cleaning queue %s" %targets)
+    def clearQueue(self, targets):
+        """Clears out pending commands in the kernel's queue."""
+        log.msg("clearing queue %s" %targets)
         engines = self.engineList(targets)
         if not engines:
             return defer.succeed(None)
         l = []
         for e in engines:
-            l.append(e.cleanQueue())
+            l.append(e.clearQueue())
         return defer.gatherResults(l)
     
-    def cleanQueueAll(self):
-        return self.cleanQueue('all')
+    def clearQueueAll(self):
+        return self.clearQueue('all')
     
     def execute(self, targets, lines):
         """Execute lines of Python code."""
@@ -272,11 +301,22 @@ class ControllerService(service.Service):
         engines = self.engineList(targets)
         l = []
         # Call unpack on values that aren't registered as allowed Serialized types
-        for k, v in namespace.iteritems():
-            if not isinstance(v, self.serialTypes):
-                namespace[k] = v.unpack()
         for e in engines:
             l.append(e.push(**namespace))
+        return defer.gatherResults(l)
+    
+    def pushSerialized(self, targets, **namespace):
+        """Push value into locals namespace with name key."""
+        log.msg("pushing to %s" % targets)
+        engines = self.engineList(targets)
+        l = []
+        # Call unpack on values that aren't registered as allowed Serialized types
+        for k, v in namespace.iteritems():
+            if not isinstance(v, self.serialTypes) and isinstance(v, Serialized):
+                    log.msg("unpacking serial, ", k)
+                    namespace[k] = v.unpack()
+        for e in engines:
+            l.append(e.pushSerialized(**namespace))
         return defer.gatherResults(l)
     
     def pull(self, targets, *keys):
@@ -294,6 +334,21 @@ class ControllerService(service.Service):
             d = engines[0].pull(*keys)
         return d
     
+    def pullSerialized(self, targets, *keys):
+        """Gets an item out of the self.locals dict by key."""
+        log.msg("getting %s from %s" %(keys, targets))
+        engines = self.engineList(targets)
+        if not isinstance(targets, int) and len(targets) > 1:
+            l = []
+            for e in engines:
+                l.append(e.pullSerialized(*keys))
+            d = defer.gatherResults(l)
+            if len(keys) > 1:
+                d.addCallback(lambda resultList: zip(*resultList))
+        else:
+            d = engines[0].pullSerialized(*keys)
+        return d
+    
     def pullNamespace(self, targets, *keys):
         """Gets an item out of the self.locals dict by key."""
         log.msg("getting namespace %s from %s" %(keys, targets))
@@ -303,8 +358,19 @@ class ControllerService(service.Service):
             for e in engines:
                 l.append(e.pullNamespace(*keys))
             d = defer.gatherResults(l)
-            if len(keys) > 1:
-                d.addCallback(lambda resultList: zip(*resultList))
+        else:
+            d = engines[0].pullNamespace(*keys)
+        return d
+    
+    def pullNamespaceSerialized(self, targets, *keys):
+        """Gets an item out of the self.locals dict by key."""
+        log.msg("getting namespace %s from %s" %(keys, targets))
+        engines = self.engineList(targets)
+        if not isinstance(targets, int) and len(targets) > 1:
+            l = []
+            for e in engines:
+                l.append(e.pullNamespace(*keys))
+            d = defer.gatherResults(l)
         else:
             d = engines[0].pullNamespace(*keys)
         return d
@@ -321,6 +387,7 @@ class ControllerService(service.Service):
     
     def reset(self, targets):
         """Reset the InteractiveShell."""
+        return self.defaultMethod(targets, 'reset')
         log.msg("resetting %s" %(targets))
         engines = self.engineList(targets)
         l = []
@@ -348,7 +415,14 @@ class ControllerService(service.Service):
             l.append(e.getResult(i))
         return defer.gatherResults(l)
     
-    
+    def defaultMethod(self, targets, name, *args, **kwargs):
+        log.msg("%s on %s" %(name, targets))
+        engines = self.engineList(targets)
+        l = []
+        for e in engines:
+            l.append(getattr(e, name)(*args, **kwargs))
+        return defer.gatherResults(l)
+
     
     #notification methods    
         

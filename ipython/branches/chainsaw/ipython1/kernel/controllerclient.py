@@ -23,13 +23,35 @@ from twisted.internet import defer
 from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 
-try: 
+arraytypeList = []
+try:
+    import Numeric
+except ImportError:
+    pass
+else:
+    arraytypeList.append(Numeric.arraytype)
+try:
     import numpy
-except ImmportError:
-    numpy = None
+except ImportError:
+    pass
+else:
+    arraytypeList.append(numpy.ndarray)
+try:
+    import numarray
+except ImportError:
+    pass
+else:
+    arraytypeList.append(numarray.numarraycore.NumArray)
 
-from ipython1.kernel import serialized
-from ipython1.kernel.controllerservice import setAllMethods
+
+arraytypes = tuple(arraytypeList)
+del arraytypeList
+
+try:
+    from ipython1.kernel import serialized
+    from ipython1.kernel.controllerservice import setAllMethods
+except ImportError, e:
+    print "ipython1 needs to be in your PYTHONPATH ", e
 
 #netstring code adapted from twisted.protocols.basic
 class NetstringParseError(ValueError):
@@ -62,7 +84,7 @@ class NetstringSocket(object):
         self.__data = ''
         self.__buffer = ''
     
-    def writeString(self,data):
+    def writeNetstring(self,data):
         """Writes data to the socket.
         
         Notes
@@ -226,6 +248,9 @@ class EngineProxy(object):
     def __getitem__(self, key):
         return self.pull(*(key,))
     
+    def pullNamespace(self, *keys):
+        return self.rc.pullNamespace(self.id, *keys)
+    
     def status(self):
         return self.rc.status(self.id)
     
@@ -288,6 +313,9 @@ class SubCluster(object):
             return self.pull(*(id,))
         else:
             raise TypeError("__getitem__ only takes strs, ints, and slices")
+    
+    def pullNamespace(self, *keys):
+        return self.rc.pullNamespace(self.ids, *keys)
     
     def status(self):
         return self.rc.status(self.ids)
@@ -363,13 +391,15 @@ class RemoteController(object):
         """Execute python source code on the ipython kernel.
         
         @arg source:
-            A string containing valtargets python code
+            A string containing valid python code
         """
         self._check_connection()
         if isinstance(targets, list):
-            targets = '::'.join(map(str, targets))
+            targetstr = '::'.join(map(str, targets))
+        else:
+            targetstr = str(targets)
         if self.block or block:
-            self.es.writeString("EXECUTE BLOCK %s::%s" % (source, targets))
+            self.es.writeNetstring("EXECUTE BLOCK %s::%s" % (source, targetstr))
             string = self.es.readString()
             if string == "PICKLE RESULT":
                 package = self.es.readString()
@@ -386,30 +416,30 @@ class RemoteController(object):
                 red = TermColors.Red
                 green = TermColors.Green
                 for d in data:
-#                    (targets, cmd) = d
                     cmd = d
-                    targets = 0
+#problem with target
+                    target = 0
                     cmd_num = cmd[0]
                     cmd_stdin = cmd[1]
                     cmd_stdout = cmd[2][:-1]
                     cmd_stderr = cmd[3][:-1]
                     print "%s[%s]:[%i]%s In [%i]:%s %s" % \
-                        (green, self.addr[0], targets,
+                        (green, self.addr[0], target,
                         blue, cmd_num, normal, cmd_stdin)
                     if cmd_stdout:
                         print "%s[%s]:[%i]%s Out[%i]:%s %s" % \
-                            (green, self.addr[0], targets,
+                            (green, self.addr[0], target,
                             red, cmd_num, normal, cmd_stdout)
                     if cmd_stderr:
                         print "%s[%s]:[%i]%s Err[%i]:\n%s %s" % \
-                            (green, self.addr[0], targets,
+                            (green, self.addr[0], target,
                             red, cmd_num, normal, cmd_stderr)
             else:
                 data = None
                 string = ""
         else:
-            string = "EXECUTE %s::%s" % (source, targets)
-            self.es.writeString(string)
+            string = "EXECUTE %s::%s" % (source, targetstr)
+            self.es.writeNetstring(string)
             string = self.es.readString()
             data = None
              
@@ -430,7 +460,7 @@ class RemoteController(object):
         # Now run the code
         self.execute(source)
     
-    def push(self, targets, **namespace):
+    def push(self, targets, *locals, **namespace):
         """Send a python object to the namespace of a kernel.
         
         There is also a dictionary style interface to the push command:
@@ -446,17 +476,24 @@ class RemoteController(object):
         """
         self._check_connection()
         if isinstance(targets, list):
-            targets = '::'.join(map(str, targets))
-        serializedNamespace = []
+            targetstr = '::'.join(map(str, targets))
+        else:
+            targetstr = str(targets)
+        self.es.writeNetstring("PUSH ::%s" % targetstr)
+        if self.es.readString() != "PUSH READY":
+            return False
         for key in namespace:
             value = namespace[key]
-            if False:#this does not work yet; isinstance(value, numpy.array):
+            if isinstance(value, arraytypes):
                 try:
                     serialObject = serialized.ArraySerialized(key)
                     serialObject.packObject(value)
                 except Exception, e:
                     print "Object cannot be serialized: ", e
                     return False
+                else:
+                    for line in serialObject:
+                        self.es.writeNetstring(line)
             else:    
                 try:
                     serialObject = serialized.PickleSerialized(key)
@@ -464,14 +501,10 @@ class RemoteController(object):
                 except pickle.PickleError, e:
                     print "Object cannot be pickled: ", e
                     return False
-            serializedNamespace.append(serialObject)
-        self.es.writeString("PUSH ::%s" % targets)
-        if self.es.readString() != "PUSH READY":
-            return False
-        for sObj in serializedNamespace:
-            for line in sObj:
-                self.es.writeString(line)
-        self.es.writeString("PUSH DONE")
+                else:
+                    for line in serialObject:
+                        self.es.writeNetstring(line)
+        self.es.writeNetstring("PUSH DONE")
         string = self.es.readString()
         if string == "PUSH OK":
             return True
@@ -501,13 +534,15 @@ class RemoteController(object):
         """
         self._check_connection()    
         if isinstance(targets, list):
-            targets = '::'.join(map(str, targets))
+            targetstr = '::'.join(map(str, targets))
+        else:
+            targetstr = str(targets)
         try:
             keystr = ','.join(keys)
         except TypeError:
             return False
         
-        self.es.writeString("PULL %s::%s" % (keystr, targets))
+        self.es.writeNetstring("PULL %s::%s" % (keystr, targetstr))
         string = self.es.readString()
         results = []
         returns = []
@@ -571,13 +606,15 @@ class RemoteController(object):
         """Gets a namespace dict with keys from targets"""
         self._check_connection()    
         if isinstance(targets, list):
-            targets = '::'.join(map(str, targets))
+            targetstr = '::'.join(map(str, targets))
+        else:
+            targetstr = str(targets)
         try:
             keystr = ','.join(keys)
         except TypeError:
             return False
             
-        self.es.writeString("PULLNAMESPACE %s::%s" %(keystr, targets))
+        self.es.writeNetstring("PULLNAMESPACE %s::%s" %(keystr, targetstr))
         string = self.es.readString()
         results = []
         while string not in ["PULLNAMESPACE OK", "PULLNAMESPACE FAIL"]:
@@ -589,7 +626,7 @@ class RemoteController(object):
                     print "could not unpickle"
                     return False
                 else:
-                    returns.append(data)
+                    results.append(data)
         if len(results) is 1:
             return results[0]
         else:
@@ -599,12 +636,14 @@ class RemoteController(object):
         """Gets a specific result from the kernel, returned as a tuple."""
         self._check_connection()    
         if isinstance(targets, list):
-            targets = '::'.join(map(str, targets))
+            targetstr = '::'.join(map(str, targets))
+        else:
+            targetstr = str(targets)
         
         if number is None:
-            self.es.writeString("GETRESULT ::%s" %targets)
+            self.es.writeNetstring("GETRESULT ::%s" %targetstr)
         else:
-            self.es.writeString("GETRESULT %i::%s" % (number, targets))
+            self.es.writeNetstring("GETRESULT %i::%s" % (number, targetstr))
         string = self.es.readString()
         if string == "PICKLE RESULT":
             package = self.es.readString()
@@ -629,9 +668,11 @@ class RemoteController(object):
         """Check the status of the kernel."""
         self._check_connection()
         if isinstance(targets, list):
-            targets = '::'.join(map(str, targets))
+            targetstr = '::'.join(map(str, targets))
+        else:
+            targetstr = str(targets)
         
-        self.es.writeString("STATUS ::%s" %targets)
+        self.es.writeNetstring("STATUS ::%s" %targetstr)
         string = self.es.readString()
         if string == "PICKLE STATUS":
             package = self.es.readString()
@@ -684,9 +725,9 @@ class RemoteController(object):
             host, port = addr
             
         if flag:
-            self.es.writeString("NOTIFY ADD %s %s" % (host, port))
+            self.es.writeNetstring("NOTIFY ADD %s %s" % (host, port))
         else:
-            self.es.writeString("NOTIFY DEL %s %s" % (host, port))
+            self.es.writeNetstring("NOTIFY DEL %s %s" % (host, port))
         string = self.es.readString()
         if string == "NOTIFY OK":
             return True
@@ -697,9 +738,11 @@ class RemoteController(object):
         """Clear the namespace if the kernel."""
         self._check_connection()
         if isinstance(targets, list):
-            targets = '::'.join(map(str, targets))
+            targetstr = '::'.join(map(str, targets))
+        else:
+            targetstr = str(targets)
         
-        self.es.writeString("RESET ::%s" %targets)
+        self.es.writeNetstring("RESET ::%s" %targetstr)
         string = self.es.readString()
         if string == "RESET OK":
             return True
@@ -710,9 +753,11 @@ class RemoteController(object):
         """Kill the engine completely."""
         self._check_connection()    
         if isinstance(targets, list):
-            targets = '::'.join(map(str, targets))
+            targetstr = '::'.join(map(str, targets))
+        else:
+            targetstr = str(targets)
         
-        self.es.writeString("KILL ::%s" %targets)
+        self.es.writeNetstring("KILL ::%s" %targetstr)
         string = self.es.readString()
         if string == "KILL OK":
             return True
@@ -722,7 +767,7 @@ class RemoteController(object):
     def disconnect(self):
         """Disconnect from the kernel, but leave it running."""
         if self.is_connected():
-            self.es.writeString("DISCONNECT")
+            self.es.writeNetstring("DISCONNECT")
             string = self.es.readString()
             if string == "DISCONNECT OK":
                 self.s.close()

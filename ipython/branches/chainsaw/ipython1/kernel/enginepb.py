@@ -29,13 +29,12 @@ from twisted.spread import pb
 from twisted.internet import defer, reactor
 from zope.interface import Interface, implements
 
-from ipython1.kernel.engineservice import EngineService, IEngine
-from ipython1.kernel.engineservice import QueuedEngine,Command
+from ipython1.kernel.engineservice import *
 from ipython1.kernel import controllerservice, serialized
 
 
 class PBEngineClientFactory(pb.PBClientFactory):
-    
+    """The Client factory on the engine that connects to the controller"""
     def __init__(self, service):
         
         pb.PBClientFactory.__init__(self)
@@ -52,20 +51,12 @@ class PBEngineClientFactory(pb.PBClientFactory):
         """callback for pb.PBClientFactory.getRootObject"""
         self.rootObject = obj
         d = self.rootObject.callRemote('registerEngine', self.engineReference, None)
-        d.addCallbacks(self._referenceSent, self._getRootFailure)
-        
-        return d
+        return d.addCallbacks(self._referenceSent, self._getRootFailure)
     
     def _referenceSent(self, id):
         self.service.id = id
         log.msg("got ID: %r" % id)
         return id
-    
-    def clientConnectionFailed(self, connector, reason):
-        log.msg("connection failed")
-    
-    def clientConnectionLost(self, connector, reason):
-        log.msg("connection lost")
     
 
 # Expose a PB interface to the EngineService
@@ -83,10 +74,10 @@ class IPBEngine(Interface):
     def remote_execute(self, lines):
         """Execute lines of Python code."""
     
-    def remote_push(self, namespace):
+    def remote_pushSerialized(self, namespace):
         """Put value into locals namespace with name key."""
     
-    def remote_pull(self, *keys):
+    def remote_pullSerialized(self, *keys):
         """Gets an item out of the self.locals dict by key."""
     
     def remote_pullNamespace(self, *keys):
@@ -118,16 +109,18 @@ class PBEngineReferenceFromService(pb.Referenceable):
     def remote_execute(self, lines):
         return self.service.execute(lines)
     
-    def remote_push(self, pNamespace):
-        serialsList = pickle.loads(pNamespace)
-        namespace = {}
-        for s in serialsList:
-            namespace[s.key] = s.unpack()
+    def remote_pushSerialized(self, pNamespace):
+        namespace = pickle.loads(pNamespace)
         return self.service.push(**namespace)
+    
+    def remote_pullSerialized(self, *keys):
+        d = self.service.pull(*keys)
+        d.addCallback(lambda v: self.serializePull(keys, v))
+        d.addCallback(lambda l:pickle.dumps(l, 2))
+        return d
     
     def remote_pull(self, *keys):
         d = self.service.pull(*keys)
-        d.addCallback(lambda v: self.serializePull(keys, v))
         d.addCallback(lambda l:pickle.dumps(l, 2))
         return d
     
@@ -164,7 +157,7 @@ components.registerAdapter(PBEngineReferenceFromService,
 #now engine-reference adapter
 class EngineFromReference(object):
     
-    implements(IEngine)
+    implements(IEngineBase, IEngineSerialized)
     
     def __init__(self, reference):
         self.reference = reference
@@ -192,17 +185,29 @@ class EngineFromReference(object):
         """Execute lines of Python code."""
         return self.callRemote('execute', lines)
     
-    def push(self, **namespace):
+    def pushSerialized(self, **namespace):
         """Put value into locals namespace with name key."""
-        return self.callRemote('push', pickle.dumps(namespace['vanillaNamespace'], 2))
+        return self.callRemote('pushSerialized', pickle.dumps(namespace, 2))
+    
+    push = pushSerialized
+    
+    def pullSerialized(self, *keys):
+        """Gets an item out of the self.locals dict by key."""
+        d = self.callRemote('pullSerialized', *keys).addCallback(pickle.loads)
+        return d
     
     def pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
-        return self.callRemote('pull', *keys).addCallback(pickle.loads)
+        d = self.callRemote('pull', *keys).addCallback(pickle.loads)
+        return d
     
     def pullNamespace(self, *keys):
         """Gets an item out of the self.locals dict by key."""
         return self.callRemote('pullNamespace', *keys)
+    
+    def pullNamespaceSerialized(self, *keys):
+        """Gets an item out of the self.locals dict by key."""
+        return self.callRemote('pullNamespaceSerialized', *keys)
     
     def reset(self):
         """Reset the InteractiveShell."""
@@ -219,7 +224,7 @@ class EngineFromReference(object):
 
 components.registerAdapter(EngineFromReference,
                         pb.RemoteReference,
-                        IEngine)
+                        IEngineBase)
 
 #for the controller:
 
@@ -238,9 +243,10 @@ class PBRemoteEngineRootFromService(pb.Root):
     def __init__(self, service):
         self.service = service
     
-    def remote_registerEngine(self, engineReference, id):
-        engine = IEngine(engineReference)
+    def remote_registerEngine(self, engineReference, id, *interfaces):
+        engine = IEngineBase(engineReference)
         remoteEngine = QueuedEngine(engine)
+        CompleteEngine(remoteEngine)
         id = self.service.registerEngine(remoteEngine, id)
         def notify(*args):
             return self.service.disconnectEngine(id)
