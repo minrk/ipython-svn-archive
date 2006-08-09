@@ -120,7 +120,7 @@ def completeEngine(engine):
     """Completes an engine object"""
     zi.alsoProvides(engine, IEngineComplete)
     
-    def _notImplementedMethod(self, *args, **kwargs):
+    def _notImplementedMethod(*args, **kwargs):
         return defer.fail(NotImplementedError(
             'This method is not implemented by this Engine'))
     
@@ -128,7 +128,7 @@ def completeEngine(engine):
         if getattr(engine, method, 'NotDefined') == 'NotDefined':
             #if not implemented, add filler
             #could establish self.notImplemented registry here
-            if callable(ICompleteEngine[method]):
+            if callable(IEngineComplete[method]):
                 setattr(engine, method, _notImplementedMethod)
             else:
                 setattr(engine, method, None)

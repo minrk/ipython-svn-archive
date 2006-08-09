@@ -13,6 +13,7 @@ from ipython1.kernel import engineservice as es
 from ipython1.kernel import serialized
 from ipython1.test.util import DeferredTestCase
 from ipython1.kernel.kernelerror import NotDefined
+import zope.interface as zi
 
 class BasicEngineServiceTest(DeferredTestCase):
     
@@ -54,6 +55,24 @@ class BasicEngineServiceTest(DeferredTestCase):
         self.assert_(isinstance(self.s.reset(), defer.Deferred))
         self.assert_(isinstance(self.s.status(), defer.Deferred))
         self.assert_(not isinstance(self.s.id, defer.Deferred))
+    
+    def testCompletedEmptyEngine(self):
+        class Empty:
+            zi.implements(es.IEngineBase)
+        ni = NotImplementedError
+        c = es.completeEngine(Empty())
+        self.assertDeferredRaises(c.execute('a=5'), ni)
+        self.assertDeferredRaises(c.push(a=5), ni)
+        self.assertDeferredRaises(c.pushSerialized(
+                a=serialized.serialize('a', [1,2,'a'])), ni)
+        self.assertDeferredRaises(c.pull('a', 'b', 'c'), ni)
+        self.assertDeferredRaises(c.pullSerialized('a', 'b', 'c'), ni)
+        self.assertDeferredRaises(c.pullNamespace('qwer', 'asdf', 'zcxv'), ni)
+        self.assertDeferredRaises(c.getResult(), ni)
+        self.assertDeferredRaises(c.reset(), ni)
+        self.assertDeferredRaises(c.status(), ni)
+        self.assertDeferredRaises(c.clearQueue(), ni)
+        self.assertEquals(c.id, None)
         
     def testExecute(self):
         commands = [(0,"a = 5","",""),
@@ -86,10 +105,14 @@ class BasicEngineServiceTest(DeferredTestCase):
             value = self.s.pullSerialized('key')
             value.addCallback(lambda serial: serial.unpack())
             d = self.assertDeferredEquals(value,o,d)
-        self.s.reset()
-        d1 = self.s.pull("a").addCallback(lambda nd:
-            self.assert_(isinstance(nd,NotDefined)))
-        return (d, d1)
+        return d
+    
+    def testPullNamespace(self):
+        ns = {'a':10,'b':"hi there",'c3':1.2342354,'door':{"p":(1,2)}}
+        d = self.s.push(**ns)
+        d.addCallback(lambda _: self.s.pullNamespace(*ns.keys()))
+        d = self.assertDeferredEquals(d,ns)
+        return d
     
     def testResult(self):
         d = self.assertDeferredRaises(self.s.getResult(),IndexError)
