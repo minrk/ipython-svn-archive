@@ -130,7 +130,7 @@ def completeEngine(engine):
             if callable(ICompleteEngine[method]:
                 setattr(engine, method, _notImplementedMethod)
             else:
-                setattr(enigne, method, None)
+                setattr(engine, method, None)
     assert(IEngineComplete.providedBy(engine))
     return engine
 
