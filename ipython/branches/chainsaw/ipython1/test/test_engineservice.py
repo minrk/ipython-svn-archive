@@ -49,29 +49,22 @@ class BasicEngineServiceTest(DeferredTestCase):
         for o in objs:
             self.s.push(key=o)
             value = self.s.pull('key')
-            self.assertDeferredEquals(value,(o,))
+            self.assertDeferredEquals(value,o)
 #        self.assertRaises(SyntaxError, self.s.push(1=2))
 
 #        self.assertRaises(TypeError,self.s.pull,10)
         self.s.reset()
         d = self.s.pull("a").addCallback(lambda nd:
-            self.assert_(isinstance(nd[0],NotDefined)))
+            self.assert_(isinstance(nd,NotDefined)))
         return d
     
-    def testCommand(self):
+    def testResult(self):
         #self.assertRaises(IndexError,self.s.getCommand)
         d = self.s.execute("a = 5")
-        d = self.assertDeferredEquals(self.s.getCommand(),(0,"a = 5","",""), d)
-        d = self.assertDeferredEquals(self.s.getCommand(0),(0,"a = 5","",""), d)
+        d = self.assertDeferredEquals(self.s.getResult(),(0,"a = 5","",""), d)
+        d = self.assertDeferredEquals(self.s.getResult(0),(0,"a = 5","",""), d)
         d.addCallback(lambda _:self.s.reset())
-        return self.assertDeferredEquals(self.s.getLastCommandIndex(),-1, d)
+        return d
+#        return self.assertDeferredEquals(self.s.getLastCommandIndex(),-1, d)
         #self.assertRaises(IndexError,self.s.getCommand)
     
-    def testPickle(self):
-        goodPickle = 1.5647654
-        import pickle
-        pickle.dumps(NotDefined('a'), 2)
-        package = pickle.dumps(dict(a=goodPickle),2)
-        self.assertDeferredEquals(self.s.pushPickle(package),None)
-        finalValue = self.s.pullPickle("a").addCallback(pickle.loads)
-        self.assertDeferredEquals(finalValue, (goodPickle,))

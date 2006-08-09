@@ -5,10 +5,9 @@ The methods of Controller Service:
     registerEngine √
     unregisterEngine √
     execute/All √o
-    push/Pickle/All √/√/oo
-    pull/Pickle/All √/√/oo
-    getCommand/All √/o
-    getLastCommandIndex/All √/o
+    push/Serial/All √/√/oo
+    pull/Serial/All √/√/oo
+    getResult/All √/o
     status/All oo
     reset/All oo
     *kill/All - do not test this, it calls reactor.stop
@@ -124,10 +123,10 @@ class BasicControllerServiceTest(DeferredTestCase):
         d.addCallback(lambda _:self.cs.pushAll(**namespace))
 #        d = self.cs.push('all', **namespace)
         d.addCallback(lambda _:self.cs.pullAll(*keys))
-        d = self.assertDeferredEquals(d, [values]*len(status))
+        d = self.assertDeferredEquals(d, zip(*([values]*len(status))))
         return d
     
-    def testPushPullPickle(self):
+    def testPushPullSerial(self):
         l1 = []
         l2 = []
         value = [1.1231232323, (1,'asdf',[2]),'another variable', 
@@ -141,13 +140,19 @@ class BasicControllerServiceTest(DeferredTestCase):
         for n in range(cnt):
             namespace[keys[n]] = value[n]
         
-        pickledNamespace = pickle.dumps(namespace, 2)
-        d = self.cs.pushPickle(0, pickledNamespace)
-        d.addCallback(lambda _:self.cs.pullPickle(0, *keys))
-        d.addCallback(lambda pns:pickle.loads(pns[0]))
-        d = self.assertDeferredEquals(d, tuple(value))
+        d = self.cs.pushSerialized(0, **namespace)
+        d.addCallback(lambda _:self.cs.pullSerialized(0, *keys))
+        d.addCallback(lambda serials: self.nmap(map(getattr, serials, ['unpack']*cnt)))
+#        d.addCallback(lambda unpacks: self.nmap(unpacks))
+        d = self.assertDeferredEquals(d, value)
         return d
     
+    def nmap(self, flist):
+        l = []
+        for f in flist:
+            l.append(f())
+        return l
+            
     #adapted from ipython1.test.test_corepb
     def testExecute(self):
         commands = [(0,"a = 5","",""),
@@ -168,10 +173,6 @@ class BasicControllerServiceTest(DeferredTestCase):
     
     def testReset(self):
         d = self.cs.reset(0)
-        return d
-    
-    def testGetLastCommandIndex(self):
-        d = self.cs.getLastCommandIndex(0)
         return d
     
     def testScale(self, n=32):
