@@ -39,6 +39,7 @@ from twisted.spread import pb
 from twisted.python import log
 
 from ipython1.kernel import controllerservice, enginepb, controllervanilla
+#from ipython1.kernel import serialized
 
 
 def tryPorts(port, factory):
@@ -57,6 +58,7 @@ def main(cport, eport):
     
     cs = controllerservice.ControllerService()
     efac = pb.PBServerFactory(enginepb.IPBRemoteEngineRoot(cs))
+#    cs.registerSerializationTypes(serialized.PickleSerialized)
     cfac = controllervanilla.IVanillaControllerFactory(cs)
     reactor.callLater(1.0,tryPorts, eport, efac)
     reactor.callLater(2.0,tryPorts, cport, cfac)
