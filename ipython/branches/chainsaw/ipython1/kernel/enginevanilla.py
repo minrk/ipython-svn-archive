@@ -29,7 +29,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.sendString("REGISTER %i" % desiredID)
         else:
             self.sendString("REGISTER")
-        self.nextHandler = self.handleRegister)
+        self.nextHandler = self.handleRegister
     
     def stringReceived(self, msg):
         if self.nextHandler is None:
@@ -136,8 +136,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     
     def handle_PUSH(self, args):
         if args is not None:
-            self.sendString('BAD COMMAND')
-            self._reset()
+            self.pushFail(failure.Failure(Exception()))
         else:
             self.nextHandler = self.handlePushing
             self.workVars['pushSerialsList'] = []
@@ -145,7 +144,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     
     def handlePushing(self, msg):
         if msg == 'PUSH DONE':
-            return self.handlePushDone()
+            self.handlePushDone()
             
         msgList = msg.split(' ', 1)
         if len(msgList) == 2:
@@ -155,9 +154,9 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             if f is not None:
                 self.nextHandler = f
             else:
-                self.pushFail()
+                self.pushFail(failure.Failure(Exception()))
         else:
-            self.pushFail()
+            self.pushFail(failure.Failure(Exception()))
                 
     def handlePushing_PICKLE(self, package):
         self.nextHandler = self.handlePushing
@@ -184,7 +183,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         self.factory.pushSerialized(**self.workVars['pushSerialsList'])
         self.pushOK()
             
-    def pushOK(self, args):
+    def pushOK(self):
         self.sendString('PUSH OK')
         self._reset()
          

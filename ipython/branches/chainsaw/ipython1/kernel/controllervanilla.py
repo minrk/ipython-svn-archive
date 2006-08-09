@@ -240,7 +240,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
             self.pullFinish("OK")
     
     def sendArray(self, sArray):
-        for line in sArray[:-1]
+        for line in sArray[:-1]:
             self.sendString(line)
         self.sendBuffer(sArray[-1])
     

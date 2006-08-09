@@ -8,10 +8,8 @@ execute()
 ::
 
 	C: EXECUTE a = 5
-	
 	E: PICKLE result
 	E: ########
-	
 	E: EXECUTE OK
 
 ::
@@ -26,25 +24,25 @@ push()
 
 	C: PUSH
 	E: PUSH READY
-	
 	C: PICKLE a
-	C: ####pickle######
-
+	C: #####
+	C: [more data]
 	C: PUSH DONE
 	E: PUSH OK
 	
+	C: PUSH
+	E: PUSH FAIL
 	
-	C: ARRAY b
-	C: shape
-	C: asdfasdf asdf as df
-	C: ####buffer####
-	
-	C: ARRAY d
-	C: shape
-	C: ####buffer###
+Possible errors:
 
-	C: PUSH DONE
-	E: PUSH OK
+- One of the objects sent cannot be unpacked on the controller or kernel
+
+Protocol errors:
+
+- Key not specified.
+- Unsupported data type
+- PUSH READY not sent by E
+- PUSH DONE not sent by C
 
 ::
 

@@ -74,10 +74,10 @@ class ResultReporterProtocol(protocol.DatagramProtocol):
 class IRemoteController(Interface):
     """The Interface the controller exposes to remote engines"""
     
-    def registerEngine(remoteEngine):
+    def registerEngine(remoteEngine, id):
         """register new remote engine"""
     
-    def disconnectEngine(id):
+    def unregisterEngine(id):
         """handle disconnecting engine"""
     
     def registerSerializationTypes(self, *serialTypes):
@@ -239,13 +239,6 @@ class ControllerService(service.Service):
             self.availableIDs.append(id)
         else:
             log.msg("preserving id %i" %id)
-    
-    def disconnectEngine(self, id):
-        """handle disconnecting engine"""
-        #do I want to keep the RemoteEngine object or not?
-        #for now, no
-        log.msg("engine %i disconnected" %id)
-        self.unregisterEngine(id)
     
     def registerSerializationTypes(self, *serialTypes):
         """Register the set of allowed subclasses of Serialized."""
