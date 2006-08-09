@@ -132,7 +132,6 @@ class BasicControllerServiceTest(DeferredTestCase):
         value = [1.1231232323, (1,'asdf',[2]),'another variable', 
                     [1,2,3,4], {'a':3, 1:'asdf'}]
         cnt = len(value)
-        #pValue = map(pickle.dumps, value, [2]*cnt)
         key = 'abcdefg'
         keys = tuple(key[:cnt])
         namespace = {}
@@ -143,7 +142,6 @@ class BasicControllerServiceTest(DeferredTestCase):
         d = self.cs.pushSerialized(0, **namespace)
         d.addCallback(lambda _:self.cs.pullSerialized(0, *keys))
         d.addCallback(lambda serials: self.nmap(map(getattr, serials, ['unpack']*cnt)))
-#        d.addCallback(lambda unpacks: self.nmap(unpacks))
         d = self.assertDeferredEquals(d, value)
         return d
     
@@ -166,7 +164,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         for id in self.cs.engines.keys():
             d = defer.succeed(None)
             for c in commands:
-                d = self.assertDeferredEquals(self.cs.execute(id, c[1]), [c], chainDeferred=d)
+                d = self.assertDeferredEquals(self.cs.execute(id, c[1]), c, chainDeferred=d)
             dlist.append(d)
         d = defer.DeferredList(dlist)
         return d

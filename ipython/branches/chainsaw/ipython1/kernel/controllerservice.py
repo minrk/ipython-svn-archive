@@ -30,22 +30,26 @@ from ipython1.kernel.engineservice import Command, IEngineComplete
 from ipython1.kernel.serialized import Serialized
 
 #from the Python Cookbook:
-def curry(f, *args, **kwargs):
-    def curried(*more_args, **more_kwargs):
-        dikt = dict(more_kwargs)
-        dikt.update(kwargs)
-        return f(*(args+more_args), **dikt)
+def curry(f, *curryArgs, **curryKWargs):
+    def curried(*args, **kwargs):
+        dikt = dict(kwargs)
+        dikt.update(curryKWargs)
+        return f(*(curryArgs+args), **dikt)
     
     return curried
 
 def setAllMethods(obj, methods=[]):
     if not methods:
-        methods = ['execute', 'push','pushSerialized', 'pull','pullSerialized',
-            'pullNamespace', 'pullNamespaceSerialized','getResult', 'status', 
-            'reset', 'kill', 'clearQueue']
+        for m in IMultiEngine:
+            if m+'All' in IMultiEngine:
+                #only want methods that have All suffix in interface
+                methods.append(m)
     for m in methods:
         try:
+            #curry attr
             setattr(obj, m+'All', curry(getattr(obj, m), 'all'))
+            #copy docstring
+            getattr(obj, m+'All').__doc__ = getattr(obj, m).__doc__
         except AttributeError:
             #will only add All method if original method exists
             pass
@@ -187,14 +191,19 @@ class ControllerService(service.Service):
         self.availableIDs = range(maxEngines,-1,-1)#[255,...,0]
         self.serialTypes = ()
         self.setAutoMethods()
-        setAllMethods(self)
     
     def setAutoMethods(self):
         for m in IMultiEngine:
-            if callable(IMultiEngine[m]) and m[-3:] != 'All'\
-                and getattr(self, m, None) is None:
-                print m
+            IM = IMultiEngine[m]
+            #first setup non-All methods
+            if callable(IM) and m[-3:] != 'All'\
+                    and getattr(self, m, None) is None:
+                #only work on methods, not attributes, and only on methods
+                #not already defined
                 setattr(self, m, curry(self.autoMethod, m))
+                #generate docstring from IMultiEngine
+                getattr(self,m).__doc__ = m+IM.getSignatureString()+'\n'+IM.__doc__
+        setAllMethods(self)
     
     #a method template for dynamically building methods
     def autoMethod(self, name, targets, *args, **kwargs):

@@ -157,7 +157,8 @@ class EngineService(service.Service):
     def pushSerialized(self, **sNamespace):
         ns = {}
         for k,v in sNamespace.iteritems():
-            ns[k] = v.unpack()
+            if isinstance(v, serialized.Serialized):
+                ns[k] = v.unpack()
         return defer.execute(self.shell.update, ns)
     
     def pull(self, *keys):
