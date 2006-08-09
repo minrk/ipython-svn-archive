@@ -1,5 +1,20 @@
 import cPickle as pickle
 
+def serialize(key, obj):
+    serial = None
+    try:
+        import numpy
+    except ImportError:
+        pass
+    else:
+        if isinstance(obj, numpy.ndarray):
+            serial = ArraySerialized(key)
+            serial.packObject(obj)
+            return serial
+    serial = PickleSerialized(key)
+    serial.packObject(obj)
+    return serial
+
 class Serialized(object):
     
     package = []

@@ -175,8 +175,6 @@ class EngineService(service.Service):
             s = serialized.PickleSerialized(keys[0])
             d = defer.execute(self.shell.get, keys[0]).addCallback(s.packObject)
             
-        
-    
     def pullNamespace(self, *keys):
         ns = {}
         for key in keys:

@@ -1,7 +1,7 @@
 import cPickle as pickle
 
 import zope.interface as zi
-from twisted.python import components
+from twisted.python import components, failure
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
@@ -414,13 +414,15 @@ components.registerAdapter(VanillaEngineClientFactoryFromEngineService,
 class IVanillaEngineServerProtocol(engineservice.IEngineBase,
     engineservice.IEngineSerialized, engineservice.IEngineThreaded):
     
+    pass
+    
 class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     
     zi.implements(IVanillaEngineServerProtocol)
     
     nextHandler = None
     workVars = {}
-    self.id = None
+    id = None
     
     def connectionMade(self):
         self.transport.setTcpNoDelay(True)
@@ -462,6 +464,10 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         self.workVars = {}
         self.nextHandler = self.dispatch
 
+    def _createDeferred(self):
+        self.workVars['deferred'] = defer.Deferred()
+        return self.workVars['deferred']
+
     def handleUnexpectedData(self, args):
         self.sendString('UNEXPECTED DATA')
     
@@ -475,13 +481,61 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         self.sendString(ia.next())
         self.sendBuffer(ia.next())
 
-        
     def sendSerialized(self, s):
         if isinstance(s, PickleSerialized):
             self.sendPickle(s)
         elif isinstance(s, ArraySerialized):
             self.sendArray(s)
 
+    def setupForIncomingSerialized(self, callbackString, errbackString=''):
+        self.workVars['callbackString'] = callbackString
+        if errbackString:
+            self.workVars['errbackString'] = errbackString
+        self.workVars['serialsList'] = []
+        self.nextHandler = self.handleIncomingSerialized
+        self.workVars['deferred'] == defer.Deferred()
+        return self.workVars['deferred']
+        
+    def handleIncomingSerialized(self, msg):
+        if msg == self.workVars['callbackString']:
+            self.workVars['deferred'].callback(self.workVars['serialsList'])
+            return
+        elif msg == self.workVars['errbackString']:
+            self.workVars['deferred'].errback(failure.Failure(Exception()))
+            
+        msgList = msg.split(' ', 1)
+        if len(msgList) == 2:
+            serialType = msgList[0]
+            self.workVars['serialKey'] = msgList[1]
+            f = getattr(self, 'handleSerial_%s' % serialType, None)
+            if f is not None:
+                self.nextHandler = f
+            else:
+                self.workVars['deferred'].errback(failure.Failure(Exception()))
+        else:
+            self.workVars['deferred'].errback(failure.Failure(Exception()))
+                
+    def handleSerial_PICKLE(self, package):
+        self.nextHandler = self.handleIncomingSerialized
+        serial = serialized.PickleSerialized(self.workVars['serialKey'])
+        serial.addToPackage(package)
+        self.workVars['serialsList'].append(serial)
+                
+    def handleSerial_ARRAY(self, pShape):
+        self.nextHandler = self.handleArray_dtype
+        serial = serialized.ArraySerialized(self.workVars['serialKey'])
+        serial.addToPackage(pShape)
+        self.workVars['serial'] = serial
+    
+    def handleArray_dtype(self, dtype):
+        self.nextHandler = self.handleArray_buffer
+        self.workVars['serial'].addToPackage(dtype)
+    
+    def handleArray_buffer(self, arrayBuffer):
+        self.nextHandler = self.handleIncomingSerialized
+        self.workVars['serial'].addToPackage(arrayBuffer)
+        self.workVars['serialsList'].append(self.workVars['serial'])
+        
     # REGISTER
 
     def handle_REGISTER(self, args):
@@ -502,35 +556,236 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         
     # IEngineBase Methods
     
+    # EXECUTE
+    
     def execute(self, lines):
         self.sendString('EXECUTE %s' % lines)
-        self.nextHandler = handleIncomingSerialized
+        d = self.setupForIncomingSerialized('EXECUTE OK', 'EXECUTE FAIL')
+        d.addCallbacks(self.handleExecuteResult) 
+        d.addErrback(self.executeFail)
+        return d
         
-    def handleExecuteResult(self, msg):
+    def handleExecuteResult(self, listOfSerialized):
+        value = listofSerialized[0].unpack()
+        self._reset()
+        return value
         
+    def executeFail(self, reason):
+        self._reset()
+        return reason
+        
+    # PUSH
     
     def push(self, **namespace):
+        self.workVars['namespace'] = namespace
+        self.sendString('PUSH')
+        self.nextHandler = self.isPushReady
+        d = self._createDeferred()
+        return d
+        
+    def isPushReady(self, msg):
+        if msg == 'PUSH READY':
+            for k, v in self.workVars['namespace'].iteritems():
+                try:
+                    s = serialized.serialize(k, v)
+                except pickle.PickleError:
+                    self.pushFail(failure.Failure())
+                self.sendSerialized(serialized.serialize(k, v))
+            self.finishPush()
+        else:
+            self.pushFail(failure.Failure(Exception()))
+            
+    def finishPush(self):
+        self.sendString('PUSH DONE')
+        self.nextHandler = self.isPushOK
+            
+    def isPushOK(self, msg):
+        if msg == 'PUSH OK':
+            self.pushOK()
+        else:
+            self.pushFail(failure.Failure(Exception()))
+            
+    def pushFail(self, f):
+        self.workVars['deferred'].errback(f)
+        self._reset()
+        
+    def pushOK(self, result=None):
+        self.workVars['deferred'].callback(result)
+        self._reset()
+        
+    #PULL
     
     def pull(self, *keys):
+        keyString = ','.join(keys)
+        self.sendString('PULL %s' % keyString)
+        d = self.setupForIncomingSerialized('PULL OK', 'PULL FAIL')
+        d.addCallback(self.handlePulledSerialized)
+        d.addErrback(self.pullFail)
+        return d
+        
+    def handlePulledSerialized(self, listOfSerialized):
+        if len(listOfSerialized) == 1:
+            result = listOfSerialized[0].unpack()
+        else:
+            result = []
+            for s in listOfSerialized:
+                result.append(s.unpack())
+        self.pullOK()
+        return result
+            
+    def pullOK(self):
+        self._reset()
+            
+    def pullFail(self, reason):
+        self._reset()
+        return reason
+            
+    # PULLNAMESPACE
     
     def pullNamespace(self, *keys):
+        keyString = ','.join(keys)
+        self.sendString('PULLNAMESPACE %s' % keyString)
+        d = self.setupForIncomingSerialized('PULLNAMESPACE OK', 'PULLNAMESPACE FAIL')
+        d.addCallback(self.handlePulledNamespaceSerialized)
+        d.addErrback(self.pullNamespaceFail)
+        return d
+        
+    def handlePulledNamespaceSerialized(self, listOfSerialized):
+        result = {}
+        for s in listOfSerialized:
+            result[s.key] = s.unpack()
+        self.pullNamespaceOK()
+        return value
+            
+    def pullNamespaceOK(self):
+        self._reset
+            
+    def pullNamespaceFail(self, reason):
+        self._reset()
+        return reason
+    
+    # GETRESULT
     
     def getResult(self, i=None):
+        
+        if i is None:
+            self.sendString('GETRESULT')
+        elif isinstance(i, int):
+            self.sendString('GETRESULT %i' % i)
+        else:
+            self._reset()
+            return defer.fail(failure.Failure(Exception()))
+        d = setupForIncomingSerialized('GETRESULT OK', 'GETRESULT FAIL')
+        d.addCallback(self.handleGotResult)
+        d.addErrback(self.getResultFail)
+        return d
+    
+    def handleGotResult(self, resultList):
+        result = resultList[0].unpack()
+        self_reset()
+        return result
+        
+    def getResultFail(self, reason):
+        self._reset()
+        return reason
+    
+    # RESET
     
     def reset(self):
-    
+        self.sendString('RESET')
+        self.nextHandler = self.isResetOK
+        return self._createDeferred()
+        
+    def isResetOK(self, msg):
+        if msg == 'RESET OK':
+            self.resetOK()
+        elif msg == 'RESET FAIL':
+            self.resetFail(failure.Failure(Exception()))
+        else:
+            self.resetFail(failure.Failure(Exception()))
+            
+    def resetOK(self):
+        self.workVars['deferred'].callback(None)
+        self._reset()
+        
+    def resetFail(self, reason):
+        self.workVars['deferred'].errback(reason)
+        self._reset()
+        
+    # KILL
+
     def kill(self):
+        self.sendString('KILL')
+        self.nextHandler = self.isKillOK
+        return self._createDeferred()
+        
+    def isKillOK(self, msg):
+        if msg == 'KILL OK':
+            self.killOK()
+        elif msg == 'KILL FAIL':
+            self.killFail(failure.Failure(Exception()))
+        else:
+            self.killFail(failure.Failure(Exception()))
+            
+    def killOK(self):
+        self.workVars['deferred'].callback(None)
+        self._reset()
+        
+    def killFail(self, reason):
+        self.workVars['deferred'].errback(reason)
+        self._reset()
+        
+    # STATUS
     
     def status(self):
+        self.sendString('STATUS')
+        self.nextHandler = self.isStatusOK
+        return self._createDeferred()
+        
+    def isStatusOK(self, msg):
+        if msg == 'STATUS OK':
+            self.statusOK()
+        elif msg == 'STATUS FAIL':
+            self.statusFail(failure.Failure(Exception()))
+        else:
+            self.statusFail(failure.Failure(Exception()))
+            
+    def statusOK(self):
+        self.workVars['deferred'].callback(None)
+        self._reset()
+        
+    def statusFail(self, reason):
+        self.workVars['deferred'].errback(reason)
+        self._reset()
         
     # IEngineSerialized Methods
     
+    # PUSHSERIALIZED -> PUSH
+    
     def pushSerialized(self, **namespace):
+        self.workVars['namespace'] = namespace
+        self.sendString('PUSH')
+        self.nextHandler = self.isPushSerializedReady
+        d = self._createDeferred()
+        return d
+        
+    def isPushSerializedReady(self, msg):
+        if msg == 'PUSH READY':
+            for v in self.workVars['namespace'].itervalues():
+                self.sendSerialized(v)
+            self.finishPush()
+        else:
+            self.pushFail(failure.Failure(Exception()))
+    
+    # PULLSERIALIZED
     
     def pullSerialized(self, *keys):
+        keyString = ','.join(keys)
+        self.sendString('PULL %s' % keyString)
+        d = self.setupForIncomingSerialized('PULL OK', 'PULL FAIL')
+        d.addErrback(self.pullFail)
+        return d
         
-    def pullNamespaceSerialized(self, *keys):
-    
     # IEngineThreadedMethods
     
     

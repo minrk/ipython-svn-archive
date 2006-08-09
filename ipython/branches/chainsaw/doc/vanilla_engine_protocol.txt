@@ -82,12 +82,12 @@ getResult()
 ::
 
 	C: GETRESULT 3
-	E: PICKLE result 24
+	E: PICKLE result
 	E: ########
 	E: GETRESULT OK
 
 	C: GETRESULT
-	E: PICKLE result 24
+	E: PICKLE result
 	E: ########
 	E: GETRESULT OK
 	
