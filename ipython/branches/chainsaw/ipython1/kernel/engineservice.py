@@ -46,19 +46,18 @@ import os, signal, time
 from twisted.application import service, internet
 from twisted.internet import defer, reactor
 from twisted.python import log, failure
-from zope.interface import Interface, implements, interface
-#from zope.interface.interface import Attribute
+import zope.interface as zi
 
 from ipython1.core.shell import InteractiveShell
 
 # Here is the interface specification for the IPythonCoreService
 
-class IEngineBase(Interface):
+class IEngineBase(zi.Interface):
     """The Interface for the IPython Engine.
     
     All these methods should return deferreds.
     """
-    id = interface.Attribute("the id of the Engine object")
+    id = zi.interface.Attribute("the id of the Engine object")
     
     def execute(lines):
         """Execute lines of Python code.
@@ -93,7 +92,7 @@ class IEngineBase(Interface):
     def status():
         """return status of engine"""
     
-class IEngineSerialized(Interface):
+class IEngineSerialized(zi.Interface):
     
     def pushSerialized(**namespace):
         """Push a dict of keys and Serialized to the user's namespace."""
@@ -102,10 +101,10 @@ class IEngineSerialized(Interface):
         """Pull objects by key form the user's namespace as Serialized."""
     
 
-class IEngineThreaded(Interface):
+class IEngineThreaded(zi.Interface):
     pass
 
-class IEngineQueued(Interface):
+class IEngineQueued(zi.Interface):
     """add some queue methods to IEngine interface"""
     
     def clearQueue():
@@ -115,34 +114,26 @@ class IEngineQueued(Interface):
 class IEngineComplete(IEngineBase, IEngineSerialized, IEngineQueued, IEngineThreaded):
     pass
 
-class CompleteEngine(object):
+def CompleteEngine(engine):
     
-    implements(IEngineComplete)
-    
-    _notImplemented = defer.fail(NotImplementedError('This method is not implemented by this Engine'))
+    zi.directlyProvides(engine, IEngineComplete)
     
     def _notImplementedMethod(self, *args, **kwargs):
-        return self._notImplemented    
+        return defer.fail(NotImplementedError(
+            'This method is not implemented by this Engine'))
     
-    def __init__(self, engine):
-        self.__doc__ = engine.__doc__
-        for method in dir(engine):
-            if method not in dir(self):
-                setattr(self, method, getattr(engine, method))
-        for method in IEngineComplete:
-            if getattr(self, method, 'NotDefined') == 'NotDefined':
-                #if not implemented, add filler
-                #could append self.notImplemented here
-                if callable(IEngineComplete[method]):
-                    setattr(self, method, self._notImplementedMethod)
-                else:
-                    setattr(self, method, self._notImplemented)
+    for method in IEngineComplete:
+        if getattr(engine, method, 'NotDefined') == 'NotDefined':
+            #if not implemented, add filler
+            #could append self.notImplemented here
+            setattr(engine, method, _notImplementedMethod)
+    assert(IEngineComplete.providedBy(engine))
 
     
 # Now the actual EngineService
 class EngineService(service.Service):
     
-    implements(IEngineBase)
+    zi.implements(IEngineBase, IEngineSerialized)
     
     id = None
     
@@ -157,6 +148,12 @@ class EngineService(service.Service):
     def push(self, **namespace):
         return defer.execute(self.shell.update, namespace)
     
+    def pushSerialized(self, **sNamespace):
+        ns = {}
+        for k,v in sNamespace.iteritems():
+            ns[k] = v.unpack()
+        return defer.execute(shell.update, ns)
+    
     def pull(self, *keys):
         if len(keys) > 1:
             result = []
@@ -165,6 +162,20 @@ class EngineService(service.Service):
             return defer.succeed(tuple(result))
         else:
             return defer.execute(self.shell.get, keys[0])
+    
+    def pullSerialized(self, *keys):
+        if len(keys) > 1:
+            l = []
+            for key in keys:
+                #temporarily just use pickle
+                s = serialized.PickleSerialized(key)
+                l.append(self.shell.get(key).addCallback(s.packObject))
+            return defer.gatherResults(l)
+        else:
+            s = serialized.PickleSerialized(keys[0])
+            d = defer.execute(self.shell.get, keys[0]).addCallback(s.packObject)
+            
+        
     
     def pullNamespace(self, *keys):
         ns = {}
@@ -195,8 +206,8 @@ class EngineService(service.Service):
 
 class QueuedEngine(object):
     
-    implements(IEngineBase, IEngineQueued)
-    id = None
+    zi.implements(IEngineQueued)
+    
     def __init__(self, engine):
         self.engine = engine
         self.id = engine.id
@@ -204,6 +215,22 @@ class QueuedEngine(object):
         self.history = {}
         self.currentCommand = None
         self.registerMethods()
+    
+    def registerMethods(self):
+        ifaces = self.engine.__provides__
+        zi.alsoProvides(self, *ifaces)
+        for m in dir(self.engine):
+            if m in IEngineComplete and callable(IEngineComplete[m])\
+                and not getattr(self, m, None):
+                # if m is a method of IEngine, and not already specified
+                    f = self.buildQueuedMethod(m)
+                    setattr(self, m, f)
+    
+    def buildQueuedMethod(self, m):
+        def queuedMethod(*args, **kwargs):
+            return self.submitCommand(Command(m, *args, **kwargs))
+        
+        return queuedMethod
     
     #methods from IEngineQueued:
     def clearQueue(self):
@@ -264,19 +291,6 @@ class QueuedEngine(object):
         self.currentCommand = None
         self._flushQueue()
         #return reason
-    
-    def registerMethods(self):
-        for m in dir(self.engine):
-            if m in IEngineComplete and callable(IEngineComplete[m])\
-                and not getattr(self, m, None):
-                # if m is a method of IEngine, and not already specified
-                    f = self.buildQueuedMethod(m)
-                    setattr(self, m, f)
-    
-    def buildQueuedMethod(self, m):
-        def queuedMethod(*args, **kwargs):
-            return self.submitCommand(Command(m, *args, **kwargs))
-        return queuedMethod
     
     #methods from IEngine
     def reset(self):
