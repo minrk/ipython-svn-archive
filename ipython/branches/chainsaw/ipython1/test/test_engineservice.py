@@ -14,7 +14,7 @@ from twisted.application import internet
 
 from ipython1.kernel import engineservice
 from ipython1.test.util import DeferredTestCase
-from ipython1.kernel1p.kernelerror import NotDefined
+from ipython1.kernel.kernelerror import NotDefined
 
 class BasicEngineServiceTest(DeferredTestCase):
 
