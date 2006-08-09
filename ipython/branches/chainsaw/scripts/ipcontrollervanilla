@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+"""The basic ipython controller perspective broker kernel.
+
+This module is meant to be run from the command line.  To start the controller,
+issue the command:
+
+    python ipenginepb
+
+This will start the kernel listening on port 10105 for control and 10201 for
+engine connections (the default).  Here is an example that starts
+the kernel on port 10106 for control, and 10202 for engines:
+
+    python ipenginepb -c 10106 -e 10202
+
+For more information on the command line options, run:
+
+    python ipenginepb -h
+
+NOTE:  The kernel cannot currently be run in the background, so:
+
+    python ipenginepb &
+
+won't result in a running kernel instance.
+"""
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+import sys, time
+#time.sleep(10)
+from optparse import OptionParser
+
+from twisted.internet import reactor, error
+from twisted.spread import pb
+from twisted.python import log
+
+from ipython1.kernel import controllerservice, enginevanilla, controllervanilla
+#from ipython1.kernel import serialized
+
+
+def tryPorts(port, factory):
+    try:
+        d = reactor.listenTCP(port, factory)
+    except error.CannotListenError:
+        log.msg("Trying the next port")
+        try:
+            d = reactor.listenTCP(port+1, factory)
+        except error.CannotListenError:
+            raise
+    return d
+
+def main(cport, eport):
+    log.startLogging(sys.stdout)
+    
+    cs = controllerservice.ControllerService()
+    efac = enginevanilla.IVanillaEngineServerFactory(cs)
+#    cs.registerSerializationTypes(serialized.PickleSerialized)
+    cfac = controllervanilla.IVanillaControllerFactory(cs)
+    reactor.callLater(1.0,tryPorts, eport, efac)
+    reactor.callLater(2.0,tryPorts, cport, cfac)
+    cs.startService()
+    reactor.run()
+
+def start(cport=10105, eport=10201):
+    parser = OptionParser()
+    parser.set_defaults(cport=cport)
+    parser.set_defaults(eport=eport)
+    parser.add_option("-c", "--controlport", type="int", dest="cport",
+        help="the TCP port the controller will listen on for control commands")
+    parser.add_option("-e", "--engineport", type="int", dest="eport",
+        help="the TCP port the controller will listen on for engine connections")
+    (options, args) = parser.parse_args()
+    print "Starting the controller on ports Engine:%i , Control: %i" % (
+                options.eport, options.cport)
+    main(options.cport, options.eport)
+    
+if __name__ == "__main__":
+    start()

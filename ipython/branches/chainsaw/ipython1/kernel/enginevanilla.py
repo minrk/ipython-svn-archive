@@ -1,7 +1,7 @@
 import cPickle as pickle
 
 import zope.interface as zi
-from twisted.python import components, failure
+from twisted.python import components, failure, log
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
@@ -93,13 +93,15 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     
     def handleRegister(self, args):
         # args = 'REGISTER id'
-        try:
-            id = int(args)
-        except TypeError:
-            self.sendString('BAD ID')
-        else:
-            self.factory.setID(id)
-            self._reset()
+        splitArgs = args.split(' ',1)
+        if len(splitArgs) == 2 and splitArgs[0] == 'REGISTER':
+            try:
+                id = int(splitArgs[1])
+            except TypeError:
+                self.sendString('BAD ID')
+            else:
+                self.factory.setID(id)
+                self._reset()
             
     #####
     ##### The EXECUTE command
@@ -428,8 +430,12 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         self.transport.setTcpNoDelay(True)
         self.nextHandler = self.dispatch
 
+    def sendString(self, s):
+        log.msg('C: %s' % s)
+        EnhancedNetstringReceiver.sendString(self, s)
+
     def stringReceived(self, msg):
-        
+        log.msg('E: %s' % msg)
         if self.nextHandler is None:
             self.defaultHandler(msg)
         else:
@@ -493,7 +499,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.workVars['errbackString'] = errbackString
         self.workVars['serialsList'] = []
         self.nextHandler = self.handleIncomingSerialized
-        self.workVars['deferred'] == defer.Deferred()
+        self.workVars['deferred'] = defer.Deferred()
         return self.workVars['deferred']
         
     def handleIncomingSerialized(self, msg):
@@ -502,6 +508,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             return
         elif msg == self.workVars['errbackString']:
             self.workVars['deferred'].errback(failure.Failure(Exception()))
+            return
             
         msgList = msg.split(' ', 1)
         if len(msgList) == 2:
@@ -546,9 +553,10 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
                 desiredID = int(desiredID)
             except TypeError:
                 desiredID = None
-        self.id = self.factory.registerEngine(engineservice.QueuedEngine(self), 
-            desiredID)
-        self.handleID(getID)
+        qe = engineservice.QueuedEngine(self)
+        engineservice.CompleteEngine(qe)
+        self.id = self.factory.registerEngine(qe, desiredID)
+        self.handleID(self.id)
         
     def handleID(self, id):
         self.sendString('REGISTER %i' % id)
@@ -811,10 +819,10 @@ class VanillaEngineServerFactoryFromControllerService(protocol.ServerFactory):
         self.service = service
     
     def registerEngine(self, engine, id):
-        self.service.registerEngine(engine, id)
+        return self.service.registerEngine(engine, id)
     
     def registerSerializationTypes(self, *serialTypes):
-        self.service.registerSerializationTypes(*serialTypes)
+        return self.service.registerSerializationTypes(*serialTypes)
         
     def startFactory(self):
         self.service.registerSerializationTypes(serialized.PickleSerialized,

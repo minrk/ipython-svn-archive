@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+"""The IPython Kernel Engine using perspective broker.
+
+To connect the engine to a controller at 127.0.0.1:9999:
+
+ipenginepb -p 9999 -c '127.0.0.1'
+"""
+#*****************************************************************************
+#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
+#                           Fernando Perez. <fperez@colorado.edu>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+import sys
+from optparse import OptionParser
+
+from twisted.internet import reactor, error
+from twisted.spread import pb
+from twisted.python import log
+
+from ipython1.kernel import engineservice, enginevanilla
+
+
+def main(controller, port, n):
+    for i in range(n):
+        service = engineservice.EngineService()
+        reactor.connectTCP(controller, port,
+            enginevanilla.IVanillaEngineClientFactory(service))      
+        service.startService()
+    reactor.run()
+
+def tryAgain(controller, port, n):
+    print "connection refused, trying again..."
+    time.sleep(1)
+    main(controller, port, n)
+
+def start(port=10201, controller = '127.0.0.1', n=1):
+    parser = OptionParser()
+    parser.set_defaults(port=port)
+    parser.set_defaults(controller=controller)
+    parser.set_defaults(n=n)
+    parser.add_option("-p", "--port", type="int", dest="port",
+        help="the TCP port the controller listens on")
+    parser.add_option("-c", "--controller", type="str", dest="controller",
+        help="the address of the controller")
+    parser.add_option("-n", "--num", type="int", dest="n",
+        help="the number of engines to start")
+    (options, args) = parser.parse_args()
+    print "Connecting the engine to %s:%i" % (options.controller,options.port)
+    log.startLogging(sys.stdout)
+    main(options.controller, options.port, options.n)
+    
+if __name__ == "__main__":
+    start()

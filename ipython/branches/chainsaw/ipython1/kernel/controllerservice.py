@@ -194,7 +194,7 @@ class ControllerService(service.Service):
         try:
             assert(IEngineComplete.providedBy(remoteEngine))
         except AssertionError:
-            return None
+            raise
         
         if id in self.engines.keys():
             raise IdInUse
