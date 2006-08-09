@@ -1,3 +1,4 @@
+# -*- test-case-name: ipython1.test.test_controllerservice -*-
 """A Twisted Service for the Controller
 
 TODO:
@@ -279,12 +280,16 @@ class ControllerService(service.Service):
         """Execute lines of Python code."""
         log.msg("executing %s on %s" %(lines, targets))
         engines = self.engineList(targets)
-        l = []
-        for e in engines:
-            d = e.execute(lines)
-            self.executeCallback(e.id, d)
-            l.append(d)
-        return defer.gatherResults(l)
+        if not isinstance(targets, int) and len(targets) > 1:
+            l = []
+            for e in engines:
+                d = e.execute(lines)
+                self.executeCallback(e.id, d)
+                l.append(d)
+            d = defer.gatherResults(l)
+        else:
+            d = engines[0].execute(lines)
+        return d
     
     def executeAll(self, lines):
         return self.execute('all', lines)
@@ -375,16 +380,20 @@ class ControllerService(service.Service):
     def status(self, targets):
         log.msg("retrieving status of %s" %targets)
         engines = self.engineList(targets)
-        l = []
-        dikt = {}
-        for e in engines:
-            l.append(e.status().addCallback(lambda s: 
-                            dikt.__setitem__(e.id, s)))
-        return defer.gatherResults(l).addCallback(lambda _: dikt)
+        if not isinstance(targets, int) and len(targets) > 1:
+            l = []
+            dikt = {}
+            for e in engines:
+                l.append(e.status().addCallback(lambda s: 
+                                dikt.__setitem__(e.id, s)))
+            d = defer.gatherResults(l).addCallback(lambda _: dikt)
+        else:
+            d = engines[0].status()
+        return d
     
     def reset(self, targets):
         """Reset the InteractiveShell."""
-        return self.defaultMethod(targets, 'reset')
+        return self.autoMethod(targets, 'reset')
         log.msg("resetting %s" %(targets))
         engines = self.engineList(targets)
         l = []
@@ -407,18 +416,28 @@ class ControllerService(service.Service):
         else:
             log.msg("getting last result from %s" %targets)
         engines = self.engineList(targets)
-        l = []
-        for e in engines:
-            l.append(e.getResult(i))
-        return defer.gatherResults(l)
+        if not isinstance(targets, int) and len(targets) > 1:
+            l = []
+            for e in engines:
+                l.append(e.getResult(i))
+            d = defer.gatherResults(l)
+        else:
+            d = engines[0].getResult(i)
+        return d
     
-    def defaultMethod(self, targets, name, *args, **kwargs):
+    #a method template for dynamically building methods
+    def autoMethod(self, targets, name, *args, **kwargs):
         log.msg("%s on %s" %(name, targets))
         engines = self.engineList(targets)
         l = []
-        for e in engines:
-            l.append(getattr(e, name)(*args, **kwargs))
-        return defer.gatherResults(l)
+        if not isinstance(targets, int) and len(targets) > 1:
+            for e in engines:
+                l.append(getattr(e, name)(*args, **kwargs))
+            d = defer.gatherResults(l)
+        else:
+            d = getattr(engines[0], name)(*args, **kwargs)
+        return d
+        
 
     
     #notification methods    
