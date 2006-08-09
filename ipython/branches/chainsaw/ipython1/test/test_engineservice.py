@@ -1,4 +1,4 @@
-"""This file contains unittests for the engineservice.py module.
+"""This file contains unittests for the kernel.engineservice.py module.
 
 Things that should be tested:
 - Should the EngineService return Deferred objects?
@@ -7,32 +7,52 @@ Things that should be tested:
 - The startService and stopService methods.
 """
 
-from twisted.trial import unittest
-from twisted.internet import defer, protocol, reactor
-from twisted.protocols import basic
-from twisted.application import internet
-
-from ipython1.kernel import engineservice
+from twisted.internet import defer
+from twisted.application.service import IService
+from ipython1.kernel import engineservice as es
 from ipython1.test.util import DeferredTestCase
 from ipython1.kernel.kernelerror import NotDefined
 
 class BasicEngineServiceTest(DeferredTestCase):
-
+    
     def setUp(self):
-        self.sf = protocol.ServerFactory()
-        self.sf.protocol = basic.LineReceiver
-        self.server = reactor.listenTCP(10201, self.sf)
-        self.f = protocol.ClientFactory()
-        self.f.protocol = basic.LineReceiver
-        self.s = engineservice.EngineService()
-        self.client = reactor.connectTCP('localhost',10202, self.f)
+        self.s = es.EngineService()
         self.s.startService()
-        
+    
     def tearDown(self):
-        self.client.disconnect()
-        del self.client
-        return self.server.stopListening()
-                
+        return self.s.stopService()
+    
+    def testInterfaces(self):
+        p = list(self.s.__provides__)
+        p.sort()
+        l = [es.IEngineBase, es.IEngineSerialized, IService]
+        l.sort()
+        self.assertEquals(p, l)
+        q = es.QueuedEngine(self.s)
+        p = list(q.__provides__)
+        p.sort()
+        l.append(es.IEngineQueued)
+        l.sort()
+        self.assertEquals(p, l)
+        c = es.completeEngine(q)
+        p = list(c.__provides__)
+        p.sort()
+        l.append(es.IEngineComplete)
+        l.sort()
+        self.assertEquals(p, l)
+        for base in es.IEngineComplete.getBases():
+            self.assert_(base.providedBy(c))
+
+    def testDeferreds(self):
+        self.assert_(isinstance(self.s.execute('a=5'), defer.Deferred))
+        self.assert_(isinstance(self.s.push(a=5), defer.Deferred))
+        self.assert_(isinstance(self.s.push(a=5, b='asdf', c=[1,2,3]), defer.Deferred))
+        self.assert_(isinstance(self.s.pull('a', 'b', 'c'), defer.Deferred))
+        self.assert_(isinstance(self.s.pullNamespace('qwer', 'asdf', 'zcxv'), defer.Deferred))
+        self.assert_(isinstance(self.s.getResult(), defer.Deferred))
+        self.assert_(isinstance(self.s.reset(), defer.Deferred))
+        self.assert_(isinstance(self.s.status(), defer.Deferred))
+        
     def testExecute(self):
         commands = [(0,"a = 5","",""),
             (1,"b = 10","",""),
