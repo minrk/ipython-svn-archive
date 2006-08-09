@@ -142,9 +142,7 @@ class NetstringSocket(object):
     
         
     def readString(self, size=2048):
-        """Reads an int32 prefixed string from the socket.
-        
-        THIS IS BROKEN RIGHT NOW!!
+        """Reads a Netstring from the socket.
         
         Notes
         =====

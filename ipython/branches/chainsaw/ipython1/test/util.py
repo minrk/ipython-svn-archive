@@ -41,10 +41,6 @@ class DeferredTestCase(unittest.TestCase):
 
         def gotFailure(f):
             #f.printTraceback()
-            print "Hi here"
-            print " .type =", f.type
-            print " .value =", f.value
-            print " .tb = ", f.tb
             self.assertRaises(expectedException, f.raiseException)
             #return f
         

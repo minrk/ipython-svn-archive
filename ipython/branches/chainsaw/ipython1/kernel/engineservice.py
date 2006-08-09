@@ -49,6 +49,7 @@ from twisted.python import log, failure
 import zope.interface as zi
 
 from ipython1.core.shell import InteractiveShell
+from ipython1.kernel import serialized
 
 # Here is the interface specification for the IPythonCoreService
 
@@ -126,7 +127,7 @@ def completeEngine(engine):
     for method in IEngineComplete:
         if getattr(engine, method, 'NotDefined') == 'NotDefined':
             #if not implemented, add filler
-            #could append self.notImplemented here
+            #could establish self.notImplemented registry here
             if callable(ICompleteEngine[method]):
                 setattr(engine, method, _notImplementedMethod)
             else:
@@ -157,7 +158,7 @@ class EngineService(service.Service):
         ns = {}
         for k,v in sNamespace.iteritems():
             ns[k] = v.unpack()
-        return defer.execute(shell.update, ns)
+        return defer.execute(self.shell.update, ns)
     
     def pull(self, *keys):
         if len(keys) > 1:
@@ -172,13 +173,18 @@ class EngineService(service.Service):
         if len(keys) > 1:
             l = []
             for key in keys:
-                #temporarily just use pickle
-                s = serialized.PickleSerialized(key)
-                l.append(self.shell.get(key).addCallback(s.packObject))
+                d = defer.execute(self.shell.get, key)
+                self.serialize(d, key)
+                l.append(d)
             return defer.gatherResults(l)
         else:
-            s = serialized.PickleSerialized(keys[0])
-            d = defer.execute(self.shell.get, keys[0]).addCallback(s.packObject)
+            key = keys[0]
+            d = defer.execute(self.shell.get, key)
+            d.addCallback(lambda obj:serialized.serialize(key, obj))
+            return d
+    
+    def serialize(self, d, key):
+        d.addCallback(lambda obj:serialized.serialize(key, obj))
             
     def pullNamespace(self, *keys):
         ns = {}

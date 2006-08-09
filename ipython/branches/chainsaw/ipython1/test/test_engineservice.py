@@ -10,6 +10,7 @@ Things that should be tested:
 from twisted.internet import defer
 from twisted.application.service import IService
 from ipython1.kernel import engineservice as es
+from ipython1.kernel import serialized
 from ipython1.test.util import DeferredTestCase
 from ipython1.kernel.kernelerror import NotDefined
 
@@ -52,6 +53,7 @@ class BasicEngineServiceTest(DeferredTestCase):
         self.assert_(isinstance(self.s.getResult(), defer.Deferred))
         self.assert_(isinstance(self.s.reset(), defer.Deferred))
         self.assert_(isinstance(self.s.status(), defer.Deferred))
+        self.assert_(not isinstance(self.s.id, defer.Deferred))
         
     def testExecute(self):
         commands = [(0,"a = 5","",""),
@@ -66,25 +68,34 @@ class BasicEngineServiceTest(DeferredTestCase):
     
     def testPushPull(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
+        d = defer.succeed(None)
         for o in objs:
             self.s.push(key=o)
             value = self.s.pull('key')
-            self.assertDeferredEquals(value,o)
-#        self.assertRaises(SyntaxError, self.s.push(1=2))
-
-#        self.assertRaises(TypeError,self.s.pull,10)
+            d = self.assertDeferredEquals(value,o, d)
         self.s.reset()
-        d = self.s.pull("a").addCallback(lambda nd:
+        d1 = self.s.pull("a").addCallback(lambda nd:
             self.assert_(isinstance(nd,NotDefined)))
-        return d
+        return (d, d1)
+    
+    def testPushPullSerialized(self):
+        objs = [10,"hi there",1.2342354,{"p":(1,2)}]
+        d = defer.succeed(None)
+        for o in objs:
+            self.s.pushSerialized(key=serialized.serialize('key', o))
+            value = self.s.pullSerialized('key')
+            value.addCallback(lambda serial: serial.unpack())
+            d = self.assertDeferredEquals(value,o,d)
+        self.s.reset()
+        d1 = self.s.pull("a").addCallback(lambda nd:
+            self.assert_(isinstance(nd,NotDefined)))
+        return (d, d1)
     
     def testResult(self):
-        #self.assertRaises(IndexError,self.s.getCommand)
-        d = self.s.execute("a = 5")
+        d = self.assertDeferredRaises(self.s.getResult(),IndexError)
+        d.addCallback(lambda _:self.s.execute("a = 5"))
         d = self.assertDeferredEquals(self.s.getResult(),(0,"a = 5","",""), d)
         d = self.assertDeferredEquals(self.s.getResult(0),(0,"a = 5","",""), d)
         d.addCallback(lambda _:self.s.reset())
         return d
-#        return self.assertDeferredEquals(self.s.getLastCommandIndex(),-1, d)
-        #self.assertRaises(IndexError,self.s.getCommand)
     
