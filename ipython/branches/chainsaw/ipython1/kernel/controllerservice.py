@@ -59,6 +59,14 @@ def allMethod(self, %s:
             #will only add All method if original method exists
             pass
 
+#from twisted.defer.gatherresults/_parseDlist
+def parseResults(results):
+    return [x[1] for x in results]
+
+def gatherBoth(dlist):
+    d = defer.DeferredList(dlist)
+    d.addCallback(parseResults)
+    return d
 
 class ResultReporterProtocol(protocol.DatagramProtocol):
     
@@ -205,7 +213,7 @@ class ControllerService(service.Service):
             if not isinstance(targets, int) and len(targets) > 1:
                 for e in engines:
                     l.append(getattr(e, name)(*args, **kwargs))
-                d = defer.gatherResults(l)
+                d = gatherBoth(l)
             else:
                 d = getattr(engines[0], name)(*args, **kwargs)
             return d
@@ -231,7 +239,7 @@ def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
         for e in engines:
             l.append(e.%s%s)""" %(m, eSig)
                 defs +="""
-            d = defer.gatherResults(l)
+            d = gatherBoth(l)
         else:
             d = engines[0].%s%s
         return d"""%(m, eSig)
@@ -324,7 +332,7 @@ def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
             for e in engines:
                 d = e.execute(lines).addCallback(self.notify)
                 l.append(d)
-            d = defer.gatherResults(l)
+            d = gatherBoth(l)
         else:
             d = engines[0].execute(lines).addCallback(self.notify)
         return d
@@ -341,7 +349,7 @@ def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
                     namespace[k] = v.unpack()
         for e in engines:
             l.append(e.pushSerialized(**namespace))
-        return defer.gatherResults(l)
+        return gatherBoth(l)
     
     def pull(self, targets, *keys):
         """Gets an item out of the self.locals dict by key."""
@@ -351,7 +359,7 @@ def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
             l = []
             for e in engines:
                 l.append(e.pull(*keys))
-            d = defer.gatherResults(l)
+            d = gatherBoth(l)
             if len(keys) > 1:
                 d.addCallback(lambda resultList: zip(*resultList))
         else:
@@ -366,7 +374,7 @@ def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
             l = []
             for e in engines:
                 l.append(e.pullSerialized(*keys))
-            d = defer.gatherResults(l)
+            d = gatherBoth(l)
             if len(keys) > 1:
                 d.addCallback(lambda resultList: zip(*resultList))
         else:
@@ -382,7 +390,7 @@ def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
             for e in engines:
                 l.append(e.status().addCallback(lambda s: 
                                 dikt.__setitem__(e.id, s)))
-            d = defer.gatherResults(l).addCallback(lambda _: dikt)
+            d = gatherBoth(l).addCallback(lambda _: dikt)
         else:
             d = engines[0].status()
         return d
