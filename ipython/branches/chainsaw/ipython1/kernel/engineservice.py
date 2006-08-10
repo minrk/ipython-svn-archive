@@ -41,7 +41,7 @@ TODO:
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import os, signal, time
+from new import instancemethod
 
 from twisted.application import service, internet
 from twisted.internet import defer, reactor
@@ -243,9 +243,10 @@ class QueuedEngine(object):
         zi.alsoProvides(self, *self.engine.__provides__)
         for m in dir(self.engine):
             if m in IEngineComplete and callable(IEngineComplete[m])\
-                and not getattr(self, m, None):
+                    and not getattr(self, m, None):
                 # if m is a method of IEngine, and not already specified
-                    setattr(self, m, self.buildQueuedMethod(m))
+                f = self.buildQueuedMethod(m)
+                setattr(self, m, instancemethod(f, self, self.__class__))
     
     def buildQueuedMethod(self, m):
         args = IEngineComplete[m].getSignatureString()[1:-1]#without '()'
@@ -256,7 +257,7 @@ class QueuedEngine(object):
             comma = ''
         defs = """
 def queuedMethod(self%s%s):
-    return self.submitCommand(Command(%s, %s))""" %(comma, args, m, args)
+    return self.submitCommand(Command('%s', %s))""" %(comma, args, m, args)
         exec(defs)
         return queuedMethod
     

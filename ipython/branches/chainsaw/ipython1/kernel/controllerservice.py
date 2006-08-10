@@ -18,7 +18,7 @@ TODO:
 #*****************************************************************************
 
 import cPickle as pickle
-
+from new import instancemethod
 from twisted.application import service, internet
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
@@ -53,7 +53,7 @@ def allMethod(self, %s:
     return self.%s('all'%s""" %(MA.getSignatureString()[1:], MA.getDoc(), 
                         m, M.getSignatureString()[8:])
             exec defs
-            setattr(obj, m+'All', allMethod)
+            setattr(obj, m+'All', instancemethod(allMethod, obj, obj.__class__))
             del allMethod
         except AttributeError:
             #will only add All method if original method exists
@@ -91,7 +91,8 @@ class IRemoteController(Interface):
     
     def registerSerializationTypes(self, *serialTypes):
         """Register the set of allowed subclasses of Serialized."""
-        
+    
+
 class IMultiEngine(Interface):
     """interface to multiple objects implementing IEngineComplete"""
     
@@ -141,12 +142,6 @@ class IMultiEngine(Interface):
         """Gets a namespace dict from targets by keys."""
     
     def pullNamespaceAll(*keys):
-        """"""
-    
-    def pullNamespaceSerialized(targets, *keys):
-        """Gets a serialized namespace dict from targets by keys."""
-    
-    def pullNamespaceSerializedAll(*keys):
         """"""
     
     def getResult(targets, i=None):
@@ -222,26 +217,27 @@ class ControllerService(service.Service):
                     and getattr(self, m, None) is None:
                 #only work on methods, not attributes, and only on methods
                 #not already defined
+                eSig = IEngineComplete[m].getSignatureString()
                 defs = """
 def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
                 defs += """
     \"\"\"%s\"\"\"""" % IM.getDoc()
                 defs += """
-    log.msg('%s on '%%s) %%targets""" %(IM.getName())
+    log.msg('%s on %%s' %%targets)""" %(IM.getName())
                 defs += """
     engines = self.engineList(targets)
     l = []
     if not isinstance(targets, int) and len(targets) > 1:
         for e in engines:
-            l.append(e.%s%s)""" %(m, IM.getSignatureString())
+            l.append(e.%s%s)""" %(m, eSig)
                 defs +="""
             d = defer.gatherResults(l)
         else:
             d = engines[0].%s%s
-        return d"""%(m, IM.getSignatureString())
+        return d"""%(m, eSig)
                 try:
                     exec(defs)
-                    setattr(self, m, autoMethod)
+                    setattr(self, m, instancemethod(autoMethod, self, self.__class__))
                     del autoMethod
 #                    log.msg("autogen method %s" %m)
                 except:
