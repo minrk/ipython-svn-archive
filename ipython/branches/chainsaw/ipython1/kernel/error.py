@@ -12,21 +12,28 @@ NotDefined -- A class to represent a nonexistant python variable.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-class NotDefined(Exception):
+from ipython1.core import error
+
+class KernelError(error.IPythonError)
+
+class NotDefined(KernelError):
     def __init__(self, name):
         self.name = name
 
     def __repr__(self):
         return '<NotDefined: %s>' % self.name
 
-class IdInUse(Exception):
+class IdInUse(KernelError):
     pass
     
-    
-class ClassName (object):
 
-    def __init__(self, arg):
-        self.arg = arg
-        pass
+class ProtocolError(KernelError):
+    pass
+    
+class InvalidEngineID(KernelError):
+    pass
+    
+
+    
 
 
