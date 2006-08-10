@@ -19,7 +19,7 @@ import types
 import time, os
 
 from twisted.internet import defer
-
+from twisted.python.failure import Failure
 from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 
@@ -49,7 +49,7 @@ del arraytypeList
 
 try:
     from ipython1.kernel import serialized
-    from ipython1.kernel.controllerservice import setAllMethods
+    from ipython1.kernel.controllerservice import addAllMethods
 except ImportError, e:
     print "ipython1 needs to be in your PYTHONPATH ", e
 
@@ -288,7 +288,7 @@ class SubCluster(object):
         else:
             raise TypeError("SubCluster requires slice or list")
         
-        setAllMethods(self)
+        addAllMethods(self)
     
     def execute(self, strings, block=False):
             return self.rc.execute(self.ids, strings, block)
@@ -345,7 +345,7 @@ class RemoteController(object):
         """
         self.addr = addr
         self.block = False
-        setAllMethods(self)
+        addAllMethods(self)
     
     def __del__(self):
         return self.disconnect()
@@ -385,6 +385,9 @@ class RemoteController(object):
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
         self.es = NetstringSocket(self.s)
     
+    def executeAll(self, source, block=False):
+        return self.execute('all', source, block)
+    
     def execute(self, targets, source, block=False):
         """Execute python source code on the ipython kernel.
         
@@ -399,22 +402,29 @@ class RemoteController(object):
         if self.block or block:
             self.es.writeNetstring("EXECUTE BLOCK %s::%s" % (source, targetstr))
             string = self.es.readString()
-            if string == "PICKLE RESULT":
+            data = []
+            while string not in ['EXECUTE FAIL', "EXECUTE OK"]:
                 package = self.es.readString()
-                try:
-                    data = pickle.loads(package)
-                    string = self.es.readString()
-                except pickle.PickleError, e:
-                    print "Error unpickling object: ", e
-                    return False    
+                if string in ["PICKLE RESULT", "PICKLE FAILURE"]:
+                    try:
+                        data.append(pickle.loads(package))
+                    except pickle.PickleError, e:
+                        print "Error unpickling object: ", e
+                        return False
+                else:
+                    return False
+                string = self.es.readString()
                 
-                # Now print data
-                blue = TermColors.Blue
-                normal = TermColors.Normal
-                red = TermColors.Red
-                green = TermColors.Green
-                for d in data:
-                    cmd = d
+            # Now print data
+            blue = TermColors.Blue
+            normal = TermColors.Normal
+            red = TermColors.Red
+            green = TermColors.Green
+            for cmd in data:
+                if isinstance(cmd, Failure):
+                    print cmd
+                else:
+                    print cmd
                     target = cmd[0]
                     cmd_num = cmd[1]
                     cmd_stdin = cmd[2]
@@ -431,9 +441,6 @@ class RemoteController(object):
                         print "%s[%s:%i]%s Err[%i]:\n%s %s" % \
                             (green, self.addr[0], target,
                             red, cmd_num, normal, cmd_stderr)
-            else:
-                data = None
-                string = ""
         else:
             string = "EXECUTE %s::%s" % (source, targetstr)
             self.es.writeNetstring(string)
@@ -550,6 +557,7 @@ class RemoteController(object):
                 return False
             if string_split[0] == "PICKLE":
                 #if it's a pickle
+                print 'it is a pickle'
                 sPickle = serialized.PickleSerialized(string_split[1])
                 sPickle.addToPackage(self.es.readString())
                 try:
@@ -575,13 +583,15 @@ class RemoteController(object):
             #get next string and reenter loop
             string = self.es.readString()
             if string == "SEGMENT PULLED":
+                if len(results) is 1:
+                    results = results[0]
                 returns.append(results)
                 results = []
                 string = self.es.readString()
         #finish command
         if not returns:
             #if it was not a nested list
-            returns = results   
+            returns = results
         if string == 'PULL OK':
             if len(returns) is 1:
                 returns = returns[0]

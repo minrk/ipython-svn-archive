@@ -41,7 +41,8 @@ def curry(f, *curryArgs, **curryKWargs):
 def addAllMethods(obj, methods=[]):
     if not methods:
         for m in IMultiEngine:
-            if m+'All' in IMultiEngine:
+            if m+'All' in IMultiEngine \
+            and getattr(obj, m+'All', 'NotDefined') == 'NotDefined':
                 #only want methods that have All suffix in interface
                 methods.append(m)
     for m in methods:
@@ -51,8 +52,8 @@ def addAllMethods(obj, methods=[]):
             defs = """
 def allMethod(self, %s:
     \"\"\"%s\"\"\"
-    return self.%s('all'%s""" %(MA.getSignatureString()[1:], MA.getDoc(), 
-                        m, M.getSignatureString()[8:])
+    return self.%s('all'%s)""" %(MA.getSignatureString()[1:], MA.getDoc(), 
+                        m, M.getSignatureString()[8:-1])
             exec defs
             setattr(obj, m+'All', instancemethod(allMethod, obj, obj.__class__))
             del allMethod
@@ -201,17 +202,13 @@ class ControllerService(service.Service):
         
         what they look like:
         
-        def autoMethod(self, name, targets, *args, **kwargs):
-            log.msg("%s on %s" %(name, targets))
+        def <fname>(self, targets, *args, **kwargs):
+            log.msg("<fname> on %s" %(targets))
             engines = self.engineList(targets)
             l = []
-            if not isinstance(targets, int) and len(targets) > 1:
-                for e in engines:
-                    l.append(getattr(e, name)(*args, **kwargs))
-                d = gatherBoth(l)
-            else:
-                d = getattr(engines[0], name)(*args, **kwargs)
-            return d
+            for e in engines:
+                l.append(e.<fname>(*args, **kwargs))
+            d = gatherBoth(l)
         """
         for m in IMultiEngine:
             IM = IMultiEngine[m]
@@ -224,20 +221,16 @@ class ControllerService(service.Service):
                 defs = """
 def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
                 defs += """
-    \"\"\"%s\"\"\"""" % IM.getDoc()
+    '''%s'''""" % IM.getDoc()
                 defs += """
     log.msg('%s on %%s' %%targets)""" %(IM.getName())
                 defs += """
     engines = self.engineList(targets)
     l = []
-    if not isinstance(targets, int) and len(targets) > 1:
-        for e in engines:
-            l.append(e.%s%s)""" %(m, eSig)
+    for e in engines:
+        l.append(e.%s%s)""" %(m, eSig)
                 defs +="""
-            d = gatherBoth(l)
-        else:
-            d = engines[0].%s%s
-        return d"""%(m, eSig)
+    return gatherBoth(l)"""
                 try:
                     exec(defs)
                     setattr(self, m, instancemethod(autoMethod, self, self.__class__))
@@ -322,15 +315,11 @@ def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
         """Execute lines of Python code."""
         log.msg("executing %s on %s" %(lines, targets))
         engines = self.engineList(targets)
-        if not isinstance(targets, int) and len(targets) > 1:
-            l = []
-            for e in engines:
-                d = e.execute(lines).addCallback(self.notify)
-                l.append(d)
-            d = gatherBoth(l)
-        else:
-            d = engines[0].execute(lines).addCallback(self.notify)
-        return d
+        l = []
+        for e in engines:
+            d = e.execute(lines).addCallback(self.notify)
+            l.append(d)
+        return gatherBoth(l)
     
     def pushSerialized(self, targets, **namespace):
         """Push value into locals namespace with name key."""
@@ -350,45 +339,35 @@ def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
         """Gets an item out of the self.locals dict by key."""
         log.msg("getting %s from %s" %(keys, targets))
         engines = self.engineList(targets)
-        if not isinstance(targets, int) and len(targets) > 1:
-            l = []
-            for e in engines:
-                l.append(e.pull(*keys))
-            d = gatherBoth(l)
-            if len(keys) > 1:
-                d.addCallback(lambda resultList: zip(*resultList))
-        else:
-            d = engines[0].pull(*keys)
+        l = []
+        for e in engines:
+            l.append(e.pull(*keys))
+        d = gatherBoth(l)
+        if len(keys) > 1:
+            d.addCallback(lambda resultList: zip(*resultList))
         return d
     
     def pullSerialized(self, targets, *keys):
         """Gets an item out of the self.locals dict by key."""
         log.msg("getting %s from %s" %(keys, targets))
         engines = self.engineList(targets)
-        if not isinstance(targets, int) and len(targets) > 1:
-            l = []
-            for e in engines:
-                l.append(e.pullSerialized(*keys))
-            d = gatherBoth(l)
-            if len(keys) > 1:
-                d.addCallback(lambda resultList: zip(*resultList))
-        else:
-            d = engines[0].pullSerialized(*keys)
+        l = []
+        for e in engines:
+            l.append(e.pullSerialized(*keys))
+        d = gatherBoth(l)
+        if len(keys) > 1:
+            d.addCallback(lambda resultList: zip(*resultList))
         return d
     
     def status(self, targets):
         log.msg("retrieving status of %s" %targets)
         engines = self.engineList(targets)
-        if not isinstance(targets, int) and len(targets) > 1:
-            l = []
-            dikt = {}
-            for e in engines:
-                l.append(e.status().addCallback(lambda s: 
-                                dikt.__setitem__(e.id, s)))
-            d = gatherBoth(l).addCallback(lambda _: dikt)
-        else:
-            d = engines[0].status()
-        return d
+        l = []
+        dikt = {}
+        for e in engines:
+            l.append(e.status().addCallback(lambda s: 
+                            dikt.__setitem__(e.id, s)))
+        return gatherBoth(l).addCallback(lambda _: dikt)
     
     
     #notification methods    

@@ -20,7 +20,7 @@ from twisted.internet import protocol, defer, reactor
 from twisted.internet.interfaces import IProducer
 from twisted.protocols import basic
 from twisted.python import components, log
-
+from twisted.python.failure import Failure
 from zope.interface import Interface, implements
 
 from ipython1.kernel import controllerservice, serialized, protocols
@@ -215,31 +215,35 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     
     def pullOK(self, entireResultList):
         try:
-            if isinstance(entireResultList,list):
-                if isinstance(entireResultList[0], tuple):
-                    for perObjectResultList in entireResultList:
-                        for serialResult in perObjectResultList:
-                            if serialResult[0].split(' ')[0] == 'ARRAY':
-                                self.sendArray(serialResult)
-                            else:
-                                for line in serialResult:
-                                    self.sendString(line)
-                        self.sendString("SEGMENT PULLED")
-                else:
-                    for serialResult in entireResultList:
-                        for line in serialResult:
-                            self.sendString(line)
+            if len(entireResultList) > 1:
+                for perObjectResultList in entireResultList:
+                    for serialResult in perObjectResultList:
+                        if not isinstance(serialResult, serialized.Serialized):
+                            try:
+                                serialResult = serialized.serialize(serialResult, '_')
+                            except:
+                                self.pullFail()
+                        self.sendSerial(serialResult)
+                    self.sendString("SEGMENT PULLED")
             else:
-                for line in entireResultList:
-                    self.sendString(line)
-        except IndexError:
-            self.pullFinish("OK")
-        except:
+                for serialResult in entireResultList:
+                    if not isinstance(serialResult, serialized.Serialized):
+                        serialResult = serialized.serialize(serialResult, '_')
+                    self.sendSerial(serialResult)
+        except Exception, e:
             self.pullFinish("FAIL")
+            raise e
         else:
             self.pullFinish("OK")
     
-    def sendArray(self, sArray):
+    def sendSerial(self, s):
+        if s[0].split(' ')[0] == 'ARRAY':
+            self.sendSerialArray(s)
+        else:
+            for line in s:
+                self.sendString(line)
+    
+    def sendSerialArray(self, sArray):
         for line in sArray[:-1]:
             self.sendString(line)
         self.sendBuffer(sArray[-1])
@@ -294,15 +298,18 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         return self.factory.execute(targets, execute_cmd)
     
-    def executeBlockOK(self, result):
-        try:
-            package = pickle.dumps(result, 2)
-        except pickle.pickleError:
-            self.executeFinish("FAIL")
-        else:
-            self.sendString("PICKLE RESULT")
-            self.sendString(package)
-            self.executeFinish("OK")
+    def executeBlockOK(self, results):
+        for r in results:
+            try:
+                if isinstance(r, Failure):
+                    serial = serialized.serialize(r, 'FAILURE')
+                else:
+                    serial = serialized.serialize(r, 'RESULT')
+            except pickle.PickleError, e:
+                self.executeFinish("FAIL")
+            else:
+                self.sendSerial(serial)
+        self.executeFinish("OK")
     
     def executeFail(self, f):
         self.executeFinish("FAIL")
@@ -487,9 +494,6 @@ class VanillaControllerFactoryFromService(protocol.ServerFactory):
     def execute(self, targets, lines):
         """Execute lines of Python code."""
         d = self.service.execute(targets, lines)
-        def printit(x):
-            print x
-        d.addCallback(printit)
         return d
         
     def pushSerialized(self, targets, **namespace):
