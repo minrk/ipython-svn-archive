@@ -152,6 +152,7 @@ class EngineService(service.Service):
     # The IEngine methods
     
     def execute(self, lines):
+        return defer.fail(Exception('hi there'))
         d = defer.execute(self.shell.execute, lines)
         d.addCallback(self.addIDToResult)
         return d
@@ -293,7 +294,7 @@ class QueuedEngine(object):
     
     def saveResult(self, result):
         """put the result in the history"""
-        self.history[result[0]] = result
+        self.history[result[1]] = result
         return result
     
     def finishCommand(self, result):
