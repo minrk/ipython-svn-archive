@@ -296,7 +296,7 @@ class ControllerService(service.Service):
                 l.append(d)
             d = defer.gatherResults(l)
         else:
-            d = e.execute(lines).addCallback(self.notify)
+            d = engines[0].execute(lines).addCallback(self.notify)
         return d
     
     def pushSerialized(self, targets, **namespace):

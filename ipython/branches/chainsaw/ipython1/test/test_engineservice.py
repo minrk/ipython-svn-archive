@@ -82,7 +82,7 @@ class BasicEngineServiceTest(DeferredTestCase):
             (4,"import math","",""),
             (5,"2.0*math.pi","6.2831853071795862\n","")]
         for c in commands:
-            result = self.s.execute(c[1])
+            result = self.s.execute(c[1]).addCallback(lambda r:r[1])
             self.assertDeferredEquals(result, c)
     
     def testPushPull(self):
@@ -117,8 +117,8 @@ class BasicEngineServiceTest(DeferredTestCase):
     def testResult(self):
         d = self.assertDeferredRaises(self.s.getResult(),IndexError)
         d.addCallback(lambda _:self.s.execute("a = 5"))
-        d = self.assertDeferredEquals(self.s.getResult(),(0,"a = 5","",""), d)
-        d = self.assertDeferredEquals(self.s.getResult(0),(0,"a = 5","",""), d)
+        d = self.assertDeferredEquals(self.s.getResult(),(None,(0,"a = 5","","")), d)
+        d = self.assertDeferredEquals(self.s.getResult(0),(None,(0,"a = 5","","")), d)
         d.addCallback(lambda _:self.s.reset())
         return d
     

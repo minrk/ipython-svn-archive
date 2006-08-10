@@ -164,7 +164,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         for id in self.cs.engines.keys():
             d = defer.succeed(None)
             for c in commands:
-                d = self.assertDeferredEquals(self.cs.execute(id, c[1]), c, chainDeferred=d)
+                d = self.assertDeferredEquals(self.cs.execute(id, c[1]), (id, c), chainDeferred=d)
             dlist.append(d)
         d = defer.DeferredList(dlist)
         return d
