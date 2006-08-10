@@ -35,10 +35,9 @@ def curry(f, *curryArgs, **curryKWargs):
         dikt = dict(kwargs)
         dikt.update(curryKWargs)
         return f(*(curryArgs+args), **dikt)
-    
     return curried
 
-def setAllMethods(obj, methods=[]):
+def addAllMethods(obj, methods=[]):
     if not methods:
         for m in IMultiEngine:
             if m+'All' in IMultiEngine:
@@ -46,10 +45,16 @@ def setAllMethods(obj, methods=[]):
                 methods.append(m)
     for m in methods:
         try:
-            #curry attr
-            setattr(obj, m+'All', curry(getattr(obj, m), 'all'))
-            #copy docstring
-            getattr(obj, m+'All').__doc__ = getattr(obj, m).__doc__
+            M = IMultiEngine[m]
+            MA = IMultiEngine[m+'All']
+            defs = """
+def allMethod(self, %s:
+    \"\"\"%s\"\"\"
+    return self.%s('all'%s""" %(MA.getSignatureString()[1:], MA.getDoc(), 
+                        m, M.getSignatureString()[8:])
+            exec defs
+            setattr(obj, m+'All', allMethod)
+            del allMethod
         except AttributeError:
             #will only add All method if original method exists
             pass
@@ -193,6 +198,23 @@ class ControllerService(service.Service):
         self.setAutoMethods()
     
     def setAutoMethods(self):
+        """
+        Automatically generates methods from IMultiEngine
+        
+        what they look like:
+        
+        def autoMethod(self, name, targets, *args, **kwargs):
+            log.msg("%s on %s" %(name, targets))
+            engines = self.engineList(targets)
+            l = []
+            if not isinstance(targets, int) and len(targets) > 1:
+                for e in engines:
+                    l.append(getattr(e, name)(*args, **kwargs))
+                d = defer.gatherResults(l)
+            else:
+                d = getattr(engines[0], name)(*args, **kwargs)
+            return d
+        """
         for m in IMultiEngine:
             IM = IMultiEngine[m]
             #first setup non-All methods
@@ -200,23 +222,33 @@ class ControllerService(service.Service):
                     and getattr(self, m, None) is None:
                 #only work on methods, not attributes, and only on methods
                 #not already defined
-                setattr(self, m, curry(self.autoMethod, m))
-                #generate docstring from IMultiEngine
-                getattr(self,m).__doc__ = m+IM.getSignatureString()+'\n'+IM.__doc__
-        setAllMethods(self)
-    
-    #a method template for dynamically building methods
-    def autoMethod(self, name, targets, *args, **kwargs):
-        log.msg("%s on %s" %(name, targets))
-        engines = self.engineList(targets)
-        l = []
-        if not isinstance(targets, int) and len(targets) > 1:
-            for e in engines:
-                l.append(getattr(e, name)(*args, **kwargs))
+                defs = """
+def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
+                defs += """
+    \"\"\"%s\"\"\"""" % IM.getDoc()
+                defs += """
+    log.msg('%s on '%%s) %%targets""" %(IM.getName())
+                defs += """
+    engines = self.engineList(targets)
+    l = []
+    if not isinstance(targets, int) and len(targets) > 1:
+        for e in engines:
+            l.append(e.%s%s)""" %(m, IM.getSignatureString())
+                defs +="""
             d = defer.gatherResults(l)
         else:
-            d = getattr(engines[0], name)(*args, **kwargs)
-        return d
+            d = engines[0].%s%s
+        return d"""%(m, IM.getSignatureString())
+                try:
+                    exec(defs)
+                    setattr(self, m, autoMethod)
+                    del autoMethod
+#                    log.msg("autogen method %s" %m)
+                except:
+                    log.msg("failed autogen method %s" %m)
+                    raise
+        addAllMethods(self)
+    
     
     #IRemoteController
     

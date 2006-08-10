@@ -245,13 +245,19 @@ class QueuedEngine(object):
             if m in IEngineComplete and callable(IEngineComplete[m])\
                 and not getattr(self, m, None):
                 # if m is a method of IEngine, and not already specified
-                    f = self.buildQueuedMethod(m)
-                    setattr(self, m, f)
+                    setattr(self, m, self.buildQueuedMethod(m))
     
     def buildQueuedMethod(self, m):
-        def queuedMethod(*args, **kwargs):
-            return self.submitCommand(Command(m, *args, **kwargs))
-        
+        args = IEngineComplete[m].getSignatureString()[1:-1]#without '()'
+#        log.msg("autoqueue method %s" %m)
+        if args:
+            comma = ', '
+        else:
+            comma = ''
+        defs = """
+def queuedMethod(self%s%s):
+    return self.submitCommand(Command(%s, %s))""" %(comma, args, m, args)
+        exec(defs)
         return queuedMethod
     
     #methods from IEngineQueued:
