@@ -1,4 +1,20 @@
+"""A test script for the methods of kernel.controllerclient.RemoteController
+It expects a Controller to be running, the default location for the script
+to look for the controller is at 127.0.0.1:10105.
 
+methods to test:
+
+execute
+push
+pull
+status
+getResult
+reset
+
+other aspects to test:
+EngineProxy/Subcluster dictionary access to RemoteController
+
+"""
 import cPickle as pickle
 import sys
 from optparse import OptionParser
@@ -9,13 +25,24 @@ from ipython1.kernel.controllerclient import RemoteController
     
 def main(port, host):
     rc = RemoteController((host, port))
-    id =  rc.status().keys()
-    print rc.status()
-    rc['a'] = 5
-    rc.push('a', 6, id[3])
-    rc.push('b', 4, id[2:4])
-    rc.execute('a*b', id[:6], block=True)
-    print rc.status()
+    id =  rc.statusAll().keys()
+    
+    print "Running on %i engines" %len(id)
+    if not id:
+        print "need some engines!"
+        return
+    
+    print "Testing Push"
+    print rc.push(0, a=5)
+    print rc.push([0], b='asdf')
+    print rc.push([0,1], c=[1,2,3])
+    print rc.push('all', a=1, b=2, c=3)
+    print rc.push(id, q={'a':5})
+    rc['z'] = 'test'
+    rc[1]['t'] = [1,2,3]
+    rc[0:5]['r'] = 'asdf'
+    rc[0:4:2]['asdf'] = 4
+    rc[1:4][1]['qwert'] = 3
     
     
 

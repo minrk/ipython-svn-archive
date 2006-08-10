@@ -21,7 +21,7 @@ def main(host, port, tests, timer):
     rc = RemoteController((host, port))
     rc.connect()
     
-    n = len(rc.status().keys())
+    n = len(rc.status('all').keys())
     if timer is None:
         timer = max(sqrt(n)/6, 1)
     
@@ -42,7 +42,7 @@ def main(host, port, tests, timer):
         for i in range(tests):
             time.sleep(timer)
             start = time.time()
-            assert(rc.execute(cmd))
+            assert(rc.execute('all', cmd))
             stop = time.time()
             print "%.2f" %(1000*(stop - start)),
     except AssertionError, e:
@@ -56,7 +56,7 @@ def main(host, port, tests, timer):
         for i in range(tests):
             time.sleep(timer)
             start = time.time()
-            assert(rc.execute(cmd))
+            assert(rc.execute('all', cmd))
             stop = time.time()
             print "%.2f" %(1000*(stop - start)),
         time.sleep(timer)
@@ -72,7 +72,7 @@ def main(host, port, tests, timer):
             time.sleep(timer)
             swap()
             start = time.time()
-            assert(rc.execute(cmd, block=True))
+            assert(rc.execute('all', cmd, block=True))
             stop = time.time()
             swap()
             print "%.2f" %(1000*(stop - start)),
@@ -88,7 +88,7 @@ def main(host, port, tests, timer):
             time.sleep(timer)
             swap()
             start = time.time()
-            assert(rc.execute(cmd, block=True))
+            assert(rc.execute('all', cmd, block=True))
             stop = time.time()
             swap()
             print "%.2f" %(1000*(stop - start)),
@@ -105,7 +105,7 @@ def main(host, port, tests, timer):
         for i in range(tests):
             time.sleep(timer)
             start = time.time()
-            assert(rc.push(key, value))
+            assert(rc.push('all', key=value))
             stop = time.time()
             print "%.2f" %(1000*(stop - start)),
         time.sleep(timer)
@@ -119,22 +119,7 @@ def main(host, port, tests, timer):
         for i in range(tests):
             time.sleep(timer)
             start = time.time()
-            assert(rc.pull(key) or n is 0)
-            stop = time.time()
-            print "%.2f" %(1000*(stop - start)),
-        time.sleep(timer)
-    except AssertionError, e:
-        print "Command Failed"
-        failures.append(e)
-    print
-    
-    dikt = {'a':2, 'b':'123'}
-    print "Updating with %s: " %dikt
-    try:
-        for i in range(tests):
-            time.sleep(timer)
-            start = time.time()
-            assert(rc.update(dikt))
+            assert(rc.pull('all', key) or n is 0)
             stop = time.time()
             print "%.2f" %(1000*(stop - start)),
         time.sleep(timer)
@@ -148,21 +133,7 @@ def main(host, port, tests, timer):
         for i in range(tests):
             time.sleep(timer)
             start = time.time()
-            assert(rc.getCommand() or n is 0)
-            stop = time.time()
-            print "%.2f" %(1000*(stop - start)),
-        time.sleep(timer)
-    except AssertionError, e:
-        print "Command Failed"
-        failures.append(e)
-    print
-    
-    print "Getting Last Command Index: "
-    try:
-        for i in range(tests):
-            time.sleep(timer)
-            start = time.time()
-            assert(rc.getLastCommandIndex() or n is 0)
+            assert(rc.getResult('all') or n is 0)
             stop = time.time()
             print "%.2f" %(1000*(stop - start)),
         time.sleep(timer)
@@ -176,7 +147,7 @@ def main(host, port, tests, timer):
         for i in range(tests):
             time.sleep(timer)
             start = time.time()
-            assert(rc.reset())
+            assert(rc.reset('all'))
             stop = time.time()
             print "%.2f" %(1000*(stop - start)),
         time.sleep(timer)
@@ -190,7 +161,7 @@ def main(host, port, tests, timer):
         for i in range(tests):
             time.sleep(timer)
             start = time.time()
-            assert(rc.status() or n is 0)
+            assert(rc.status('all') or n is 0)
             stop = time.time()
             print "%.2f" %(1000*(stop - start)),
         time.sleep(timer)
@@ -204,7 +175,7 @@ def main(host, port, tests, timer):
         for i in range(tests):
             time.sleep(timer)
             start = time.time()
-            assert(rc.kill())
+            assert(rc.kill('all'))
             stop = time.time()
             print "%.2f" %(1000*(stop - start)),
         time.sleep(timer)
