@@ -99,8 +99,7 @@ class IRemoteController(Interface):
     
     def registerSerializationTypes(self, *serialTypes):
         """Register the set of allowed subclasses of Serialized."""
-    
-
+        
 class IMultiEngine(Interface):
     """interface to multiple objects implementing IEngineComplete"""
     
