@@ -14,7 +14,8 @@ NotDefined -- A class to represent a nonexistant python variable.
 
 from ipython1.core import error
 
-class KernelError(error.IPythonError)
+class KernelError(error.IPythonError):
+    pass
 
 class NotDefined(KernelError):
     def __init__(self, name):

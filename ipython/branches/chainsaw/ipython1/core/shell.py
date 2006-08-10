@@ -20,7 +20,7 @@ from StringIO import StringIO
 
 from IPython.OutputTrap import OutputTrap
 
-from ipython1.kernel.kernelerror import NotDefined
+from ipython1.kernel.error import NotDefined
 
 class InteractiveShell(InteractiveConsole):
     """The Basic IPython Shell class.  

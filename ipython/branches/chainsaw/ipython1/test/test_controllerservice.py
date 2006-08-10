@@ -11,7 +11,7 @@ from twisted.internet import defer
 from twisted.application.service import IService
 from ipython1.kernel import engineservice as es, controllerservice as cs, serialized
 from ipython1.test.util import DeferredTestCase
-from ipython1.kernel.kernelerror import NotDefined
+from ipython1.kernel.error import NotDefined
 import zope.interface as zi
 
 class BasicEngineServiceTest(DeferredTestCase):

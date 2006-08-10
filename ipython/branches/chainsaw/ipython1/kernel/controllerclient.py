@@ -415,7 +415,6 @@ class RemoteController(object):
                 green = TermColors.Green
                 for d in data:
                     cmd = d
-#problem with target
                     target = cmd[0]
                     cmd_num = cmd[1]
                     cmd_stdin = cmd[2]

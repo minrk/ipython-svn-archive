@@ -50,6 +50,7 @@ import zope.interface as zi
 
 from ipython1.core.shell import InteractiveShell
 from ipython1.kernel import serialized
+from ipython1.kernel.util import gatherBoth
 
 # Here is the interface specification for the IPythonCoreService
 
@@ -167,28 +168,33 @@ class EngineService(service.Service):
         ns = {}
         for k,v in sNamespace.iteritems():
             if isinstance(v, serialized.Serialized):
-                ns[k] = v.unpack()
+                try:
+                    ns[k] = v.unpack()
+                except pickle.PickleError:
+                    return defer.fail()
             else:
                 ns[k] = v
         return defer.execute(self.shell.update, ns)
     
     def pull(self, *keys):
         if len(keys) > 1:
-            result = []
+            pulledDeferreds = []
             for key in keys:
-                result.append(self.shell.get(key))
-            return defer.succeed(tuple(result))
+                pulledDeferreds.append(defer.execute(self.shell.get,key)))
+            d = gatherBoth(pulledDeferreds)
+            return d
         else:
             return defer.execute(self.shell.get, keys[0])
     
     def pullSerialized(self, *keys):
         if len(keys) > 1:
-            l = []
+            pulledDeferreds = []
             for key in keys:
-                d = defer.execute(self.shell.get, key)
-                self.serialize(d, key)
-                l.append(d)
-            return defer.gatherResults(l)
+                d = defer.execute(self.shell.get,key)
+                pulledDeferreds.append(d)
+                self.serializ(d, key)
+            dList = gatherBoth(pulledDeferreds)               
+            return dList
         else:
             key = keys[0]
             d = defer.execute(self.shell.get, key)
@@ -291,7 +297,7 @@ def queuedMethod(self%s%s):
             d.addCallback(self.finishCommand)
             d.addErrback(self.abortCommand)
         else:
-            raise 'no such method'
+            return defer.fail(AttributeError(cmd.remoteMethod))
     
     def _flushQueue(self):
         """pop next command in queue, run it"""
@@ -319,6 +325,7 @@ def queuedMethod(self%s%s):
         del self.currentCommand
         self.currentCommand = None
         self._flushQueue()
+        return None
         #return reason
     
     #methods from IEngine
@@ -373,7 +380,7 @@ class Command(object):
     
     def handleError(self, reason):
         """When an error has occured, relay it to self.deferred."""
-        log.msg("Traceback from remote host: " + reason.getErrorMessage())
+        #log.msg("Traceback from remote host: " + reason.getErrorMessage())
         self.deferred.errback(reason)
     
 

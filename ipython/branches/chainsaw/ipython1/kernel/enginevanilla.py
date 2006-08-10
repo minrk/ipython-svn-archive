@@ -1,10 +1,14 @@
 import cPickle as pickle
 
 import zope.interface as zi
-from twisted.python import components, failure, log
+from twisted.python import components, log
+from twisted.python.failure import Failure
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 
+defer.setDebugging(1)
+
+from ipython1.kernel import error
 from ipython1.kernel.controllerservice import ControllerService, IRemoteController
 from ipython1.kernel.protocols import EnhancedNetstringReceiver
 import ipython1.kernel.serialized as serialized
@@ -107,25 +111,38 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             
     def handle_EXECUTE(self, lines):
         # This will block so callbacks are called immediately!
-        d = self.factory.execute(lines)  
-        d.addCallback(self.handleExecuteResult)
-        d.addErrback(self.executeFail)
+        if lines is None:
+            self.executeFail()
+        d = self.factory.execute(lines)
+        d.addCallback(self.handleExecuteSuccess)
+        d.addErrback(self.handleExecuteFailure)
         
-    def handleExecuteResult(self, result):
-        serial = serialized.PickleSerialized('RESULT')
+    def handleExecuteSuccess(self, result):
         try:
+            serial = serialized.PickleSerialized('RESULT')
             serial.packObject(result)
         except pickle.PickleError:
-            self.executeFail(failure.Failure(Exception()))
+            self.handleExecuteFailure(Failure())
         else:
             self.sendPickleSerialized(serial)
             self.executeOK()
+ 
+    def handleExecuteFailure(self, reason):
+        # I am not sure we need to catch this PickleError
+        try:
+            serial = serialized.PickleSerialized('FAILURE')
+            serial.packObject(reason)
+        except pickle.PickleError:
+            self.executeFail()
+        else:
+            self.sendPickleSerialized(serial)
+            self.executeOK()    
  
     def executeOK(self):
         self.sendString('EXECUTE OK')
         self._reset()
          
-    def executeFail(self, reason):
+    def executeFail(self):
         self.sendString('EXECUTE FAIL')
         self._reset()
     
@@ -135,7 +152,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     
     def handle_PUSH(self, args):
         if args is not None:
-            self.pushFail(failure.Failure(Exception()))
+            self.pushFail(Failure(Exception()))
         else:
             self.nextHandler = self.handlePushing
             self.workVars['pushSerialsList'] = []
@@ -154,9 +171,9 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             if f is not None:
                 self.nextHandler = f
             else:
-                self.pushFail(failure.Failure(Exception()))
+                self.pushFail(Failure(Exception()))
         else:
-            self.pushFail(failure.Failure(Exception()))
+            self.pushFail(Failure(Exception()))
                 
     def handlePushing_PICKLE(self, package):
         self.nextHandler = self.handlePushing
@@ -512,7 +529,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.workVars['deferred'].callback(self.workVars['serialsList'])
             return
         elif msg == self.workVars['errbackString']:
-            self.workVars['deferred'].errback(failure.Failure(Exception()))
+            self.workVars['deferred'].errback(Failure(error.ProtocolError(msg)))
             return
             
         msgList = msg.split(' ', 1)
@@ -523,9 +540,9 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             if f is not None:
                 self.nextHandler = f
             else:
-                self.workVars['deferred'].errback(failure.Failure(Exception()))
+                self.workVars['deferred'].errback(Failure(error.ProtocolError(msg)))
         else:
-            self.workVars['deferred'].errback(failure.Failure(Exception()))
+            self.workVars['deferred'].errback(Failure(error.ProtocolError(msg)))
                 
     def handleSerial_PICKLE(self, package):
         self.nextHandler = self.handleIncomingSerialized
@@ -572,18 +589,19 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     # EXECUTE
     
     def execute(self, lines):
+        if not isinstance(lines, str):
+            return defer.fail(Failure(TypeError('lines must be a string')))
         self.sendString('EXECUTE %s' % lines)
         d = self.setupForIncomingSerialized('EXECUTE OK', 'EXECUTE FAIL')
-        d.addCallbacks(self.handleExecuteResult) 
-        d.addErrback(self.executeFail)
+        d.addCallbacks(self.handleExecuteOK, self.handleExecuteFail)
         return d
         
-    def handleExecuteResult(self, listOfSerialized):
+    def handleExecuteOK(self, listOfSerialized):
         value = listOfSerialized[0].unpack()
         self._reset()
         return value
         
-    def executeFail(self, reason):
+    def handleExecuteFail(self, reason):
         self._reset()
         return reason
         
@@ -602,11 +620,11 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
                 try:
                     s = serialized.serialize(k, v)
                 except pickle.PickleError:
-                    self.pushFail(failure.Failure())
+                    self.pushFail(Failure())
                 self.sendSerialized(serialized.serialize(k, v))
             self.finishPush()
         else:
-            self.pushFail(failure.Failure(Exception()))
+            self.pushFail(Failure(Exception()))
             
     def finishPush(self):
         self.sendString('PUSH DONE')
@@ -616,7 +634,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         if msg == 'PUSH OK':
             self.pushOK()
         else:
-            self.pushFail(failure.Failure(Exception()))
+            self.pushFail(Failure(Exception()))
             
     def pushFail(self, f):
         self.workVars['deferred'].errback(f)
@@ -687,7 +705,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.sendString('GETRESULT %i' % i)
         else:
             self._reset()
-            return defer.fail(failure.Failure(Exception()))
+            return defer.fail(Failure(Exception()))
         d = setupForIncomingSerialized('GETRESULT OK', 'GETRESULT FAIL')
         d.addCallback(self.handleGotResult)
         d.addErrback(self.getResultFail)
@@ -713,9 +731,9 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         if msg == 'RESET OK':
             self.resetOK()
         elif msg == 'RESET FAIL':
-            self.resetFail(failure.Failure(Exception()))
+            self.resetFail(Failure(Exception()))
         else:
-            self.resetFail(failure.Failure(Exception()))
+            self.resetFail(Failure(Exception()))
             
     def resetOK(self):
         self.workVars['deferred'].callback(None)
@@ -736,9 +754,9 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         if msg == 'KILL OK':
             self.killOK()
         elif msg == 'KILL FAIL':
-            self.killFail(failure.Failure(Exception()))
+            self.killFail(Failure(Exception()))
         else:
-            self.killFail(failure.Failure(Exception()))
+            self.killFail(Failure(Exception()))
             
     def killOK(self):
         self.workVars['deferred'].callback(None)
@@ -759,9 +777,9 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         if msg == 'STATUS OK':
             self.statusOK()
         elif msg == 'STATUS FAIL':
-            self.statusFail(failure.Failure(Exception()))
+            self.statusFail(Failure(Exception()))
         else:
-            self.statusFail(failure.Failure(Exception()))
+            self.statusFail(Failure(Exception()))
             
     def statusOK(self):
         self.workVars['deferred'].callback(None)
@@ -788,7 +806,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
                 self.sendSerialized(v)
             self.finishPush()
         else:
-            self.pushFail(failure.Failure(Exception()))
+            self.pushFail(Failure(Exception()))
     
     # PULLSERIALIZED
     

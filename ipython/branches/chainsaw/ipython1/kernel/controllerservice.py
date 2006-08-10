@@ -28,6 +28,7 @@ from zope.interface import Interface, implements
 
 from ipython1.kernel.engineservice import Command, IEngineComplete
 from ipython1.kernel.serialized import Serialized
+from ipython1.kernel.util import gatherBoth
 
 #from the Python Cookbook:
 def curry(f, *curryArgs, **curryKWargs):
@@ -58,15 +59,6 @@ def allMethod(self, %s:
         except AttributeError:
             #will only add All method if original method exists
             pass
-
-#from twisted.defer.gatherresults/_parseDlist
-def parseResults(results):
-    return [x[1] for x in results]
-
-def gatherBoth(dlist):
-    d = defer.DeferredList(dlist)
-    d.addCallback(parseResults)
-    return d
 
 class ResultReporterProtocol(protocol.DatagramProtocol):
     

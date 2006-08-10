@@ -8,7 +8,7 @@ Things that should be tested:
 
 from twisted.trial import unittest
 from ipython1.core import shell
-from ipython1.kernel.kernelerror import NotDefined
+from ipython1.kernel.error import NotDefined
 
 class BasicShellTest(unittest.TestCase):
 

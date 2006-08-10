@@ -486,8 +486,12 @@ class VanillaControllerFactoryFromService(protocol.ServerFactory):
     #IEngine multiplexer methods
     def execute(self, targets, lines):
         """Execute lines of Python code."""
-        return self.service.execute(targets, lines)
-    
+        d = self.service.execute(targets, lines)
+        def printit(x):
+            print x
+        d.addCallback(printit)
+        return d
+        
     def pushSerialized(self, targets, **namespace):
         """Push value into locals namespace with name key."""
         return self.service.pushSerialized(targets, **namespace)
