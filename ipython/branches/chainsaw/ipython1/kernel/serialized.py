@@ -1,6 +1,6 @@
 import cPickle as pickle
 
-def serialize(key, obj):
+def serialize(obj, key):
     serial = None
     try:
         import numpy

@@ -64,7 +64,7 @@ class BasicEngineServiceTest(DeferredTestCase):
         self.assertDeferredRaises(c.execute('a=5'), ni)
         self.assertDeferredRaises(c.push(a=5), ni)
         self.assertDeferredRaises(c.pushSerialized(
-                a=serialized.serialize('a', [1,2,'a'])), ni)
+                a=serialized.serialize([1,2,'a'], 'a')), ni)
         self.assertDeferredRaises(c.pull('a', 'b', 'c'), ni)
         self.assertDeferredRaises(c.pullSerialized('a', 'b', 'c'), ni)
         self.assertDeferredRaises(c.pullNamespace('qwer', 'asdf', 'zcxv'), ni)
@@ -101,7 +101,7 @@ class BasicEngineServiceTest(DeferredTestCase):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
         d = defer.succeed(None)
         for o in objs:
-            self.s.pushSerialized(key=serialized.serialize('key', o))
+            self.s.pushSerialized(key=serialized.serialize(o, 'key'))
             value = self.s.pullSerialized('key')
             value.addCallback(lambda serial: serial.unpack())
             d = self.assertDeferredEquals(value,o,d)

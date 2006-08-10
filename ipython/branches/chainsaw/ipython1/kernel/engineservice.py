@@ -153,7 +153,6 @@ class EngineService(service.Service):
     # The IEngine methods
     
     def execute(self, lines):
-        return defer.fail(Exception('hi there'))
         d = defer.execute(self.shell.execute, lines)
         d.addCallback(self.addIDToResult)
         return d
@@ -180,7 +179,7 @@ class EngineService(service.Service):
         if len(keys) > 1:
             pulledDeferreds = []
             for key in keys:
-                pulledDeferreds.append(defer.execute(self.shell.get,key)))
+                pulledDeferreds.append(defer.execute(self.shell.get,key))
             d = gatherBoth(pulledDeferreds)
             return d
         else:
@@ -192,17 +191,19 @@ class EngineService(service.Service):
             for key in keys:
                 d = defer.execute(self.shell.get,key)
                 pulledDeferreds.append(d)
-                self.serializ(d, key)
+                d.addCallback(serialized.serialize, key)
+                d.addErrback(self.handlePullProblems)
             dList = gatherBoth(pulledDeferreds)               
             return dList
         else:
             key = keys[0]
             d = defer.execute(self.shell.get, key)
-            d.addCallback(lambda obj:serialized.serialize(key, obj))
+            d.addCallback(serialized.serialize, key)
+            d.addErrback(self.handlePullProblems)
             return d
-    
-    def serialize(self, d, key):
-        d.addCallback(lambda obj:serialized.serialize(key, obj))
+            
+    def handlePullProblems(self, reason):
+        return serialized.serialize(reason, 'FAILURE')
             
     def pullNamespace(self, *keys):
         ns = {}

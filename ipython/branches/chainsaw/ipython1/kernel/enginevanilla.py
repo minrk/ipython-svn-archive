@@ -618,10 +618,10 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         if msg == 'PUSH READY':
             for k, v in self.workVars['namespace'].iteritems():
                 try:
-                    s = serialized.serialize(k, v)
+                    s = serialized.serialize(v, k)
                 except pickle.PickleError:
                     self.pushFail(Failure())
-                self.sendSerialized(serialized.serialize(k, v))
+                self.sendSerialized(serialized.serialize(v, k))
             self.finishPush()
         else:
             self.pushFail(Failure(Exception()))

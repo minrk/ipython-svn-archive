@@ -83,7 +83,7 @@ class BasicEngineServiceTest(DeferredTestCase):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
         d = defer.succeed(None)
         for o in objs:
-            self.cs.pushSerialized(0, key=serialized.serialize('key', o))
+            self.cs.pushSerialized(0, key=serialized.serialize(o, 'key'))
             value = self.cs.pullSerialized(0, 'key')
             value.addCallback(lambda serial: serial.unpack())
             d = self.assertDeferredEquals(value,o,d)

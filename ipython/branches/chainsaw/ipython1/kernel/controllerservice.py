@@ -93,7 +93,11 @@ class IRemoteController(Interface):
         """Register the set of allowed subclasses of Serialized."""
         
 class IMultiEngine(Interface):
-    """interface to multiple objects implementing IEngineComplete"""
+    """interface to multiple objects implementing IEngineComplete.
+    
+    All IMultiEngine methods must return a Deferred to alist with length 
+    equal to the number of targets.
+    """
     
     def verifyTargets(targets):
         """verify if targets is callable id list, id, or string 'all'"""
