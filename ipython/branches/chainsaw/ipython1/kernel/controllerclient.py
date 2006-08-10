@@ -414,9 +414,7 @@ class RemoteController(object):
                 red = TermColors.Red
                 green = TermColors.Green
                 for d in data:
-                    cmd = d
-#problem with target
-                    target = 0
+                    (target, cmd) = d
                     cmd_num = cmd[0]
                     cmd_stdin = cmd[1]
                     cmd_stdout = cmd[2][:-1]
@@ -603,33 +601,30 @@ class RemoteController(object):
     def pullNamespace(self, targets, *keys):
         """Gets a namespace dict with keys from targets"""
         self._check_connection()    
-        if isinstance(targets, list):
-            targetstr = '::'.join(map(str, targets))
+        values = self.pull(targets, *keys)
+        returns = []
+        multitargets = not isinstance(targets, int) and len(targets) > 1
+        if len(keys) > 1 and multitargets:
+            results = zip(*values)
+        elif multitargets:
+            results = values
+        elif len(keys) > 1:
+            results = [values]
         else:
-            targetstr = str(targets)
-        try:
-            keystr = ','.join(keys)
-        except TypeError:
-            return False
-            
-        self.es.writeNetstring("PULLNAMESPACE %s::%s" %(keystr, targetstr))
-        string = self.es.readString()
-        results = []
-        while string not in ["PULLNAMESPACE OK", "PULLNAMESPACE FAIL"]:
-            if string == "PICKLE NAMESPACE":
-                pns = self.es.readString()
-                try: 
-                    data = pickle.loads(pns)
-                except pickle.PickleError:
-                    print "could not unpickle"
-                    return False
-                else:
-                    results.append(data)
-        if len(results) is 1:
-            return results[0]
-        else:
-            return results        
-    
+            dikt = {}
+            dikt[keys[0]] = values
+            return dikt
+        for r in results:
+            dikt = {}
+            if len(keys) == 1:
+                kv = ((keys[0], r),)
+            else:
+                kv = zip(keys, r)
+            for k,v in kv:
+                dikt[k] = v
+            returns.append(dikt)
+        return returns
+
     def getResult(self, targets, number=None):
         """Gets a specific result from the kernel, returned as a tuple."""
         self._check_connection()    

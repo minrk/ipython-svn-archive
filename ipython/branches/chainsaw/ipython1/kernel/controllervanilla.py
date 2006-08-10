@@ -252,45 +252,6 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self.sendString("PULL %s" % msg)
     
     #####
-    ##### The PULL command
-    #####
-
-    def handle_PULLNAMESPACE(self, args, targets):
-        # Parse the args
-        try:
-            keys = args.split(',')
-        except TypeError:
-            self.pullnsFinish('FAIL')
-        else:
-            self.nextHandler = self.handleUnexpectedData
-            d = self.factory.pullNamespaceSerialized(targets, *keys)
-            d.addCallbacks(self.pullnsOK, self.pullnsFail)
-            return d
-    
-    def pullnsOK(self, resultList):
-        try:
-            if isinstance(resultList, list):
-                for serialNamespace in resultList:
-                    for line in serialNamespace:
-                        self.sendString(line)
-            else:
-                serialNamespace = resultList
-                for line in serialNamespace:
-                    #could be big
-                    self.sendString(line)
-        except:
-            self.pullnsFinish("FAIL")
-        else:
-            self.pullnsFinish("OK")
-    
-    def pullnsFail(self, failure):
-        self.pullnsFinish("FAIL")
-    
-    def pullnsFinish(self, msg):
-        self._reset()
-        self.sendString("PULLNAMESPACE %s" % msg)
-    
-    #####
     ##### The EXECUTE command
     #####
     

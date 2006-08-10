@@ -285,6 +285,20 @@ class ControllerService(service.Service):
         else:
             return False
     
+    def execute(self, targets, lines):
+        """Execute lines of Python code."""
+        log.msg("executing %s on %s" %(lines, targets))
+        engines = self.engineList(targets)
+        if not isinstance(targets, int) and len(targets) > 1:
+            l = []
+            for e in engines:
+                d = e.execute(lines).addCallback(self.notify)
+                l.append(d)
+            d = defer.gatherResults(l)
+        else:
+            d = e.execute(lines).addCallback(self.notify)
+        return d
+    
     def pushSerialized(self, targets, **namespace):
         """Push value into locals namespace with name key."""
         log.msg("pushing to %s" % targets)
@@ -366,14 +380,14 @@ class ControllerService(service.Service):
             log.msg("Notifiers: %s" % self._notifiers)
         return defer.succeed(None)
     
-    def notify(self, id, result):
-        package = pickle.dumps((id, result), 2)
+    def notify(self, result):
+        package = pickle.dumps(result, 2)
         for tonotify in self.notifiers().values():
             if tonotify.transport.protocol is not None:
                 tonotify.transport.protocol.sendLine(
                         "RESULT %i %s" %(len(package), package))
             else:
-                log.msg("Notifier connection not ready for RESULT " + str((id, result)))
+                log.msg("Notifier connection not ready for RESULT " + str(result))
         return result
     
 

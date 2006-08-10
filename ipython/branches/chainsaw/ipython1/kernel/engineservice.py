@@ -152,7 +152,8 @@ class EngineService(service.Service):
     # The IEngine methods
     
     def execute(self, lines):
-        return defer.execute(self.shell.execute, lines)
+        d = defer.execute(self.shell.execute, lines)
+        return d.addCallback(lambda r: (self.id, r))
     
     def push(self, **namespace):
         return defer.execute(self.shell.update, namespace)
@@ -211,7 +212,9 @@ class EngineService(service.Service):
             return defer.succeed(None)
     
     def getResult(self, i=None):
-        return defer.execute(self.shell.getCommand, i)
+        d = defer.execute(self.shell.getCommand, i)
+        return d.addCallback(lambda r: (self.id, r))
+        
     
     def status(self):
         return defer.succeed(None)
