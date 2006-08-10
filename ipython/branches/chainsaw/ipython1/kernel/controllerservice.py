@@ -382,7 +382,7 @@ class ControllerService(service.Service):
             log.msg("Notifiers: %s" % self._notifiers)
         return defer.succeed(None)
     
-    def notify(self, id, result):
+    def notify(self, result):
         package = pickle.dumps(result, 2)
         for tonotify in self.notifiers().values():
             if tonotify.transport.protocol is not None:

@@ -153,15 +153,15 @@ class TCPResultsProtocol(LineReceiver):
                     cmd_stdin = cmd_tuple[2]
                     cmd_stdout = cmd_tuple[3]
                     cmd_stderr = cmd_tuple[4]
-                    print "\n%s[%s]:[%i]%s In [%i]:%s %s" % \
+                    print "\n%s[%s:%i]%s In [%i]:%s %s" % \
                         (self.green, self.peer.host, id,
                         self.blue, cmd_num, self.normal, cmd_stdin)
                     if cmd_stdout:
-                        print "%s[%s]:[%i]%s Out[%i]:%s %s" % \
+                        print "%s[%s:%i]%s Out[%i]:%s %s" % \
                             (self.green, self.peer.host, id,
                             self.red, cmd_num, self.normal, cmd_stdout)
                     if cmd_stderr:
-                        print "%s[%s]:[%i]%s Err[%i]:\n%s %s" % \
+                        print "%s[%s:%i]%s Err[%i]:\n%s %s" % \
                             (self.green, self.peer.host, id,
                             self.red, cmd_num, self.normal, cmd_stderr)
         else:
