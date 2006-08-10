@@ -81,10 +81,10 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         self.sendBuffer(ia.next())
     
     def sendSerialized(self, s):
-        if isinstance(s, PickleSerialized):
-            self.sendPickle(s)
-        elif isinstance(s, ArraySerialized):
-            self.sendArray(s)
+        if isinstance(s, serialized.PickleSerialized):
+            self.sendPickleSerialized(s)
+        elif isinstance(s, serialized.ArraySerialized):
+            self.sendArrarySerialized(s)
     
     #####
     ##### The REGISTER command
@@ -113,7 +113,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         d.addErrback(self.executeFail)
         
     def handleExecuteResult(self, result):
-        serial = serialized.PickleSerialized('result')
+        serial = serialized.PickleSerialized('RESULT')
         try:
             serial.packObject(result)
         except pickle.PickleError:
@@ -143,8 +143,10 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.sendString("PUSH READY")
     
     def handlePushing(self, msg):
+        log.msg("handlePushing" + msg)
         if msg == 'PUSH DONE':
             self.handlePushDone()
+            return
             
         msgList = msg.split(' ', 1)
         if len(msgList) == 2:
@@ -159,6 +161,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.pushFail(failure.Failure(Exception()))
                 
     def handlePushing_PICKLE(self, package):
+        log.msg('handlePushing_PICKLE')
         self.nextHandler = self.handlePushing
         serial = serialized.PickleSerialized(self.workVars['pushKey'])
         serial.addToPackage(package)
@@ -180,7 +183,10 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         self.workVars['pushSerialsList'].append(self.workVars['pushSerial'])
                 
     def handlePushDone(self):
-        self.factory.pushSerialized(**self.workVars['pushSerialsList'])
+        ns = {}
+        for v in self.workVars['pushSerialsList']:
+            ns[v.key] = v
+        self.factory.pushSerialized(**ns)
         self.pushOK()
             
     def pushOK(self):
@@ -188,6 +194,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         self._reset()
          
     def pushFail(self, reason):
+        reason.printTraceback()
         self.sendString('PUSH FAIL')
         self._reset()
 
@@ -211,7 +218,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.sendSerialized(oneOrMoreSerialized)
         self.pullOK()
     
-    def pullOK(self, args):
+    def pullOK(self):
         self.sendString('PULL OK')
         self._reset()
     
@@ -236,7 +243,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.sendSerialized(v)
         self.pullNamespaceOK()
     
-    def pullNamespaceOK(self, args):
+    def pullNamespaceOK(self):
         self.sendString('PULLNAMESPACE OK')
         self._reset()
     
@@ -262,7 +269,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         d.addCallbacks(self.handleResult, self.getResultFail)
         
     def handleResult(self, result):
-        serial = serialized.PickleSerialized('result')
+        serial = serialized.PickleSerialized('RESULT')
         try:
             serial.packObject(result)
         except pickle.PickleError:
@@ -271,7 +278,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.sendPickleSerialized(serial)
             self.getResultOK()
             
-    def getResultOK(self, args):
+    def getResultOK(self):
         self.sendString('GETRESULT OK')
         self._reset()
 
@@ -459,7 +466,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             # Handler resolved with state and cmd 
             f(args)
         else:
-            self.sendString('BAD COMMAND')
+            #self.sendString('BAD COMMAND')
             self._reset()
 
     # Utility methods
@@ -489,10 +496,10 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         self.sendBuffer(ia.next())
 
     def sendSerialized(self, s):
-        if isinstance(s, PickleSerialized):
-            self.sendPickle(s)
-        elif isinstance(s, ArraySerialized):
-            self.sendArray(s)
+        if isinstance(s, serialized.PickleSerialized):
+            self.sendPickleSerialized(s)
+        elif isinstance(s, serialized.ArraySerialized):
+            self.sendArrarySerialized(s)
 
     def setupForIncomingSerialized(self, callbackString, errbackString=''):
         log.msg("C: Entering setupForIncomingSerialized")
@@ -799,8 +806,15 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         keyString = ','.join(keys)
         self.sendString('PULL %s' % keyString)
         d = self.setupForIncomingSerialized('PULL OK', 'PULL FAIL')
+        d.addCallback(self.handlePullSerialized)
         d.addErrback(self.pullFail)
         return d
+        
+    def handlePullSerialized(self, s):
+        if len(s) == 1:
+            return s[0]
+        else:
+            return s
         
     # IEngineThreadedMethods
     

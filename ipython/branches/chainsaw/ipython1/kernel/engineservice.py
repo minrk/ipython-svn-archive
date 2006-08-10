@@ -97,10 +97,13 @@ class IEngineBase(zi.Interface):
 class IEngineSerialized(zi.Interface):
     
     def pushSerialized(**namespace):
-        """Push a dict of keys and Serialized to the user's namespace."""
+        """Push a dict of keys and Serialized|objects to the user's namespace."""
     
     def pullSerialized(*keys):
-        """Pull objects by key form the user's namespace as Serialized."""
+        """Pull objects by key form the user's namespace as Serialized.
+        
+        Returns a list or one of Serialized.
+        """
     
 
 class IEngineThreaded(zi.Interface):
@@ -159,6 +162,8 @@ class EngineService(service.Service):
         for k,v in sNamespace.iteritems():
             if isinstance(v, serialized.Serialized):
                 ns[k] = v.unpack()
+            else:
+                ns[k] = v
         return defer.execute(self.shell.update, ns)
     
     def pull(self, *keys):

@@ -238,7 +238,7 @@ class EngineProxy(object):
         return self.rc.push(self.id, **namespace)
     
     def __setitem__(self, key, value):
-        return self.push(key=value)
+        return self.push(**{key:value})
     
     def pull(self, *keys):
         return self.rc.pull(self.id, *keys)
@@ -297,7 +297,7 @@ class SubCluster(object):
         return self.rc.push(self.ids, **namespace)
     
     def __setitem__(self, key, value):
-        return self.push(key=value)
+        return self.push(**{key:value})
     
     def pull(self, *keys):
         return self.rc.pull(self.ids, *keys)
@@ -512,7 +512,7 @@ class RemoteController(object):
             return string
     
     def __setitem__(self, key, value):
-            return self.push('all', key=value)
+            return self.push('all', **{key:value})
     
     def pull(self, targets, *keys):
         """Get a python object from a remote kernel.
