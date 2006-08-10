@@ -143,15 +143,16 @@ class TCPResultsProtocol(LineReceiver):
                 fail = True
             else:
                 try:
-                    (id, cmd_tuple) = pickle.loads(msg_split[2])
+                    cmd_tuple = pickle.loads(msg_split[2])
                 except pickle.PickleError:
                     fail = True
                 else:
                     fail = False
-                    cmd_num = cmd_tuple[0]
-                    cmd_stdin = cmd_tuple[1]
-                    cmd_stdout = cmd_tuple[2]
-                    cmd_stderr = cmd_tuple[3]
+                    id = cmd_tuple[0]
+                    cmd_num = cmd_tuple[1]
+                    cmd_stdin = cmd_tuple[2]
+                    cmd_stdout = cmd_tuple[3]
+                    cmd_stderr = cmd_tuple[4]
                     print "\n%s[%s]:[%i]%s In [%i]:%s %s" % \
                         (self.green, self.peer.host, id,
                         self.blue, cmd_num, self.normal, cmd_stdin)

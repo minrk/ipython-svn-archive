@@ -21,3 +21,12 @@ class NotDefined(Exception):
 
 class IdInUse(Exception):
     pass
+    
+    
+class ClassName (object):
+
+    def __init__(self, arg):
+        self.arg = arg
+        pass
+
+

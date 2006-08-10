@@ -246,6 +246,8 @@ class ControllerService(service.Service):
         del self.engines[id]
         if not self.saveIDs:
             self.availableIDs.append(id)
+            # Sort to assign lower ids first
+            self.availableIDs.sort(reverse=True) 
         else:
             log.msg("preserving id %i" %id)
     
@@ -380,7 +382,7 @@ class ControllerService(service.Service):
             log.msg("Notifiers: %s" % self._notifiers)
         return defer.succeed(None)
     
-    def notify(self, result):
+    def notify(self, id, result):
         package = pickle.dumps(result, 2)
         for tonotify in self.notifiers().values():
             if tonotify.transport.protocol is not None:

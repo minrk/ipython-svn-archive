@@ -10,7 +10,14 @@ import sys
 import os
 import socket
 
-def main():
+def main(host, port, listen):
+    if listen:
+        s = socket.socket()
+        s.bind((host, port))
+        s.listen(1)
+        clientSock, clientAddr = s.accept()
+    else:
+        
     while True:
         
 def start():
@@ -18,7 +25,8 @@ def start():
     parser.set_defaults(port=10104)
     parser.add_option('-h', '--host', type='str', dest='host')
     parser.add_option('-p', '--port', type='int', dest='port')
-    parser.add_options('-l', '--listen', type=, dest='listen')
+    parser.add_options('-l', '--listen', action='store_true', dest='listen',
+        default=True)
     (options, args) = parser.parse_args()
     main(options.host, options.port, options.listen)
 

@@ -68,7 +68,6 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     
     def handleUnexpectedData(self, args):
         log.msg("Unexpected Data: %s" + args)
-        self.sendString('UNEXPECTED DATA')
     
     def sendPickleSerialized(self, p):
         for line in p:
@@ -143,7 +142,6 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.sendString("PUSH READY")
     
     def handlePushing(self, msg):
-        log.msg("handlePushing" + msg)
         if msg == 'PUSH DONE':
             self.handlePushDone()
             return
@@ -161,7 +159,6 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.pushFail(failure.Failure(Exception()))
                 
     def handlePushing_PICKLE(self, package):
-        log.msg('handlePushing_PICKLE')
         self.nextHandler = self.handlePushing
         serial = serialized.PickleSerialized(self.workVars['pushKey'])
         serial.addToPackage(package)
@@ -419,7 +416,7 @@ components.registerAdapter(VanillaEngineClientFactoryFromEngineService,
 # Controller side of things
 
 class IVanillaEngineServerProtocol(engineservice.IEngineBase,
-    engineservice.IEngineSerialized, engineservice.IEngineThreaded):
+    engineservice.IEngineSerialized):
     
     pass
     
@@ -438,12 +435,12 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     def connectionLost(self, reason):
         self.factory.unregisterEngine(self.id)
 
-    def sendString(self, s):
-        log.msg('C: %s' % s)
-        EnhancedNetstringReceiver.sendString(self, s)
+    #def sendString(self, s):
+    #    log.msg('C: %s' % s)
+    #    EnhancedNetstringReceiver.sendString(self, s)
 
     def stringReceived(self, msg):
-        log.msg('E: %s' % msg)
+        #log.msg('E: %s' % msg)
         if self.nextHandler is None:
             self.defaultHandler(msg)
         else:
@@ -483,7 +480,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         return self.workVars['deferred']
 
     def handleUnexpectedData(self, args):
-        self.sendString('UNEXPECTED DATA')
+        log.msg('Unexpected Data: %s' % args)
     
     def sendPickleSerialized(self, p):
         for line in p:
@@ -502,19 +499,15 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.sendArrarySerialized(s)
 
     def setupForIncomingSerialized(self, callbackString, errbackString=''):
-        log.msg("C: Entering setupForIncomingSerialized")
         self.workVars['callbackString'] = callbackString
         if errbackString:
             self.workVars['errbackString'] = errbackString
         self.workVars['serialsList'] = []
-        log.msg("C: Setting nextHandler")
         self.nextHandler = self.handleIncomingSerialized
-        log.msg("C: Creating deferred")
         self.workVars['deferred'] = defer.Deferred()
         return self.workVars['deferred']
         
     def handleIncomingSerialized(self, msg):
-        log.msg("C: Checking termination strings")
         if msg == self.workVars['callbackString']:
             self.workVars['deferred'].callback(self.workVars['serialsList'])
             return
@@ -579,7 +572,6 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     # EXECUTE
     
     def execute(self, lines):
-        log.msg("C: Entering execute")
         self.sendString('EXECUTE %s' % lines)
         d = self.setupForIncomingSerialized('EXECUTE OK', 'EXECUTE FAIL')
         d.addCallbacks(self.handleExecuteResult) 
@@ -587,13 +579,11 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         return d
         
     def handleExecuteResult(self, listOfSerialized):
-        log.msg("C: Entering handleExecuteResult")
         value = listOfSerialized[0].unpack()
         self._reset()
         return value
         
     def executeFail(self, reason):
-        log.msg("C: Entering executeFail")
         self._reset()
         return reason
         

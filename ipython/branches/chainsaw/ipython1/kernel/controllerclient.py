@@ -414,20 +414,22 @@ class RemoteController(object):
                 red = TermColors.Red
                 green = TermColors.Green
                 for d in data:
-                    (target, cmd) = d
-                    cmd_num = cmd[0]
-                    cmd_stdin = cmd[1]
-                    cmd_stdout = cmd[2][:-1]
-                    cmd_stderr = cmd[3][:-1]
-                    print "%s[%s]:[%i]%s In [%i]:%s %s" % \
+                    cmd = d
+#problem with target
+                    target = cmd[0]
+                    cmd_num = cmd[1]
+                    cmd_stdin = cmd[2]
+                    cmd_stdout = cmd[3][:-1]
+                    cmd_stderr = cmd[4][:-1]
+                    print "%s[%s:%i]%s In [%i]:%s %s" % \
                         (green, self.addr[0], target,
                         blue, cmd_num, normal, cmd_stdin)
                     if cmd_stdout:
-                        print "%s[%s]:[%i]%s Out[%i]:%s %s" % \
+                        print "%s[%s:%i]%s Out[%i]:%s %s" % \
                             (green, self.addr[0], target,
                             red, cmd_num, normal, cmd_stdout)
                     if cmd_stderr:
-                        print "%s[%s]:[%i]%s Err[%i]:\n%s %s" % \
+                        print "%s[%s:%i]%s Err[%i]:\n%s %s" % \
                             (green, self.addr[0], target,
                             red, cmd_num, normal, cmd_stderr)
             else:

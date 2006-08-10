@@ -2,6 +2,13 @@
 Vanilla Engine to Controller Network Protocol
 =============================================
 
+
+	Cl:  EXECUTE a = 5
+	Cr:  PICKLE error
+	Cr:  ##########
+	Cr:  EXECUTE FAIL ERROR 10
+...
+	Cr:  ERROR DONE
 execute()
 =========
 
