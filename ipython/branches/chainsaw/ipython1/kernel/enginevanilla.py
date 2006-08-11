@@ -213,7 +213,6 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         d = self.factory.pushSerialized(**ns)
         d.addCallback(self.pushOK)
         d.addErrback(self.pushFail)
-        self.pushOK()
             
     def pushOK(self, *args):
         self.sendString('PUSH OK')
@@ -465,12 +464,12 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     def connectionLost(self, reason):
         self.factory.unregisterEngine(self.id)
 
-    def sendString(self, s):
-        log.msg('C: %s' % s)
-        EnhancedNetstringReceiver.sendString(self, s)
+    #def sendString(self, s):
+    #    log.msg('C: %s' % s)
+    #    EnhancedNetstringReceiver.sendString(self, s)
 
     def stringReceived(self, msg):
-        log.msg('E: %s' % msg)
+        #log.msg('E: %s' % msg)
         if self.nextHandler is None:
             self.defaultHandler(msg)
         else:
@@ -648,7 +647,6 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             
     def finishPush(self):
         self.nextHandler = self.isPushOK
-        log.msg('The next handler is: ' + repr(self.nextHandler))
         self.sendString('DONE')
 
     def isPushOK(self, msg):
