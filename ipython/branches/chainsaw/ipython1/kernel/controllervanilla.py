@@ -204,20 +204,20 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     def handle_PULL(self, args, targets):
         # Parse the args
         try:
-            keys = args.split(',')
+            self.workVars['pullKeys'] = args.split(',')
         except TypeError:
             self.pullFinish('FAIL')
         else:
             self.nextHandler = self.handleUnexpectedData
-            d = self.factory.pullSerialized(targets, *keys)
+            d = self.factory.pullSerialized(targets, *self.workVars['pullKeys'])
             d.addCallbacks(self.pullOK, self.pullFail)
             return d
     
     def pullOK(self, entireResultList):
         try:
             if len(entireResultList) > 1:
-                for perObjectResultList in entireResultList:
-                    for serialResult in perObjectResultList:
+                for perTargetResultList in entireResultList:
+                    for serialResult in perTargetResultList:
                         if not isinstance(serialResult, serialized.Serialized):
                             try:
                                 serialResult = serialized.serialize(serialResult, '_')

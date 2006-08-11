@@ -552,6 +552,7 @@ class RemoteController(object):
         returns = []
         nkeys = len(keys)
         while string not in ['PULL OK', 'PULL FAIL']:
+            print string
             string_split = string.split(' ', 1)
             if len(string_split) is not 2:
                 return False
@@ -562,6 +563,7 @@ class RemoteController(object):
                 sPickle.addToPackage(self.es.readString())
                 try:
                     data = sPickle.unpack()
+                    print data
                 except pickle.PickleError, e:
                     print "Error unpickling object: ", e
                     return False

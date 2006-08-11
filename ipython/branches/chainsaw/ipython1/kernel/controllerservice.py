@@ -51,7 +51,7 @@ def addAllMethods(obj, methods=[]):
             MA = IMultiEngine[m+'All']
             defs = """
 def allMethod(self, %s:
-    \"\"\"%s\"\"\"
+    '''%s'''
     return self.%s('all'%s)""" %(MA.getSignatureString()[1:], MA.getDoc(), 
                         m, M.getSignatureString()[8:-1])
             exec defs
@@ -219,23 +219,19 @@ class ControllerService(service.Service):
                 #not already defined
                 eSig = IEngineComplete[m].getSignatureString()
                 defs = """
-def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
-                defs += """
-    '''%s'''""" % IM.getDoc()
-                defs += """
-    log.msg('%s on %%s' %%targets)""" %(IM.getName())
-                defs += """
+def autoMethod(self, %s:
+    '''%s'''
+    log.msg('%s on %%s' %%targets)
     engines = self.engineList(targets)
     l = []
     for e in engines:
-        l.append(e.%s%s)""" %(m, eSig)
-                defs +="""
-    return gatherBoth(l)"""
+        l.append(e.%s%s)
+    return gatherBoth(l)"""\
+            %(IM.getSignatureString()[1:], IM.getDoc(), IM.getName(), m, eSig)
                 try:
                     exec(defs)
                     setattr(self, m, instancemethod(autoMethod, self, self.__class__))
-                    del autoMethod
-#                    log.msg("autogen method %s" %m)
+                    #del autoMethod
                 except:
                     log.msg("failed autogen method %s" %m)
                     raise
@@ -355,8 +351,8 @@ def autoMethod(self, %s:""" %(IM.getSignatureString()[1:])
         for e in engines:
             l.append(e.pullSerialized(*keys))
         d = gatherBoth(l)
-        if len(keys) > 1:
-            d.addCallback(lambda resultList: zip(*resultList))
+#        if len(keys) > 1:
+#            d.addCallback(lambda resultList: zip(*resultList))
         return d
     
     def status(self, targets):
