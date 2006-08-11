@@ -17,10 +17,15 @@ class CompleteEngineTestCase(DeferredTestCase):
     class Empty:
         pass
     e = es.completeEngine(Empty())
-    def test_Interface(self):
+    
+    def printer(self, r):
+        print r
+        return r
+    
+    def testInterface(self):
         for base in es.IEngineComplete.getBases():
             self.assert_(base.providedBy(self.e))
-        
+    
     def testExecute(self):
         commands = [(self.e.id, 0,"a = 5","",""),
             (self.e.id, 1,"b = 10","",""),
@@ -29,12 +34,10 @@ class CompleteEngineTestCase(DeferredTestCase):
             (self.e.id, 4,"import math","",""),
             (self.e.id, 5,"2.0*math.pi","6.2831853071795862\n","")]
         d = defer.succeed(None)
-        print d
         for c in commands:
-            print c
             result = self.e.execute(c[2])
             d = self.assertDeferredEquals(result, c, d)
-        return d
+        return d.addCallback(self.printer)
     
     def testPushPull(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]

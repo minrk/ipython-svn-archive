@@ -260,12 +260,18 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
 
         keys = args.split(',')
         self.nextHandler = self.handleUnexpectedData
-        d = self.factory.pullNamespaceSerialized(*keys)
+        d = self.factory.pullNamespace(*keys)
         d.addCallbacks(self.handleNamespacePulled, self.pullNamespaceFail)
         return d
     
     def handleNamespacePulled(self, namespace):
-        for v in namespace.itervalues():
+        serialNS = {}
+        try:
+            for k,v in namespace.iteritems():
+                serialNS[k] = serialized.serialize(v, k)
+        except Exception, e:
+            self.dieLoudly("serialization error: ", e)
+        for v in serialNS.itervalues():
             self.sendSerialized(v)
         self.pullNamespaceOK()
     
