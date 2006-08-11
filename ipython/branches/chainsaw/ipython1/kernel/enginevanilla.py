@@ -56,23 +56,29 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         f = getattr(self, 'handle_%s' %
                     (cmd), None)            
         if f:
-            # Handler resolved with state and cmd 
             f(args)
         else:
-            self.sendString('BAD COMMAND')
-            self._reset()
+            self.dieLoudly(msg)
     
     # Utility methods
         
+    def dieLoudly(self, *args):
+        """Die loudly in case of protocol errors."""
+        id = self.factory.id
+        for a in args:
+            log.msg('Protocol Error [%i]: ' % id + repr(a))
+        self.transport.loseConnection()
+        reactor.stop()
+        
     def defaultHandler(self, msg):
-        log.msg('Unexpected message: ' + msg)
+        self.dieLoudly(msg)
     
     def _reset(self):
         self.workVars = {}
         self.nextHandler = self.dispatch
     
     def handleUnexpectedData(self, args):
-        log.msg("Unexpected Data: %s" + args)
+        self.dieLoudly(args)
     
     def sendPickleSerialized(self, p):
         for line in p:
@@ -95,16 +101,17 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     #####
     
     def handleRegister(self, args):
-        # args = 'REGISTER id'
         splitArgs = args.split(' ',1)
         if len(splitArgs) == 2 and splitArgs[0] == 'REGISTER':
             try:
                 id = int(splitArgs[1])
-            except TypeError:
-                self.sendString('BAD ID')
+            except TypeError, e:
+                self.dieLoudly("The controller protocol gave an id that is not an int: " + e)
             else:
                 self.factory.setID(id)
                 self._reset()
+        else:
+            self.dieLoudly(args)
     
     #####
     ##### The EXECUTE command
@@ -153,7 +160,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     
     def handle_PUSH(self, args):
         if args is not None:
-            self.pushFail()  # will the other side be ready for this?
+            self.dieLoudly('PUSH does not take any arguments: ' + args)
         else:
             self.nextHandler = self.handlePushing
             self.workVars['pushSerialsList'] = []
@@ -173,9 +180,9 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             if f is not None:
                 self.nextHandler = f
             else:
-                self.pushFail() # Will the other side be ready for this?
+                self.dieLoudly('Unsupported serialization type: ' + pushType)
         else:
-            self.pushFail() # Will the other side be ready for this?
+            self.dieLoudly('Data commands must have two arguments: ' + msg)
                 
     def handlePushing_PICKLE(self, package):
         self.nextHandler = self.handlePushing
@@ -202,14 +209,18 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         ns = {}
         for v in self.workVars['pushSerialsList']:
             ns[v.key] = v
-        self.factory.pushSerialized(**ns)
+        # This will errback with serialization errors
+        d = self.factory.pushSerialized(**ns)
+        d.addCallback(self.pushOK)
+        d.addErrback(self.pushFail)
         self.pushOK()
             
-    def pushOK(self):
+    def pushOK(self, *args):
         self.sendString('PUSH OK')
         self._reset()
          
-    def pushFail(self):
+    def pushFail(self, reason):
+        reason.printVerboseTraceback()
         self.sendString('PUSH FAIL')
         self._reset()
 
@@ -278,27 +289,39 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             try:
                 index = int(args)
             except TypeError:
-                self.getResultFail()
+                self.dieLoudly('Results should be indexed by integers: ' + args)
             else:
                 d = self.factory.getResult(index)
-        d.addCallbacks(self.handleResult, self.getResultFail)
+       d.addCallback(self.handleGetResultSuccess)
+        d.addErrback(self.handleGetResultFailure)
         
-    def handleResult(self, result):
-        serial = serialized.PickleSerialized('RESULT')
+    def handleGetResultSuccess(self, result):
         try:
+            serial = serialized.PickleSerialized('RESULT')
             serial.packObject(result)
+        except pickle.PickleError:
+            self.handleGetResultFailure(Failure())
+        else:
+            self.sendPickleSerialized(serial)
+            self.getResultOK()
+ 
+    def handleGetResultFailure(self, reason):
+        # I am not sure we need to catch this PickleError
+        try:
+            serial = serialized.PickleSerialized('FAILURE')
+            serial.packObject(reason)
         except pickle.PickleError:
             self.getResultFail()
         else:
             self.sendPickleSerialized(serial)
-            self.getResultOK()
-            
+            self.getResultOK()    
+ 
     def getResultOK(self):
-        self.sendString('GETRESULT OK')
+        self.sendString('EXECUTE OK')
         self._reset()
-
-    def getResultFail(self, reason):
-        self.sendString('GETRESULT FAIL')
+         
+    def getResultFail(self):
+        self.sendString('EXECUTE FAIL')
         self._reset()
             
     #####
@@ -376,9 +399,9 @@ class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
         # Add some error checking.
         self.service.id = id
         
-    id = property(self.getID, self.setID, "The engines id.")
+    id = property(self.getID, self.setID, "The engine's id.")
     
-    # These should be generate dynamically from service
+    # These should be generated dynamically from service
     def execute(self, lines):
         return self.service.execute(lines)
         
@@ -461,16 +484,14 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         f = getattr(self, 'handle_%s' %
                     (cmd), None)            
         if f:
-            # Handler resolved with state and cmd 
             f(args)
         else:
-            #self.sendString('BAD COMMAND')
-            self._reset()
+            self.dieLoudly('Command could not be dispatched: ' + msg)
 
     # Utility methods
         
     def defaultHandler(self, msg):
-        log.msg('Unexpected message: ' + msg)
+        self.dieLoudly('defaultHandler called with: ' + msg)
             
     def _reset(self):
         self.workVars = {}
@@ -481,7 +502,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         return self.workVars['deferred']
 
     def handleUnexpectedData(self, args):
-        log.msg('Unexpected Data: %s' % args)
+        self.dieLoudly('Unexpected Data: %s' % args)
     
     def sendPickleSerialized(self, p):
         for line in p:
@@ -513,7 +534,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.workVars['deferred'].callback(self.workVars['serialsList'])
             return
         elif msg == self.workVars['errbackString']:
-            self.workVars['deferred'].errback(Failure(error.ProtocolError(msg)))
+            self.workVars['deferred'].errback(Failure(error.KernelError(msg)))
             return
             
         msgList = msg.split(' ', 1)
@@ -524,9 +545,9 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             if f is not None:
                 self.nextHandler = f
             else:
-                self.workVars['deferred'].errback(Failure(error.ProtocolError(msg)))
+                self.dieLoudly('Unsupported serialization type: ' + serialType)
         else:
-            self.workVars['deferred'].errback(Failure(error.ProtocolError(msg)))
+            self.dieLoudly('Data commands must have two arguments: ' + msg)
                 
     def handleSerial_PICKLE(self, package):
         self.nextHandler = self.handleIncomingSerialized
@@ -603,12 +624,13 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             for k, v in self.workVars['namespace'].iteritems():
                 try:
                     s = serialized.serialize(v, k)
-                except pickle.PickleError:
-                    self.pushFail(Failure())
-                self.sendSerialized(serialized.serialize(v, k))
+                except Exception, e:
+                    log.msg('You tried to push an unserializable type, ignoring: ' + k) 
+                else:
+                    self.sendSerialized(s)
             self.finishPush()
         else:
-            self.pushFail(Failure(Exception()))
+            self.dieLoudly('I was expecting README but got: ' + msg)
             
     def finishPush(self):
         self.sendString('DONE')
@@ -640,11 +662,19 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         
     def handlePulledSerialized(self, listOfSerialized):
         if len(listOfSerialized) == 1:
-            result = listOfSerialized[0].unpack()
+            try:
+                result = listOfSerialized[0].unpack()
+            except Exception:
+                result = None
         else:
             result = []
             for s in listOfSerialized:
-                result.append(s.unpack())
+                try:
+                    obj = s.unpack()
+                except Exception:
+                    log.msg('You pulled an unserializable type, ignoring: ' + s.key)
+                else:
+                    result.append(obj)
         self.pullOK()
         return result
             
@@ -668,9 +698,14 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     def handlePulledNamespaceSerialized(self, listOfSerialized):
         result = {}
         for s in listOfSerialized:
-            result[s.key] = s.unpack()
+            try:
+                obj = s.unpack()
+            except Exception:
+                log.msg('You pulled an unserializable type, ignoring: ' + s.key)
+            else:
+                result[s.key] = obj
         self.pullNamespaceOK()
-        return value
+        return result
             
     def pullNamespaceOK(self):
         self._reset
@@ -689,7 +724,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.sendString('GETRESULT %i' % i)
         else:
             self._reset()
-            return defer.fail(Failure(Exception()))
+            return defer.fail(Failure(TypeError('i must be an int or NoneType')))
         d = setupForIncomingSerialized('GETRESULT OK', 'GETRESULT FAIL')
         d.addCallback(self.handleGotResult)
         d.addErrback(self.getResultFail)
@@ -715,9 +750,9 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         if msg == 'RESET OK':
             self.resetOK()
         elif msg == 'RESET FAIL':
-            self.resetFail(Failure(Exception()))
+            self.resetFail(Failure(error.KernelError('RESET FAIL')))
         else:
-            self.resetFail(Failure(Exception()))
+            self.resetFail(Failure(error.KernelError('RESET OK not received: ' + msg)))
             
     def resetOK(self):
         self.workVars['deferred'].callback(None)
@@ -738,9 +773,9 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         if msg == 'KILL OK':
             self.killOK()
         elif msg == 'KILL FAIL':
-            self.killFail(Failure(Exception()))
+            self.killFail(Failure(error.KernelError('KILL FAIL')))
         else:
-            self.killFail(Failure(Exception()))
+            self.killFail(Failure(error.KernelError('KILL OK not received: ' + msg)))
             
     def killOK(self):
         self.workVars['deferred'].callback(None)
@@ -761,9 +796,9 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         if msg == 'STATUS OK':
             self.statusOK()
         elif msg == 'STATUS FAIL':
-            self.statusFail(Failure(Exception()))
+            self.statusFail(Failure(error.KernelError('STATUS FAIL')))
         else:
-            self.statusFail(Failure(Exception()))
+            self.statusFail(Failure(error.KernelError('STATUS OK not received: ' + msg)))
             
     def statusOK(self):
         self.workVars['deferred'].callback(None)
@@ -785,12 +820,12 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         return d
         
     def isPushSerializedReady(self, msg):
-        if msg == 'PUSH READY':
+        if msg == 'READY':
             for v in self.workVars['namespace'].itervalues():
                 self.sendSerialized(v)
             self.finishPush()
         else:
-            self.pushFail(Failure(Exception()))
+            self.dieLoudly('Expecting READY, got: ' + msg)
     
     # PULLSERIALIZED
     
@@ -834,7 +869,7 @@ class VanillaEngineServerFactoryFromControllerService(protocol.ServerFactory):
         return self.service.registerSerializationTypes(*serialTypes)
                 
     def startFactory(self):
-        self.service.registerSerializationTypes(serialized.PickleSerialized,
+        return self.service.registerSerializationTypes(serialized.PickleSerialized,
             serialized.ArraySerialized)
     
 components.registerAdapter(VanillaEngineServerFactoryFromControllerService,
