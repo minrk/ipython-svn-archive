@@ -59,6 +59,7 @@ class BasicEngineServiceTest(DeferredTestCase):
     def testCompletedEmptyEngine(self):
         class Empty:
             zi.implements(es.IEngineBase)
+            pass
         ni = NotImplementedError
         c = es.completeEngine(Empty())
         self.assertDeferredRaises(c.execute('a=5'), ni)

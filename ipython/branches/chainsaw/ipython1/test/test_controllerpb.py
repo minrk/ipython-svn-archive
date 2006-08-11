@@ -21,7 +21,7 @@ from twisted.trial import unittest
 from twisted.internet import defer, reactor
 from twisted.spread import pb
 
-from ipython1.kernel import engineservice, controllerservice, enginepb, enginepb
+from ipython1.kernel import engineservice, controllerservice, enginepb
 from ipython1.kernel.engineservice import Command
 from ipython1.test.util import DeferredTestCase
 
@@ -141,7 +141,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         
         d = self.cs.pushSerialized(0, **namespace)
         d.addCallback(lambda _:self.cs.pullSerialized(0, *keys))
-        d.addCallback(lambda serials: self.nmap(map(getattr, serials, ['unpack']*cnt)))
+        d.addCallback(lambda serials: self.nmap(map(getattr, serials[0], ['unpack']*cnt)))
         d = self.assertDeferredEquals(d, value)
         return d
     
@@ -164,7 +164,7 @@ class BasicControllerServiceTest(DeferredTestCase):
         for id in self.cs.engines.keys():
             d = defer.succeed(None)
             for c in commands:
-                d = self.assertDeferredEquals(self.cs.execute(id, c[1]), (id, c), chainDeferred=d)
+                d = self.assertDeferredEquals(self.cs.execute(id, c[1]), [(id,)+ c], chainDeferred=d)
             dlist.append(d)
         d = defer.DeferredList(dlist)
         return d

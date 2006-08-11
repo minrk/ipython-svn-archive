@@ -8,10 +8,11 @@ is callable using Perspective Broker.
 Any public methods of the IKernelService Interface that should be available over
 PB must be added to both the Interface and Adapter in this file.
 
-This module must be imported in its entirety to have its Adapters registered
-properly:
+TODO:
 
-from ipython1.kernel import enginepb
+- Make sure the classes fully implement the right interfaces
+- Make sure that the methods take the right args and return the right thing
+- The right thing here is the correct result or a errback triggered.
 """
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>

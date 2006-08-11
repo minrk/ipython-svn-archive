@@ -2,36 +2,9 @@
 
 """A Twisted Service Representation of the IPython Core.
 
-This file contains the ICoreService Interface specification.  Any public 
-methods in ipython core must be given here.  If they are not meant to be public
-they should not appear here.
-
-The CoreService should not make any assumptions about what network protocols 
-will be used to expose it.  The Interfaces and Adapters used for this purpose
-can be found in the files corepb.py, corehttp.py, etc.
-
 TODO:
 
-- Use pb.Error subclasses to pass exceptions back to the calling process.
-  For this I can put calls to ishell in a try/except clause:
-  
-    try:
-        result = self.ishell.execute(lines)
-    except Exception:
-        raise pb.Error("execute()")
-    else:
-        return defer.succeed(self.ishell.execute(lines))  
-
-  The argument of the pr.Error is then available on the other side as
-  getErrorMessage().
-  
-- Security issues.  Turn on TLS an authentication.
-
-- Generate the IEngine interface as a set of disjoint mixins
-- Create a basic NotImplementedEngine
-- Make our engine inherit from that
-- 
-
+- Nothing for now
 """
 #*****************************************************************************
 #       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>

@@ -65,7 +65,7 @@ class BasicEngineServiceTest(DeferredTestCase):
             (5,"2.0*math.pi","6.2831853071795862\n","")]
         for c in commands:
             result = self.cs.execute(0, c[1])
-            self.assertDeferredEquals(result, (0,)+c))
+            self.assertDeferredEquals(result, [(0,)+c])
     
     def testPushPull(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
@@ -73,10 +73,10 @@ class BasicEngineServiceTest(DeferredTestCase):
         for o in objs:
             self.cs.push(0, key=o)
             value = self.cs.pull(0, 'key')
-            d = self.assertDeferredEquals(value,o, d)
+            d = self.assertDeferredEquals(value, [o] , d)
         self.cs.reset(0)
         d1 = self.cs.pull(0, "a").addCallback(lambda nd:
-            self.assert_(isinstance(nd,NotDefined)))
+            self.assert_(isinstance(nd[0],NotDefined)))
         return (d, d1)
     
     def testPushPullSerialized(self):
@@ -85,7 +85,7 @@ class BasicEngineServiceTest(DeferredTestCase):
         for o in objs:
             self.cs.pushSerialized(0, key=serialized.serialize(o, 'key'))
             value = self.cs.pullSerialized(0, 'key')
-            value.addCallback(lambda serial: serial.unpack())
+            value.addCallback(lambda serial: serial[0].unpack())
             d = self.assertDeferredEquals(value,o,d)
         return d
     
@@ -93,14 +93,16 @@ class BasicEngineServiceTest(DeferredTestCase):
         ns = {'a':10,'b':"hi there",'c3':1.2342354,'door':{"p":(1,2)}}
         d = self.cs.push(0, **ns)
         d.addCallback(lambda _: self.cs.pullNamespace(0, *ns.keys()))
-        d = self.assertDeferredEquals(d,ns)
+        d = self.assertDeferredEquals(d,[ns])
         return d
     
     def testResult(self):
-        d = self.assertDeferredRaises(self.cs.getResult(0),IndexError)
+        d = self.cs.getResult(0)
+        d.addCallback(lambda r: r[0])
+        d = self.assertDeferredRaises(d, IndexError)
         d.addCallback(lambda _:self.cs.execute(0, "a = 5"))
-        d = self.assertDeferredEquals(self.cs.getResult(0),(0, 0,"a = 5","",""), d)
-        d = self.assertDeferredEquals(self.cs.getResult(0, 0),(0, 0,"a = 5","",""), d)
+        d = self.assertDeferredEquals(self.cs.getResult(0),[(0, 0,"a = 5","","")], d)
+        d = self.assertDeferredEquals(self.cs.getResult(0, 0),[(0, 0,"a = 5","","")], d)
         d.addCallback(lambda _:self.cs.reset(0))
         return d
     
