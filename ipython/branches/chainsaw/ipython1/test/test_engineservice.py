@@ -13,7 +13,6 @@ from ipython1.kernel import engineservice as es
 from ipython1.kernel import serialized
 from ipython1.test.util import DeferredTestCase
 from ipython1.kernel.error import NotDefined
-import zope.interface as zi
 
 class BasicEngineServiceTest(DeferredTestCase):
     
@@ -58,22 +57,21 @@ class BasicEngineServiceTest(DeferredTestCase):
     
     def testCompletedEmptyEngine(self):
         class Empty:
-            zi.implements(es.IEngineBase)
             pass
         ni = NotImplementedError
         c = es.completeEngine(Empty())
-        self.assertDeferredRaises(c.execute('a=5'), ni)
-        self.assertDeferredRaises(c.push(a=5), ni)
-        self.assertDeferredRaises(c.pushSerialized(
-                a=serialized.serialize([1,2,'a'], 'a')), ni)
-        self.assertDeferredRaises(c.pull('a', 'b', 'c'), ni)
-        self.assertDeferredRaises(c.pullSerialized('a', 'b', 'c'), ni)
-        self.assertDeferredRaises(c.pullNamespace('qwer', 'asdf', 'zcxv'), ni)
-        self.assertDeferredRaises(c.getResult(), ni)
-        self.assertDeferredRaises(c.reset(), ni)
-        self.assertDeferredRaises(c.status(), ni)
-        self.assertDeferredRaises(c.clearQueue(), ni)
-        self.assertEquals(c.id, None)
+        d = self.assertDeferredRaises(c.execute('a=5'), ni)
+        d = self.assertDeferredRaises(c.push(a=5), ni, d)
+        d = self.assertDeferredRaises(c.pushSerialized(
+                a=serialized.serialize([1,2,'a'], 'a')), ni, d)
+        d = self.assertDeferredRaises(c.pull('a', 'b', 'c'), ni, d)
+        d = self.assertDeferredRaises(c.pullSerialized('a', 'b', 'c'), ni, d)
+        d = self.assertDeferredRaises(c.pullNamespace('qwer', 'asdf', 'zcxv'), ni, d)
+        d = self.assertDeferredRaises(c.getResult(), ni, d)
+        d = self.assertDeferredRaises(c.reset(), ni, d)
+        d = self.assertDeferredRaises(c.status(), ni, d)
+        d = self.assertDeferredRaises(c.clearQueue(), ni, d)
+        return self.assertEquals(c.id, None, d)
         
     def testExecute(self):
         commands = [(self.s.id, 0,"a = 5","",""),
@@ -82,21 +80,24 @@ class BasicEngineServiceTest(DeferredTestCase):
             (self.s.id, 3,"print c","15\n",""),
             (self.s.id, 4,"import math","",""),
             (self.s.id, 5,"2.0*math.pi","6.2831853071795862\n","")]
+        d = defer.succeed(None)
         for c in commands:
             result = self.s.execute(c[2])
-            self.assertDeferredEquals(result, c)
+            d = self.assertDeferredEquals(result, c, d)
+        return d
     
     def testPushPull(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
         d = defer.succeed(None)
         for o in objs:
-            self.s.push(key=o)
-            value = self.s.pull('key')
+            self.e.push(key=o)
+            value = self.e.pull('key')
             d = self.assertDeferredEquals(value,o, d)
-        self.s.reset()
-        d1 = self.s.pull("a").addCallback(lambda nd:
+        d.addCallback(lambda _:self.e.reset())
+        d.addCallback(lambda _: self.e.pull("a"))
+        d.addCallback(lambda nd:
             self.assert_(isinstance(nd,NotDefined)))
-        return (d, d1)
+        return d
     
     def testPushPullSerialized(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
@@ -115,7 +116,7 @@ class BasicEngineServiceTest(DeferredTestCase):
         d = self.assertDeferredEquals(d,ns)
         return d
     
-    def testResult(self):
+    def testGetResult(self):
         d = self.assertDeferredRaises(self.s.getResult(),IndexError)
         d.addCallback(lambda _:self.s.execute("a = 5"))
         d = self.assertDeferredEquals(self.s.getResult(),(self.s.id, 0,"a = 5","",""), d)
@@ -123,3 +124,5 @@ class BasicEngineServiceTest(DeferredTestCase):
         d.addCallback(lambda _:self.s.reset())
         return d
     
+    def testStatus(self):
+        return self.assertDeferredEquals(self.s.status(), None)

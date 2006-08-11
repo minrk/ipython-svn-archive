@@ -1,3 +1,4 @@
+# -*- test-case-name: ipython1.test.test_enginepb -*-
 """Expose the IPython Kernel Service using Twisted's Perspective Broker.
 
 This module specifies the IPBEngineFromService Interface and its implementation
@@ -78,6 +79,9 @@ class IPBEngine(Interface):
     def remote_pushSerialized(self, namespace):
         """Put value into locals namespace with name key."""
     
+    def remote_pull(self, *keys):
+        """"""
+    
     def remote_pullSerialized(self, *keys):
         """Gets an item out of the self.locals dict by key."""
     
@@ -110,32 +114,23 @@ class PBEngineReferenceFromService(pb.Referenceable):
     def remote_execute(self, lines):
         return self.service.execute(lines)
     
-    def remote_pushSerialized(self, pNamespace):
+    def remote_push(self, pNamespace):
         namespace = pickle.loads(pNamespace)
         return self.service.push(**namespace)
     
+    def remote_pushSerialized(self, pNamespace):
+        namespace = pickle.loads(pNamespace)
+        return self.service.pushSerialized(**namespace)
+    
     def remote_pullSerialized(self, *keys):
-        d = self.service.pull(*keys)
-        d.addCallback(lambda v: self.serializePull(keys, v))
-        d.addCallback(lambda l:pickle.dumps(l, 2))
+        d = self.service.pullSerialized(*keys)
+        d.addCallback(pickle.dumps, 2)
         return d
     
     def remote_pull(self, *keys):
         d = self.service.pull(*keys)
         d.addCallback(lambda l:pickle.dumps(l, 2))
         return d
-    
-    def serializePull(self, keys, objects):
-        if len(keys) is 1:
-            serial = serialized.PickleSerialized(keys[0])
-            serial.packObject(objects)
-            return serial            
-        serializedList = []
-        for i in range(len(keys)):
-            serial = serialized.PickleSerialized(keys[i])
-            serial.packObject(objects[i])
-            serializedList.append(serial)
-        return serializedList
     
     def remote_pullNamespace(self, *keys):
         d = self.service.pullNamespace(*keys)
@@ -148,7 +143,10 @@ class PBEngineReferenceFromService(pb.Referenceable):
         return self.service.kill()
     
     def remote_getResult(self, i=None):
-        return self.service.getResult(i)
+        d = defer.Deferred()
+        d1 = self.service.getResult(i)
+        d1.addBoth(lambda r: d.callback(pickle.dumps(r, 2)))
+        return d
     
 
 components.registerAdapter(PBEngineReferenceFromService,
@@ -190,7 +188,9 @@ class EngineFromReference(object):
         """Put value into locals namespace with name key."""
         return self.callRemote('pushSerialized', pickle.dumps(namespace, 2))
     
-    push = pushSerialized
+    def push(self, **namespace):
+        d = self.callRemote('push', pickle.dumps(namespace, 2))
+        return d
     
     def pullSerialized(self, *keys):
         """Gets an item out of the self.locals dict by key."""
@@ -204,11 +204,7 @@ class EngineFromReference(object):
     
     def pullNamespace(self, *keys):
         """Gets an item out of the self.locals dict by key."""
-        return self.callRemote('pullNamespace', *keys)
-    
-    def pullNamespaceSerialized(self, *keys):
-        """Gets an item out of the self.locals dict by key."""
-        return self.callRemote('pullNamespaceSerialized', *keys)
+        return self.callRemote('pullNamespace', *keys).addCallback(pickle.loads)
     
     def reset(self):
         """Reset the InteractiveShell."""
@@ -216,11 +212,12 @@ class EngineFromReference(object):
 
     def kill(self):
         """Reset the InteractiveShell."""
+        #this will raise on success
         return self.callRemote('kill').addErrback(lambda _:defer.succeed(None))
     
     def getResult(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
-        return self.callRemote('getResult', i)
+        return self.callRemote('getResult', i).addCallback(pickle.loads)
     
 
 components.registerAdapter(EngineFromReference,

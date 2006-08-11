@@ -52,8 +52,8 @@ def addAllMethods(obj, methods=[]):
             defs = """
 def allMethod(self, %s:
     '''%s'''
-    return self.%s('all'%s)""" %(MA.getSignatureString()[1:], MA.getDoc(), 
-                        m, M.getSignatureString()[8:-1])
+    return self.%s('all'%s)
+""" %(MA.getSignatureString()[1:], MA.getDoc(), m, M.getSignatureString()[8:-1])
             exec defs
             setattr(obj, m+'All', instancemethod(allMethod, obj, obj.__class__))
             del allMethod
@@ -226,8 +226,8 @@ def autoMethod(self, %s:
     l = []
     for e in engines:
         l.append(e.%s%s)
-    return gatherBoth(l)"""\
-            %(IM.getSignatureString()[1:], IM.getDoc(), IM.getName(), m, eSig)
+    return gatherBoth(l)
+"""%(IM.getSignatureString()[1:], IM.getDoc(), IM.getName(), m, eSig)
                 try:
                     exec(defs)
                     setattr(self, m, instancemethod(autoMethod, self, self.__class__))
