@@ -29,7 +29,9 @@ class CompleteEngineTestCase(DeferredTestCase):
             (self.e.id, 4,"import math","",""),
             (self.e.id, 5,"2.0*math.pi","6.2831853071795862\n","")]
         d = defer.succeed(None)
+        print d
         for c in commands:
+            print c
             result = self.e.execute(c[2])
             d = self.assertDeferredEquals(result, c, d)
         return d

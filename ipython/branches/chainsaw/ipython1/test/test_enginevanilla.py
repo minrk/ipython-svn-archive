@@ -21,11 +21,14 @@ from ipython1.test import util
 from ipython1.test  import completeenginetest as cet
 from ipython1.kernel import engineservice as es, enginevanilla as ev
 
-class EnginePBTest(cet.CompleteEngineTestCase):
+class EngineVanillaTest(cet.CompleteEngineTestCase):
 #class EnginePBTest(util.DeferredTestCase):
         
     def setUp(self):
         #start one controller and connect one engine
+        self.deferred = defer.Deferred()
+        self.deferred.addCallback(self.printer)
+#        self.deferred.callback(None)
         self.services = []
         self.clients = []
         self.servers = []
@@ -33,16 +36,14 @@ class EnginePBTest(cet.CompleteEngineTestCase):
         self.servers.append(reactor.listenTCP(10201, self.sf))
         
         self.es = es.EngineService()
-        ef = ev.IVanillaClientFactory(self.es)
+        ef = ev.IVanillaEngineClientFactory(self.es)
         client = reactor.connectTCP('127.0.0.1', 10201, ef)
-
+        
         self.clients.append(client)
         self.services.append(self.es)
         self.es.startService()
+        return self.deferred
         
-        return ef.deferred
-        
-    
     def tearDown(self):
         l = []
         for s in self.servers:
@@ -58,9 +59,17 @@ class EnginePBTest(cet.CompleteEngineTestCase):
         dl = defer.DeferredList(l)
         return dl
     
+    def printer(self, result):
+        print result
+        return result
+    
+    def testA(self):
+        pass
+    
     def registerEngine(self, remoteEngine, id):
         self.e = remoteEngine
-        return id
+        self.deferred.callback(None)
+        return 0
     
     def unregisterEngine(self, id):
         pass

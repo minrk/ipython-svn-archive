@@ -90,11 +90,11 @@ class BasicEngineServiceTest(DeferredTestCase):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
         d = defer.succeed(None)
         for o in objs:
-            self.e.push(key=o)
-            value = self.e.pull('key')
+            self.s.push(key=o)
+            value = self.s.pull('key')
             d = self.assertDeferredEquals(value,o, d)
-        d.addCallback(lambda _:self.e.reset())
-        d.addCallback(lambda _: self.e.pull("a"))
+        d.addCallback(lambda _:self.s.reset())
+        d.addCallback(lambda _: self.s.pull("a"))
         d.addCallback(lambda nd:
             self.assert_(isinstance(nd,NotDefined)))
         return d

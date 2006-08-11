@@ -1,4 +1,4 @@
-# -*- test-case-name: ipython1.test.test_enginepb -*-
+# -*- test-case-name: ipython1.test.test_enginevanilla -*-
 import cPickle as pickle
 
 import zope.interface as zi
