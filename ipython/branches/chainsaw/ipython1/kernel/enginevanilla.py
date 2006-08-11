@@ -58,7 +58,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         if f:
             f(args)
         else:
-            self.dieLoudly(msg)
+            self.dieLoudly('Command could not be dispatched: ' + msg)
     
     # Utility methods
         
@@ -465,12 +465,12 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     def connectionLost(self, reason):
         self.factory.unregisterEngine(self.id)
 
-    #def sendString(self, s):
-    #    log.msg('C: %s' % s)
-    #    EnhancedNetstringReceiver.sendString(self, s)
+    def sendString(self, s):
+        log.msg('C: %s' % s)
+        EnhancedNetstringReceiver.sendString(self, s)
 
     def stringReceived(self, msg):
-        #log.msg('E: %s' % msg)
+        log.msg('E: %s' % msg)
         if self.nextHandler is None:
             self.defaultHandler(msg)
         else:
@@ -647,14 +647,17 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.dieLoudly('I was expecting README but got: ' + msg)
             
     def finishPush(self):
-        self.sendString('DONE')
         self.nextHandler = self.isPushOK
-            
+        log.msg('The next handler is: ' + repr(self.nextHandler))
+        self.sendString('DONE')
+
     def isPushOK(self, msg):
         if msg == 'PUSH OK':
             self.pushOK()
+        elif msg == 'PUSH FAIL':
+            self.pushFail(Failure(error.KernelError('Received PUSH FAIL')))
         else:
-            self.pushFail(Failure(Exception()))
+            self.dieLoudly('Expected PUSH OK, got: ' + msg)
             
     def pushFail(self, f):
         self.workVars['deferred'].errback(f)
@@ -766,7 +769,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         elif msg == 'RESET FAIL':
             self.resetFail(Failure(error.KernelError('RESET FAIL')))
         else:
-            self.resetFail(Failure(error.KernelError('RESET OK not received: ' + msg)))
+            self.dieLoudly('RESET OK|FAIL not received: ' + msg)
             
     def resetOK(self):
         self.workVars['deferred'].callback(None)
@@ -789,7 +792,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         elif msg == 'KILL FAIL':
             self.killFail(Failure(error.KernelError('KILL FAIL')))
         else:
-            self.killFail(Failure(error.KernelError('KILL OK not received: ' + msg)))
+            self.dieLoudly('KILL OK|FAIL not received: ' + msg)
             
     def killOK(self):
         self.workVars['deferred'].callback(None)
@@ -812,7 +815,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         elif msg == 'STATUS FAIL':
             self.statusFail(Failure(error.KernelError('STATUS FAIL')))
         else:
-            self.statusFail(Failure(error.KernelError('STATUS OK not received: ' + msg)))
+            self.dieLoudly('STATUS OK|FAIL not received: ' + msg)
             
     def statusOK(self):
         self.workVars['deferred'].callback(None)

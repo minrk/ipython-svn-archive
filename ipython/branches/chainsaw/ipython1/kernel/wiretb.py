@@ -18,7 +18,11 @@ class WireTraceback(object):
     """Wrap a traceback object in a purely serializable manner.
     
     This class can encapsulate standard exception triplet information, or a Twisted 
-    Failure object."""
+    Failure object.
+    
+    We are not currently using this - eventually we will, but then we will inherit from
+    twisted.python.failure.Failure.
+    """
     
     def __init__(self, exc_value=None, exc_type=None, exc_tb=None,
                  failure=None):

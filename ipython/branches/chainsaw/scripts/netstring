@@ -18,8 +18,6 @@ def main(host, port, listen):
         clientSock, clientAddr = s.accept()
     else:
         
-    while True:
-        
 def start():
     parser = OptionParser()
     parser.set_defaults(port=10104)
