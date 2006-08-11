@@ -292,7 +292,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
                 self.dieLoudly('Results should be indexed by integers: ' + args)
             else:
                 d = self.factory.getResult(index)
-       d.addCallback(self.handleGetResultSuccess)
+        d.addCallback(self.handleGetResultSuccess)
         d.addErrback(self.handleGetResultFailure)
         
     def handleGetResultSuccess(self, result):
@@ -399,7 +399,7 @@ class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
         # Add some error checking.
         self.service.id = id
         
-    id = property(self.getID, self.setID, "The engine's id.")
+    id = property(getID, setID, "The engine's id.")
     
     # These should be generated dynamically from service
     def execute(self, lines):
@@ -489,6 +489,14 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.dieLoudly('Command could not be dispatched: ' + msg)
 
     # Utility methods
+        
+    def dieLoudly(self, *args):
+        """Die loudly in case of protocol errors."""
+        id = self.id
+        for a in args:
+            log.msg('Protocol Error [%i]: ' % id + repr(a))
+        self.transport.loseConnection()
+        reactor.stop()
         
     def defaultHandler(self, msg):
         self.dieLoudly('defaultHandler called with: ' + msg)
