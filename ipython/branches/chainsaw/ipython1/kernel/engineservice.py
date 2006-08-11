@@ -142,13 +142,14 @@ def completeEngine(engine):
     
 # Now the actual EngineService
 class EngineService(service.Service):
+    """Wrap IPython into a IEngineFoo implementing Twisted Service."""
     
     zi.implements(IEngineBase, IEngineSerialized)
     
     id = None
     
     def __init__(self):
-        self.shell = InteractiveShell()# let's use containment, not inheritance
+        self.shell = InteractiveShell()
     
     # The IEngine methods
     
@@ -190,9 +191,9 @@ class EngineService(service.Service):
             pulledDeferreds = []
             for key in keys:
                 d = defer.execute(self.shell.get,key)
-                pulledDeferreds.append(d)
                 d.addCallback(serialized.serialize, key)
                 d.addErrback(self.handlePullProblems)
+                pulledDeferreds.append(d)
             dList = gatherBoth(pulledDeferreds)               
             return dList
         else:
@@ -203,6 +204,7 @@ class EngineService(service.Service):
             return d
             
     def handlePullProblems(self, reason):
+        #reason.printTraceback()
         return serialized.serialize(reason, 'FAILURE')
             
     def pullNamespace(self, *keys):

@@ -557,7 +557,7 @@ class RemoteController(object):
                 return False
             if string_split[0] == "PICKLE":
                 #if it's a pickle
-                print 'it is a pickle'
+                #print 'it is a pickle'
                 sPickle = serialized.PickleSerialized(string_split[1])
                 sPickle.addToPackage(self.es.readString())
                 try:

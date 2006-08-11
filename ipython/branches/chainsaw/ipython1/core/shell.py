@@ -174,7 +174,8 @@ class InteractiveShell(InteractiveConsole):
         I have often called this push(), but in this case the
         InteractiveConsole class already defines a push() method that
         is different.
-        """
+        """          
+                  
         if not isinstance(key, str):
             raise TypeError, "Objects must be keyed by strings."
         self.update({key:value})
@@ -187,6 +188,7 @@ class InteractiveShell(InteractiveConsole):
         
         I have often called this pull().  I still like that better.
         """
+        
         if not isinstance(key, str):
             raise TypeError, "Objects must be keyed by strings."
         self._namespace_lock.acquire()

@@ -208,7 +208,6 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         self._reset()
          
     def pushFail(self, reason):
-        reason.printTraceback()
         self.sendString('PUSH FAIL')
         self._reset()
 
