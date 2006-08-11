@@ -22,6 +22,9 @@ class CompleteEngineTestCase(DeferredTestCase):
         print r
         return r
     
+    def passer(self, r):
+        return
+    
     def testInterface(self):
         for base in es.IEngineComplete.getBases():
             self.assert_(base.providedBy(self.e))

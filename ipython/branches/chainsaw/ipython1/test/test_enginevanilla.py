@@ -22,13 +22,15 @@ from ipython1.test import util
 from ipython1.test  import completeenginetest as cet
 from ipython1.kernel import engineservice as es, enginevanilla as ev
 
-log.startLogging(sys.stdout)
+#log.startLogging(sys.stdout)
 class EngineVanillaTest(cet.CompleteEngineTestCase):
 #class EnginePBTest(util.DeferredTestCase):
         
     def setUp(self):
         #start one controller and connect one engine
         self.deferred = defer.Deferred()
+        self.deferred.setTimeout(.1)
+        self.deferred.addBoth(self.passer)
         self.services = []
         self.clients = []
         self.servers = []
@@ -59,9 +61,6 @@ class EngineVanillaTest(cet.CompleteEngineTestCase):
         dl = defer.DeferredList(l)
         return dl
     
-    def printer(self, result):
-        print result
-        return result
     def ready(self):
         self.deferred.callback(None)
     
@@ -69,7 +68,6 @@ class EngineVanillaTest(cet.CompleteEngineTestCase):
         self.e = remoteEngine
         self.e.id = id
         self.ready()
-        #reactor.callLater(0, self.ready)
         return 0
     
     def unregisterEngine(self, id):
