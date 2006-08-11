@@ -24,17 +24,24 @@ execute()
 	C: EXECUTE
 	E: EXECUTE FAIL
 
+::
+
+	C: EXECUTE b = 10
+	E: PICKLE FAILURE
+	E: #######
+	E: EXECUTE OK
+
 push()
 ======
 
 ::
 
 	C: PUSH
-	E: PUSH READY
+	E: READY
 	C: PICKLE a
 	C: #####
 	C: [more data]
-	C: PUSH DONE
+	C: DONE
 	E: PUSH OK
 	
 	C: PUSH

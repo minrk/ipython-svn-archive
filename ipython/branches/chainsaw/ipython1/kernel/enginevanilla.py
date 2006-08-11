@@ -152,14 +152,15 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     
     def handle_PUSH(self, args):
         if args is not None:
-            self.pushFail(Failure(Exception()))
+            self.pushFail()  # will the other side be ready for this?
         else:
             self.nextHandler = self.handlePushing
             self.workVars['pushSerialsList'] = []
-            self.sendString("PUSH READY")
+            self.sendString("READY")
     
     def handlePushing(self, msg):
-        if msg == 'PUSH DONE':
+        # What if DONE never comes
+        if msg == 'DONE':
             self.handlePushDone()
             return
             
@@ -171,9 +172,9 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             if f is not None:
                 self.nextHandler = f
             else:
-                self.pushFail(Failure(Exception()))
+                self.pushFail() # Will the other side be ready for this?
         else:
-            self.pushFail(Failure(Exception()))
+            self.pushFail() # Will the other side be ready for this?
                 
     def handlePushing_PICKLE(self, package):
         self.nextHandler = self.handlePushing
@@ -207,7 +208,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         self.sendString('PUSH OK')
         self._reset()
          
-    def pushFail(self, reason):
+    def pushFail(self):
         self.sendString('PUSH FAIL')
         self._reset()
 
@@ -332,22 +333,6 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         self._reset()
 
     #####
-    ##### The KILL command
-    #####   
-            
-    def handle_KILL(self, args):
-        d = self.factory.kill()
-        d.addCallbacks(self.killOK, self.killFail)
-
-    def killOK(self, args):
-        self.sendString('KILL OK')
-        self._reset()
-
-    def killFail(self, reason):
-        self.sendString('KILL FAIL')
-        self._reset()
-
-    #####
     ##### The STATUS command
     #####   
             
@@ -364,7 +349,8 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         self._reset()
 
 
-class IVanillaEngineClientFactory(zi.Interface):
+class IVanillaEngineClientFactory(engineservice.IEngineBase,
+    engineservice.IEngineSerialized):
     
     def getID():
         """Get's the engines id."""
@@ -380,7 +366,6 @@ class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
     
     def __init__(self, service):
         self.service = service
-        self.serviceInterfaces = list(zi.providedBy(service))
         
     # From IVanillaEngineClientFactory
     def getID(self):
@@ -390,7 +375,9 @@ class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
         # Add some error checking.
         self.service.id = id
         
-    # Go through the methods of service and wrap automatically!!!
+    id = property(self.getID, self.setID, "The engines id.")
+    
+    # These should be generate dynamically from service
     def execute(self, lines):
         return self.service.execute(lines)
         
@@ -420,10 +407,7 @@ class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
 
     def pullSerialized(self, *keys):
         return self.service.pullSerialized(*keys)
-        
-    def pullNamespaceSerialized(self, *keys):
-        return self.service.pullNamespaceSerialized(*keys)        
-    
+             
 components.registerAdapter(VanillaEngineClientFactoryFromEngineService,
                            engineservice.EngineService,
                            IVanillaEngineClientFactory)
@@ -614,7 +598,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         return d
         
     def isPushReady(self, msg):
-        if msg == 'PUSH READY':
+        if msg == 'READY':
             for k, v in self.workVars['namespace'].iteritems():
                 try:
                     s = serialized.serialize(v, k)
@@ -626,7 +610,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.pushFail(Failure(Exception()))
             
     def finishPush(self):
-        self.sendString('PUSH DONE')
+        self.sendString('DONE')
         self.nextHandler = self.isPushOK
             
     def isPushOK(self, msg):

@@ -129,12 +129,12 @@ def completeEngine(engine):
             'This method is not implemented by this Engine'))
     
     for method in IEngineComplete:
-        if getattr(engine, method, 'NotDefined') == 'NotDefined':
+        if getattr(engine, method, 'NotDefined') == 'Not-Defined':
             #if not implemented, add filler
             #could establish self.notImplemented registry here
             if callable(IEngineComplete[method]):
                 setattr(engine, method, _notImplementedMethod)
-            else:
+            else: 
                 setattr(engine, method, None)
     assert(IEngineComplete.providedBy(engine))
     return engine
@@ -266,7 +266,8 @@ class QueuedEngine(object):
             comma = ''
         defs = """
 def queuedMethod(self%s%s):
-    return self.submitCommand(Command('%s', %s))""" %(comma, args, m, args)
+    return self.submitCommand(Command('%s', %s))
+""" % (comma, args, m, args)
         exec(defs)
         return queuedMethod
     
@@ -351,9 +352,9 @@ def queuedMethod(self%s%s):
         """Get the stdin/stdout/stderr of command i."""
         if i is None:
             i = max(self.history.keys()+[None])
-        try:
-            cmd = self.history[i]
-        except KeyError:
+
+        cmd = self.history.get(i, None)
+        if cmd is None:
             return self.submitCommand(Command("getResult", i))
         else:
             return defer.succeed(cmd)
