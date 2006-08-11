@@ -331,30 +331,6 @@ def autoMethod(self, %s:
             l.append(e.pushSerialized(**namespace))
         return gatherBoth(l)
     
-    def pull(self, targets, *keys):
-        """Gets an item out of the self.locals dict by key."""
-        log.msg("getting %s from %s" %(keys, targets))
-        engines = self.engineList(targets)
-        l = []
-        for e in engines:
-            l.append(e.pull(*keys))
-        d = gatherBoth(l)
-        if len(keys) > 1:
-            d.addCallback(lambda resultList: zip(*resultList))
-        return d
-    
-    def pullSerialized(self, targets, *keys):
-        """Gets an item out of the self.locals dict by key."""
-        log.msg("getting %s from %s" %(keys, targets))
-        engines = self.engineList(targets)
-        l = []
-        for e in engines:
-            l.append(e.pullSerialized(*keys))
-        d = gatherBoth(l)
-#        if len(keys) > 1:
-#            d.addCallback(lambda resultList: zip(*resultList))
-        return d
-    
     def status(self, targets):
         log.msg("retrieving status of %s" %targets)
         engines = self.engineList(targets)

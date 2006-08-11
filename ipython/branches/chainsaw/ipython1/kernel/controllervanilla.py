@@ -214,27 +214,19 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
             return d
     
     def pullOK(self, entireResultList):
-        try:
-            if len(entireResultList) > 1:
-                for perTargetResultList in entireResultList:
-                    for serialResult in perTargetResultList:
-                        if not isinstance(serialResult, serialized.Serialized):
-                            try:
-                                serialResult = serialized.serialize(serialResult, '_')
-                            except:
-                                self.pullFail()
-                        self.sendSerial(serialResult)
-                    self.sendString("SEGMENT PULLED")
-            else:
-                for serialResult in entireResultList:
-                    if not isinstance(serialResult, serialized.Serialized):
+        for perTargetResultList in entireResultList:
+            if len(self.workVars['pullKeys']) == 1:
+                perTargetResultList = [perTargetResultList]
+            for serialResult in perTargetResultList:
+                if not isinstance(serialResult, serialized.Serialized):
+                    try:
                         serialResult = serialized.serialize(serialResult, '_')
-                    self.sendSerial(serialResult)
-        except Exception, e:
-            self.pullFinish("FAIL")
-            raise e
-        else:
-            self.pullFinish("OK")
+                    except:
+                        self.pullFail()
+                self.sendSerial(serialResult)
+            
+            self.sendString("SEGMENT PULLED")
+        self.pullFinish("OK")
     
     def sendSerial(self, s):
         if s[0].split(' ')[0] == 'ARRAY':

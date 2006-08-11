@@ -550,20 +550,16 @@ class RemoteController(object):
         string = self.es.readString()
         results = []
         returns = []
-        nkeys = len(keys)
         while string not in ['PULL OK', 'PULL FAIL']:
-            print string
             string_split = string.split(' ', 1)
             if len(string_split) is not 2:
                 return False
             if string_split[0] == "PICKLE":
                 #if it's a pickle
-                #print 'it is a pickle'
                 sPickle = serialized.PickleSerialized(string_split[1])
                 sPickle.addToPackage(self.es.readString())
                 try:
                     data = sPickle.unpack()
-                    print data
                 except pickle.PickleError, e:
                     print "Error unpickling object: ", e
                     return False
@@ -597,6 +593,10 @@ class RemoteController(object):
         if string == 'PULL OK':
             if len(returns) is 1:
                 returns = returns[0]
+            elif len(keys) > 1:
+                returns = zip(*returns)
+            else:
+                returns = tuple(returns)
             return returns
         else:
             return False
@@ -615,7 +615,6 @@ class RemoteController(object):
         """Gets a namespace dict with keys from targets"""
         self._check_connection()    
         values = self.pull(targets, *keys)
-        returns = []
         multitargets = not isinstance(targets, int) and len(targets) > 1
         if len(keys) > 1 and multitargets:
             results = zip(*values)
@@ -627,6 +626,7 @@ class RemoteController(object):
             dikt = {}
             dikt[keys[0]] = values
             return dikt
+        returns = []
         for r in results:
             dikt = {}
             if len(keys) == 1:
@@ -636,6 +636,8 @@ class RemoteController(object):
             for k,v in kv:
                 dikt[k] = v
             returns.append(dikt)
+        if len(returns) is 1:
+            returns = returns[0]
         return returns
 
     def getResult(self, targets, number=None):
