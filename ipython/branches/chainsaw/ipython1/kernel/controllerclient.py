@@ -24,24 +24,24 @@ from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten
 
 arraytypeList = []
-try:
-    import Numeric
-except ImportError:
-    pass
-else:
-    arraytypeList.append(Numeric.arraytype)
+#try:
+#    import Numeric
+#except ImportError:
+#    pass
+#else:
+#    arraytypeList.append(Numeric.arraytype)
 try:
     import numpy
 except ImportError:
     pass
 else:
     arraytypeList.append(numpy.ndarray)
-try:
-    import numarray
-except ImportError:
-    pass
-else:
-    arraytypeList.append(numarray.numarraycore.NumArray)
+#try:
+#    import numarray
+#except ImportError:
+#    pass
+#else:
+#    arraytypeList.append(numarray.numarraycore.NumArray)
 
 
 arraytypes = tuple(arraytypeList)
@@ -330,14 +330,10 @@ class SubCluster(object):
 
 
 class RemoteController(object):
-    """A high level interface to a remotely running ipython kernel."""
+    """A high level interface to a remotely running ipython controller."""
     
     def __init__(self, addr):
-        """Create a RemoteController instance pointed at a specific kernel.
-        
-        Upon creation, the RemoteController class knows about, but is not
-        connected to the kernel.  The connection occurs automatically when
-        other methods of RemoteController are called.
+        """Create a RemoteController instance pointed at a specific controller.
         
         @arg addr:
             The (ip,port) tuple of the kernel.  The ip in a string
@@ -351,7 +347,7 @@ class RemoteController(object):
         return self.disconnect()
     
     def is_connected(self):
-        """Are we connected to the kernel?""" 
+        """Are we connected to the controller?""" 
         if hasattr(self, 's'):
             try:
                 self.fd = self.s.fileno()
@@ -361,7 +357,7 @@ class RemoteController(object):
                 return True
     
     def _check_connection(self):
-        """Are we connected to the kernel, if not reconnect."""
+        """Are we connected to the controller?  If not reconnect."""
         if not self.is_connected():
             self.connect()
     
@@ -452,7 +448,7 @@ class RemoteController(object):
         else:
             return False
     
-    def run(self, fname):
+    def run(self, targets, fname):
         """Run a file on the kernel."""
         
         fileobj = open(fname,'r')
@@ -462,7 +458,10 @@ class RemoteController(object):
         code = compile(source,fname,'exec')
         
         # Now run the code
-        self.execute(source)
+        self.execute(targets, source)
+    
+    def runAll(self, fname):
+        return self.run('all', fname)
     
     def push(self, targets, *locals, **namespace):
         """Send a python object to the namespace of a kernel.
@@ -488,26 +487,14 @@ class RemoteController(object):
             return False
         for key in namespace:
             value = namespace[key]
-            if isinstance(value, arraytypes):
-                try:
-                    serialObject = serialized.ArraySerialized(key)
-                    serialObject.packObject(value)
-                except Exception, e:
-                    print "Object cannot be serialized: ", e
-                    return False
-                else:
-                    for line in serialObject:
-                        self.es.writeNetstring(line)
-            else:    
-                try:
-                    serialObject = serialized.PickleSerialized(key)
-                    serialObject.packObject(value)
-                except pickle.PickleError, e:
-                    print "Object cannot be pickled: ", e
-                    return False
-                else:
-                    for line in serialObject:
-                        self.es.writeNetstring(line)
+            try:
+                serialObject = serialized.serialize(value, key)
+            except Exception, e:
+                print "Object cannot be serialized: ", key, e
+                return False
+            else:
+                for line in serialObject:
+                    self.es.writeNetstring(line)
         self.es.writeNetstring("PUSH DONE")
         string = self.es.readString()
         if string == "PUSH OK":
@@ -640,7 +627,7 @@ class RemoteController(object):
             returns = returns[0]
         return returns
 
-    def getResult(self, targets, number=None):
+    def getResult(self, targets, i=None):
         """Gets a specific result from the kernel, returned as a tuple."""
         self._check_connection()    
         if isinstance(targets, list):
