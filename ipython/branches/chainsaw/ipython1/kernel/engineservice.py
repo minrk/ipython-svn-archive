@@ -129,8 +129,7 @@ def completeEngine(engine):
             'This method is not implemented by this Engine'))
     
     for method in IEngineComplete:
-        print method
-        if getattr(engine, method, 'NotDefined') == 'Not-Defined':
+        if getattr(engine, method, 'NotDefined') == 'NotDefined':
             #if not implemented, add filler
             #could establish self.notImplemented registry here
             if callable(IEngineComplete[method]):
