@@ -466,7 +466,7 @@ class RemoteController(object):
     def runAll(self, fname):
         return self.run('all', fname)
     
-    def push(self, targets, *locals, **namespace):
+    def push(self, targets, *localkeys, **namespace):
         """Send a python object to the namespace of a kernel.
         
         There is also a dictionary style interface to the push command:
@@ -485,6 +485,17 @@ class RemoteController(object):
             targetstr = '::'.join(map(str, targets))
         else:
             targetstr = str(targets)
+        
+        for key in localkeys:
+            try:
+                namespace[key] = locals()[key]
+            except KeyError:
+                return False
+        
+        if not namespace:
+            #need something to send
+            return False
+        
         self.es.writeNetstring("PUSH ::%s" % targetstr)
         if self.es.readString() != "PUSH READY":
             return False

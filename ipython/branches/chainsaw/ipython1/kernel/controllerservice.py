@@ -43,7 +43,7 @@ def curry(f, *curryArgs, **curryKWargs):
 def addAllMethods(obj, methods=[]):
     if not methods:
         for m in IMultiEngine:
-            if m+'All' in IMultiEngine \
+            if m+'All' in IMultiEngine and getattr(obj, m, None)\
             and getattr(obj, m+'All', 'NotDefined') == 'NotDefined':
                 #only want methods that have All suffix in interface
                 methods.append(m)
