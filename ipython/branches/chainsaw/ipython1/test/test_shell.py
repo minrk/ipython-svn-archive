@@ -6,6 +6,15 @@ Things that should be tested:
 - Don't worry about implementation methods
 """
 
+#*****************************************************************************
+#       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
+#                           Brian E Granger <ellisonbg@gmail.com>
+#                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
 from twisted.trial import unittest
 from ipython1.core import shell
 from ipython1.kernel.error import NotDefined

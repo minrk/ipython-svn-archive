@@ -1,4 +1,14 @@
 """Classes for using Apple's Bonjour with Twisted."""
+
+#*****************************************************************************
+#       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
+#                           Brian E Granger <ellisonbg@gmail.com>
+#                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
 import bonjour
 
 from twisted.internet.interfaces import IReadDescriptor
