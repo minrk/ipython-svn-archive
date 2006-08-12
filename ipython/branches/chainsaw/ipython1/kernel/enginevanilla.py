@@ -108,8 +108,8 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             except TypeError, e:
                 self.dieLoudly("The controller protocol gave an id that is not an int: " + e)
             else:
-                self.factory.setID(id)
                 self._reset()
+                self.factory.setID(id)
         else:
             self.dieLoudly(args)
     
@@ -402,6 +402,10 @@ class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
     def setID(self, id):
         # Add some error checking.
         self.service.id = id
+        self.notifySetID()   # Use as a hook for tests
+        
+    def notifySetID(self):
+        pass
         
     id = property(getID, setID, "The engine's id.")
     
@@ -454,7 +458,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     
     nextHandler = None
     workVars = {}
-    id = None
+    _id = None
     
     def connectionMade(self):
         self.transport.setTcpNoDelay(True)
@@ -467,7 +471,6 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         return self._id
 
     def setID(self, id):
-        # Add some error checking.
         self._id = id
 
     id = property(getID, setID, "The engine's id.")
@@ -518,6 +521,18 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     def _reset(self):
         self.workVars = {}
         self.nextHandler = self.dispatch
+
+    def _callbackAndReset(self, result):
+        self.nextHandler = self.dispatch
+        d = self.workVars['deferred']
+        self.workVars = {}
+        d.callback(result)
+
+    def _errbackAndReset(self, reason):
+        self.nextHandler = self.dispatch
+        d = self.workVars['deferred']
+        self.workVars = {}
+        d.errback(reason)
 
     def _createDeferred(self):
         self.workVars['deferred'] = defer.Deferred()
@@ -668,15 +683,11 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.dieLoudly('Expected PUSH OK, got: ' + msg)
             
     def pushFail(self, f):
-        self._reset()
-        self.workVars['deferred'].errback(f)
-
-        
+        self._errbackAndReset(f)
+    
     def pushOK(self, result=None):
-        self._reset()
-        self.workVars['deferred'].callback(result)
-
-        
+        self._callbackAndReset(result)
+    
     #PULL
     
     def pull(self, *keys):
@@ -752,7 +763,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         else:
             self._reset()
             return defer.fail(Failure(TypeError('i must be an int or NoneType')))
-        d = setupForIncomingSerialized('GETRESULT OK', 'GETRESULT FAIL')
+        d = self.setupForIncomingSerialized('GETRESULT OK', 'GETRESULT FAIL')
         d.addCallback(self.handleGotResult)
         d.addErrback(self.getResultFail)
         return d
@@ -782,15 +793,11 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.dieLoudly('RESET OK|FAIL not received: ' + msg)
             
     def resetOK(self):
-        self._reset()
-        self.workVars['deferred'].callback(None)
-
-        
+        self._callbackAndReset(None)
+    
     def resetFail(self, reason):
-        self._reset()
-        self.workVars['deferred'].errback(reason)
-
-        
+        self._errbackAndReset(reason)
+    
     # KILL
 
     def kill(self):
@@ -807,13 +814,10 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.dieLoudly('KILL OK|FAIL not received: ' + msg)
             
     def killOK(self):
-        self._reset()
-        self.workVars['deferred'].callback(None)
-
-        
+        self._callbackAndReset(None)
+    
     def killFail(self, reason):
-        self._reset()
-        self.workVars['deferred'].errback(reason)
+        self._errbackAndReset(reason)
         
     # STATUS
     
@@ -831,12 +835,10 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.dieLoudly('STATUS OK|FAIL not received: ' + msg)
             
     def statusOK(self):
-        self._reset()
-        self.workVars['deferred'].callback(None)
-        
+        self._callbackAndReset(None)
+    
     def statusFail(self, reason):
-        self._reset()
-        self.workVars['deferred'].errback(reason)
+        self._errbackAndReset(reason)
         
     # IEngineSerialized Methods
     

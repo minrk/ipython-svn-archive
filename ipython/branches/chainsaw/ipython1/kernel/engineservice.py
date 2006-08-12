@@ -255,7 +255,7 @@ def queuedMethod(self%s%s):
         d = defer.Deferred()
         cmd.setDeferred(d)
         if self.currentCommand is not None:
-            log.msg("Queueing: " + repr(cmd))
+            #log.msg("Queueing: " + repr(cmd))
             self.queued.append(cmd)
             return d
         self.currentCommand = cmd
@@ -265,7 +265,7 @@ def queuedMethod(self%s%s):
     def runCurrentCommand(self):
         """run current command"""
         cmd = self.currentCommand
-        log.msg("Starting: " + repr(self.currentCommand))
+        #log.msg("Starting: " + repr(self.currentCommand))
         f = getattr(self.engine, cmd.remoteMethod, None)
         if f:
             d = f(*cmd.args, **cmd.kwargs)
@@ -289,7 +289,7 @@ def queuedMethod(self%s%s):
     
     def finishCommand(self, result):
         """finish currrent command"""
-        log.msg("Finishing: " + repr(self.currentCommand) + ':' + repr(result))
+        #log.msg("Finishing: " + repr(self.currentCommand) + ':' + repr(result))
         self.currentCommand.handleResult(result)
         del self.currentCommand
         self.currentCommand = None

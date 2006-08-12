@@ -74,11 +74,11 @@ class CompleteEngineTestCase(DeferredTestCase):
     
     def testGetResult(self):
         #d = self.assertDeferredRaises(self.e.getResult(),IndexError)
-        d = defer.succeed(None)
-        d.addCallback(lambda _:self.e.execute("a = 5"))
-        d = self.assertDeferredEquals(self.e.getResult(),(self.e.id, 0,"a = 5","",""), d)
-        d = self.assertDeferredEquals(self.e.getResult(0),(self.e.id, 0,"a = 5","",""), d)
-        d.addCallback(lambda _:self.e.reset())
+        d = self.e.execute("a = 5")
+        d.addCallback(lambda _: self.e.getResult())
+        d = self.assertDeferredEquals(d, (self.e.id, 0,"a = 5","",""))
+        d.addCallback(lambda _: self.e.getResult(0))
+        d = self.assertDeferredEquals(d, (self.e.id, 0,"a = 5","",""))
         return d
     
     def testStatus(self):
