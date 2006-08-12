@@ -30,11 +30,11 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     def connectionMade(self):
         self.transport.setTcpNoDelay(True)
         desiredID = self.factory.getID()
+        self.nextHandler = self.handleRegister
         if desiredID is not None:
             self.sendString("REGISTER %i" % desiredID)
         else:
             self.sendString("REGISTER")
-        self.nextHandler = self.handleRegister
     
     def stringReceived(self, msg):
         if self.nextHandler is None:
@@ -147,12 +147,12 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.executeOK()    
  
     def executeOK(self):
+        self._reset()
         self.sendString('EXECUTE OK')
-        self._reset()
-         
+    
     def executeFail(self):
-        self.sendString('EXECUTE FAIL')
         self._reset()
+        self.sendString('EXECUTE FAIL')
     
     #####   
     ##### The PUSH command
@@ -215,14 +215,14 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         d.addErrback(self.pushFail)
             
     def pushOK(self, *args):
-        self.sendString('PUSH OK')
         self._reset()
-         
+        self.sendString('PUSH OK')
+    
     def pushFail(self, reason):
         reason.printVerboseTraceback()
-        self.sendString('PUSH FAIL')
         self._reset()
-
+        self.sendString('PUSH FAIL')
+    
     #####
     ##### The PULL command
     #####
@@ -244,12 +244,12 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         self.pullOK()
     
     def pullOK(self):
-        self.sendString('PULL OK')
         self._reset()
+        self.sendString('PULL OK')
     
     def pullFail(self, reason):
-        self.sendString('PULL FAIL')
         self._reset()
+        self.sendString('PULL FAIL')
 
     #####
     ##### The PULLNAMESPACE command
@@ -275,12 +275,12 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         self.pullNamespaceOK()
     
     def pullNamespaceOK(self):
-        self.sendString('PULLNAMESPACE OK')
         self._reset()
+        self.sendString('PULLNAMESPACE OK')
     
     def pullNamespaceFail(self, reason):
-        self.sendString('PULLNAMESPACE FAIL')
         self._reset()
+        self.sendString('PULLNAMESPACE FAIL')
 
     #####
     ##### The GETRESULT command
@@ -322,12 +322,12 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.getResultOK()    
  
     def getResultOK(self):
+        self._reset()
         self.sendString('EXECUTE OK')
-        self._reset()
-         
+    
     def getResultFail(self):
-        self.sendString('EXECUTE FAIL')
         self._reset()
+        self.sendString('EXECUTE FAIL')
             
     #####
     ##### The RESET command
@@ -338,13 +338,13 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         d.addCallbacks(self.resetOK, self.resetFail)
 
     def resetOK(self, args):
+        self._reset()
         self.sendString('RESET OK')
-        self._reset()
-
+    
     def resetFail(self, reason):
-        self.sendString('RESET FAIL')
         self._reset()
-
+        self.sendString('RESET FAIL')
+    
     #####
     ##### The KILL command
     #####   
@@ -354,12 +354,12 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         d.addCallbacks(self.killOK, self.killFail)
 
     def killOK(self, args):
-        self.sendString('KILL OK')
         self._reset()
+        self.sendString('KILL OK')
 
     def killFail(self, reason):
-        self.sendString('KILL FAIL')
         self._reset()
+        self.sendString('KILL FAIL')
 
     #####
     ##### The STATUS command
@@ -370,13 +370,12 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         d.addCallbacks(self.statusOK, self.statusFail)
 
     def statusOK(self, args):
-        self.sendString('STATUS OK')
         self._reset()
+        self.sendString('STATUS OK')
 
     def statusFail(self, reason):
-        self.sendString('STATUS FAIL')
         self._reset()
-
+        self.sendString('STATUS FAIL')
 
 class IVanillaEngineClientFactory(engineservice.IEngineBase,
     engineservice.IEngineSerialized):
@@ -455,7 +454,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     
     nextHandler = None
     workVars = {}
-    _id = None
+    id = None
     
     def connectionMade(self):
         self.transport.setTcpNoDelay(True)
@@ -609,8 +608,9 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         self.handleID(self.id)
         
     def handleID(self, id):
-        self.sendString('REGISTER %i' % id)
         self._reset()
+        self.sendString('REGISTER %i' % id)
+
         
     # IEngineBase Methods
     
@@ -668,12 +668,14 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.dieLoudly('Expected PUSH OK, got: ' + msg)
             
     def pushFail(self, f):
-        self.workVars['deferred'].errback(f)
         self._reset()
+        self.workVars['deferred'].errback(f)
+
         
     def pushOK(self, result=None):
-        self.workVars['deferred'].callback(result)
         self._reset()
+        self.workVars['deferred'].callback(result)
+
         
     #PULL
     
@@ -780,12 +782,14 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.dieLoudly('RESET OK|FAIL not received: ' + msg)
             
     def resetOK(self):
-        self.workVars['deferred'].callback(None)
         self._reset()
+        self.workVars['deferred'].callback(None)
+
         
     def resetFail(self, reason):
-        self.workVars['deferred'].errback(reason)
         self._reset()
+        self.workVars['deferred'].errback(reason)
+
         
     # KILL
 
@@ -803,12 +807,13 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.dieLoudly('KILL OK|FAIL not received: ' + msg)
             
     def killOK(self):
-        self.workVars['deferred'].callback(None)
         self._reset()
+        self.workVars['deferred'].callback(None)
+
         
     def killFail(self, reason):
-        self.workVars['deferred'].errback(reason)
         self._reset()
+        self.workVars['deferred'].errback(reason)
         
     # STATUS
     
@@ -826,22 +831,22 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
             self.dieLoudly('STATUS OK|FAIL not received: ' + msg)
             
     def statusOK(self):
-        self.workVars['deferred'].callback(None)
         self._reset()
+        self.workVars['deferred'].callback(None)
         
     def statusFail(self, reason):
-        self.workVars['deferred'].errback(reason)
         self._reset()
+        self.workVars['deferred'].errback(reason)
         
     # IEngineSerialized Methods
     
     # PUSHSERIALIZED -> PUSH
     
     def pushSerialized(self, **namespace):
-        self.workVars['namespace'] = namespace
-        self.sendString('PUSH')
         self.nextHandler = self.isPushSerializedReady
+        self.workVars['namespace'] = namespace
         d = self._createDeferred()
+        self.sendString('PUSH')
         return d
         
     def isPushSerializedReady(self, msg):

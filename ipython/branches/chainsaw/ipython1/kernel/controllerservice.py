@@ -319,7 +319,7 @@ def autoMethod(self, %s:
     
     def pushSerialized(self, targets, **namespace):
         """Push value into locals namespace with name key."""
-        log.msg("pushing to %s" % targets)
+        log.msg("pushing Serialized to %s" % targets)
         engines = self.engineList(targets)
         l = []
         # Call unpack on values that aren't registered as allowed Serialized types
