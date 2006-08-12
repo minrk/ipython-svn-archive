@@ -29,7 +29,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
 
     def connectionMade(self):
         self.transport.setTcpNoDelay(True)
-        desiredID = self.factory.getID()
+        desiredID = self.factory.id
         self.nextHandler = self.handleRegister
         if desiredID is not None:
             self.sendString("REGISTER %i" % desiredID)
@@ -109,7 +109,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
                 self.dieLoudly("The controller protocol gave an id that is not an int: " + e)
             else:
                 self._reset()
-                self.factory.setID(id)
+                self.factory.id = id
         else:
             self.dieLoudly(args)
     
@@ -380,11 +380,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
 class IVanillaEngineClientFactory(engineservice.IEngineBase,
     engineservice.IEngineSerialized):
     
-    def getID():
-        """Get's the engines id."""
-        
-    def setID(id):
-        """Set's the engines id."""
+    pass
 
 class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
     
@@ -396,18 +392,20 @@ class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
         self.service = service
         
     # From IVanillaEngineClientFactory
-    def getID(self):
+    def _getID(self):
         return self.service.id
         
-    def setID(self, id):
+    def _setID(self, id):
         # Add some error checking.
         self.service.id = id
         self.notifySetID()   # Use as a hook for tests
         
     def notifySetID(self):
+        # This is meant to be a hook to detect whenn the Protocol calls setID
+        # after it has finished registering with a controller.  Mainly for tests.
         pass
         
-    id = property(getID, setID, "The engine's id.")
+    id = property(_getID, _setID, "The engine's id.")
     
     # These should be generated dynamically from service
     def execute(self, lines):
@@ -467,26 +465,25 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     def connectionLost(self, reason):
         self.factory.unregisterEngine(self.id)
 
-    def getID(self):
+    def _getID(self):
         return self._id
 
-    def setID(self, id):
+    def _setID(self, id):
         self._id = id
 
-    id = property(getID, setID, "The engine's id.")
-
+    id = property(_getID, _setID, "The engine's id.")
     
     #def sendString(self, s):
     #    log.msg('C: %s' % s)
     #    EnhancedNetstringReceiver.sendString(self, s)
-
+    
     def stringReceived(self, msg):
         #log.msg('E: %s' % msg)
         if self.nextHandler is None:
             self.defaultHandler(msg)
         else:
             self.nextHandler(msg)
-
+    
     def dispatch(self, msg):
         # Try to parse out a command
         splitLine = msg.split(' ', 1)
@@ -523,12 +520,20 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         self.nextHandler = self.dispatch
 
     def _callbackAndReset(self, result):
+        
+        # The ordering here is EXTREMELY important
+        # The workVars must be cleared before the Deferred is triggered,
+        # so the Deferred must be saved in a local variable d
         self.nextHandler = self.dispatch
         d = self.workVars['deferred']
         self.workVars = {}
         d.callback(result)
 
     def _errbackAndReset(self, reason):
+        
+        # The ordering here is EXTREMELY important
+        # The workVars must be cleared before the Deferred is triggered,
+        # so the Deferred must be saved in a local variable d
         self.nextHandler = self.dispatch
         d = self.workVars['deferred']
         self.workVars = {}
