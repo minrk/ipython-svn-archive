@@ -22,44 +22,60 @@ from ipython1.test import util
 from ipython1.test  import completeenginetest as cet
 from ipython1.kernel import engineservice as es, enginevanilla as ev
 
-#log.startLogging(sys.stdout)
-class EngineVanillaTest(cet.CompleteEngineTestCase):
-#class EnginePBTest(util.DeferredTestCase):
+evsf = ev.VanillaEngineServerFactoryFromControllerService
+log.startLogging(sys.stdout)
+#class EngineVanillaTest(cet.CompleteEngineTestCase):
+class EnginePBTest(util.DeferredTestCase):
         
     def setUp(self):
         #start one controller and connect one engine
-        self.deferred = defer.Deferred()
-        self.deferred.setTimeout(.1)
-        self.deferred.addBoth(self.passer)
         self.services = []
         self.clients = []
         self.servers = []
-        self.sf = ev.VanillaEngineServerFactoryFromControllerService(self)
+        self.sf = evsf(self)
+            
         self.servers.append(reactor.listenTCP(10201, self.sf))
-        
         self.es = es.EngineService()
         ef = ev.IVanillaEngineClientFactory(self.es)
+        ef.starterDeferred = defer.Deferred()
+        f = ev.VanillaEngineClientProtocol.handleRegister
+        def hr(self, args):
+            f(self, args)
+            self.factory.starterDeferred.callback(None)
+            self.factory.starterDeferred = defer.Deferred()
+        
+        ef.protocol.handleRegister = hr
         client = reactor.connectTCP('127.0.0.1', 10201, ef)
         
         self.clients.append(client)
         self.services.append(self.es)
         self.es.startService()
-        return self.deferred
+        return ef.starterDeferred
         
     def tearDown(self):
         l = []
         for s in self.servers:
-            try:
-                d = s.stopListening()
-                if d is not None:
-                    l.append(d)
-            except:
-                pass
+            d = s.stopListening()
+            if d is not None:
+                l.append(d)
         for c in self.clients:
             c.disconnect()
             del c
         dl = defer.DeferredList(l)
         return dl
+    
+#    def testA(self):
+#        pass
+    
+    
+    def testPullNamespace(self):
+        ns = {'a':10,'b':"hi there",'c3':1.2342354,'door':{"p":(1,2)}}
+        d = self.e.push(**ns)
+        d.addCallback(lambda _: self.e.pullNamespace(*ns.keys()))
+        d = self.assertDeferredEquals(d,ns)
+        return d
+    
+    
     
     def ready(self):
         self.deferred.callback(None)
@@ -67,7 +83,6 @@ class EngineVanillaTest(cet.CompleteEngineTestCase):
     def registerEngine(self, remoteEngine, id):
         self.e = remoteEngine
         self.e.id = id
-        self.ready()
         return 0
     
     def unregisterEngine(self, id):

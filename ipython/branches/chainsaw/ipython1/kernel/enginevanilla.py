@@ -455,15 +455,25 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     
     nextHandler = None
     workVars = {}
-    id = None
+    _id = None
     
     def connectionMade(self):
         self.transport.setTcpNoDelay(True)
         self.nextHandler = self.dispatch
-
+    
     def connectionLost(self, reason):
         self.factory.unregisterEngine(self.id)
 
+    def getID(self):
+        return self._id
+
+    def setID(self, id):
+        # Add some error checking.
+        self._id = id
+
+    id = property(getID, setID, "The engine's id.")
+
+    
     #def sendString(self, s):
     #    log.msg('C: %s' % s)
     #    EnhancedNetstringReceiver.sendString(self, s)
