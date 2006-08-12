@@ -392,7 +392,7 @@ class IVanillaEngineClientFactory(engineservice.IEngineBase,
     
     pass
 
-class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory):
+class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory, object):
     
     zi.implements(IVanillaEngineClientFactory)
     

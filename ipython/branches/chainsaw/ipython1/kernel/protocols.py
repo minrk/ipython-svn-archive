@@ -9,7 +9,7 @@
 
 from twisted.protocols import basic
 
-class EnhancedNetstringReceiver(basic.NetstringReceiver):
+class EnhancedNetstringReceiver(basic.NetstringReceiver, object):
     
     def sendBuffer(self, buf):
         bufLength = len(buf)
