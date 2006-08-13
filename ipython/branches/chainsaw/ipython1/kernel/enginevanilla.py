@@ -329,15 +329,15 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
             self.getResultFail()
         else:
             self.sendPickleSerialized(serial)
-            self.getResultOK()    
+            self.getResultOK()
  
     def getResultOK(self):
         self._reset()
-        self.sendString('EXECUTE OK')
+        self.sendString('GETRESULT OK')
     
     def getResultFail(self):
         self._reset()
-        self.sendString('EXECUTE FAIL')
+        self.sendString('GETRESULT FAIL')
             
     #####
     ##### The RESET command
@@ -357,7 +357,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
     
     #####
     ##### The KILL command
-    #####   
+    #####
             
     def handle_KILL(self, args):
         d = self.factory.kill()
