@@ -398,6 +398,11 @@ class RemoteController(object):
             targetstr = '::'.join(map(str, targets))
         else:
             targetstr = str(targets)
+        
+        if not targetstr or not source:
+            # need something to do
+            return False
+        
         if self.block or block:
             self.es.writeNetstring("EXECUTE BLOCK %s::%s" % (source, targetstr))
             string = self.es.readString()
@@ -461,12 +466,12 @@ class RemoteController(object):
         code = compile(source,fname,'exec')
         
         # Now run the code
-        self.execute(targets, source)
+        return self.execute(targets, source)
     
     def runAll(self, fname):
         return self.run('all', fname)
     
-    def push(self, targets, *localkeys, **namespace):
+    def push(self, targets, **namespace):
         """Send a python object to the namespace of a kernel.
         
         There is also a dictionary style interface to the push command:
@@ -486,14 +491,8 @@ class RemoteController(object):
         else:
             targetstr = str(targets)
         
-        for key in localkeys:
-            try:
-                namespace[key] = locals()[key]
-            except KeyError:
-                return False
-        
-        if not namespace:
-            #need something to send
+        if not namespace or not targetstr:
+            #need something to send, someone to send it to
             return False
         
         self.es.writeNetstring("PUSH ::%s" % targetstr)
@@ -547,6 +546,9 @@ class RemoteController(object):
         except TypeError:
             return False
         
+        if not keys or not targetstr:
+            return False
+
         self.es.writeNetstring("PULL %s::%s" % (keystr, targetstr))
         string = self.es.readString()
         results = []
@@ -614,6 +616,8 @@ class RemoteController(object):
     
     def pullNamespace(self, targets, *keys):
         """Gets a namespace dict with keys from targets"""
+        if not keys:
+            return False
         self._check_connection()    
         values = self.pull(targets, *keys)
         multitargets = not isinstance(targets, int) and len(targets) > 1
@@ -649,10 +653,13 @@ class RemoteController(object):
         else:
             targetstr = str(targets)
         
-        if number is None:
+        if not targetstr:
+            return False
+        
+        if i is None:
             self.es.writeNetstring("GETRESULT ::%s" %targetstr)
         else:
-            self.es.writeNetstring("GETRESULT %i::%s" % (number, targetstr))
+            self.es.writeNetstring("GETRESULT %i::%s" % (i, targetstr))
         string = self.es.readString()
         if string == "PICKLE RESULT":
             package = self.es.readString()
@@ -680,6 +687,9 @@ class RemoteController(object):
             targetstr = '::'.join(map(str, targets))
         else:
             targetstr = str(targets)
+        
+        if not targetstr:
+            return False
         
         self.es.writeNetstring("STATUS ::%s" %targetstr)
         string = self.es.readString()
@@ -751,6 +761,9 @@ class RemoteController(object):
         else:
             targetstr = str(targets)
         
+        if not targetstr:
+            return False
+        
         self.es.writeNetstring("RESET ::%s" %targetstr)
         string = self.es.readString()
         if string == "RESET OK":
@@ -765,6 +778,9 @@ class RemoteController(object):
             targetstr = '::'.join(map(str, targets))
         else:
             targetstr = str(targets)
+        
+        if not targetstr:
+            return False
         
         self.es.writeNetstring("KILL ::%s" %targetstr)
         string = self.es.readString()
