@@ -16,11 +16,9 @@ parts of the controller.
 #*****************************************************************************
 
 import cPickle as pickle
-import time
 
-from twisted.internet import protocol, defer, reactor
+from twisted.internet import protocol, defer
 from twisted.internet.interfaces import IProducer
-from twisted.protocols import basic
 from twisted.python import components, log
 from twisted.python.failure import Failure
 from zope.interface import Interface, implements
@@ -179,7 +177,6 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self.nextHandler = self.handlePushing
         key = self.workVars['pushKey']
         self.workVars['pushSerial'].addToPackage(arrayBuffer)
-        print self.workVars['pushSerial'].unpack()
         self.workVars['pushDict'][key] = self.workVars['pushSerial']
     
     def handlePushingDone(self):
@@ -249,6 +246,100 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     def pullFinish(self, msg):
         self._reset()
         self.sendString("PULL %s" % msg)
+    
+    
+    #####
+    ##### The SCATTER command
+    #####
+    
+    def handle_SCATTER(self, args, targets):
+        if not args:
+            self.nextHandler = self.handleScatter
+            return
+        argSplit = args.split(' ',1)
+        self.workVars['scatterTargets'] = targets
+        for a in argSplit:
+            split = a.split('=',1)
+            if len(split) is 2:
+                if split[0] == 'style':
+                    self.workVars['scatterStyle'] = split[1]
+                elif split[0] == 'flatten':
+                    self.workVars['scatterFlatten'] = int(split[1])
+                else:
+                    self.scatterFail()
+                    return
+            else:
+                self.scatterFail()
+                return
+        self.nextHandler = self.handleScatter
+    
+    def handleScatter(self, args):
+        arglist = args.split(' ',1)
+        if len(arglist) is 2:
+            scatterType = arglist[0]
+            self.workVars['scatterKey'] = arglist[1]
+        else:
+            self.scatterFinish("FAIL")
+            return
+        
+        f = getattr(self, 'handleScatter_%s' %scatterType, None)
+        if f is not None:
+            self.nextHandler = f
+        else:
+            self.scatterFinish("FAIL")
+    
+    def handleScatter_PICKLE(self, package):
+        self.nextHandler = self.handleScatterDone
+        key = self.workVars['scatterKey']
+        serial = serialized.PickleSerialized(key)
+        serial.addToPackage(package)
+        self.workVars['scatterSerial'] = serial
+    
+    def handleScatter_ARRAY(self, pShape):
+        self.nextHandler = self.handleScatterArray_dtype
+        key = self.workVars['scatterKey']
+        serial = serialized.ArraySerialized(key)
+        serial.addToPackage(pShape)
+        self.workVars['scatterSerial'] = serial
+    
+    def handleScatterArray_dtype(self, dtype):
+        self.nextHandler = self.handleScatterArray_buffer
+        self.workVars['scatterSerial'].addToPackage(dtype)
+    
+    def handleScatterArray_buffer(self, arrayBuffer):
+        self.nextHandler = self.handleScatterDone
+        key = self.workVars['scatterKey']
+        self.workVars['scatterSerial'].addToPackage(arrayBuffer)
+    
+    def handleScatterDone(self, args):
+        if args != "SCATTER DONE":
+            return self.scatterFail()
+        
+        d = defer.Deferred().addCallback(self.scatterCallback)
+        self.producer.register(self.transport, d)
+        self.sendString('SCATTER OK')
+        return d
+    
+    def scatterCallback(self, _):
+        key = self.workVars['scatterKey']
+        targets = self.workVars['scatterTargets']
+        obj = self.workVars['scatterSerial'].unpack()
+        kw = {}
+        style = self.workVars.get('scatterStyle', None)
+        if style is not None:
+            kw['style'] = style
+        flatten = self.workVars.get('scatterFlatten', None)
+        if flatten is not None:
+            kw['flatten'] = flatten
+        self._reset()
+        return self.factory.scatter(targets, key, obj, **kw)
+    
+    def scatterFail(self, failure=None):
+        self.scatterFinish("FAIL")
+    
+    def scatterFinish(self, msg):
+        self._reset()
+        self.sendString("SCATTER ", msg)
     
     #####
     ##### The EXECUTE command

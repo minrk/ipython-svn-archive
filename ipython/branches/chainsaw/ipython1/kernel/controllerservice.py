@@ -21,14 +21,13 @@ TODO:
 
 import cPickle as pickle
 from new import instancemethod
-from twisted.application import service, internet
+from twisted.application import service
 from twisted.internet import protocol, reactor, defer
 from twisted.protocols import basic
 from twisted.python import log
-from twisted.spread import pb
 from zope.interface import Interface, implements
 
-from ipython1.kernel.engineservice import Command, IEngineComplete
+from ipython1.kernel.engineservice import IEngineComplete
 from ipython1.kernel.serialized import Serialized
 from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import map
@@ -361,7 +360,7 @@ def autoMethod(self, %s:
         return gatherBoth(l)
     
     def gather(self, targets, key, style='basic'):
-    
+        
         engines = self.engineList(targets)
         nEngines = len(engines)
                 
