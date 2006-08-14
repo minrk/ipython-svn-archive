@@ -16,12 +16,10 @@ sockets and thus, do not require Twisted.
 #*****************************************************************************
 
 import socket
-import threading
 import pickle
 import types
-import time, os
+import os
 
-from twisted.internet import defer
 from twisted.python.failure import Failure
 from IPython.ColorANSI import *
 from IPython.genutils import flatten as genutil_flatten

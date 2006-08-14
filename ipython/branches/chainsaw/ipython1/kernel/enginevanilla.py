@@ -15,7 +15,6 @@ import zope.interface as zi
 from twisted.python import components, log
 from twisted.python.failure import Failure
 from twisted.internet import protocol, reactor, defer
-from twisted.protocols import basic
 
 defer.setDebugging(1)
 

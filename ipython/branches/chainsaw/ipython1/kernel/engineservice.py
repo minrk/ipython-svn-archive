@@ -15,12 +15,12 @@ TODO:
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
-
+import cPickle as pickle
 from new import instancemethod
 
-from twisted.application import service, internet
+from twisted.application import service
 from twisted.internet import defer, reactor
-from twisted.python import log, failure
+from twisted.python import log
 import zope.interface as zi
 
 from ipython1.core.shell import InteractiveShell
@@ -233,7 +233,7 @@ class QueuedEngine(object):
                 setattr(self, m, instancemethod(f, self, self.__class__))
     
     def buildQueuedMethod(self, m):
-        args = IEngineComplete[m].getSignatureString()[1:-1]#without '()'
+        args = IEngineComplete[m].getSignatureString()[1:-1]#strip '()'
 #        log.msg("autoqueue method %s" %m)
         if args:
             comma = ', '

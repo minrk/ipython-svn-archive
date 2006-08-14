@@ -25,12 +25,11 @@ TODO:
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import time
 import cPickle as pickle
 
 from twisted.python import components, log
 from twisted.spread import pb
-from twisted.internet import defer, reactor
+from twisted.internet import defer
 from zope.interface import Interface, implements
 
 from ipython1.kernel.engineservice import *
@@ -66,7 +65,9 @@ class PBEngineClientFactory(pb.PBClientFactory):
 # Expose a PB interface to the EngineService
      
 class IPBEngine(Interface):
-    """Twisted Perspective Broker remote interface for engine service."""
+    """Twisted Perspective Broker remote interface for engine service.
+    This is NOT the IEngine interface, it is the counterpart to EngineFromReference,
+    which does implement IEngine"""
     
     #remote methods for engine service
     def remote_getID(self):
