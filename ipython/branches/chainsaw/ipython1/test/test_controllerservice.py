@@ -31,7 +31,6 @@ class BasicEngineServiceTest(DeferredTestCase):
         self.engines = []
         self.cs.registerSerializationTypes(serialized.Serialized)
         self.addEngine(1)
-        
     
     def tearDown(self):
         self.cs.stopService()
@@ -44,6 +43,10 @@ class BasicEngineServiceTest(DeferredTestCase):
             e.startService()
             self.cs.registerEngine(e, None)
             self.engines.append(e)
+    
+    def printer(self, r):
+        print r
+        return r
     
     def testInterfaces(self):
         p = list(self.cs.__provides__)
@@ -114,4 +117,20 @@ class BasicEngineServiceTest(DeferredTestCase):
         d = self.assertDeferredEquals(self.cs.getResult(0, 0),[(0, 0,"a = 5","","")], d)
         d.addCallback(lambda _:self.cs.reset(0))
         return d
+    
+    def testScatterGather(self):
+        self.addEngine(15)
+        try:
+            import numpy
+            a = numpy.random.random(100)
+            d = self.cs.scatterAll('a', a)
+            d.addCallback(lambda _: self.cs.gatherAll('a'))
+            d.addCallback(lambda b: (a==b).all())
+            d = self.assertDeferredEquals(d, True)
+        except ImportError:
+            print "no numpy"
+            d = defer.succeed(None)
+        l = range(100)
+        d.addCallback(lambda _: self.cs.scatterAll('l', l))
+        return self.assertDeferredEquals(self.cs.gatherAll('l'),l, d)
     

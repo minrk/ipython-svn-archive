@@ -31,6 +31,7 @@ from zope.interface import Interface, implements
 from ipython1.kernel.engineservice import Command, IEngineComplete
 from ipython1.kernel.serialized import Serialized
 from ipython1.kernel.util import gatherBoth
+from ipython1.kernel import map
 
 #from the Python Cookbook:
 def curry(f, *curryArgs, **curryKWargs):
@@ -105,6 +106,17 @@ class IMultiEngine(Interface):
     def verifyTargets(targets):
         """verify if targets is callable id list, id, or string 'all'"""
     
+    def scatter(targets, key, seq, style='basic', flatten=False):
+        """partition and distribute a sequence"""
+    
+    def scatterAll(key, seq, style='basic', flatten=False):
+        """"""
+    
+    def gather(targets, key, style='basic'):
+        """gather object as distributed by scatter"""
+    
+    def gatherAll(key, style='basic'):
+        """"""
     #IRemoteEngine multiplexer methods
     def pushSerialized(targets, **namespace):
         """Push a dict of keys and Serialized to the user's namespace."""
@@ -302,8 +314,7 @@ def autoMethod(self, %s:
                 if id not in self.engines.keys():
                     log.msg("id %i not registered" %id)
                     return False
-                else: 
-                    return True
+            return True
         elif targets is 'all':
             return True
         else:
@@ -332,6 +343,35 @@ def autoMethod(self, %s:
         for e in engines:
             l.append(e.pushSerialized(**namespace))
         return gatherBoth(l)
+    
+    def scatter(self, targets, key, seq, style='basic', flatten=False):
+        
+        engines = self.engineList(targets)
+        nEngines = len(engines)
+        
+        mapClass = map.styles[style]
+        mapObject = mapClass()
+        l = []
+        for index, engine in enumerate(engines):
+            partition = mapObject.getPartition(seq, index, nEngines)
+            if flatten and len(partition) == 1:    
+                l.append(engine.push(**{key: partition[0]}))
+            else:
+                l.append(engine.push(**{key: partition}))
+        return gatherBoth(l)
+    
+    def gather(self, targets, key, style='basic'):
+    
+        engines = self.engineList(targets)
+        nEngines = len(engines)
+                
+        l = []
+        for e in engines:
+            l.append(e.pull(key))
+        
+        mapClass = map.styles[style]
+        mapObject = mapClass()
+        return gatherBoth(l).addCallback(mapObject.joinPartitions)
     
     def status(self, targets):
         log.msg("retrieving status of %s" %targets)
