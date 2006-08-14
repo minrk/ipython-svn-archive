@@ -48,7 +48,7 @@ class CompleteEngineTestCase(DeferredTestCase):
         for c in commands:
             result = self.e.execute(c[2])
             d = self.assertDeferredEquals(result, c, d)
-        return d.addCallback(self.printer)
+        return d
     
     def testPushPull(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
@@ -62,6 +62,16 @@ class CompleteEngineTestCase(DeferredTestCase):
         d.addCallback(lambda nd:
             self.assert_(isinstance(nd,NotDefined)))
         return d
+    
+    # def testArray(self):
+    #     try:
+    #         import numpy
+    #     except:
+    #         print 'no numpy'
+    #         return
+    #     a = numpy.array('asdf')
+    #     d = self.e.push(a=a)
+    #     return self.assertDeferredEquals(self.e.pull('a'), a, d)
     
     def testPushPullSerialized(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
