@@ -1,0 +1,40 @@
+<html xmlns:n="http://nevow.com/ns/nevow/0.1">
+    <head>
+        <n:invisible n:render="liveglue" />
+        <style type="text/css">
+            #controller {
+                font-family: monospace;
+                margin-top: 5em;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            button {
+                border: 1px solid #999;
+            }
+            #output {
+                border: 1px solid #999;
+                text-align: right;
+            }
+        </style>
+        <script type="text/javascript">
+        buttonClicked = function() {
+            d = server.callRemote('statusAll');
+            d.addCallback(updateDisplay);
+        }
+        updateDisplay = function(expression) {
+            getElement('output').innerHTML = expression;
+        }
+        </script>
+    </head>
+    <body>
+        <table id="controller">
+            <tr>
+                <td id="output">return buttonClicked();</td>
+            </tr>
+			<tr>
+				<td><button onClick="return buttonClicked('all');">status</button></td>
+			</tr>
+        </table>
+    </body>
+</html>
+
