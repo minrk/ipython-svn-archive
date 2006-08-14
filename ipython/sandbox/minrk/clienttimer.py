@@ -21,7 +21,7 @@ def main(host, port, tests, timer):
     rc = RemoteController((host, port))
     rc.connect()
     
-    n = len(rc.status('all').keys())
+    n = len(rc.getIDs())
     if timer is None:
         timer = max(sqrt(n)/6, 1)
     

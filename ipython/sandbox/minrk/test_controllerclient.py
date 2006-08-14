@@ -25,30 +25,30 @@ from ipython1.kernel.controllerclient import RemoteController
 
 def main(port, host):
     rc = RemoteController((host, port))
-    id =  rc.statusAll().keys()
+    ids = rc.getIDs()
     hide = StringIO.StringIO('')    
-    print "Running on %i engines" %len(id)
-    if not id:
+    print "Running on %i engines" %len(ids)
+    if not ids:
         print "need some engines!"
         return
     
     print "Testing push/pull"
     try:
-        assert rc.push(0, a=5)
-        assert rc.pull(0, 'a') == 5
-        assert not rc.push(0)
-        assert not rc.push([], a=5)
-        assert rc.push([0], b='asdf', c=[1,2])
-        assert rc.pull([0], 'b', 'c') == ['asdf', [1,2]]
-        assert rc.push([0,1], c=[1,2,3])
-        assert rc.pull([0,1], 'c') == ([1,2,3],[1,2,3])
-        assert rc.push([0,0], a=14)
-        assert rc.pull([0,0,0], 'a') == (14,14,14)
-        assert rc.push([0,1], a=1, b=2, c=3)
-        assert rc.pull([0,1],'a','b','c') == [(1,1),(2,2),(3,3)]
+        assert rc.push(0, a=5),"assert rc.push(0, a=5)"
+        assert rc.pull(0, 'a') == 5,"assert rc.pull(0, 'a') == 5"
+        assert not rc.push(0),"assert not rc.push(0)"
+        assert not rc.push([], a=5),"assert not rc.push([], a=5)"
+        assert rc.push([0], b='asdf', c=[1,2]),"assert rc.push([0], b='asdf', c=[1,2])"
+        assert rc.pull([0], 'b', 'c') == ['asdf', [1,2]],"assert rc.pull([0], 'b', 'c') == ['asdf', [1,2]]"
+        assert rc.pushAll(c=[1,2,3]),"assert rc.pushAll(c=[1,2,3])"
+        assert rc.pullAll('c') == ([1,2,3],)*len(ids),"assert rc.pullAll('c') == ([1,2,3],)*len(ids)"
+        assert rc.push([0,0], a=14),"assert rc.push([0,0], a=14)"
+        assert rc.pull([0,0,0], 'a') == (14,14,14),"assert rc.pull([0,0,0], 'a') == (14,14,14)"
+        assert rc.pushAll(a=1, b=2, c=3),"assert rc.pushAll(a=1, b=2, c=3)"
+        assert rc.pullAll('a','b','c') == [(1,)*len(ids),(2,)*len(ids),(3,)*len(ids)],"assert rc.pullAll('a','b','c') == [(1,1)*len(ids),(2,2)*len(ids),(3,3)*len(ids)]"
         q={'a':5}
-        assert rc.push(id, q=q)
-        assert rc.pull(id,'q') == (q,)*len(id)
+        assert rc.push(ids, q=q),"assert rc.push(ids, q=q)"
+        assert rc.pull(ids,'q') == (q,)*len(ids) or len(ids) is 1,"assert rc.pull(ids,'q') == (q,)*len(ids)"
         rc['z'] = 'test'
         rc[1]['t'] = [1,2,3]
         rc[0:5]['r'] = 'asdf'
@@ -59,41 +59,49 @@ def main(port, host):
     else:
        print "push/pull OK"
     
-    print "Testing pushAll"
+    print "Testing push/pullNamespace"
     try:
-        assert rc.pushAll(a=5)
-        assert rc.pushAll(a=5, b=6, c='asdf')
-        try:
-            rc.pushAll(0, a=5)
-        except:
-            pass
-        else:
-            raise 'Should have raised'
+        ns = {'a':5}
+        assert rc.pushAll(**ns),"assert rc.pushAll(a=5)"
+        assert rc.pullNamespace(0, 'a') == ns,"assert rc.pullNamespace(0, 'a') == {'a':5}"
+        assert rc.pullNamespaceAll('a') == [ns]*len(ids),"assert rc.pullNamespaceAll('a') == [{'a':5}]*len(ids)"
+        ns['b'] = 6
+        ns['cd'] = 'asdf'
+        assert rc.pushAll(**ns),"assert rc.pushAll(a=5, b=6, cd='asdf')"
+        assert rc.pullNamespace(0, *ns.keys()) == ns,"assert rc.pullNamespace(0, *ns.keys()) == ns"
+        assert rc.pullNamespaceAll(*ns.keys()) == [ns]*len(ids),"assert rc.pullNamespaceAll(*ns.keys) == [ns]*len(ids)"
     except Exception, e:
-        print "pushAll FAIL: ", e
+        print "pushAll/pullNamespace FAIL: ", e
     else:
-        print "pushAll OK"
+        print "pushAll/pullNamespace OK"
         
     print "Testing execute"
     try:
-        assert rc.execute(0, 'a')
-        assert rc.execute([0,1], 'print a')
-        assert rc.execute('all', 'b-3')
-        assert not rc.execute(0, '')
-        assert not rc.execute([], 'locals')
+        assert rc.execute(0, 'a'),"assert rc.execute(0, 'a')"
+        assert rc.executeAll('print a'),"assert rc.execute([0,1], 'print a')"
+        assert rc.execute('all', 'b-3'),"assert rc.execute('all', 'b-3')"
+        assert not rc.execute(0, ''),"assert not rc.execute(0, '')"
+        assert not rc.execute([], 'locals'),"assert not rc.execute([], 'locals')"
         s = sys.stdout
         sys.stdout = hide
-        assert rc.execute(0, 'a', block=True)
-        assert rc.execute([0,1], 'print a', block=True)
-        assert rc.execute('all', 'b-3', block=True)
-        assert not rc.execute(0, '', block=True)
-        assert not rc.execute([], 'locals', block=True)
+        assert rc.execute(0, 'a', block=True),"assert rc.execute(0, 'a', block=True)"
+        assert rc.execute([0,0], 'print a', block=True),"assert rc.execute([0,1], 'print a', block=True)"
+        assert rc.execute('all', 'b-3', block=True),"assert rc.execute('all', 'b-3', block=True)"
+        assert not rc.execute(0, '', block=True),"assert not rc.execute(0, '', block=True)"
+        assert not rc.execute([], 'locals', block=True),"assert not rc.execute([], 'locals', block=True)"
         sys.stdout = s
     except Exception, e:
         print "execute FAIL: ", e
     else:
         print "execute OK"
     
+    # print "Testing status/reset"
+    # try:
+    #     pass
+    # except Exception, e:
+    #     print 'status/reset FAIL: ', e
+    # else:
+    #     print 'status/reset OK'
 
 
 
