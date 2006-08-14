@@ -337,14 +337,12 @@ def autoMethod(self, %s:
         log.msg("retrieving status of %s" %targets)
         engines = self.engineList(targets)
         l = []
-        dikt = {}
         for e in engines:
-            l.append(e.status().addCallback(lambda s: 
-                            dikt.__setitem__(e.id, s)))
-        return gatherBoth(l).addCallback(lambda _: dikt)
+            l.append(e.status().addCallback(lambda s:(e.id, s)))
+        return gatherBoth(l)
     
     
-    #notification methods    
+    # notification methods    
         
     def notifiers(self):
         return self._notifiers

@@ -179,6 +179,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self.nextHandler = self.handlePushing
         key = self.workVars['pushKey']
         self.workVars['pushSerial'].addToPackage(arrayBuffer)
+        print self.workVars['pushSerial'].unpack()
         self.workVars['pushDict'][key] = self.workVars['pushSerial']
     
     def handlePushingDone(self):
@@ -202,7 +203,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     #####
     ##### The PULL command
     #####
-
+    
     def handle_PULL(self, args, targets):
         # Parse the args
         try:
@@ -357,12 +358,11 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     
     def statusOK(self, status):
         try:
-            package = pickle.dumps(status, 2)
+            serial = serialized.serialize(status, 'STATUS')
         except pickle.PickleError:
             self.statusFinish('FAIL')
         else:
-            self.sendString("PICKLE STATUS")
-            self.sendString(package)
+            self.sendSerial(serial)
             self.statusFinish('OK')
     
     def statusFail(self, reason):
