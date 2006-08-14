@@ -25,6 +25,7 @@ import time, os
 from IPython.ColorANSI import *
 
 from twisted.protocols.basic import LineReceiver
+# from twisted.python import log
     
 class UDPResultGatherer(object):
     """This class listens on a UDP port for kernels reporting stdout and stderr.
@@ -135,6 +136,10 @@ class TCPResultsProtocol(LineReceiver):
     
     def connectionMade(self):
         self.peer = self.transport.getPeer()
+        print "Connected Controller: %s" %(self.peer.host)
+    
+    def connectionLost(self, reason):
+        print "Disconnected Controller: %s" %(self.peer.host)
 
     def lineReceived(self, line):
         
