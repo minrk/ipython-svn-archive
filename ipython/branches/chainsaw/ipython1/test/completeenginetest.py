@@ -63,15 +63,18 @@ class CompleteEngineTestCase(DeferredTestCase):
             self.assert_(isinstance(nd,NotDefined)))
         return d
     
-    # def testArray(self):
-    #     try:
-    #         import numpy
-    #     except:
-    #         print 'no numpy'
-    #         return
-    #     a = numpy.array('asdf')
-    #     d = self.e.push(a=a)
-    #     return self.assertDeferredEquals(self.e.pull('a'), a, d)
+    def testPushPullArray(self):
+        try:
+            import numpy
+        except:
+            print 'no numpy'
+            return
+        a = numpy.random.random(10000)
+        d = self.e.push(a=a)
+        d.addCallback(lambda _: self.e.pull('a'))
+        d.addCallback(lambda b: b==a)
+        d.addCallback(lambda c: c.all())
+        return self.assertDeferredEquals(d, True)
     
     def testPushPullSerialized(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]

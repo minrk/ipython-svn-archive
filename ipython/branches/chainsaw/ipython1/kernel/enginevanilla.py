@@ -94,15 +94,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         for line in p:
             self.sendString(line)
     
-    def sendArrarySerialized(self, a):
-        # print a
-        # ia = iter(a)
-        # self.sendString(ia.next())
-        # self.sendString(ia.next())
-        # self.sendString(ia.next())
-        # self.sendBuffer(ia.next())
-        # for line in a:
-        #     print line
+    def sendArraySerialized(self, a):
         for line in a[:-1]:
             # print line
             self.sendString(line)
@@ -112,7 +104,7 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         if isinstance(s, serialized.PickleSerialized):
             self.sendPickleSerialized(s)
         elif isinstance(s, serialized.ArraySerialized):
-            self.sendArrarySerialized(s)
+            self.sendArraySerialized(s)
     
     #####
     ##### The REGISTER command
@@ -569,7 +561,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         for line in p:
             self.sendString(line)
     
-    def sendArrarySerialized(self, a):
+    def sendArraySerialized(self, a):
         # ia = iter(a)
         # self.sendString(ia.next())
         # self.sendString(ia.next())
@@ -582,7 +574,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
         if isinstance(s, serialized.PickleSerialized):
             self.sendPickleSerialized(s)
         elif isinstance(s, serialized.ArraySerialized):
-            self.sendArrarySerialized(s)
+            self.sendArraySerialized(s)
     
     def setupForIncomingSerialized(self, callbackString, errbackString=''):
         self.workVars['callbackString'] = callbackString

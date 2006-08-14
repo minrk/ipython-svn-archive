@@ -12,7 +12,11 @@ from twisted.protocols import basic
 class EnhancedNetstringReceiver(basic.NetstringReceiver, object):
     
     def sendBuffer(self, buf):
-        bufLength = len(buf)
-        self.transport.write('%d:')
-        self.transport.write(buf)
+        self.transport.write('%i:' %len(buf))
+        
+        # want to be able to call:
+        # self.transport.write(buf)
+        # but can't, so we have a
+        # temporary solution that copies:
+        self.transport.write(str(buf))
         self.transport.write(',')
