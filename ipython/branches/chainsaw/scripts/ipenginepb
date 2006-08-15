@@ -17,16 +17,17 @@ ipenginepb -p 9999 -c '127.0.0.1'
 
 # MPI module should be loaded first
 
+# MPI module should be loaded first
+
+import sys
+from IPython.genutils import get_home_dir
+
 ipython_path = get_home_dir() + '/.ipython'
-print 'Searcing for MPI module import in: ', ipython_path
 sys.path.append(ipython_path)
 try:
     import mpi_init_module
-    print 'MPI detected, setting mpi =', mpi_init_module.mpi
 except ImportError:
-    raise
     mpi_module = None
-    print 'No MPI extension detected, setting mpi = None'
 else:
     mpi_module = mpi_init_module.mpi
 

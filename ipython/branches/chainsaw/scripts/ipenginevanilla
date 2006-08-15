@@ -25,7 +25,6 @@ sys.path.append(ipython_path)
 try:
     import mpi_init_module
 except ImportError:
-    raise
     mpi_module = None
 else:
     mpi_module = mpi_init_module.mpi

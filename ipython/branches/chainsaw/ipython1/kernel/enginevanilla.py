@@ -931,8 +931,11 @@ class VanillaEngineServerFactoryFromControllerService(protocol.ServerFactory):
         return self.service.registerSerializationTypes(*serialTypes)
     
     def startFactory(self):
-        return self.service.registerSerializationTypes(serialized.PickleSerialized,
-            serialized.ArraySerialized)
+        if hasattr(serialize, 'ArraySerialized'):
+            return self.service.registerSerializationTypes(serialized.PickleSerialized,
+                serialized.ArraySerialized)
+        else:
+            return self.service.registerSerializationTypes(serialized.PickleSerialized)
     
 
 components.registerAdapter(VanillaEngineServerFactoryFromControllerService,
