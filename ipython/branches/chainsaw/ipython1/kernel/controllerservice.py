@@ -30,7 +30,7 @@ from zope.interface import Interface, implements
 from ipython1.kernel.engineservice import IEngineComplete
 from ipython1.kernel.serialized import Serialized
 from ipython1.kernel.util import gatherBoth
-from ipython1.kernel import map
+from ipython1.kernel import map as Map
 
 #from the Python Cookbook:
 def curry(f, *curryArgs, **curryKWargs):
@@ -293,8 +293,8 @@ def autoMethod(self, %s:
         """parse a *valid* id list into list of engines"""
         if isinstance(targets, int):
             return [self.engines[targets]]
-        elif isinstance(targets, list):
-            return map(self.engines.__getitem__, targets)            
+        elif isinstance(targets, (list, tuple)):
+            return map(self.engines.get, targets)
         elif targets is 'all':
             return self.engines.values()
         else:
@@ -313,6 +313,7 @@ def autoMethod(self, %s:
                 if id not in self.engines.keys():
                     log.msg("id %i not registered" %id)
                     return False
+            print 
             return True
         elif targets is 'all':
             return True
@@ -348,7 +349,7 @@ def autoMethod(self, %s:
         engines = self.engineList(targets)
         nEngines = len(engines)
         
-        mapClass = map.styles[style]
+        mapClass = Map.styles[style]
         mapObject = mapClass()
         l = []
         for index, engine in enumerate(engines):
@@ -360,7 +361,7 @@ def autoMethod(self, %s:
         return gatherBoth(l)
     
     def gather(self, targets, key, style='basic'):
-        
+        """gather a distributed object, and reassemble it"""
         engines = self.engineList(targets)
         nEngines = len(engines)
                 
@@ -368,7 +369,7 @@ def autoMethod(self, %s:
         for e in engines:
             l.append(e.pull(key))
         
-        mapClass = map.styles[style]
+        mapClass = Map.styles[style]
         mapObject = mapClass()
         return gatherBoth(l).addCallback(mapObject.joinPartitions)
     

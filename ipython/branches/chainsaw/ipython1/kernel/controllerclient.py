@@ -22,7 +22,8 @@ import os
 
 from twisted.python.failure import Failure
 from IPython.ColorANSI import *
-from IPython.genutils import flatten as genutil_flatten
+# from IPython.genutils import flatten as genutil_flatten
+
 
 arraytypeList = []
 # try:
@@ -501,6 +502,11 @@ class RemoteController(object):
     def runAll(self, fname):
         return self.run('all', fname)
     
+    def sendSerial(self, serial):
+        assert isinstance(serial, serialized.Serialized)
+        for line in serial:
+            self.es.writeNetstring(line)
+    
     def push(self, targets, **namespace):
         """Send python object(s) to the namespace of remote kernel(s).
         
@@ -540,8 +546,7 @@ class RemoteController(object):
                 print "Object cannot be serialized: ", key, e
                 return False
             else:
-                for line in serialObject:
-                    self.es.writeNetstring(line)
+                self.sendSerial(serialObject)
         self.es.writeNetstring("PUSH DONE")
         string = self.es.readNetstring()
         if string == "PUSH OK":
@@ -721,6 +726,69 @@ class RemoteController(object):
         if not multitargets:
             returns = returns[0]
         return returns
+    
+    def scatter(self, targets, key, seq, style='basic', flatten=False):
+        """distribute sequence object to targets"""
+        if not self.legalTargets(targets) or not key or not seq or \
+            not isinstance(seq, (tuple, list)+arraytypes):
+            return False
+        self._check_connection()
+        if isinstance(targets, (list, tuple)):
+            targetstr = '::'.join(map(str, targets))
+        else:
+            targetstr = str(targets)        
+        
+        try:
+            serial = serialized.serialize(seq, key)
+        except:
+            return False
+        self.es.writeNetstring('SCATTER style=%s flatten=%i::%s' %
+                (style, int(flatten), targetstr))
+        self.sendSerial(serial)
+        reply = self.es.readNetstring()
+        if reply == 'SCATTER OK':
+            return True
+        else:
+            return False
+    
+    def gather(self, targets, key, style='basic'):
+        """gather a distributed object, and reassemble it"""
+        if not self.legalTargets(targets) or not key:
+            return False
+        self._check_connection()
+        if isinstance(targets, (list, tuple)):
+            targetstr = '::'.join(map(str, targets))
+        else:
+            targetstr = str(targets)
+        
+        self.es.writeNetstring('GATHER %s style=%s::%s' %(key, style, targets))
+        split = self.es.readNetstring().split(' ',1)
+        if len(split) is not 2:
+            return False
+        if split[0] == 'PICKLE':
+            serial = serialized.PickleSerialized(key)
+            serial.addToPackage(self.es.readNetstring())
+            try:
+                obj = serial.unpack()
+            except pickle.PickleError, e:
+                print 'could not unpickle: ', e
+                return False
+        elif split[0] == 'ARRAY':
+            serial = serialized.ArraySerialized(key)
+            for i in range(3):
+                serial.addToPackage(self.es.readNetstring())
+            try:
+                obj = serial.unpack()
+            except Exception, e:
+                print 'could not build array: ', e
+                return False
+        else:
+            return False
+        
+        if self.es.readNetstring() == 'GATHER OK':
+            return obj
+        else:
+            return False
     
     def getResult(self, targets, i=None):
         """Gets a specific result from the kernels, returned as a tuple, or 

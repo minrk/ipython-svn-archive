@@ -261,6 +261,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         for a in argSplit:
             split = a.split('=',1)
             if len(split) is 2:
+                print split
                 if split[0] == 'style':
                     self.workVars['scatterStyle'] = split[1]
                 elif split[0] == 'flatten':
@@ -289,11 +290,12 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
             self.scatterFinish("FAIL")
     
     def handleScatter_PICKLE(self, package):
-        self.nextHandler = self.handleScatterDone
+        self.nextHandler = self.handleUnexpectedData
         key = self.workVars['scatterKey']
         serial = serialized.PickleSerialized(key)
         serial.addToPackage(package)
         self.workVars['scatterSerial'] = serial
+        return self.handleScatterDone()
     
     def handleScatter_ARRAY(self, pShape):
         self.nextHandler = self.handleScatterArray_dtype
@@ -307,14 +309,12 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self.workVars['scatterSerial'].addToPackage(dtype)
     
     def handleScatterArray_buffer(self, arrayBuffer):
-        self.nextHandler = self.handleScatterDone
+        self.nextHandler = self.handleUnexpectedData
         key = self.workVars['scatterKey']
         self.workVars['scatterSerial'].addToPackage(arrayBuffer)
+        return self.handleScatterDone()
     
-    def handleScatterDone(self, args):
-        if args != "SCATTER DONE":
-            return self.scatterFail()
-        
+    def handleScatterDone(self):
         d = defer.Deferred().addCallback(self.scatterCallback)
         self.producer.register(self.transport, d)
         self.sendString('SCATTER OK')
@@ -339,7 +339,45 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     
     def scatterFinish(self, msg):
         self._reset()
-        self.sendString("SCATTER ", msg)
+        self.sendString("SCATTER "+ msg)
+    
+    
+    #####
+    ##### The GATHER command
+    #####
+    
+    def handle_GATHER(self, args, targets):
+        # Parse the args
+        if not args:
+            self.gatherFail()
+        
+        argSplit = args.split(' ',1)
+        self.workVars['gatherKey'] = argSplit[0]
+        kw = {}
+        if len(argSplit) is 2:
+            styleSplit = argSplit[1].split('=',1)
+            if styleSplit[0] == 'style' and len(styleSplit) is 2:
+                kw['style'] = styleSplit[1]
+        self.nextHandler = self.handleUnexpectedData
+        d = self.factory.gather(targets, self.workVars['gatherKey'], **kw)
+        d.addCallbacks(self.gatherOK, self.gatherFail)
+        return d
+    
+    def gatherOK(self, obj):
+        try:
+            serial = serialized.serialize(obj, self.workVars['gatherKey'])
+            self.sendSerial(serial)
+        except:
+            self.gatherFail(Failure())
+        self.gatherFinish("OK")
+    
+    def gatherFail(self, failure=None):
+        self.gatherFinish("FAIL")
+    
+    def gatherFinish(self, msg):
+        self._reset()
+        self.sendString("GATHER %s" % msg)
+    
     
     #####
     ##### The EXECUTE command
@@ -589,9 +627,17 @@ class VanillaControllerFactoryFromService(protocol.ServerFactory):
         """Gets an item out of the user namespace by key."""
         return self.service.pullSerialized(targets, *keys)
     
-    def pullNamespaceSerialized(self, targets, *keys):
+    def pullNamespace(self, targets, *keys):
         """Gets an item out of the user namespace by key."""
-        return self.service.pullNamespaceSerialized(targets, *keys)
+        return self.service.pullNamespace(targets, *keys)
+    
+    def scatter(self, targets, key, seq, style='basic', flatten=False):
+        """distribute an object across targets"""
+        return self.service.scatter(targets, key, seq, style, flatten)
+    
+    def gather(self, targets, key, style='basic'):
+        """gather and reassemble distributed object"""
+        return self.service.gather(targets, key, style)
     
     def status(self, targets):
         """status of engines"""
