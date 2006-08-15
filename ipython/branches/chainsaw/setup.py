@@ -33,7 +33,8 @@ import sys
 
 with_packages = ['ipython1',
                  'ipython1.kernel',
-                 'ipython1.core']
+                 'ipython1.core',
+                 'ipython1.test']
                 
 with_scripts =  ['scripts/ipcontrollerpb',
                  'scripts/ipcontrollervanilla',

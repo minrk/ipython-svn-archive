@@ -1,4 +1,4 @@
-# -*- test-case-name: ipython1.test.test_engineservice -*-
+ # -*- test-case-name: ipython1.test.test_engineservice -*-
 
 """A Twisted Service Representation of the IPython Core.
 
@@ -123,9 +123,17 @@ class EngineService(service.Service):
     
     id = None
     
-    def __init__(self):
+    def __init__(self, mpi=None):
         self.shell = InteractiveShell()
+        self.mpi = mpi
+        if self.mpi is not None:
+            log.msg("MPI started with rank = %i and size = %i" % 
+                (self.mpi.rank, self.mpi.size))
+            self.id = self.mpi.rank
     
+    def startService(self):
+        self.shell.update({'mpi': self.mpi})
+            
     # The IEngine methods
     
     def execute(self, lines):

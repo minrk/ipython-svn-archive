@@ -15,6 +15,21 @@ ipenginepb -p 9999 -c '127.0.0.1'
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
+# MPI module should be loaded first
+
+import sys
+from IPython.genutils import get_home_dir
+
+ipython_path = get_home_dir() + '/.ipython'
+sys.path.append(ipython_path)
+try:
+    import mpi_init_module
+except ImportError:
+    raise
+    mpi_module = None
+else:
+    mpi_module = mpi_init_module.mpi
+
 import sys
 from optparse import OptionParser
 
@@ -27,7 +42,7 @@ from ipython1.kernel import engineservice, enginevanilla
 
 def main(controller, port, n):
     for i in range(n):
-        service = engineservice.EngineService()
+        service = engineservice.EngineService(mpi=mpi_module)
         reactor.connectTCP(controller, port,
             enginevanilla.IVanillaEngineClientFactory(service))      
         service.startService()

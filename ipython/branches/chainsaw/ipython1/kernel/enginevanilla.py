@@ -632,12 +632,14 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     
     def handle_REGISTER(self, args):
         self.nextHandler = self.handleUnexpectedData
-        desiredID = args
-        if desiredID is not None:
+        if args is not None:
+            desiredID = args[0]
             try:
                 desiredID = int(desiredID)
             except TypeError:
                 desiredID = None
+        else:
+            desiredID = None
         qe = engineservice.QueuedEngine(self)
         self.id = self.factory.registerEngine(engineservice.completeEngine(qe), 
             desiredID)

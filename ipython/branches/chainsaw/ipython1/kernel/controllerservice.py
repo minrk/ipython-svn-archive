@@ -31,6 +31,7 @@ from ipython1.kernel.engineservice import IEngineComplete
 from ipython1.kernel.serialized import Serialized
 from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import map as Map
+from ipython1.kernel import error
 
 #from the Python Cookbook:
 def curry(f, *curryArgs, **curryKWargs):
@@ -253,25 +254,25 @@ def autoMethod(self, %s:
     
     #IRemoteController
     
-    def registerEngine(self, remoteEngine, id):
+    def registerEngine(self, remoteEngine, id=None):
         """register new engine connection"""
         for base in IEngineComplete.getBases():
             assert(base.providedBy(remoteEngine))
         
-        if id in self.engines.keys():
-            raise IdInUse
+        desiredID = id
+        if desiredID in self.engines.keys():
+            desiredID = None
             
-        if id in self.availableIDs:
-            remoteEngine.id = id
-            self.availableIDs.remove(id)
+        if desiredID in self.availableIDs:
+            remoteEngine.id = desiredID
+            self.availableIDs.remove(desiredID)
         else:
-            id = self.availableIDs.pop()
-            remoteEngine.id = id
+            remoteEngine.id = self.availableIDs.pop()
             
         remoteEngine.service = self
-        self.engines[id] = remoteEngine
-        log.msg("registered engine %i" %id)
-        return id
+        self.engines[remoteEngine.id] = remoteEngine
+        log.msg("registered engine: " + repr(remoteEngine.id))
+        return remoteEngine.id
     
     def unregisterEngine(self, id):
         """eliminate remote engine object"""

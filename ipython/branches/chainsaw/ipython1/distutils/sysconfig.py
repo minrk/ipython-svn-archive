@@ -49,5 +49,4 @@ def customize_compiler(compiler):
 python_version = distutils.sysconfig.get_python_version()
 
 if python_version == '2.3':
-    print "Monkey patching distutils.sysconfig.customize_compiler..."
     distutils.sysconfig.customize_compiler = customize_compiler
