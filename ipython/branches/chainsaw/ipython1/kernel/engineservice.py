@@ -338,7 +338,7 @@ def queuedMethod(self%s%s):
     
     def status(self):
         """Get the status {queue, history} of the engine"""
-        dikt = {'queue':self.queued, 'history':self.history}
+        dikt = {'queue':map(repr,self.queued), 'history':self.history}
         if self.saveLocals:
             dikt['locals'] = self.locals
         return defer.succeed(dikt)
@@ -371,7 +371,10 @@ class Command(object):
         self.deferred = d
     
     def __repr__(self):
-        return "Command: " + self.remoteMethod + repr(self.args) + repr(self.kwargs)
+        kws = ''
+        for k,v in self.kwargs.iteritems():
+            kws += '%s=%s,' %(k,v)
+        return "%s(%s, %s)" %(self.remoteMethod, str(self.args)[1:-1], kws)
     
     def handleResult(self, result):
         """When the result is ready, relay it to self.deferred."""
