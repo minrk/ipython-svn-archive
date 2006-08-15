@@ -206,20 +206,31 @@ class EngineService(service.Service):
         return d
     
     def status(self):
-        return defer.succeed(None)
+        remotes = {}
+        for k,v in self.shell.locals.iteritems():
+            if k not in ['__name__', '__doc__', '__console__', '__builtins__']:
+                remotes[k] = v
+        # print remotes
+        return defer.succeed(remotes)
     
 
 # Now the implementation of the QueuedEngine
 
 class QueuedEngine(object):
-    
+    """a Queued wrapper for any IEngine object"""
     zi.implements(IEngineQueued)
     
-    def __init__(self, engine):
+    def __init__(self, engine, saveLocals=False):
+        """@arg saveLocals:
+            whether to update the remote status when the queue is empty.  defaults
+            to False."""
         self.engine = engine
         self.id = engine.id
         self.queued = []
         self.history = {}
+        self.locals = {}
+        self.upToDate = True
+        self.saveLocals = saveLocals
         self.currentCommand = None
         self.registerMethods()
     
@@ -256,6 +267,7 @@ def queuedMethod(self%s%s):
         """submit command to queue"""
         d = defer.Deferred()
         cmd.setDeferred(d)
+        self.upToDate = not self.saveLocals
         if self.currentCommand is not None:
             #log.msg("Queueing: " + repr(cmd))
             self.queued.append(cmd)
@@ -283,6 +295,10 @@ def queuedMethod(self%s%s):
         if len(self.queued) > 0:
             self.currentCommand = self.queued.pop(0)
             self.runCurrentCommand()
+        elif not self.upToDate:
+            d = self.submitCommand(Command('status'))
+            self.upToDate = True
+            return d.addCallback(self.updateStatus)
     
     def saveResult(self, result):
         """put the result in the history"""
@@ -306,7 +322,8 @@ def queuedMethod(self%s%s):
         self._flushQueue()
         return None
         #return reason
-    
+    def updateStatus(self, locals):
+        self.locals = locals
     #methods from IEngine
     def reset(self):
         """Reset the InteractiveShell."""
@@ -321,7 +338,10 @@ def queuedMethod(self%s%s):
     
     def status(self):
         """Get the status {queue, history} of the engine"""
-        return defer.succeed({'queue':self.queued, 'history':self.history})
+        dikt = {'queue':self.queued, 'history':self.history}
+        if self.saveLocals:
+            dikt['locals'] = self.locals
+        return defer.succeed(dikt)
     
     def getResult(self, i=None):
         """Get the stdin/stdout/stderr of command i."""

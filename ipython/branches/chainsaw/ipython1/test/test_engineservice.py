@@ -134,4 +134,4 @@ class BasicEngineServiceTest(DeferredTestCase):
         return d
     
     def testStatus(self):
-        return self.assertDeferredEquals(self.s.status(), None)
+        return self.assertDeferredEquals(self.s.status(), {})

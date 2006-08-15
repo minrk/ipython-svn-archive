@@ -379,10 +379,13 @@ class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
         d.addCallbacks(self.statusOK, self.statusFail)
     
     def statusOK(self, args):
+        serial = serialized.serialize(args, 'STATUS')
+        self.sendSerialized(serial)
         self._reset()
         self.sendString('STATUS OK')
     
     def statusFail(self, reason):
+        print reason
         self._reset()
         self.sendString('STATUS FAIL')
     
@@ -841,19 +844,26 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     
     def status(self):
         self.sendString('STATUS')
-        self.nextHandler = self.isStatusOK
-        return self._createDeferred()
+        d = self.setupForIncomingSerialized('STATUS OK', 'STATUS FAIL')
+        d.addCallback(self.handleGotStatus)
+        d.addErrback(self.statusFail)
+        return d
     
-    def isStatusOK(self, msg):
-        if msg == 'STATUS OK':
-            self.statusOK()
-        elif msg == 'STATUS FAIL':
-            self.statusFail(Failure(error.KernelError('STATUS FAIL')))
-        else:
-            self.dieLoudly('STATUS OK|FAIL not received: ' + msg)
+    def handleGotStatus(self, resultList):
+        result = resultList[0].unpack()
+        self._reset()
+        return result
     
-    def statusOK(self):
-        self._callbackAndReset(None)
+    # def isStatusOK(self, msg):
+    #     if msg == 'STATUS OK':
+    #         self.statusOK()
+    #     elif msg == 'STATUS FAIL':
+    #         self.statusFail(Failure(error.KernelError('STATUS FAIL')))
+    #     else:
+    #         self.dieLoudly('STATUS OK|FAIL not received: ' + msg)
+    # 
+    # def statusOK(self):
+    #     self._callbackAndReset(None)
     
     def statusFail(self, reason):
         self._errbackAndReset(reason)
