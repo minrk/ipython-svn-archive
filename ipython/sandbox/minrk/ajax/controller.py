@@ -2,6 +2,7 @@ import os
 from zope.interface import Interface
 from twisted.python.components import registerAdapter
 from nevow import athena, inevow, loaders, util
+from twisted.python.failure import Failure
 from ipython1.kernel.controllerclient import RemoteController
 from ipython1.kernel.controllerservice import IMultiEngine
 class IController(Interface):
@@ -16,22 +17,52 @@ class Controller(object):
     
     def statusTupleToHTML(self, status):
         s = '<tr><td>%i</td>'%status[0]
-        for value in status[1].values():
-            s+="<td>"
-            if isinstance(value, dict):
-                value = value.values()
-            for entry in value:
-                s+= str(entry)+'<br>'
-            s+="</td>"
-            print s
+        s+="<td>"
+        for value in status[1]['queue']:
+            s += "%s<br>" %value
+        s+="</td>\n<td>"
+        for cmd in status[1]['history'].values():
+            if isinstance(cmd, Failure):
+                s+="Failure"
+            else:
+                target = cmd[0]
+                cmd_num = cmd[1]
+                cmd_stdin = cmd[2]
+                cmd_stdout = cmd[3][:-1]
+                cmd_stderr = cmd[4][:-1]
+                s += "<a id='stdin'>In [%i]:</a> %s<br>" % (cmd_num, cmd_stdin)
+                if cmd_stdout:
+                    s += "<a id='stdout'>Out[%i]:</a> %s<br>" % (cmd_num, cmd_stdout)
+                if cmd_stderr:
+                    s += "<a id='stderr'>Err[%i]:</a><br> %s<br>" % (cmd_num, cmd_stderr)
+            s += '<br>\n'
+        s+="</td>"
         return s+'</tr>\n'
         
-    def statusAll(self):
-        s = "<div align=\"center\"><table border=\"2\"><tr><td><b>id</b></td><td><b>queue</b></td><td><b>history</b></td></tr>\n"
-        for t in self.rc.statusAll():
+    def status(self, ids):
+        print ids
+        s = "<table id='status' border='1'><tr><td><b>id</b></td><td><b>queue</b></td><td><b>history</b></td></tr>\n"
+        if ids == 'all':
+            stat = self.rc.statusAll()
+        else:
+            try:
+                idlist = map(int,ids.split(','))
+                if len(idlist) is 1:
+                    id = idlist[0]
+                    stat1 = self.rc.status(id)
+                    if stat1 is False:
+                        return unicode('id %i not registered' %id)
+                    stat = [(id, stat1)]
+                else:
+                    stat = self.rc.status(idlist)
+                if stat is False:
+                    return unicode('illegal id list: %s' %idlist)
+            except ValueError:
+                return unicode('illegal id string: %s' %ids)
+        for t in stat:
             s += self.statusTupleToHTML(t)
         
-        return unicode(s+'</table></div>')
+        return unicode(s+'</table>')
     
 class ControllerResource(athena.LivePage):
     """
