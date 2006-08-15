@@ -1,3 +1,4 @@
+import os
 from zope.interface import Interface
 from twisted.python.components import registerAdapter
 from nevow import athena, inevow, loaders, util
@@ -14,22 +15,23 @@ class Controller(object):
         self.rc.connect()
     
     def statusTupleToHTML(self, status):
-        s = '<tr><td>%i<td>'%status[0]
+        s = '<tr><td>%i</td>'%status[0]
         for value in status[1].values():
             s+="<td>"
             if isinstance(value, dict):
                 value = value.values()
             for entry in value:
-                s+= str(entry)+'\n'
+                s+= str(entry)+'<br>'
             s+="</td>"
+            print s
         return s+'</tr>\n'
         
     def statusAll(self):
-        s = "<table><tr><td><b>id</b></td><td><b>queue</b></td><td><b>history</b></td></tr>\n"
+        s = "<div align=\"center\"><table border=\"2\"><tr><td><b>id</b></td><td><b>queue</b></td><td><b>history</b></td></tr>\n"
         for t in self.rc.statusAll():
             s += self.statusTupleToHTML(t)
         
-        return unicode(s+'</table>')
+        return unicode(s+'</table></div>')
     
 class ControllerResource(athena.LivePage):
     """
@@ -39,9 +41,10 @@ class ControllerResource(athena.LivePage):
     evaluates the expression and sets the output in the browser.
     """
     addSlash = True
-    docFactory = loaders.xmlfile(
-        util.resource_filename('ajax', 'controller.html')
-        )
+    html = os.path.abspath(os.path.curdir)+'/controller.html'
+    docFactory = loaders.xmlfile(html)
+    print util.resource_filename('ajax', 'controller.html')
+    print html
 
 if __name__ == '__main__':
 
