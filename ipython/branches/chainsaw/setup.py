@@ -33,13 +33,13 @@ import sys
 
 with_packages = ['ipython1',
                  'ipython1.kernel',
-                 'ipython1.core',
-                 'ipython1.startup']
+                 'ipython1.core']
                 
-with_scripts =  ['scripts/ipkernel',
-                 'scripts/ipkernel-wx',
-                 'scripts/ipresults',
-                 'scripts/ipcontroller']
+with_scripts =  ['scripts/ipcontrollerpb',
+                 'scripts/ipcontrollervanilla',
+                 'scripts/ipenginepb',
+                 'scripts/ipenginevanilla',
+                 'scripts/ipresultstcp']
 
 with_ext_modules = [Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])]
 
