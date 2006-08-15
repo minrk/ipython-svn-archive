@@ -857,8 +857,7 @@ class RemoteController(object):
                 else:
                     return False
         else:
-            # For other data types
-            pass
+            return False
     
     def getIDs(self):
         status = self.statusAll()
