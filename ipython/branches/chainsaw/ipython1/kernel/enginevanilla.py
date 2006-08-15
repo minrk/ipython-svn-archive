@@ -931,7 +931,7 @@ class VanillaEngineServerFactoryFromControllerService(protocol.ServerFactory):
         return self.service.registerSerializationTypes(*serialTypes)
     
     def startFactory(self):
-        if hasattr(serialize, 'ArraySerialized'):
+        if hasattr(serialized, 'ArraySerialized'):
             return self.service.registerSerializationTypes(serialized.PickleSerialized,
                 serialized.ArraySerialized)
         else:
