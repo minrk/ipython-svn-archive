@@ -729,7 +729,7 @@ class RemoteController(object):
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         """distribute sequence object to targets"""
-        if not self.legalTargets(targets) or not key or not seq or \
+        if not self.legalTargets(targets) or not key or \
             not isinstance(seq, (tuple, list)+arraytypes):
             return False
         self._check_connection()
