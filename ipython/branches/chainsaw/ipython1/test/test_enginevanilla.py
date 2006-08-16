@@ -49,8 +49,8 @@ class EngineVanillaTest(cet.CompleteEngineTestCase):
         self.sf = evsf(self)    
         self.servers.append(reactor.listenTCP(10201, self.sf))
         
-        self.es = es.EngineService()
-        ef = ev.VanillaEngineClientFactoryFromEngineService(self.es)
+        self.engines = es.EngineService()
+        ef = ev.VanillaEngineClientFactoryFromEngineService(self.engines)
         starterDeferred = defer.Deferred()
         def myNotifySetID():
             starterDeferred.callback(None)
@@ -58,8 +58,8 @@ class EngineVanillaTest(cet.CompleteEngineTestCase):
 
         client = reactor.connectTCP('127.0.0.1', 10201, ef)
         self.clients.append(client)
-        self.services.append(self.es)
-        self.es.startService()
+        self.services.append(self.engines)
+        self.engines.startService()
         return starterDeferred
         
     def tearDown(self):
@@ -75,8 +75,8 @@ class EngineVanillaTest(cet.CompleteEngineTestCase):
         return dl
     
     def registerEngine(self, remoteEngine, id):
-        self.e = remoteEngine
-        self.e.id = 0
+        self.engine = remoteEngine
+        self.engine.id = 0
         return 0
     
     def unregisterEngine(self, id):

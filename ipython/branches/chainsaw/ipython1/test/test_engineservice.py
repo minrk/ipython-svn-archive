@@ -18,27 +18,26 @@ Things that should be tested:
 
 from twisted.internet import defer
 from twisted.application.service import IService
-from ipython1.kernel import engineservice as es
-from ipython1.kernel import serialized
-from ipython1.test.util import DeferredTestCase
-from ipython1.kernel.error import NotDefined
+from ipython1.kernel import serialized, error, engineservice as es
+from ipython1.test import util
+from ipython1.test.completeenginetest import CompleteEngineTestCase
 
-class BasicEngineServiceTest(DeferredTestCase):
+class BasicEngineServiceTest(util.DeferredTestCase):
     
     def setUp(self):
-        self.s = es.EngineService()
-        self.s.startService()
+        self.engine = es.EngineService()
+        self.engine.startService()
     
     def tearDown(self):
-        return self.s.stopService()
+        return self.engine.stopService()
     
     def testInterfaces(self):
-        p = list(self.s.__provides__)
+        p = list(self.engine.__provides__)
         p.sort()
         l = [es.IEngineBase, es.IEngineSerialized, IService]
         l.sort()
         self.assertEquals(p, l)
-        q = es.QueuedEngine(self.s)
+        q = es.QueuedEngine(self.engine)
         p = list(q.__provides__)
         p.sort()
         l.append(es.IEngineQueued)
@@ -54,15 +53,15 @@ class BasicEngineServiceTest(DeferredTestCase):
             self.assert_(base.providedBy(c))
 
     def testDeferreds(self):
-        self.assert_(isinstance(self.s.execute('a=5'), defer.Deferred))
-        self.assert_(isinstance(self.s.push(a=5), defer.Deferred))
-        self.assert_(isinstance(self.s.push(a=5, b='asdf', c=[1,2,3]), defer.Deferred))
-        self.assert_(isinstance(self.s.pull('a', 'b', 'c'), defer.Deferred))
-        self.assert_(isinstance(self.s.pullNamespace('qwer', 'asdf', 'zcxv'), defer.Deferred))
-        self.assert_(isinstance(self.s.getResult(), defer.Deferred))
-        self.assert_(isinstance(self.s.reset(), defer.Deferred))
-        self.assert_(isinstance(self.s.status(), defer.Deferred))
-        self.assert_(not isinstance(self.s.id, defer.Deferred))
+        self.assert_(isinstance(self.engine.execute('a=5'), defer.Deferred))
+        self.assert_(isinstance(self.engine.push(a=5), defer.Deferred))
+        self.assert_(isinstance(self.engine.push(a=5, b='asdf', c=[1,2,3]), defer.Deferred))
+        self.assert_(isinstance(self.engine.pull('a', 'b', 'c'), defer.Deferred))
+        self.assert_(isinstance(self.engine.pullNamespace('qwer', 'asdf', 'zcxv'), defer.Deferred))
+        self.assert_(isinstance(self.engine.getResult(), defer.Deferred))
+        self.assert_(isinstance(self.engine.reset(), defer.Deferred))
+        self.assert_(isinstance(self.engine.status(), defer.Deferred))
+        self.assert_(not isinstance(self.engine.id, defer.Deferred))
     
     def testCompletedEmptyEngine(self):
         class Empty:
@@ -83,15 +82,15 @@ class BasicEngineServiceTest(DeferredTestCase):
         return self.assertEquals(c.id, None, d)
         
     def testExecute(self):
-        commands = [(self.s.id, 0,"a = 5","",""),
-            (self.s.id, 1,"b = 10","",""),
-            (self.s.id, 2,"c = a + b","",""),
-            (self.s.id, 3,"print c","15\n",""),
-            (self.s.id, 4,"import math","",""),
-            (self.s.id, 5,"2.0*math.pi","6.2831853071795862\n","")]
+        commands = [(self.engine.id, 0,"a = 5","",""),
+            (self.engine.id, 1,"b = 10","",""),
+            (self.engine.id, 2,"c = a + b","",""),
+            (self.engine.id, 3,"print c","15\n",""),
+            (self.engine.id, 4,"import math","",""),
+            (self.engine.id, 5,"2.0*math.pi","6.2831853071795862\n","")]
         d = defer.succeed(None)
         for c in commands:
-            result = self.s.execute(c[2])
+            result = self.engine.execute(c[2])
             d = self.assertDeferredEquals(result, c, d)
         return d
     
@@ -99,41 +98,41 @@ class BasicEngineServiceTest(DeferredTestCase):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
         d = defer.succeed(None)
         for o in objs:
-            self.s.push(key=o)
-            value = self.s.pull('key')
+            self.engine.push(key=o)
+            value = self.engine.pull('key')
             d = self.assertDeferredEquals(value,o, d)
-        d.addCallback(lambda _:self.s.reset())
-        d.addCallback(lambda _: self.s.pull("a"))
+        d.addCallback(lambda _:self.engine.reset())
+        d.addCallback(lambda _: self.engine.pull("a"))
         d.addCallback(lambda nd:
-            self.assert_(isinstance(nd,NotDefined)))
+            self.assert_(isinstance(nd,error.NotDefined)))
         return d
     
     def testPushPullSerialized(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
         d = defer.succeed(None)
         for o in objs:
-            self.s.pushSerialized(key=serialized.serialize(o, 'key'))
-            value = self.s.pullSerialized('key')
+            self.engine.pushSerialized(key=serialized.serialize(o, 'key'))
+            value = self.engine.pullSerialized('key')
             value.addCallback(lambda serial: serial.unpack())
             d = self.assertDeferredEquals(value,o,d)
         return d
     
     def testPullNamespace(self):
         ns = {'a':10,'b':"hi there",'c3':1.2342354,'door':{"p":(1,2)}}
-        d = self.s.push(**ns)
-        d.addCallback(lambda _: self.s.pullNamespace(*ns.keys()))
+        d = self.engine.push(**ns)
+        d.addCallback(lambda _: self.engine.pullNamespace(*ns.keys()))
         d = self.assertDeferredEquals(d,ns)
         return d
     
     def testGetResult(self):
-        d = self.assertDeferredRaises(self.s.getResult(),IndexError)
-        d.addCallback(lambda _:self.s.execute("a = 5"))
-        d = self.assertDeferredEquals(self.s.getResult(),(self.s.id, 0,"a = 5","",""), d)
-        d = self.assertDeferredEquals(self.s.getResult(0),(self.s.id, 0,"a = 5","",""), d)
-        d.addCallback(lambda _:self.s.reset())
+        d = self.assertDeferredRaises(self.engine.getResult(),IndexError)
+        d.addCallback(lambda _:self.engine.execute("a = 5"))
+        d = self.assertDeferredEquals(self.engine.getResult(),(self.engine.id, 0,"a = 5","",""), d)
+        d = self.assertDeferredEquals(self.engine.getResult(0),(self.engine.id, 0,"a = 5","",""), d)
+        d.addCallback(lambda _:self.engine.reset())
         return d
     
     def testStatus(self):
         pass
         # When mpi support is enabled, the following is not true.
-        #return self.assertDeferredEquals(self.s.status(), {})
+        #return self.assertDeferredEquals(self.engine.status(), {})

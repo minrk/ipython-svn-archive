@@ -43,13 +43,13 @@ class EnginePBTest(cet.CompleteEngineTestCase):
         self.sf = pb.PBServerFactory(self.sroot)
         self.servers.append(reactor.listenTCP(10201, self.sf))
         
-        self.es = es.EngineService()
-        ef = enginepb.PBEngineClientFactory(self.es)
+        self.engines = es.EngineService()
+        ef = enginepb.PBEngineClientFactory(self.engines)
         client = reactor.connectTCP('127.0.0.1', 10201, ef)
         
         self.clients.append(client)
-        self.services.append(self.es)
-        self.es.startService()
+        self.services.append(self.engines)
+        self.engines.startService()
         
         return ef.deferred
         
@@ -70,7 +70,7 @@ class EnginePBTest(cet.CompleteEngineTestCase):
         return dl
     
     def registerEngine(self, remoteEngine, id):
-        self.e = remoteEngine
+        self.engine = remoteEngine
         return id
     
     def unregisterEngine(self, id):
