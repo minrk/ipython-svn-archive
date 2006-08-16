@@ -33,13 +33,6 @@ from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import map as Map
 from ipython1.kernel import error
 
-#from the Python Cookbook:
-def curry(f, *curryArgs, **curryKWargs):
-    def curried(*args, **kwargs):
-        dikt = dict(kwargs)
-        dikt.update(curryKWargs)
-        return f(*(curryArgs+args), **dikt)
-    return curried
 
 def addAllMethods(obj, methods=[]):
     if not methods:

@@ -21,3 +21,12 @@ def gatherBoth(dlist):
     d.addCallback(parseResults)
     return d
 
+#from the Python Cookbook:
+def curry(f, *curryArgs, **curryKWargs):
+    def curried(*args, **kwargs):
+        dikt = dict(kwargs)
+        dikt.update(curryKWargs)
+        return f(*(curryArgs+args), **dikt)
+    
+    return curried
+
