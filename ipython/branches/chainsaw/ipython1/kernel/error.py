@@ -26,9 +26,11 @@ class NotDefined(KernelError):
     def __repr__(self):
         return '<NotDefined: %s>' % self.name
 
+class QueueCleared(KernelError):
+    pass
+
 class IdInUse(KernelError):
     pass
-    
 
 class ProtocolError(KernelError):
     pass

@@ -20,12 +20,12 @@ from new import instancemethod
 
 from twisted.application import service
 from twisted.internet import defer, reactor
-from twisted.python import log
+from twisted.python import log, failure
 import zope.interface as zi
 
 from ipython1.core.shell import InteractiveShell
-from ipython1.kernel import serialized
-from ipython1.kernel.util import gatherBoth
+from ipython1.kernel import serialized, error
+from ipython1.kernel.util import gatherBoth, curry
 
 # Here is the interface specification for the IPythonCoreService
 
@@ -99,16 +99,16 @@ def completeEngine(engine):
     """Completes an engine object"""
     zi.alsoProvides(engine, IEngineComplete)
     
-    def _notImplementedMethod(*args, **kwargs):
+    def _notImplementedMethod(name, *args, **kwargs):
         return defer.fail(NotImplementedError(
-            'This method is not implemented by this Engine'))
+            'This method %s is not implemented by this Engine' %name))
     
     for method in IEngineComplete:
         if getattr(engine, method, 'NotDefined') == 'NotDefined':
             #if not implemented, add filler
             #could establish self.notImplemented registry here
             if callable(IEngineComplete[method]):
-                setattr(engine, method, _notImplementedMethod)
+                setattr(engine, method, curry(_notImplementedMethod, method))
             else: 
                 setattr(engine, method, None)
     assert(IEngineComplete.providedBy(engine))
@@ -187,7 +187,7 @@ class EngineService(service.Service):
             return d
             
     def handlePullProblems(self, reason):
-        #reason.printTraceback()
+        # reason.printTraceback()
         return serialized.serialize(reason, 'FAILURE')
             
     def pullNamespace(self, *keys):
@@ -268,7 +268,10 @@ def queuedMethod(self%s%s):
     #methods from IEngineQueued:
     def clearQueue(self):
         """clear the queue"""
+        for cmd in self.queued:
+            cmd.deferred.errback(failure.Failure(error.QueueCleared()))
         self.queued = []
+        return defer.succeed(True)
     
     #queue methods:
     def submitCommand(self, cmd):
@@ -395,7 +398,7 @@ class Command(object):
     
     def handleError(self, reason):
         """When an error has occured, relay it to self.deferred."""
-        #log.msg("Traceback from remote host: " + reason.getErrorMessage())
+        # log.msg("Traceback from remote host: " + reason.getErrorMessage())
         self.deferred.errback(reason)
     
 
