@@ -379,10 +379,15 @@ class Command(object):
         self.deferred = d
     
     def __repr__(self):
-        kws = ''
+        if not self.args:
+            args = ''
+        else:
+            args = str(self.args)[1:-1]
         for k,v in self.kwargs.iteritems():
-            kws += '%s=%s,' %(k,v)
-        return "%s(%s, %s)" %(self.remoteMethod, str(self.args)[1:-1], kws)
+            if args:
+                args += ', '
+            args += '%s=%r' %(k,v)
+        return "%s(%s)" %(self.remoteMethod, args)
     
     def handleResult(self, result):
         """When the result is ready, relay it to self.deferred."""
