@@ -60,7 +60,7 @@ class Controller(object):
         if not idlist:
             return unicode("bad targets: "+ targets)
         self.shell.execute("RETURN = rc.%s(%r, %s)" %(name, idlist, args))
-        return self.shell.get('RETURN')
+        return unicode(self.shell.get('RETURN'))
     
     def parseTargets(self, targets):
         if targets == 'all':
