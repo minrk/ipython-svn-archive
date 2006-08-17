@@ -3,7 +3,7 @@
         <n:invisible n:render="liveglue" />
         <style type="text/css">
             #controller {
-                border: 1px solid #999;
+/*                border: 0 px solid #999;*/
 				text-align: center;
                 font-family: monospace;
                 margin-top: 5em;
@@ -11,7 +11,7 @@
                 margin-right: auto;
             }
             #status{
-/*                border: 1px solid #999;	*/
+                border: 1px solid #999;	
 				text-align: left;				
 			}
 			#button {
@@ -19,6 +19,9 @@
             }
             #idfield {
                 border: 1px solid #999;
+            }
+            #idform {
+                border: 0px solid #999;
             }
 			#stdin{
 				color: green;
@@ -40,35 +43,83 @@
         <script type="text/javascript">
         getStatus = function(id) {
             d = server.callRemote('status', id);
-            d.addCallback(updateDisplay);
+            d.addCallback(updateStatus);
         }
-        updateDisplay = function(expression) {
+        updateStatus = function(expression) {
             getElement('output').innerHTML = expression;
         }
 		if (!ids){
 			var ids = 'all'
 		}
-		changeField = function(){
-			ids = document.getElementById("idfield").value
-			return getStatus(ids)
+		if (!command){
+			var command = "local"
 		}
-		getStatus(ids);
+		refreshStatus = function(){
+			ids = document.getElementById("idfield").value
+			getStatus(ids)
+		}
+		submitcommand = function(cmd, targets, args){
+			d = server.callRemote(cmd, targets, args)
+			d.addCallback(commandOutput)
+		}
+		commandOutput = function(outs){
+			getElement('commandout').innerHTML = outs;
+			return refreshStatus()
+		}
+		changeCmd = function(cmd){
+			if(cmd == 'local' || cmd == 'globals'){
+				document.getElementById("targets").disabled = true
+			}else{
+				document.getElementById("targets").disabled = false
+			}
+			if(cmd == 'reset' || cmd == 'status' || cmd == 'kill'){
+				document.getElementById("args").disabled = true
+			}else{
+				document.getElementById("args").disabled = false
+			}
+		}
         </script>
 		
     </head>
     <body>
         <table id="controller">
-			<tr><td><form id="idform" name="idform" action="javascript:changeField()">
+			<tr><td><form id="idform" name="idform" action="javascript:refreshStatus();">
 				<input id="idfield" name="idfield" type="text" value="all"/>
+				<br/>
+				<button style="submit">refresh status</button>
 			</form></td>
             </tr>
-			<tr>
-			<td><button onClick="return getStatus(ids);" align="center">refresh</button></td>
-			</tr>
             <tr>
-                <td id="output" align="center">click 'refresh' to refresh status</td>
+          <td id="output">click 'refresh' to refresh status</td>
 			</tr>
         </table>
+		<table id="command">
+			<tr><td><form id="cmdform" name="cmdform" action="javascript: submitcommand(cmd.options[cmd.selectedIndex].value, targets.value, args.value);">
+				<select name="cmd" id="cmd" onchange="changeCmd(this.options[cmd.selectedIndex].value);">
+					<option value="local">local</option>
+					<option value="globals">globals</option>
+					<option value="execute">execute</option>
+					<option value="push">push</option>
+					<option value="pull">pull</option>
+					<option value="pullNamespace">pullNS</option>
+					<option value="scatter">scatter</option>
+					<option value="gather">gather</option>
+					<option value="status">status</option>
+					<option value="reset">reset</option>
+					<option value="kill">kill</option>
+				</select>
+				<input type="text" name="targets" id="targets" value="all"/>
+				<input type="text" name="args" id="args" value=""/>
+				<button name="execute" style="submit">execute</button>
+				</form></td>
+			</tr>
+			<tr><td id="commandout">commandout</td></tr>
+		</table>
     </body>
+<script type="text/javascript">
+/*init page*/
+getStatus(ids);
+changeCmd(command);
+</script>
 </html>
 
