@@ -71,6 +71,7 @@ class EnginePBTest(cet.CompleteEngineTestCase):
     
     def registerEngine(self, remoteEngine, id):
         self.engine = remoteEngine
+        self.engine.keepUpToDate = False
         return id
     
     def unregisterEngine(self, id):

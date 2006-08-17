@@ -44,19 +44,15 @@ class CompleteEngineTestCase(DeferredTestCase):
         except error.QueueCleared:
             pass
     
-    def testInterfaceProvided(self):
+    def testInterface(self):
         for base in es.IEngineComplete.getBases():
             self.assert_(base.providedBy(self.engine))
     
     def testInterfaceDeep(self):
-        import sys
-        from twisted.python import log
-        # log.startLogging(sys.stdout)
         l = []
         for method in list(es.IEngineComplete):
             M = es.IEngineComplete[method]
             if isinstance(M, zi.interface.Method) and 'kill' not in method:
-                # print method
                 f = getattr(self.engine, method, None)
                 self.assert_(f is not None)
                 d = f(*M.getSignatureInfo()['required'])
@@ -136,5 +132,7 @@ class CompleteEngineTestCase(DeferredTestCase):
         return d.addErrback(self.catchNotImplemented)
     
     def testStatus(self):
-        print "This test not implemented",
+        d = self.engine.status()
+        d.addCallback(lambda s: isinstance(s, dict))
+        return self.assertDeferredEquals(d, True).addErrback(self.catchNotImplemented)
     

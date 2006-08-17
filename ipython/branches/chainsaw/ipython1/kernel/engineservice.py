@@ -140,10 +140,10 @@ class EngineService(service.Service):
         d = defer.execute(self.shell.execute, lines)
         d.addCallback(self.addIDToResult)
         return d
-        
+    
     def addIDToResult(self, result):
         return (self.id,) + result
-
+    
     def push(self, **namespace):
         return defer.execute(self.shell.update, namespace)
     
@@ -185,11 +185,11 @@ class EngineService(service.Service):
             d.addCallback(serialized.serialize, key)
             d.addErrback(self.handlePullProblems)
             return d
-            
+    
     def handlePullProblems(self, reason):
         # reason.printTraceback()
         return serialized.serialize(reason, 'FAILURE')
-            
+    
     def pullNamespace(self, *keys):
         ns = {}
         for key in keys:
@@ -217,8 +217,7 @@ class EngineService(service.Service):
         remotes = {}
         for k,v in self.shell.locals.iteritems():
             if k not in ['__name__', '__doc__', '__console__', '__builtins__']:
-                remotes[k] = v
-        # print remotes
+                remotes[k] = repr(v) # want representation, not actual object
         return defer.succeed(remotes)
     
 
@@ -228,17 +227,17 @@ class QueuedEngine(object):
     """a Queued wrapper for any IEngine object"""
     zi.implements(IEngineQueued)
     
-    def __init__(self, engine, saveLocals=False):
-        """@arg saveLocals:
+    def __init__(self, engine, keepUpToDate=False):
+        """@arg keepUpToDate:
             whether to update the remote status when the queue is empty.  defaults
             to False."""
         self.engine = engine
         self.id = engine.id
         self.queued = []
         self.history = {}
-        self.locals = {}
+        self.engineStatus = {}
         self.upToDate = True
-        self.saveLocals = saveLocals
+        self.keepUpToDate = keepUpToDate
         self.currentCommand = None
         self.registerMethods()
     
@@ -278,7 +277,7 @@ def queuedMethod(self%s%s):
         """submit command to queue"""
         d = defer.Deferred()
         cmd.setDeferred(d)
-        self.upToDate = not self.saveLocals
+        self.upToDate = not self.keepUpToDate
         if self.currentCommand is not None:
             #log.msg("Queueing: " + repr(cmd))
             self.queued.append(cmd)
@@ -290,7 +289,7 @@ def queuedMethod(self%s%s):
     def runCurrentCommand(self):
         """run current command"""
         cmd = self.currentCommand
-        #log.msg("Starting: " + repr(self.currentCommand))
+        # log.msg("Starting: " + repr(self.currentCommand))
         f = getattr(self.engine, cmd.remoteMethod, None)
         if f:
             d = f(*cmd.args, **cmd.kwargs)
@@ -318,7 +317,7 @@ def queuedMethod(self%s%s):
     
     def finishCommand(self, result):
         """finish currrent command"""
-        #log.msg("Finishing: " + repr(self.currentCommand) + ':' + repr(result))
+        # log.msg("Finishing: " + repr(self.currentCommand) + ':' + repr(result))
         self.currentCommand.handleResult(result)
         del self.currentCommand
         self.currentCommand = None
@@ -333,8 +332,10 @@ def queuedMethod(self%s%s):
         self._flushQueue()
         return None
         #return reason
-    def updateStatus(self, locals):
-        self.locals = locals
+    
+    def updateStatus(self, status):
+        self.engineStatus = status
+    
     #methods from IEngine
     def reset(self):
         """Reset the InteractiveShell."""
@@ -350,8 +351,8 @@ def queuedMethod(self%s%s):
     def status(self):
         """Get the status {queue, history} of the engine"""
         dikt = {'queue':map(repr,self.queued), 'history':self.history}
-        if self.saveLocals:
-            dikt['locals'] = self.locals
+        if self.keepUpToDate:
+            dikt['engine'] = self.engineStatus
         return defer.succeed(dikt)
     
     def getResult(self, i=None):
@@ -385,7 +386,7 @@ class Command(object):
         if not self.args:
             args = ''
         else:
-            args = str(self.args)[1:-1]
+            args = str(self.args)[1:-2]#cut off (...,)
         for k,v in self.kwargs.iteritems():
             if args:
                 args += ', '

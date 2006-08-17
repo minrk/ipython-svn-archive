@@ -895,7 +895,7 @@ class RemoteController(object):
         if addr is None:
             host = socket.gethostbyname(socket.gethostname())
             port = 10104
-#            print "Kernel notification: ", host, port, flag
+            # print "Kernel notification: ", host, port, flag
         else:
             host, port = addr
             
