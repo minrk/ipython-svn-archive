@@ -156,7 +156,7 @@ class ControllerResource(athena.LivePage):
     evaluates the expression and sets the output in the browser.
     """
     addSlash = True
-    html = os.path.abspath(os.path.curdir)+'/interactive.html'
+    html = os.path.abspath(os.path.curdir)+'/controller.html'
     docFactory = loaders.xmlfile(html)
 
 if __name__ == '__main__':
