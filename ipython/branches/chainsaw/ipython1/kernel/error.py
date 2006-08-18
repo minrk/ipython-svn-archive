@@ -21,7 +21,8 @@ class KernelError(error.IPythonError):
 
 class NotDefined(KernelError):
     def __init__(self, name):
-        self.name = self.args = name
+        self.name = name
+        self.args = (name,)
 
     def __repr__(self):
         return '<NotDefined: %s>' % self.name
