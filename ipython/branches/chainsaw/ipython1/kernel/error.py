@@ -21,10 +21,12 @@ class KernelError(error.IPythonError):
 
 class NotDefined(KernelError):
     def __init__(self, name):
-        self.name = name
+        self.name = self.args = name
 
     def __repr__(self):
         return '<NotDefined: %s>' % self.name
+    
+    __str__ = __repr__
 
 class QueueCleared(KernelError):
     pass
