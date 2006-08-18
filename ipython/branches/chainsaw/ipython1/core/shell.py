@@ -244,7 +244,7 @@ class InteractiveShell(InteractiveConsole):
         
         self._command_lock.release()
         
-        if inResult:
+        if inResult is not None:
             return (cmdNum, inResult, outResult, errResult)
         else:
             raise IndexError, "Command with index does not exist."
