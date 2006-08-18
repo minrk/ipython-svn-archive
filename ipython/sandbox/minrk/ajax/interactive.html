@@ -1,0 +1,73 @@
+<html xmlns:n="http://nevow.com/ns/nevow/0.1">
+    <head>
+        <n:invisible n:render="liveglue" />
+        <style type="text/css">
+            #outputTable {
+				text-align: center;
+                font-family: monospace;
+				width: 0px;
+				height: 0px;
+                margin-top: 2em;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            #outputframe {
+				border: 1px solid #999;
+				width: 512px;
+				height: 420px;
+				text-align: left;
+				vertical-align: top;
+            }
+			#output{
+				overflow: auto;
+				width: 512px;
+				height: 420px;
+			}
+			#input{
+				text-align: left;
+                font-family: monospace;
+			}
+			#stdin{
+				color: green;
+				font-weight: bold;
+			}
+			#stdout{
+				color: blue;
+				font-weight: bold;
+			}
+			#stderr{
+				color: red;
+				font-weight: bold;
+			}
+        </style>
+        <script type="text/javascript">
+		execute = function(lines){
+			d = server.callRemote('execute', lines);
+			d.addBoth(redraw);
+		}
+		redraw = function(outs){
+			var output = getElement('output');
+			output.innerHTML = output.innerHTML + outs;
+			output.scrollTop = output.scrollHeight;
+			getElement('lines').value = "";
+			d = server.callRemote('getNextCommandIndex');
+			d.addCallback(setcmdindex);
+		}
+		setcmdindex = function(id){
+			getElement('cmdid').innerHTML = id;
+		}
+		server.callRemote('getResults').addCallback(redraw);
+        </script>
+		
+    </head>
+    <body ><table id="outputTable"><tr>
+		<td id="outputframe"><div id="output"><br/></div></td>
+		</tr><tr>
+		<td><form id="input" action="javascript: execute(lines.value);">
+			<a id="stdin">In [<span id="cmdid">0</span>]:</a><input type="text" name="lines" id="lines" value="" size="48"/>
+		</form></td>
+		</tr>
+		</table>
+    </body>
+</html>
+
