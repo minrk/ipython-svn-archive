@@ -20,6 +20,7 @@ import pickle
 import types
 import os
 
+import ipython1.kernel.magic
 from twisted.python.failure import Failure
 from IPython.ColorANSI import *
 # from IPython.genutils import flatten as genutil_flatten
@@ -334,6 +335,29 @@ class SubCluster(object):
     def kill(self):
         return self.rc.kill(self.ids)
     
+    def activate(self):
+        """Make this cluster the active one for ipython magics.
+        
+        IPython has a magic syntax to work with InteractiveCluster objects.
+        In a given ipython session there is a single active cluster.  While
+        there can be many clusters created and used by the user, there is only
+        one active one.  The active cluster is used when ever the magic syntax
+        is used.  
+        
+        The activate() method is called on a given cluster to make it the active
+        one.  Once this has been done, the magic command can be used:
+        
+        >>> %px a = 5       # Same as execute('a = 5')
+        
+        >>> %autopx         # Now every command is sent to execute()
+        
+        >>> %autopx         # The second time it toggles autoparallel mode off
+        """
+        try:
+            __IPYTHON__.active_cluster = self
+        except NameError:
+            print "The %px and %autopx magic's are not active."
+    
 
 
 class RemoteController(object):
@@ -349,6 +373,29 @@ class RemoteController(object):
         self.addr = addr
         self.block = False
         addAllMethods(self)
+    
+    def activate(self):
+        """Make this cluster the active one for ipython magics.
+        
+        IPython has a magic syntax to work with InteractiveCluster objects.
+        In a given ipython session there is a single active cluster.  While
+        there can be many clusters created and used by the user, there is only
+        one active one.  The active cluster is used when ever the magic syntax
+        is used.  
+        
+        The activate() method is called on a given cluster to make it the active
+        one.  Once this has been done, the magic command can be used:
+        
+        >>> %px a = 5       # Same as execute('a = 5')
+        
+        >>> %autopx         # Now every command is sent to execute()
+        
+        >>> %autopx         # The second time it toggles autoparallel mode off
+        """
+        try:
+            __IPYTHON__.active_cluster = self
+        except NameError:
+            print "The %px and %autopx magic's are not active."
     
     def __del__(self):
         return self.disconnect()
