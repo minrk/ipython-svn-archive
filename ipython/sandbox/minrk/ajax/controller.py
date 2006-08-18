@@ -73,13 +73,13 @@ class Controller(object):
     
     def statusTupleToHTML(self, status):
         s = '<tr><td>%i</td>'%status[0]
-        s+="<td id='status'>"
+        s+="<td id='statuselement'>"
         if not status[1].get('queue', None):
             s+= "&nbsp"
         else:
             for value in status[1]['queue']:
                 s += "%s<br>" %value
-        s+="</td>\n<td id='status'>"
+        s+="</td>\n<td id='statuselement'>"
         if not status[1].get('history', None):
             s+= "&nbsp"
         else:
@@ -98,7 +98,7 @@ class Controller(object):
                     if cmd_stderr:
                         s += "<a id='stderr'>Err[%i]:</a><br> %s<br>" % (cmd_num, cmd_stderr)
                 s += '<br>\n'
-        s+="</td>\n<td id='status'>"
+        s+="</td>\n<td id='statuselement'>"
         if not status[1].get('engine', None):
             s+= "&nbsp"
         else:
@@ -113,7 +113,7 @@ class Controller(object):
         idlist = self.parseTargets(targets)
         if not idlist:
             return unicode("bad targets: "+ targets)
-        s = "<table><tr><td><b>id</b></td>\
+        s = "<table id='status'><tr><td><b>id</b></td>\
         <td><b>queue</b></td><td><b>history</b></td><td><b>locals</b></td></tr>\n"
         if targets == 'all':
             stat = self.rc.statusAll()

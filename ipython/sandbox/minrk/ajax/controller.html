@@ -17,6 +17,10 @@
                 margin-right: auto;
             }
             #status{
+                border: 0px solid #999;	
+				text-align: center;				
+			}
+			#statuselement{
                 border: 1px solid #999;	
 				text-align: left;				
 			}
@@ -41,10 +45,6 @@
 				color: red;
 				font-weight: bold;
 			}
-            #output {
-                border: 0px solid #999;
-                text-align: center;
-            }
         </style>
         <script type="text/javascript">
         getStatus = function(id) {
@@ -88,8 +88,8 @@
 		
     </head>
     <body>
-		<table id="command">
-			<tr><td><form id="cmdform" name="cmdform" action="javascript: submitcommand(cmd.options[cmd.selectedIndex].value, targets.value, args.value);">
+		<table id="command" width="1"><tr><td>cmd</td><td>targets</td><td>args</td></tr>
+			<tr><form id="cmdform" name="cmdform" action="javascript: submitcommand(cmd.options[cmd.selectedIndex].value, targets.value, args.value);"><td>
 				<select name="cmd" id="cmd" onchange="changeCmd(this.options[cmd.selectedIndex].value);">
 					<option value="local">local</option>
 					<option value="globals">globals</option>
@@ -102,15 +102,15 @@
 					<option value="status">status</option>
 					<option value="reset">reset</option>
 					<option value="kill">kill</option>
-				</select>
-				<input type="text" name="targets" id="targets" value="all"/>
-				<input type="text" name="args" id="args" value=""/>
-				<button name="execute" style="submit">execute</button>
-				</form></td>
+				</select></td>
+				<td><input type="text" name="targets" id="targets" value="all"/></td>
+				<td><input type="text" name="args" id="args" value=""/></td>
+				<td><button name="execute" style="submit">execute</button></td>
+				</form>
 			</tr>
-			<tr><td id="commandout">commandout</td></tr>
+			<tr><td id="commandout" colspan="3">commandout</td></tr>
 		</table>
-        <table id="controller">
+        <table id="controller" width="600">
 			<tr><td><form id="idform" name="idform" action="javascript:refreshStatus();">
 				<input id="idfield" name="idfield" type="text" value="all"/>
 				<br/>
@@ -118,7 +118,7 @@
 			</form></td>
             </tr>
             <tr>
-          <td id="output">click 'refresh' to refresh status</td>
+          <td id="output" align="center">click 'refresh' to refresh status</td>
 			</tr>
         </table>
     </body>
