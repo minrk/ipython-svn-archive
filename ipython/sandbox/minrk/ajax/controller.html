@@ -61,7 +61,7 @@
 			var command = "local"
 		}
 		refreshStatus = function(){
-			ids = document.getElementById("idfield").value
+			ids = getElement("idfield").value
 			getStatus(ids)
 		}
 		submitcommand = function(cmd, targets, args){
@@ -74,14 +74,14 @@
 		}
 		changeCmd = function(cmd){
 			if(cmd == 'local' || cmd == 'globals'){
-				document.getElementById("targets").disabled = true
+				getElement("targets").disabled = true
 			}else{
-				document.getElementById("targets").disabled = false
+				getElement("targets").disabled = false
 			}
 			if(cmd == 'reset' || cmd == 'status' || cmd == 'kill' || cmd == 'globals'){
-				document.getElementById("args").disabled = true
+				getElement("args").disabled = true
 			}else{
-				document.getElementById("args").disabled = false
+				getElement("args").disabled = false
 			}
 		}
         </script>

@@ -71,19 +71,18 @@ class Controller(object):
         except ValueError:
             return False
     
-    def statusTupleToHTML(self, status):
-        s = '<tr><td>%i</td>'%status[0]
-        s+="<td id='statuselement'>"
-        if not status[1].get('queue', None):
+    def statusToHTML(self, status):
+        s ="<td  id='statuselement'>"
+        if not status.get('queue', None):
             s+= "&nbsp"
         else:
-            for value in status[1]['queue']:
+            for value in status['queue']:
                 s += "%s<br>" %value
         s+="</td>\n<td id='statuselement'>"
-        if not status[1].get('history', None):
+        if not status.get('history', None):
             s+= "&nbsp"
         else:
-            for cmd in status[1]['history'].values():
+            for cmd in status['history'].values():
                 if isinstance(cmd, Failure):
                     s+="Failure"
                 else:
@@ -99,15 +98,14 @@ class Controller(object):
                         s += "<a id='stderr'>Err[%i]:</a><br> %s<br>" % (cmd_num, cmd_stderr)
                 s += '<br>\n'
         s+="</td>\n<td id='statuselement'>"
-        if not status[1].get('engine', None):
+        if not status.get('engine', None):
             s+= "&nbsp"
         else:
-            for key, value in status[1]['engine'].iteritems():
+            for key, value in status['engine'].iteritems():
                 s += "%s = %s" %(key, value
                 )
                 s += '<br>\n'
-        s+="</td>"
-        return s+'</tr>\n'
+        return s+'</td>\n'
     
     def status(self, targets=None, args=None):
         idlist = self.parseTargets(targets)
@@ -129,7 +127,9 @@ class Controller(object):
             if stat is False:
                 return unicode('illegal id list: %s' %idlist)
         for t in stat:
-            s += self.statusTupleToHTML(t)
+            s += '<tr><td>%i</td>'%t[0]
+            s += self.statusToHTML(t[1])
+            s += '</tr>'
         return unicode(s+'</table>')
     
     def local(self, targets=None, args=None):
@@ -156,7 +156,7 @@ class ControllerResource(athena.LivePage):
     evaluates the expression and sets the output in the browser.
     """
     addSlash = True
-    html = os.path.abspath(os.path.curdir)+'/controller.html'
+    html = os.path.abspath(os.path.curdir)+'/interactive.html'
     docFactory = loaders.xmlfile(html)
 
 if __name__ == '__main__':
