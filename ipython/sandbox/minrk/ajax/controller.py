@@ -59,8 +59,8 @@ class Controller(object):
         idlist = self.parseTargets(targets)
         if not idlist:
             return unicode("bad targets: "+ targets)
-        self.shell.execute("RETURN = rc.%s(%r, %s)" %(name, idlist, args))
-        return unicode(self.shell.get('RETURN'))
+        self.shell.execute("__RETURN = rc.%s(%r, %s)" %(name, idlist, args))
+        return unicode(self.shell.get('__RETURN'))
     
     def parseTargets(self, targets):
         if targets == 'all':
@@ -141,7 +141,7 @@ class Controller(object):
     def globals(self, targets=None, args=None):
         dikt = {}
         for k,v in self.shell.locals.iteritems():
-            if k not in ['__name__', '__doc__', '__console__', '__builtins__']:
+            if k not in ['__name__', '__doc__', '__console__', '__builtins__', '__RETURN']:
                 dikt[k] = str(v) # want representation, not actual object
         return unicode(dikt)
     
