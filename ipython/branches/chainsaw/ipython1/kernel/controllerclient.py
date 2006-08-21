@@ -436,20 +436,20 @@ class RemoteController(object):
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
         self.es = NetstringSocket(self.s)
     
-    def legalTargets(self, targets):
+    def parseTargets(self, targets):
         if isinstance(targets, int):
-            return targets >= 0
+            if targets >= 0:
+                return str(targets)
         elif isinstance(targets, (list, tuple)):
             if not targets:
                 return False
             for t in targets:
-                if t < 0:
+                if not isinstance(t, int) or t < 0:
                     return False
-            return True
+            return '::'.join(map(str, targets))
         elif targets == 'all':
-            return True
-        else:
-            return False
+            return targets
+        return False
     
     def multiTargets(self, targets):
         return not isinstance(targets, int) and len(targets) > 1
@@ -473,14 +473,11 @@ class RemoteController(object):
             False:
                 do not wait, return as soon as source has been sent, print nothing.
         """
-        if not self.legalTargets(targets) or not source:
+        targetstr = self.parseTargets(targets)
+        if not targetstr or not source:
             # need something to do
             return False
         self._check_connection()
-        if isinstance(targets, (list, tuple)):
-            targetstr = '::'.join(map(str, targets))
-        else:
-            targetstr = str(targets)        
         
         if self.block or block:
             self.es.writeNetstring("EXECUTE BLOCK %s::%s" % (source, targetstr))
@@ -572,15 +569,11 @@ class RemoteController(object):
         @arg namespace:
             The python objects to send and their remote keys.  i.e. a=1, b='asdf'
         """
-        if not self.legalTargets(targets) or not namespace:
+        targetstr = self.parseTargets(targets)
+        if not targetstr or not namespace:
             #need something to do
             return False
-        self._check_connection()
-        if isinstance(targets, (list, tuple)):
-            targetstr = '::'.join(map(str, targets))
-        else:
-            targetstr = str(targets)
-        
+        self._check_connection()        
         
         self.es.writeNetstring("PUSH ::%s" % targetstr)
         if self.es.readNetstring() != "PUSH READY":
@@ -641,15 +634,12 @@ class RemoteController(object):
                     for t in targets:
                         l.append(rc.pull(t, *keys))
         """
-        if not self.legalTargets(targets) or not keys:
+        targetstr = self.parseTargets(targets)
+        if not targetstr or not keys:
             # need something to do
             return False
         self._check_connection()
         
-        if isinstance(targets, (list, tuple)):
-            targetstr = '::'.join(map(str, targets))
-        else:
-            targetstr = str(targets)
         try:
             keystr = ','.join(keys)
         except TypeError:
@@ -733,7 +723,8 @@ class RemoteController(object):
                 is maintained.
                 
             """
-        if not self.legalTargets(targets) or not keys:
+        targetstr = self.parseTargets(targets)
+        if not targetstr or not keys:
             # need something to do
             return False
         self._check_connection()
@@ -776,14 +767,11 @@ class RemoteController(object):
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         """distribute sequence object to targets"""
-        if not self.legalTargets(targets) or not key or \
+        targetstr = self.parseTargets(targets)
+        if not targetstr or not key or \
             not isinstance(seq, (tuple, list)+arraytypes):
             return False
         self._check_connection()
-        if isinstance(targets, (list, tuple)):
-            targetstr = '::'.join(map(str, targets))
-        else:
-            targetstr = str(targets)        
         
         try:
             serial = serialized.serialize(seq, key)
@@ -800,15 +788,12 @@ class RemoteController(object):
     
     def gather(self, targets, key, style='basic'):
         """gather a distributed object, and reassemble it"""
-        if not self.legalTargets(targets) or not key:
+        targetstr = self.parseTargets(targets)
+        if not targetstr or not key:
             return False
         self._check_connection()
-        if isinstance(targets, (list, tuple)):
-            targetstr = '::'.join(map(str, targets))
-        else:
-            targetstr = str(targets)
         
-        self.es.writeNetstring('GATHER %s style=%s::%s' %(key, style, targets))
+        self.es.writeNetstring('GATHER %s style=%s::%s' %(key, style, targetstr))
         split = self.es.readNetstring().split(' ',1)
         if len(split) is not 2:
             return False
@@ -840,14 +825,11 @@ class RemoteController(object):
     def getResult(self, targets, i=None):
         """Gets a specific result from the kernels, returned as a tuple, or 
             list of tuples if multiple targets."""
-        if not self.legalTargets(targets):
+        targetstr = self.parseTargets(targets)
+        if not targetstr:
             # need something to do
             return False
         self._check_connection()    
-        if isinstance(targets, (list, tuple)):
-            targetstr = '::'.join(map(str, targets))
-        else:
-            targetstr = str(targets)
         
         if i is None:
             self.es.writeNetstring("GETRESULT ::%s" %targetstr)
@@ -877,14 +859,11 @@ class RemoteController(object):
     
     def status(self, targets):
         """Check the status of the kernel."""
-        if not self.legalTargets(targets):
+        targetstr = self.parseTargets(targets)
+        if not targetstr:
             # need something to do
             return False
         self._check_connection()
-        if isinstance(targets, (list, tuple)):
-            targetstr = '::'.join(map(str, targets))
-        else:
-            targetstr = str(targets)
         
         self.es.writeNetstring("STATUS ::%s" %targetstr)
         string = self.es.readNetstring()
@@ -958,14 +937,11 @@ class RemoteController(object):
     
     def reset(self, targets):
         """Clear the namespace if the kernel."""
-        if not self.legalTargets(targets):
+        targetstr = self.parseTargets(targets)
+        if not targetstr:
             # need something to do
             return False
         self._check_connection()
-        if isinstance(targets, (list, tuple)):
-            targetstr = '::'.join(map(str, targets))
-        else:
-            targetstr = str(targets)
         
         self.es.writeNetstring("RESET ::%s" %targetstr)
         string = self.es.readNetstring()
@@ -976,14 +952,11 @@ class RemoteController(object):
     
     def kill(self, targets):
         """Kill the engine completely."""
-        if not self.legalTargets(targets):
+        targetstr = self.parseTargets(targets)
+        if not targetstr:
             # need something to do
             return False
         self._check_connection()    
-        if isinstance(targets, (list, tuple)):
-            targetstr = '::'.join(map(str, targets))
-        else:
-            targetstr = str(targets)
         
         self.es.writeNetstring("KILL ::%s" %targetstr)
         string = self.es.readNetstring()
