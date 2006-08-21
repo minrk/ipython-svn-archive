@@ -30,3 +30,7 @@ def curry(f, *curryArgs, **curryKWargs):
     
     return curried
 
+#debugging callbacks
+def printer(r):
+    print r
+    return r
