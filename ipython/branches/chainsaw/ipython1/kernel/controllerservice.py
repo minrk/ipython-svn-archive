@@ -30,8 +30,7 @@ from zope.interface import Interface, implements
 from ipython1.kernel.engineservice import IEngineComplete
 from ipython1.kernel.serialized import Serialized
 from ipython1.kernel.util import gatherBoth
-from ipython1.kernel import map as Map
-from ipython1.kernel import error
+from ipython1.kernel import error, map as Map
 
 
 def addAllMethods(obj, methods=[]):
