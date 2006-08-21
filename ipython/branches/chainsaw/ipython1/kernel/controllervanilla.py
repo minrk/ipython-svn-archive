@@ -261,7 +261,6 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         for a in argSplit:
             split = a.split('=',1)
             if len(split) is 2:
-                print split
                 if split[0] == 'style':
                     self.workVars['scatterStyle'] = split[1]
                 elif split[0] == 'flatten':
