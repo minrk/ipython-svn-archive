@@ -218,8 +218,10 @@ class InteractiveShell(InteractiveConsole):
         self.lastCommandIndex = -1
         self._command_lock.release()
 
-        self._namespace_lock.acquire()        
+        self._namespace_lock.acquire()
+        mpi = self.locals.get('mpi', None)
         self.locals = {}
+        self.locals['mpi'] = mpi
         self._namespace_lock.release()
                 
     def getCommand(self,i=None):
