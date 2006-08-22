@@ -278,6 +278,8 @@ class SubCluster(object):
         if isinstance(ids, slice):
             #parse slice
             idlist = rc.getIDs()
+            assert idlist or (ids.start and ids.stop), \
+                "Cannot autoslice, no engines connected"
             if ids.step is None:
                 step = 1
             else:
@@ -296,7 +298,8 @@ class SubCluster(object):
         else:
             raise TypeError("SubCluster requires slice or list")
         
-        addAllMethods(self)
+        # addAllMethods(self) #SubClusters do not take target args, 
+        # only operate on all except through dict interface
     
     def execute(self, strings, block=False):
             return self.rc.execute(self.ids, strings, block)
@@ -322,6 +325,13 @@ class SubCluster(object):
     
     def pullNamespace(self, *keys):
         return self.rc.pullNamespace(self.ids, *keys)
+    
+    def scatter(self, key, seq, style='basic', flatten=False):
+        """distribute sequence object to targets"""
+        return self.rc.scatter(self.ids, key, seq, style, flatten)
+    
+    def gather(self, key, style='basic'):
+        return self.rc.gather(self.ids, key, style)
     
     def status(self):
         return self.rc.status(self.ids)

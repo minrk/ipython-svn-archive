@@ -33,29 +33,6 @@ from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import error, map as Map
 
 
-def addAllMethods(obj, methods=[]):
-    if not methods:
-        for m in IMultiEngine:
-            if m+'All' in IMultiEngine and getattr(obj, m, None)\
-            and getattr(obj, m+'All', 'NotDefined') == 'NotDefined':
-                #only want methods that have All suffix in interface
-                methods.append(m)
-    for m in methods:
-        try:
-            M = IMultiEngine[m]
-            MA = IMultiEngine[m+'All']
-            defs = """
-def allMethod(self, %s:
-    '''%s'''
-    return self.%s('all'%s)
-""" %(MA.getSignatureString()[1:], MA.getDoc(), m, M.getSignatureString()[8:-1])
-            exec defs
-            setattr(obj, m+'All', instancemethod(allMethod, obj, obj.__class__))
-            del allMethod
-        except AttributeError:
-            #will only add All method if original method exists
-            pass
-
 class ResultReporterProtocol(protocol.DatagramProtocol):
     
     def __init__(self, result, addr):
@@ -87,7 +64,8 @@ class IRemoteController(Interface):
     
     def registerSerializationTypes(self, *serialTypes):
         """Register the set of allowed subclasses of Serialized."""
-        
+    
+
 class IMultiEngine(Interface):
     """interface to multiple objects implementing IEngineComplete.
     
@@ -179,13 +157,32 @@ class IMultiEngine(Interface):
         """"""
     
 
-#the controller interface implements both IEngineCompleteController, IMultiEngine
+# the controller interface implements both IEngineCompleteController, IMultiEngine
 class IController(IRemoteController, IMultiEngine):
     
     pass 
 
-#implementation of the Controller Service
-        
+# implementation of the Controller Service
+def addAllMethods(obj, interface=IMultiEngine):
+    for m in interface:
+        # print m
+        # print hasattr(obj, m),not hasattr(obj, m+'All')
+        if m+'All' in interface and hasattr(obj, m) and not hasattr(obj, m+'All'):
+            # methods that have 'All' suffix in interface and regular in obj
+            M = interface[m]
+            MA = interface[m+'All']
+            defs = """
+def allMethod(self, %s):
+    '''%s'''
+    return self.%s('all'%s)
+""" %(MA.getSignatureString()[1:-1], MA.getDoc(), m, M.getSignatureString()[8:-1])
+            exec defs
+            setattr(obj, m+'All', instancemethod(allMethod, obj, obj.__class__))
+            del allMethod
+    return obj
+
+
+
 class ControllerService(service.Service):
     """This service listens for kernel engines and control clients.
         It manages the command queues for the engines.
