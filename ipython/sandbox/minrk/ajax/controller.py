@@ -59,13 +59,14 @@ class Controller(object):
         idlist = self.parseTargets(targets)
         if not idlist:
             return unicode("bad targets: "+ targets)
-        self.shell.execute("__RETURN = rc.%s(%r, %s)" %(name, idlist, args))
+        s = "__RETURN = rc.%s(%r, %s)" %(name, idlist, args)
+        self.shell.execute(s)
         r = repr(self.shell.get('__RETURN'))
         return unicode(r)
     
     def parseTargets(self, targets):
-        if targets == 'all':
-            return targets
+        if targets == u'all':
+            return 'all'
         try:
             return map(int,targets.split(','))
         except ValueError:
@@ -137,6 +138,9 @@ class Controller(object):
             self.shell.execute(args)
         except:
             return unicode("fail")
+        # protect from deleting the rc object:
+        if self.rc is not self.shell.get('rc'):
+            self.shell.put('rc', self.rc)
         return self.globals()
     
     def globals(self, targets=None, args=None):
