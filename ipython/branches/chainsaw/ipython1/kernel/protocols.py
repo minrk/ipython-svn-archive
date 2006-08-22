@@ -10,7 +10,9 @@
 from twisted.protocols import basic
 
 class EnhancedNetstringReceiver(basic.NetstringReceiver, object):
-    
+
+    MAX_LENGTH = 500000000
+
     def sendBuffer(self, buf):
         self.transport.write('%i:' %len(buf))
         

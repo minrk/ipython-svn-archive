@@ -112,7 +112,10 @@ class NetstringSocket(object):
         lengthToSend = len(data)
         while offset < lengthToSend:
             slice = buffer(data, offset, lengthToSend - offset)
-            amountWritten = self.sock.send(slice[:65536])
+            if self.verbose:
+                print lengthToSend, offset, len(slice), slice
+            amountWritten = self.sock.send(slice)
+            # print amountWritten
             offset += amountWritten
         
         return self.sock.send(',')

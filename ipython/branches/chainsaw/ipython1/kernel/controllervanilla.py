@@ -75,6 +75,8 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
     
     
+    def connectionLost(self, reason):
+        print reason
     def stringReceived(self, string):
         if self.nextHandler is None:
             self.defaultHandler(string)
