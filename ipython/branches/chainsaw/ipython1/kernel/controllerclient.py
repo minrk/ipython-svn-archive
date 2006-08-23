@@ -50,11 +50,8 @@ else:
 arraytypes = tuple(arraytypeList)
 del arraytypeList
 
-try:
-    from ipython1.kernel import serialized
-    from ipython1.kernel.controllerservice import addAllMethods
-except ImportError, e:
-    print "ipython1 needs to be in your PYTHONPATH ", e
+from ipython1.kernel import serialized
+from ipython1.kernel.controllerservice import addAllMethods
 
 #netstring code adapted from twisted.protocols.basic
 class NetstringParseError(ValueError):
@@ -263,8 +260,8 @@ class EngineProxy(object):
     def status(self):
         return self.rc.status(self.id)
     
-    def getResult(self, n=None):
-        return self.rc.getResult(self.id, n)
+    def getResult(self, i=None):
+        return self.rc.getResult(self.id, i)
     
     def reset(self):
         return self.rc.reset(self.id)
@@ -279,42 +276,51 @@ class SubCluster(object):
     def __init__(self, rc, ids):
         self.rc = rc
         if isinstance(ids, slice):
-            #parse slice
-            idlist = rc.getIDs()
-            assert idlist or (ids.start and ids.stop), \
-                "Cannot autoslice, no engines connected"
-            if ids.step is None:
-                step = 1
-            else:
-                step = ids.step
-            if ids.start is None:
-                start = min(idlist)
-            else:
-                start = ids.start
-            if ids.stop is None:
-                stop = max(idlist)
-            else:
-                stop = ids.stop
-            self.ids = range(start, stop, step)
+            self.originalIDs = range(*ids.indices(ids.stop))
         elif isinstance(ids, list):
-            self.ids = ids
+            self.originalIDs = ids
         else:
             raise TypeError("SubCluster requires slice or list")
+        # Make sure these exist as of now
+        currentIDs = rc.getIDs()
+        for id in self.originalIDs:
+            if id not in currentIDs:
+                raise Exception("The engine with id %i does not exist" % id)
+        self.ids = range(len(self.originalIDs))
+        print self.ids
+        print self.originalIDs
+        addAllMethods(self)
+    
+    def getIDs(self):
+        return self.ids
         
-        # addAllMethods(self) #SubClusters do not take target args, 
-        # only operate on all except through dict interface
+    def getOriginalIDs(self):
+        return self.originalIDs
+        
+    def _mapIDsToOriginal(self, ids):
+        if ids == 'all':
+            return self.originalIDs
+        elif isinstance(ids, int) and ids >= 0:
+            return ids
+        elif isinstance(ids, (list, tuple)):
+            return [self.originalIDs[i] for i in ids]
+        else:
+            raise TypeError("targets/ids must be int, list or tuple")
     
-    def execute(self, strings, block=False):
-            return self.rc.execute(self.ids, strings, block)
+    def execute(self, targets, lines, block=False):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.rc.execute(actualTargets, lines, block)
     
-    def push(self, **namespace):
-        return self.rc.push(self.ids, **namespace)
+    def push(self, targets, **namespace):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.rc.push(actualTargets, **namespace)
     
     def __setitem__(self, key, value):
         return self.push(**{key:value})
     
-    def pull(self, *keys):
-        return self.rc.pull(self.ids, *keys)
+    def pull(self, targets, *keys):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.rc.pull(actualTargets, *keys)
     
     def __getitem__(self, id):
         if isinstance(id, slice):
@@ -322,31 +328,29 @@ class SubCluster(object):
         elif isinstance(id, int):
             return EngineProxy(self.rc, self.ids[id])
         elif isinstance(id, str):
-            return self.pull(*(id,))
+            return self.pull('all',*(id,))
         else:
             raise TypeError("__getitem__ only takes strs, ints, and slices")
     
-    def pullNamespace(self, *keys):
-        return self.rc.pullNamespace(self.ids, *keys)
+    def pullNamespace(self, targets, *keys):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.rc.pullNamespace(actualTargets, *keys)
     
-    def scatter(self, key, seq, style='basic', flatten=False):
-        """distribute sequence object to targets"""
-        return self.rc.scatter(self.ids, key, seq, style, flatten)
+    def status(self, targets):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.rc.status(actualTargets)
     
-    def gather(self, key, style='basic'):
-        return self.rc.gather(self.ids, key, style)
+    def getResult(self, targets, i=None):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.rc.getResult(actualTargets, i)
     
-    def status(self):
-        return self.rc.status(self.ids)
+    def reset(self, targets):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.rc.reset(actualTargets)
     
-    def getResult(self, n=None):
-        return self.rc.getResult(self.ids, n)
-    
-    def reset(self):
-        return self.rc.reset(self.ids)
-    
-    def kill(self):
-        return self.rc.kill(self.ids)
+    def kill(self, targets):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.rc.kill(actualTargets)
     
     def activate(self):
         """Make this cluster the active one for ipython magics.
