@@ -18,7 +18,6 @@ Copyright (c) 2006 __MyCompanyName__. All rights reserved.
 import new
 
 from IPython.iplib import InteractiveShell
-#from ipython1.kernel import controllerclient
 
 def magic_px(self,parameter_s=''):
     """Executes the given python command on the active IPython cluster.
@@ -35,10 +34,6 @@ def magic_px(self,parameter_s=''):
     active_cluster = __IPYTHON__.active_cluster
     if active_cluster:
         print "Executing command on cluster"
-        #if isinstance(active_cluster, cc.SubCluster):
-        #    active_cluster.execute(parameter_s)
-        #else:
-        #    active_cluster.executeAll(parameter_s)
         active_cluster.executeAll(parameter_s)
     else:
         print "Error: No active IPython cluster.  Use activate()."
@@ -107,30 +102,12 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
         return False
     
 def magic_autopx(self, parameter_s=''):
-
-    # Build and activate a subcluster if needed 
-    if parameter_s:
-        exec_str = 'kernels = %s' % parameter_s
-        try:
-            exec exec_str
-        except:
-            print "Argument of autopx must evaluate to a list"
-            return
-        else:
-            print "Autoparallel mode will use kernels: ", kernels
-            self.saved_active_cluster = self.active_cluster
-            ic = self.active_cluster.subcluster(kernels)
-            self.active_cluster = ic            
     
     if hasattr(self, 'autopx'):
         if self.autopx == True:
             self.runsource = new.instancemethod(InteractiveShell.runsource,
                 self, self.__class__)
             self.autopx = False
-            try:
-                self.active_cluster = self.saved_active_cluster
-            except:
-                pass
             print "Auto Parallel Disabled" 
         else:
             self.runsource = new.instancemethod(pxrunsource, self,
