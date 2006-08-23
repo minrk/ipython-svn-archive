@@ -2,9 +2,6 @@
 # encoding: utf-8   -> do we need these now?
 """
 Magic command interface for interactive parallel work.
-
-Created by Brian Granger on 2006-08-17.
-Copyright (c) 2006 __MyCompanyName__. All rights reserved.
 """
 #*****************************************************************************
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
@@ -113,12 +110,12 @@ def magic_autopx(self, parameter_s=''):
             self.runsource = new.instancemethod(pxrunsource, self,
                 self.__class__)
             self.autopx = True
-            print "Auto Parallel Enabled"
+            print "Auto Parallel Enabled\nType %autopx to disable"
     else:
         self.runsource = new.instancemethod(pxrunsource, self,
                 self.__class__)
         self.autopx = True
-        print "Auto Parallel Enabled"
+        print "Auto Parallel Enabled\nType %autopx to disable"
 
             
 # Add the new magic function to the class dict:
