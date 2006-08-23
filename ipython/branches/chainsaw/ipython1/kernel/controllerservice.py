@@ -313,7 +313,12 @@ def autoMethod(self, %s:
     
     def execute(self, targets, lines):
         """Execute lines of Python code."""
-        log.msg("executing %s on %s" %(lines, targets))
+        
+        if len(lines) > 64:
+            linestr = lines[:61]+'...'
+        else:
+            linestr = lines
+        log.msg("executing %s on %s" %(linestr, targets))
         engines = self.engineList(targets)
         l = []
         for e in engines:
@@ -336,7 +341,7 @@ def autoMethod(self, %s:
         return gatherBoth(l)
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
-        
+        log.msg("scattering %s to %s" %(key, targets))
         engines = self.engineList(targets)
         nEngines = len(engines)
         
@@ -353,6 +358,7 @@ def autoMethod(self, %s:
     
     def gather(self, targets, key, style='basic'):
         """gather a distributed object, and reassemble it"""
+        log.msg("gathering %s from %s"%(key, targets))
         engines = self.engineList(targets)
         nEngines = len(engines)
                 
