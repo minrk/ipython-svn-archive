@@ -1,0 +1,79 @@
+#!/usr/bin/env python
+"""Classes for gathering results from kernels.
+
+IPython kernels send back results (stdout, stderr) to a UDP port.  The classes
+in this module listen on the UDP port and hadle the incoming results.
+
+Classes:
+
+ResultGatherer     -- A multithreaded class that collects and prints results
+                      from kernels.
+
+To use simply start a basic result gatherer from the command line, issue:
+
+python results.py
+
+This will start the results gatherer on port 10104.  To use a different port,
+use the -p option:
+
+python results.py -p 10001
+
+Once the result gatherer has been started you can tell kernels to send results
+to the gatherer by using the .notify method of the RemoteKernel or 
+InteractiveCluster classes.  Multiple kernels can notify a single gatherer.
+"""
+
+#*****************************************************************************
+#       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
+#                           Brian E Granger <ellisonbg@gmail.com>
+#                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+
+import socket
+from optparse import OptionParser
+
+from twisted.internet import protocol, reactor
+from nevow import appserver
+
+from ipython1.kernel.controllerclient import RemoteController
+from ipython1.kernel.util import printer
+from resultsajax import *
+
+def main(port, c):
+    f = TCPAJAXResultsFactory()
+    site = appserver.NevowSite(ResultRoot(f))
+    reactor.listenTCP(port, f)
+    reactor.listenTCP(8080, site)
+    reactor.callLater(2, printer, 'Gatherer Running')
+    if c is not None:
+        reactor.callLater(2, notify, port, c)
+    reactor.run()
+
+def notify(port, c):
+    csplit = c.split(':')
+    if len(csplit) is 1:
+        cport = 10105
+    else:
+        cport = int(csplit[1])
+    cip = csplit[0]
+    rc = RemoteController((cip, cport))
+    here = socket.gethostbyname(socket.gethostname())
+    return rc.notify(addr=(here, port))
+    
+def start():
+    parser = OptionParser()
+    parser.set_defaults(port=10104)
+    parser.set_defaults(controller=None)
+    parser.add_option("-p", "--port", type="int", dest="port",
+        help="the TCP port the gatherer will listen on")
+    parser.add_option("-c", "--controller", type="str", dest="controller",
+        help="ip:port of the controller")
+    (options, args) = parser.parse_args()
+    print "Starting the gatherer on port %i" % options.port
+    main(options.port, options.controller)
+    
+if __name__ == '__main__':
+    start()
