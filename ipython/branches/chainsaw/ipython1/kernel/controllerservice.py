@@ -290,7 +290,7 @@ def autoMethod(self, %s:
             return [self.engines[targets]]
         elif isinstance(targets, (list, tuple)):
             return map(self.engines.get, targets)
-        elif targets is 'all':
+        elif targets == 'all':
             return self.engines.values()
         else:
             return []
