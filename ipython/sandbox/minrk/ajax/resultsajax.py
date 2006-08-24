@@ -1,4 +1,5 @@
-import cPickle as pickle
+import os, cPickle as pickle
+
 
 from nevow import athena, loaders, tags, inevow
 from twisted.internet import protocol, reactor
@@ -45,10 +46,8 @@ class TCPAJAXResultsFactory(protocol.ServerFactory):
         rc = RemoteController((peer.host, 10105))
         rlist = []
         for s in rc.statusAll():
-            print s
             rlist.extend(s[1].get('history', {}).values())
         for r in rlist:
-            print r
             self.handleResult(r)
         
     def handleResult(self, result):
@@ -76,7 +75,7 @@ class TCPAJAXResultsFactory(protocol.ServerFactory):
             pass
     
 myPackage = athena.JSPackage({
-    'ResultModule': '/Users/minrk/dev/sandbox/ajax/resultmodule.js',
+    'ResultModule': os.path.abspath(os.path.curdir)+'/resultmodule.js'
     })
 
 athena.jsDeps.mapping.update(myPackage.mapping)
@@ -139,7 +138,6 @@ style = """
 class ResultPage(athena.LivePage):
     addSlash = True
     source = None
-    print 'ResultPage'
     
     docFactory = loaders.stan(tags.html[
         tags.head(render=tags.directive('liveglue')),
@@ -155,7 +153,6 @@ class ResultPage(athena.LivePage):
         return ctx.tag[f]
     
     def render_resultElement(self, ctx, data):
-        print 'render'
         f = ResultElement()
         f.setFragmentParent(self)
         reactor.callLater(.1, self.source.addGatherer, f)
