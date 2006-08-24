@@ -40,7 +40,7 @@ from twisted.internet import reactor, error
 from twisted.spread import pb
 from twisted.python import log
 
-from ipython1.kernel import controllerservice, enginepb, controllervanilla
+from ipython1.kernel import controllerservice, enginepb, controllervanilla, controllerpb
 #from ipython1.kernel import serialized
 
 
@@ -49,36 +49,38 @@ def tryPorts(port, factory):
         d = reactor.listenTCP(port, factory)
     except error.CannotListenError:
         log.msg("Trying the next port")
-        try:
-            d = reactor.listenTCP(port+1, factory)
-        except error.CannotListenError:
-            raise
+        d = tryPorts(port+1, factory)
     return d
 
-def main(cport, eport):
+def main(cport, eport, pport):
     log.startLogging(sys.stdout)
     
     cs = controllerservice.ControllerService()
     efac = pb.PBServerFactory(enginepb.IPBRemoteEngineRoot(cs))
 #    cs.registerSerializationTypes(serialized.PickleSerialized)
     cfac = controllervanilla.IVanillaControllerFactory(cs)
+    pfac = pb.PBServerFactory(controllerpb.IPBController(cs))
     reactor.callLater(1.0,tryPorts, eport, efac)
     reactor.callLater(2.0,tryPorts, cport, cfac)
+    reactor.callLater(3.0,tryPorts, pport, pfac)
     cs.startService()
     reactor.run()
 
-def start(cport=10105, eport=10201):
+def start():
     parser = OptionParser()
-    parser.set_defaults(cport=cport)
-    parser.set_defaults(eport=eport)
+    parser.set_defaults(cport=10105)
+    parser.set_defaults(eport=10201)
+    parser.set_defaults(pport=10111)
     parser.add_option("-c", "--controlport", type="int", dest="cport",
         help="the TCP port the controller will listen on for control commands")
     parser.add_option("-e", "--engineport", type="int", dest="eport",
         help="the TCP port the controller will listen on for engine connections")
+    parser.add_option("-p", "--pbcontrolport", type="int", dest="pport",
+        help="the TCP port the controller will listen on for perspective broker control connections")
     (options, args) = parser.parse_args()
-    print "Starting the controller on ports Engine:%i , Control: %i" % (
-                options.eport, options.cport)
-    main(options.cport, options.eport)
+    print "Starting the controller on ports Engine:%i , Control: %i , ControlPB: %i" % (
+                options.eport, options.cport, options.pport)
+    main(options.cport, options.eport, options.pport)
     
 if __name__ == "__main__":
     start()
