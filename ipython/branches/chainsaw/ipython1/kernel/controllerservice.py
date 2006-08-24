@@ -261,12 +261,15 @@ def autoMethod(self, %s:
             
         remoteEngine.service = self
         self.engines[remoteEngine.id] = remoteEngine
-        log.msg("registered engine: " + repr(remoteEngine.id))
+        msg = "registered engine: " + repr(remoteEngine.id)
+        log.msg(msg)
+        self.notify((remoteEngine.id, -1, msg, '', ''))
         return remoteEngine.id
     
     def unregisterEngine(self, id):
         """eliminate remote engine object"""
-        log.msg("unregistered engine %i" %id)
+        msg = "unregistered engine %r" %id
+        log.msg(msg)
         del self.engines[id]
         if not self.saveIDs:
             self.availableIDs.append(id)
@@ -274,6 +277,7 @@ def autoMethod(self, %s:
             self.availableIDs.sort(reverse=True) 
         else:
             log.msg("preserving id %i" %id)
+        self.notify((id, -1, msg, '', ''))
     
     def registerSerializationTypes(self, *serialTypes):
         """Register the set of allowed subclasses of Serialized."""
@@ -406,7 +410,7 @@ def autoMethod(self, %s:
         for tonotify in self.notifiers().values():
             if tonotify.transport.protocol is not None:
                 tonotify.transport.protocol.sendLine(
-                        "RESULT %i %s" %(len(package), package))
+                        "RESULT %s" %(package))
             else:
                 log.msg("Notifier connection not ready for RESULT " + str(result))
         return result

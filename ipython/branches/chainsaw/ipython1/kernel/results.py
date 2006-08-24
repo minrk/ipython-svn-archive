@@ -90,34 +90,29 @@ class UDPResultGatherer(object):
 
             # Get and print a message
             message, client_addr = s.recvfrom(8192)
-            msg_split = message.split(" ", 2)
-            if msg_split[0] == "RESULT" and len(msg_split) == 3:
+            msg_split = message.split(" ", 1)
+            if msg_split[0] == "RESULT" and len(msg_split) == 2:
                 try:
-                    nbytes = int(msg_split[1])
-                except  (ValueError, TypeError):
+                    (id, cmd_tuple) = pickle.loads(msg_split[1])
+                except pickle.PickleError:
                     fail = True
                 else:
-                    try:
-                        (id, cmd_tuple) = pickle.loads(msg_split[2])
-                    except pickle.PickleError:
-                        fail = True
-                    else:
-                        fail = False
-                        cmd_num = cmd_tuple[0]
-                        cmd_stdin = cmd_tuple[1]
-                        cmd_stdout = cmd_tuple[2]
-                        cmd_stderr = cmd_tuple[3]
-                        print "\n%s[%s]:[%i]%s In [%i]:%s %s" % \
+                    fail = False
+                    cmd_num = cmd_tuple[0]
+                    cmd_stdin = cmd_tuple[1]
+                    cmd_stdout = cmd_tuple[2]
+                    cmd_stderr = cmd_tuple[3]
+                    print "\n%s[%s]:[%i]%s In [%i]:%s %s" % \
+                        (green, client_addr[0], id,
+                        blue, cmd_num, normal, cmd_stdin)
+                    if cmd_stdout:
+                        print "%s[%s]:[%i]%s Out[%i]:%s %s" % \
                             (green, client_addr[0], id,
-                            blue, cmd_num, normal, cmd_stdin)
-                        if cmd_stdout:
-                            print "%s[%s]:[%i]%s Out[%i]:%s %s" % \
-                                (green, client_addr[0], id,
-                                red, cmd_num, normal, cmd_stdout)
-                        if cmd_stderr:
-                            print "%s[%s]:[%i]%s Err[%i]:\n%s %s" % \
-                                (green, client_addr[0], id,
-                                red, cmd_num, normal, cmd_stderr)
+                            red, cmd_num, normal, cmd_stdout)
+                    if cmd_stderr:
+                        print "%s[%s]:[%i]%s Err[%i]:\n%s %s" % \
+                            (green, client_addr[0], id,
+                            red, cmd_num, normal, cmd_stderr)
             else:
                 fail = True
                 
@@ -143,35 +138,30 @@ class TCPResultsProtocol(LineReceiver):
 
     def lineReceived(self, line):
         
-        msg_split = line.split(" ", 2)
-        if msg_split[0] == "RESULT" and len(msg_split) == 3:
+        msg_split = line.split(" ", 1)
+        if msg_split[0] == "RESULT" and len(msg_split) == 2:
             try:
-                nbytes = int(msg_split[1])
-            except  (ValueError, TypeError):
+                cmd_tuple = pickle.loads(msg_split[1])
+            except pickle.PickleError:
                 fail = True
             else:
-                try:
-                    cmd_tuple = pickle.loads(msg_split[2])
-                except pickle.PickleError:
-                    fail = True
-                else:
-                    fail = False
-                    id = cmd_tuple[0]
-                    cmd_num = cmd_tuple[1]
-                    cmd_stdin = cmd_tuple[2]
-                    cmd_stdout = cmd_tuple[3]
-                    cmd_stderr = cmd_tuple[4]
-                    print "\n%s[%s:%i]%s In [%i]:%s %s" % \
+                fail = False
+                id = cmd_tuple[0]
+                cmd_num = cmd_tuple[1]
+                cmd_stdin = cmd_tuple[2]
+                cmd_stdout = cmd_tuple[3]
+                cmd_stderr = cmd_tuple[4]
+                print "\n%s[%s:%i]%s In [%i]:%s %s" % \
+                    (self.green, self.peer.host, id,
+                    self.blue, cmd_num, self.normal, cmd_stdin)
+                if cmd_stdout:
+                    print "%s[%s:%i]%s Out[%i]:%s %s" % \
                         (self.green, self.peer.host, id,
-                        self.blue, cmd_num, self.normal, cmd_stdin)
-                    if cmd_stdout:
-                        print "%s[%s:%i]%s Out[%i]:%s %s" % \
-                            (self.green, self.peer.host, id,
-                            self.red, cmd_num, self.normal, cmd_stdout)
-                    if cmd_stderr:
-                        print "%s[%s:%i]%s Err[%i]:\n%s %s" % \
-                            (self.green, self.peer.host, id,
-                            self.red, cmd_num, self.normal, cmd_stderr)
+                        self.red, cmd_num, self.normal, cmd_stdout)
+                if cmd_stderr:
+                    print "%s[%s:%i]%s Err[%i]:\n%s %s" % \
+                        (self.green, self.peer.host, id,
+                        self.red, cmd_num, self.normal, cmd_stderr)
         else:
             fail = True
             
