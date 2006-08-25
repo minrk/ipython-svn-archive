@@ -122,9 +122,9 @@ class BasicControllerPBTest(DeferredTestCase):
         return d
     
     def testResult(self):
-        # d = self.controller.getResult(0)
-        # d.addCallback(lambda r: r[0])
-        # d = self.assertDeferredRaises(d, IndexError)
+        d = self.controller.getResult(0)
+        d.addCallback(lambda r: r[0])
+        d = self.assertDeferredRaises(d, IndexError)
         d = self.controller.execute(0, "a = 5")
         d = self.assertDeferredEquals(self.controller.getResult(0),[(0, 0,"a = 5","","")], d)
         d = self.assertDeferredEquals(self.controller.getResult(0, 0),[(0, 0,"a = 5","","")], d)

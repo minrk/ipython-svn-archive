@@ -71,64 +71,67 @@ class PBControllerRootFromService(pb.Root):
     
     def remote_verifyTargets(self, targets):
         """verify if targets is callable id list, id, or string 'all'"""
-        return self.service.verifyTargets(targets)
+        return self.service.verifyTargets(targets).addBoth(pickle.dumps, 2)
     
     def remote_scatter(self, targets, key, pseq, style='basic', flatten=False):
         """partition and distribute a sequence"""
         seq = pickle.loads(pseq)
-        return self.service.scatter(targets, key, seq, style, flatten)
+        d = self.service.scatter(targets, key, seq, style, flatten)
+        return d.addBoth(pickle.dumps, 2)
     
     def remote_gather(self, targets, key, style='basic'):
         """gather object as distributed by scatter"""
         d = self.service.gather(targets, key, style)
-        return d.addCallback(pickle.dumps, 2)
+        return d.addBoth(pickle.dumps, 2)
     
     def remote_pushSerialized(self, targets, pns):
         """Push a dict of keys and Serialized to the user's namespace."""
-        return self.service.pushSerialized(targets, **pickle.loads(pns))
+        d = self.service.pushSerialized(targets, **pickle.loads(pns))
+        return d.addBoth(pickle.dumps, 2)
     
     def remote_pullSerialized(self, targets, *keys):
         """Pull objects by key form the user's namespace as Serialized."""
         d = self.service.pullSerialized(targets, *keys)
-        return d.addCallback(pickle.dumps, 2)
+        return d.addBoth(pickle.dumps, 2)
     
     def remote_clearQueue(self, targets):
         """Clears out pending commands in an engine's queue."""
-        return self.service.clearQueue(targets)
+        return self.service.clearQueue(targets).addBoth(pickle.dumps, 2)
     
     def remote_execute(self, targets, lines):
         """Execute lines of Python code."""
         d = self.service.execute(targets, lines)
-        return d
+        return d.addBoth(pickle.dumps, 2)
     
     def remote_push(self, targets, pns):
         """Push value into locals namespace with name key."""
-        return self.service.push(targets, **pickle.loads(pns))
+        d = self.service.push(targets, **pickle.loads(pns))
+        return d.addBoth(pickle.dumps, 2)
     
     def remote_pull(self, targets, *keys):
         """Gets an item out of the self.locals dict by key."""
-        return self.service.pull(targets, *keys).addCallback(pickle.dumps, 2)
+        return self.service.pull(targets, *keys).addBoth(pickle.dumps, 2)
     
     def remote_pullNamespace(self, targets, *keys):
         """Gets a namespace dict from targets by keys."""
         d = self.service.pullNamespace(targets, *keys)
-        return d.addCallback(pickle.dumps, 2)
+        return d.addBoth(pickle.dumps, 2)
     
     def remote_getResult(self, targets, i=None):
         """Get the stdin/stdout/stderr of command i."""
-        return self.service.getResult(targets, i)
+        return self.service.getResult(targets, i).addBoth(pickle.dumps, 2)
     
     def remote_reset(self, targets):
         """Reset the InteractiveShell."""
-        return self.service.reset(targets)
+        return self.service.reset(targets).addBoth(pickle.dumps, 2)
     
     def remote_status(self, targets):
         """Return the status of engines"""
-        return self.service.status(targets)
+        return self.service.status(targets).addBoth(pickle.dumps, 2)
     
     def remote_kill(self, targets):
         """Kills the engine process"""
-        return self.service.kill(targets)
+        return self.service.kill(targets).addBoth(pickle.dumps, 2)
     
 
 components.registerAdapter(PBControllerRootFromService,
@@ -148,6 +151,7 @@ class PBRemoteController(object):
     def __init__(self, reference):
         self.reference = reference
         self.callRemote = reference.callRemote
+        cs.addAllMethods(self)
     
     def verifyTargets(self, targets):
         """verify if targets is callable id list, id, or string 'all'"""
@@ -156,127 +160,69 @@ class PBRemoteController(object):
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         """partition and distribute a sequence"""
         pseq = pickle.dumps(seq, 2)
-        return self.callRemote('scatter', targets, key, pseq, style, flatten)
-    
-    def scatterAll(self, key, seq, style='basic', flatten=False):
-        """"""
-        pseq = pickle.dumps(seq, 2)
-        return self.callRemote('scatter', 'all', key, pseq, style, flatten)
+        d = self.callRemote('scatter', targets, key, pseq, style, flatten)
+        return d.addCallback(pickle.loads)
     
     def gather(self, targets, key, style='basic'):
         """gather object as distributed by scatter"""
         d = self.callRemote('gather', targets, key, style='basic')
         return d.addCallback(pickle.loads)
     
-    def gatherAll(self, key, style='basic'):
-        """"""
-        d = self.callRemote('gather', 'all', key, style='basic')
-        return d.addCallback(pickle.loads)
-    
-    #IRemoteEngine multiplexer methods
     def pushSerialized(self, targets, **namespace):
         """Push a dict of keys and Serialized to the user's namespace."""
-        sns = {}
-        for k,v in namespace.iteritems():
-            sns[k] = serialized.serialize(v, k)
-        pns = pickle.dumps(sns, 2)
-        return self.callRemote('pushSerialized', targets, pns)
-    
-    def pushSerializedAll(self, **namespace):
-        """Push a dict of keys and Serialized to the user's namespace."""
-        sns = {}
-        for k,v in namespace.iteritems():
-            sns[k] = serialized.serialize(v, k)
-        pns = pickle.dumps(sns, 2)
-        return self.callRemote('pushSerialized', 'all', pns)
+        pns = pickle.dumps(namespace, 2)
+        d = self.callRemote('pushSerialized', targets, pns)
+        return d.addCallback(pickle.loads)
     
     def pullSerialized(self, targets, *keys):
         """Pull objects by key form the user's namespace as Serialized."""
         d = self.callRemote('pullSerialized', targets, *keys)
-        return d.addCallback(pickle.loads).addCallback(util.unpack)
+        return d.addCallback(pickle.loads)
     
-    def pullSerializedAll(self, *keys):
-        """Pull objects by key form the user's namespace as Serialized."""
-        d = self.callRemote('pullSerialized', 'all', *keys)
-        return d.addCallback(pickle.loads).addCallback(util.unpack)
-    
-    #IQueuedEngine multiplexer methods
     def clearQueue(self, targets):
         """Clears out pending commands in an engine's queue."""
-        return self.callRemote('clearQueue', targets)
+        d = self.callRemote('clearQueue', targets)
+        return d.addCallback(pickle.loads)
     
-    def clearQueueAll(self):
-        """Clears out pending commands in all queues."""
-        return self.callRemote('clearQueue', 'all')
-    
-    #IEngineCompleteBase multiplexer methods
     def execute(self, targets, lines):
         """Execute lines of Python code."""
-        return self.callRemote('execute', targets, lines)
-    
-    def executeAll(self, lines):
-        """Execute lines of Python code."""
-        return self.callRemote('execute', 'all', lines)
+        d = self.callRemote('execute', targets, lines)
+        return d.addCallback(pickle.loads)
     
     def push(self, targets, **namespace):
         """Push value into locals namespace with name key."""
         pns = pickle.dumps(namespace, 2)
-        return self.callRemote('push', targets, pns)
-    
-    def pushAll(self, **namespace):
-        """"""
-        pns = pickle.dumps(namespace, 2)
-        return self.callRemote('push', 'all', ppns)
+        d = self.callRemote('push', targets, pns)
+        return d.addCallback(pickle.loads)
     
     def pull(self, targets, *keys):
         """Gets an item out of the self.locals dict by key."""
         return self.callRemote('pull', targets, *keys).addCallback(pickle.loads)
-    
-    def pullAll(self, *keys):
-        """"""
-        return self.callRemote('pull', 'all', *keys).addCallback(pickle.loads)
     
     def pullNamespace(self, targets, *keys):
         """Gets a namespace dict from targets by keys."""
         d = self.callRemote('pullNamespace', targets, *keys)
         return d.addCallback(pickle.loads)
     
-    def pullNamespaceAll(self, *keys):
-        """"""
-        d = self.callRemote('pullNamespace', 'all', *keys)
-        return d.addCallback(pickle.loads)
-    
     def getResult(self, targets, i=None):
         """Get the stdin/stdout/stderr of command i."""
-        return self.callRemote('getResult', targets, i)
-    
-    def getResultAll(self, i=None):
-        """"""
-        return self.callRemote('getResult', 'all', i)
+        d = self.callRemote('getResult', targets, i)
+        return d.addCallback(pickle.loads)
     
     def reset(self, targets):
         """Reset the InteractiveShell."""
-        return self.callRemote('reset', targets)
-    
-    def resetAll(self):
-        """"""
-        return self.callRemote('reset', 'all')
+        d = self.callRemote('reset', targets)
+        return d.addCallback(pickle.loads)
     
     def status(self, targets):
         """Return the status of engines"""
-        return self.callRemote('status', targets)
-    
-    def statusAll(self):
-        """"""
-        return self.callRemote('status', 'all')
+        d = self.callRemote('status', targets)
+        return d.addCallback(pickle.loads)
     
     def kill(self, targets):
         """Kills the engine process"""
-        return self.callRemote('kill', targets)
-    
-    def killAll(self):
-        """"""
-        return self.callRemote('kill', 'all')
+        d = self.callRemote('kill', targets)
+        return d.addCallback(pickle.loads)
     
 
 components.registerAdapter(PBRemoteController, pb.RemoteReference, cs.IMultiEngine)
