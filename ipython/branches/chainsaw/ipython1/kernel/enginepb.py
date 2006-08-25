@@ -149,9 +149,7 @@ class PBEngineReferenceFromService(pb.Referenceable):
     
     def remote_getResult(self, i=None):
         #this is weird
-        d = defer.Deferred()
-        d1 = self.service.getResult(i)
-        d1.addBoth(lambda r: d.callback(pickle.dumps(r, 2)))
+        d = self.service.getResult(i).addCallback(pickle.dumps, 2)
         return d
     
     def remote_status(self):

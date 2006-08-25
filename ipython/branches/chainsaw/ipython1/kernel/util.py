@@ -11,6 +11,8 @@
 #*****************************************************************************
 
 from twisted.internet import defer
+from ipython1.kernel import serialized
+
 
 #from twisted.internet.defer.gatherresults/_parseDlist
 def parseResults(results):
@@ -30,7 +32,14 @@ def curry(f, *curryArgs, **curryKWargs):
     
     return curried
 
-#debugging callbacks
+#useful callbacks
 def printer(r):
     print r
     return r
+
+def unpack(serial):
+    if isinstance(serial, list):
+        return [s.unpack() for s in serial]
+    if isinstance(serial, Serialized):
+        return serial.unpack()
+    return serial
