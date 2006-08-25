@@ -1,4 +1,4 @@
-#!/usr/bin/ipython
+#!/usr/local/bin/python
 """timer test for controllerclient"""
 
 import time, sys
