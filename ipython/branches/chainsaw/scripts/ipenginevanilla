@@ -15,47 +15,42 @@ ipenginepb -p 9999 -c '127.0.0.1'
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-# MPI module should be loaded first
-
-import sys
-from IPython.genutils import get_home_dir
-
-ipython_path = get_home_dir() + '/.ipython'
-sys.path.append(ipython_path)
-try:
-    import mpi_init_module
-except ImportError:
-    mpi_module = None
-else:
-    mpi_module = mpi_init_module.mpi
-
 import sys
 from optparse import OptionParser
 
 from twisted.internet import reactor, error
-from twisted.spread import pb
 from twisted.python import log
 
-from ipython1.kernel import engineservice, enginevanilla
+from ipython1.kernel.engineservice import EngineService
+from ipython1.config.objects import EngineConfiguration
+from ipython1.config.loader import configure
 
+engineConfig = EngineConfiguration()
+configure(engineConfig)
 
-def main(controller, port, n):
+# MPI module should be loaded first
+
+mpi = None
+if engineConfig.mpiImportStatement:
+    try:
+        exec engineConfig.mpiImportStatement
+    except ImportError:
+        mpi = None
+
+def main(n):
     for i in range(n):
-        service = engineservice.EngineService(mpi=mpi_module)
-        reactor.connectTCP(controller, port,
-            enginevanilla.IVanillaEngineClientFactory(service))      
+        service = EngineService(mpi=mpi)
+        reactor.connectTCP(
+            engineConfig.listenForEnginesOn[0],
+            engineConfig.listenForEnginesOn[1],
+            engineConfig.engineClientProtocolInterface(service))      
         service.startService()
     reactor.run()
 
-def tryAgain(controller, port, n):
-    print "connection refused, trying again..."
-    time.sleep(1)
-    main(controller, port, n)
-
-def start(port=10201, controller = '127.0.0.1', n=1):
+def start(n=1):
     parser = OptionParser()
-    parser.set_defaults(port=port)
-    parser.set_defaults(controller=controller)
+    parser.set_defaults(port=engineConfig.listenForEnginesOn[1])
+    parser.set_defaults(controller=engineConfig.listenForEnginesOn[0])
     parser.set_defaults(n=n)
     parser.add_option("-p", "--port", type="int", dest="port",
         help="the TCP port the controller listens on")
@@ -64,9 +59,9 @@ def start(port=10201, controller = '127.0.0.1', n=1):
     parser.add_option("-n", "--num", type="int", dest="n",
         help="the number of engines to start")
     (options, args) = parser.parse_args()
-    print "Connecting the engine to %s:%i" % (options.controller,options.port)
     log.startLogging(sys.stdout)
-    main(options.controller, options.port, options.n)
+    engineConfig.update(listenForEnginesOn = (options.controller, options.port))
+    main(options.n)
     
 if __name__ == "__main__":
     start()
