@@ -23,7 +23,7 @@ from ipython1.test import multienginetest as met
 class BasicControllerServiceTest(met.MultiEngineTestCase):
     
     def setUp(self):
-        self.controller  = self.cs = cs.ControllerService()
+        self.controller  = self.rc = cs.ControllerService()
         self.controller.startService()
         self.engines = []
         self.controller.registerSerializationTypes(serialized.Serialized)

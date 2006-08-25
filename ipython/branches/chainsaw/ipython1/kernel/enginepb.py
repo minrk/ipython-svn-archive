@@ -117,45 +117,46 @@ class PBEngineReferenceFromService(pb.Referenceable):
         self.service.id = id
     
     def remote_execute(self, lines):
-        return self.service.execute(lines)
+        return self.service.execute(lines).addErrback(pickle.dumps, 2)
     
     def remote_push(self, pNamespace):
         namespace = pickle.loads(pNamespace)
-        return self.service.push(**namespace)
+        return self.service.push(**namespace).addErrback(pickle.dumps, 2)
     
     def remote_pushSerialized(self, pNamespace):
         namespace = pickle.loads(pNamespace)
-        return self.service.pushSerialized(**namespace)
+        d = self.service.pushSerialized(**namespace)
+        return d.addErrback(pickle.dumps, 2)
     
     def remote_pullSerialized(self, *keys):
         d = self.service.pullSerialized(*keys)
-        d.addCallback(pickle.dumps, 2)
-        return d
-    
+        return d.addBoth(pickle.dumps, 2)
+        
     def remote_pull(self, *keys):
         d = self.service.pull(*keys)
-        d.addCallback(pickle.dumps, 2)
-        return d
+        return d.addBoth(pickle.dumps, 2)
+        
     
     def remote_pullNamespace(self, *keys):
         d = self.service.pullNamespace(*keys)
-        return d.addCallback(pickle.dumps, 2)
+        return d.addBoth(pickle.dumps, 2)
     
     def remote_reset(self):
-        return self.service.reset()
+        return self.service.reset().addErrback(pickle.dumps, 2)
 
     def remote_kill(self):
-        return self.service.kill()
+        return self.service.kill().addErrback(pickle.dumps, 2)
     
     def remote_getResult(self, i=None):
         #this is weird
-        d = self.service.getResult(i).addCallback(pickle.dumps, 2)
-        return d
+        return self.service.getResult(i).addErrback(pickle.dumps, 2)
+        
     
     def remote_status(self):
         # return None
-        d = self.service.status()
-        return d.addCallback(pickle.dumps, 2)
+        return self.service.status().addErrback(pickle.dumps, 2)
+    
+
 
 components.registerAdapter(PBEngineReferenceFromService,
                            EngineService,
@@ -190,25 +191,26 @@ class EngineFromReference(object):
     
     def execute(self, lines):
         """Execute lines of Python code."""
-        return self.callRemote('execute', lines)
+        return self.callRemote('execute', lines).addCallback(self.checkReturn)
     
     def pushSerialized(self, **namespace):
         """Put value into locals namespace with name key."""
-        return self.callRemote('pushSerialized', pickle.dumps(namespace, 2))
+        d = self.callRemote('pushSerialized', pickle.dumps(namespace, 2))
+        return d.addCallback(self.checkReturn)
     
     def push(self, **namespace):
         d = self.callRemote('push', pickle.dumps(namespace, 2))
-        return d
+        return d.addCallback(self.checkReturn)
     
     def pullSerialized(self, *keys):
         """Gets an item out of the self.locals dict by key."""
-        d = self.callRemote('pullSerialized', *keys).addCallback(pickle.loads)
-        return d
+        d = self.callRemote('pullSerialized', *keys)
+        return d.addCallback(pickle.loads)
     
     def pull(self, *keys):
         """Gets an item out of the self.locals dict by key."""
-        d = self.callRemote('pull', *keys).addCallback(pickle.loads)
-        return d
+        d = self.callRemote('pull', *keys)
+        return d.addCallback(pickle.loads)
     
     def pullNamespace(self, *keys):
         """Gets an item out of the self.locals dict by key."""
@@ -216,7 +218,7 @@ class EngineFromReference(object):
     
     def reset(self):
         """Reset the InteractiveShell."""
-        return self.callRemote('reset')
+        return self.callRemote('reset').addCallback(self.checkReturn)
 
     def kill(self):
         """Reset the InteractiveShell."""
@@ -225,12 +227,19 @@ class EngineFromReference(object):
     
     def getResult(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
-        return self.callRemote('getResult', i).addCallback(pickle.loads)
+        return self.callRemote('getResult', i).addCallback(self.checkReturn)
     
     def status(self):
         """get the status of the engine"""
-        return self.callRemote('status').addCallback(pickle.loads)
+        return self.callRemote('status').addCallback(self.checkReturn)
     
+    def checkReturn(self, r):
+        if isinstance(r, str):
+            try: 
+                return pickle.loads(r)
+            except pickle.PickleError: 
+                pass
+        return r
 
 components.registerAdapter(EngineFromReference,
                         pb.RemoteReference,

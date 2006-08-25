@@ -5,11 +5,19 @@ from ipython1.test import util
 
 class MultiEngineTestCase(util.DeferredTestCase):
     
+    def setUp(self):
+        """self.rc must implement controllerservice.IRemoteEngine.
+        self.controller must implement IMultiEngine."""
+        raise(NotImplementedError("Tests must override this method"))
+    
+    def tearDown(self):
+        raise(NotImplementedError("Tests must override this method"))
+    
     def addEngine(self, n=1):
         for i in range(n):
             e = es.completeEngine(es.EngineService())
             e.startService()
-            self.cs.registerEngine(e, None)
+            self.rc.registerEngine(e, None)
             self.engines.append(e)
     
     def testDeferreds(self):

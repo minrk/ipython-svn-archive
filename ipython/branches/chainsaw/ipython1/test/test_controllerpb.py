@@ -20,20 +20,20 @@ from twisted.internet import reactor
 from twisted.spread import pb
 
 from ipython1.kernel import controllerservice as cs, serialized
-from ipython1.kernel import controllerpb
+from ipython1.kernel import controllerpb, util
 from ipython1.test import multienginetest as met
 
 class BasicControllerPBTest(met.MultiEngineTestCase):
     
     def setUp(self):
-        self.cs = cs.ControllerService()
-        self.cs.startService()
-        self.sf = pb.PBServerFactory(controllerpb.IPBController(self.cs))
+        self.rc = cs.ControllerService()
+        self.rc.startService()
+        self.sf = pb.PBServerFactory(controllerpb.IPBController(self.rc))
         self.s = reactor.listenTCP(10111, self.sf)
         self.cf = pb.PBClientFactory()
         self.c = reactor.connectTCP('127.0.0.1', 10111, self.cf)
         self.engines = []
-        self.cs.registerSerializationTypes(serialized.Serialized)
+        self.rc.registerSerializationTypes(serialized.Serialized)
         self.addEngine(1)
         return self.cf.getRootObject().addCallback(self.gotRoot)
     
@@ -41,7 +41,7 @@ class BasicControllerPBTest(met.MultiEngineTestCase):
         self.controller = cs.IMultiEngine(root)
     
     def tearDown(self):
-        self.cs.stopService()
+        self.rc.stopService()
         for e in self.engines:
             e.stopService()
         self.c.disconnect()

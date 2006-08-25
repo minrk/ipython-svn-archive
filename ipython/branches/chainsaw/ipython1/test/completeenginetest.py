@@ -123,8 +123,9 @@ class CompleteEngineTestCase(DeferredTestCase):
         return d.addErrback(self.catchNotImplemented)
     
     def testGetResult(self):
-        #d = self.assertDeferredRaises(self.engine.getResult(),IndexError)
-        d = self.engine.execute("a = 5")
+        d = self.engine.getResult().addErrback(self.catchNotImplemented)
+        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
+        d.addCallback(lambda _:self.engine.execute("a = 5"))
         d.addCallback(lambda _: self.engine.getResult())
         d = self.assertDeferredEquals(d, (self.engine.id, 0,"a = 5","",""))
         d.addCallback(lambda _: self.engine.getResult(0))

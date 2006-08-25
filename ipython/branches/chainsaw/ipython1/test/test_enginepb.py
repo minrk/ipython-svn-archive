@@ -29,7 +29,7 @@ from twisted.spread import pb
 
 from ipython1.test import util
 from ipython1.test  import completeenginetest as cet
-from ipython1.kernel import engineservice as es, enginepb, controllerservice as cs
+from ipython1.kernel import engineservice as es, enginepb, controllerservice as cs, util
 
 class EnginePBTest(cet.CompleteEngineTestCase):
 #class EnginePBTest(util.DeferredTestCase):
