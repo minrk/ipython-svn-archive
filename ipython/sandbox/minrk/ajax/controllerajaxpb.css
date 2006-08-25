@@ -1,0 +1,49 @@
+#controller {
+	text-align: center;
+    font-family: monospace;
+    margin-top: 2em;
+    margin-left: auto;
+    margin-right: auto;
+}
+#command {
+	text-align: left;
+    font-family: monospace;
+    margin-top: 2em;
+    margin-left: auto;
+    margin-right: auto;
+}
+#commandout{
+/*	border: 1px solid #999;*/
+	text-align: left;
+    font-family: monospace;
+    margin-top: 2em;
+}
+#status{
+    border: 0px solid #999;	
+	text-align: center;				
+}
+#statuselement{
+    border: 1px solid #999;	
+	text-align: left;	
+}
+#button {
+    border: 1px solid #999;
+}
+#idfield {
+    border: 1px solid #999;
+}
+#idform {
+    border: 0px solid #999;
+}
+#stdin{
+	color: green;
+	font-weight: bold;
+}
+#stdout{
+	color: blue;
+	font-weight: bold;
+}
+#stderr{
+	color: red;
+	font-weight: bold;
+}

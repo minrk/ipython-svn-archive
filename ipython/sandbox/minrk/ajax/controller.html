@@ -64,7 +64,7 @@
 			ids = getElement("idfield").value
 			getStatus(ids)
 		}
-		submitcommand = function(cmd, targets, args){
+		submitCommand = function(cmd, targets, args){
 			d = server.callRemote(cmd, targets, args)
 			d.addCallback(commandOutput)
 		}
@@ -89,7 +89,7 @@
     </head>
     <body>
 		<table id="command" width="1"><tr><td>cmd</td><td>targets</td><td>args</td></tr>
-			<tr><form id="cmdform" name="cmdform" action="javascript: submitcommand(cmd.options[cmd.selectedIndex].value, targets.value, args.value);"><td>
+			<tr><form id="cmdform" name="cmdform" action="javascript: submitCommand(cmd.options[cmd.selectedIndex].value, targets.value, args.value);"><td>
 				<select name="cmd" id="cmd" onchange="changeCmd(this.options[cmd.selectedIndex].value);">
 					<option value="local">local</option>
 					<option value="globals">globals</option>

@@ -51,9 +51,9 @@ def main(port, host):
         assert rc.pull(ids,'q') == (q,)*len(ids) or len(ids) is 1,"assert rc.pull(ids,'q') == (q,)*len(ids)"
         rc['z'] = 'test'
         rc[1]['t'] = [1,2,3]
-        rc[0:5]['r'] = 'asdf'
-        rc[0:4:2]['asdf'] = 4
-        rc[1:4][1]['qwert'] = 3
+        rc[0:max(ids)]['r'] = 'asdf'
+        rc[0:max(ids):2]['asdf'] = 4
+        rc[1:max(ids)][1]['qwert'] = 3
     except Exception, e:
        print "push/pull FAIL: ", e
     else:
