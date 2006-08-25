@@ -6,7 +6,7 @@ from twisted.python import components
 from twisted.spread import pb
 from zope.interface import Interface, implements
 
-from ipython1.kernel import controllerservice as cs, util, serialized
+from ipython1.kernel import controllerservice as cs
 
 class IPBController(Interface):
     """Perspective Broker interface to controller.  Same as IMultiEngine, but

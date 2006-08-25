@@ -33,7 +33,7 @@ from twisted.internet import defer
 from zope.interface import Interface, implements
 
 from ipython1.kernel.engineservice import *
-from ipython1.kernel import controllerservice, serialized
+from ipython1.kernel import controllerservice
 
 
 class PBEngineClientFactory(pb.PBClientFactory):
