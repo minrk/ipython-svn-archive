@@ -68,7 +68,7 @@ class ClientConfiguration(Configuration):
     
     configFiles = ['client_config.py']
     
-    clientModule = controllerclient
+    RemoteController = controllerclient.RemoteController
     connectToControllerOn = ('127.0.0.1', clientVanillaPort)
     maxMessageSize = maxMesageSize
 
