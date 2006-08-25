@@ -1,7 +1,13 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-Configuration objects
+Configuration objects.
+
+I don't know how to deal with config objects that have the same attributes.  Solutions:
+
+- Make sure each config object has uniquely named attributes.
+- Have a separate config file for each config object.  This is what I do now.
+
 """
 
 # Imports
@@ -19,22 +25,31 @@ from ipython1.kernel import \
 
 class Configuration(object):
     
+    configFiles = ['ipython1rc.py']
+    
     def update(self, **kwargs):
         for k, v in kwargs.iteritems():
             if hasattr(self, k):
+                print "Setting %s to: " % k + repr(v)
                 setattr(self, k, v)
             else:
-                raise AttributeError("Configration object does not have attribute: " + k)
+                pass
+                #raise AttributeError("Configuration object does not have attribute: " + k)
+
+    def addConfigFile(self, filename):
+        self.configFiles.append(filename)
 
 # Global defautls
     
 maxMesageSize = 999999
 enginePort = 10201
+clientVanillaPort = 10105
+listenForVanillaClientsOn = ('', 10105)
 
 # Engine configration
 
 class EngineConfiguration(Configuration):
-    enginePort = enginePort
+    connectToControllerOn = ('127.0.0.1', enginePort)
     engineClientProtocolInterface = IVanillaEngineClientFactory
     maxMessageSize = maxMesageSize
     mpiImportStatement = ''
@@ -42,16 +57,19 @@ class EngineConfiguration(Configuration):
 # Controller configruation
     
 class ControllerConfiguration(Configuration):
-    enginePort = enginePort
     engineServerProtocolInterface = IVanillaEngineServerFactory
-    clientInterfaces = [(IVanillaControllerFactory, 10105)]
+    listenForEnginesOn  = ('', enginePort)
+    clientInterfaces = [(IVanillaControllerFactory, ('', clientVanillaPort))]
     maxMessageSize = maxMesageSize
     
 # Client configuration
 
 class ClientConfiguration(Configuration):
+    
+    configFiles = ['client_config.py']
+    
     clientModule = controllerclient
-    controllerPort = 10105
+    connectToControllerOn = ('127.0.0.1', clientVanillaPort)
     maxMessageSize = maxMesageSize
 
 
