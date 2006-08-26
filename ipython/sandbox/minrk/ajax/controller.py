@@ -41,6 +41,7 @@ class IAjaxController(Interface):
     
     def globals(targets=None, args=None):
         """globals"""
+    
 
 class Controller(object):
     def __init__(self):

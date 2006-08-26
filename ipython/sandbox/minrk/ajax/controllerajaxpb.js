@@ -17,6 +17,7 @@ ControllerModule.ControllerWidget.method(
     'submitCommand',
     function(self, cmd, targets, args){
 /*        alert(cmd);*/
+		self.commandOutput(cmd+'('+targets+','+args+') pending...');
 		d = self.callRemote(cmd, targets, args);
 /*		d.addCallback(self.commandOutput);*/
 	});
@@ -47,20 +48,21 @@ ControllerModule.ControllerWidget.method(
 ControllerModule.StatusWidget = {};
 ControllerModule.StatusWidget = Nevow.Athena.Widget.subclass('ControllerModule.StatusWidget');
 
+ControllerModule.StatusWidget.method(
+    'getStatus',
+    function(self, id) {
+        d = self.callRemote('status', id);
+    });
 
-/*ControllerModule.StatusWidget.methods(
-    self.ids = 'all';
-	self.command = "execute";
-    function getStatus(self, id) {
-        d = server.callRemote('status', id);
-        d.addCallback(updateStatus);
-    }
-    function updateStatus(self, expression) {
-        getElement('status').innerHTML = expression;
-    }
-	function refreshStatus(self){
-		ids = getElement("idfield").value
-		getStatus(ids)
-	}
-);
-*/
+ControllerModule.StatusWidget.method(
+    'refreshStatus',
+    function(self) {
+        var idform = getElement('idform');
+        self.getStatus(idform.idfield.value);
+    });
+
+ControllerModule.StatusWidget.method(
+    'updateStatus',
+    function(self, expression) {
+        getElement('statusout').innerHTML = expression;
+    });

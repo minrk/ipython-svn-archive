@@ -17,6 +17,121 @@ myPackage = athena.JSPackage({
 
 athena.jsDeps.mapping.update(myPackage.mapping)
 
+def statusListToHTML(statusList):
+    s = "<table id='status'><tr><td><b>id</b></td><td><b>pending</b></td>\
+    <td><b>queue</b></td><td><b>history</b></td><td><b>locals</b></td></tr>\n"
+    for r in statusList:
+        s += '<tr><td>%i</td>'%r[0]
+        s += statusToHTML(r[1])
+        s += '</tr>'
+    return s+'</table>'
+
+def statusToHTML(status):
+    s ="<td  id='statuselement'>"
+    if not status.get('pending', None):
+        s+= "&nbsp"
+    else:
+        s += "%s<br>" %status['pending']
+    s+="</td>\n<td id='statuselement'>"
+    if not status.get('queue', None):
+        s+= "&nbsp"
+    else:
+        for value in status['queue']:
+            s += "%s<br>" %value
+    s+="</td>\n<td id='statuselement'>"
+    if not status.get('history', None):
+        s+= "&nbsp"
+    else:
+        for cmd in status['history'].values():
+            s += resultToHTML(cmd)+'<br>\n'
+    s+="</td>\n<td id='statuselement'>"
+    if not status.get('engine', None):
+        s+= "&nbsp"
+    else:
+        s+= dictToHTML(status['engine'])
+    return s+'</td>\n'
+
+def resultToHTML(cmd):
+    s=''
+    if isinstance(cmd, Failure):
+        s+="Failure"
+    else:
+        target = cmd[0]
+        cmd_num = cmd[1]
+        cmd_stdin = cmd[2]
+        cmd_stdout = cmd[3][:-1]
+        cmd_stderr = cmd[4][:-1]
+        s += "<a id='stdin'>[%i]In [%i]:</a> %s<br>" % (target, cmd_num, cmd_stdin)
+        if cmd_stdout:
+            s += "<a id='stdout'>[%i]Out[%i]:</a> %s<br>" % (target, cmd_num, cmd_stdout)
+        if cmd_stderr:
+            s += "<a id='stderr'>[%i]Err[%i]:</a><br> %s<br>" % (target, cmd_num, cmd_stderr)
+    return s
+
+def dictToHTML(d):
+    s=''
+    if not isinstance(d, dict):
+        return str(d)
+    for key, value in d.iteritems():
+        s += "<b>%s</b> = %s" %(key, value)
+        s += '<br>\n'
+    return s
+
+
+
+class StatusElement(athena.LiveElement):
+    jsClass = u'ControllerModule.StatusWidget'
+    
+    docFactory = loaders.stan(tags.div(render=tags.directive('liveElement'))[
+        tags.table(id="statuswidget")[
+            tags.tr[tags.td[tags.form(id="idform",
+                action="""javascript:
+                var idform = getElement('idform');
+                var w = Nevow.Athena.Widget.get(idform);
+                w.refreshStatus();
+                """)[
+                tags.input(id="idfield", type="text", value="all"),
+                tags.br,
+                tags.input(type="submit", value="refresh status")
+            ]]],
+            tags.tr[tags.td(id="statusout")["click refresh status"]]
+        ]
+    ])
+    
+    def __init__(self, controller):
+        self.controller = controller
+    
+    def parseTargets(self, targets):
+        if targets == 'all':
+            return 'all'
+        try:
+            return map(int,targets.split(','))
+        except ValueError:
+            return False
+    
+    def status(self, targets):
+        idlist = self.parseTargets(targets)
+        if idlist is False:
+            return self.fail()
+        d = self.controller.status(idlist)
+        return d.addCallbacks(self.statusOK, self.fail)
+    
+    athena.expose(status)
+    
+    def statusOK(self, resultList):
+        return self.finish(statusListToHTML(resultList))
+    
+    def refreshStatus(self):
+        return self.callRemote('refreshStatus')
+    
+    def finish(self, s):
+        return self.callRemote('updateStatus', unicode(s))
+    
+    def fail(self, f=None):
+        return self.finish('Failure')
+    
+
+
 class ControllerElement(athena.LiveElement):
     jsClass = u'ControllerModule.ControllerWidget'
     
@@ -53,6 +168,15 @@ class ControllerElement(athena.LiveElement):
     
     def __init__(self, controller):
         self.controller = controller
+        self._notifiers = []
+    
+    def notify(self):
+        for n in self._notifiers:
+            n()
+    
+    def addNotifier(self, n):
+        assert callable(n), 'notifiers must be callable'
+        self._notifiers.append(n)
     
     def parseTargets(self, targets):
         if targets == 'all':
@@ -65,43 +189,37 @@ class ControllerElement(athena.LiveElement):
     def execute(self, targets, lines):
         idlist = self.parseTargets(targets)
         if idlist is False:
-            return self.Fail(None)
-        d = self.controller.execute(idlist, lines)
-        return d.addCallbacks(self.executeOK, self.Fail)
+            return self.fail(None)
+        d = self.controller.execute(idlist, str(lines))
+        return d.addCallbacks(self.executeOK, self.fail)
     
     athena.expose(execute)
     
     def executeOK(self, resultList):
         s = ''
         for r in resultList:
-            s += self.resultToHTML(r)
-        self.callRemote('commandOutput', unicode(s))
+            s += resultToHTML(r)
+        self.finish(s)
     
     def status(self, targets, _):
         idlist = self.parseTargets(targets)
         if not idlist:
-            return self.Fail(None)
+            return self.fail(None)
         d = self.controller.status(idlist)
-        return d.addCallbacks(self.statusOK, self.Fail)
+        return d.addCallbacks(self.statusOK, self.fail)
     
     athena.expose(status)
     
     def statusOK(self, resultList):
-        s = "<table id='status'><tr><td><b>id</b></td>\
-        <td><b>queue</b></td><td><b>history</b></td><td><b>locals</b></td></tr>\n"
-        for r in resultList:
-            s += '<tr><td>%i</td>'%r[0]
-            s += self.statusToHTML(r[1])
-            s += '</tr>'
-        return self.callRemote('commandOutput', unicode(s+'</table>'))
+        return self.finish(statusListToHTML(resultList))
     
     def pull(self, targets, keystr):
         keys = map(str, keystr.split(','))
         idlist = self.parseTargets(targets)
         if not idlist or not keys:
-            return self.Fail(None)
+            return self.fail(None)
         d = self.controller.pullNamespace(idlist, *keys)
-        return d.addCallbacks(self.pullOK, self.Fail)
+        return d.addCallbacks(self.pullOK, self.fail)
     
     athena.expose(pull)
     
@@ -109,85 +227,39 @@ class ControllerElement(athena.LiveElement):
         s = ''
         print resultList
         for r in resultList:
-            s += self.dictToHTML(r)
-        return self.callRemote('commandOutput', unicode(s))
+            s += dictToHTML(r)
+        return self.finish(s)
     
     def reset(self, targets, _):
         idlist = self.parseTargets(targets)
         if not idlist:
-            return self.Fail(None)
+            return self.fail(None)
         d = self.controller.reset(idlist)
-        return d.addCallbacks(self.resetOK, self.Fail)
+        return d.addCallbacks(self.resetOK, self.fail)
     
     athena.expose(reset)
     
     def resetOK(self, r):
-        return self.callRemote('commandOutput', u'')
+        return self.finish('')
     
     def kill(self, targets, _):
         idlist = self.parseTargets(targets)
         if not idlist:
-            return self.Fail(None)
+            return self.fail(None)
         d = self.controller.kill(idlist)
-        return d.addCallbacks(self.killOK, self.Fail)
+        return d.addCallbacks(self.killOK, self.fail)
     
     athena.expose(kill)
     
     def killOK(self, r):
-        return self.callRemote('commandOutput', u'')
+        return self.finish('')
     
-    def Fail(self, f):
-        self.callRemote('commandOutput', u'Failure')    
+    def finish(self, s):
+        self.notify()
+        return self.callRemote('commandOutput', unicode(s))
     
-    def statusToHTML(self, status):
-        s ="<td  id='statuselement'>"
-        if not status.get('queue', None):
-            s+= "&nbsp"
-        else:
-            for value in status['queue']:
-                s += "%s<br>" %value
-        s+="</td>\n<td id='statuselement'>"
-        if not status.get('history', None):
-            s+= "&nbsp"
-        else:
-            for cmd in status['history'].values():
-                s += self.resultToHTML(cmd)+'<br>\n'
-        s+="</td>\n<td id='statuselement'>"
-        if not status.get('engine', None):
-            s+= "&nbsp"
-        else:
-            s+= self.dictToHTML(status['engine'])
-        return s+'</td>\n'
-    
-    def resultToHTML(self, cmd):
-        s=''
-        if isinstance(cmd, Failure):
-            s+="Failure"
-        else:
-            target = cmd[0]
-            cmd_num = cmd[1]
-            cmd_stdin = cmd[2]
-            cmd_stdout = cmd[3][:-1]
-            cmd_stderr = cmd[4][:-1]
-            s += "<a id='stdin'>[%i]In [%i]:</a> %s<br>" % (target, cmd_num, cmd_stdin)
-            if cmd_stdout:
-                s += "<a id='stdout'>[%i]Out[%i]:</a> %s<br>" % (target, cmd_num, cmd_stdout)
-            if cmd_stderr:
-                s += "<a id='stderr'>[%i]Err[%i]:</a><br> %s<br>" % (target, cmd_num, cmd_stderr)
-        return s
-    
-    def dictToHTML(self, d):
-        s=''
-        if not isinstance(d, dict):
-            return str(d)
-        for key, value in d.iteritems():
-            s += "<b>%s</b> = %s" %(key, value)
-            s += '<br>\n'
-        return s
-        
-    def handleOutput(self, result):
-        us = self.resultToHTML(result)
-        return self.callRemote('handleOutput', us)
+    def fail(self, f=None):
+        return self.finish('Failure')
     
 
 class ControllerPage(athena.LivePage):
@@ -212,12 +284,13 @@ class ControllerPage(athena.LivePage):
     def render_controllerElements(self, ctx, data):
         f = ControllerElement(self.controller)
         f.setFragmentParent(self)
-        return ctx.tag[f]
-        
-        g = StatusElement()
+        g = StatusElement(self.controller)
         g.setFragmentParent(self)
+        f.addNotifier(g.refreshStatus)
+        reactor.callLater(1, g.refreshStatus)
         return ctx.tag[f, g]
     
+
 class ControllerRoot(object):
     implements(inevow.IResource)
     
