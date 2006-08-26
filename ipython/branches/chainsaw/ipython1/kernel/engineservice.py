@@ -123,8 +123,8 @@ class EngineService(service.Service):
     
     id = None
     
-    def __init__(self, mpi=None):
-        self.shell = InteractiveShell()
+    def __init__(self, shellClass, mpi=None):
+        self.shell = shellClass()
         self.mpi = mpi
         if self.mpi is not None:
             log.msg("MPI started with rank = %i and size = %i" % 
@@ -350,7 +350,8 @@ def queuedMethod(self%s%s):
     
     def status(self):
         """Get the status {queue, history} of the engine"""
-        dikt = {'queue':map(repr,self.queued), 'history':self.history}
+        dikt = {'queue':map(repr,self.queued), 'pending':repr(self.currentCommand),
+            'history':self.history}
         if self.keepUpToDate:
             dikt['engine'] = self.engineStatus
         return defer.succeed(dikt)

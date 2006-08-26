@@ -101,6 +101,7 @@ class IPBEngine(Interface):
     
     def remote_status():
         """get status from remote engine"""
+    
 
 class PBEngineReferenceFromService(pb.Referenceable):
     #object necessary for id property
@@ -135,7 +136,6 @@ class PBEngineReferenceFromService(pb.Referenceable):
     def remote_pull(self, *keys):
         d = self.service.pull(*keys)
         return d.addBoth(pickle.dumps, 2)
-        
     
     def remote_pullNamespace(self, *keys):
         d = self.service.pullNamespace(*keys)
@@ -143,17 +143,14 @@ class PBEngineReferenceFromService(pb.Referenceable):
     
     def remote_reset(self):
         return self.service.reset().addErrback(pickle.dumps, 2)
-
+    
     def remote_kill(self):
         return self.service.kill().addErrback(pickle.dumps, 2)
     
     def remote_getResult(self, i=None):
-        #this is weird
         return self.service.getResult(i).addErrback(pickle.dumps, 2)
-        
     
     def remote_status(self):
-        # return None
         return self.service.status().addErrback(pickle.dumps, 2)
     
 

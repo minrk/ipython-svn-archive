@@ -22,9 +22,13 @@ def configure(configObject):
             definedAttributes = {}
             exec fileContents in definedAttributes
             configObject.update(**definedAttributes)
+        else:
+            print "could not load config file"
             
 def resolveFilePath(filename):
     resolvedFile = None
+    if os.path.isfile(filename):
+        return filename
     tryPath = get_home_dir() + '/.ipython/' + filename
     if os.path.isfile(tryPath):
         resolvedFile = tryPath

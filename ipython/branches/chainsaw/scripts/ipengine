@@ -40,7 +40,7 @@ if engineConfig.mpiImportStatement:
 def main(n):
     log.startLogging(sys.stdout)
     for i in range(n):
-        service = EngineService(mpi=mpi)
+        service = EngineService(engineConfig.engineShell, mpi=mpi)
         reactor.connectTCP(
             engineConfig.connectToControllerOn[0],
             engineConfig.connectToControllerOn[1],
@@ -53,13 +53,19 @@ def start(n=1):
     parser.set_defaults(port=engineConfig.connectToControllerOn[1])
     parser.set_defaults(controller=engineConfig.connectToControllerOn[0])
     parser.set_defaults(n=n)
+    parser.set_defaults(configfile = '')
     parser.add_option("-p", "--port", type="int", dest="port",
         help="the TCP port the controller listens on")
     parser.add_option("-i", "--controller", type="string", dest="controller",
         help="the address of the controller")
     parser.add_option("-n", "--num", type="int", dest="n",
         help="the number of engines to start")
+    parser.add_option("-f", "--configfile", type="string", dest="configfile",
+        help="an additional Config File")
     (options, args) = parser.parse_args()
+    if options.configfile:
+        engineConfig.addConfigFile(options.configfile)
+        configure(engineConfig)
     engineConfig.update(connectToControllerOn = (options.controller, options.port))
     main(options.n)
     

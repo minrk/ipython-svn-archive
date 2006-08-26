@@ -45,11 +45,17 @@ def start():
     parser = OptionParser()
     parser.set_defaults(eport=controllerConfig.listenForEnginesOn[1])
     parser.set_defaults(eip=controllerConfig.listenForEnginesOn[0])
+    parser.set_defaults(configfile = '')
     parser.add_option("-p", "--engineport", type="int", dest="eport",
         help="the TCP port the controller will listen on for engine connections")
     parser.add_option("-i", "--engineip", type="string", dest="eip",
         help="the TCP ip address the controller will listen on for engine connections")
+    parser.add_option("-f", "--configfile", type="string", dest="configfile",
+        help="an additional Config File")
     (options, args) = parser.parse_args()
+    if options.configfile:
+        controllerConfig.addConfigFile(options.configfile)
+        configure(controllerConfig)
     controllerConfig.update(listenForEnginesOn = (options.eip, options.eport))
     main()
     

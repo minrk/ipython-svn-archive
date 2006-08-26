@@ -21,6 +21,8 @@ from ipython1.kernel.controllervanilla import \
 from ipython1.kernel import \
     controllerclient
 
+from ipython1.core.shell import InteractiveShell
+
 # A base class for configuration objects
 
 class Configuration(object):
@@ -39,18 +41,18 @@ class Configuration(object):
     def addConfigFile(self, filename):
         self.configFiles.append(filename)
 
-# Global defautls
+# Global defaults
     
 maxMesageSize = 999999
 enginePort = 10201
 clientVanillaPort = 10105
-listenForVanillaClientsOn = ('', 10105)
 
 # Engine configration
 
 class EngineConfiguration(Configuration):
     connectToControllerOn = ('127.0.0.1', enginePort)
     engineClientProtocolInterface = IVanillaEngineClientFactory
+    engineShell = InteractiveShell
     maxMessageSize = maxMesageSize
     mpiImportStatement = ''
     

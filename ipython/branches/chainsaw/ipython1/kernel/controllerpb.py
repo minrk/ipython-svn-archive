@@ -144,7 +144,15 @@ class PBControllerRootFromService(pb.Root):
 components.registerAdapter(PBControllerRootFromService,
             cs.ControllerService, IPBController)
 
-
+class IPBControllerFactory(Interface):
+    pass
+    
+def PBServerFactoryFromService(service):
+    return pb.PBServerFactory(IPBController(service))
+    
+components.registerAdapter(PBServerFactoryFromService,
+            cs.ControllerService, IPBControllerFactory)
+        
 
 #END stuff that goes on the controller
 
