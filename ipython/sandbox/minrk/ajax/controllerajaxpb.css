@@ -1,4 +1,15 @@
-#statuswidget {
+#resultOut{
+    border: 1px solid #999;
+    margin-top: 2em;
+    margin-left: auto;
+    margin-right: auto;
+	overflow: auto;
+	width: 480px;
+	height: 420px;
+	text-align: left;
+    font-family: monospace;
+}
+#statusWidget {
 	text-align: center;
     font-family: monospace;
     margin-top: 2em;
@@ -12,7 +23,7 @@
     margin-left: auto;
     margin-right: auto;
 }
-#commandout{
+#commandOut{
 /*	border: 1px solid #999;*/
 	text-align: left;
     font-family: monospace;
@@ -22,7 +33,7 @@
     border: 0px solid #999;	
 	text-align: center;				
 }
-#statuselement{
+#statusElement{
     border: 1px solid #999;	
 	text-align: left;	
 }
