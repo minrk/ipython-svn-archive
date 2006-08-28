@@ -4,38 +4,46 @@
     margin-left: auto;
     margin-right: auto;
 	overflow: auto;
-	width: 480px;
-	height: 420px;
+	width: 400px;
+	height: 24em;
 	text-align: left;
     font-family: monospace;
-}
-#statusWidget {
-	text-align: center;
-    font-family: monospace;
-    margin-top: 2em;
-    margin-left: auto;
-    margin-right: auto;
 }
 #command {
 	text-align: left;
     font-family: monospace;
-    margin-top: 2em;
+    margin-top: 1em;
     margin-left: auto;
     margin-right: auto;
 }
 #commandOut{
-/*	border: 1px solid #999;*/
 	text-align: left;
+    font-family: monospace;
+/*    margin-top: 1em;*/
+    overflow: auto;
+    height: 10em;
+
+}
+#statusWidget {
+	text-align: center;
+	vertical-align: top;	
     font-family: monospace;
     margin-top: 2em;
 }
-#status{
-    border: 0px solid #999;	
+#statusOut{
 	text-align: center;				
+	overflow: auto;
+	height: 400px;
+	width: 360px;
+}
+#statusTable{
+    text-align: center;
+	vertical-align: top;	
 }
 #statusElement{
     border: 1px solid #999;	
-	text-align: left;	
+	text-align: left;
+	vertical-align: top;	
 }
 #button {
     border: 1px solid #999;

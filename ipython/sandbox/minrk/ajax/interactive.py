@@ -70,12 +70,7 @@ class AjaxShellResource(athena.LivePage):
     """
     addSlash = True
     html = os.path.abspath(os.path.curdir)+'/interactive.html'
-    docFactory = loaders.xmlfile(html)
-    reactor.callLater(5, self.testF)
-    
-    def testF(self):
-        self.callRemote()
-    
+    docFactory = loaders.xmlfile(html)    
 
 if __name__ == '__main__':
 

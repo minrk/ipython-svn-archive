@@ -6,10 +6,12 @@ from twisted.internet import protocol, reactor
 from twisted.python.failure import Failure
 from zope.interface import implements
 
-
 from ipython1.kernel.results import TCPResultsProtocol
 from ipython1.kernel.controllerclient import RemoteController
 
+from controllerajaxpb import ResultElement
+
+basedir = os.path.abspath(os.path.curdir)
 
 class TCPAJAXResultsProtocol(TCPResultsProtocol):
     
@@ -75,82 +77,24 @@ class TCPAJAXResultsFactory(protocol.ServerFactory):
             pass
     
 myPackage = athena.JSPackage({
-    'ResultModule': os.path.abspath(os.path.curdir)+'/resultmodule.js'
+    'ControllerModule': basedir+'/controllerajaxpb.js'
     })
 
 athena.jsDeps.mapping.update(myPackage.mapping)
 
-class ResultElement(athena.LiveElement):
-    jsClass = u'ResultModule.ResultWidget'
-    
-    docFactory = loaders.stan([tags.div(render=tags.directive('liveElement')),
-        tags.div(id="output")])
-    
-    def resultToHTML(self, cmd):
-        s=''
-        if isinstance(cmd, Failure):
-            s+="Failure"
-        else:
-            target = cmd[0]
-            cmd_num = cmd[1]
-            cmd_stdin = cmd[2]
-            cmd_stdout = cmd[3][:-1]
-            cmd_stderr = cmd[4][:-1]
-            s += "<a id='stdin'>[%i]In [%i]:</a> %s<br>" % (target, cmd_num, cmd_stdin)
-            if cmd_stdout:
-                s += "<a id='stdout'>[%i]Out[%i]:</a> %s<br>" % (target, cmd_num, cmd_stdout)
-            if cmd_stderr:
-                s += "<a id='stderr'>[%i]Err[%i]:</a><br> %s<br>" % (target, cmd_num, cmd_stderr)
-        return unicode(s)
-    
-    def handleResult(self, result):
-        us = self.resultToHTML(result)
-        return self.callRemote('handleResult', us)
-    
-
-style = """
-
-#output{
-    border: 1px solid #999;
-    margin-top: 2em;
-    margin-left: auto;
-    margin-right: auto;
-	overflow: auto;
-	width: 480px;
-	height: 420px;
-	text-align: left;
-    font-family: monospace;
-}
-
-#stdin{
-	color: green;
-	font-weight: bold;
-}
-#stdout{
-	color: blue;
-	font-weight: bold;
-}
-#stderr{
-	color: red;
-	font-weight: bold;
-}
-"""
 class ResultPage(athena.LivePage):
     addSlash = True
     source = None
+    css = open(basedir+'/ajaxpb.css').read()
     
     docFactory = loaders.stan(tags.html[
         tags.head(render=tags.directive('liveglue')),
-        tags.style(render=tags.directive('style')),
+        tags.style(type="text/css")[css],
         tags.body(render=tags.directive('resultElement'))])
     
     def __init__(self, source):
         athena.LivePage.__init__(self)
         self.source = source
-    
-    def render_style(self, ctx, data):
-        f = style
-        return ctx.tag[f]
     
     def render_resultElement(self, ctx, data):
         f = ResultElement()

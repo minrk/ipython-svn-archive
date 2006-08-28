@@ -35,7 +35,7 @@ import sys
 from optparse import OptionParser
 
 from twisted.python import log
-from twisted.internet import protocol, reactor
+from twisted.internet import reactor
 from twisted.spread import pb
 from nevow import appserver
 
@@ -52,10 +52,11 @@ def main(port, ip):
     reactor.run()
 
 def gotRoot(rootObj):
-    
-    site = appserver.NevowSite(ControllerRoot(IMultiEngine(rootObj)))
+    pbc = IMultiEngine(rootObj)
+    site = appserver.NevowSite(ControllerRoot(pbc))
     reactor.listenTCP(8080, site)
-    reactor.callLater(2, printer, 'Running')
+    reactor.callLater(1, printer, 'Running')
+
     
 def start():
     parser = OptionParser()
