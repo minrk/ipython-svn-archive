@@ -19,11 +19,9 @@ TODO:
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import cPickle as pickle
 from new import instancemethod
 from twisted.application import service
-from twisted.internet import protocol, reactor, defer
-from twisted.protocols import basic
+from twisted.internet import defer
 from twisted.python import log
 from zope.interface import Interface, implements
 
@@ -31,31 +29,12 @@ from ipython1.kernel.engineservice import IEngineComplete
 from ipython1.kernel.serialized import Serialized
 from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import map as Map
-from ipython1.kernel import error
-
-
-class ResultReporterProtocol(protocol.DatagramProtocol):
-    
-    def __init__(self, result, addr):
-        self.result = result
-        self.addr = addr
-    
-    def startProtocol(self):
-        package = pickle.dumps(self.result, 2)
-        self.transport.write("RESULT %i %s" % (len(package), package), 
-            self.addr)
-        self.tried = True
-    
-    def datagramReceived(self,data, sending_addr):
-        if sending_addr == self.addr and data == "RESULT OK":
-            self.transport.stopListening()
-    
-
+from ipython1.kernel import results
 
 # Interface for the Controller Service
 
 class IRemoteController(Interface):
-    """The Interface the controller exposes to remote engines"""
+    """The Interface the controller exposes to remote engines."""
     
     def registerEngine(remoteEngine, id):
         """register new remote engine"""
@@ -193,7 +172,6 @@ class ControllerService(service.Service):
     
     def __init__(self, maxEngines=255, saveIDs=False):
         self.saveIDs = saveIDs
-        self.notifierFactory = NotifierFactory(self)
         self._notifiers = {}
         self.engines = {}
         self.availableIDs = range(maxEngines,-1,-1)#[255,...,0]
@@ -390,14 +368,13 @@ def autoMethod(self, %s:
     
     def addNotifier(self, n):
         if n not in self._notifiers:
-            self._notifiers[n] = reactor.connectTCP(n[0], n[1], self.notifierFactory)
-            self.notifierFactory.lastNotifier = n
+            self._notifiers[n] = results.INotifier(n)
+            self._notifiers[n].notifyOnDisconnect(self.delNotifier,n)
             log.msg("Notifiers: %s" % self._notifiers)
         return defer.succeed(None)
     
     def delNotifier(self, n):
         if n in self._notifiers:
-            self._notifiers[n].disconnect()
             try:
                 del self._notifiers[n]
             except KeyError:
@@ -406,26 +383,8 @@ def autoMethod(self, %s:
         return defer.succeed(None)
     
     def notify(self, result):
-        package = pickle.dumps(result, 2)
         for tonotify in self.notifiers().values():
-            if tonotify.transport.protocol is not None:
-                tonotify.transport.protocol.sendLine(
-                        "RESULT %s" %(package))
-            else:
-                log.msg("Notifier connection not ready for RESULT " + str(result))
+            tonotify.notify(result)
         return result
     
 
-class NotifierFactory(protocol.ClientFactory):
-    """A small client factory and protocol for the tcp results gatherer"""
-    protocol = basic.LineReceiver
-    protocol.lineReceived = lambda _,__: None
-    lastNotifier = None
-    def __init__(self, service):
-        self.service = service
-    
-    def clientConnectionLost(self, connector, reason):
-        self.service.delNotifier((connector.host, connector.port))
-    
-    clientConnectionFailed = clientConnectionLost
-    

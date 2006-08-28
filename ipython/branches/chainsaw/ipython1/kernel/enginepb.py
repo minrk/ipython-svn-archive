@@ -35,6 +35,8 @@ from zope.interface import Interface, implements
 from ipython1.kernel.engineservice import *
 from ipython1.kernel import controllerservice
 
+class IPBEngineClientFactory(Interface):
+    pass
 
 class PBEngineClientFactory(pb.PBClientFactory):
     """The Client factory on the engine that connects to the controller"""
@@ -60,7 +62,9 @@ class PBEngineClientFactory(pb.PBClientFactory):
         self.service.id = id
         log.msg("got ID: %r" % id)
         return id
-    
+
+components.registerAdapter(PBEngineClientFactory, 
+                    EngineService, IPBEngineClientFactory)
 
 # Expose a PB interface to the EngineService
      
@@ -269,10 +273,19 @@ class PBRemoteEngineRootFromService(pb.Root):
         engineReference.broker.notifyOnDisconnect(notify)
         return id
 
-    
-
 components.registerAdapter(PBRemoteEngineRootFromService,
                         controllerservice.ControllerService,
                         IPBRemoteEngineRoot)
+
+    
+class IPBEngineServerFactory(Interface):
+    pass
+
+def PBEngineServerFactoryFromService(service):
+    return pb.PBServerFactory(IPBRemoteEngineRoot(service))
+
+components.registerAdapter(PBEngineServerFactoryFromService,
+                        controllerservice.ControllerService,
+                        IPBEngineServerFactory)
 
 

@@ -23,7 +23,6 @@ from twisted.internet import defer, reactor
 from twisted.python import log, failure
 import zope.interface as zi
 
-from ipython1.core.shell import InteractiveShell
 from ipython1.kernel import serialized, error
 from ipython1.kernel.util import gatherBoth, curry
 

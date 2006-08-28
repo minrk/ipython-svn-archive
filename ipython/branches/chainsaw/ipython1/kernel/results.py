@@ -17,18 +17,38 @@ InteractiveCluster classes.  Multiple kernels can notify a single gatherer.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import socket
-import threading
-import pickle
-import time, os
+import socket, threading, cPickle as pickle
+
+from zope.interface import Interface, implements
+from twisted.protocols.basic import LineReceiver
+from twisted.internet import protocol
+from twisted.python import components
 
 from IPython.ColorANSI import *
 
-from twisted.protocols.basic import LineReceiver
-# from twisted.python import log
+class ResultReporterProtocol(protocol.DatagramProtocol):
     
+    def __init__(self, result, addr):
+        self.result = result
+        self.addr = addr
+    
+    def startProtocol(self):
+        package = pickle.dumps(self.result, 2)
+        self.transport.write("RESULT %i %s" % (len(package), package), 
+            self.addr)
+        self.tried = True
+    
+    def datagramReceived(self,data, sending_addr):
+        if sending_addr == self.addr and data == "RESULT OK":
+            self.transport.stopListening()
+    
+
+
 class UDPResultGatherer(object):
-    """This class listens on a UDP port for kernels reporting stdout and stderr.
+    """
+    The UDP result system is currently broken!
+    
+    This class listens on a UDP port for kernels reporting stdout and stderr.
     
     The current implementation simply prints the stdin, stdout and stderr
     of each kernel command to standard out in colorized form.
@@ -41,6 +61,8 @@ class UDPResultGatherer(object):
     Also, currently, I don't report the port that the kernel is listening on.
     This information will be useful when multiple kernel's are running on
     a single interface. 
+    
+    
     """
     
     def __init__(self, addr):
@@ -58,7 +80,7 @@ class UDPResultGatherer(object):
         self.hault = False
         self.t = t
         t.start()
-
+    
     def stop(self):
         """Stop gathering output and errors on the UDP port.
         
@@ -69,7 +91,7 @@ class UDPResultGatherer(object):
         self.hault_lock.acquire()
         self.hault = True
         self.hault_lock.release()
-
+    
     def _gather(self, addr):
         """This does the work in the second thread."""
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -87,7 +109,7 @@ class UDPResultGatherer(object):
             self.hault_lock.release()
             if hault:
                 break 
-
+                
             # Get and print a message
             message, client_addr = s.recvfrom(8192)
             msg_split = message.split(" ", 1)
@@ -135,7 +157,7 @@ class TCPResultsProtocol(LineReceiver):
     
     def connectionLost(self, reason):
         print "Disconnected Controller: %s" %(self.peer.host)
-
+    
     def lineReceived(self, line):
         
         msg_split = line.split(" ", 1)
@@ -169,5 +191,60 @@ class TCPResultsProtocol(LineReceiver):
             self.sendLine("RESULT FAIL")
         else:
             self.sendLine("RESULT OK")
-        
+    
+
+
+# Notifier - the Controller side of the results objects
+class INotifier(Interface):
+    """an interface for notifier objects"""
+    def notify(result):
+        """notify of a result Tuple"""
+    
+    def notifyOnDisconnect(f, *a, **kw):
+        """function to be called on disconnect"""
+    
+
+class BaseNotifier(object):
+    implements(INotifier)
+    _disconnectNotifiers = []
+    
+    def notifyOnDisconnect(self, f, *a, **kw):
+        if not callable(f):
+            return False
+        else:
+            self._disconnectNotifiers.append((f, a, kw))
+    
+    def onDisconnect(self, *a, **kw):
+        for f,a,kw in self._disconnectNotifiers:
+            try:
+                f(*a, **kw)
+            except:
+                self._disconnectNotifiers.remove((f,a,kw))
+    
+
+
+class TCPNotifier(BaseNotifier):
+    
+    def __init__(self, addr):
+        self.host = addr[0]
+        self.port = addr[1]
+        self.factory = NotifierFactory(self.onDisconnect)
+        self.client = reactor.connectTCP(self.host, self.port, self.factory)
+    
+    def notify(self, result):
+        package = pickle.dumps(result, 2)
+        if self.client.transport.protocol is not None:
+            self.client.transport.protocol.sendLine("RESULT %s" %package)
+            
+    
+
+components.registerAdapter(TCPNotifier, tuple, INotifier)
+
+class NotifierFactory(protocol.ClientFactory):
+    """A small client factory and protocol for the tcp results gatherer"""
+    protocol = LineReceiver
+    protocol.lineReceived = lambda _,__: None
+    def __init__(self, onDisconnect=None):
+        if onDisconnect is not None:
+            self.clientConnectionLost = self.clientConnectionFailed = onDisconnect
     

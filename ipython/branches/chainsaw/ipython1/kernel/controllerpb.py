@@ -7,7 +7,7 @@ from twisted.python.failure import Failure
 from twisted.spread import pb
 from zope.interface import Interface, implements
 
-from ipython1.kernel import controllerservice as cs
+from ipython1.kernel import controllerservice as cs, results
 
 class IPBController(Interface):
     """Perspective Broker interface to controller.  Same as IMultiEngine, but
@@ -59,6 +59,9 @@ class IPBController(Interface):
     def remote_kill(targets):
         """Kills the engine process"""
     
+    def remote_addNotifier(reference):
+        """adds a notifier"""
+    
 
 #implementation if IPBController
 class PBControllerRootFromService(pb.Root):
@@ -72,7 +75,7 @@ class PBControllerRootFromService(pb.Root):
     
     def remote_verifyTargets(self, targets):
         """verify if targets is callable id list, id, or string 'all'"""
-        return self.service.verifyTargets(targets).addErrback(pickle.dumps, 2)
+        return self.service.verifyTargets(targets)
     
     def remote_scatter(self, targets, key, pseq, style='basic', flatten=False):
         """partition and distribute a sequence"""
@@ -135,6 +138,11 @@ class PBControllerRootFromService(pb.Root):
         """Kills the engine process"""
         return self.service.kill(targets).addErrback(pickle.dumps, 2)
     
+    def remote_addNotifier(self, reference):
+        """adds a notifier"""
+        return self.service.addNotifier(reference)
+    
+    assert remote_addNotifier
     def checkReturns(self, rlist):
         for r in rlist:
             if isinstance(r, (Failure, Exception)):
@@ -158,7 +166,7 @@ components.registerAdapter(PBServerFactoryFromService,
 
 #BEGIN counterparts
 
-class PBRemoteController(object):
+class PBRemoteController(pb.Referenceable):
     """remote controller object, connected through perspective broker
     """
     implements(cs.IMultiEngine)
@@ -166,7 +174,11 @@ class PBRemoteController(object):
     def __init__(self, reference):
         self.reference = reference
         self.callRemote = reference.callRemote
+        self.callRemote('addNotifier', self)
         cs.addAllMethods(self)
+    
+    def remote_notify(self, result):
+        print result
     
     def verifyTargets(self, targets):
         """verify if targets is callable id list, id, or string 'all'"""
@@ -247,10 +259,18 @@ class PBRemoteController(object):
             except pickle.PickleError, TypeError: 
                 pass
         elif isinstance(r, list):
-            for result in r:
-                r[r.index(result)] = self.checkReturn(result)
+            return map(self.checkReturn, r)
         return r
 
     
-
+class PBNotifier(results.BaseNotifier):
+    
+    def __init__(self, reference):
+        self.callRemote = reference.callRemote
+        reference.broker.notifyOnDisconnect(self.onDisconnect)
+    
+    def notify(self, result):
+        return self.callRemote('notify', result).addErrback(self.onDisconnect)
+    
 components.registerAdapter(PBRemoteController, pb.RemoteReference, cs.IMultiEngine)
+components.registerAdapter(PBNotifier, pb.RemoteReference, results.INotifier)
