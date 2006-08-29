@@ -2,7 +2,7 @@ import os, cPickle as pickle
 
 
 from nevow import athena, loaders, tags, inevow
-from twisted.internet import protocol, reactor
+from twisted.internet import protocol, reactor, defer
 from twisted.python.failure import Failure
 from zope.interface import implements
 
@@ -56,8 +56,11 @@ class TCPAJAXResultsFactory(protocol.ServerFactory):
         self.results.append(result)
         for g in self.gatherers:
             try:
-                g.handleResult(result).addErrback(self.loseGatherer, gatherer=g)
-            except:
+                d = g.handleResult(result)
+                if isinstance(d, defer.Deferred):
+                    d.addErrback(self.loseGatherer, gatherer=g)
+            except Exception:
+                print e
                 self.loseGatherer(gatherer=g)
     
     def addGatherer(self, gatherer):
@@ -68,7 +71,6 @@ class TCPAJAXResultsFactory(protocol.ServerFactory):
                 gatherer.handleResult(r)
             except:
                 return
-                
     
     def loseGatherer(self, gatherer=None):
         try:
@@ -85,8 +87,10 @@ athena.jsDeps.mapping.update(myPackage.mapping)
 class ResultPage(athena.LivePage):
     addSlash = True
     source = None
-    css = open(basedir+'/ajaxpb.css').read()
-    
+    CSS = open(basedir+'/ajaxpb.css').read()
+    start = CSS.find('height', CSS.find('resultOut'))
+    stop = CSS.find('\n', start)
+    css = CSS[:start]+'height: 30em;\n'+CSS[stop:]
     docFactory = loaders.stan(tags.html[
         tags.head(render=tags.directive('liveglue')),
         tags.style(type="text/css")[css],
@@ -99,7 +103,7 @@ class ResultPage(athena.LivePage):
     def render_resultElement(self, ctx, data):
         f = ResultElement()
         f.setFragmentParent(self)
-        reactor.callLater(.1, self.source.addGatherer, f)
+        reactor.callLater(1, self.source.addGatherer, f)
         return ctx.tag[f]
     
 class ResultRoot(object):
