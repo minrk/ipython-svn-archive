@@ -110,7 +110,7 @@ class ResultElement(athena.LiveElement):
             return map(int,targets.split(','))
         except ValueError:
             return 'all'
-
+    
     def setIDs(self, ids):
         self.ids = self.parseTargets(ids)
     
@@ -123,7 +123,7 @@ class StatusElement(athena.LiveElement):
         tags.table(id="statusWidget")[
             tags.tr[tags.td[tags.form(id="idform",
                 action="""javascript:
-                var idform = getElement('idform');
+                var idform = document.getElementById('idform');
                 var w = Nevow.Athena.Widget.get(idform);
                 w.refreshStatus();
                 """)[
@@ -187,11 +187,11 @@ class CommandElement(athena.LiveElement):
         tags.tr[tags.td["cmd"],tags.td["targets"], tags.td["args"]],
         tags.tr[tags.form(id="cmdform",
             action="""javascript:
-            var w = Nevow.Athena.Widget.get(getElement('cmdform'));
-            var cmd = getElement('cmd');
+            var w = Nevow.Athena.Widget.get(document.getElementById('cmdform'));
+            var cmd = document.getElementById('cmd');
             cmd = cmd.options[cmd.selectedIndex].value;
-            var targets = getElement('targets').value;
-            var args = getElement('args').value;
+            var targets = document.getElementById('targets').value;
+            var args = document.getElementById('args').value;
             w.submitCommand(cmd, targets, args);""")[
             
             tags.td[tags.select(id="cmd", name="cmd",
@@ -235,6 +235,7 @@ class CommandElement(athena.LiveElement):
         if idlist is False:
             return self.fail(None)
         d = self.controller.execute(idlist, str(lines))
+        self.notify()
         return d.addCallbacks(self.executeOK, self.fail)
     
     athena.expose(execute)
@@ -251,6 +252,7 @@ class CommandElement(athena.LiveElement):
         if not idlist or not keys:
             return self.fail(None)
         d = self.controller.pullNamespace(idlist, *keys)
+        self.notify()
         return d.addCallbacks(self.pullOK, self.fail)
     
     athena.expose(pull)
