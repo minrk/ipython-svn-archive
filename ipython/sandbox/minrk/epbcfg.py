@@ -1,0 +1,3 @@
+from ipython1.kernel.enginepb import IPBEngineClientFactory
+
+engineClientProtocolInterface = IPBEngineClientFactory
