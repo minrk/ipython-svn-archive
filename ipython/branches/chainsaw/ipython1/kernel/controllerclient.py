@@ -503,9 +503,14 @@ class RemoteController(object):
         if self.block or block:
             string = "EXECUTE BLOCK %s::%s" % (source, targetstr)
             try:
-                self.es.writeNetstring(string)
+                self.es.writeNe
+                tstring(string)
             except socket.error:
-                return self.execute(targets, source, block)
+                try:
+                    self.connect()
+                    self.es.writeNetstring(string)
+                except socket.error:
+                    return False
             string = self.es.readNetstring()
             if string [:3] == 'BAD':
                 return False
@@ -552,7 +557,11 @@ class RemoteController(object):
             try:
                 self.es.writeNetstring(string)
             except socket.error:
-                return self.execute(targets, source, block)
+                try:
+                    self.connect()
+                    self.es.writeNetstring(string)
+                except socket.error:
+                    return False
             string = self.es.readNetstring()
             data = None
              
@@ -608,7 +617,11 @@ class RemoteController(object):
         try:
             self.es.writeNetstring(string)
         except socket.error:
-            return self.push(targets, **namespace)
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                return False
         
         if self.es.readNetstring() != "PUSH READY":
             return False
@@ -683,7 +696,11 @@ class RemoteController(object):
         try:
             self.es.writeNetstring(string)
         except socket.error:
-            return self.pull(targets, *keys)
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                return False
         
         string = self.es.readNetstring()
         if string [:3] == 'BAD':
@@ -820,7 +837,11 @@ class RemoteController(object):
         try:
             self.es.writeNetstring(string)
         except socket.error:
-            return self.scatter(targets, key, seq, style, flatten)
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                return False
         
         self.sendSerial(serial)
         reply = self.es.readNetstring()
@@ -840,7 +861,11 @@ class RemoteController(object):
         try:
             self.es.writeNetstring(string)
         except socket.error:
-            return self.scatter(targets, key, seq, style, flatten)
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                return False
         
         split = self.es.readNetstring().split(' ',1)
         if len(split) is not 2:
@@ -885,7 +910,11 @@ class RemoteController(object):
         try:
             self.es.writeNetstring(string)
         except socket.error:
-            return self.getResult(targets, i)
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                return False
         
         string = self.es.readNetstring()
         if string == "PICKLE RESULT":
@@ -920,7 +949,11 @@ class RemoteController(object):
         try:
             self.es.writeNetstring(string)
         except socket.error:
-            return self.status(targets)
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                return False
         
         string = self.es.readNetstring()
         if string == "PICKLE STATUS":
@@ -989,7 +1022,12 @@ class RemoteController(object):
         try:
             self.es.writeNetstring(string)
         except socket.error:
-            return self.notify(addr, flag)
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                return False
+        
         string = self.es.readNetstring()
         if string == "NOTIFY OK":
             return True
@@ -1007,7 +1045,11 @@ class RemoteController(object):
         try:
             self.es.writeNetstring(string)
         except socket.error:
-            return self.reset(targets)
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                return False
         
         string = self.es.readNetstring()
         if string == "RESET OK":
