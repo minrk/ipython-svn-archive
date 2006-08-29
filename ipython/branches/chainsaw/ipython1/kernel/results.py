@@ -21,7 +21,7 @@ import socket, threading, cPickle as pickle
 
 from zope.interface import Interface, implements
 from twisted.protocols.basic import LineReceiver
-from twisted.internet import protocol
+from twisted.internet import protocol, reactor
 from twisted.python import components
 
 from IPython.ColorANSI import *

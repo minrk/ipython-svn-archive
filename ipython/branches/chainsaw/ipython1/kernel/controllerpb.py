@@ -178,6 +178,7 @@ class PBRemoteController(pb.Referenceable):
         cs.addAllMethods(self)
     
     def remote_notify(self, result):
+        """This should be overridden to be useful"""
         print result
     
     def verifyTargets(self, targets):

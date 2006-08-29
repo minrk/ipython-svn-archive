@@ -278,7 +278,7 @@ class EngineProxy(object):
 
 
 class RCView(object):
-    """A set of EngineProxy objects for RemoteController.__getitem__"""
+    """A subset interface for RemoteController.__getitem__"""
     def __init__(self, rc, ids):
         self.rc = rc
         if isinstance(ids, slice):
@@ -307,7 +307,7 @@ class RCView(object):
         if ids == 'all':
             return self._originalIDs
         elif isinstance(ids, int) and ids in self._ids:
-            return ids
+            return self._originalIDs[ids]
         elif isinstance(ids, (list, tuple)):
             return [self._originalIDs[i] for i in ids]
         else:
@@ -500,6 +500,8 @@ class RemoteController(object):
         if self.block or block:
             self.es.writeNetstring("EXECUTE BLOCK %s::%s" % (source, targetstr))
             string = self.es.readNetstring()
+            if string [:3] == 'BAD':
+                return False
             data = []
             while string not in ['EXECUTE FAIL', "EXECUTE OK"]:
                 package = self.es.readNetstring()
@@ -666,6 +668,8 @@ class RemoteController(object):
         multitargets = self.multiTargets(targets)
         self.es.writeNetstring("PULL %s::%s" % (keystr, targetstr))
         string = self.es.readNetstring()
+        if string [:3] == 'BAD':
+            return False
         results = []
         returns = []
         while string not in ['PULL OK', 'PULL FAIL']:

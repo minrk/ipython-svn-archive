@@ -224,7 +224,7 @@ class EngineFromReference(object):
     def kill(self):
         """Reset the InteractiveShell."""
         #this will raise on success
-        return self.callRemote('kill').addErrback(lambda _:defer.succeed(None))
+        return self.callRemote('kill').addErrback(lambda _:None)
     
     def getResult(self, i=None):
         """Get the stdin/stdout/stderr of command i."""

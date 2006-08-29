@@ -33,6 +33,9 @@ def curry(f, *curryArgs, **curryKWargs):
     return curried
 
 #useful callbacks
+def catcher(r):
+    pass
+
 def printer(r):
     print r
     return r
