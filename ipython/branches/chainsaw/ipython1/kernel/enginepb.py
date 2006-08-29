@@ -223,15 +223,15 @@ class EngineFromReference(object):
 
     def kill(self):
         """Reset the InteractiveShell."""
-        #this will raise on success
+        #this will raise pb.PBConnectionLost on success
         self.callRemote('kill').addErrback(self.killBack)
         return defer.succeed(None)
-    
+        
     def killBack(self, f):
         try:
             f.raiseException()
         except pb.PBConnectionLost:
-            return None
+            return
     
     def getResult(self, i=None):
         """Get the stdin/stdout/stderr of command i."""
