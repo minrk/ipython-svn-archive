@@ -30,9 +30,10 @@ defer.setDebugging(1)
 
 import sys
 
+from ipython1.core.shell import InteractiveShell
+from ipython1.kernel import engineservice as es, enginevanilla as ev
 from ipython1.test import util
 from ipython1.test  import completeenginetest as cet
-from ipython1.kernel import engineservice as es, enginevanilla as ev
 
 evsf = ev.VanillaEngineServerFactoryFromControllerService
 
@@ -49,7 +50,7 @@ class EngineVanillaTest(cet.CompleteEngineTestCase):
         self.sf = evsf(self)    
         self.servers.append(reactor.listenTCP(10201, self.sf))
         
-        self.engines = es.EngineService()
+        self.engines = es.EngineService(InteractiveShell)
         ef = ev.VanillaEngineClientFactoryFromEngineService(self.engines)
         starterDeferred = defer.Deferred()
         def myNotifySetID():

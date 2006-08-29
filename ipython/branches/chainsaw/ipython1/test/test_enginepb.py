@@ -27,9 +27,10 @@ from twisted.python import components
 from twisted.internet import reactor, defer
 from twisted.spread import pb
 
-from ipython1.test import util
-from ipython1.test  import completeenginetest as cet
+from ipython1.core.shell import InteractiveShell
 from ipython1.kernel import engineservice as es, enginepb, controllerservice as cs, util
+from ipython1.test  import completeenginetest as cet
+from ipython1.test import util
 
 class EnginePBTest(cet.CompleteEngineTestCase):
 #class EnginePBTest(util.DeferredTestCase):
@@ -43,7 +44,7 @@ class EnginePBTest(cet.CompleteEngineTestCase):
         self.sf = pb.PBServerFactory(self.sroot)
         self.servers.append(reactor.listenTCP(10201, self.sf))
         
-        self.engines = es.EngineService()
+        self.engines = es.EngineService(InteractiveShell)
         ef = enginepb.PBEngineClientFactory(self.engines)
         client = reactor.connectTCP('127.0.0.1', 10201, ef)
         

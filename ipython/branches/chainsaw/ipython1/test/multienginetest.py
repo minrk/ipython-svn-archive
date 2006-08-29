@@ -1,4 +1,6 @@
 from twisted.internet import defer
+
+from ipython1.core.shell import InteractiveShell
 from ipython1.kernel import engineservice as es, serialized
 from ipython1.kernel.error import NotDefined
 from ipython1.test import util
@@ -15,7 +17,7 @@ class MultiEngineTestCase(util.DeferredTestCase):
     
     def addEngine(self, n=1):
         for i in range(n):
-            e = es.completeEngine(es.EngineService())
+            e = es.completeEngine(es.EngineService(InteractiveShell))
             e.startService()
             self.rc.registerEngine(e, None)
             self.engines.append(e)

@@ -14,9 +14,10 @@ test template for complete engine object
 #*****************************************************************************
 
 from twisted.internet import defer
+import zope.interface as zi
+
 from ipython1.kernel import serialized, error, engineservice as es
 from ipython1.test.util import DeferredTestCase
-import zope.interface as zi
 
 class CompleteEngineTestCase(DeferredTestCase):
     """A test for any completed engine object

@@ -2,7 +2,7 @@
 """A perspective broker interface to the controller"""
 import cPickle as pickle
 
-from twisted.python import components
+from twisted.python import components, log
 from twisted.python.failure import Failure
 from twisted.spread import pb
 from zope.interface import Interface, implements
@@ -174,12 +174,12 @@ class PBRemoteController(pb.Referenceable):
     def __init__(self, reference):
         self.reference = reference
         self.callRemote = reference.callRemote
-        self.callRemote('addNotifier', self)
         cs.addAllMethods(self)
+        self.deferred = self.callRemote('addNotifier', self)
     
     def remote_notify(self, result):
         """This should be overridden to be useful"""
-        print result
+        log.msg(result)
     
     def verifyTargets(self, targets):
         """verify if targets is callable id list, id, or string 'all'"""

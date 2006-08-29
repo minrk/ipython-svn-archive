@@ -18,14 +18,16 @@ Things that should be tested:
 
 from twisted.internet import defer
 from twisted.application.service import IService
+
+from ipython1.core.shell import InteractiveShell
 from ipython1.kernel import serialized, error, engineservice as es
 from ipython1.test import util
-from ipython1.test.completeenginetest import CompleteEngineTestCase
+# from ipython1.test.completeenginetest import CompleteEngineTestCase
 
 class BasicEngineServiceTest(util.DeferredTestCase):
     
     def setUp(self):
-        self.engine = es.EngineService()
+        self.engine = es.EngineService(InteractiveShell)
         self.engine.startService()
     
     def tearDown(self):

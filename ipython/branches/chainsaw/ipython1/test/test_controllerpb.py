@@ -16,8 +16,8 @@ Things that should be tested:
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-from twisted.internet import reactor
-from twisted.spread import pb
+from twisted.internet import reactor, defer
+from twisted.spread import pb, interfaces
 
 from ipython1.kernel import controllerservice as cs, serialized
 from ipython1.kernel import controllerpb, util
@@ -28,7 +28,9 @@ class BasicControllerPBTest(met.MultiEngineTestCase):
     def setUp(self):
         self.rc = cs.ControllerService()
         self.rc.startService()
-        self.sf = pb.PBServerFactory(controllerpb.IPBController(self.rc))
+        self.root = controllerpb.IPBController(self.rc)
+        self.root.remote_addNotifier = lambda _:None
+        self.sf = pb.PBServerFactory(self.root)
         self.s = reactor.listenTCP(10111, self.sf)
         self.cf = pb.PBClientFactory()
         self.c = reactor.connectTCP('127.0.0.1', 10111, self.cf)
@@ -39,16 +41,18 @@ class BasicControllerPBTest(met.MultiEngineTestCase):
     
     def gotRoot(self, root):
         self.controller = cs.IMultiEngine(root)
+        return self.controller.deferred
     
     def tearDown(self):
-        self.rc.stopService()
-        for e in self.engines:
+        l=[]
+        for e in self.engines+[self.rc]:
             e.stopService()
-        self.c.disconnect()
         return self.s.stopListening()
     
     def testInterfaces(self):
         p = list(self.controller.__provides__)
-        l = [cs.IMultiEngine]
-        self.assertEquals(p, l)
+        p.sort()
+        l = [cs.IMultiEngine, interfaces.IJellyable]
+        l.sort()
+        return self.assertEquals(p, l)
     
