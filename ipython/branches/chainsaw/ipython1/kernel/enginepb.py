@@ -29,11 +29,11 @@ import cPickle as pickle
 
 from twisted.python import components, log
 from twisted.spread import pb
-from twisted.internet import defer
+from twisted.internet import defer, error
 from zope.interface import Interface, implements
 
 from ipython1.kernel.engineservice import *
-from ipython1.kernel import controllerservice
+from ipython1.kernel import controllerservice, util
 
 class IPBEngineClientFactory(Interface):
     pass
@@ -224,7 +224,14 @@ class EngineFromReference(object):
     def kill(self):
         """Reset the InteractiveShell."""
         #this will raise on success
-        return self.callRemote('kill').addErrback(lambda _:None)
+        self.callRemote('kill').addErrback(self.killBack)
+        return defer.succeed(None)
+    
+    def killBack(self, f):
+        try:
+            f.raiseException()
+        except pb.PBConnectionLost:
+            return None
     
     def getResult(self, i=None):
         """Get the stdin/stdout/stderr of command i."""

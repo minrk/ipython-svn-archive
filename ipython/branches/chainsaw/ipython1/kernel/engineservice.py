@@ -23,7 +23,7 @@ from twisted.internet import defer, reactor
 from twisted.python import log, failure
 import zope.interface as zi
 
-from ipython1.kernel import serialized, error
+from ipython1.kernel import serialized, error, util
 from ipython1.kernel.util import gatherBoth, curry
 
 # Here is the interface specification for the IPythonCoreService
@@ -307,7 +307,7 @@ def queuedMethod(self%s%s):
         elif not self.upToDate:
             d = self.submitCommand(Command('status'))
             self.upToDate = True
-            return d.addCallback(self.updateStatus)
+            return d.addCallbacks(self.updateStatus, util.catcher)
     
     def saveResult(self, result):
         """put the result in the history"""
