@@ -47,6 +47,7 @@ class BasicControllerPBTest(met.MultiEngineTestCase):
         l=[]
         for e in self.engines+[self.rc]:
             e.stopService()
+        self.c.disconnect()
         return self.s.stopListening()
     
     def testInterfaces(self):
