@@ -322,7 +322,7 @@ class RCView(object):
         return self.rc.push(actualTargets, **namespace)
     
     def __setitem__(self, key, value):
-        return self.push(**{key:value})
+        return self.push('all', **{key:value})
     
     def pull(self, targets, *keys):
         actualTargets = self._mapIDsToOriginal(targets)
@@ -420,10 +420,9 @@ class RemoteController(object):
     
     def is_connected(self):
         """Are we connected to the controller?""" 
-        if hasattr(self, 'es'):
+        if hasattr(self, 's'):
             try:
-                self.es.writeNetstring('')
-                self.es.readNetstring()
+                self.s.send('')
             except socket.error:
                 return False
             else:
@@ -432,7 +431,8 @@ class RemoteController(object):
     def _check_connection(self):
         """Are we connected to the controller?  If not reconnect."""
         if not self.is_connected():
-            self.connect()
+            return self.connect()
+        return True
     
     def connect(self):
         """Initiate a new connection to the controller."""
@@ -442,17 +442,20 @@ class RemoteController(object):
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         except socket.error, e:
             print "Strange error creating socket: %s" % e
-            
+            return False
         try:
             self.s.connect(self.addr)
         except socket.gaierror, e:
             print "Address related error connecting to sever: %s" % e
+            return False
         except socket.error, e:
             print "Connection error: %s" % e
+            return False
                 
         # Turn off Nagle's algorithm to prevent the 200 ms delay :)
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
         self.es = NetstringSocket(self.s)
+        return True
     
     def parseTargets(self, targets):
         if isinstance(targets, int):
@@ -498,7 +501,11 @@ class RemoteController(object):
         self._check_connection()
         
         if self.block or block:
-            self.es.writeNetstring("EXECUTE BLOCK %s::%s" % (source, targetstr))
+            string = "EXECUTE BLOCK %s::%s" % (source, targetstr)
+            try:
+                self.es.writeNetstring(string)
+            except socket.error:
+                return self.execute(targets, source, block)
             string = self.es.readNetstring()
             if string [:3] == 'BAD':
                 return False
@@ -542,7 +549,10 @@ class RemoteController(object):
                             red, cmd_num, normal, cmd_stderr)
         else:
             string = "EXECUTE %s::%s" % (source, targetstr)
-            self.es.writeNetstring(string)
+            try:
+                self.es.writeNetstring(string)
+            except socket.error:
+                return self.execute(targets, source, block)
             string = self.es.readNetstring()
             data = None
              
@@ -590,12 +600,16 @@ class RemoteController(object):
             The python objects to send and their remote keys.  i.e. a=1, b='asdf'
         """
         targetstr = self.parseTargets(targets)
-        if not targetstr or not namespace:
+        if not targetstr or not namespace or not self._check_connection():
             #need something to do
             return False
-        self._check_connection()        
         
-        self.es.writeNetstring("PUSH ::%s" % targetstr)
+        string = "PUSH ::%s" % targetstr
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            return self.push(targets, **namespace)
+        
         if self.es.readNetstring() != "PUSH READY":
             return False
         for key in namespace:
@@ -655,10 +669,9 @@ class RemoteController(object):
                         l.append(rc.pull(t, *keys))
         """
         targetstr = self.parseTargets(targets)
-        if not targetstr or not keys:
+        if not targetstr or not keys or not self._check_connection():
             # need something to do
             return False
-        self._check_connection()
         
         try:
             keystr = ','.join(keys)
@@ -666,7 +679,12 @@ class RemoteController(object):
             return False
         
         multitargets = self.multiTargets(targets)
-        self.es.writeNetstring("PULL %s::%s" % (keystr, targetstr))
+        string = "PULL %s::%s" % (keystr, targetstr)
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            return self.pull(targets, *keys)
+        
         string = self.es.readNetstring()
         if string [:3] == 'BAD':
             return False
@@ -746,10 +764,9 @@ class RemoteController(object):
                 
             """
         targetstr = self.parseTargets(targets)
-        if not targetstr or not keys:
+        if not targetstr or not keys or not self._check_connection():
             # need something to do
             return False
-        self._check_connection()
         
         multitargets = self.multiTargets(targets)
         values = self.pull(targets, *keys)
@@ -790,17 +807,21 @@ class RemoteController(object):
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         """distribute sequence object to targets"""
         targetstr = self.parseTargets(targets)
-        if not targetstr or not key or \
-            not isinstance(seq, (tuple, list)+arraytypes):
+        if not targetstr or not key  or not self._check_connection()\
+                or not isinstance(seq, (tuple, list)+arraytypes):
             return False
-        self._check_connection()
         
         try:
             serial = serialized.serialize(seq, key)
         except:
             return False
-        self.es.writeNetstring('SCATTER style=%s flatten=%i::%s' %
-                (style, int(flatten), targetstr))
+        string = 'SCATTER style=%s flatten=%i::%s' %(
+                        style, int(flatten), targetstr)
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            return self.scatter(targets, key, seq, style, flatten)
+        
         self.sendSerial(serial)
         reply = self.es.readNetstring()
         if reply == 'SCATTER OK':
@@ -811,11 +832,16 @@ class RemoteController(object):
     def gather(self, targets, key, style='basic'):
         """gather a distributed object, and reassemble it"""
         targetstr = self.parseTargets(targets)
-        if not targetstr or not key:
+        if not targetstr or not key or not self._check_connection():
+            #need something to do
             return False
-        self._check_connection()
         
-        self.es.writeNetstring('GATHER %s style=%s::%s' %(key, style, targetstr))
+        string = 'GATHER %s style=%s::%s' %(key, style, targetstr)
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            return self.scatter(targets, key, seq, style, flatten)
+        
         split = self.es.readNetstring().split(' ',1)
         if len(split) is not 2:
             return False
@@ -848,15 +874,19 @@ class RemoteController(object):
         """Gets a specific result from the kernels, returned as a tuple, or 
             list of tuples if multiple targets."""
         targetstr = self.parseTargets(targets)
-        if not targetstr:
+        if not targetstr or not self._check_connection():
             # need something to do
             return False
-        self._check_connection()    
         
         if i is None:
-            self.es.writeNetstring("GETRESULT ::%s" %targetstr)
+            string = "GETRESULT ::%s" %targetstr
         else:
-            self.es.writeNetstring("GETRESULT %i::%s" % (i, targetstr))
+            string = "GETRESULT %i::%s" % (i, targetstr)
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            return self.getResult(targets, i)
+        
         string = self.es.readNetstring()
         if string == "PICKLE RESULT":
             package = self.es.readNetstring()
@@ -882,12 +912,16 @@ class RemoteController(object):
     def status(self, targets):
         """Check the status of the kernel."""
         targetstr = self.parseTargets(targets)
-        if not targetstr:
+        if not targetstr or not self._check_connection():
             # need something to do
             return False
-        self._check_connection()
         
-        self.es.writeNetstring("STATUS ::%s" %targetstr)
+        string = "STATUS ::%s" %targetstr
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            return self.status(targets)
+        
         string = self.es.readNetstring()
         if string == "PICKLE STATUS":
             package = self.es.readNetstring()
@@ -938,7 +972,8 @@ class RemoteController(object):
         @arg flag:
             A boolean to turn notification on (True) or off (False) 
         """
-        self._check_connection()
+        if not self._check_connection():
+            return False
         
         if addr is None:
             host = socket.gethostbyname(socket.gethostname())
@@ -948,9 +983,13 @@ class RemoteController(object):
             host, port = addr
             
         if flag:
-            self.es.writeNetstring("NOTIFY ADD %s %s" % (host, port))
+            string = "NOTIFY ADD %s %s" % (host, port)
         else:
-            self.es.writeNetstring("NOTIFY DEL %s %s" % (host, port))
+            string = "NOTIFY DEL %s %s" % (host, port)
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            return self.notify(addr, flag)
         string = self.es.readNetstring()
         if string == "NOTIFY OK":
             return True
@@ -960,12 +999,16 @@ class RemoteController(object):
     def reset(self, targets):
         """Clear the namespace if the kernel."""
         targetstr = self.parseTargets(targets)
-        if not targetstr:
+        if not targetstr or not self._check_connection():
             # need something to do
             return False
-        self._check_connection()
         
-        self.es.writeNetstring("RESET ::%s" %targetstr)
+        string = "RESET ::%s" %targetstr
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            return self.reset(targets)
+        
         string = self.es.readNetstring()
         if string == "RESET OK":
             return True
@@ -975,10 +1018,9 @@ class RemoteController(object):
     def kill(self, targets):
         """Kill the engine completely."""
         targetstr = self.parseTargets(targets)
-        if not targetstr:
+        if not targetstr or not self._check_connection():
             # need something to do
             return False
-        self._check_connection()    
         
         self.es.writeNetstring("KILL ::%s" %targetstr)
         string = self.es.readNetstring()
@@ -990,7 +1032,10 @@ class RemoteController(object):
     def disconnect(self):
         """Disconnect from the kernel, but leave it running."""
         if self.is_connected():
-            self.es.writeNetstring("DISCONNECT")
+            try:
+                self.es.writeNetstring("DISCONNECT")
+            except socket.error:
+                return True
             string = self.es.readNetstring()
             if string == "DISCONNECT OK":
                 self.s.close()
