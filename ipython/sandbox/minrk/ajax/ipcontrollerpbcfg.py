@@ -8,6 +8,7 @@ from ipython1.kernel.controllerpb import \
     IPBControllerFactory
 
 clientPBPort = 10111
+clientVanillaPort = 10105
 
 # engineServerProtocolInterface = IVanillaEngineServerFactory
 engineServerProtocolInterface = IPBEngineServerFactory
