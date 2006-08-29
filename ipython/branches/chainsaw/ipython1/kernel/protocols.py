@@ -8,10 +8,11 @@
 #*****************************************************************************
 
 from twisted.protocols import basic
+from twisted.internet import protocol
 
 class EnhancedNetstringReceiver(basic.NetstringReceiver, object):
-
-    MAX_LENGTH = 536870912 # 500 MB
+    
+    MAX_LENGTH = 134217728 # 100 MB, 2**27
 
     def sendBuffer(self, buf):
         self.transport.write('%i:' %len(buf))
@@ -22,3 +23,24 @@ class EnhancedNetstringReceiver(basic.NetstringReceiver, object):
         # temporary solution that copies:
         self.transport.write(str(buf))
         self.transport.write(',')
+    
+
+class EnhancedFactory:
+    
+    MAX_LENGTH = 134217728 # 100 MB, 2**27
+    
+    def buildProtocol(self, addr):
+        p = self.protocol()
+        p.MAX_LENGTH = self.MAX_LENGTH
+        p.factory = self
+        return p
+    
+
+class EnhancedServerFactory(EnhancedFactory, protocol.ServerFactory, object):
+    pass
+
+class EnhancedClientFactory(EnhancedFactory, protocol.ClientFactory, object):
+    pass
+
+    
+    

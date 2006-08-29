@@ -17,7 +17,7 @@ parts of the controller.
 
 import cPickle as pickle
 
-from twisted.internet import protocol, defer
+from twisted.internet import defer
 from twisted.internet.interfaces import IProducer
 from twisted.python import components, log
 from twisted.python.failure import Failure
@@ -590,7 +590,7 @@ class IVanillaControllerFactory(Interface):
     
 
 
-class VanillaControllerFactoryFromService(protocol.ServerFactory):
+class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
     """the controller factory"""
     
     implements(IVanillaControllerFactory)

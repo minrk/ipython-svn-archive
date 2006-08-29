@@ -18,9 +18,8 @@ from twisted.internet import protocol, reactor, defer
 
 defer.setDebugging(1)
 
-from ipython1.kernel import error
+from ipython1.kernel import error, protocols
 from ipython1.kernel.controllerservice import ControllerService, IRemoteController
-from ipython1.kernel.protocols import EnhancedNetstringReceiver
 import ipython1.kernel.serialized as serialized
 import ipython1.kernel.engineservice as engineservice
 
@@ -29,7 +28,7 @@ import ipython1.kernel.engineservice as engineservice
 class IVanillaEngineClientProtocol(zi.Interface):
     pass
 
-class VanillaEngineClientProtocol(EnhancedNetstringReceiver):
+class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
     
     zi.implements(IVanillaEngineClientProtocol)
     
@@ -394,7 +393,7 @@ class IVanillaEngineClientFactory(engineservice.IEngineBase,
     
     pass
 
-class VanillaEngineClientFactoryFromEngineService(protocol.ClientFactory, object):
+class VanillaEngineClientFactoryFromEngineService(protocols.EnhancedClientFactory):
     
     zi.implements(IVanillaEngineClientFactory)
     
@@ -463,7 +462,7 @@ class IVanillaEngineServerProtocol(engineservice.IEngineBase,
     
     pass
     
-class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
+class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
     
     zi.implements(IVanillaEngineServerProtocol)
     
@@ -488,7 +487,7 @@ class VanillaEngineServerProtocol(EnhancedNetstringReceiver):
     
     #def sendString(self, s):
     #    log.msg('C: %s' % s)
-    #    EnhancedNetstringReceiver.sendString(self, s)
+    #    protocols.EnhancedNetstringReceiver.sendString(self, s)
     
     def stringReceived(self, msg):
         #log.msg('E: %s' % msg)
@@ -912,7 +911,7 @@ class IVanillaEngineServerFactory(IRemoteController):
     
     pass
 
-class VanillaEngineServerFactoryFromControllerService(protocol.ServerFactory):
+class VanillaEngineServerFactoryFromControllerService(protocols.EnhancedServerFactory):
     
     zi.implements(IVanillaEngineServerFactory)
     
