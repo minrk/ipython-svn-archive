@@ -24,7 +24,7 @@ ControllerModule.CommandWidget = Nevow.Athena.Widget.subclass('ControllerModule.
 ControllerModule.CommandWidget.method(
     'getIDs',
     function(self) {
-        getElement('targets').value = getParam('ids');
+        document.getElementById('targets').value = getParam('ids');
     });
     
 ControllerModule.CommandWidget.method(
@@ -37,20 +37,20 @@ ControllerModule.CommandWidget.method(
 ControllerModule.CommandWidget.method(
     'commandOutput',
     function(self, outs){
-		getElement('commandOut').innerHTML = outs;
+		document.getElementById('commandOut').innerHTML = outs;
 	});
 ControllerModule.CommandWidget.method(
     'changeCmd',
     function(self, cmd){
 		if(cmd == 'local' || cmd == 'globals'){
-			getElement("targets").disabled = true
+			document.getElementById("targets").disabled = true
 		}else{
-			getElement("targets").disabled = false
+			document.getElementById("targets").disabled = false
 		}
 		if(cmd == 'reset' || cmd == 'status' || cmd == 'kill' || cmd == 'globals'){
-			getElement("args").disabled = true
+			document.getElementById("args").disabled = true
 		}else{
-			getElement("args").disabled = false
+			document.getElementById("args").disabled = false
 		}
 	});
 
@@ -59,7 +59,7 @@ ControllerModule.StatusWidget = Nevow.Athena.Widget.subclass('ControllerModule.S
 ControllerModule.StatusWidget.method(
     'getIDs',
     function(self){
-        var idform = getElement('idform');
+        var idform = document.getElementById('idform');
         idform.idfield.value = getParam('ids')
     });
 
@@ -72,7 +72,7 @@ ControllerModule.StatusWidget.method(
 ControllerModule.StatusWidget.method(
     'refreshStatus',
     function(self) {
-        var idform = getElement('idform');
+        var idform = document.getElementById('idform');
         self.getStatus(idform.idfield.value, idform.pending.checked, 
             idform.queue.checked,idform.history.checked,idform.locals.checked);
     });
@@ -80,7 +80,7 @@ ControllerModule.StatusWidget.method(
 ControllerModule.StatusWidget.method(
     'updateStatus',
     function(self, expression) {
-        getElement('statusOut').innerHTML = expression;
+        document.getElementById('statusOut').innerHTML = expression;
     });
 
 ControllerModule.ResultWidget = Nevow.Athena.Widget.subclass('ControllerModule.ResultWidget');
@@ -97,7 +97,7 @@ ControllerModule.ResultWidget.method(
 ControllerModule.ResultWidget.method(
     'handleResult',
     function(self, result) {
-        var output = getElement('resultOut');
+        var output = document.getElementById('resultOut');
         output.innerHTML = output.innerHTML+result;
         output.scrollTop = output.scrollHeight;
     });
