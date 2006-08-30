@@ -16,6 +16,8 @@ import new
 
 from IPython.iplib import InteractiveShell
 
+__IPYTHON__.active_cluster = None
+
 def magic_px(self,parameter_s=''):
     """Executes the given python command on the active IPython cluster.
     
@@ -29,7 +31,7 @@ def magic_px(self,parameter_s=''):
     #print 'Magic function. Passed parameter is between < >: <'+parameter_s+'>'
     #print 'The self object is:',self
     active_cluster = __IPYTHON__.active_cluster
-    if active_cluster:
+    if active_cluster is not None:
         print "Executing command on cluster"
         active_cluster.executeAll(parameter_s)
     else:
@@ -58,7 +60,7 @@ def magic_pn(self,parameter_s=''):
     cmd = args[1]
             
     active_cluster = __IPYTHON__.active_cluster
-    if active_cluster:
+    if active_cluster is not None:
         print "Executing command on cluster"
         active_cluster.execute(k, cmd)
     else:
