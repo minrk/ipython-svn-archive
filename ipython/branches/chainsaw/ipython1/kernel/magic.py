@@ -18,7 +18,7 @@ from IPython.iplib import InteractiveShell
 
 NO_ACTIVE_CONTROLLER = """
 Error:  No Controller is activated
-Use activate() on a RemoteController object to activate it more magics.
+Use activate() on a RemoteController object to activate it for magics.
 """
 
 def magic_px(self,parameter_s=''):
