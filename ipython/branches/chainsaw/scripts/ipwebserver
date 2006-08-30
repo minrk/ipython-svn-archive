@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+"""Classes for gathering results from kernels.
+
+IPython kernels send back results (stdout, stderr) to a UDP port.  The classes
+in this module listen on the UDP port and hadle the incoming results.
+
+Classes:
+
+ResultGatherer     -- A multithreaded class that collects and prints results
+                      from kernels.
+
+To use simply start a basic result gatherer from the command line, issue:
+
+python results.py
+
+This will start the results gatherer on port 10104.  To use a different port,
+use the -p option:
+
+python results.py -p 10001
+
+Once the result gatherer has been started you can tell kernels to send results
+to the gatherer by using the .notify method of the RemoteKernel or 
+InteractiveCluster classes.  Multiple kernels can notify a single gatherer.
+"""
+
+#*****************************************************************************
+#       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
+#                           Brian E Granger <ellisonbg@gmail.com>
+#                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
+import sys
+from optparse import OptionParser
+
+from twisted.python import log
+from twisted.internet import reactor
+from twisted.spread import pb
+from nevow import appserver
+
+from ipython1.kernel.controllerservice import IMultiEngine
+from ipython1.kernel.util import printer
+from ipython1.web.athenapages import PageRoot, ControllerPage, ResultsPage
+
+def main(port, ip, mode):
+    global Page
+    if mode == 'controller':
+        Page = ControllerPage
+    elif mode == 'results':
+        Page = ResultsPage
+    else:
+        print "invalid mode"
+        return
+    log.startLogging(sys.stdout)
+    f = pb.PBClientFactory()
+    d = f.getRootObject()
+    d.addCallback(gotRoot)
+    reactor.connectTCP(ip, port, f)
+    reactor.run()
+
+def gotRoot(rootObj):
+    global Page
+    pbc = IMultiEngine(rootObj)
+    site = appserver.NevowSite(PageRoot(Page, pbc))
+    reactor.listenTCP(8080, site)
+    reactor.callLater(1, printer, 'Running')
+
+    
+def start():
+    parser = OptionParser()
+    parser.set_defaults(port=10111)
+    parser.set_defaults(controller='127.0.0.1')
+    parser.set_defaults(mode='controller')
+    parser.add_option("-p", "--port", type="int", dest="port",
+        help="the TCP port the gatherer will listen on")
+    parser.add_option("-c", "--controller", type="str", dest="controller",
+        help="ip:port of the controller")
+    parser.add_option("-m", "--mode", type="str", dest="mode",
+        help="The mode to run the webserver in [controller/results]")
+    (options, args) = parser.parse_args()
+    print "Starting the gatherer on port %i" % options.port
+    main(options.port, options.controller, options.mode)
+    
+if __name__ == '__main__':
+    start()
