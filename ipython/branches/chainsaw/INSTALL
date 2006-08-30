@@ -18,20 +18,32 @@ The IPython kernel requires four things:
 1. A current version of IPython
 2. Zope Interface
 3. Twisted
-4. The kernel itself
+4. The IPython1 package that contains the kernel
 
-For MPI support, two additional things are needed:
-
-1. An MPI implementation compiled as a shared library
-2. A way of calling MPI from Python
+There are also a number of optional dependencies that provide additional capabilities.
 
 Installation Instructions
 =========================
 
+Unless otherwise stated, all of the following packages can be installed by cd'ing to the source directory and issuing the command:
+
+::
+
+	python setup.py install
+	
+To install into the site-packages directory of your system Python you will need admin privileges.  If you do not have such provileges, you can use set a --home flag when you install to select a different directory for your packages:
+
+::
+
+	python setup.py install --home=some-dir-in-your-PYTHONPATH
+	
+Your will then need to set you PYTHONPATH environment variable to point to this directory.
+More information about options for setup.py can be found in the Python documentation.
+	
 IPython
 -------
 
-First, download and install the current version of ipython:
+First, download and install the current version of IPython:
 
 http://ipython.scipy.org
 
@@ -53,20 +65,15 @@ Get the trunk version of Twisted using subversion:
 ::
 
 	svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted
-	cd Twisted
-	python setup.py install
-	    
+	
 IPython Kernel
 --------------
 
-The latest prototype of the IPython kernel can be retrieved from the IPython subversion repository with the command.
+The latest prototype of the IPython kernel can be retrieved from the IPython subversion repository with the command:
 
 ::
 
     svn co http://ipython.scipy.org/svn/ipython/ipython/branches/chainsaw ipython1
-    cd ipython1
-    python setup.py build
-    python setup.py install
 
 In addition to installing the ipython1 python package, this will also install a few scripts for starting the kernel into an appropriate location.  To control where these scripts are installed, you can do the following:
 
@@ -82,13 +89,11 @@ Nevow is a web development framework that is based on Twisted.  Nevow is an opti
 ::
 
 	svn co http://divmod.org/svn/Divmod/trunk/Nevow/ Nevow 
-	cd Nevow
-	python setup.py install
 
 Configuration
 =============
 
-IPython1 uses configuration files and objects to configure itself.  The basic configuration objects, their options and default values can be found in ipython1.config.objects.  Tools for working with these objects are provided in the other
+IPython1 uses configuration files and objects to configure itself.  Information about the basic configuration objects, their options and default values can be found in ipython1.config.objects.  Tools for working with these objects are provided in the other
 ipython1.config submodules.
 
 Testing
