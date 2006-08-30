@@ -90,7 +90,7 @@ class RemoteController(object):
         try:
             __IPYTHON__.activeController = self
         except NameError:
-            print "The %px and %autopx magic's are not active."
+            print "The IPython Controller magics only work within IPython."
     
     def __del__(self):
         return self.disconnect()
