@@ -1,4 +1,7 @@
-#resultId{
+#monitor{
+    border: 1px solid #999;
+}
+#resultIdDiv{
     text-align: center;
 }
 #resultOut{
@@ -12,7 +15,7 @@
 	text-align: left;
     font-family: monospace;
 }
-#command {
+#commandWidget {
 	text-align: left;
     font-family: monospace;
     margin-top: 1em;
@@ -48,24 +51,9 @@
 	text-align: left;
 	vertical-align: top;	
 }
-#button {
+#statusidfield {
     border: 1px solid #999;
 }
-#idfield {
-    border: 1px solid #999;
-}
-#idform {
+#statusidform {
     border: 0px solid #999;
-}
-#stdin{
-	color: green;
-	font-weight: bold;
-}
-#stdout{
-	color: blue;
-	font-weight: bold;
-}
-#stderr{
-	color: red;
-	font-weight: bold;
 }

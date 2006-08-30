@@ -6,6 +6,8 @@ from twisted.python.failure import Failure
 from nevow import athena, inevow, loaders, util
 from ipython1.core.shell import InteractiveShell
 
+basedir = os.path.split(os.path.abspath(locals()['__file__']))[0]
+
 class IAjaxShell(Interface):
     """Interface for Ajax Shell"""
     def execute(lines, id):
@@ -69,7 +71,7 @@ class AjaxShellResource(athena.LivePage):
     evaluates the expression and sets the output in the browser.
     """
     addSlash = True
-    html = os.path.abspath(os.path.curdir)+'/interactive.html'
+    html = basedir+'/interactive.html'
     docFactory = loaders.xmlfile(html)    
 
 if __name__ == '__main__':

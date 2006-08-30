@@ -1,0 +1,12 @@
+#stdin{
+	color: green;
+	font-weight: bold;
+}
+#stdout{
+	color: blue;
+	font-weight: bold;
+}
+#stderr{
+	color: red;
+	font-weight: bold;
+}

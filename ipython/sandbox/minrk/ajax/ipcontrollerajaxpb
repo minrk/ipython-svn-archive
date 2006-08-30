@@ -41,7 +41,7 @@ from nevow import appserver
 
 from ipython1.kernel.controllerservice import IMultiEngine
 from ipython1.kernel.util import printer
-from controllerajaxpb import *
+from athenapages import PageRoot, ControllerPage
 
 def main(port, ip):
     log.startLogging(sys.stdout)
@@ -53,7 +53,7 @@ def main(port, ip):
 
 def gotRoot(rootObj):
     pbc = IMultiEngine(rootObj)
-    site = appserver.NevowSite(ControllerRoot(pbc))
+    site = appserver.NevowSite(PageRoot(ControllerPage, pbc))
     reactor.listenTCP(8080, site)
     reactor.callLater(1, printer, 'Running')
 

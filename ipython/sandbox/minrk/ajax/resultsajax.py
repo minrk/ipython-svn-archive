@@ -11,7 +11,7 @@ from ipython1.kernel.controllerclient import RemoteController
 
 from controllerajaxpb import ResultElement
 
-basedir = os.path.abspath(os.path.curdir)
+basedir = os.path.split(os.path.abspath(locals()['__file__']))[0]
 
 class TCPAJAXResultsProtocol(TCPResultsProtocol):
     

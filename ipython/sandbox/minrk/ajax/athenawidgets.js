@@ -60,8 +60,8 @@ ControllerModule.StatusWidget = Nevow.Athena.Widget.subclass('ControllerModule.S
 ControllerModule.StatusWidget.method(
     'getIDs',
     function(self){
-        var idform = document.getElementById('idform');
-        idform.idfield.value = getParam('ids')
+        var idform = document.getElementById('statusidform');
+        idform.statusidfield.value = getParam('ids')
     });
 
 ControllerModule.StatusWidget.method(
@@ -73,8 +73,8 @@ ControllerModule.StatusWidget.method(
 ControllerModule.StatusWidget.method(
     'refreshStatus',
     function(self) {
-        var idform = document.getElementById('idform');
-        self.getStatus(idform.idfield.value, idform.pending.checked, 
+        var idform = document.getElementById('statusidform');
+        self.getStatus(idform.statusidfield.value, idform.pending.checked, 
             idform.queue.checked,idform.history.checked,idform.locals.checked);
     });
 
@@ -102,4 +102,12 @@ ControllerModule.ResultWidget.method(
         var output = document.getElementById('resultOut');
         output.innerHTML = output.innerHTML+result;
         output.scrollTop = output.scrollHeight;
+    });
+
+ControllerModule.IDWidget = Nevow.Athena.Widget.subclass('ControllerModule.IDWidget');
+
+ControllerModule.IDWidget.method(
+    'drawIDs',
+    function(self, idstr){
+        document.getElementById('idlist').innerHTML = idstr;
     });
