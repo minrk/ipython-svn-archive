@@ -24,7 +24,8 @@ def configure(configObject):
             configObject.update(**definedAttributes)
         else:
             print "could not load config file"
-            
+
+
 def resolveFilePath(filename):
     resolvedFile = None
     if os.path.isfile(filename):
@@ -35,7 +36,4 @@ def resolveFilePath(filename):
     elif os.path.isfile(os.path.expanduser(filename)):
         resolvedFile = os.path.expanduser(filename)
     return resolvedFile
-            
-        
-        
-    
+

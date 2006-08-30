@@ -17,12 +17,12 @@ InteractiveCluster classes.  Multiple kernels can notify a single gatherer.
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-import socket, threading, cPickle as pickle
+import socket, threading, types, cPickle as pickle
 
-from zope.interface import Interface, implements
+from zope.interface import Interface, implements, interface
 from twisted.protocols.basic import LineReceiver
-from twisted.internet import protocol, reactor
-from twisted.python import components
+from twisted.internet import protocol, reactor, defer
+from twisted.python import components, log
 
 from IPython.ColorANSI import *
 
@@ -195,8 +195,40 @@ class TCPResultsProtocol(LineReceiver):
 
 
 # Notifier - the Controller side of the results objects
-class INotifier(Interface):
+class NotifierParent(object):
+    _notifiers = {}
+    # notification methods 
+        
+    def notifiers(self):
+        return self._notifiers
+    
+    def addNotifier(self, n):
+        if n.key not in self._notifiers:
+            self._notifiers[n.key] = n
+            print n.notifyOnDisconnect(self.delNotifier,n.key)
+            log.msg("Notifiers: %s" % self._notifiers)
+        return defer.succeed(None)
+    
+    def delNotifier(self, key):
+        if key in self._notifiers:
+            try:
+                del self._notifiers[key]
+            except KeyError:
+                pass
+            log.msg("Notifiers: %s" % self._notifiers)
+        return defer.succeed(None)
+    
+    def notify(self, result):
+        for tonotify in self.notifiers().values():
+            tonotify.notify(result)
+        return result
+    
+
+class INotifierChild(Interface):
     """an interface for notifier objects"""
+    
+    key = interface.Attribute("The key for registration")
+    
     def notify(result):
         """notify of a result Tuple"""
     
@@ -204,8 +236,9 @@ class INotifier(Interface):
         """function to be called on disconnect"""
     
 
-class BaseNotifier(object):
-    implements(INotifier)
+
+class BaseNotifierChild(object):
+    implements(INotifierChild)
     _disconnectNotifiers = []
     
     def notifyOnDisconnect(self, f, *a, **kw):
@@ -214,7 +247,7 @@ class BaseNotifier(object):
         else:
             self._disconnectNotifiers.append((f, a, kw))
     
-    def onDisconnect(self, *a, **kw):
+    def onDisconnect(self, *args, **kwargs):
         for f,a,kw in self._disconnectNotifiers:
             try:
                 f(*a, **kw)
@@ -222,29 +255,37 @@ class BaseNotifier(object):
                 self._disconnectNotifiers.remove((f,a,kw))
     
 
+def notifierFromFunction(f):
+    n = BaseNotifierChild()
+    n.key = repr(f)
+    n.notify = f
+    return n
 
-class TCPNotifier(BaseNotifier):
+components.registerAdapter(notifierFromFunction,
+        types.FunctionType, INotifierChild)
+
+class TCPNotifierChild(BaseNotifierChild):
     
     def __init__(self, addr):
+        self.key = addr
         self.host = addr[0]
         self.port = addr[1]
-        self.factory = NotifierFactory(self.onDisconnect)
+        self.factory = NotifierChildFactory(self.onDisconnect)
         self.client = reactor.connectTCP(self.host, self.port, self.factory)
     
     def notify(self, result):
         package = pickle.dumps(result, 2)
         if self.client.transport.protocol is not None:
             self.client.transport.protocol.sendLine("RESULT %s" %package)
-            
     
 
-components.registerAdapter(TCPNotifier, tuple, INotifier)
+components.registerAdapter(TCPNotifierChild, tuple, INotifierChild)
 
-class NotifierFactory(protocol.ClientFactory):
+class NotifierChildFactory(protocol.ClientFactory):
     """A small client factory and protocol for the tcp results gatherer"""
     protocol = LineReceiver
     protocol.lineReceived = lambda _,__: None
     def __init__(self, onDisconnect=None):
-        if onDisconnect is not None:
+        if callable(onDisconnect):
             self.clientConnectionLost = self.clientConnectionFailed = onDisconnect
     

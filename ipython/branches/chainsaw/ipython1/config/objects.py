@@ -16,10 +16,7 @@ from ipython1.kernel.enginevanilla import \
     IVanillaEngineClientFactory, IVanillaEngineServerFactory
 
 from ipython1.kernel.controllervanilla import \
-    IVanillaControllerFactory
-
-from ipython1.kernel import \
-    controllerclient
+    IVanillaControllerFactory, RemoteController
 
 from ipython1.core.shell import InteractiveShell
 
@@ -70,7 +67,7 @@ class ClientConfiguration(Configuration):
     
     configFiles = ['client_config.py']
     
-    RemoteController = controllerclient.RemoteController
+    RemoteController = RemoteController
     connectToControllerOn = ('127.0.0.1', clientVanillaPort)
     maxMessageSize = maxMesageSize
 

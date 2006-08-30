@@ -146,9 +146,9 @@ class PBControllerRootFromService(pb.Root):
     
     def remote_addNotifier(self, reference):
         """adds a notifier"""
-        return self.service.addNotifier(reference)
+        n = results.INotifierChild(reference)
+        return self.service.addNotifier(n)
     
-    assert remote_addNotifier
     def checkReturns(self, rlist):
         for r in rlist:
             if isinstance(r, (Failure, Exception)):
@@ -172,7 +172,7 @@ components.registerAdapter(PBServerFactoryFromService,
 
 #BEGIN counterparts
 
-class PBRemoteController(pb.Referenceable):
+class PBRemoteController(pb.Referenceable, results.NotifierParent):
     """remote controller object, connected through perspective broker
     """
     implements(cs.IMultiEngine)
@@ -182,10 +182,7 @@ class PBRemoteController(pb.Referenceable):
         self.callRemote = reference.callRemote
         cs.addAllMethods(self)
         self.deferred = self.callRemote('addNotifier', self)
-    
-    def remote_notify(self, result):
-        """This should be overridden to be useful"""
-        log.msg(result)
+        self.remote_notify = self.notify
     
     def verifyTargets(self, targets):
         """verify if targets is callable id list, id, or string 'all'"""
@@ -194,7 +191,7 @@ class PBRemoteController(pb.Referenceable):
     
     def getIDs(self):
         """get ids"""
-        d = self.callRemote('getIDs', targets)
+        d = self.callRemote('getIDs')
         return d.addCallback(self.checkReturn)
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
@@ -274,8 +271,11 @@ class PBRemoteController(pb.Referenceable):
             return map(self.checkReturn, r)
         return r
 
+
+components.registerAdapter(PBRemoteController, 
+        pb.RemoteReference, cs.IMultiEngine)
     
-class PBNotifier(results.BaseNotifier):
+class PBNotifierChild(results.BaseNotifierChild):
     
     def __init__(self, reference):
         self.key = repr(reference)
@@ -285,5 +285,6 @@ class PBNotifier(results.BaseNotifier):
     def notify(self, result):
         return self.callRemote('notify', result).addErrback(self.onDisconnect)
     
-components.registerAdapter(PBRemoteController, pb.RemoteReference, cs.IMultiEngine)
-components.registerAdapter(PBNotifier, pb.RemoteReference, results.INotifier)
+components.registerAdapter(PBNotifierChild,
+        pb.RemoteReference, results.INotifierChild)
+

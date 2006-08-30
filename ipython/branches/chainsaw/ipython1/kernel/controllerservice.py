@@ -166,7 +166,7 @@ def allMethod(self, %s):
 
 
 
-class ControllerService(service.Service):
+class ControllerService(service.Service, results.NotifierParent):
     """This service listens for kernel engines and control clients.
         It manages the command queues for the engines.
     """
@@ -175,7 +175,6 @@ class ControllerService(service.Service):
     
     def __init__(self, maxEngines=255, saveIDs=False):
         self.saveIDs = saveIDs
-        self._notifiers = {}
         self.engines = {}
         self.availableIDs = range(maxEngines,-1,-1)#[255,...,0]
         self.serialTypes = ()
@@ -267,6 +266,8 @@ def autoMethod(self, %s:
     #ImultiEngine helper methods
     def engineList(self, targets):
         """parse a *valid* id list into list of engines"""
+        # we could be strict here
+        # assert self.verifyTargets(targets), "need valid ids"
         if isinstance(targets, int):
             return [self.engines[targets]]
         elif isinstance(targets, (list, tuple)):
@@ -366,31 +367,3 @@ def autoMethod(self, %s:
             l.append(e.status().addCallback(lambda s:(e.id, s)))
         return gatherBoth(l)
     
-    
-    # notification methods    
-        
-    def notifiers(self):
-        return self._notifiers
-    
-    def addNotifier(self, n):
-        if n not in self._notifiers:
-            self._notifiers[n] = results.INotifier(n)
-            self._notifiers[n].notifyOnDisconnect(self.delNotifier,n)
-            log.msg("Notifiers: %s" % self._notifiers)
-        return defer.succeed(None)
-    
-    def delNotifier(self, n):
-        if n in self._notifiers:
-            try:
-                del self._notifiers[n]
-            except KeyError:
-                pass
-            log.msg("Notifiers: %s" % self._notifiers)
-        return defer.succeed(None)
-    
-    def notify(self, result):
-        for tonotify in self.notifiers().values():
-            tonotify.notify(result)
-        return result
-    
-
