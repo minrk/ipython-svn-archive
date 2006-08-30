@@ -1,5 +1,6 @@
 // import Nevow.Athena
-/*from cryer.co.uk script8*/
+
+/*getParam from cryer.co.uk script8*/
 function getParam(name)
 {
   var start=location.search.indexOf("?"+name+"=");
@@ -91,6 +92,7 @@ ControllerModule.ResultWidget.method(
     'getIDs',
     function(self) {
         self.ids = getParam('ids');
+        document.getElementById('resultIdField').value = self.ids
         self.callRemote('setIDs', self.ids);
     });
 
