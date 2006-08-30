@@ -1,5 +1,5 @@
 ===========================
-IPython Kernel Readme
+IPython Kernel README
 ===========================
 
 :Author:  Brian E. Granger
@@ -11,146 +11,69 @@ IPython Kernel Readme
 Overview
 ========
 
-This file gives an overview of the IPython kernel and the IPython kernel
-interface.
+This file gives an overview of the IPython kernel.  The IPython kernel exposes Python over the network and allows parallel and distributed applications to be developed, debugged, tested, executed and monitored interactively and collaboratively.
 
 For installation instructions, see the INSTALL file in this directory.
 
-The IPython kernel opens up the door for the following:
+The IPython kernel is a component of a future release of IPython - IPython1.  While IPython1 is not completed the kernel module is fully functional and can be used from the current stable IPython versions.  
 
-1.  Interactive parallel computation in python.  
+The IPython kernel is essentially a network enabled Python instance.  The kernel actually consists of three components:
 
-2.  A separation (into two or more processes) of the python user interface
-    and the executetion of python code.
-    
-3.  Seamless support for the interactive use of multiple GUI toolkits.
+:IPython Engine: The IPython Engine is a Python instance that takes Python commands over a network connection.  Eventually, the IPython Engine will be an IPython instance, but for now, it is plain Python.  The Engine can also handle incoming and outgoing Python objects send over a network connection.  When multiple Engines are started, parallel and distributed computing becomes possible.  An important feature of the IPython Engines is that they block while user code is being executed.  
+:IPython Controller: The IPython Controller provides an interface for working with a set of Engines.  It manages a queue for each Engine and exposes a fully asynchronous interface to each Engine.  Because the Controller listens on a network port for Engines to connect to it, it must be started before any Engines are started.  The Controller also provides a single point of contact for users who wish to utilize the Engines connected to the Controller.
+:Controller Clients: Various Controller clients provide a way for users to interact with a Controller, and thus, with a set of Engines.  Our default client is RemoteController Python object that is designed to be used from within Python or IPython.  It be used both interactively and in scripts.  
 
-4.  Collaborative computing.
+Getting Started
+===============
 
-The IPython kernel actually consists of two layers: the kernel and the kernel
-client.  The kernel is run in a separate process and consists of a
-fully functional python interpreter that listen for python commands on a 
-network port rather that a command line.  The kernel client is run by
-the user in a separate python interpreter.  The kernel client 
-consists of a set of python objects that allow the user to interact with one 
-or more kernels simultaneously.  
+Starting the Controller
+-----------------------
 
-**NOTE:**  If you run code on the kernel that i) calls C/C++/fortran and ii) does not release Python's Global Interpreter Lock (GIL), the kernel will become unresponsive while the code runs.  We are fixing this problem in a future release.
-
-Basic usage
-===========
-
-Starting the kernel
--------------------
-
-The IPython kernel is a python VM that listens on a network port.  The kernel is started using the ipkernel command.  To see the command line options for
-ipkernel issue the command:
+The IPython Controller can be started with the command:
 
 ::
 
-    ipkernel -h
-
-Be default, the kernel listens on TCP port 10105.  To specify what TCP port
-the kernel should listen on, use the -p (or --port) option:
-
-::
-
-    ipkernel --port 10106
-    
-To enable MPI support, call ipkernel with the --mpi flag:
+	ipcontroller
+	
+This will start a controller that listens on the default ports for connections from Engines and Clients.  To see command line options for the Controller give the command:
 
 ::
 
-    ipkernel --mpi
+	ipcontroller -h
 
-By default, the IPython kernel has two threads, one for executing user commands and a second for handling network calls.  The multi-threaded version has a command queue so that multiple commands can be sent to a kernel while it is working.  To start a single thread version with no queue:
+The details of the Controller (which ports are used, etc.) can also be configured using configuration files. 
 
-::
+Starting Engines
+----------------
 
-    ipkernel --threadless
-
-The basic kernel does not support interactive calls to GUI toolkits (tk, wx,
-qt, Cocoa, etc.).  This is because each GUI toolkit has its own event loop that 
-must be integrated with the event loop of the kernel (which uses twisted).  
-
-To allow the interactive use of GUI toolkits, special purpose kernels are 
-offered.  Currently, we have implemented a kernel that integrates with wx.
-To start this kernel, use ipkernelwx rather than ipkernel in the above 
-command.  The GUI kernel accept the same command line options.  On Mac OS X
-the GUI kernels must be started with the command pythonw rather than python.
-
-**NOTE:**  Do not run the GUI kernel unless you really need it.  This is because
-the GUI kernel lacks some of the features of the basic kernel.  Most importantly
-the basic kernel is multithreaded and has a queue, whereas the GUI kernels have
-only a single user thread and no queue.  The queue allow multiple python 
-commands to be sent to the kernel while previous commands are still executing.
-
-**NOTE:**  It may not be possible to run the kernel in the background currently. 
-Thus if you try python kernel.py &, the kernel will not work.  This has to do with the deep inner workings of Twisted.  In the future you will be able to do
-this.
-
-Using the kernel controller
----------------------------
-
-The IPython kernel controller is a separate process that uses a simple network protocol to keep track of where various kernels are running.  It saves this information to a file that can be loaded into IPython to access the kernels interactively.  There is a couple of situations where this capability is useful:
-
-1.  In some computing environments, it is not easy to tell what ip and port a
-    kernel has started on.  Many batch submission systems like PBS, Torque or
-    Xgrid don't allow you to specify what node a process will run on.
-    Thus you need a way of finding out where a kernel is running.
-    
-2.  Second, even if you know the ip address of a kernel, you may not know the
-    port it is listening on.  The reason is that when there are multiple 
-    kernels running on a single node, the kernel is smart and picks a port 
-    that is not already being using by another kernel.
-    
-3.  It is a royal pain to manually enter the (ip, port) of each running kernel.
-    The kernel controller maintains a list of the kernel in the proper format
-    to be read by IPython.
-    
-To use the kernel controller you start it **before** starting the kernels and tell the kernels to notify the controller that they have started:
+Instances of the IPython Engine can be started with the command:
 
 ::
 
-    ipcontroller -n 16 -f mycluster
-    ipkernel -C ip_of_controller
-    ipkernel -C ip_of_controller
-    ... 16 times
-    
-At the end of this process, the controller will create a file ~/.ipython/mycluster with the list of the kernels' IP addresses and ports.  This file
-can then be loaded in an interactive python/IPython session:
+	ipengine
+	
+Upon starting, the Engine should automatically connect to the Controller and register itself.  As long as the Controller was started with the default ports, the Engines should find the Controller just fine.  Multiple instances of the Engine can be started on a single machine or on multiple machines.  A single Controller can handle up to 256 Engines, but this number is somewhat dependent on OS related limits on the number of file descriptors per process.
 
->>> ic = InteractiveCluster
->>> ic.load("mycluster")
-    
-    
-Monitoring kernels
-------------------
+Like the Controller, the Engine can be configured using command line options and configuration files.
 
-To monitor the stdin, stdout and stderr of the kernels, you must start a
-ResultGatherer class.  This class is bound to a UDP port and receives UDP
-datagrams from the kernels when results are ready.  To start a ResultGatherer
-run the following command from the command line:
+To run an Engine in the background, you may need to issue the command as:
 
 ::
 
-	ipresults
+	(ipengine &)
+	
+For some reason, running 'ipengine &' without the parentheses dones't work on some platforms.
 
-This will start a ResultGatherer bound to port 10104.  To change the port,
-use the -p options:
+If you have MPI installed, it is also possible to start the Engines using mpiexec:
 
 ::
 
-	ipresults -p 10101
+	mpiexec -n 8 ipengine
+	
+Once the Controller and Engines have been started you ready to use them from a client.
 
-Once a ResultGatherer is running, you must notify the kernel that it
-should send results to the ResultGatherer.  This is done using the notify()
-method of the RemoteKernel or InteractiveCluster class.  
-
-See below for examples of this.
-
-Using the kernel
-================
+Using the Controller and Engines from a Client
+==============================================
 
 The kernel interface is implemented in the kernelclient.py module.  This module
 contains two main classes that allow the user to interact with the kernel:

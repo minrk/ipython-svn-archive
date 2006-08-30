@@ -4,14 +4,14 @@ IPython Kernel Installation
 
 :Author:  Brian E. Granger
 :Contact: ellisonbg@gmail.com
-:Date: August, 2006
+:Date: August 29, 2006
 
 .. contents::
 
 Introduction
 ============
 
-This INSTALL file describes the steps required to install the Ipython kernel.  The For a description of the kernel, see the README file in this directory.
+This INSTALL file describes the steps required to install the IPython kernel.  For a description of the kernel, see the README file in this directory.
 
 The IPython kernel requires four things:
 
@@ -23,7 +23,7 @@ The IPython kernel requires four things:
 For MPI support, two additional things are needed:
 
 1. An MPI implementation compiled as a shared library
-2. A was of calling MPI from Python
+2. A way of calling MPI from Python
 
 Installation Instructions
 =========================
@@ -42,16 +42,20 @@ Next, download and install the zope.interface package:
 
 http://www.zope.org/Products/ZopeInterface
 
-We are using some new features of zope.interface so get version
+We are using recent features of zope.interface so get version
 3.1.0c1 or greater.
 
 Twisted
 -------
 
-Download and install the latest version of Twisted:
+Get the trunk version of Twisted using subversion:
 
-http://www.twistedmatrix.com
-    
+::
+
+	svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted
+	cd Twisted
+	python setup.py install
+	    
 IPython Kernel
 --------------
 
@@ -70,8 +74,36 @@ In addition to installing the ipython1 python package, this will also install a 
 
     python setup.py install_scripts --install-dir=/some/other/bin
 
+Nevow (Optional)
+----------------
+
+Nevow is a web development framework that is based on Twisted.  Nevow is an optional dependency that is only needed if you want to have a nice Ajaxy web interface to the IPython Controller and Engines.  You should get the trunk version of Nevow at the same time you get Twisted as they are developed in parallel:
+
+::
+
+	svn co http://divmod.org/svn/Divmod/trunk/Nevow/ Nevow 
+	cd Nevow
+	python setup.py install
+
+Configuration
+=============
+
+IPython1 uses configuration files and objects to configure itself.  The basic configuration objects, their options and default values can be found in ipython1.config.objects.  Tools for working with these objects are provided in the other
+ipython1.config submodules.
+
+Testing
+=======
+
+Once you have completed the installation of the IPython1 kernel you can run our test suite with the command:
+
+::
+
+	trial ipython1
+	
+The trial command is part of Twisted and allows asynchronous network based applications to be tested using python's unittest framework.  Please let us know if the tests do not pass.
+
 MPI Support
------------
+===========
 
 The IPython kernel includes MPI support.  With MPI support IPython engines can pass data between each other using MPI.  There are many ways to call MPI from within Python:
 
@@ -82,34 +114,33 @@ The IPython kernel includes MPI support.  With MPI support IPython engines can p
 For any of these options to work, MPI must be initialized by a call to
 MPI_Init().  Here is how this is handled in ipython1.  
 
-1.  When an engine is started, it trys to import a module named mpi_init_module in your ~/.ipython directory.  
-2.  mpi_init_module must import a module that calls MPI_Init().
-3.  The module that calls MPI_Init() should be imported as 'mpi' and should
-define two attributes, rank and size, which are the MPI rank and size.
-4.  If the engine can import mpi_init_module, it passes the mpi variable
-onto the EngineService.
-4.  When the engine connects to a controller it requests an id that is 
-the same as its mpi.rank.
+1.  When an engine is started, it trys to find a configuration variable called mpiImportStatement that is a string which, when executed import an mpi module.
+2.  The mpi module must call MPI_Init() when it is imported.
+3.  The module that calls MPI_Init() should be imported as 'mpi' and should define two attributes, rank and size, which are the MPI rank and size.
+4.  If the engine is successful in importing the mpi module, it passes the mpi variable onto the EngineService.
+5.  When the engine connects to a controller it requests an id that is the same as its mpi.rank.
 
 From this point on, you can make calls to MPI using whatever means you wish.
 As of this point, we have tested this approach using two mpi modules: 
 mpi4py and our own mpi module, ipython1.kernel.mpi.  For these two
-options, mpi_init_module should read:
+options, the mpiImportStatement configuration variable should read:
 
-from ipython1.kernel import mpi			# For ipython1.kernel.mpi
+::
 
-or 
+	mpiImportStatement = 'from ipython1.kernel import mpi'
 
-from mpi4py import MPI as mpi
+	mpiImportStatment = 'from mpi4py ipmort MPI as mpi'
 
 Our ipython1.kernel.mpi module is not a full MPI wrapper.  It only calls
 MPI_Init() and sets the rank and size attributes.  Thus it will only be
-useful if you want to use MPI using ctypes or from compiled code.
+useful if you want to call MPI using ctypes or from compiled code.
 
 By default, the ipython1.kernel.mpi module is not built.  To build it,
 give the build command
 
-python setup.py build --mpicc=your mpicc command
+::
+
+	python setup.py build --mpicc=your-mpicc-command
 
 
 
