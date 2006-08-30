@@ -88,7 +88,7 @@ class RemoteController(object):
         >>> %autopx         # The second time it toggles autoparallel mode off
         """
         try:
-            __IPYTHON__.active_cluster = self
+            __IPYTHON__.activeController = self
         except NameError:
             print "The %px and %autopx magic's are not active."
     

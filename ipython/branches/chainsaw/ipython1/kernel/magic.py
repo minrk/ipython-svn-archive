@@ -16,12 +16,15 @@ import new
 
 from IPython.iplib import InteractiveShell
 
-__IPYTHON__.active_cluster = None
+NO_ACTIVE_CONTROLLER = """
+Error:  No Controller is activated
+Use activate() on a RemoteController object to activate it more magics.
+"""
 
 def magic_px(self,parameter_s=''):
-    """Executes the given python command on the active IPython cluster.
+    """Executes the given python command on the active IPython Controller.
     
-    To activate a cluster in IPython, first create it and then call
+    To activate a Controller in IPython, first create it and then call
     the activate() method.
     
     Then you can do the following:
@@ -30,17 +33,18 @@ def magic_px(self,parameter_s=''):
     """
     #print 'Magic function. Passed parameter is between < >: <'+parameter_s+'>'
     #print 'The self object is:',self
-    active_cluster = __IPYTHON__.active_cluster
-    if active_cluster is not None:
-        print "Executing command on cluster"
-        active_cluster.executeAll(parameter_s)
+    try:
+        activeController = __IPYTHON__.activeController
+    except AttributeError:
+        print NO_ACTIVE_CONTROLLER
     else:
-        print "Error: No active IPython cluster.  Use activate()."
-        
+        print "Executing command on Controller"
+        activeController.executeAll(parameter_s)
+
 def magic_pn(self,parameter_s=''):
     """Executes the given python command on the active IPython cluster.
     
-    To activate a cluster in IPython, first create it and then call
+    To activate a Controller in IPython, first create it and then call
     the activate() method.
     
     Then you can do the following:
@@ -58,15 +62,15 @@ def magic_pn(self,parameter_s=''):
             print "Usage: %pn kernel command"
             return
     cmd = args[1]
-            
-    active_cluster = __IPYTHON__.active_cluster
-    if active_cluster is not None:
-        print "Executing command on cluster"
-        active_cluster.execute(k, cmd)
-    else:
-        print "Error: No active IPython cluster.  Use activate()."
-
     
+    try:
+        activeController = __IPYTHON__.activeController
+    except AttributeError:
+        print NO_ACTIVE_CONTROLLER
+    else:
+        print "Executing command on cluster"
+        activeController.execute(k, cmd)
+
 def pxrunsource(self, source, filename="<input>", symbol="single"):
 
     try:
@@ -93,11 +97,11 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
         else:
             return None
     else:
-        #if isinstance(active_cluster, cc.SubCluster):
-        #    self.active_cluster.execute(source)
+        #if isinstance(activeController, cc.SubCluster):
+        #    self.activeController.execute(source)
         #else:
-        #    self.active_cluster.executeAll(source)
-        self.active_cluster.executeAll(source)
+        #    self.activeController.executeAll(source)
+        self.activeController.executeAll(source)
         return False
     
 def magic_autopx(self, parameter_s=''):
@@ -109,15 +113,23 @@ def magic_autopx(self, parameter_s=''):
             self.autopx = False
             print "Auto Parallel Disabled" 
         else:
-            self.runsource = new.instancemethod(pxrunsource, self,
-                self.__class__)
+            try:
+                activeController = __IPYTHON__.activeController
+            except AttributeError:
+                print NO_ACTIVE_CONTROLLER
+            else:
+                self.runsource = new.instancemethod(pxrunsource, self, self.__class__)
+                self.autopx = True
+                print "Auto Parallel Enabled\nType %autopx to disable"
+    else:
+        try:
+            activeController = __IPYTHON__.activeController
+        except AttributeError:
+            print NO_ACTIVE_CONTROLLER
+        else:
+            self.runsource = new.instancemethod(pxrunsource, self, self.__class__)
             self.autopx = True
             print "Auto Parallel Enabled\nType %autopx to disable"
-    else:
-        self.runsource = new.instancemethod(pxrunsource, self,
-                self.__class__)
-        self.autopx = True
-        print "Auto Parallel Enabled\nType %autopx to disable"
 
             
 # Add the new magic function to the class dict:
