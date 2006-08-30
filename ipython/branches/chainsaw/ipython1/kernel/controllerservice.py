@@ -50,11 +50,14 @@ class IMultiEngine(Interface):
     """interface to multiple objects implementing IEngineComplete.
     
     All IMultiEngine methods must return a Deferred to alist with length 
-    equal to the number of targets.
+    equal to the number of targets, except for verifyTargets.
     """
     
     def verifyTargets(targets):
         """verify if targets is callable id list, id, or string 'all'"""
+    
+    def getIDs():
+        """return list of currently registered ids."""
     
     def scatter(targets, key, seq, style='basic', flatten=False):
         """partition and distribute a sequence"""
@@ -292,6 +295,9 @@ def autoMethod(self, %s:
             return True
         else:
             return False
+    
+    def getIDs(self):
+        return defer.succeed(self.engines.keys())
     
     def execute(self, targets, lines):
         """Execute lines of Python code."""

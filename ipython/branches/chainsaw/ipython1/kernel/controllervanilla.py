@@ -131,6 +131,25 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
                 return None
     
     #####   
+    ##### The GETIDS command
+    #####
+    
+    def handle_GETIDS(self, args, targets):
+        d = self.factory.getIDs()
+        return d.addCallbacks(self.getIDsCallback, self.getIDsFail)
+    
+    def getIDsCallback(self, idlist):
+        try:
+            s = pickle.dumps(idlist, 2)
+        except pickle.PickleError:
+            self.getIDsFail()
+        self.sendString(s)
+        self.sendString("GETIDS OK")
+    
+    def getIDsFail(self, f):
+        self.sendString("GETIDS FAIL")
+    
+    #####   
     ##### The PUSH command
     #####
     
@@ -608,6 +627,9 @@ class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
     
     def verifyTargets(self, targets):
         return self.service.verifyTargets(targets)
+    
+    def getIDs(self):
+        return self.service.getIDs()
     
     #IQueuedEngine multiplexer methods
     def cleanQueue(self, targets):

@@ -975,12 +975,30 @@ class RemoteController(object):
             return False
     
     def getIDs(self):
-        status = self.statusAll()
-        if(status):
-            return zip(*self.statusAll())[0]
+        if not self._check_connection():
+            return False
+        
+        string = "GETIDS"
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                return False
+        
+        package = self.es.readNetstring()
+        try:
+            ids = pickle.loads(package)
+        except pickle.PickleError:
+            return False
+        
+        s = self.es.readNetstring()
+        if s == "GETIDS OK":
+            return ids
         else:
-            return status
-    
+            return False
     def notify(self, addr=None, flag=True):
         """Instruct the kernel to notify a result gatherer.
         

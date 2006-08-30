@@ -17,6 +17,9 @@ class IPBController(Interface):
     def remote_verifyTargets(targets):
         """verify if targets is callable id list, id, or string 'all'"""
     
+    def remote_getIDs():
+        """return the currently registered ids"""
+    
     def remote_scatter(targets, key, seq, style='basic', flatten=False):
         """partition and distribute a sequence"""
     
@@ -76,6 +79,9 @@ class PBControllerRootFromService(pb.Root):
     def remote_verifyTargets(self, targets):
         """verify if targets is callable id list, id, or string 'all'"""
         return self.service.verifyTargets(targets)
+    
+    def remote_getIDs(self):
+        return self.service.getIDs()
     
     def remote_scatter(self, targets, key, pseq, style='basic', flatten=False):
         """partition and distribute a sequence"""
@@ -186,6 +192,11 @@ class PBRemoteController(pb.Referenceable):
         d = self.callRemote('verifyTargets', targets)
         return d.addCallback(self.checkReturn)
     
+    def getIDs(self):
+        """get ids"""
+        d = self.callRemote('getIDs', targets)
+        return d.addCallback(self.checkReturn)
+    
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         """partition and distribute a sequence"""
         pseq = pickle.dumps(seq, 2)
@@ -267,6 +278,7 @@ class PBRemoteController(pb.Referenceable):
 class PBNotifier(results.BaseNotifier):
     
     def __init__(self, reference):
+        self.key = repr(reference)
         self.callRemote = reference.callRemote
         reference.broker.notifyOnDisconnect(self.onDisconnect)
     
