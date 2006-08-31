@@ -39,6 +39,21 @@ To install into the site-packages directory of your system Python you will need 
 	
 Your will then need to set you PYTHONPATH environment variable to point to this directory.
 More information about options for setup.py can be found in the Python documentation.
+
+IPython Kernel
+--------------
+
+The latest prototype of the IPython kernel can be retrieved from the IPython subversion repository with the command:
+
+::
+
+    svn co http://ipython.scipy.org/svn/ipython/ipython/branches/chainsaw ipython1
+
+In addition to installing the ipython1 python package, this will also install a few scripts for starting the kernel into an appropriate location.  To control where these scripts are installed, you can do the following:
+
+::
+
+    python setup.py install_scripts --install-dir=/some/other/bin
 	
 IPython
 -------
@@ -69,21 +84,6 @@ Get the trunk version of Twisted using subversion:
 
 	svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted
 	
-IPython Kernel
---------------
-
-The latest prototype of the IPython kernel can be retrieved from the IPython subversion repository with the command:
-
-::
-
-    svn co http://ipython.scipy.org/svn/ipython/ipython/branches/chainsaw ipython1
-
-In addition to installing the ipython1 python package, this will also install a few scripts for starting the kernel into an appropriate location.  To control where these scripts are installed, you can do the following:
-
-::
-
-    python setup.py install_scripts --install-dir=/some/other/bin
-
 Nevow (Optional)
 ----------------
 
