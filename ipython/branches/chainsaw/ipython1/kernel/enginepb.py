@@ -42,24 +42,24 @@ class IPBEngineClientFactory(Interface):
 
 class PBEngineClientFactory(pb.PBClientFactory, object):
     """The Client factory on the engine that connects to the controller"""
-    _MAX_SIZE = 99999999
+    _MAX_LENGTH = 99999999
     
     def _getSize(self):
-        return self._MAX_SIZE
+        return self._MAX_LENGTH
     
     def _setSize(self, n):
         banana.SIZE_LIMIT = n
-        self.engineReference.MAX_SIZE = n
-        self._MAX_SIZE = n
+        self.engineReference.MAX_LENGTH = n
+        self._MAX_LENGTH = n
     
-    MAX_SIZE = property(_getSize, _setSize)
+    MAX_LENGTH = property(_getSize, _setSize)
     
     def __init__(self, service):
         
         pb.PBClientFactory.__init__(self)
         self.service = service
         self.engineReference = IPBEngine(service)
-        self.engineReference.MAX_SIZE = self.MAX_SIZE
+        self.engineReference.MAX_LENGTH = self.MAX_LENGTH
         self.deferred = self.getRootObject()
         self.deferred.addCallbacks(self._gotRoot, self._getRootFailure)
     
@@ -126,7 +126,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         
     implements(IPBEngine)
     
-    MAX_SIZE = 99999999
+    MAX_LENGTH = 99999999
     
     def __init__(self, service):
         self.service = service
@@ -176,7 +176,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         return d.addCallback(self.checkSize)
     
     def checkSize(self, package):
-        if len(package) > self.MAX_SIZE:
+        if len(package) > self.MAX_LENGTH:
             package = pickle.dumps(Failure(protocols.MessageSizeError()),2)
         return package
 
@@ -190,7 +190,7 @@ class EngineFromReference(object):
     
     implements(IEngineBase, IEngineSerialized)
     
-    MAX_SIZE = 99999999
+    MAX_LENGTH = 99999999
     
     def __init__(self, reference):
         self.reference = reference
@@ -282,7 +282,7 @@ class EngineFromReference(object):
         return r
     
     def checkSize(self, package):
-        if len(package) < self.MAX_SIZE:
+        if len(package) < self.MAX_LENGTH:
             return True
     
     

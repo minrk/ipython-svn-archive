@@ -15,6 +15,7 @@ configure(clientConfig)
 import ipython1.kernel.magic
 
 RemoteController = clientConfig.RemoteController
+RemoteController.MAX_LENGTH = clientConfig.maxMessageSize
 defaultController = clientConfig.connectToControllerOn
 
 del configure

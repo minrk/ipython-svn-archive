@@ -84,7 +84,7 @@ class NetstringSocket(object):
             print "client:",data
         prefix = "%d:" % len(data)
         
-        if len(prefix)+len(data) >= self.MAX_SIZE:
+        if len(prefix)+len(data) >= self.MAX_LENGTH:
             raise MessageSizeError()
         
         offset = 0

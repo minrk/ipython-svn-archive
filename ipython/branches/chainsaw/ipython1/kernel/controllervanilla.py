@@ -59,7 +59,7 @@ del arraytypeList
 class RemoteController(object):
     """A high level interface to a remotely running ipython controller."""
     
-    MAX_SIZE = 99999999
+    MAX_LENGTH = 99999999
     
     def __init__(self, addr):
         """Create a RemoteController instance pointed at a specific controller.
@@ -135,7 +135,7 @@ class RemoteController(object):
         # Turn off Nagle's algorithm to prevent the 200 ms delay :)
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
         self.es = protocols.NetstringSocket(self.s)
-        self.es.MAX_SIZE = self.MAX_SIZE
+        self.es.MAX_LENGTH = self.MAX_LENGTH
         return True
     
     def parseTargets(self, targets):

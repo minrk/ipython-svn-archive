@@ -29,14 +29,17 @@ def main():
     
     cs = controllerservice.ControllerService()
     efac = controllerConfig.engineServerProtocolInterface(cs)
+    efac.MAX_LENGTH = controllerConfig.maxMessageSize
     reactor.listenTCP(
         port=controllerConfig.listenForEnginesOn[1],
         factory=efac,
         interface=controllerConfig.listenForEnginesOn[0])
     for ci in controllerConfig.clientInterfaces:
+        fac = ci[0](cs)
+        fac.MAX_LENGTH = controllerConfig.maxMessageSize
         reactor.listenTCP(
             port=ci[1][1],
-            factory=ci[0](cs),
+            factory=fac,
             interface=ci[1][0])
     cs.startService()
     reactor.run()

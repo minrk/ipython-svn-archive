@@ -205,7 +205,7 @@ class NotifierParent(object):
     def addNotifier(self, n):
         if n.key not in self._notifiers:
             self._notifiers[n.key] = n
-            print n.notifyOnDisconnect(self.delNotifier,n.key)
+            n.notifyOnDisconnect(self.delNotifier,n.key)
             log.msg("Notifiers: %s" % self._notifiers)
         return defer.succeed(None)
     

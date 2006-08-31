@@ -18,7 +18,7 @@ ipenginepb -p 9999 -c '127.0.0.1'
 import sys
 from optparse import OptionParser
 
-from twisted.internet import reactor, error
+from twisted.internet import reactor
 from twisted.python import log
 
 from ipython1.kernel.engineservice import EngineService
@@ -41,10 +41,12 @@ def main(n):
     log.startLogging(sys.stdout)
     for i in range(n):
         service = EngineService(engineConfig.engineShell, mpi=mpi)
+        fac = engineConfig.engineClientProtocolInterface(service)
+        fac.MAX_LENGTH = engineConfig.maxMessageSize
         reactor.connectTCP(
             engineConfig.connectToControllerOn[0],
             engineConfig.connectToControllerOn[1],
-            engineConfig.engineClientProtocolInterface(service))      
+            fac)      
         service.startService()
     reactor.run()
 
