@@ -15,35 +15,41 @@ This INSTALL file describes the steps required to install the IPython kernel.  F
 
 The IPython kernel requires four things:
 
-1. A current version of IPython
-2. Zope Interface
-3. Twisted
-4. The IPython1 package that contains the kernel
+1. The IPython1 package that contains the kernel
+2. A current version of IPython
+3. Zope Interface
+4. Twisted
+
+If you are comfortable using subversion and installing Python packages, you can probably just get and install these packages without further instructions  If not, read on.
+
+To get these packages, you will need Subversion (or svn).  Many systems will already have Subversion installed; if you need more information about Subversion, see http://svnbook.red-bean.com/.
 
 There are also a number of optional dependencies that provide additional capabilities.
+
+We also provide a script in this directory called getdependencies.sh that will download (but not install) the dependencies into the parent directory.
 
 Installation Instructions
 =========================
 
-Unless otherwise stated, all of the following packages can be installed by cd'ing to the source directory and issuing the command:
+Unless otherwise stated, all of the following packages can be installed by changing to the source directory and issuing the command:
 
 ::
 
 	python setup.py install
 	
-To install into the site-packages directory of your system Python you will need admin privileges.  If you do not have such provileges, you can use set a --home flag when you install to select a different directory for your packages:
+To install into the site-packages directory of your system Python you will need admin privileges.  If you do not have such privileges, you can use set a --home flag when you install to select a different directory for your packages:
 
 ::
 
 	python setup.py install --home=some-dir-in-your-PYTHONPATH
 	
 Your will then need to set you PYTHONPATH environment variable to point to this directory.
-More information about options for setup.py can be found in the Python documentation.
+More information about installing Python packages can be found in the Python documentation at http://docs.python.org/.
 
 IPython Kernel
 --------------
 
-The latest prototype of the IPython kernel can be retrieved from the IPython subversion repository with the command:
+The latest prototype of the IPython kernel can be retrieved from the IPython Subversion repository with the command:
 
 ::
 
@@ -62,23 +68,27 @@ First, download and install the current version of IPython:
 
 http://ipython.scipy.org
 
+You can also get the trunk version using Subversion:
+
+::
+
+	svn co http://ipython.scipy.org/svn/ipython/ipython/trunk ipython
+
 Zope Interface
 --------------
 
-Next, download and install the zope.interface package:
-
-http://www.zope.org/Products/ZopeInterface
+Next, download and install the zope.interface package: http://www.zope.org/Products/ZopeInterface.
 
 We recommend the 3.1.0c1 build:
 
 http://www.zope.org/Products/ZopeInterface/3.1.0c1/ZopeInterface-3.1.0c1.tgz
 
-Previous builds won't work, but more recent ones probably will.
+Earlier builds won't work, but more recent ones probably will.
 
 Twisted
 -------
 
-Get the trunk version of Twisted using subversion:
+Get the trunk version of Twisted using Subversion:
 
 ::
 
