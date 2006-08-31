@@ -876,14 +876,15 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     
     nextHandler = None
     def connectionMade(self):
-        log.msg("Connection Made...")
+        log.msg("Client connection made")
         self.transport.setTcpNoDelay(True)
         self.producer = NonBlockingProducer(self)
         self._reset()
     
     
     def connectionLost(self, reason):
-        print reason
+        log.msg("Client disconnected")
+        
     def stringReceived(self, string):
         if self.nextHandler is None:
             self.defaultHandler(string)
