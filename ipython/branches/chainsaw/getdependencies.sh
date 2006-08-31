@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # This script attemps to use svn and wget or curl to download (not install) the direct
-# dependencies of the IPython Kernel.  This packages are put into the parent directory.
+# dependencies of the IPython Kernel.  This packages are put into the parent directory,
+# so you should be able to run it from this directory.
 
 cd ..
 echo "Working in $PWD"

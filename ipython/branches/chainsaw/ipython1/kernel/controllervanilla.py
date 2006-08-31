@@ -71,6 +71,7 @@ class RemoteController(object):
         self.addr = addr
         self.block = False
         controllerservice.addAllMethods(self)
+        self.activate()
     
     def activate(self):
         """Make this cluster the active one for ipython magics.

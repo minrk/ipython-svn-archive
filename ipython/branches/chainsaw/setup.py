@@ -43,6 +43,10 @@ with_scripts =  ['scripts/ipcontroller',
                  'scripts/ipresults',
                  'scripts/ipwebserver']
 
+with_package_data = {'ipython1': ['web/*.js', 
+                                 'web/*.css',
+                                 'web/*.html']}
+
 with_ext_modules = [Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])]
 
 # Now build IPython
@@ -56,6 +60,7 @@ setup(name             = 'ipython1',
       url              = 'http://ipython.scipy.org',
       license          = 'BSD',
       packages         = with_packages,
+      package_data     = with_package_data,
       scripts          = with_scripts,
       ext_modules      = with_ext_modules,
       cmdclass         = {'config': config,
