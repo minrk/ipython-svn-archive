@@ -16,12 +16,12 @@ from ipython1.kernel.enginepb import IPBEngineClientFactory
 clientPBPort = 10111
 clientVanillaPort = 10105
 
-maxMessageSize = 9999
+# maxMessageSize = 9999
 
-engineClientProtocolInterface = IPBEngineClientFactory
+# engineClientProtocolInterface = IPBEngineClientFactory
 
-# engineServerProtocolInterface = IVanillaEngineServerFactory
-engineServerProtocolInterface = IPBEngineServerFactory
+engineServerProtocolInterface = IVanillaEngineServerFactory
+# engineServerProtocolInterface = IPBEngineServerFactory
 
 clientInterfaces = [(IVanillaControllerFactory, ('', clientVanillaPort)),
             (IPBControllerFactory, ('', clientPBPort))]
