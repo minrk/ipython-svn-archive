@@ -111,3 +111,5 @@ ControllerModule.IDWidget.method(
     function(self, idstr){
         document.getElementById('idlist').innerHTML = idstr;
     });
+
+ControllerModule.ChatWidget = Nevow.Athena.Widget.subclass('ControllerModule.ChatWidget');

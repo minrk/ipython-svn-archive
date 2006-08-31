@@ -1,16 +1,19 @@
 #statusWidget {
 	text-align: center;
+	border: 1px solid #999;
 	vertical-align: top;	
     font-family: monospace;
 /*    margin-top: 2em;*/
-	height: 100%;
-	width: 100%;
+	height: 60%;
+    margin-left: 2em;
+    margin-right: 2em;
 }
 #statusOut{
-	text-align: center;				
+	text-align: center;
 	overflow: auto;
-	height: 80%;
+	height: 60%;
 	width: 80%;
+	padding: 1em;
 }
 #statusTable{
     text-align: center;

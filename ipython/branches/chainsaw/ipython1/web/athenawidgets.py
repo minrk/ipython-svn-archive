@@ -1,10 +1,9 @@
-from nevow import athena, loaders, tags
+from nevow import athena, loaders, tags, inevow, livepage
 from twisted.python import util
 from twisted.python.failure import Failure
 from twisted.internet import reactor
 
-from ipython1.kernel import results, controllerpb
-
+from ipython1.kernel import results
 myPackage = athena.JSPackage({
     'ControllerModule': util.sibpath(__file__, 'athenawidgets.js')
     })
@@ -12,7 +11,7 @@ myPackage = athena.JSPackage({
 athena.jsDeps.mapping.update(myPackage.mapping)
 
 def statusListToHTML(statusList, pending, queue, history, local):
-    s = "<table id='statusTable' align='center'><tr><td><b>id</b>"
+    s = "<table id='statusTable'><tr><td><b>id</b>"
     for e in ['pending', 'queue', 'history', 'local']:
         if locals()[e]:
             s+= "<td><b>%s</b></td>" %e    
@@ -85,6 +84,17 @@ def dictToHTML(d):
     return s
 
 
+def parseTargets(targets):
+    if targets == 'all':
+        return 'all'
+    if targets[-1] == ',':
+        targets = targets[:-1]
+    try:
+        return map(int,targets.split(','))
+    except ValueError:
+        return []
+
+
 class ResultWidget(athena.LiveElement):
     jsClass = u'ControllerModule.ResultWidget'
     ids = 'all'
@@ -108,7 +118,8 @@ class ResultWidget(athena.LiveElement):
             for s in result[2:]:
                 if not isinstance(s, str):
                     return False
-            return True
+            if self.ids == 'all' or result[0] in self.ids:
+                return True
     
     def handleResult(self, result):
         if not self.validResult(result):
@@ -116,18 +127,8 @@ class ResultWidget(athena.LiveElement):
         s = resultToHTML(result)
         return self.callRemote('handleResult', unicode(s))
     
-    def parseTargets(self, targets):
-        if targets == 'all':
-            return 'all'
-        if targets[-1] == ',':
-            targets = targets[:-1]
-        try:
-            return map(int,targets.split(','))
-        except ValueError:
-            return []
-    
     def setIDs(self, ids):
-        self.ids = self.parseTargets(ids)
+        self.ids = parseTargets(ids)
     
     athena.expose(setIDs)
 
@@ -161,17 +162,9 @@ class StatusWidget(athena.LiveElement):
         self.controller = controller
         reactor.callLater(.1, self.callRemote, 'getIDs')
     
-    def parseTargets(self, targets):
-        if targets == 'all':
-            return 'all'
-        try:
-            return map(int,targets.split(','))
-        except ValueError:
-            return False
-    
     def status(self, targets, pending=True, queue=True, history=True, locals=True):
         args = (pending, queue, history, locals)
-        idlist = self.parseTargets(targets)
+        idlist = parseTargets(targets)
         if idlist is False:
             return self.fail()
         d = self.controller.status(idlist)
@@ -197,7 +190,7 @@ class CommandWidget(athena.LiveElement, results.NotifierParent):
     jsClass = u'ControllerModule.CommandWidget'
     
     docFactory = loaders.stan(tags.div(render=tags.directive('liveElement'))[
-        tags.table(id="command", hidden=True)[
+        tags.table(id="commandWidget", hidden=True)[
         tags.tr[tags.td["cmd"],tags.td["targets"], tags.td["args"]],
         tags.tr[tags.form(id="cmdform",
             action="""javascript:
@@ -227,16 +220,8 @@ class CommandWidget(athena.LiveElement, results.NotifierParent):
         self.controller = controller
         reactor.callLater(.1, self.callRemote, 'getIDs')
     
-    def parseTargets(self, targets):
-        if targets == 'all':
-            return 'all'
-        try:
-            return map(int,targets.split(','))
-        except ValueError:
-            return False
-    
     def execute(self, targets, lines):
-        idlist = self.parseTargets(targets)
+        idlist = parseTargets(targets)
         if idlist is False:
             return self.fail(None)
         d = self.controller.execute(idlist, str(lines))
@@ -253,7 +238,7 @@ class CommandWidget(athena.LiveElement, results.NotifierParent):
     
     def pull(self, targets, keystr):
         keys = map(str, keystr.split(','))
-        idlist = self.parseTargets(targets)
+        idlist = parseTargets(targets)
         if not idlist or not keys:
             return self.fail(None)
         d = self.controller.pullNamespace(idlist, *keys)
@@ -270,7 +255,7 @@ class CommandWidget(athena.LiveElement, results.NotifierParent):
         return self.finish(s)
     
     def reset(self, targets, _):
-        idlist = self.parseTargets(targets)
+        idlist = parseTargets(targets)
         if not idlist:
             return self.fail(None)
         d = self.controller.reset(idlist)
@@ -282,7 +267,7 @@ class CommandWidget(athena.LiveElement, results.NotifierParent):
         return self.finish('')
     
     def kill(self, targets, _):
-        idlist = self.parseTargets(targets)
+        idlist = parseTargets(targets)
         if not idlist:
             return self.fail(None)
         d = self.controller.kill(idlist)
@@ -310,15 +295,128 @@ class IDWidget(athena.LiveElement):
     
     def __init__(self, controller):
         self.controller = controller
-        print self.controller.getIDs().addCallback(self.gotIDs)
+        reactor.callLater(1, self.ready)
         n = results.notifierFromFunction(
             lambda _:self.controller.getIDs().addCallback(self.gotIDs))
         self.controller.addNotifier(n)
     
+    def ready(self):
+        return self.controller.getIDs().addCallback(self.gotIDs)
+        
     def gotIDs(self, idlist):
         s = ''
         for id in idlist:
             s += " <a href='monitor?ids=%i')>:%i:</a> " %(id, id)
         return self.callRemote('drawIDs', unicode(s))
     
+
+import time
+from nevow.livepage import set, assign, append, js, document, eol
+class ChatWidget(athena.LiveElement):
+    """This is broken"""
+    jsClass = u'ControllerModule.ChatWidget'
+
+    docFactory = loaders.stan([tags.div(render=tags.directive('liveElement'))[
+        tags.div(id="topic"), tags.div(id="content")[
+            tags.div(pattern="message")[tags.xml("""
+            <span class="timestamp"><nevow:slot name="timestamp" /></span>
+            <span class="userid"><nevow:slot name="userid" /></span>
+            <span class="message"><nevow:slot name="message" /></span>
+            """)]],
+            # tags.span(class="timestamp")[tags.slot(name="timestamp")],
+            # tags.span(class="userid")[tags.slot(name="userid")],
+            # tags.span(class="message")[tags.slot(name="message")]],
+            
+            tags.dl(id="userlist")[tags.dt["Userlist"],
+            tags.dd(pattern="user")[
+            # tags.attr(name="id")["user-list-", tags.slot(name="user-id")],
+            # tags.slot(name="user-id")
+            tags.xml("""
+                <nevow:attr name="id">user-list-<nevow:slot name="user-id" /></nevow:attr>
+                <nevow:slot name="user-id" />
+            </dd>
+            """)
+            ]],
+            tags.form(name="inputForm", onsubmit="""
+                var w = Nevow.Athena.getWidget(this);
+                w.callRemote('sendInput', this.inputLine.value);""")[
+              tags.input(name="inputLine"),
+              tags.input(type="submit", value="say")
+            ],
+            tags.form(name="nickForm", onsubmit="""
+                var w = Nevow.Athena.getWidget(this);
+                w.callRemote('changeNick', this.nick.value);""")[
+              tags.input(name="nick"),
+              tags.input(type="submit", value="change nick")
+            ],
+            tags.form(name="topicForm", onsubmit="""
+                var w = Nevow.Athena.getWidget(this);
+                w.callRemote('changeTopic', this.topic.value);""")[
+                tags.input(name="topic"),
+                tags.input(type="submit", value="change topic")
+            ],
+            # tags.span(id="bottom")
+    ]])
+    messagePattern = inevow.IQ(docFactory).patternGenerator('message')
+    userPattern = inevow.IQ(docFactory).patternGenerator('user')
     
+
+    def __init__(self):
+        self.clients = []
+        self.events = []
+    
+    def goingLive(self, ctx, client):
+        client.notifyOnClose().addBoth(self.userLeft, client)
+
+        client.userId = "newuser"
+        client.send(
+            assign(document.nickForm.nick.value, client.userId))
+
+        addUserlistEntry = append('userlist', self.userPattern.fillSlots('user-id', client.userId)), eol
+        self.sendEvent(
+            client, addUserlistEntry, self.content(client, 'has joined.'))
+
+        ## Catch the user up with the previous events
+        client.send([(event, eol) for source, event in self.events])
+
+        self.clients.append(client)
+
+    def userLeft(self, _, client):
+        self.clients.remove(client)
+        self.sendEvent(
+            client,
+            js.removeNode('user-list-%s' % (client.userId, )), eol,
+            self.content(client, 'has left.'))
+
+    def sendEvent(self, source, *event):
+        self.events.append((source, event))
+        for target in self.clients:
+            if target is not source:
+                target.send(event)
+        return event
+
+    def content(self, sender, message):
+        return append(
+            'content',
+            self.messagePattern.fillSlots(
+                'timestamp', time.strftime("%H:%M %d/%m/%y")
+            ).fillSlots(
+                'userid', sender.userId
+            ).fillSlots(
+                'message', message)), eol, js.scrollDown()
+
+    def handle_sendInput(self, ctx, inputLine):
+        sender = livepage.IClientHandle(ctx)
+        return self.sendEvent(sender, self.content(sender, inputLine)), eol, js.focusInput()
+
+    def handle_changeNick(self, ctx, nick):
+        changer = livepage.IClientHandle(ctx)
+        rv = self.sendEvent(
+            changer,
+            set('user-list-%s' % (changer.userId, ), nick), eol,
+            js.changeId('user-list-%s' % (changer.userId, ), 'user-list-%s' % (nick, )), eol,
+            self.content(changer, 'changed nick to %r.' % (nick, )))
+
+        changer.userId = nick
+        return rv
+
