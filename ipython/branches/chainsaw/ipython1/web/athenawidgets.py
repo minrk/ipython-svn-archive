@@ -11,7 +11,7 @@ myPackage = athena.JSPackage({
 athena.jsDeps.mapping.update(myPackage.mapping)
 
 def statusListToHTML(statusList, pending, queue, history, local):
-    s = "<table id='statusTable'><tr><td><b>id</b>"
+    s = "<table id='statusTable' align='center'><tr><td><b>id</b>"
     for e in ['pending', 'queue', 'history', 'local']:
         if locals()[e]:
             s+= "<td><b>%s</b></td>" %e    

@@ -4,16 +4,17 @@
 	vertical-align: top;	
     font-family: monospace;
 /*    margin-top: 2em;*/
-	height: 60%;
+	height: 72%;
     margin-left: 2em;
     margin-right: 2em;
 }
 #statusOut{
 	text-align: center;
 	overflow: auto;
-	height: 60%;
-	width: 80%;
-	padding: 1em;
+	height: 72%;
+    margin-left: 1em;
+    margin-right: 1em;
+/*	padding: 1em;*/
 }
 #statusTable{
     text-align: center;
