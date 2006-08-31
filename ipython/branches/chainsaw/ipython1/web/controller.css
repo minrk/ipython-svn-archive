@@ -3,7 +3,7 @@ body { font-family: Verdana, sans-serif; margin: 0px; padding: 0px }
 .message { font-size: small }
 .timestamp { float: right; font-size: x-small; }
 h1,h2,h3,h4{padding: 0em; text-align: center; margin-right: 230px;}
-form { padding-left: 1em }
+form { padding-left: 1em ;}
 
 /*#inputs{position: fixed; bottom: 1em; left: 1em; background-color: #999;}*/
 
