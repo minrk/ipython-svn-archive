@@ -14,12 +14,8 @@ function focusInput() {
 }
 
 function scrollDown() {
-    var bottom = document.getElementById('bottom')
-    if (bottom.scrollIntoView) {
-        bottom.scrollIntoView()
-    } else {
-        window.scrollTo(0, 9999999);
-    }
+	var content = document.getElementById('content');
+    content.scrollTop = content.scrollHeight;
 }
 
 function removeNode(nodeId) {
