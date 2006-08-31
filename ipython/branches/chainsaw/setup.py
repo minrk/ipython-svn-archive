@@ -40,7 +40,8 @@ with_packages = ['ipython1',
                 
 with_scripts =  ['scripts/ipcontroller',
                  'scripts/ipengine',
-                 'scripts/ipresults']
+                 'scripts/ipresults',
+                 'scripts/ipwebserver']
 
 with_ext_modules = [Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])]
 

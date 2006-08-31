@@ -54,8 +54,11 @@ Next, download and install the zope.interface package:
 
 http://www.zope.org/Products/ZopeInterface
 
-We are using recent features of zope.interface so get version
-3.1.0c1 or greater.
+We recommend the 3.1.0c1 build:
+
+http://www.zope.org/Products/ZopeInterface/3.1.0c1/ZopeInterface-3.1.0c1.tgz
+
+Previous builds won't work, but more recent ones probably will.
 
 Twisted
 -------
