@@ -14,7 +14,7 @@ import cPickle as pickle
 import zope.interface as zi
 from twisted.python import components, log
 from twisted.python.failure import Failure
-from twisted.internet import protocol, reactor, defer
+from twisted.internet import reactor, defer
 
 defer.setDebugging(1)
 
@@ -89,16 +89,24 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         self.dieLoudly(args)
     
     def sendPickleSerialized(self, p):
-        for line in p:
-            self.sendString(line)
+            for line in p:
+                self.sendString(line)
     
     def sendArraySerialized(self, a):
         for line in a[:-1]:
-            # print line
             self.sendString(line)
         self.sendBuffer(a[-1])
     
     def sendSerialized(self, s):
+        maxlen = max(map(len, [line for line in s]))
+        if maxlen > self.MAX_LENGTH:
+            e = protocols.MessageSizeError(s.key)
+            f = serialized.serialize(Failure(e), 'FAILURE')
+            maxlen = max(map(len, [line for line in f]))
+            if maxlen > self.MAX_LENGTH:
+                return self.dieLoudly(e)
+            return self.sendSerialized(f)
+        
         if isinstance(s, serialized.PickleSerialized):
             self.sendPickleSerialized(s)
         elif isinstance(s, serialized.ArraySerialized):
@@ -384,7 +392,7 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         self.sendString('STATUS OK')
     
     def statusFail(self, reason):
-        print reason
+        log.msg(reason)
         self._reset()
         self.sendString('STATUS FAIL')
     
@@ -559,23 +567,24 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         self.dieLoudly('Unexpected Data: %s' % args)
     
     def sendPickleSerialized(self, p):
-        for line in p:
-            self.sendString(line)
+            for line in p:
+                self.sendString(line)
     
     def sendArraySerialized(self, a):
-        # ia = iter(a)
-        # self.sendString(ia.next())
-        # self.sendString(ia.next())
-        # self.sendBuffer(ia.next())
         for line in a[:-1]:
             self.sendString(line)
         self.sendBuffer(a[-1])
     
     def sendSerialized(self, s):
+        maxlen = max(map(len, [line for line in s]))
+        if maxlen > self.MAX_LENGTH:
+            raise protocols.MessageSizeError(s.key)
+        
         if isinstance(s, serialized.PickleSerialized):
             self.sendPickleSerialized(s)
         elif isinstance(s, serialized.ArraySerialized):
             self.sendArraySerialized(s)
+    
     
     def setupForIncomingSerialized(self, callbackString, errbackString=''):
         self.workVars['callbackString'] = callbackString

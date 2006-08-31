@@ -11,13 +11,21 @@ import socket
 from twisted.protocols import basic
 from twisted.internet import protocol
 
+from ipython1.kernel import error
+
+class MessageSizeError(error.KernelError):
+    """If a message exceeds a certain limit, this should be raised"""
+    pass
+
 class EnhancedNetstringReceiver(basic.NetstringReceiver, object):
     
-    MAX_LENGTH = 134217728 # 100 MB, 2**27
-
+    MAX_LENGTH = 99999999
+    
     def sendBuffer(self, buf):
-        self.transport.write('%i:' %len(buf))
-        
+        prefix = '%i:' %len(buf)
+        if len(prefix)+len(buf) >= self.MAX_LENGTH:
+            raise MessageSizeError
+        self.transport.write(prefix)
         # want to be able to call:
         # self.transport.write(buf)
         # but can't, so we have a
@@ -25,6 +33,12 @@ class EnhancedNetstringReceiver(basic.NetstringReceiver, object):
         self.transport.write(str(buf))
         self.transport.write(',')
     
+    def sendString(self, string):
+        prefix = '%i:' %len(string)
+        if len(prefix)+len(string) >= self.MAX_LENGTH:
+            raise MessageSizeError
+        return basic.NetstringReceiver.sendString(self, string)
+
 #netstring code adapted from twisted.protocols.basic
 class NetstringParseError(ValueError):
     """The incoming data is not in valid Netstring format."""
@@ -69,6 +83,9 @@ class NetstringSocket(object):
         if self.verbose: 
             print "client:",data
         prefix = "%d:" % len(data)
+        
+        if len(prefix)+len(data) >= self.MAX_SIZE:
+            raise MessageSizeError()
         
         offset = 0
         lengthToSend = len(prefix)
@@ -143,11 +160,9 @@ class NetstringSocket(object):
     
 
 
-
-
 class EnhancedFactory:
     
-    MAX_LENGTH = 134217728 # 100 MB, 2**27
+    MAX_LENGTH = 99999999
     
     def buildProtocol(self, addr):
         p = self.protocol()

@@ -28,23 +28,38 @@ TODO:
 import cPickle as pickle
 
 from twisted.python import components, log
+from twisted.python.failure import Failure
 from twisted.spread import pb
-from twisted.internet import defer, error
+from twisted.internet import defer
+from twisted.spread import banana
 from zope.interface import Interface, implements
 
 from ipython1.kernel.engineservice import *
-from ipython1.kernel import controllerservice, util
+from ipython1.kernel import controllerservice, protocols
 
 class IPBEngineClientFactory(Interface):
     pass
 
-class PBEngineClientFactory(pb.PBClientFactory):
+class PBEngineClientFactory(pb.PBClientFactory, object):
     """The Client factory on the engine that connects to the controller"""
+    _MAX_SIZE = 99999999
+    
+    def _getSize(self):
+        return self._MAX_SIZE
+    
+    def _setSize(self, n):
+        banana.SIZE_LIMIT = n
+        self.engineReference.MAX_SIZE = n
+        self._MAX_SIZE = n
+    
+    MAX_SIZE = property(_getSize, _setSize)
+    
     def __init__(self, service):
         
         pb.PBClientFactory.__init__(self)
         self.service = service
         self.engineReference = IPBEngine(service)
+        self.engineReference.MAX_SIZE = self.MAX_SIZE
         self.deferred = self.getRootObject()
         self.deferred.addCallbacks(self._gotRoot, self._getRootFailure)
     
@@ -107,10 +122,11 @@ class IPBEngine(Interface):
         """get status from remote engine"""
     
 
-class PBEngineReferenceFromService(pb.Referenceable):
-    #object necessary for id property
+class PBEngineReferenceFromService(pb.Referenceable, object):
         
     implements(IPBEngine)
+    
+    MAX_SIZE = 99999999
     
     def __init__(self, service):
         self.service = service
@@ -135,15 +151,15 @@ class PBEngineReferenceFromService(pb.Referenceable):
     
     def remote_pullSerialized(self, *keys):
         d = self.service.pullSerialized(*keys)
-        return d.addBoth(pickle.dumps, 2)
+        return d.addBoth(pickle.dumps, 2).addCallback(self.checkSize)
         
     def remote_pull(self, *keys):
         d = self.service.pull(*keys)
-        return d.addBoth(pickle.dumps, 2)
+        return d.addBoth(pickle.dumps, 2).addCallback(self.checkSize)
     
     def remote_pullNamespace(self, *keys):
         d = self.service.pullNamespace(*keys)
-        return d.addBoth(pickle.dumps, 2)
+        return d.addBoth(pickle.dumps, 2).addCallback(self.checkSize)
     
     def remote_reset(self):
         return self.service.reset().addErrback(pickle.dumps, 2)
@@ -152,11 +168,17 @@ class PBEngineReferenceFromService(pb.Referenceable):
         return self.service.kill().addErrback(pickle.dumps, 2)
     
     def remote_getResult(self, i=None):
-        return self.service.getResult(i).addErrback(pickle.dumps, 2)
+        d = self.service.getResult(i).addBoth(pickle.dumps, 2)
+        return d.addCallback(self.checkSize)
     
     def remote_status(self):
-        return self.service.status().addErrback(pickle.dumps, 2)
+        d = self.service.status().addBoth(pickle.dumps, 2)
+        return d.addCallback(self.checkSize)
     
+    def checkSize(self, package):
+        if len(package) > self.MAX_SIZE:
+            package = pickle.dumps(Failure(protocols.MessageSizeError()),2)
+        return package
 
 
 components.registerAdapter(PBEngineReferenceFromService,
@@ -167,6 +189,8 @@ components.registerAdapter(PBEngineReferenceFromService,
 class EngineFromReference(object):
     
     implements(IEngineBase, IEngineSerialized)
+    
+    MAX_SIZE = 99999999
     
     def __init__(self, reference):
         self.reference = reference
@@ -192,15 +216,23 @@ class EngineFromReference(object):
     
     def execute(self, lines):
         """Execute lines of Python code."""
+        if not self.checkSize(lines):
+            return defer.fail(Failure(protocols.MessageSizeError()))
         return self.callRemote('execute', lines).addCallback(self.checkReturn)
     
     def pushSerialized(self, **namespace):
         """Put value into locals namespace with name key."""
-        d = self.callRemote('pushSerialized', pickle.dumps(namespace, 2))
+        package = pickle.dumps(namespace, 2)
+        if not self.checkSize(package):
+            return defer.fail(Failure(protocols.MessageSizeError()))
+        d = self.callRemote('pushSerialized', package)
         return d.addCallback(self.checkReturn)
     
     def push(self, **namespace):
-        d = self.callRemote('push', pickle.dumps(namespace, 2))
+        package = pickle.dumps(namespace, 2)
+        if not self.checkSize(package):
+            return defer.fail(Failure(protocols.MessageSizeError()))
+        d = self.callRemote('push', package)
         return d.addCallback(self.checkReturn)
     
     def pullSerialized(self, *keys):
@@ -226,7 +258,7 @@ class EngineFromReference(object):
         #this will raise pb.PBConnectionLost on success
         self.callRemote('kill').addErrback(self.killBack)
         return defer.succeed(None)
-        
+    
     def killBack(self, f):
         try:
             f.raiseException()
@@ -245,10 +277,15 @@ class EngineFromReference(object):
         if isinstance(r, str):
             try: 
                 return pickle.loads(r)
-            except pickle.PickleError: 
+            except pickle.PickleError:
                 pass
         return r
-
+    
+    def checkSize(self, package):
+        if len(package) < self.MAX_SIZE:
+            return True
+    
+    
 components.registerAdapter(EngineFromReference,
                         pb.RemoteReference,
                         IEngineBase)

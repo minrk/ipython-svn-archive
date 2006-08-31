@@ -2,7 +2,7 @@
 """A perspective broker interface to the controller"""
 import cPickle as pickle
 
-from twisted.python import components, log
+from twisted.python import components
 from twisted.python.failure import Failure
 from twisted.spread import pb
 from zope.interface import Interface, implements

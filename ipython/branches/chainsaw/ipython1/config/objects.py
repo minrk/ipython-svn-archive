@@ -40,7 +40,7 @@ class Configuration(object):
 
 # Global defaults
     
-maxMesageSize = 999999
+maxMesageSize = 99999999
 enginePort = 10201
 clientVanillaPort = 10105
 

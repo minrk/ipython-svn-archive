@@ -25,6 +25,7 @@ from zope.interface import Interface, implements
 
 from IPython.ColorANSI import TermColors
 
+import ipython1.kernel.magic
 from ipython1.kernel import controllerservice, serialized, protocols, results
 from ipython1.kernel.util import _tar_module
 from ipython1.kernel.controllerclient import RCView, EngineProxy
@@ -57,6 +58,8 @@ del arraytypeList
 # The Client Side:
 class RemoteController(object):
     """A high level interface to a remotely running ipython controller."""
+    
+    MAX_SIZE = 99999999
     
     def __init__(self, addr):
         """Create a RemoteController instance pointed at a specific controller.
@@ -132,6 +135,7 @@ class RemoteController(object):
         # Turn off Nagle's algorithm to prevent the 200 ms delay :)
         self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
         self.es = protocols.NetstringSocket(self.s)
+        self.es.MAX_SIZE = self.MAX_SIZE
         return True
     
     def parseTargets(self, targets):
@@ -261,7 +265,7 @@ class RemoteController(object):
     def runAll(self, fname):
         return self.run('all', fname)
     
-    def sendSerial(self, serial):
+    def sendSerialized(self, serial):
         assert isinstance(serial, serialized.Serialized)
         for line in serial:
             self.es.writeNetstring(line)
@@ -309,7 +313,7 @@ class RemoteController(object):
                 print "Object cannot be serialized: ", key, e
                 return False
             else:
-                self.sendSerial(serialObject)
+                self.sendSerialized(serialObject)
         self.es.writeNetstring("PUSH DONE")
         string = self.es.readNetstring()
         if string == "PUSH OK":
@@ -519,7 +523,7 @@ class RemoteController(object):
             except socket.error:
                 return False
         
-        self.sendSerial(serial)
+        self.sendSerialized(serial)
         reply = self.es.readNetstring()
         if reply == 'SCATTER OK':
             return True
@@ -1046,22 +1050,34 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
                         serialResult = serialized.serialize(serialResult, '_')
                     except:
                         self.pullFail()
-                self.sendSerial(serialResult)
+                self.sendSerialized(serialResult)
             
             self.sendString("SEGMENT PULLED")
         self.pullFinish("OK")
     
-    def sendSerial(self, s):
-        if s[0].split(' ')[0] == 'ARRAY':
-            self.sendSerialArray(s)
-        else:
-            for line in s:
+    def sendPickleSerialized(self, p):
+            for line in p:
                 self.sendString(line)
     
-    def sendSerialArray(self, sArray):
-        for line in sArray[:-1]:
+    def sendArraySerialized(self, a):
+        for line in a[:-1]:
             self.sendString(line)
-        self.sendBuffer(sArray[-1])
+        self.sendBuffer(a[-1])
+    
+    def sendSerialized(self, s):
+        maxlen = max(map(len, [line for line in s]))
+        if maxlen > self.MAX_LENGTH:
+            e = protocols.MessageSizeError(s.key)
+            f = serialized.serialize(Failure(e), 'FAILURE')
+            maxlen = max(map(len, [line for line in f]))
+            if maxlen > self.MAX_LENGTH:
+                return self.transport.loseConnection()
+            return self.sendSerialized(f)
+        
+        if isinstance(s, serialized.PickleSerialized):
+            self.sendPickleSerialized(s)
+        elif isinstance(s, serialized.ArraySerialized):
+            self.sendArraySerialized(s)
     
     def pullFail(self, failure):
         self.pullFinish("FAIL")
@@ -1188,7 +1204,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     def gatherOK(self, obj):
         try:
             serial = serialized.serialize(obj, self.workVars['gatherKey'])
-            self.sendSerial(serial)
+            self.sendSerialized(serial)
         except:
             self.gatherFail(Failure())
         self.gatherFinish("OK")
@@ -1254,7 +1270,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
             except pickle.PickleError, e:
                 self.executeFinish("FAIL")
             else:
-                self.sendSerial(serial)
+                self.sendSerialized(serial)
         self.executeFinish("OK")
     
     def executeFail(self, f):
@@ -1313,7 +1329,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         except pickle.PickleError:
             self.statusFinish('FAIL')
         else:
-            self.sendSerial(serial)
+            self.sendSerialized(serial)
             self.statusFinish('OK')
     
     def statusFail(self, reason):
