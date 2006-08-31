@@ -6,7 +6,7 @@ from optparse import OptionParser
 from StringIO import StringIO
 from math import sqrt
 
-from ipython1.kernel.controllerclient import RemoteController
+from ipython1.kernel.api import RemoteController
 
 swapStream = StringIO()
 def swap():

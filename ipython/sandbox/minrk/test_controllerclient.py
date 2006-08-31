@@ -20,7 +20,7 @@ import sys, StringIO
 from optparse import OptionParser
 
 from random import randint
-from ipython1.kernel.controllerclient import RemoteController
+from ipython1.kernel.api import RemoteController
         
 
 def main(port, host):
