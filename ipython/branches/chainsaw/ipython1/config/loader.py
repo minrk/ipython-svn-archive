@@ -22,9 +22,6 @@ def configure(configObject):
             definedAttributes = {}
             exec fileContents in definedAttributes
             configObject.update(**definedAttributes)
-        else:
-            print "could not load config file"
-
 
 def resolveFilePath(filename):
     resolvedFile = None
