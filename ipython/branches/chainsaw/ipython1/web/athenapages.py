@@ -5,7 +5,7 @@ from zope.interface import implements
 
 from ipython1.kernel import results
 
-from athenawidgets import CommandWidget, ResultWidget, StatusWidget, IDWidget, ChatWidget
+from ipython1.web import athenawidgets as aw
 
 class filePage(rend.Page):
     def __init__(self, *files):
@@ -15,7 +15,7 @@ class filePage(rend.Page):
                 s += open(f).read()+'\n'
             except:
                 pass
-        self.docFactory = loaders.stan(s)
+        self.docFactory = loaders.stan(tags.raw(s))
     
 
 class MonitorPage(athena.LivePage):
@@ -38,11 +38,11 @@ class MonitorPage(athena.LivePage):
                 util.sibpath(__file__, 'monitor.css'))
     
     def render_widgets(self, ctx, data):
-        f = CommandWidget(self.controller)
+        f = aw.CommandWidget(self.controller)
         f.setFragmentParent(self)
-        g = StatusWidget(self.controller)
+        g = aw.StatusWidget(self.controller)
         g.setFragmentParent(self)
-        h = ResultWidget()
+        h = aw.ResultWidget()
         h.setFragmentParent(self)
         n1 = results.notifierFromFunction(h.handleResult)
         self.controller.addNotifier(n1)
@@ -76,11 +76,11 @@ class ResultsPage(athena.LivePage):
                 util.sibpath(__file__, 'results.css'))
     
     def render_widgets(self, ctx, data):
-        w = ResultWidget()
+        w = aw.ResultWidget()
         w.setFragmentParent(self)
         n1 = results.notifierFromFunction(w.handleResult)
         self.controller.addNotifier(n1)
-        c = CommandWidget(self.controller)
+        c = aw.CommandWidget(self.controller)
         c.setFragmentParent(self)
         return ctx.tag[w,tags.br,c]
     
@@ -105,12 +105,12 @@ class StatusPage(athena.LivePage):
                 util.sibpath(__file__, 'status.css'))
     
     def render_widgets(self, ctx, data):
-        w = StatusWidget(self.controller)
+        w = aw.StatusWidget(self.controller)
         w.setFragmentParent(self)
         reactor.callLater(.1, w.refreshStatus)
         n2 = results.notifierFromFunction(w.refreshStatus)
         self.controller.addNotifier(n2)
-        c = CommandWidget(self.controller)
+        c = aw.CommandWidget(self.controller)
         c.setFragmentParent(self)
         c.addNotifier(n2)
         return ctx.tag[w,tags.br,c]
@@ -136,7 +136,7 @@ class CommandPage(athena.LivePage):
                 util.sibpath(__file__, 'command.css'))
     
     def render_widget(self, ctx, data):
-        w = CommandWidget(self.controller)
+        w = aw.CommandWidget(self.controller)
         w.setFragmentParent(self)
         return ctx.tag[w]
     
@@ -159,7 +159,7 @@ class ControllerPageAthena(athena.LivePage):
             tags.div(render=tags.directive('chat'))
         ]
     ])
-
+    
     def __init__(self, controller):
         athena.LivePage.__init__(self)
         self.controller = controller
@@ -169,14 +169,14 @@ class ControllerPageAthena(athena.LivePage):
                 util.sibpath(__file__, 'controller.css'))
     
     def render_idwidget(self, ctx, data):
-        w = IDWidget(self.controller)
+        w = aw.IDWidget(self.controller)
         w.setFragmentParent(self)
         return ctx.tag[w]
     
     def render_chat(self, ctx, data):
         self.chat = "NO CHAT"
         if self.chat is None:
-            self.chat = ChatWidget()
+            self.chat = aw.ChatWidget()
             self.chat.setFragmentParent(self)
         return ctx.tag[self.chat]
     
@@ -195,6 +195,7 @@ class ControllerPageAthena(athena.LivePage):
     def goingLive(self, ctx, client):
         return self.chat.goingLive(ctx, client)
     
+
 
 
 import os, time
@@ -220,7 +221,7 @@ class ControllerPageLivepage(livepage.LivePage):
     def gotIDs(self, idlist):
         s = ''
         for id in idlist:
-            s += " <a href='monitor?ids=%i')>%i</a> " %(id, id)
+            s += " <a href='notebook?ids=%i')>%i</a> " %(id, id)
         self.sendEvent(None, assign(
             document.getElementById('idlist').innerHTML, unicode(s)))
     
@@ -229,13 +230,16 @@ class ControllerPageLivepage(livepage.LivePage):
 
     def child_status(self, ctx):
         return StatusPage(self.controller)
-
+    
     def child_command(self, ctx):
         return CommandPage(self.controller)
-
+    
     def child_monitor(self, ctx):
         return MonitorPage(self.controller)
-
+    
+    def child_notebook(self, ctx):
+        return NotebookPage(self.controller)
+    
     def goingLive(self, ctx, client):
         client.notifyOnClose().addBoth(self.userLeft, client)
 
@@ -251,21 +255,21 @@ class ControllerPageLivepage(livepage.LivePage):
         client.send([(event, eol) for source, event in self.events])
 
         self.clients.append(client)
-
+    
     def userLeft(self, _, client):
         self.clients.remove(client)
         self.sendEvent(
             client,
             js.removeNode('user-list-%s' % (client.userId, )), eol,
             self.content(client, 'has left.'))
-
+    
     def sendEvent(self, source, *event):
         self.events.append((source, event))
         for target in self.clients:
             if target is not source:
                 target.send(event)
         return event
-
+    
     def content(self, sender, message):
         return append(
             'content',
@@ -292,6 +296,30 @@ class ControllerPageLivepage(livepage.LivePage):
         return rv
 
 ControllerPage = ControllerPageLivepage
+
+class NotebookPage(athena.LivePage):
+    addSlash=True
+    docFactory = loaders.stan(tags.html[tags.head(render=tags.directive('liveglue'))[
+        tags.title["IPython Notebook"],
+        tags.link(href="notebook.css", rel="stylesheet", type="text/css"),
+        # tags.script(type="text/javascript", src="nested.js")
+    ],tags.body(render=tags.directive('widget'))
+    ])
+    def __init__(self, controller):
+        athena.LivePage.__init__(self)
+        self.controller = controller
+        if self.children is None:
+            self.children = {}
+        self.children["notebook.css"] = filePage(
+            util.sibpath(__file__, 'notebook.css'))
+    
+    def render_widget(self, ctx, data):
+        w = aw.NotebookWidget(self.controller)
+        w.setFragmentParent(self)
+        return ctx.tag[w]
+    
+
+
 class PageRoot(object):
     implements(inevow.IResource)
     

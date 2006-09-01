@@ -10,6 +10,9 @@ myPackage = athena.JSPackage({
 
 athena.jsDeps.mapping.update(myPackage.mapping)
 
+def htmlBrackets(s):
+    return s.replace('<', '&lt;').replace('>', '&gt;')
+
 def statusListToHTML(statusList, pending, queue, history, local):
     s = "<table id='statusTable' align='center'><tr><td><b>id</b>"
     for e in ['pending', 'queue', 'history', 'local']:
@@ -66,7 +69,7 @@ def resultToHTML(cmd):
         cmd_stdout = cmd[3][:-1]
         cmd_stderr = cmd[4][:-1]
         for c in [cmd_stdin, cmd_stdout, cmd_stderr]:
-            c = c.replace('<', '&lt;').replace('>', '&gt;')
+            c = htmlBrackets(c)
         s += "<a id='stdin'>[%i]In [%i]:</a> %s<br>" % (target, cmd_num, cmd_stdin)
         if cmd_stdout:
             s += "<a id='stdout'>[%i]Out[%i]:</a> %s<br>" % (target, cmd_num, cmd_stdout)
@@ -338,19 +341,19 @@ class ChatWidget(athena.LiveElement):
             """)
             ]],
             tags.form(name="inputForm", onsubmit="""
-                var w = Nevow.Athena.getWidget(this);
+                var w = Nevow.Athena.Widget(this);
                 w.callRemote('sendInput', this.inputLine.value);""")[
               tags.input(name="inputLine"),
               tags.input(type="submit", value="say")
             ],
             tags.form(name="nickForm", onsubmit="""
-                var w = Nevow.Athena.getWidget(this);
+                var w = Nevow.Athena.Widget(this);
                 w.callRemote('changeNick', this.nick.value);""")[
               tags.input(name="nick"),
               tags.input(type="submit", value="change nick")
             ],
             tags.form(name="topicForm", onsubmit="""
-                var w = Nevow.Athena.getWidget(this);
+                var w = Nevow.Athena.Widget(this);
                 w.callRemote('changeTopic', this.topic.value);""")[
                 tags.input(name="topic"),
                 tags.input(type="submit", value="change topic")
@@ -420,3 +423,54 @@ class ChatWidget(athena.LiveElement):
         changer.userId = nick
         return rv
 
+class NotebookWidget(athena.LiveElement):
+    jsClass = u'ControllerModule.NotebookWidget'
+    docFactory = loaders.stan(tags.div(render=tags.directive('liveElement'))[
+    tags.xml("""
+    <div class="pageHeader">IPython Notebook</div>
+    <div class="controlCol">
+    <div class="controlLink" onclick="Nevow.Athena.Widget.get(this).addIOCell();">Add I/O Cell</div>
+    <div class="controlLink" onclick="Nevow.Athena.Widget.get(this).addTextCell();">Add Text Cell</div>
+    <div class="controlLink" onclick="Nevow.Athena.Widget.get(this).createGroup();">Create Group</div>
+    <hr size="1"/>
+    Move<br/>
+    Delete
+    </div>
+    <div id="nb" class="notebook"></div>
+    </div>
+    </div>
+    """)])
+    
+    def __init__(self, controller):
+        self.controller = controller
+        reactor.callLater(.1, self.callRemote, 'getIDs')
+        
+    def setIDs(self, ids):
+        self.ids = parseTargets(ids)
+        print self.ids
+    
+    athena.expose(setIDs)
+    
+    def execute(self, cmd_id, line):
+        print cmd_id
+        print line
+        d = self.controller.execute(self.ids, str(line))
+        d.addCallback(self.returnResult, cmd_id)
+    
+    athena.expose(execute)
+    
+    def returnResult(self, result, cmd_id):
+        if len(result) is 1:
+            id = unicode(result[0][1])
+        else:
+            id = u'*'
+        result = zip(*result)
+        out = htmlBrackets(''.join(result[3]))
+        err = htmlBrackets(''.join(result[4]))
+        
+        if err:
+            out += '<br><b>ERR:</b><br>'+err
+        self.callRemote('handleOutput', cmd_id, id, unicode(out))
+    
+    
+    
