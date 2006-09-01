@@ -130,7 +130,7 @@ class RemoteController(object):
             print "Address related error connecting to sever: %s" % e
             return False
         except socket.error, e:
-            print "Connection error: %s" % e
+            print "Not Connected: %s" % e
             return False
                 
         # Turn off Nagle's algorithm to prevent the 200 ms delay :)
@@ -178,7 +178,7 @@ class RemoteController(object):
         """
         targetstr = self.parseTargets(targets)
         if not targetstr or not source:
-            # need something to do
+            print "Need something to do!"
             return False
         self._check_connection()
         
@@ -191,9 +191,11 @@ class RemoteController(object):
                     self.connect()
                     self.es.writeNetstring(string)
                 except socket.error:
+                    print "Not Connected"
                     return False
             string = self.es.readNetstring()
             if string [:3] == 'BAD':
+                print string
                 return False
             data = []
             while string not in ['EXECUTE FAIL', "EXECUTE OK"]:
@@ -205,6 +207,7 @@ class RemoteController(object):
                         print "Error unpickling object: ", e
                         return False
                 else:
+                    print "Expected pickle, received ", string
                     return False
                 string = self.es.readNetstring()
                 
@@ -242,6 +245,7 @@ class RemoteController(object):
                     self.connect()
                     self.es.writeNetstring(string)
                 except socket.error:
+                    print "Not Connected"
                     return False
             string = self.es.readNetstring()
             data = None
@@ -249,6 +253,7 @@ class RemoteController(object):
         if string == "EXECUTE OK":
             return True
         else:
+            print string
             return False
     
     def run(self, targets, fname):
@@ -291,7 +296,7 @@ class RemoteController(object):
         """
         targetstr = self.parseTargets(targets)
         if not targetstr or not namespace or not self._check_connection():
-            #need something to do
+            print "Need something to do!"
             return False
         
         string = "PUSH ::%s" % targetstr
@@ -302,9 +307,11 @@ class RemoteController(object):
                 self.connect()
                 self.es.writeNetstring(string)
             except socket.error:
+                print "Not Connected"
                 return False
-        
-        if self.es.readNetstring() != "PUSH READY":
+        string = self.es.readNetstring()
+        if string != "PUSH READY":
+            print "Expected 'PUSH READY', got '%s'" %string
             return False
         for key in namespace:
             value = namespace[key]
@@ -320,6 +327,7 @@ class RemoteController(object):
         if string == "PUSH OK":
             return True
         elif string == "PUSH FAIL":
+            print "Push Failed"
             return False
         else:
             return string
@@ -364,12 +372,13 @@ class RemoteController(object):
         """
         targetstr = self.parseTargets(targets)
         if not targetstr or not keys or not self._check_connection():
-            # need something to do
+            print "Need something to do!"
             return False
         
         try:
             keystr = ','.join(keys)
         except TypeError:
+            print "keys must be strings"
             return False
         
         multitargets = self.multiTargets(targets)
@@ -381,19 +390,22 @@ class RemoteController(object):
                 self.connect()
                 self.es.writeNetstring(string)
             except socket.error:
+                print "Not Connected"
                 return False
         
         string = self.es.readNetstring()
         if string [:3] == 'BAD':
+            print string
             return False
         results = []
         returns = []
         while string not in ['PULL OK', 'PULL FAIL']:
             string_split = string.split(' ', 1)
             if len(string_split) is not 2:
+                print "Pull Failed, invalid line: "+string
                 return False
             if string_split[0] == "PICKLE":
-                #if it's a pickle
+                # if it's a pickle
                 sPickle = serialized.PickleSerialized(string_split[1])
                 sPickle.addToPackage(self.es.readNetstring())
                 try:
@@ -406,12 +418,14 @@ class RemoteController(object):
                 try:
                     sArray = serialized.ArraySerialized(string_split[1])
                 except NameError:
+                    print "Could not serialize"
                     return False    
                 for i in range(3):#arrays have a 3 line package
                     sArray.addToPackage(self.es.readNetstring())
                 data = sArray.unpack()
             else:
                 #we don't know how to handle it!
+                print "'%s' is not a valid serialized handle" %string
                 return False
             
             #successful retrieval
@@ -437,6 +451,7 @@ class RemoteController(object):
                 returns = tuple(returns)
             return returns
         else:
+            print string
             return False
     
     def __getitem__(self, id):
@@ -463,7 +478,7 @@ class RemoteController(object):
             """
         targetstr = self.parseTargets(targets)
         if not targetstr or not keys or not self._check_connection():
-            # need something to do
+            print "Need something to do!"
             return False
         
         multitargets = self.multiTargets(targets)
@@ -507,11 +522,13 @@ class RemoteController(object):
         targetstr = self.parseTargets(targets)
         if not targetstr or not key  or not self._check_connection()\
                 or not isinstance(seq, (tuple, list)+arraytypes):
+            print "Need something to do"
             return False
         
         try:
             serial = serialized.serialize(seq, key)
         except:
+            print "Could not serialize "+key
             return False
         string = 'SCATTER style=%s flatten=%i::%s' %(
                         style, int(flatten), targetstr)
@@ -522,6 +539,7 @@ class RemoteController(object):
                 self.connect()
                 self.es.writeNetstring(string)
             except socket.error:
+                print "Not Connected"
                 return False
         
         self.sendSerialized(serial)
@@ -529,13 +547,14 @@ class RemoteController(object):
         if reply == 'SCATTER OK':
             return True
         else:
+            print reply
             return False
     
     def gather(self, targets, key, style='basic'):
         """gather a distributed object, and reassemble it"""
         targetstr = self.parseTargets(targets)
         if not targetstr or not key or not self._check_connection():
-            #need something to do
+            print "Need something to do!"
             return False
         
         string = 'GATHER %s style=%s::%s' %(key, style, targetstr)
@@ -546,10 +565,12 @@ class RemoteController(object):
                 self.connect()
                 self.es.writeNetstring(string)
             except socket.error:
+                print "Not Connected"
                 return False
         
         split = self.es.readNetstring().split(' ',1)
         if len(split) is not 2:
+            print "Bad response: "+split[0]
             return False
         if split[0] == 'PICKLE':
             serial = serialized.PickleSerialized(key)
@@ -569,11 +590,13 @@ class RemoteController(object):
                 print 'could not build array: ', e
                 return False
         else:
+            print "Could not handle: "+''.join(split)
             return False
         
         if self.es.readNetstring() == 'GATHER OK':
             return obj
         else:
+            print "Gather Failed"
             return False
     
     def getResult(self, targets, i=None):
@@ -581,7 +604,7 @@ class RemoteController(object):
             list of tuples if multiple targets."""
         targetstr = self.parseTargets(targets)
         if not targetstr or not self._check_connection():
-            # need something to do
+            print "Need something to do!"
             return False
         
         if i is None:
@@ -595,6 +618,7 @@ class RemoteController(object):
                 self.connect()
                 self.es.writeNetstring(string)
             except socket.error:
+                print "Not Connected"
                 return False
         
         string = self.es.readNetstring()
@@ -623,7 +647,7 @@ class RemoteController(object):
         """Check the status of the kernel."""
         targetstr = self.parseTargets(targets)
         if not targetstr or not self._check_connection():
-            # need something to do
+            print "Need something to do!"
             return False
         
         string = "STATUS ::%s" %targetstr
@@ -634,6 +658,7 @@ class RemoteController(object):
                 self.connect()
                 self.es.writeNetstring(string)
             except socket.error:
+                print "Not Connected"
                 return False
         
         string = self.es.readNetstring()
@@ -651,12 +676,15 @@ class RemoteController(object):
                         data = data[0][1]
                     return data
                 else:
+                    print string
                     return False
         else:
+            print "Could not handle: "+string
             return False
     
     def getIDs(self):
         if not self._check_connection():
+            print "Not Connected"
             return False
         
         string = "GETIDS"
@@ -667,18 +695,21 @@ class RemoteController(object):
                 self.connect()
                 self.es.writeNetstring(string)
             except socket.error:
+                print "Not Connected"
                 return False
         
         package = self.es.readNetstring()
         try:
             ids = pickle.loads(package)
         except pickle.PickleError:
+            print "Could not build idlist"
             return False
         
         s = self.es.readNetstring()
         if s == "GETIDS OK":
             return ids
         else:
+            print s
             return False
     def notify(self, addr=None, flag=True):
         """Instruct the kernel to notify a result gatherer.
@@ -705,6 +736,7 @@ class RemoteController(object):
             A boolean to turn notification on (True) or off (False) 
         """
         if not self._check_connection():
+            print "Not Connected"
             return False
         
         if addr is None:
@@ -725,19 +757,21 @@ class RemoteController(object):
                 self.connect()
                 self.es.writeNetstring(string)
             except socket.error:
+                print "Not Connected"
                 return False
         
         string = self.es.readNetstring()
         if string == "NOTIFY OK":
             return True
         else:
+            print "Notify Failed"
             return False
     
     def reset(self, targets):
         """Clear the namespace if the kernel."""
         targetstr = self.parseTargets(targets)
         if not targetstr or not self._check_connection():
-            # need something to do
+            print "Need something to do!"
             return False
         
         string = "RESET ::%s" %targetstr
@@ -748,26 +782,37 @@ class RemoteController(object):
                 self.connect()
                 self.es.writeNetstring(string)
             except socket.error:
+                print "Not Connected"
                 return False
         
         string = self.es.readNetstring()
         if string == "RESET OK":
             return True
         else:
+            print string
             return False      
     
     def kill(self, targets):
         """Kill the engine completely."""
         targetstr = self.parseTargets(targets)
         if not targetstr or not self._check_connection():
-            # need something to do
+            print "Need something to do!"
             return False
-        
-        self.es.writeNetstring("KILL ::%s" %targetstr)
+        string = "KILL ::%s" %targetstr
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                print "Not Connected"
+                return False
         string = self.es.readNetstring()
         if string == "KILL OK":
             return True
         else:
+            print string
             return False      
     
     def disconnect(self):
@@ -784,6 +829,7 @@ class RemoteController(object):
                 del self.es
                 return True
             else:
+                print string
                 return False
         else:
             return True
@@ -950,7 +996,9 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         try:
             s = pickle.dumps(idlist, 2)
         except pickle.PickleError:
-            self.getIDsFail()
+            return self.getIDsFail()
+        if len(s) > self.MAX_LENGTH:
+            return self.getIDsFail()
         self.sendString(s)
         self.sendString("GETIDS OK")
     
@@ -1035,7 +1083,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         try:
             self.workVars['pullKeys'] = args.split(',')
         except TypeError:
-            self.pullFinish('FAIL')
+            return self.pullFinish('FAIL')
         else:
             self.nextHandler = self.handleUnexpectedData
             d = self.factory.pullSerialized(targets, *self.workVars['pullKeys'])
@@ -1051,7 +1099,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
                     try:
                         serialResult = serialized.serialize(serialResult, '_')
                     except:
-                        self.pullFail()
+                        return self.pullFail()
                 self.sendSerialized(serialResult)
             
             self.sendString("SEGMENT PULLED")
@@ -1208,7 +1256,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
             serial = serialized.serialize(obj, self.workVars['gatherKey'])
             self.sendSerialized(serial)
         except:
-            self.gatherFail(Failure())
+            return self.gatherFail(Failure())
         self.gatherFinish("OK")
     
     def gatherFail(self, failure=None):
@@ -1270,7 +1318,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
                 else:
                     serial = serialized.serialize(r, 'RESULT')
             except pickle.PickleError, e:
-                self.executeFinish("FAIL")
+                return self.executeFinish("FAIL")
             else:
                 self.sendSerialized(serial)
         self.executeFinish("OK")
@@ -1298,13 +1346,12 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     
     def getResultOK(self, result):
         try:
-            package = pickle.dumps(result, 2)
+            s = serialized.serialize(result, 'RESULT')
         except pickle.pickleError:
             self.getResultFinish("FAIL")
             return
         else:
-            self.sendString("PICKLE RESULT")
-            self.sendString(package)
+            self.sendSerialized(s)
             self.getResultFinish("OK")
     
     def getResultFail(self, f):
@@ -1329,7 +1376,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         try:
             serial = serialized.serialize(status, 'STATUS')
         except pickle.PickleError:
-            self.statusFinish('FAIL')
+            return self.statusFinish('FAIL')
         else:
             self.sendSerialized(serial)
             self.statusFinish('OK')
@@ -1354,7 +1401,7 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
             try:
                 port = int(port)
             except ValueError:
-                self.notifyFail()
+                return self.notifyFail()
             else:
                 if action == "ADD":
                     n = results.INotifierChild((host, port))

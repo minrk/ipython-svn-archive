@@ -648,7 +648,7 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
                 desiredID = None
         else:
             desiredID = None
-        qe = engineservice.QueuedEngine(self)
+        qe = engineservice.QueuedEngine(self, keepUpToDate=True)
         self.id = self.factory.registerEngine(engineservice.completeEngine(qe), 
             desiredID)
         self.handleID(self.id)

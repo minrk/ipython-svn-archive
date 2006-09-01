@@ -85,8 +85,8 @@ class RCView(object):
             if id not in currentIDs:
                 raise Exception("The engine with id %i does not exist" % id)
         self._ids = range(len(self._originalIDs))
-        print self._ids
-        print self._originalIDs
+        # print self._ids
+        # print self._originalIDs
         addAllMethods(self)
     
     def getIDs(self):
