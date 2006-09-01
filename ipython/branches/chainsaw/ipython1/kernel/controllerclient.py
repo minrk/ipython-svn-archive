@@ -23,7 +23,6 @@ TODOs:
 
 
 import ipython1.kernel.magic
-from ipython1.kernel.controllerservice import addAllMethods
 
 class EngineProxy(object):
     """an object to interact directly to a remote engine through a Remote 
@@ -87,7 +86,6 @@ class RCView(object):
         self._ids = range(len(self._originalIDs))
         # print self._ids
         # print self._originalIDs
-        addAllMethods(self)
     
     def getIDs(self):
         return self._originalIDs
@@ -109,10 +107,16 @@ class RCView(object):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.execute(actualTargets, lines, block)
     
+    def executeAll(self, lines, block=False):
+        return self.execute('all', lines, block)
+        
     def push(self, targets, **namespace):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.push(actualTargets, **namespace)
     
+    def pushAll(self, **namespace):
+        return self.push('all', **namespace)
+        
     def __setitem__(self, key, value):
         return self.push('all', **{key:value})
     
@@ -120,6 +124,12 @@ class RCView(object):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.pull(actualTargets, *keys)
     
+    def pullAll(self, *keys):
+        r = self.pull('all', *keys)
+        if len(self._ids) is 1:
+            r = [r]
+        return r
+        
     def __getitem__(self, id):
         if isinstance(id, slice):
             return RCView(self.rc, self._originalIDs[id])
@@ -134,34 +144,64 @@ class RCView(object):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.run(actualTargets, fname)
     
+    def runAll(self, fname):
+        return self.run('all', fname)
+        
     def pullNamespace(self, targets, *keys):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.pullNamespace(actualTargets, *keys)
     
+    def pullNamespaceAll(self, *keys):
+        return self.pullNamespace('all', *keys)
+        
     def status(self, targets):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.status(actualTargets)
     
+    def statusAll(self):
+        r = self.status('all')
+        if len(self._ids) is 1:
+            r = [r]
+        return r
+        
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.scatter(actualTargets, key, seq, style, flatten)
     
+    def scatterAll(self, key, seq, style='basic', flatten=False):
+        return self.scatter('all', key, seq, style, flatten)
+        
     def gather(self, targets, key, style='basic'):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.gather(actualTargets, key, style)        
     
+    def gatherAll(self, key, style='basic'):
+        return self.gather('all', key, style)
+        
     def getResult(self, targets, i=None):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.getResult(actualTargets, i)
     
+    def getResultAll(self, i=None):
+        r = self.getResult('all', i)
+        if len(self._ids) is 1:
+            r = [r]
+        return r
+        
     def reset(self, targets):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.reset(actualTargets)
     
+    def resetAll(self):
+        return self.reset('all')
+        
     def kill(self, targets):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.kill(actualTargets)
     
+    def killAll(self):
+        return self.kill('all')
+        
     def activate(self):
         try:
             __IPYTHON__.active_cluster = self
