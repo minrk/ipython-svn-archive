@@ -133,10 +133,10 @@ ControllerModule.NotebookWidget.method(
     'handleOutput',
     function (self, cmd_id, id, out){
         var cell = document.getElementById(cmd_id);
-        cell.lastChild.firstChild.firstChild.innerHTML = 'In  ['+id+']:'
-        cell.lastChild.lastChild.firstChild.innerHTML = 'Out ['+id+']:'
+        cell.lastChild.firstChild.firstChild.innerHTML = 'In&nbsp;['+id+']:'
+        cell.lastChild.lastChild.firstChild.innerHTML = 'Out['+id+']:'
         var output = cell.lastChild.lastChild.lastChild;
-        output.innerHTML = out;
+        output.innerHTML = out+'&nbsp';
     });
 
 ControllerModule.NotebookWidget.method(
@@ -158,7 +158,7 @@ ControllerModule.NotebookWidget.method(
         inRow.className = 'inRow';
         var inLabel = document.createElement('div');
         inLabel.className = 'inLabel';
-        inLabel.innerHTML = 'In  []:';
+        inLabel.innerHTML = 'In&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:';
         inRow.appendChild(inLabel);
         var inContent = document.createElement('div');
         inContent.className = 'inContent';
@@ -174,11 +174,11 @@ ControllerModule.NotebookWidget.method(
         outRow.className = 'outRow';
         var outLabel = document.createElement('div');
         outLabel.className = 'outLabel';
-        outLabel.innerHTML = 'Out[]:';
+        outLabel.innerHTML = 'Out&nbsp;&nbsp;&nbsp;&nbsp;:';
         outRow.appendChild(outLabel);
         var outContent = document.createElement('div');
         outContent.className = 'outContent';
-        outContent.innerHTML = '';
+        outContent.innerHTML = '&nbsp;';
         outRow.appendChild(outContent);
 
         // Add the input and output rows to the inOut columns
@@ -287,7 +287,7 @@ ControllerModule.NotebookWidget.method(
         // make I/O cells break out by showing the output
         if (Cell.className == 'ioCell')
         {
-            Cell.lastChild.firstChild.firstChild.innerHTML = 'In  []:'
+            Cell.lastChild.firstChild.firstChild.innerHTML = 'In&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:'
             if (e.shiftKey && e.keyCode == 13)
             {
                 var line = textareaObj.value;
