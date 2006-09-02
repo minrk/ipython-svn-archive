@@ -18,6 +18,29 @@ class filePage(rend.Page):
         self.docFactory = loaders.stan(tags.raw(s))
     
 
+class NotebookPage(athena.LivePage):
+    addSlash=True
+    docFactory = loaders.stan(tags.html[tags.head(render=tags.directive('liveglue'))[
+        tags.title["IPython Notebook"],
+        tags.link(href="notebook.css", rel="stylesheet", type="text/css"),
+        # tags.script(type="text/javascript", src="nested.js")
+    ],tags.body(render=tags.directive('widget'))
+    ])
+    def __init__(self, controller):
+        athena.LivePage.__init__(self)
+        self.controller = controller
+        if self.children is None:
+            self.children = {}
+        self.children["notebook.css"] = filePage(
+            util.sibpath(__file__, 'notebook.css'))
+    
+    def render_widget(self, ctx, data):
+        w = aw.NotebookWidget(self.controller)
+        w.setFragmentParent(self)
+        return ctx.tag[w]
+    
+
+
 class MonitorPage(athena.LivePage):
     addSlash = True
     docFactory = loaders.stan(tags.html[
@@ -221,7 +244,7 @@ class ControllerPageLivepage(livepage.LivePage):
     def gotIDs(self, idlist):
         s = ''
         for id in idlist:
-            s += " <a href='notebook?ids=%i')>%i</a> " %(id, id)
+            s += " <a href='notebook?ids=%i' target='_blank'>%i</a> " %(id, id)
         self.sendEvent(None, assign(
             document.getElementById('idlist').innerHTML, unicode(s)))
     
@@ -296,28 +319,6 @@ class ControllerPageLivepage(livepage.LivePage):
         return rv
 
 ControllerPage = ControllerPageLivepage
-
-class NotebookPage(athena.LivePage):
-    addSlash=True
-    docFactory = loaders.stan(tags.html[tags.head(render=tags.directive('liveglue'))[
-        tags.title["IPython Notebook"],
-        tags.link(href="notebook.css", rel="stylesheet", type="text/css"),
-        # tags.script(type="text/javascript", src="nested.js")
-    ],tags.body(render=tags.directive('widget'))
-    ])
-    def __init__(self, controller):
-        athena.LivePage.__init__(self)
-        self.controller = controller
-        if self.children is None:
-            self.children = {}
-        self.children["notebook.css"] = filePage(
-            util.sibpath(__file__, 'notebook.css'))
-    
-    def render_widget(self, ctx, data):
-        w = aw.NotebookWidget(self.controller)
-        w.setFragmentParent(self)
-        return ctx.tag[w]
-    
 
 
 class PageRoot(object):

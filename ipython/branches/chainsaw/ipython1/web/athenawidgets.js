@@ -133,8 +133,9 @@ ControllerModule.NotebookWidget.method(
     'handleOutput',
     function (self, cmd_id, id, out){
         var cell = document.getElementById(cmd_id);
-        cell.lastChild.firstChild.firstChild.innerHTML = 'In&nbsp;['+id+']:'
-        cell.lastChild.lastChild.firstChild.innerHTML = 'Out['+id+']:'
+        cell.lastChild.firstChild.firstChild.innerHTML = 'In&nbsp;['+id+']:';
+        cell.lastChild.firstChild.lastChild.firstChild.disabled = false;
+        cell.lastChild.lastChild.firstChild.innerHTML = 'Out['+id+']:';
         var output = cell.lastChild.lastChild.lastChild;
         output.innerHTML = out+'&nbsp';
     });
@@ -291,6 +292,7 @@ ControllerModule.NotebookWidget.method(
             if (e.shiftKey && e.keyCode == 13)
             {
                 var line = textareaObj.value;
+                textareaObj.disabled = true;
                 self.callRemote('execute', Cell.id, line);
             }else{
                 Cell.lastChild.lastChild.style.display = '';

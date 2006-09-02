@@ -10,7 +10,14 @@ myPackage = athena.JSPackage({
 
 athena.jsDeps.mapping.update(myPackage.mapping)
 
-def htmlBrackets(s):
+def classTag(tag, klass):
+    if not isinstance(tag, tags.Tag):
+        tag = getattr(tags, str(tag))(tmp='tmp')
+        del tag.attributes['tmp']
+    tag.attributes['class'] = klass
+    return tag
+
+def htmlString(s):
     return s.replace('<', '&lt;').replace('>', '&gt;')
 
 def statusListToHTML(statusList, pending, queue, history, local):
@@ -69,7 +76,7 @@ def resultToHTML(cmd):
         cmd_stdout = cmd[3][:-1]
         cmd_stderr = cmd[4][:-1]
         for c in [cmd_stdin, cmd_stdout, cmd_stderr]:
-            c = htmlBrackets(c)
+            c = htmlString(c)
         s += "<a id='stdin'>[%i]In [%i]:</a> %s<br>" % (target, cmd_num, cmd_stdin)
         if cmd_stdout:
             s += "<a id='stdout'>[%i]Out[%i]:</a> %s<br>" % (target, cmd_num, cmd_stdout)
@@ -98,6 +105,60 @@ def parseTargets(targets):
         return []
 
 
+class NotebookWidget(athena.LiveElement):
+    jsClass = u'ControllerModule.NotebookWidget'
+    docFactory = loaders.stan(tags.div(render=tags.directive('liveElement'))[
+    classTag(tags.div, 'pageHeader')["IPython Notebook"],
+    classTag(tags.div, 'controlCol')[
+        classTag(tags.div(onclick="Nevow.Athena.Widget.get(this).addIOCell();"),
+            'controlLink')["Add IO Cell"],
+        classTag(tags.div(onclick="Nevow.Athena.Widget.get(this).addTextCell();"),
+            'controlLink')["Add Text Cell"],
+        classTag(tags.div(onclick="Nevow.Athena.Widget.get(this).createGroup();"),
+            'controlLink')["Create Group"],
+        tags.hr(size="1"),"Move", tags.br, "Delete",
+    ],
+    classTag(tags.div(id='nb'), 'notebook')
+    ])
+    
+    def __init__(self, controller):
+        self.controller = controller
+        reactor.callLater(.1, self.callRemote, 'getIDs')
+        reactor.callLater(.1, self.callRemote, 'addIOCell')
+        
+    def setIDs(self, ids):
+        self.ids = parseTargets(ids)
+    
+    athena.expose(setIDs)
+    
+    def execute(self, cmd_id, line):
+        d = self.controller.execute(self.ids, str(line))
+        d.addCallback(self.returnResult, cmd_id)
+    
+    athena.expose(execute)
+    
+    def returnResult(self, result, cmd_id):
+        n = len(result)
+        if n is 1:
+            id = unicode(result[0][1])
+        else:
+            id = u'*'
+            result = map(list, result)
+            for i in range(n):
+                node = result[i][0]
+                # out
+                result[i][3] = '%i:%s'%(node,result[i][3])
+                # err
+                if result[i][4]:
+                    result[i][4] = '%i:%s'%(node,result[i][4])
+        result = zip(*result)
+        out = '<br/>'.join(map(htmlString, result[3]))
+        err = '<br/>'.join(map(htmlString, result[4]))
+        if len(err) > 5*n:
+            out += '<br><b>ERR:</b><br>'+err
+        self.callRemote('handleOutput', cmd_id, id, unicode(out))
+    
+    
 class ResultWidget(athena.LiveElement):
     jsClass = u'ControllerModule.ResultWidget'
     ids = 'all'
@@ -187,7 +248,6 @@ class StatusWidget(athena.LiveElement):
     def fail(self, f=None):
         return self.finish('Failure')
     
-
 
 class CommandWidget(athena.LiveElement, results.NotifierParent):
     jsClass = u'ControllerModule.CommandWidget'
@@ -289,7 +349,6 @@ class CommandWidget(athena.LiveElement, results.NotifierParent):
         return self.finish('Failure')
     
 
-
 class IDWidget(athena.LiveElement):
     jsClass = u'ControllerModule.IDWidget'
     
@@ -321,14 +380,11 @@ class ChatWidget(athena.LiveElement):
 
     docFactory = loaders.stan([tags.div(render=tags.directive('liveElement'))[
         tags.div(id="topic"), tags.div(id="content")[
-            tags.div(pattern="message")[tags.xml("""
-            <span class="timestamp"><nevow:slot name="timestamp" /></span>
-            <span class="userid"><nevow:slot name="userid" /></span>
-            <span class="message"><nevow:slot name="message" /></span>
-            """)]],
-            # tags.span(class="timestamp")[tags.slot(name="timestamp")],
-            # tags.span(class="userid")[tags.slot(name="userid")],
-            # tags.span(class="message")[tags.slot(name="message")]],
+            tags.div(pattern="message")[
+            classTag(tags.span, 'timestamp')[tags.slot(name='timestamp')],
+            classTag(tags.span, 'userid')[tags.slot(name='userid')],
+            classTag(tags.span, 'message')[tags.slot(name='message')],
+            ]],
             
             tags.dl(id="userlist")[tags.dt["Userlist"],
             tags.dd(pattern="user")[
@@ -336,9 +392,7 @@ class ChatWidget(athena.LiveElement):
             # tags.slot(name="user-id")
             tags.xml("""
                 <nevow:attr name="id">user-list-<nevow:slot name="user-id" /></nevow:attr>
-                <nevow:slot name="user-id" />
-            </dd>
-            """)
+            """),tags.slot(name="user-id")
             ]],
             tags.form(name="inputForm", onsubmit="""
                 var w = Nevow.Athena.Widget(this);
@@ -423,54 +477,4 @@ class ChatWidget(athena.LiveElement):
         changer.userId = nick
         return rv
 
-class NotebookWidget(athena.LiveElement):
-    jsClass = u'ControllerModule.NotebookWidget'
-    docFactory = loaders.stan(tags.div(render=tags.directive('liveElement'))[
-    tags.xml("""
-    <div class="pageHeader">IPython Notebook</div>
-    <div class="controlCol">
-    <div class="controlLink" onclick="Nevow.Athena.Widget.get(this).addIOCell();">Add I/O Cell</div>
-    <div class="controlLink" onclick="Nevow.Athena.Widget.get(this).addTextCell();">Add Text Cell</div>
-    <div class="controlLink" onclick="Nevow.Athena.Widget.get(this).createGroup();">Create Group</div>
-    <hr size="1"/>
-    Move<br/>
-    Delete
-    </div>
-    <div id="nb" class="notebook"></div>
-    </div>
-    </div>
-    """)])
-    
-    def __init__(self, controller):
-        self.controller = controller
-        reactor.callLater(.1, self.callRemote, 'getIDs')
-        
-    def setIDs(self, ids):
-        self.ids = parseTargets(ids)
-        print self.ids
-    
-    athena.expose(setIDs)
-    
-    def execute(self, cmd_id, line):
-        print cmd_id
-        print line
-        d = self.controller.execute(self.ids, str(line))
-        d.addCallback(self.returnResult, cmd_id)
-    
-    athena.expose(execute)
-    
-    def returnResult(self, result, cmd_id):
-        if len(result) is 1:
-            id = unicode(result[0][1])
-        else:
-            id = u'*'
-        result = zip(*result)
-        out = htmlBrackets(''.join(result[3]))
-        err = htmlBrackets(''.join(result[4]))
-        
-        if err:
-            out += '<br><b>ERR:</b><br>'+err
-        self.callRemote('handleOutput', cmd_id, id, unicode(out))
-    
-    
     

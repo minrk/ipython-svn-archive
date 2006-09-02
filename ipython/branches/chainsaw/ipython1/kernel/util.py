@@ -11,6 +11,8 @@
 #*****************************************************************************
 import os, types
 
+# from IPython import OInspect #for __getdef
+
 from twisted.internet import defer
 from ipython1.kernel import serialized
 
