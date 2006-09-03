@@ -138,12 +138,13 @@ class NotebookWidget(athena.LiveElement):
     athena.expose(execute)
     
     def returnResult(self, result, cmd_id):
+        print result
         n = len(result)
         if n is 1:
             id = unicode(result[0][1])
-            out = htmlString(result[3])
-            if result[4]:
-                out += '<br><b>ERR:</b><br>'+htmlString(result[4])
+            out = htmlString(result[0][3])
+            if result[0][4]:
+                out += '<br><b>ERR:</b><br>'+htmlString(result[0][4])
         else:
             id = u'*'
             result = map(list, result)
