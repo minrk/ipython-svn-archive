@@ -3,19 +3,30 @@
 /*getParam from cryer.co.uk script8*/
 function getParam(name)
 {
-  var start=location.search.indexOf("?"+name+"=");
-  if (start<0) start=location.search.indexOf("&"+name+"=");
-  if (start<0) return 'all';
-  start += name.length+2;
-  var end=location.search.indexOf("&",start)-1;
-  if (end<0) end=location.search.length;
-  var result=location.search.substring(start,end);
-  var result='';
-  for(var i=start;i<=end;i++) {
-    var c=location.search.charAt(i);
-    result=result+(c=='+'?' ':c);
-  }
-  return unescape(result);
+    var globalIDs = document.getElementById('globalIDs');
+    if (globalIDs != null){
+        return globalIDs.value;
+    }else{
+        globalIDs = document.createElement('input');
+/*        globalIDs.id = 'globalIDs';*/
+        globalIDs.setAttribute('id', 'globalIDs')
+        globalIDs.type = 'hidden';
+        document.body.appendChild(globalIDs);
+    }
+    var start=location.search.indexOf("?"+name+"=");
+    if (start<0) start=location.search.indexOf("&"+name+"=");
+    if (start<0) return null;
+    start += name.length+2;
+    var end=location.search.indexOf("&",start)-1;
+    if (end<0) end=location.search.length;
+    var result=location.search.substring(start,end);
+    var result='';
+    for(var i=start;i<=end;i++) {
+        var c=location.search.charAt(i);
+        result=result+(c=='+'?' ':c);
+    }
+    globalIDs.value = unescape(result);
+    return unescape(result);
 }
 
 ControllerModule = {};
@@ -25,7 +36,13 @@ ControllerModule.CommandWidget = Nevow.Athena.Widget.subclass('ControllerModule.
 ControllerModule.CommandWidget.method(
     'getIDs',
     function(self) {
-        document.getElementById('targets').value = getParam('ids');
+        var ids = getParam('ids');
+        if (ids == null){
+        	ids = prompt("Which IDs?", "all");
+            var globalIDs = document.getElementById('globalIDs');
+            globalIDs.value = ids;
+        }
+        document.getElementById('targets').value = ids;
     });
     
 ControllerModule.CommandWidget.method(
@@ -61,7 +78,13 @@ ControllerModule.StatusWidget.method(
     'getIDs',
     function(self){
         var idform = document.getElementById('statusidform');
-        idform.statusidfield.value = getParam('ids')
+        var ids = getParam('ids');
+        if (ids == null){
+        	ids = prompt("Which IDs?", "all");
+            var globalIDs = document.getElementById('globalIDs');
+            globalIDs.value = ids;
+        }
+        idform.statusidfield.value = ids;
     });
 
 ControllerModule.StatusWidget.method(
@@ -92,6 +115,11 @@ ControllerModule.ResultWidget.method(
     'getIDs',
     function(self) {
         self.ids = getParam('ids');
+        if (self.ids == null){
+        	self.ids = prompt("Which IDs?", "all");
+            var globalIDs = document.getElementById('globalIDs');
+            globalIDs.value = self.ids;
+        }
         document.getElementById('resultIdField').value = self.ids
         self.callRemote('setIDs', self.ids);
     });
@@ -123,9 +151,17 @@ ControllerModule.NotebookWidget.method(
     'getIDs',
     function(self) {
         var ids = getParam('ids');
-/*    document.getElementById('idfield').value = self.ids;*/
-        self.selectedCell = ''
-        self.currentID = 0;
+        if (ids == null){
+        	ids = prompt("Which IDs?", "all");
+            var globalIDs = document.getElementById('globalIDs');
+            globalIDs.value = ids;
+        }
+        if (!self.selectedCell){
+            self.selectedCell = '';
+        }
+        if (!self.currentID){
+            self.currentID = 0;
+        }
         self.callRemote('setIDs', ids);
     });
 

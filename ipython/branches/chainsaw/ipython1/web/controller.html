@@ -27,10 +27,6 @@ function changeId(old, newe) {
     window.document.getElementById(old).id = newe;
 }
 
-function clickme(name){
-	var ids = prompt("Which IDs?", "all");
-	window.location = window.location+name+"?ids="+ids;
-}
 function onResize(){
 	var Y = window.innerHeight - 200;
 	document.getElementById('content').style.height = ""+Y+"px";

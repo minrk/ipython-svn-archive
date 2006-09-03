@@ -18,7 +18,7 @@ def classTag(tag, klass):
     return tag
 
 def htmlString(s):
-    return s.replace('<', '&lt;').replace('>', '&gt;')
+    return s.replace('<', '&lt;').replace('>', '&gt;').replace('\n','<br/>')
 
 def statusListToHTML(statusList, pending, queue, history, local):
     s = "<table id='statusTable' align='center'><tr><td><b>id</b>"
@@ -141,21 +141,21 @@ class NotebookWidget(athena.LiveElement):
         n = len(result)
         if n is 1:
             id = unicode(result[0][1])
+            out = htmlString(result[3])
+            if result[4]:
+                out += '<br><b>ERR:</b><br>'+htmlString(result[4])
         else:
             id = u'*'
             result = map(list, result)
+            out = ''
             for i in range(n):
                 node = result[i][0]
                 # out
-                result[i][3] = '%i:%s'%(node,result[i][3])
+                if result[i][3]:
+                    out += '%i:%s<br/>'%(node,htmlString(result[i][3]))
                 # err
                 if result[i][4]:
-                    result[i][4] = '%i:%s'%(node,result[i][4])
-        result = zip(*result)
-        out = '<br/>'.join(map(htmlString, result[3]))
-        err = '<br/>'.join(map(htmlString, result[4]))
-        if len(err) > 5*n:
-            out += '<br><b>ERR:</b><br>'+err
+                    out += '%i:%s<br/>'%(node,htmlString(result[i][4]))
         self.callRemote('handleOutput', cmd_id, id, unicode(out))
     
     
@@ -207,7 +207,7 @@ class StatusWidget(athena.LiveElement):
                 var w = Nevow.Athena.Widget.get(statusidform);
                 w.refreshStatus();
                 """)[
-                tags.input(id="statusidfield", type="text", value="all"),
+                tags.input(id="statusidfield", type="text"),
                 tags.br,
                 tags.input(type="checkbox", id="pending", checked="true",
                     onChange="this.form.submit()")["pending"],
@@ -271,7 +271,7 @@ class CommandWidget(athena.LiveElement, results.NotifierParent):
                 tags.option(value="reset")["reset"],
                 tags.option(value="kill")["kill"],
             ]],
-            tags.td[tags.input(type="text", id="targets", name="targets", value="all")],
+            tags.td[tags.input(type="text", id="targets", name="targets")],
             tags.td[tags.input(type="text", id="args", name="args")],
             tags.td[tags.input(type="submit", value="exec")]
         ]],
