@@ -2,41 +2,19 @@
 # encoding: utf-8
 """
 Configuration objects.
-
-I don't know how to deal with config objects that have the same attributes.  Solutions:
-
-- Make sure each config object has uniquely named attributes.
-- Have a separate config file for each config object.  This is what I do now.
-
 """
+#*****************************************************************************
+#       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
+#                           Brian E Granger <ellisonbg@gmail.com>
+#                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#*****************************************************************************
 
 # Imports
 
-from ipython1.kernel.enginevanilla import \
-    IVanillaEngineClientFactory, IVanillaEngineServerFactory
-
-from ipython1.kernel.controllervanilla import \
-    IVanillaControllerFactory, RemoteController
-
-from ipython1.core.shell import InteractiveShell
-
-# A base class for configuration objects
-
-class Configuration(object):
-    
-    configFiles = ['ipython1rc.py']
-    
-    def update(self, **kwargs):
-        for k, v in kwargs.iteritems():
-            if hasattr(self, k):
-                print "Setting %s to: " % k + repr(v)
-                setattr(self, k, v)
-            else:
-                pass
-                #raise AttributeError("Configuration object does not have attribute: " + k)
-
-    def addConfigFile(self, filename):
-        self.configFiles.append(filename)
+from ipython1.config.base import ConfigurationBase, ConfigData
 
 # Global defaults
     
@@ -44,32 +22,56 @@ maxMesageSize = 99999999
 enginePort = 10201
 clientVanillaPort = 10105
 
-# Engine configration
+# Engine configrations
 
-class EngineConfiguration(Configuration):
+from ipython1.kernel.enginevanilla import \
+    IVanillaEngineClientFactory
+
+from ipython1.core.shell import InteractiveShell
+
+class EngineConfigData(ConfigData):
     connectToControllerOn = ('127.0.0.1', enginePort)
     engineClientProtocolInterface = IVanillaEngineClientFactory
     engineShell = InteractiveShell
     maxMessageSize = maxMesageSize
     mpiImportStatement = ''
     
-# Controller configruation
+class EngineConfig(ConfigurationBase):
+    configDataClass = EngineConfigData
+    configFiles = ['ipython1rc.py', 'enginerc.py']
     
-class ControllerConfiguration(Configuration):
+# Controller configruation
+
+from ipython1.kernel.enginevanilla import \
+    IVanillaEngineServerFactory
+
+from ipython1.kernel.controllervanilla import \
+    IVanillaControllerFactory
+    
+class ControllerConfigData(ConfigData):
     engineServerProtocolInterface = IVanillaEngineServerFactory
     listenForEnginesOn  = ('', enginePort)
     clientInterfaces = [(IVanillaControllerFactory, ('', clientVanillaPort))]
     maxMessageSize = maxMesageSize
     
+class ControllerConfig(ConfigurationBase):
+    configDataClass = ControllerConfigData
+    configFiles = ['ipython1rc.py', 'controllerrc.py']
+    
 # Client configuration
 
-class ClientConfiguration(Configuration):
-    
-    configFiles = ['client_config.py']
-    
+from ipython1.kernel.controllervanilla import \
+    RemoteController
+
+class ClientConfigData(ConfigData):    
     RemoteController = RemoteController
     connectToControllerOn = ('127.0.0.1', clientVanillaPort)
     maxMessageSize = maxMesageSize
+
+class ClientConfig(ConfigurationBase):
+    configDataClass = ClientConfigData
+    configFiles = ['ipython1rc.py', 'clientrc.py']
+   
 
 
 
