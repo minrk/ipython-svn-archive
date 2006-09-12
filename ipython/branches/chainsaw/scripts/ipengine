@@ -22,11 +22,10 @@ from twisted.internet import reactor
 from twisted.python import log
 
 from ipython1.kernel.engineservice import EngineService
-from ipython1.config.objects import EngineConfiguration
-from ipython1.config.loader import configure
+import ipython1.config.api as config
 
-engineConfig = EngineConfiguration()
-configure(engineConfig)
+engineConfig = config.getConfigObject('engine')
+shellConfig = config.getConfigObject('shell')
 
 # MPI module should be loaded first
 
@@ -40,7 +39,7 @@ if engineConfig.mpiImportStatement:
 def main(n):
     log.startLogging(sys.stdout)
     for i in range(n):
-        service = EngineService(engineConfig.engineShell, mpi=mpi)
+        service = EngineService(shellConfig.shellClass, mpi=mpi)
         fac = engineConfig.engineClientProtocolInterface(service)
         fac.MAX_LENGTH = engineConfig.maxMessageSize
         reactor.connectTCP(
@@ -52,23 +51,44 @@ def main(n):
 
 def start(n=1):
     parser = OptionParser()
-    parser.set_defaults(port=engineConfig.connectToControllerOn[1])
-    parser.set_defaults(controller=engineConfig.connectToControllerOn[0])
+    parser.set_defaults(controllerport=engineConfig.connectToControllerOn[1])
+    parser.set_defaults(controllerip=engineConfig.connectToControllerOn[0])
     parser.set_defaults(n=n)
-    parser.set_defaults(configfile = '')
-    parser.add_option("-p", "--port", type="int", dest="port",
+    parser.set_defaults(filetorun = '')
+    parser.set_defaults(profile = '')
+    parser.set_defaults(rcfile='')
+    parser.set_defaults(ipythondir='')
+
+    parser.add_option("--controller-port", type="int", dest="controllerport",
         help="the TCP port the controller listens on")
-    parser.add_option("-i", "--controller", type="string", dest="controller",
+    parser.add_option("--controller-ip", type="string", dest="controllerip",
         help="the address of the controller")
     parser.add_option("-n", "--num", type="int", dest="n",
-        help="the number of engines to start")
-    parser.add_option("-f", "--configfile", type="string", dest="configfile",
-        help="an additional Config File")
+        help="the number of engines to start in this process")
+    parser.add_option("-r", "--run", type="string", dest="filetorun")
+    
+    # Configuration files and profiles
+    parser.add_option("-p", "--profile", type="string", dest="profile",
+        help="the name of a profile")
+    parser.add_option("--rcfile", type="string", dest="rcfile",
+        help="the name of a configuration file")
+    parser.add_option("--ipythondir", type="string", dest="ipythondir",
+        help="look for config files and profiles in this directory")
     (options, args) = parser.parse_args()
-    if options.configfile:
-        engineConfig.addConfigFile(options.configfile)
-        configure(engineConfig)
-    engineConfig.update(connectToControllerOn = (options.controller, options.port))
+            
+    # Configuration files and profiles
+    if options.profile and not options.rcfile:
+        config.updateConfigWithProfile('ipengine', options.profile, options.ipythondir)
+    elif options.rcfile and not options.profile:
+        config.updateConfigWithFile(options.rcfile, options.ipythondir)
+    else:
+        config.updateConfigWithFile('ipenginerc.py', options.ipythondir)
+        
+    # Now override with command line options
+    if options.filetorun:
+        shellConfig.filesToRun.append(options.filetorun)
+    engineConfig.connectToControllerOn = (options.controllerip, 
+        options.controllerport)
     main(options.n)
     
 if __name__ == "__main__":

@@ -2,9 +2,15 @@
 # encoding: utf-8
 """
 controllerrc.py
-
-
 """
+
+# Get a valid configuration object for the controller
+
+from ipython1.config.api import getConfigObject 
+
+controllerrc = getConfigObject('controller')
+
+# Now we can configure the controller
 
 from ipython1.kernel.enginevanilla import \
     IVanillaEngineServerFactory
@@ -15,19 +21,19 @@ from ipython1.kernel.controllervanilla import \
 from ipython1.kernel.controllerpb import \
     IPBControllerFactory
 
-
 # Set the network protocol used to talk to engines
-#ControllerConfig.engineServerProtocolInterface = IVanillaEngineServerFactory
+controllerrc.engineServerProtocolInterface = IVanillaEngineServerFactory
 
 # Set the interface and port to listen for engines on
-#ControllerConfig.listenForEnginesOn  = ('', 10201)
+controllerrc.listenForEnginesOn  = ('', 10201)
 
 # Set the client interfaces to start
 # Just the vanilla protocol
-#ControllerConfig.clientInterfaces = [(IVanillaControllerFactory, ('', 10105))]
+controllerrc.clientInterfaces = [(IVanillaControllerFactory, ('', 10105))]
 # The vanilla protocol and PB
-#ControllerConfig.clientInterfaces = [(IVanillaControllerFactory, ('', 10105)),
-#                                     (IPBControllerFactory, ('', 10111))]
+#controllerrc.clientInterfaces = [(IVanillaControllerFactory, ('', 10105)),
+#                                  (IPBControllerFactory, ('', 10111))]
 
-#ControllerConfig.maxMessageSize = 99999999
+# Set the maximum message size
+controllerrc.maxMessageSize = 99999999
 

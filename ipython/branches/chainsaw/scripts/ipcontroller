@@ -18,11 +18,9 @@ from twisted.internet import reactor, error
 from twisted.python import log
 
 from ipython1.kernel import controllerservice
-from ipython1.config.objects import ControllerConfiguration
-from ipython1.config.loader import configure
+import ipython1.config.api as config
 
-controllerConfig = ControllerConfiguration()
-configure(controllerConfig)
+controllerConfig = config.getConfigObject('controller')
 
 def main():
     log.startLogging(sys.stdout)
@@ -46,20 +44,33 @@ def main():
 
 def start():
     parser = OptionParser()
-    parser.set_defaults(eport=controllerConfig.listenForEnginesOn[1])
-    parser.set_defaults(eip=controllerConfig.listenForEnginesOn[0])
-    parser.set_defaults(configfile = '')
-    parser.add_option("-p", "--engineport", type="int", dest="eport",
+    parser.set_defaults(engineport=controllerConfig.listenForEnginesOn[1])
+    parser.set_defaults(engineip=controllerConfig.listenForEnginesOn[0])
+    
+    parser.add_option("--engine-port", type="int", dest="engineport",
         help="the TCP port the controller will listen on for engine connections")
-    parser.add_option("-i", "--engineip", type="string", dest="eip",
+    parser.add_option("--engine-ip", type="string", dest="engineip",
         help="the TCP ip address the controller will listen on for engine connections")
-    parser.add_option("-f", "--configfile", type="string", dest="configfile",
-        help="an additional Config File")
+        
+    # Configuration files and profiles
+    parser.add_option("-p", "--profile", type="string", dest="profile",
+        help="the name of a profile")
+    parser.add_option("--rcfile", type="string", dest="rcfile",
+        help="the name of a configuration file")
+    parser.add_option("--ipythondir", type="string", dest="ipythondir",
+        help="look for config files and profiles in this directory")
     (options, args) = parser.parse_args()
-    if options.configfile:
-        controllerConfig.addConfigFile(options.configfile)
-        configure(controllerConfig)
-    controllerConfig.update(listenForEnginesOn = (options.eip, options.eport))
+          
+    # Configuration files and profiles
+    if options.profile and not options.rcfile:
+        config.updateConfigWithProfile('ipcontroller', options.profile, options.ipythondir)
+    elif options.rcfile and not options.profile:
+        config.updateConfigWithFile(options.rcfile, options.ipythondir)
+    else:
+        config.updateConfigWithFile('ipcontrollerrc.py', options.ipythondir)
+        
+    # Update withh command line options
+    controllerConfig.listenForEnginesOn = (options.engineip, options.engineport)
     main()
     
     

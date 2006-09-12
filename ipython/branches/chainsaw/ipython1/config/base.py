@@ -16,12 +16,8 @@ See the docstrings of ConfigData and ConfigurationBase for more details.
 
 import os
 import sys
-
-from IPython.genutils import get_home_dir
-
-ipython_path = get_home_dir() + '/.ipython'
-
-class ConfigData(object):
+        
+class Config(object):
     """A class that contains configuration data.
     
     The Config data class is designed to be a simple bag for configuration
@@ -36,7 +32,7 @@ class ConfigData(object):
         print "Setting %s to: " % name, repr(value)
         self.__dict__[name] = value
 
-class ConfigurationBase(object):
+class ConfigHelper(object):
     """A class to manage configuration data.
     
     This class creates an attribute, data that points to a ConfigData instance.
@@ -48,57 +44,15 @@ class ConfigurationBase(object):
     - configFiles: a list of file names from which to load config data
     - configDataClass: a subclass of ConfigData
     """
-    
-    configFiles = ['ipython1rc.py']
-    configDataClass = ConfigData
+
+    configClass = Config
     
     def __init__(self):
-        self.data = self.configDataClass()        
-        
-    def updateWithConfigFiles(self):
-        """Update the config data using the configFiles.
-        
-        The files named in configFiles are read for config data related to this
-        class.  This happens by executing the contents of the config file in
-        a namespace with one attribute defined: the name of this class.  Thus if
-        a class FooConfig is being configured, the config file should contain lines
-        like:
-        
-        FooConfig.bar = 'this is the bar string'
-        
-        Thus, the bar attribute of FooConfig's data container will be updated.
-        """
-        configFilePaths = [self._resolveFilePath(f) for f in self.configFiles]
-        for cf in configFilePaths:
-            if cf is not None:
-                print "Loading configuration from: " + cf
-                dataNamespace = {self.__class__.__name__: self.configDataClass}
-                execfile(cf, dataNamespace)
-     
-    def _resolveFilePath(self, filename):
-        """Resolve filenames into paths.
-        
-        This looks in the following order:
-        
-        1.  In the current working directory
-        2.  In the ~/.ipython directory
-        3.  By absolute path resolving the ~
-        """
-        resolvedFile = None
-        if os.path.isfile(filename):
-            return filename
-        tryPath = get_home_dir() + '/.ipython/' + filename
-        if os.path.isfile(tryPath):
-            resolvedFile = tryPath
-        elif os.path.isfile(os.path.expanduser(filename)):
-            resolvedFile = os.path.expanduser(filename)
-        return resolvedFile
+        self.data = self.configClass()        
         
     def update(self, **kwargs):
         for k, v in kwargs.iteritems():
             if hasattr(self.data, k):
                 print "Setting %s to: " % k + repr(v)
                 setattr(self.data, k, v)
-
-
 

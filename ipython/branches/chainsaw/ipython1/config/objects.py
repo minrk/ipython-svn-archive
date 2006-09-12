@@ -14,7 +14,7 @@ Configuration objects.
 
 # Imports
 
-from ipython1.config.base import ConfigurationBase, ConfigData
+from ipython1.config.base import ConfigHelper, Config
 
 # Global defaults
     
@@ -22,25 +22,32 @@ maxMesageSize = 99999999
 enginePort = 10201
 clientVanillaPort = 10105
 
+# Shell configuration
+
+from ipython1.core.shell import InteractiveShell
+
+class ShellConfig(Config):
+    shellClass = InteractiveShell
+    filesToRun = []
+    
+class ShellConfigHelper(ConfigHelper):
+    configClass = ShellConfig
+
 # Engine configrations
 
 from ipython1.kernel.enginevanilla import \
     IVanillaEngineClientFactory
 
-from ipython1.core.shell import InteractiveShell
-
-class EngineConfigData(ConfigData):
+class EngineConfig(Config):
     connectToControllerOn = ('127.0.0.1', enginePort)
     engineClientProtocolInterface = IVanillaEngineClientFactory
-    engineShell = InteractiveShell
     maxMessageSize = maxMesageSize
     mpiImportStatement = ''
     
-class EngineConfig(ConfigurationBase):
-    configDataClass = EngineConfigData
-    configFiles = ['ipython1rc.py', 'enginerc.py']
+class EngineConfigHelper(ConfigHelper):
+    configClass = EngineConfig
     
-# Controller configruation
+# Controller configuration
 
 from ipython1.kernel.enginevanilla import \
     IVanillaEngineServerFactory
@@ -48,31 +55,38 @@ from ipython1.kernel.enginevanilla import \
 from ipython1.kernel.controllervanilla import \
     IVanillaControllerFactory
     
-class ControllerConfigData(ConfigData):
+from ipython1.kernel.controllerpb import \
+    IPBControllerFactory
+    
+class ControllerConfig(Config):
     engineServerProtocolInterface = IVanillaEngineServerFactory
     listenForEnginesOn  = ('', enginePort)
-    clientInterfaces = [(IVanillaControllerFactory, ('', clientVanillaPort))]
+    clientInterfaces = [(IVanillaControllerFactory, ('', clientVanillaPort)),
+                        (IPBControllerFactory, ('', 10111))]
     maxMessageSize = maxMesageSize
     
-class ControllerConfig(ConfigurationBase):
-    configDataClass = ControllerConfigData
-    configFiles = ['ipython1rc.py', 'controllerrc.py']
+class ControllerConfigHelper(ConfigHelper):
+    configClass = ControllerConfig
     
 # Client configuration
 
 from ipython1.kernel.controllervanilla import \
     RemoteController
 
-class ClientConfigData(ConfigData):    
+class ClientConfig(Config):    
     RemoteController = RemoteController
     connectToControllerOn = ('127.0.0.1', clientVanillaPort)
     maxMessageSize = maxMesageSize
 
-class ClientConfig(ConfigurationBase):
-    configDataClass = ClientConfigData
-    configFiles = ['ipython1rc.py', 'clientrc.py']
-   
+class ClientConfigHelper(ConfigHelper):
+    configClass = ClientConfig
 
+# All top-level config classes must be listed here.
+
+configHelperClasses = {'engine'     : EngineConfigHelper,
+                       'controller' : ControllerConfigHelper,
+                       'client'     : ClientConfigHelper,
+                       'shell'      : ShellConfigHelper}
 
 
 
