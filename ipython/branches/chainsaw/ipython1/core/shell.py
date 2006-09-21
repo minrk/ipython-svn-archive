@@ -83,7 +83,8 @@ class InteractiveShell(InteractiveConsole):
         # I am using this user defined signal to interrupt the currently 
         # running command.  I am not sure if this is the best way, but
         # it is working!
-        signal.signal(signal.SIGUSR1, self._handleSIGUSR1)
+        # This doesn't work on Windows as it doesn't have this signal.
+        #signal.signal(signal.SIGUSR1, self._handleSIGUSR1)
 
     def _handleSIGUSR1(self, signum, frame):
         """Handle the SIGUSR1 signal by printing to stderr."""
