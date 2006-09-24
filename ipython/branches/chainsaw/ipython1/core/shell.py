@@ -220,9 +220,11 @@ class InteractiveShell(InteractiveConsole):
         self._command_lock.release()
 
         self._namespace_lock.acquire()
+        # preserve id, mpi objects
         mpi = self.locals.get('mpi', None)
-        self.locals = {}
-        self.locals['mpi'] = mpi
+        id = self.locals.get('id', None)
+        del self.locals
+        self.locals = {'mpi': mpi, 'id': id}
         self._namespace_lock.release()
                 
     def getCommand(self,i=None):

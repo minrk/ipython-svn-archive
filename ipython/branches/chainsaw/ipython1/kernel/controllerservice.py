@@ -49,7 +49,7 @@ class IRemoteController(Interface):
 class IMultiEngine(Interface):
     """interface to multiple objects implementing IEngineComplete.
     
-    All IMultiEngine methods must return a Deferred to alist with length 
+    All IMultiEngine methods must return a Deferred to a list with length 
     equal to the number of targets, except for verifyTargets.
     """
     

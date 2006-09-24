@@ -70,6 +70,7 @@ class IEngineBase(zi.Interface):
     
 
 class IEngineSerialized(zi.Interface):
+    """Add serialized push/pull.  All methods should return deferreds"""
     
     def pushSerialized(**namespace):
         """Push a dict of keys and Serialized|objects to the user's namespace."""
@@ -82,20 +83,27 @@ class IEngineSerialized(zi.Interface):
     
 
 class IEngineThreaded(zi.Interface):
+    """A place holder for threaded commands.  All methods should return deferreds."""
     pass
 
 class IEngineQueued(zi.Interface):
-    """add some queue methods to IEngine interface"""
+    """add some queue methods to IEngine interface.  All methods should return deferreds."""
     
     def clearQueue():
         """clear the queue"""
     
 
 class IEngineComplete(IEngineBase, IEngineSerialized, IEngineQueued, IEngineThreaded):
+    """An engine is expected to implement IEngineBase, IEngineSerialized, 
+    IEngine Queued, and IEngine Threaded.  All IEngine methods must return
+    a deferred.
+    If a method is not implemented, it is expected to return a deferred
+    failing with NotImplementedError."""
     pass
 
 def completeEngine(engine):
-    """Completes an engine object"""
+    """Completes an engine object.  The returned object is guaranteed to
+    properly implement IEngineComplete."""
     zi.alsoProvides(engine, IEngineComplete)
     
     def _notImplementedMethod(name, *args, **kwargs):
@@ -131,7 +139,7 @@ class EngineService(service.Service):
             self.id = self.mpi.rank
     
     def startService(self):
-        self.shell.update({'mpi': self.mpi})
+        self.shell.update({'mpi': self.mpi, 'id' : self.id})
             
     # The IEngine methods
     
@@ -223,7 +231,8 @@ class EngineService(service.Service):
 # Now the implementation of the QueuedEngine
 
 class QueuedEngine(object):
-    """a Queued wrapper for any IEngine object"""
+    """an IQueuedEngine implementing wrapper for any IEngine implementing object, 
+    which adds IEngineQueued functionality."""
     zi.implements(IEngineQueued)
     
     def __init__(self, engine, keepUpToDate=False):
@@ -263,7 +272,7 @@ def queuedMethod(self%s%s):
         exec(defs)
         return queuedMethod
     
-    #methods from IEngineQueued:
+    # methods from IEngineQueued:
     def clearQueue(self):
         """clear the queue"""
         for cmd in self.queued:
@@ -271,7 +280,8 @@ def queuedMethod(self%s%s):
         self.queued = []
         return defer.succeed(True)
     
-    #queue methods:
+    # queue management methods:
+    # You should not call these directly
     def submitCommand(self, cmd):
         """submit command to queue"""
         d = defer.Deferred()
@@ -333,9 +343,10 @@ def queuedMethod(self%s%s):
         #return reason
     
     def updateStatus(self, status):
+        """The callback for keeping a local copy of the status."""
         self.engineStatus = status
     
-    #methods from IEngine
+    #methods from IEngineBase
     def reset(self):
         """Reset the InteractiveShell."""
         self.clearQueue()
