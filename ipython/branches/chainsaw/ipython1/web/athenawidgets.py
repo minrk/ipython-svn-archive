@@ -219,7 +219,7 @@ class StatusWidget(athena.LiveElement):
                 tags.input(type="checkbox", id="locals",
                     onChange="this.form.submit()")["locals"],tags.br,
                 tags.input(type="submit", value="refresh status")
-            ],tags.div(id="statusOut")["click refresh status"]
+            ],tags.div(id="statusOut")
         ]
     ])
     
