@@ -1,5 +1,6 @@
 from nevow import athena, loaders, tags, inevow, rend, livepage
 from twisted.internet import reactor
+from twisted.web import static
 from twisted.python import util
 from zope.interface import implements
 
@@ -14,7 +15,7 @@ class filePage(rend.Page):
             try:
                 s += open(f).read()+'\n'
             except:
-                pass
+                print "failed to open file: %s" %f
         self.docFactory = loaders.stan(tags.raw(s))
     
 
@@ -23,7 +24,6 @@ class NotebookPage(athena.LivePage):
     docFactory = loaders.stan(tags.html[tags.head(render=tags.directive('liveglue'))[
         tags.title["IPython Notebook"],
         tags.link(href="notebook.css", rel="stylesheet", type="text/css"),
-        # tags.script(type="text/javascript", src="nested.js")
     ],tags.body(render=tags.directive('widget'))
     ])
     def __init__(self, controller):
@@ -31,7 +31,7 @@ class NotebookPage(athena.LivePage):
         self.controller = controller
         if self.children is None:
             self.children = {}
-        self.children["notebook.css"] = filePage(
+        self.children["notebook.css"] = static.File(
             util.sibpath(__file__, 'notebook.css'))
     
     def render_widget(self, ctx, data):
@@ -46,6 +46,7 @@ class MonitorPage(athena.LivePage):
     docFactory = loaders.stan(tags.html[
         tags.head(render=tags.directive('liveglue'))[
                 tags.title["IPython Monitor"],
+                tags.link(rel="stylesheet", type="text/css", href="main.css"),
                 tags.link(rel="stylesheet", type="text/css", href="monitor.css")
                 ],
         tags.body[tags.h1["IPython Monitor"],
@@ -57,8 +58,8 @@ class MonitorPage(athena.LivePage):
         self.controller = controller
         if not self.children:
             self.children = {}
-        self.children["monitor.css"] = filePage(util.sibpath(__file__, 'main.css'), 
-                util.sibpath(__file__, 'monitor.css'))
+        self.children["main.css"] = static.File(util.sibpath(__file__, 'main.css'))
+        self.children["monitor.css"] = static.File(util.sibpath(__file__, 'monitor.css'))
     
     def render_widgets(self, ctx, data):
         f = aw.CommandWidget(self.controller)
@@ -84,6 +85,7 @@ class ResultsPage(athena.LivePage):
     docFactory = loaders.stan(tags.html[
         tags.head(render=tags.directive('liveglue'))[
                 tags.title["IPython Results"],
+                tags.link(rel="stylesheet", type="text/css", href="main.css"),
                 tags.link(rel="stylesheet", type="text/css", href="results.css")
                 ],
         tags.body[tags.h1["IPython Results"],
@@ -95,8 +97,8 @@ class ResultsPage(athena.LivePage):
         self.controller = controller
         if not self.children:
             self.children = {}
-        self.children["results.css"] = filePage(util.sibpath(__file__, 'main.css'), 
-                util.sibpath(__file__, 'results.css'))
+        self.children["main.css"] = static.File(util.sibpath(__file__, 'main.css'))
+        self.children["results.css"] = static.File(util.sibpath(__file__, 'results.css'))
     
     def render_widgets(self, ctx, data):
         w = aw.ResultWidget()
@@ -113,6 +115,7 @@ class StatusPage(athena.LivePage):
     docFactory = loaders.stan(tags.html[
         tags.head(render=tags.directive('liveglue'))[
                 tags.title["IPython Status"],
+                tags.link(rel="stylesheet", type="text/css", href="main.css"),
                 tags.link(rel="stylesheet", type="text/css", href="status.css")
                 ],
         tags.body[tags.h1["IPython Status"],
@@ -124,8 +127,8 @@ class StatusPage(athena.LivePage):
         self.controller = controller
         if not self.children:
             self.children = {}
-        self.children["status.css"] = filePage(util.sibpath(__file__, 'main.css'), 
-                util.sibpath(__file__, 'status.css'))
+        self.children["main.css"] = static.File(util.sibpath(__file__, 'main.css'))
+        self.children["status.css"] = static.File(util.sibpath(__file__, 'status.css'))
     
     def render_widgets(self, ctx, data):
         w = aw.StatusWidget(self.controller)
@@ -144,6 +147,7 @@ class CommandPage(athena.LivePage):
     docFactory = loaders.stan(tags.html[
         tags.head(render=tags.directive('liveglue'))[
                 tags.title["IPython Command"],
+                tags.link(rel="stylesheet", type="text/css", href="main.css"),
                 tags.link(rel="stylesheet", type="text/css", href="command.css")
                 ],
         tags.body[tags.h1["IPython Command"],
@@ -155,8 +159,8 @@ class CommandPage(athena.LivePage):
         self.controller = controller
         if not self.children:
             self.children = {}
-        self.children["command.css"] = filePage(util.sibpath(__file__, 'main.css'), 
-                util.sibpath(__file__, 'command.css'))
+        self.children["main.css"] = static.File(util.sibpath(__file__, 'main.css'))
+        self.children["command.css"] = static.File(util.sibpath(__file__, 'command.css'))
     
     def render_widget(self, ctx, data):
         w = aw.CommandWidget(self.controller)
@@ -165,10 +169,12 @@ class CommandPage(athena.LivePage):
     
 
 class ControllerPageAthena(athena.LivePage):
+    "This is broken"
     chat=None
     addSlash = True
     docFactory = loaders.stan(tags.html[
         tags.head(render=tags.directive('liveglue'))[
+                tags.link(rel="stylesheet", type="text/css", href="main.css"),
                 tags.link(rel="stylesheet", type="text/css",
                 href="controller.css")],
         tags.body[tags.h1["IPython Controller"],
@@ -188,8 +194,8 @@ class ControllerPageAthena(athena.LivePage):
         self.controller = controller
         if not self.children:
             self.children = {}
-        self.children["controller.css"] = filePage(util.sibpath(__file__, 'main.css'), 
-                util.sibpath(__file__, 'controller.css'))
+        self.children["main.css"] = static.File(util.sibpath(__file__, 'main.css'))
+        self.children["controller.css"] = static.File(util.sibpath(__file__, 'controller.css'))
     
     def render_idwidget(self, ctx, data):
         w = aw.IDWidget(self.controller)
@@ -239,6 +245,10 @@ class ControllerPageLivepage(livepage.LivePage):
         n = results.notifierFromFunction(
             lambda _:self.controller.getIDs().addCallback(self.gotIDs))
         self.controller.addNotifier(n)
+        if not self.children:
+            self.children = {}
+        self.children["controller.css"] = static.File(util.sibpath(__file__, 'controller.css'))
+        self.children["controller.js"] = static.File(util.sibpath(__file__, 'controller.js'))
         
     
     def gotIDs(self, idlist):
@@ -247,6 +257,7 @@ class ControllerPageLivepage(livepage.LivePage):
             s += " <a href='notebook?ids=%i' target='_blank'>%i</a> " %(id, id)
         self.sendEvent(None, assign(
             document.getElementById('idlist').innerHTML, unicode(s)))
+        self.sendEvent(None, 'resize()')
     
     def child_results(self, ctx):
         return ResultsPage(self.controller)
