@@ -82,7 +82,7 @@ class NetstringSocket(object):
         """
         if self.verbose: 
             print "client:",data
-        prefix = "%d:" % len(data)
+        prefix = "%i:" % len(data)
         
         if len(prefix)+len(data) >= self.MAX_LENGTH:
             raise MessageSizeError()
