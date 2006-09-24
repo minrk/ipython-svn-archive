@@ -283,7 +283,7 @@ class ControllerPageLivepage(livepage.LivePage):
 
         addUserlistEntry = append('userlist', self.userPattern.fillSlots('user-id', client.userId)), eol
         self.sendEvent(
-            client, addUserlistEntry, self.content(client, 'has joined.'))
+            client, addUserlistEntry, self.content(client, 'connected.'))
 
         ## Catch the user up with the previous events
         client.send([(event, eol) for source, event in self.events])
@@ -295,7 +295,7 @@ class ControllerPageLivepage(livepage.LivePage):
         self.sendEvent(
             client,
             js.removeNode('user-list-%s' % (client.userId, )), eol,
-            self.content(client, 'has left.'))
+            self.content(client, 'disconnected.'))
     
     def sendEvent(self, source, *event):
         self.events.append((source, event))
