@@ -1,3 +1,10 @@
+"""
+Serialization objects and utilities for use in network protocols.
+
+TODO:  allow discontinuous array buffers (in ArraySerialized.packObj)
+        The restriction is actually in EnhancedNetstring
+"""
+
 #*****************************************************************************
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
@@ -78,11 +85,13 @@ else:
         def packObject(self, obj):
             if not isinstance(obj, numpy.ndarray):
                 raise TypeError('obj must be a numpy ndarray object')
-                
+            # Our send method requires contiguous arrays, so if it is not
+            # contiguous, we must make a contiguous copy, which is undesirable
+            array = numpy.ascontiguousarray(obj, dtype=None)
             p = []
-            p.append(pickle.dumps(obj.shape, 2))
-            p.append(obj.dtype.str)
-            p.append(numpy.getbuffer(obj))   # I think we are making a copy!
+            p.append(pickle.dumps(array.shape, 2))
+            p.append(array.dtype.str)
+            p.append(numpy.getbuffer(array))   # I think we are making a copy!
             self.package.extend(p)
         
         def unpack(self):
