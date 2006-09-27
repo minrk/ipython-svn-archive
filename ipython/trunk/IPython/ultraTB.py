@@ -204,10 +204,14 @@ class TBTools:
 
     def set_colors(self,*args,**kw):
         """Shorthand access to the color table scheme selector method."""
-        
+
+        # Set own color table
         self.color_scheme_table.set_active_scheme(*args,**kw)
         # for convenience, set Colors to the active scheme
         self.Colors = self.color_scheme_table.active_colors
+        # Also set colors of debugger
+        if hasattr(self,'pdb') and self.pdb is not None:
+            self.pdb.set_colors(*args,**kw)
 
     def color_toggle(self):
         """Toggle between the currently active color scheme and NoColor."""
@@ -692,7 +696,7 @@ class VerboseTB(TBTools):
                     etb = etb.tb_next
                 self.pdb.botframe = etb.tb_frame
                 self.pdb.interaction(self.tb.tb_frame, self.tb)
-            except 'ha':   # dbg
+            except:
                 print '*** ERROR ***'
                 print 'This version of pdb has a bug and crashed.'
                 print 'Returning to IPython...'
