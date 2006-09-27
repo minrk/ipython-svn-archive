@@ -692,7 +692,7 @@ class VerboseTB(TBTools):
                     etb = etb.tb_next
                 self.pdb.botframe = etb.tb_frame
                 self.pdb.interaction(self.tb.tb_frame, self.tb)
-            except:
+            except 'ha':   # dbg
                 print '*** ERROR ***'
                 print 'This version of pdb has a bug and crashed.'
                 print 'Returning to IPython...'

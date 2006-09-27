@@ -2029,8 +2029,22 @@ want to merge them back into the new files.""" % locals()
         """simple prefilter function, for debugging"""
         return self.handle_normal(line,continue_prompt)
 
+    
+    def multiline_prefilter(self, line, continue_prompt):
+        """ Run _prefilter for each line of input
+        
+        Covers cases where there are multiple lines in the user entry,
+        which is the case when the user goes back to a multiline history
+        entry and presses enter.
+        
+        """
+        out = []
+        for l in line.rstrip('\n').split('\n'):
+            out.append(self._prefilter(l, continue_prompt))
+        return '\n'.join(out)
+    
     # Set the default prefilter() function (this can be user-overridden)
-    prefilter = _prefilter
+    prefilter = multiline_prefilter
 
     def handle_normal(self,line,continue_prompt=None,
                       pre=None,iFun=None,theRest=None):
