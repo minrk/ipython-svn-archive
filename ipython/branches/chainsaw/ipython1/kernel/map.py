@@ -1,19 +1,28 @@
-"""Classes used in scattering sequences.
+"""Classes used in scattering and gathering sequences.
 
 Scattering consists of partitioning a sequence and sending the various
 pieces to individual nodes in a cluster.
 """
-#*****************************************************************************
-#       Copyright (C) 2005  Brian Granger, <bgranger@scu.edu>
-#                           Fernando Perez. <fperez@colorado.edu>
+#-------------------------------------------------------------------------------
+#       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
+#                           Brian E Granger <ellisonbg@gmail.com>
+#                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#*****************************************************************************
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
 
 import types
 
 from IPython.genutils import flatten as genutil_flatten
+
+#-------------------------------------------------------------------------------
+# Figure out which array packages are present and their array types
+#-------------------------------------------------------------------------------
 
 arrayModules = []
 try:
@@ -37,6 +46,7 @@ else:
         'type':numarray.numarraycore.NumArray})
 
 class Map:
+    """A class for partitioning a sequence using a map."""
             
     def getPartition(self, seq, p, q):
         """Returns the pth partition of q partitions of seq."""
@@ -75,6 +85,10 @@ class Map:
             return genutil_flatten(listOfPartitions)        
 
 class RoundRobinMap(Map):
+    """Partitions a sequence in a roun robin fashion.
+    
+    This currently does not work!
+    """
 
     def getPartition(self, seq, p, q):
         return seq[p:len(seq):q]

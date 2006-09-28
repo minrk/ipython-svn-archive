@@ -1,19 +1,20 @@
+"""A vanilla protocol interface to a ControllerService.
 
-"""The Twisted core of the ipython controller.
-
-This module contains the Twisted protocols, factories, etc. used to
-implement the ipython controller.  This module only contains the network related
-parts of the controller.
+The client side of this uses standard blocking python sockets and can 
+be used from an interactive python session.
 """
-
-#*****************************************************************************
+#-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
 #                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#*****************************************************************************
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
 
 import socket, cPickle as pickle
 
@@ -50,12 +51,14 @@ else:
 # else:
 #    arraytypeList.append(numarray.numarraycore.NumArray)
 
-
 arraytypes = tuple(arraytypeList)
 del arraytypeList
 
 
-# The Client Side:
+#-------------------------------------------------------------------------------
+# The client side of things
+#-------------------------------------------------------------------------------
+
 class RemoteController(object):
     """A high level interface to a remotely running ipython controller."""
     
@@ -711,6 +714,7 @@ class RemoteController(object):
         else:
             print s
             return False
+            
     def notify(self, addr=None, flag=True):
         """Instruct the kernel to notify a result gatherer.
         
@@ -874,14 +878,16 @@ class RemoteController(object):
         self.execute("os.system('tar -xf %s')" % tarball_name)        
     
 
-    
-
-
-# The Server Side:
+#-------------------------------------------------------------------------------
+# The server (Controller) side of things
+#-------------------------------------------------------------------------------
 
 class NonBlockingProducer:
-    """A producer for nonblocking commands.  It waits for the consumer to 
-    perform its next write, then makes a callback."""
+    """A producer for nonblocking commands.  
+    
+    It waits for the consumer to perform its next write, then makes a callback.
+    """
+
     implements(IProducer)
     
     def __init__(self, protocol):
@@ -916,17 +922,15 @@ class NonBlockingProducer:
     
 
 class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
-    """The control protocol for the Controller.  It listens for clients to
-    connect, and relays commands to the controller service.
-    A line based protocol."""
+    """The vanilla protocol for Client/Controller communications."""
     
     nextHandler = None
+
     def connectionMade(self):
         log.msg("Client connection made")
         self.transport.setTcpNoDelay(True)
         self.producer = NonBlockingProducer(self)
         self._reset()
-    
     
     def connectionLost(self, reason):
         log.msg("Client disconnected")
@@ -984,9 +988,9 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
                 #defaults to all on bad targetList  should it do this
                 return None
     
-    #####   
-    ##### The GETIDS command
-    #####
+    #-------------------------------------------------------------------------------
+    # The GETIDS command
+    #-------------------------------------------------------------------------------
     
     def handle_GETIDS(self, args, targets):
         d = self.factory.getIDs()
@@ -1005,9 +1009,9 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     def getIDsFail(self, f):
         self.sendString("GETIDS FAIL")
     
-    #####   
-    ##### The PUSH command
-    #####
+    #-------------------------------------------------------------------------------
+    # The PUSH command
+    #-------------------------------------------------------------------------------
     
     def handle_PUSH(self, args, targets):
         self.nextHandler = self.handlePushing
@@ -1074,9 +1078,9 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString("PUSH %s" % msg)
     
-    #####
-    ##### The PULL command
-    #####
+    #-------------------------------------------------------------------------------
+    # The PULL command
+    #-------------------------------------------------------------------------------
     
     def handle_PULL(self, args, targets):
         # Parse the args
@@ -1136,10 +1140,9 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString("PULL %s" % msg)
     
-    
-    #####
-    ##### The SCATTER command
-    #####
+    #-------------------------------------------------------------------------------
+    # The PULL command
+    #-------------------------------------------------------------------------------
     
     def handle_SCATTER(self, args, targets):
         if not args:
@@ -1229,10 +1232,9 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString("SCATTER "+ msg)
     
-    
-    #####
-    ##### The GATHER command
-    #####
+    #-------------------------------------------------------------------------------
+    # The GATHER command
+    #-------------------------------------------------------------------------------
     
     def handle_GATHER(self, args, targets):
         # Parse the args
@@ -1266,10 +1268,9 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString("GATHER %s" % msg)
     
-    
-    #####
-    ##### The EXECUTE command
-    #####
+    #-------------------------------------------------------------------------------
+    # The EXECUTE command
+    #-------------------------------------------------------------------------------
     
     def handle_EXECUTE(self, args, targets):
         """Handle the EXECUTE command."""
@@ -1330,12 +1331,11 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString("EXECUTE %s" % msg)
     
-    #####
-    ##### GETRESULT command
-    #####
+    #-------------------------------------------------------------------------------
+    # The GETRESULT command
+    #-------------------------------------------------------------------------------
     
     def handle_GETRESULT(self, args, targets):
-        
         self.nextHandler = self.handleUnexpectedData
         try: 
             index = int(args)
@@ -1361,10 +1361,9 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString("GETRESULT %s" %msg)
     
-    
-    #####
-    ##### Kernel control commands
-    #####
+    #-------------------------------------------------------------------------------
+    # The STATUS, NOTIFY, RESET, KILL and DISCONNECT commands
+    #-------------------------------------------------------------------------------
     
     def handle_STATUS(self, args, targets):
         self.nextHandler = self.handleUnexpectedData
@@ -1426,7 +1425,6 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     def notifyFinish(self, msg):
         self._reset()
         self.sendString("NOTIFY %s" % msg)
-    # The RESET, KILL and DISCONNECT commands
     
     def handle_RESET(self, args, targets):
         self._reset()
@@ -1449,39 +1447,35 @@ class IVanillaControllerFactory(results.INotifierParent):
     """Interface to clients for controller.  Very much like IControllerService,
     but excludes some methods such as push/pull without serialization.  """
     
-    #IQueuedEngine multiplexer methods
     def cleanQueue(self, targets):
-        """Cleans out pending commands in an engine's queue."""
     
-    #IEngine multiplexer methods
     def execute(self, targets, lines):
-        """Execute lines of Python code."""
     
     def pushSerialized(self, targets, **namespace):
-        """push value into locals namespace with name key."""
     
     def pullSerialized(self, targets, *keys):
-        """Gets an item out of the self.locals dict by key."""
     
     def pullNamespace(self, targets, *keys):
-        """Gets an item out of the user namespace by key."""
     
     def status(self, targets):
-        """status of engines"""
     
     def reset(self, targets):
-        """Reset the InteractiveShell."""
     
     def kill(self, targets):
-        """kill engines"""
     
     def getResult(self, targets, i=None):
-        """Get the stdin/stdout/stderr of command i."""
-    
-
 
 class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
-    """the controller factory"""
+    """Adapt a ControllerService to a IVanillaControllerFactory implementer.
+    
+    This is the server factory that the controller uses to listen for client
+    connections over the vanilla protocol.
+    
+    The methods here are those of the IMultiEngine, and documentation
+    can be found in the interface definition of IMultiEngine.
+    
+    Where are the fooAll versions of the IMultiEngine methods?
+    """
     
     implements(IVanillaControllerFactory)
     
@@ -1503,11 +1497,9 @@ class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
     def getIDs(self):
         return self.service.getIDs()
     
-    #IQueuedEngine multiplexer methods
     def cleanQueue(self, targets):
         return self.service.cleanQueue(targets)
     
-    #IEngine multiplexer methods
     def execute(self, targets, lines):
         d = self.service.execute(targets, lines)
         return d
@@ -1539,8 +1531,6 @@ class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
     def getResult(self, targets, i=None):
         return self.service.getResult(targets, i)
     
-
-
 components.registerAdapter(VanillaControllerFactoryFromService,
                         controllerservice.ControllerService,
                         IVanillaControllerFactory)

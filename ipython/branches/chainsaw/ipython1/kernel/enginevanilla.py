@@ -1,13 +1,35 @@
 # -*- test-case-name: ipython1.test.test_enginevanilla -*-
+"""Expose the IPython EngineService using our vanilla protocol.
 
-#*****************************************************************************
+This modules defines interfaces and adapters to connect an EngineService to
+a ControllerService using the vanilla protocol.  It defines the following classes:
+
+On the Engine (client) side:
+
+ * IPBEngineClientFactory
+ * PBEngineClientFactory
+ * IPBEngine
+ * PBEngineReferenceFromService
+ 
+On the Controller (server) side:
+ 
+ * EngineFromReference
+ * IPBRemoteEngineRoot
+ * PBRemoteEngineRootFromService
+ * IPBEngineServerFactory
+"""
+#-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
 #                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#*****************************************************************************
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
 
 import cPickle as pickle
 
@@ -16,19 +38,24 @@ from twisted.python import components, log
 from twisted.python.failure import Failure
 from twisted.internet import reactor, defer
 
-defer.setDebugging(1)
-
 from ipython1.kernel import error, protocols
 from ipython1.kernel.controllerservice import ControllerService, IRemoteController
 import ipython1.kernel.serialized as serialized
 import ipython1.kernel.engineservice as engineservice
 
+# Verbose debugging of deferreds
+
+defer.setDebugging(1)
+
+#-------------------------------------------------------------------------------
 # Engine side of things
+#-------------------------------------------------------------------------------
 
 class IVanillaEngineClientProtocol(zi.Interface):
     pass
 
 class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
+    """The client side of the vanilla protocol."""
     
     zi.implements(IVanillaEngineClientProtocol)
     
@@ -68,7 +95,9 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         else:
             self.dieLoudly('Command could not be dispatched: ' + msg)
     
+    #---------------------------------------------------------------------------
     # Utility methods
+    #---------------------------------------------------------------------------
         
     def dieLoudly(self, *args):
         """Die loudly in case of protocol errors."""
@@ -112,10 +141,10 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         elif isinstance(s, serialized.ArraySerialized):
             self.sendArraySerialized(s)
     
-    #####
-    ##### The REGISTER command
-    #####
-    
+    #---------------------------------------------------------------------------
+    # The REGISTER command
+    #---------------------------------------------------------------------------
+ 
     def handleRegister(self, args):
         splitArgs = args.split(' ',1)
         if len(splitArgs) == 2 and splitArgs[0] == 'REGISTER':
@@ -129,9 +158,9 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         else:
             self.dieLoudly(args)
     
-    #####
-    ##### The EXECUTE command
-    #####
+    #---------------------------------------------------------------------------
+    # The EXECUTE command
+    #---------------------------------------------------------------------------
             
     def handle_EXECUTE(self, lines):
         # This will block so callbacks are called immediately!
@@ -169,10 +198,10 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
     def executeFail(self):
         self._reset()
         self.sendString('EXECUTE FAIL')
-    
-    #####   
-    ##### The PUSH command
-    #####
+        
+    #---------------------------------------------------------------------------
+    # The PUSH command
+    #---------------------------------------------------------------------------
     
     def handle_PUSH(self, args):
         if args is not None:
@@ -239,9 +268,9 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString('PUSH FAIL')
     
-    #####
-    ##### The PULL command
-    #####
+    #---------------------------------------------------------------------------
+    # The PULL command
+    #---------------------------------------------------------------------------
     
     def handle_PULL(self, args):
 
@@ -267,9 +296,9 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString('PULL FAIL')
     
-    #####
-    ##### The PULLNAMESPACE command
-    #####
+    #---------------------------------------------------------------------------
+    # The PULLNAMESPACE command
+    #---------------------------------------------------------------------------
 
     def handle_PULLNAMESPACE(self, args):
 
@@ -298,9 +327,9 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString('PULLNAMESPACE FAIL')
     
-    #####
-    ##### The GETRESULT command
-    #####
+    #---------------------------------------------------------------------------
+    # The GETRESULT command
+    #---------------------------------------------------------------------------
 
     def handle_GETRESULT(self, args):
         self.nextHandler = self.handleUnexpectedData
@@ -345,9 +374,9 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString('GETRESULT FAIL')
     
-    #####
-    ##### The RESET command
-    #####   
+    #---------------------------------------------------------------------------
+    # The RESET command
+    #--------------------------------------------------------------------------- 
             
     def handle_RESET(self, args):
         d = self.factory.reset()
@@ -361,9 +390,9 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString('RESET FAIL')
     
-    #####
-    ##### The KILL command
-    #####
+    #---------------------------------------------------------------------------
+    # The KILL command
+    #---------------------------------------------------------------------------
             
     def handle_KILL(self, args):
         d = self.factory.kill()
@@ -377,9 +406,9 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString('KILL FAIL')
     
-    #####
-    ##### The STATUS command
-    #####   
+    #---------------------------------------------------------------------------
+    # The STATUS command
+    #--------------------------------------------------------------------------- 
             
     def handle_STATUS(self, args):
         d = self.factory.status()
@@ -398,10 +427,12 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
     
 class IVanillaEngineClientFactory(engineservice.IEngineBase,
     engineservice.IEngineSerialized):
+    """Interface or the client factory of the Engine."""
     
     pass
 
 class VanillaEngineClientFactoryFromEngineService(protocols.EnhancedClientFactory):
+    """Adapt an EngineService to a vanilla protocol client factory."""
     
     zi.implements(IVanillaEngineClientFactory)
     
@@ -415,18 +446,24 @@ class VanillaEngineClientFactoryFromEngineService(protocols.EnhancedClientFactor
         return self.service.id
     
     def _setID(self, id):
-        # Add some error checking.
+        """Set the engine id, but with a hook for tests."""
         self.service.id = id
         self.notifySetID()   # Use as a hook for tests
     
     def notifySetID(self):
-        # This is meant to be a hook to detect whenn the Protocol calls setID
-        # after it has finished registering with a controller.  Mainly for tests.
+        """This method is meant to be a hook to use in testing.
+        
+        It will be called when the engine's id is set, which will e after
+        is has finished registering with a controller.
+        """
         pass
     
     id = property(_getID, _setID, "The engine's id.")
     
-    # These should be generated dynamically from service
+    #---------------------------------------------------------------------------
+    # Methods from EngineService/IEngine interfaces
+    #--------------------------------------------------------------------------- 
+
     def execute(self, lines):
         return self.service.execute(lines)
     
@@ -463,7 +500,9 @@ components.registerAdapter(VanillaEngineClientFactoryFromEngineService,
                            IVanillaEngineClientFactory)
 
     
+#-------------------------------------------------------------------------------
 # Controller side of things
+#-------------------------------------------------------------------------------
 
 class IVanillaEngineServerProtocol(engineservice.IEngineBase,
     engineservice.IEngineSerialized):
@@ -471,6 +510,7 @@ class IVanillaEngineServerProtocol(engineservice.IEngineBase,
     pass
     
 class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
+    """Server side of the vanilla protocol."""
     
     zi.implements(IVanillaEngineServerProtocol)
     
@@ -522,7 +562,9 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         else:
             self.dieLoudly('Command could not be dispatched: ' + msg)
     
+    #---------------------------------------------------------------------------
     # Utility methods
+    #---------------------------------------------------------------------------
         
     def dieLoudly(self, *args):
         """Die loudly in case of protocol errors."""
@@ -585,7 +627,6 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         elif isinstance(s, serialized.ArraySerialized):
             self.sendArraySerialized(s)
     
-    
     def setupForIncomingSerialized(self, callbackString, errbackString=''):
         self.workVars['callbackString'] = callbackString
         if errbackString:
@@ -636,7 +677,9 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         self.workVars['serial'].addToPackage(arrayBuffer)
         self.workVars['serialsList'].append(self.workVars['serial'])
     
-    # REGISTER
+    #---------------------------------------------------------------------------
+    # The REGISTER command
+    #---------------------------------------------------------------------------
     
     def handle_REGISTER(self, args):
         self.nextHandler = self.handleUnexpectedData
@@ -657,10 +700,13 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString('REGISTER %i' % id)
     
-        
-    # IEngineBase Methods
+    #---------------------------------------------------------------------------
+    # IEngineBase methods
+    #---------------------------------------------------------------------------
     
-    # EXECUTE
+    #---------------------------------------------------------------------------
+    # The EXECUTE command
+    #---------------------------------------------------------------------------
     
     def execute(self, lines):
         if not isinstance(lines, str):
@@ -679,7 +725,9 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         return reason
     
-    # PUSH
+    #---------------------------------------------------------------------------
+    # The PUSH command
+    #---------------------------------------------------------------------------
     
     def push(self, **namespace):
         self.workVars['namespace'] = namespace
@@ -719,7 +767,9 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
     def pushOK(self, result=None):
         self._callbackAndReset(result)
     
-    #PULL
+    #---------------------------------------------------------------------------
+    # The PULL command
+    #---------------------------------------------------------------------------
     
     def pull(self, *keys):
         keyString = ','.join(keys)
@@ -754,7 +804,9 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         return reason
     
-    # PULLNAMESPACE
+    #---------------------------------------------------------------------------
+    # The PULLNAMESPACE command
+    #---------------------------------------------------------------------------
     
     def pullNamespace(self, *keys):
         keyString = ','.join(keys)
@@ -783,7 +835,9 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         return reason
     
-    # GETRESULT
+    #---------------------------------------------------------------------------
+    # The GETRESULT command
+    #---------------------------------------------------------------------------
     
     def getResult(self, i=None):
         
@@ -808,7 +862,9 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         return reason
     
-    # RESET
+    #---------------------------------------------------------------------------
+    # The RESET command
+    #---------------------------------------------------------------------------
     
     def reset(self):
         self.sendString('RESET')
@@ -829,7 +885,9 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
     def resetFail(self, reason):
         self._errbackAndReset(reason)
     
-    # KILL
+    #---------------------------------------------------------------------------
+    # The KILL command
+    #---------------------------------------------------------------------------
     
     def kill(self):
         self.sendString('KILL')
@@ -849,8 +907,10 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
     
     def killFail(self, reason):
         self._errbackAndReset(reason)
-    
-    # STATUS
+        
+    #---------------------------------------------------------------------------
+    # The STATUS command
+    #---------------------------------------------------------------------------
     
     def status(self):
         self.sendString('STATUS')
@@ -878,9 +938,14 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
     def statusFail(self, reason):
         self._errbackAndReset(reason)
     
+    #---------------------------------------------------------------------------
     # IEngineSerialized Methods
+    #---------------------------------------------------------------------------
     
-    # PUSHSERIALIZED -> PUSH
+    #---------------------------------------------------------------------------
+    # The PUSHSERIALIZED command
+    #---------------------------------------------------------------------------
+    # PUSHSERIALIZED calls PUSH underneath
     
     def pushSerialized(self, **namespace):
         self.nextHandler = self.isPushSerializedReady
@@ -897,7 +962,9 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         else:
             self.dieLoudly('Expecting READY, got: ' + msg)
     
-    # PULLSERIALIZED
+    #---------------------------------------------------------------------------
+    # The PULLSERIALIZED command
+    #---------------------------------------------------------------------------
     
     def pullSerialized(self, *keys):
         keyString = ','.join(keys)
@@ -912,15 +979,21 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
             return s[0]
         else:
             return s
-    
-    # IEngineThreadedMethods
 
 class IVanillaEngineServerFactory(IRemoteController):
-    """This is what the server factory should look like"""
+    """Interface the vanillized controller presents to an Engine.
+    
+    Should probably be called IVanillaControllerServerFactory.
+    """
     
     pass
 
 class VanillaEngineServerFactoryFromControllerService(protocols.EnhancedServerFactory):
+    """Adapts a ControllerService to an IVanillaEngineServerFactory implementer.
+    
+    This server factory exposes a ControllerService to an EngineService using
+    the vanilla protocol.
+    """
     
     zi.implements(IVanillaEngineServerFactory)
     
@@ -944,7 +1017,6 @@ class VanillaEngineServerFactoryFromControllerService(protocols.EnhancedServerFa
                 serialized.ArraySerialized)
         else:
             return self.service.registerSerializationTypes(serialized.PickleSerialized)
-    
 
 components.registerAdapter(VanillaEngineServerFactoryFromControllerService,
                            ControllerService,

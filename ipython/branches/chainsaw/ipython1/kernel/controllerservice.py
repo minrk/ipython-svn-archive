@@ -1,23 +1,26 @@
 # -*- test-case-name: ipython1.test.test_controllerservice -*-
-"""A Twisted Service for the Controller
+"""A Twisted Service for the IPython Controller.
 
-TODO:
+The IPython Controller:
 
-- Use subclasses of pb.Error to pass exceptions back to the calling process.
-- Deal more carefully with the failure modes of the kernel engine.
-- Add an XML-RPC interface
-- Add an HTTP interface
-- Security!!!!!
+ * Listens for Engines to connect and then manages those Engines.
+ * Listens for clients and passes commands from client to the Engines.
+ * Exposes an asynchronous interfaces to the Engines which themselves can block.
+ * Acts as a gateway to the Engines.
 """
 
-#*****************************************************************************
+#-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
 #                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#*****************************************************************************
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
 
 from new import instancemethod
 from twisted.application import service
@@ -31,122 +34,124 @@ from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import map as Map
 from ipython1.kernel import results
 
-# Interface for the Controller Service
+#-------------------------------------------------------------------------------
+# Interfaces for the Controller
+#-------------------------------------------------------------------------------
 
 class IRemoteController(Interface):
-    """The Interface the controller exposes to remote engines."""
+    """The Interface a ControllerService exposes to an EngineService."""
     
     def registerEngine(remoteEngine, id):
-        """register new remote engine"""
+        """Register new remote engine.
+        
+        remoteEngine: an implementer of IEngineComplete
+        id: requested id
+        
+        Returns the actual id granted.
+        """
     
     def unregisterEngine(id):
-        """handle disconnecting engine"""
+        """Handle a disconnecting engine."""
     
     def registerSerializationTypes(self, *serialTypes):
         """Register the set of allowed subclasses of Serialized."""
     
 
 class IMultiEngine(Interface):
-    """interface to multiple objects implementing IEngineComplete.
+    """Interface to multiple objects implementing IEngineComplete.
+    
+    For the most part this class simply acts as a multiplexer of Engines.
+    Thus most of the methods here are jut like those in the IEngine*
+    interfaces, but with an extra argument: targets.
     
     All IMultiEngine methods must return a Deferred to a list with length 
     equal to the number of targets, except for verifyTargets.
     """
     
     def verifyTargets(targets):
-        """verify if targets is callable id list, id, or string 'all'"""
+        """Verify if targets is callable id list, id, or string 'all'"""
     
     def getIDs():
-        """return list of currently registered ids."""
+        """Return list of currently registered ids."""
     
     def scatter(targets, key, seq, style='basic', flatten=False):
-        """partition and distribute a sequence"""
+        """Partition and distribute a sequence to targets."""
     
     def scatterAll(key, seq, style='basic', flatten=False):
-        """See this.scatter for documentation."""
     
     def gather(targets, key, style='basic'):
-        """gather object as distributed by scatter"""
+        """Gather object key from targets."""
     
     def gatherAll(key, style='basic'):
-        """See this.gather for documentation."""
-    #IRemoteEngine multiplexer methods
+
+    #---------------------------------------------------------------------------
+    # Mutiplexed IEngine methos
+    #---------------------------------------------------------------------------
+
+    # These methods are basically those of the IEngineComplete interface.
+    # The targets argument specifies which engines the command will be run
+    # on.  Examples of valid targets:
+    # targets = 10
+    # targets = [0,1,2,3,4]
+    # targets = 'all'
+    #
+    # The fooAll methods correspond to foo('all',...), that is with targets='all'
+    
     def pushSerialized(targets, **namespace):
-        """Push a dict of keys and Serialized to the user's namespace."""
     
     def pushSerializedAll(**namespace):
-        """See this.pushSerialized for documentation."""
     
     def pullSerialized(targets, *keys):
-        """Pull objects by key form the user's namespace as Serialized."""
     
     def pullSerializedAll(*keys):
-        """See this.pullSerialized for documentation."""
     
-    #IQueuedEngine multiplexer methods
     def clearQueue(targets):
-        """Clears out pending commands in an engine's queue."""
     
     def clearQueueAll():
-        """See this.clearQueue for documentation."""
     
-    #IEngineCompleteBase multiplexer methods
     def execute(targets, lines):
-        """Execute lines of Python code."""
     
     def executeAll(lines):
-        """See this.execute for documentation."""
     
     def push(targets, **namespace):
-        """Push value into locals namespace with name key."""
     
     def pushAll(**namespace):
-        """See this.push for documentation."""
     
     def pull(targets, *keys):
-        """Gets an item out of the self.locals dict by key."""
     
     def pullAll(*keys):
-        """See this.pull for documentation."""
     
     def pullNamespace(targets, *keys):
-        """Gets a namespace dict from targets by keys."""
     
     def pullNamespaceAll(*keys):
-        """See this.pullNamespace for documentation."""
     
     def getResult(targets, i=None):
-        """Get the stdin/stdout/stderr of command i."""
     
     def getResultAll(i=None):
-        """See this.getResult for documentation."""
     
     def reset(targets):
-        """Reset the InteractiveShell."""
     
     def resetAll():
-        """See this.reset for documentation."""
     
     def status(targets):
-        """Return the status of engines"""
     
     def statusAll():
-        """See this.status for documentation."""
     
     def kill(targets):
-        """Kills the engine process"""
     
     def killAll():
-        """See this.kill for documentation."""
     
-
-# the controller interface implements both IEngineCompleteController, IMultiEngine
-class IController(IRemoteController, IMultiEngine, results.INotifierParent):
+class IController(IRemoteController, IMultiEngine):
+    """The Controller is both an IRemoteController and an IMultiEngine."""
     
     pass 
 
-# implementation of the Controller Service
+#-------------------------------------------------------------------------------
+# Implementation of the ControllerService
+#-------------------------------------------------------------------------------
+
 def addAllMethods(obj, interface=IMultiEngine):
+    """Dynamically generate the fooAll methods in IController."""
     for m in interface:
         # print m
         # print hasattr(obj, m),not hasattr(obj, m+'All')
@@ -164,11 +169,8 @@ def allMethod(self, %s):
             del allMethod
     return obj
 
-
-
 class ControllerService(service.Service, results.NotifierParent):
-    """This service listens for kernel engines and control clients.
-        It manages the command queues for the engines.
+    """A Controller represented as a Twisted Service.
     """
     
     implements(IController)
@@ -221,8 +223,10 @@ def autoMethod(self, %s:
                     raise
         addAllMethods(self)
     
-    
-    # IRemoteController
+
+    #---------------------------------------------------------------------------
+    # IRemoteController methods
+    #---------------------------------------------------------------------------
     
     def registerEngine(self, remoteEngine, id=None):
         """register new engine connection"""
@@ -264,6 +268,7 @@ def autoMethod(self, %s:
         self.serialTypes = serialTypes
     
     #ImultiEngine helper methods
+
     def engineList(self, targets):
         """parse a *valid* id list into list of engines"""
         # we could be strict here
@@ -277,7 +282,12 @@ def autoMethod(self, %s:
         else:
             return []
     
-    #IMultiEngine methods
+    #---------------------------------------------------------------------------
+    # IMultiEngine methods
+    #---------------------------------------------------------------------------
+    # Only certain methods must be done by hand, the other are dynamically 
+    # generated.
+    
     def verifyTargets(self, targets):
         if isinstance(targets, int):
             if targets not in self.engines.keys():
@@ -300,9 +310,7 @@ def autoMethod(self, %s:
     def getIDs(self):
         return defer.succeed(self.engines.keys())
     
-    def execute(self, targets, lines):
-        """Execute lines of Python code."""
-        
+    def execute(self, targets, lines):        
         if len(lines) > 64:
             linestr = lines[:61]+'...'
         else:
@@ -316,7 +324,6 @@ def autoMethod(self, %s:
         return gatherBoth(l)
     
     def pushSerialized(self, targets, **namespace):
-        """Push value into locals namespace with name key."""
         log.msg("pushing Serialized to %s" % targets)
         engines = self.engineList(targets)
         l = []
@@ -329,6 +336,14 @@ def autoMethod(self, %s:
             l.append(e.pushSerialized(**namespace))
         return gatherBoth(l)
     
+    def status(self, targets):
+        log.msg("retrieving status of %s" %targets)
+        engines = self.engineList(targets)
+        l = []
+        for e in engines:
+            l.append(e.status().addCallback(lambda s:(e.id, s)))
+        return gatherBoth(l)
+        
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         log.msg("scattering %s to %s" %(key, targets))
         engines = self.engineList(targets)
@@ -358,12 +373,4 @@ def autoMethod(self, %s:
         mapClass = Map.styles[style]
         mapObject = mapClass()
         return gatherBoth(l).addCallback(mapObject.joinPartitions)
-    
-    def status(self, targets):
-        log.msg("retrieving status of %s" %targets)
-        engines = self.engineList(targets)
-        l = []
-        for e in engines:
-            l.append(e.status().addCallback(lambda s:(e.id, s)))
-        return gatherBoth(l)
     

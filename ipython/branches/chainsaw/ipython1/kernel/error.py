@@ -1,20 +1,23 @@
 """Classes and functions for kernel related errors and exceptions.
-
-Classes:
-
-NotDefined -- A class to represent a nonexistant python variable.
 """
-
-#*****************************************************************************
+#-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
 #                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#*****************************************************************************
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
 
 from ipython1.core import error
+
+#-------------------------------------------------------------------------------
+# Error classes
+#-------------------------------------------------------------------------------
 
 class KernelError(error.IPythonError):
     pass

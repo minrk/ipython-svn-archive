@@ -2,21 +2,23 @@
 Serialization objects and utilities for use in network protocols.
 
 TODO:  allow discontinuous array buffers (in ArraySerialized.packObj)
-        The restriction is actually in EnhancedNetstring
+       The restriction is actually in EnhancedNetstring.
 """
 
-#*****************************************************************************
+#-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
 #                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#*****************************************************************************
+#-------------------------------------------------------------------------------
 
 import cPickle as pickle
 
 def serialize(obj, key):
+    """Serialize obj using an appropriate subclass of Serialized."""
+    
     serial = None
     try:
         import numpy
@@ -32,8 +34,13 @@ def serialize(obj, key):
     return serial
 
 class Serialized(object):
+    """A class to hold serialized objects in different formats.
+    
+    The most general form of a serialized object is a sequence of strings.
+    """
     
     package = []
+    
     def __init__(self, key):
         self.key = key
         self.initPackage()
@@ -60,6 +67,7 @@ class Serialized(object):
     
 
 class PickleSerialized(Serialized):
+    """Class for holding pickled objects."""
         
     def initPackage(self):
         self.package = ['PICKLE %s' % self.key]
@@ -71,13 +79,14 @@ class PickleSerialized(Serialized):
     def unpack(self):
         return pickle.loads(self.package[1])
     
-
+# Only define ArraySerialized is numpy is available
 try:
     import numpy
 except ImportError:
     pass
 else:
     class ArraySerialized(Serialized):
+        """Class for holding serialized numpy arrays."""
         
         def initPackage(self):
             self.package = ['ARRAY %s' % self.key]

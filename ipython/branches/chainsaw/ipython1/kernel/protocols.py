@@ -1,11 +1,17 @@
-#*****************************************************************************
+"""Low level network protocols."""
+#-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
 #                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#*****************************************************************************
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
+
 import socket
 
 from twisted.protocols import basic
@@ -13,11 +19,18 @@ from twisted.internet import protocol
 
 from ipython1.kernel import error
 
+# Exception classes
+
 class MessageSizeError(error.KernelError):
     """If a message exceeds a certain limit, this should be raised"""
     pass
 
+#-------------------------------------------------------------------------------
+# EnhancedNetstringReceiver
+#-------------------------------------------------------------------------------
+
 class EnhancedNetstringReceiver(basic.NetstringReceiver, object):
+    """This class provides some basic enhancements of NetstringReceiver."""
     
     MAX_LENGTH = 99999999
     
@@ -39,10 +52,37 @@ class EnhancedNetstringReceiver(basic.NetstringReceiver, object):
             raise MessageSizeError
         return basic.NetstringReceiver.sendString(self, string)
 
-#netstring code adapted from twisted.protocols.basic
+class EnhancedFactory:
+    """A Factory for the EnhancedNetstringReceiver that sets MAX_LENGTH."""
+    
+    MAX_LENGTH = 99999999
+    
+    def buildProtocol(self, addr):
+        p = self.protocol()
+        p.MAX_LENGTH = self.MAX_LENGTH
+        p.factory = self
+        return p
+    
+
+class EnhancedServerFactory(EnhancedFactory, protocol.ServerFactory, object):
+    """Client Factory for EnhancedNetstrings."""
+    pass
+
+class EnhancedClientFactory(EnhancedFactory, protocol.ClientFactory, object):
+    """Client Factory for EnhancedNetstrings."""
+    pass
+
+
+#-------------------------------------------------------------------------------
+# A plain socket based netstring receiver
+#-------------------------------------------------------------------------------
+# Netstring code adapted from twisted.protocols.basic
+
 class NetstringParseError(ValueError):
     """The incoming data is not in valid Netstring format."""
     pass
+
+
 
 class NetstringSocket(object):
     """A wrapper for a socket that reads/writes Netstrings.
@@ -157,25 +197,6 @@ class NetstringSocket(object):
         if self.verbose:
             print "controller:",string
         return string
-    
-
-
-class EnhancedFactory:
-    
-    MAX_LENGTH = 99999999
-    
-    def buildProtocol(self, addr):
-        p = self.protocol()
-        p.MAX_LENGTH = self.MAX_LENGTH
-        p.factory = self
-        return p
-    
-
-class EnhancedServerFactory(EnhancedFactory, protocol.ServerFactory, object):
-    pass
-
-class EnhancedClientFactory(EnhancedFactory, protocol.ClientFactory, object):
-    pass
 
     
     

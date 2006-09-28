@@ -1,20 +1,30 @@
  # -*- test-case-name: ipython1.test.test_engineservice -*-
+"""A Twisted Service Representation of the IPython core.
 
-"""A Twisted Service Representation of the IPython Core.
+The IPython Core exposed to the network is called the Engine.  Its
+representation in Twisted in the EngineService.  Interfaces and adapters
+are used to abstract out the details of the actual network protocol used.
+The EngineService is an Engine that knows nothing about the actual protocol
+used.
 
-TODO:
+The EngineService is exposed with various network protocols in modules like:
 
-- Nothing for now
+enginepb.py
+enginevanilla.py
 """
-
-#*****************************************************************************
+#-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
 #                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#*****************************************************************************
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
+
 import cPickle as pickle
 from new import instancemethod
 
@@ -26,84 +36,115 @@ import zope.interface as zi
 from ipython1.kernel import serialized, error, util
 from ipython1.kernel.util import gatherBoth, curry
 
-# Here is the interface specification for the IPythonCoreService
+#-------------------------------------------------------------------------------
+# Interface specification for the Engine
+#-------------------------------------------------------------------------------
 
 class IEngineBase(zi.Interface):
     """The Interface for the IPython Engine.
     
-    All these methods should return deferreds.
+    This interface provides a formal specification of the IPython core.
+    All these methods should return deferreds regardless of what side of a
+    network connection they are on.
     """
+    
     id = zi.interface.Attribute("the id of the Engine object")
     
     def execute(lines):
         """Execute lines of Python code.
         
-        Returns deferred to tuple of (id, stdin, stdout, stderr)
+        Returns a deferred to tuple of (id, stdin, stdout, stderr).
         """
     
     def push(**namespace):
         """Push dict namespace into the user's namespace.
         
-        Returns deferred to None
+        Returns a deferred to None.
         """
     
     def pull(*keys):
         """Pulls values out of the user's namespace by keys.
         
-        Returns deferred to tuple or object
+        Returns a deferred to tuple or object.
         """
     
     def pullNamespace(*keys):
-        """Pulls values by key from user's namespace as dict."""
+        """Pulls values by key from user's namespace as dict.
+        
+        Returns a defered to a dict."""
     
     def getResult(i=None):
-        """Get the stdin/stdout/stderr of command i."""
+        """Get the stdin/stdout/stderr of command i.
+        
+        Returns a deferred to a tuple."""
     
     def reset():
-        """Reset the InteractiveShell."""
+        """Reset the shell."""
     
     def kill():
-        """kill the process"""
+        """Kill the engine by stopping the reactor."""
     
     def status():
-        """return status of engine"""
+        """Return the status of the engine.
+        
+        Returns a deferred to a dict."""
     
 
 class IEngineSerialized(zi.Interface):
-    """Add serialized push/pull.  All methods should return deferreds"""
+    """Push/Pull methods that take Serialized objects.  
+    
+    All methods should return deferreds.
+    """
     
     def pushSerialized(**namespace):
-        """Push a dict of keys and Serialized|objects to the user's namespace."""
+        """Push a dict of keys and Serialized objects into the user's namespace."""
     
     def pullSerialized(*keys):
-        """Pull objects by key form the user's namespace as Serialized.
+        """Pull objects by key from the user's namespace as Serialized.
         
-        Returns a list or one of Serialized.
+        Returns a list of or one Serialized.
         """
     
-
 class IEngineThreaded(zi.Interface):
-    """A place holder for threaded commands.  All methods should return deferreds."""
+    """A place holder for threaded commands.  
+    
+    All methods should return deferreds.
+    """
     pass
 
 class IEngineQueued(zi.Interface):
-    """add some queue methods to IEngine interface.  All methods should return deferreds."""
+    """Interface for an Engine with a queue.  
+    
+    All methods should return deferreds.
+    """
     
     def clearQueue():
-        """clear the queue"""
+        """Clear the queue."""
     
 
 class IEngineComplete(IEngineBase, IEngineSerialized, IEngineQueued, IEngineThreaded):
-    """An engine is expected to implement IEngineBase, IEngineSerialized, 
-    IEngine Queued, and IEngine Threaded.  All IEngine methods must return
-    a deferred.
-    If a method is not implemented, it is expected to return a deferred
-    failing with NotImplementedError."""
+    """An engine that implements everything.
+    
+    An "complete" engine is expected to implement IEngineBase, IEngineSerialized, 
+    IEngine Queued, and IEngineThreaded.  
+    
+    All IEngine methods must return a deferred.  If a method is not implemented, 
+    it is expected to return a deferred failing with NotImplementedError.
+    """
     pass
 
+#-------------------------------------------------------------------------------
+# Functions and classes to implement the EngineService
+#-------------------------------------------------------------------------------
+
 def completeEngine(engine):
-    """Completes an engine object.  The returned object is guaranteed to
-    properly implement IEngineComplete."""
+    """Completes an engine object.  
+    
+    The returned object is guaranteed to properly implement IEngineComplete.
+    
+    The methods that are not already implemented by engine are dynamically
+    generated and will return a deferred to a NotImplementedError failure.
+    """
     zi.alsoProvides(engine, IEngineComplete)
     
     def _notImplementedMethod(name, *args, **kwargs):
@@ -121,16 +162,19 @@ def completeEngine(engine):
     assert(IEngineComplete.providedBy(engine))
     return engine
 
-    
-# Now the actual EngineService
 class EngineService(service.Service):
-    """Wrap IPython into a IEngineFoo implementing Twisted Service."""
+    """Adapt an IPython shell into a IEngine implementing Twisted Service."""
     
     zi.implements(IEngineBase, IEngineSerialized)
     
     id = None
     
     def __init__(self, shellClass, mpi=None):
+        """Create an EngineService.
+        
+        shellClass: a subclass of core.InteractiveShell
+        mpi:        an mpi module that has rank and size attributes
+        """
         self.shell = shellClass()
         self.mpi = mpi
         if self.mpi is not None:
@@ -139,9 +183,11 @@ class EngineService(service.Service):
             self.id = self.mpi.rank
     
     def startService(self):
+        """Start the service and seed the user's namespace."""
+        
         self.shell.update({'mpi': self.mpi, 'id' : self.id})
             
-    # The IEngine methods
+    # The IEngine methods.  See the interface for documentation.
     
     def execute(self, lines):
         d = defer.execute(self.shell.execute, lines)
@@ -194,7 +240,6 @@ class EngineService(service.Service):
             return d
     
     def handlePullProblems(self, reason):
-        # reason.printTraceback()
         return serialized.serialize(reason, 'FAILURE')
     
     def pullNamespace(self, *keys):
@@ -227,18 +272,21 @@ class EngineService(service.Service):
                 remotes[k] = repr(v) # want representation, not actual object
         return defer.succeed(remotes)
     
-
-# Now the implementation of the QueuedEngine
-
 class QueuedEngine(object):
-    """an IQueuedEngine implementing wrapper for any IEngine implementing object, 
-    which adds IEngineQueued functionality."""
+    """Add a queue to an IEngine implementing object.
+    
+    The resulting object will implement IEngineQueued.
+    """
+    
     zi.implements(IEngineQueued)
     
     def __init__(self, engine, keepUpToDate=False):
-        """@arg keepUpToDate:
-            whether to update the remote status when the queue is empty.  defaults
-            to False."""
+        """Create a QueuedEngine object from an engine
+        
+        keepUpToDate: whether to update the remote status when the 
+                      queue is empty.  Defaults to False.
+        """
+
         self.engine = engine
         self.id = engine.id
         self.queued = []
@@ -274,16 +322,18 @@ def queuedMethod(self%s%s):
     
     # methods from IEngineQueued:
     def clearQueue(self):
-        """clear the queue"""
+        """Clear the queue."""
+        
         for cmd in self.queued:
             cmd.deferred.errback(failure.Failure(error.QueueCleared()))
         self.queued = []
         return defer.succeed(True)
     
-    # queue management methods:
-    # You should not call these directly
+    # Queue management methods.  You should not call these directly
+    
     def submitCommand(self, cmd):
-        """submit command to queue"""
+        """Submit command to queue."""
+        
         d = defer.Deferred()
         cmd.setDeferred(d)
         self.upToDate = not self.keepUpToDate
@@ -296,7 +346,8 @@ def queuedMethod(self%s%s):
         return d
     
     def runCurrentCommand(self):
-        """run current command"""
+        """Run current command."""
+        
         cmd = self.currentCommand
         # log.msg("Starting: " + repr(self.currentCommand))
         f = getattr(self.engine, cmd.remoteMethod, None)
@@ -310,7 +361,8 @@ def queuedMethod(self%s%s):
             return defer.fail(AttributeError(cmd.remoteMethod))
     
     def _flushQueue(self):
-        """pop next command in queue, run it"""
+        """Pop next command in queue and run it."""
+        
         if len(self.queued) > 0:
             self.currentCommand = self.queued.pop(0)
             self.runCurrentCommand()
@@ -320,12 +372,14 @@ def queuedMethod(self%s%s):
             return d.addCallbacks(self.updateStatus, util.catcher)
     
     def saveResult(self, result):
-        """put the result in the history"""
+        """Put the result in the history."""
+        
         self.history[result[1]] = result
         return result
     
     def finishCommand(self, result):
-        """finish currrent command"""
+        """Finish currrent command."""
+        
         # log.msg("Finishing: " + repr(self.currentCommand) + ':' + repr(result))
         self.currentCommand.handleResult(result)
         del self.currentCommand
@@ -334,7 +388,8 @@ def queuedMethod(self%s%s):
         return result
     
     def abortCommand(self, reason):
-        """abort current command"""
+        """Abort current command."""
+        
         self.currentCommand.handleError(reason)
         del self.currentCommand
         self.currentCommand = None
@@ -344,22 +399,21 @@ def queuedMethod(self%s%s):
     
     def updateStatus(self, status):
         """The callback for keeping a local copy of the status."""
+        
         self.engineStatus = status
     
-    #methods from IEngineBase
+    #methods from IEngineBase.  See IEngineBase for documentation.
+    
     def reset(self):
-        """Reset the InteractiveShell."""
         self.clearQueue()
         self.history = {}  # reset the cache - I am not sure we should do this
         return self.submitCommand(Command("reset"))
     
     def kill(self):
-        """kill the InteractiveShell."""
         self.clearQueue()
         return self.submitCommand(Command("kill"))
     
     def status(self):
-        """Get the status {queue, history} of the engine"""
         dikt = {'queue':map(repr,self.queued), 'pending':repr(self.currentCommand),
             'history':self.history}
         if self.keepUpToDate:
@@ -367,7 +421,6 @@ def queuedMethod(self%s%s):
         return defer.succeed(dikt)
     
     def getResult(self, i=None):
-        """Get the stdin/stdout/stderr of command i."""
         if i is None:
             i = max(self.history.keys()+[None])
 
@@ -377,10 +430,14 @@ def queuedMethod(self%s%s):
         else:
             return defer.succeed(cmd)
     
-
-#Command object for queued Engines
 class Command(object):
-    """A command that will be sent to the Remote Engine."""
+    """A command object that encapslates queued commands.
+    
+    This class basically keeps track of a command that has been queued
+    in a QueuedEngine.  It manages the deferreds and hold the method to be called
+    and the arguments to that method.
+    """
+    
     
     def __init__(self, remoteMethod, *args, **kwargs):
         """Build a new Command object."""
@@ -390,7 +447,8 @@ class Command(object):
         self.kwargs = kwargs
     
     def setDeferred(self, d):
-        """Sets the deferred attribute of the Command."""    
+        """Sets the deferred attribute of the Command."""  
+          
         self.deferred = d
     
     def __repr__(self):
@@ -406,10 +464,12 @@ class Command(object):
     
     def handleResult(self, result):
         """When the result is ready, relay it to self.deferred."""
+        
         self.deferred.callback(result)
     
     def handleError(self, reason):
         """When an error has occured, relay it to self.deferred."""
+        
         # log.msg("Traceback from remote host: " + reason.getErrorMessage())
         self.deferred.errback(reason)
     

@@ -3,18 +3,26 @@
 """
 Magic command interface for interactive parallel work.
 """
-#*****************************************************************************
+#-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
 #                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#*****************************************************************************
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
 
 import new
 
 from IPython.iplib import InteractiveShell
+
+#-------------------------------------------------------------------------------
+# Definitions of magic functions for use with IPython
+#-------------------------------------------------------------------------------
 
 NO_ACTIVE_CONTROLLER = """
 Error:  No Controller is activated
@@ -31,8 +39,7 @@ def magic_px(self,parameter_s=''):
      
     >>> %px a = 5       # Runs a = 5 on all nodes
     """
-    #print 'Magic function. Passed parameter is between < >: <'+parameter_s+'>'
-    #print 'The self object is:',self
+
     try:
         activeController = __IPYTHON__.activeController
     except AttributeError:
@@ -51,6 +58,7 @@ def magic_pn(self,parameter_s=''):
      
     >>> %pn 0 a = 5       # Runs a = 5 on kernel 0
     """
+    
     args = parameter_s.split(" ", 1)
     if len(args) == 2:
         try:

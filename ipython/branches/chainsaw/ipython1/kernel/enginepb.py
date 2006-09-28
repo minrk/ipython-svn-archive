@@ -1,29 +1,36 @@
 # -*- test-case-name: ipython1.test.test_enginepb -*-
-"""Expose the IPython Kernel Service using Twisted's Perspective Broker.
+"""Expose the IPython EngineService using Twisted's Perspective Broker.
 
-This module specifies the IPBEngineFromService Interface and its implementation
-as an Adapter from the IEngineService Interface.  This adapter wraps
-EngineService instance into something that inherits from pb.Referenceable.  This makes
-is callable using Perspective Broker.
+This modules defines interfaces and adapters to connect an EngineService to
+a ControllerService using Perspective Broker.  It defines the following classes:
 
-Any public methods of the IKernelService Interface that should be available over
-PB must be added to both the Interface and Adapter in this file.
+On the Engine (client) side:
 
-TODO:
-
-- Make sure the classes fully implement the right interfaces
-- Make sure that the methods take the right args and return the right thing
-- The right thing here is the correct result or a errback triggered.
+ * IPBEngineClientFactory
+ * PBEngineClientFactory
+ * IPBEngine
+ * PBEngineReferenceFromService
+ 
+On the Controller (server) side:
+ 
+ * EngineFromReference
+ * IPBRemoteEngineRoot
+ * PBRemoteEngineRootFromService
+ * IPBEngineServerFactory
 """
 
-#*****************************************************************************
+#-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
 #                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#*****************************************************************************
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
 
 import cPickle as pickle
 
@@ -37,11 +44,16 @@ from zope.interface import Interface, implements
 from ipython1.kernel.engineservice import *
 from ipython1.kernel import controllerservice, protocols
 
+#-------------------------------------------------------------------------------
+# The client (Engine) side of things
+#-------------------------------------------------------------------------------
+
 class IPBEngineClientFactory(Interface):
     pass
 
 class PBEngineClientFactory(pb.PBClientFactory, object):
-    """The Client factory on the engine that connects to the controller"""
+    """PBClientFactory on the Engine that connects to the Controller."""
+    
     _MAX_LENGTH = 99999999
     
     def _getSize(self):
@@ -65,10 +77,12 @@ class PBEngineClientFactory(pb.PBClientFactory, object):
     
     def _getRootFailure(self, reason):
         """errback for pb.PBClientFactory.getRootObject"""
+        
         reason.raiseException()
     
     def _gotRoot(self, obj):
         """callback for pb.PBClientFactory.getRootObject"""
+        
         self.rootObject = obj
         d = self.rootObject.callRemote('registerEngine', self.engineReference, None)
         return d.addCallbacks(self._referenceSent, self._getRootFailure)
@@ -84,11 +98,12 @@ components.registerAdapter(PBEngineClientFactory,
 # Expose a PB interface to the EngineService
      
 class IPBEngine(Interface):
-    """Twisted Perspective Broker remote interface for engine service.
-    This is NOT the IEngine interface, it is the counterpart to EngineFromReference,
-    which does implement IEngine"""
+    """An interface that exposes an EngineService over PB.
     
-    #remote methods for engine service
+    The methods in this interface are basically those from IEngine, but with
+    the remote_ prefix that makes them visible to PB.
+    """
+    
     def remote_getID():
         """return this.id"""
     
@@ -96,33 +111,27 @@ class IPBEngine(Interface):
         """set this.id"""
     
     def remote_execute(lines):
-        """Execute lines of Python code."""
     
     def remote_pushSerialized(namespace):
-        """Put value into locals namespace with name key."""
     
     def remote_pull(*keys):
-        """"""
     
     def remote_pullSerialized(*keys):
-        """Gets an item out of the .locals dict by key."""
     
     def remote_pullNamespace(*keys):
-        """Gets a namespace dict from keys"""
+        
     def remote_reset():
-        """Reset the InteractiveShell."""
     
     def remote_kill():
-        """kill the InteractiveShell."""
     
     def remote_getResult(i=None):
-        """Get the stdin/stdout/stderr of command i."""
     
     def remote_status():
-        """get status from remote engine"""
+
     
 
 class PBEngineReferenceFromService(pb.Referenceable, object):
+    """Adapt and EngineService to an IPBEngine implementer."""
         
     implements(IPBEngine)
     
@@ -185,8 +194,12 @@ components.registerAdapter(PBEngineReferenceFromService,
                            EngineService,
                            IPBEngine)
 
-#now engine-reference adapter
+#-------------------------------------------------------------------------------
+# Now the server (Controller) side of things
+#-------------------------------------------------------------------------------
+
 class EngineFromReference(object):
+    """Adapt a PBReference to an IEngine implementing object."""
     
     implements(IEngineBase, IEngineSerialized)
     
@@ -214,14 +227,16 @@ class EngineFromReference(object):
     
     id = property(getID, setID)
     
+    #---------------------------------------------------------------------------
+    # Methods from IEngine
+    #---------------------------------------------------------------------------
+    
     def execute(self, lines):
-        """Execute lines of Python code."""
         if not self.checkSize(lines):
             return defer.fail(Failure(protocols.MessageSizeError()))
         return self.callRemote('execute', lines).addCallback(self.checkReturn)
     
     def pushSerialized(self, **namespace):
-        """Put value into locals namespace with name key."""
         package = pickle.dumps(namespace, 2)
         if not self.checkSize(package):
             return defer.fail(Failure(protocols.MessageSizeError()))
@@ -236,42 +251,35 @@ class EngineFromReference(object):
         return d.addCallback(self.checkReturn)
     
     def pullSerialized(self, *keys):
-        """Gets an item out of the self.locals dict by key."""
         d = self.callRemote('pullSerialized', *keys)
         return d.addCallback(pickle.loads)
     
     def pull(self, *keys):
-        """Gets an item out of the self.locals dict by key."""
         d = self.callRemote('pull', *keys)
         return d.addCallback(pickle.loads)
     
     def pullNamespace(self, *keys):
-        """Gets an item out of the self.locals dict by key."""
         return self.callRemote('pullNamespace', *keys).addCallback(pickle.loads)
     
     def reset(self):
-        """Reset the InteractiveShell."""
         return self.callRemote('reset').addCallback(self.checkReturn)
 
     def kill(self):
-        """Reset the InteractiveShell."""
         #this will raise pb.PBConnectionLost on success
         self.callRemote('kill').addErrback(self.killBack)
         return defer.succeed(None)
+
+    def getResult(self, i=None):
+        return self.callRemote('getResult', i).addCallback(self.checkReturn)
+    
+    def status(self):
+        return self.callRemote('status').addCallback(self.checkReturn)
     
     def killBack(self, f):
         try:
             f.raiseException()
         except pb.PBConnectionLost:
             return
-    
-    def getResult(self, i=None):
-        """Get the stdin/stdout/stderr of command i."""
-        return self.callRemote('getResult', i).addCallback(self.checkReturn)
-    
-    def status(self):
-        """get the status of the engine"""
-        return self.callRemote('status').addCallback(self.checkReturn)
     
     def checkReturn(self, r):
         if isinstance(r, str):
@@ -285,23 +293,29 @@ class EngineFromReference(object):
         if len(package) < self.MAX_LENGTH:
             return True
     
-    
 components.registerAdapter(EngineFromReference,
                         pb.RemoteReference,
                         IEngineBase)
 
-#for the controller:
-
 class IPBRemoteEngineRoot(Interface):
-    """Root object for the controller service Remote Engine server factory"""
+    """Interface that tells how an Engine sees a Controller.
+    
+    Should probably be named IPBRemoteControllerRoot.
+    """
     
     def remote_registerEngine(self, engineReference):
-        """register new engine on controller"""
+        """Register new engine on controller."""
     
 
 class PBRemoteEngineRootFromService(pb.Root):
-    """Perspective Broker Root object adapter for Controller Service 
-    Remote Engine connection"""
+    """Adapts a ControllerService to an IPBRemoteEngineRoot.
+    
+    This wraps the ControllerService into something that PB will expose to the 
+    EngineService.
+    
+    Should probably be named PBRemoteControllerRootFromService.
+    """
+    
     implements(IPBRemoteEngineRoot)
     
     def __init__(self, service):
@@ -326,6 +340,11 @@ class IPBEngineServerFactory(Interface):
     pass
 
 def PBEngineServerFactoryFromService(service):
+    """Adapt a ControllerService to a IPBEngineServerFactory.
+    
+    Why is this a function rather than a class?
+    """
+    
     return pb.PBServerFactory(IPBRemoteEngineRoot(service))
 
 components.registerAdapter(PBEngineServerFactoryFromService,

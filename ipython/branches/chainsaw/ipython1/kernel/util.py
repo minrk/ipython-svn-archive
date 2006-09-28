@@ -1,27 +1,34 @@
 #!/usr/bin/env python
 # encoding: utf-8
-
-#*****************************************************************************
+"""General utilities for kernel related things."""
+#-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
 #                           Benjamin Ragan-Kelly <<benjaminrk@gmail.com>>
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#*****************************************************************************
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
+
 import os, types
 
-# from IPython import OInspect #for __getdef
-
 from twisted.internet import defer
+
 from ipython1.kernel import serialized
 
 
 #from twisted.internet.defer.gatherresults/_parseDlist
 def parseResults(results):
+    """Pull out results from a DeferredList."""
+    
     return [x[1] for x in results]
 
 def gatherBoth(dlist):
+    """This is like gatherBoth, but sets consumeErrors=1."""
     d = defer.DeferredList(dlist, consumeErrors=1)
     d.addCallback(parseResults)
     return d
@@ -82,10 +89,11 @@ def _tar_module(mod):
     
     return tarball_name, fileString
 
-
-
 #from the Python Cookbook:
+
 def curry(f, *curryArgs, **curryKWargs):
+    """Curry the function f with curryArgs and curryKWargs."""
+    
     def curried(*args, **kwargs):
         dikt = dict(kwargs)
         dikt.update(curryKWargs)
@@ -94,12 +102,15 @@ def curry(f, *curryArgs, **curryKWargs):
     return curried
 
 #useful callbacks
+
 def catcher(r):
     pass
 
 def printer(r):
     print r
     return r
+
+# Smart unpacker
 
 def unpack(serial):
     if isinstance(serial, list):
