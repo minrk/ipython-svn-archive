@@ -41,12 +41,6 @@ class IPBController(Interface):
     
     def remote_gather(targets, key, style='basic'):
     
-    def remote_pushSerialized(targets, **namespace):
-    
-    def remote_pullSerialized(targets, *keys):
-    
-    def remote_clearQueue(targets):
-    
     def remote_execute(targets, lines):
     
     def remote_push(targets, **namespace):
@@ -62,6 +56,12 @@ class IPBController(Interface):
     def remote_status(targets):
     
     def remote_kill(targets):
+    
+    def remote_pushSerialized(targets, **namespace):
+    
+    def remote_pullSerialized(targets, *keys):
+    
+    def remote_clearQueue(targets):
     
     def remote_addNotifier(reference):    
 

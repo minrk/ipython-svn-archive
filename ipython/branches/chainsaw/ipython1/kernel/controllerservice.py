@@ -68,6 +68,10 @@ class IMultiEngine(Interface):
     equal to the number of targets, except for verifyTargets.
     """
     
+    #---------------------------------------------------------------------------
+    # Non multiplexed methods
+    #---------------------------------------------------------------------------
+    
     def verifyTargets(targets):
         """Verify if targets is callable id list, id, or string 'all'"""
     
@@ -96,19 +100,7 @@ class IMultiEngine(Interface):
     # targets = 'all'
     #
     # The fooAll methods correspond to foo('all',...), that is with targets='all'
-    
-    def pushSerialized(targets, **namespace):
-    
-    def pushSerializedAll(**namespace):
-    
-    def pullSerialized(targets, *keys):
-    
-    def pullSerializedAll(*keys):
-    
-    def clearQueue(targets):
-    
-    def clearQueueAll():
-    
+       
     def execute(targets, lines):
     
     def executeAll(lines):
@@ -141,8 +133,20 @@ class IMultiEngine(Interface):
     
     def killAll():
     
-class IController(IRemoteController, IMultiEngine):
-    """The Controller is both an IRemoteController and an IMultiEngine."""
+    def pushSerialized(targets, **namespace):
+    
+    def pushSerializedAll(**namespace):
+    
+    def pullSerialized(targets, *keys):
+    
+    def pullSerializedAll(*keys):
+    
+    def clearQueue(targets):
+    
+    def clearQueueAll():
+    
+class IController(IRemoteController, IMultiEngine, results.INotifierParent):
+    """The Controller is an IRemoteController, IMultiEngine & INotifierParent."""
     
     pass 
 
@@ -223,7 +227,6 @@ def autoMethod(self, %s:
                     raise
         addAllMethods(self)
     
-
     #---------------------------------------------------------------------------
     # IRemoteController methods
     #---------------------------------------------------------------------------

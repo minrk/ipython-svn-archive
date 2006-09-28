@@ -1,8 +1,14 @@
 """Classes for gathering results from kernels.
 
-Once the result gatherer has been started you can tell kernels to send results
-to the gatherer by using the .notify method of the RemoteKernel or 
-InteractiveCluster classes.  Multiple kernels can notify a single gatherer.
+This module introduces the notion of a Notifier, which is the mchanism a 
+Controller uses for upward communication with clients.
+
+it consists of a Parent and a Child, where the parent notifies its children
+The ControllerService is a NotifierParent, and a Results Gatherer is a Child.
+An object can implement INotifierParent and INotifierChild, as the notify
+method is meant to behave the same.
+
+Parents maintain a list of children in a dict {child.key: child,...}
 """
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
@@ -26,39 +32,37 @@ from twisted.python import components, log
 
 from IPython.ColorANSI import TermColors
 
-
-# Notifier - the Controller's upward communication mechanism
-# it consists of a Parent and a Child, where the parent notifies its children
-# The controller service is a NotifierParent, and a Results Gatherer is a Child.
-# an object can implement INotifierParent and INotifierChild, as the notify
-# method is meant to behave the same.
-
-# Summary:
-# 1.  Parents maintain a list of children in a dict {child.key: child,...}
-
-#-----------
+#-------------------------------------------------------------------------------
 # The Parent 
-#-----------
+#-------------------------------------------------------------------------------
+
 class INotifierParent(Interface):
     """The interface for a NotifierParent object."""
+    
     notifiers = interface.Attribute("The dict of notifier objects")
     
     def addNotifier(notifier):
-        """adds a notifier to the set of children to notify.
-        notifier must implement INotifierChild"""
+        """Adds a notifier to the set of children to notify.
+        
+        Notifier must implement INotifierChild
+        """
     
     def delNotifier(key):
-        """removes a notifier from the set of children to notify by key"""
+        """Removes a notifier from the set of children to notify by key."""
     
     def notify(result):
-        """notifies children of result.  result must be a tuple of the form: 
-        (node_id, cmd_num, stdin, stdout, stderr)
+        """Notifies children of result.  
+        
+        Result must be a tuple of the form: 
+            (node_id, cmd_num, stdin, stdout, stderr)
         """
 
 class NotifierParent(object):
-    """An object that notifies Children of results."""
+    """An object that notifies children of results."""
+    
     implements(INotifierParent)
     _notifiers = {}
+    
     # notification methods 
     
     notifiers = property(lambda self: self._notifiers, lambda self,_: 
@@ -85,28 +89,29 @@ class NotifierParent(object):
             tonotify.notify(result)
         return result
     
-#-----------
+#-------------------------------------------------------------------------------
 # The Child 
-#-----------
+#-------------------------------------------------------------------------------
 
 class INotifierChild(Interface):
-    """an interface for notifier objects"""
+    """An interface for notifier objects."""
     
     key = interface.Attribute("The key for registration")
     
     def notify(result):
-        """handle a result tuple (id, cmd_num, in, out, err)."""
+        """Handle a result tuple (id, cmd_num, in, out, err)."""
     
     def notifyOnDisconnect(f, *a, **kw):
-        """function to be called on disconnect with args a, and keywords kw"""
+        """Function to be called on disconnect."""
     
-
-
 class BaseNotifierChild(object):
-    """A base class for building NotifierChildren.  It provides a generic
-    implementation of notifyOnDisconnect, and sets key to None, which means
-    it is unhashable, so NotifierChildren should define self.key in a unique
-    way."""
+    """A base class for building NotifierChildren.  
+    
+    It provides a generic implementation of notifyOnDisconnect, and sets key 
+    to None, which means it is unhashable, so NotifierChildren should define 
+    self.key in a unique way.
+    """
+
     implements(INotifierChild)
     _disconnectNotifiers = []
     key = None
@@ -125,8 +130,12 @@ class BaseNotifierChild(object):
 
 def notifierFromFunction(f):
     """An adapter for building a basic notifier Child from a function.
-    The function itself will be called as notify.  It is assumed that
-    the function will never 'disconnect'."""
+    
+    The function itself will be called as notify.  
+    
+    It is assumed that the function will never 'disconnect'.
+    """
+
     n = BaseNotifierChild()
     n.key = repr(f)
     n.notify = f
@@ -139,8 +148,10 @@ components.registerAdapter(notifierFromFunction,
 #-----------------------------------------------------------------------------
 # TCP Results Gatherer specific Objects
 #-----------------------------------------------------------------------------
+
 class TCPNotifierChild(BaseNotifierChild):
-    """This is the Child object for the TCPResultsGatherer in the Con.Service."""
+    """The Child class for the TCPResultsGatherer in ControllerService."""
+    
     def __init__(self, addr):
         self.key = addr
         self.host = addr[0]
@@ -157,18 +168,17 @@ class TCPNotifierChild(BaseNotifierChild):
 components.registerAdapter(TCPNotifierChild, tuple, INotifierChild)
 
 class NotifierChildFactory(protocol.ClientFactory):
-    """A small client factory and protocol for the tcp results gatherer"""
+    """A small client factory and protocol for TCPResultsGatherer."""
+    
     protocol = LineReceiver
     protocol.lineReceived = lambda _,__: None
     def __init__(self, onDisconnect=None):
         if callable(onDisconnect):
             self.clientConnectionLost = self.clientConnectionFailed = onDisconnect
 
-# The actual TCP results gatherer protocol
-# This is what is created by default in the ipresults script.
 class TCPResultsProtocol(LineReceiver):
-    """This is the Command Line Results Gatherer.  It listens on a TCP port
-    for incoming connections from controllers.  The """
+    """The protocol used for TCP notifications."""
+    
     blue = TermColors.Blue
     normal = TermColors.Normal
     red = TermColors.Red

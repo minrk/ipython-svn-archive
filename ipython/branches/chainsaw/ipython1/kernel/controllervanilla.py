@@ -1444,8 +1444,11 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     
 
 class IVanillaControllerFactory(results.INotifierParent):
-    """Interface to clients for controller.  Very much like IControllerService,
-    but excludes some methods such as push/pull without serialization.  """
+    """Interface to clients for controller.  
+    
+    Very much like IControllerService, but excludes some methods such as 
+    push/pull without serialization.
+    """
     
     def cleanQueue(self, targets):
     

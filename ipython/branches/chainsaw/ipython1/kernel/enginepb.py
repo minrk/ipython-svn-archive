@@ -100,8 +100,9 @@ components.registerAdapter(PBEngineClientFactory,
 class IPBEngine(Interface):
     """An interface that exposes an EngineService over PB.
     
-    The methods in this interface are basically those from IEngine, but with
-    the remote_ prefix that makes them visible to PB.
+    The methods in this interface are similar to those from IEngine, 
+    but their arguments and return values are pickled if they are not already
+    a string so they can be send over PB.
     """
     
     def remote_getID():
@@ -111,23 +112,40 @@ class IPBEngine(Interface):
         """set this.id"""
     
     def remote_execute(lines):
-    
-    def remote_pushSerialized(namespace):
-    
+        
+    def remote_push(self, pNamespace):
+        """Push a namespace into the users namespace.
+        
+        @arg pNamespace: a pickled namespace.
+        """
+
     def remote_pull(*keys):
-    
-    def remote_pullSerialized(*keys):
-    
+
     def remote_pullNamespace(*keys):
+
+    def remote_getResult(i=None):
+        """Get result i.
+        
+        Returns a deferred to a pickled result tuple.
+        """
         
     def remote_reset():
     
     def remote_kill():
-    
-    def remote_getResult(i=None):
-    
+        
     def remote_status():
 
+    def remote_pushSerialized(pNamespace):
+        """Push a dict of keys and serialized objects into users namespace.
+        
+        @arg pNamespace: a pickle namespace of keys and serialized objects.
+        """
+
+    def remote_pullSerialized(*keys):
+        """Pull objects from users namespace by key as Serialized.
+        
+        Returns a deferred to a pickled namespace.
+        """
     
 
 class PBEngineReferenceFromService(pb.Referenceable, object):
@@ -152,15 +170,6 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     def remote_push(self, pNamespace):
         namespace = pickle.loads(pNamespace)
         return self.service.push(**namespace).addErrback(pickle.dumps, 2)
-    
-    def remote_pushSerialized(self, pNamespace):
-        namespace = pickle.loads(pNamespace)
-        d = self.service.pushSerialized(**namespace)
-        return d.addErrback(pickle.dumps, 2)
-    
-    def remote_pullSerialized(self, *keys):
-        d = self.service.pullSerialized(*keys)
-        return d.addBoth(pickle.dumps, 2).addCallback(self.checkSize)
         
     def remote_pull(self, *keys):
         d = self.service.pull(*keys)
@@ -170,19 +179,28 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         d = self.service.pullNamespace(*keys)
         return d.addBoth(pickle.dumps, 2).addCallback(self.checkSize)
     
+    def remote_getResult(self, i=None):
+        d = self.service.getResult(i).addBoth(pickle.dumps, 2)
+        return d.addCallback(self.checkSize)
+    
     def remote_reset(self):
         return self.service.reset().addErrback(pickle.dumps, 2)
     
     def remote_kill(self):
         return self.service.kill().addErrback(pickle.dumps, 2)
     
-    def remote_getResult(self, i=None):
-        d = self.service.getResult(i).addBoth(pickle.dumps, 2)
-        return d.addCallback(self.checkSize)
-    
     def remote_status(self):
         d = self.service.status().addBoth(pickle.dumps, 2)
         return d.addCallback(self.checkSize)
+    
+    def remote_pushSerialized(self, pNamespace):
+        namespace = pickle.loads(pNamespace)
+        d = self.service.pushSerialized(**namespace)
+        return d.addErrback(pickle.dumps, 2)
+    
+    def remote_pullSerialized(self, *keys):
+        d = self.service.pullSerialized(*keys)
+        return d.addBoth(pickle.dumps, 2).addCallback(self.checkSize)
     
     def checkSize(self, package):
         if len(package) > self.MAX_LENGTH:
@@ -235,14 +253,7 @@ class EngineFromReference(object):
         if not self.checkSize(lines):
             return defer.fail(Failure(protocols.MessageSizeError()))
         return self.callRemote('execute', lines).addCallback(self.checkReturn)
-    
-    def pushSerialized(self, **namespace):
-        package = pickle.dumps(namespace, 2)
-        if not self.checkSize(package):
-            return defer.fail(Failure(protocols.MessageSizeError()))
-        d = self.callRemote('pushSerialized', package)
-        return d.addCallback(self.checkReturn)
-    
+
     def push(self, **namespace):
         package = pickle.dumps(namespace, 2)
         if not self.checkSize(package):
@@ -250,16 +261,15 @@ class EngineFromReference(object):
         d = self.callRemote('push', package)
         return d.addCallback(self.checkReturn)
     
-    def pullSerialized(self, *keys):
-        d = self.callRemote('pullSerialized', *keys)
-        return d.addCallback(pickle.loads)
-    
     def pull(self, *keys):
         d = self.callRemote('pull', *keys)
         return d.addCallback(pickle.loads)
     
     def pullNamespace(self, *keys):
         return self.callRemote('pullNamespace', *keys).addCallback(pickle.loads)
+
+    def getResult(self, i=None):
+        return self.callRemote('getResult', i).addCallback(self.checkReturn)
     
     def reset(self):
         return self.callRemote('reset').addCallback(self.checkReturn)
@@ -269,12 +279,20 @@ class EngineFromReference(object):
         self.callRemote('kill').addErrback(self.killBack)
         return defer.succeed(None)
 
-    def getResult(self, i=None):
-        return self.callRemote('getResult', i).addCallback(self.checkReturn)
-    
     def status(self):
         return self.callRemote('status').addCallback(self.checkReturn)
     
+    def pushSerialized(self, **namespace):
+        package = pickle.dumps(namespace, 2)
+        if not self.checkSize(package):
+            return defer.fail(Failure(protocols.MessageSizeError()))
+        d = self.callRemote('pushSerialized', package)
+        return d.addCallback(self.checkReturn)
+        
+    def pullSerialized(self, *keys):
+        d = self.callRemote('pullSerialized', *keys)
+        return d.addCallback(pickle.loads)
+ 
     def killBack(self, f):
         try:
             f.raiseException()
