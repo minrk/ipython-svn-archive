@@ -1404,6 +1404,8 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
                 return self.notifyFail()
             else:
                 if action == "ADD":
+                    if (host, port) in self.factory.notifiers:
+                        return self.notifyOK('')
                     n = results.INotifierChild((host, port))
                     return self.factory.addNotifier(n
                     ).addCallbacks(self.notifyOK, self.notifyFail)
@@ -1443,8 +1445,9 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         self.transport.loseConnection()
     
 
-class IVanillaControllerFactory(Interface):
-    """interface to clients for controller"""
+class IVanillaControllerFactory(results.INotifierParent):
+    """Interface to clients for controller.  Very much like IControllerService,
+    but excludes some methods such as push/pull without serialization.  """
     
     #IQueuedEngine multiplexer methods
     def cleanQueue(self, targets):
@@ -1486,6 +1489,7 @@ class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
     
     def __init__(self, service):
         self.service = service
+        self.notifiers = self.service.notifiers
     
     def addNotifier(self, n):
         return self.service.addNotifier(n)
@@ -1501,49 +1505,38 @@ class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
     
     #IQueuedEngine multiplexer methods
     def cleanQueue(self, targets):
-        """Cleans out pending commands in an engine's queue."""
         return self.service.cleanQueue(targets)
     
     #IEngine multiplexer methods
     def execute(self, targets, lines):
-        """Execute lines of Python code."""
         d = self.service.execute(targets, lines)
         return d
         
     def pushSerialized(self, targets, **namespace):
-        """Push value into locals namespace with name key."""
         return self.service.pushSerialized(targets, **namespace)
     
     def pullSerialized(self, targets, *keys):
-        """Gets an item out of the user namespace by key."""
         return self.service.pullSerialized(targets, *keys)
     
     def pullNamespace(self, targets, *keys):
-        """Gets an item out of the user namespace by key."""
         return self.service.pullNamespace(targets, *keys)
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
-        """distribute an object across targets"""
         return self.service.scatter(targets, key, seq, style, flatten)
     
     def gather(self, targets, key, style='basic'):
-        """gather and reassemble distributed object"""
         return self.service.gather(targets, key, style)
     
     def status(self, targets):
-        """status of engines"""
         return self.service.status(targets)
     
     def reset(self, targets):
-        """Reset the InteractiveShell."""
         return self.service.reset(targets)
     
     def kill(self, targets):
-        """kill an engine"""
         return self.service.kill(targets)
     
     def getResult(self, targets, i=None):
-        """Get the stdin/stdout/stderr of command i."""
         return self.service.getResult(targets, i)
     
 

@@ -63,85 +63,85 @@ class IMultiEngine(Interface):
         """partition and distribute a sequence"""
     
     def scatterAll(key, seq, style='basic', flatten=False):
-        """"""
+        """See this.scatter for documentation."""
     
     def gather(targets, key, style='basic'):
         """gather object as distributed by scatter"""
     
     def gatherAll(key, style='basic'):
-        """"""
+        """See this.gather for documentation."""
     #IRemoteEngine multiplexer methods
     def pushSerialized(targets, **namespace):
         """Push a dict of keys and Serialized to the user's namespace."""
     
     def pushSerializedAll(**namespace):
-        """Push a dict of keys and Serialized to the user's namespace."""
+        """See this.pushSerialized for documentation."""
     
     def pullSerialized(targets, *keys):
         """Pull objects by key form the user's namespace as Serialized."""
     
     def pullSerializedAll(*keys):
-        """Pull objects by key form the user's namespace as Serialized."""
+        """See this.pullSerialized for documentation."""
     
     #IQueuedEngine multiplexer methods
     def clearQueue(targets):
         """Clears out pending commands in an engine's queue."""
     
     def clearQueueAll():
-        """Clears out pending commands in all queues."""
+        """See this.clearQueue for documentation."""
     
     #IEngineCompleteBase multiplexer methods
     def execute(targets, lines):
         """Execute lines of Python code."""
     
     def executeAll(lines):
-        """Execute lines of Python code."""
+        """See this.execute for documentation."""
     
     def push(targets, **namespace):
         """Push value into locals namespace with name key."""
     
     def pushAll(**namespace):
-        """"""
+        """See this.push for documentation."""
     
     def pull(targets, *keys):
         """Gets an item out of the self.locals dict by key."""
     
     def pullAll(*keys):
-        """"""
+        """See this.pull for documentation."""
     
     def pullNamespace(targets, *keys):
         """Gets a namespace dict from targets by keys."""
     
     def pullNamespaceAll(*keys):
-        """"""
+        """See this.pullNamespace for documentation."""
     
     def getResult(targets, i=None):
         """Get the stdin/stdout/stderr of command i."""
     
     def getResultAll(i=None):
-        """"""
+        """See this.getResult for documentation."""
     
     def reset(targets):
         """Reset the InteractiveShell."""
     
     def resetAll():
-        """"""
+        """See this.reset for documentation."""
     
     def status(targets):
         """Return the status of engines"""
     
     def statusAll():
-        """"""
+        """See this.status for documentation."""
     
     def kill(targets):
         """Kills the engine process"""
     
     def killAll():
-        """"""
+        """See this.kill for documentation."""
     
 
 # the controller interface implements both IEngineCompleteController, IMultiEngine
-class IController(IRemoteController, IMultiEngine):
+class IController(IRemoteController, IMultiEngine, results.INotifierParent):
     
     pass 
 
@@ -222,7 +222,7 @@ def autoMethod(self, %s:
         addAllMethods(self)
     
     
-    #IRemoteController
+    # IRemoteController
     
     def registerEngine(self, remoteEngine, id=None):
         """register new engine connection"""
