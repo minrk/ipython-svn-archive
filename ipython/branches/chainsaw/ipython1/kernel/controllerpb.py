@@ -34,37 +34,53 @@ class IPBController(Interface):
     """
     
     def remote_verifyTargets(targets):
+        """"""
     
     def remote_getIDs():
-    
+        """"""
+        
     def remote_scatter(targets, key, seq, style='basic', flatten=False):
-    
+        """"""
+        
     def remote_gather(targets, key, style='basic'):
-    
+        """"""
+        
     def remote_execute(targets, lines):
-    
+        """"""
+        
     def remote_push(targets, **namespace):
-    
+        """"""
+        
     def remote_pull(targets, *keys):
-    
+        """"""
+        
     def remote_pullNamespace(targets, *keys):
-    
+        """"""
+        
     def remote_getResult(targets, i=None):
-    
+        """"""
+        
     def remote_reset(targets):
-    
+        """"""
+        
     def remote_status(targets):
-    
+        """"""
+        
     def remote_kill(targets):
-    
+        """"""
+        
     def remote_pushSerialized(targets, **namespace):
-    
+        """"""
+        
     def remote_pullSerialized(targets, *keys):
-    
+        """"""
+        
     def remote_clearQueue(targets):
-    
+        """"""
+        
     def remote_addNotifier(reference):    
-
+        """"""
+        
 class PBControllerRootFromService(pb.Root):
     """Perspective Broker interface to controller.  Same as IMultiEngine, but
     with 'remote_'

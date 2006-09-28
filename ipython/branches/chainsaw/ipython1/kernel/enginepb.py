@@ -112,6 +112,7 @@ class IPBEngine(Interface):
         """set this.id"""
     
     def remote_execute(lines):
+        """"""
         
     def remote_push(self, pNamespace):
         """Push a namespace into the users namespace.
@@ -120,6 +121,7 @@ class IPBEngine(Interface):
         """
 
     def remote_pull(*keys):
+        """"""
 
     def remote_pullNamespace(*keys):
 
@@ -130,11 +132,14 @@ class IPBEngine(Interface):
         """
         
     def remote_reset():
-    
+        """"""
+        
     def remote_kill():
+        """"""
         
     def remote_status():
-
+        """"""
+        
     def remote_pushSerialized(pNamespace):
         """Push a dict of keys and serialized objects into users namespace.
         

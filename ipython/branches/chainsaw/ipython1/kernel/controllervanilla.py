@@ -1449,25 +1449,34 @@ class IVanillaControllerFactory(results.INotifierParent):
     Very much like IControllerService, but excludes some methods such as 
     push/pull without serialization.
     """
-    
-    def cleanQueue(self, targets):
-    
+        
     def execute(self, targets, lines):
-    
-    def pushSerialized(self, targets, **namespace):
-    
-    def pullSerialized(self, targets, *keys):
-    
+        """"""
+        
     def pullNamespace(self, targets, *keys):
+        """"""
+
+    def getResult(self, targets, i=None):
+        """"""
     
     def status(self, targets):
-    
+        """"""
+        
     def reset(self, targets):
-    
+        """"""
+        
     def kill(self, targets):
+        """"""
     
-    def getResult(self, targets, i=None):
-
+    def pushSerialized(self, targets, **namespace):
+        """"""
+    
+    def pullSerialized(self, targets, *keys):
+        """"""
+    
+    def cleanQueue(self, targets):
+        """"""
+        
 class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
     """Adapt a ControllerService to a IVanillaControllerFactory implementer.
     

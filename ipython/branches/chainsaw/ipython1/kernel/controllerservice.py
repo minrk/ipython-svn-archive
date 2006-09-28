@@ -102,49 +102,71 @@ class IMultiEngine(Interface):
     # The fooAll methods correspond to foo('all',...), that is with targets='all'
        
     def execute(targets, lines):
+        """"""
     
     def executeAll(lines):
-    
+        """"""
+        
     def push(targets, **namespace):
-    
+        """"""
+        
     def pushAll(**namespace):
-    
+        """"""
+        
     def pull(targets, *keys):
-    
+        """"""
+        
     def pullAll(*keys):
+        """"""
     
     def pullNamespace(targets, *keys):
+        """"""
     
     def pullNamespaceAll(*keys):
-    
+        """"""
+        
     def getResult(targets, i=None):
-    
+        """"""
+        
     def getResultAll(i=None):
-    
+        """"""
+        
     def reset(targets):
-    
+        """"""
+        
     def resetAll():
-    
+        """"""
+        
     def status(targets):
-    
+        """"""
+        
     def statusAll():
-    
+        """"""
+        
     def kill(targets):
-    
+        """"""
+        
     def killAll():
-    
+        """"""
+        
     def pushSerialized(targets, **namespace):
-    
+        """"""
+        
     def pushSerializedAll(**namespace):
-    
+        """"""
+        
     def pullSerialized(targets, *keys):
-    
+        """"""
+        
     def pullSerializedAll(*keys):
-    
+        """"""
+        
     def clearQueue(targets):
-    
+        """"""
+        
     def clearQueueAll():
-    
+        """"""
+        
 class IController(IRemoteController, IMultiEngine, results.INotifierParent):
     """The Controller is an IRemoteController, IMultiEngine & INotifierParent."""
     
