@@ -38,6 +38,7 @@ from ipython1.kernel import results
 # Interfaces for the Controller
 #-------------------------------------------------------------------------------
 
+
 class IRemoteController(Interface):
     """The Interface a ControllerService exposes to an EngineService."""
     
@@ -62,7 +63,12 @@ class IMultiEngine(Interface):
     
     For the most part this class simply acts as a multiplexer of Engines.
     Thus most of the methods here are jut like those in the IEngine*
-    interfaces, but with an extra argument: targets.
+    interfaces, but with an extra argument: targets.  The targets argument
+    can have the following forms:
+    
+    targets = 10            # Engines are indexed by ints
+    targets = [0,1,2,3]     # A list of ints
+    targets = 'all'         # A string to indicate all targets
     
     All IMultiEngine methods must return a Deferred to a list with length 
     equal to the number of targets, except for verifyTargets.
@@ -82,25 +88,18 @@ class IMultiEngine(Interface):
         """Partition and distribute a sequence to targets."""
     
     def scatterAll(key, seq, style='basic', flatten=False):
+        """Scatter to all targets."""
     
     def gather(targets, key, style='basic'):
         """Gather object key from targets."""
     
     def gatherAll(key, style='basic'):
-
+        """Gather from all targets."""
+        
     #---------------------------------------------------------------------------
     # Mutiplexed IEngine methos
     #---------------------------------------------------------------------------
-
-    # These methods are basically those of the IEngineComplete interface.
-    # The targets argument specifies which engines the command will be run
-    # on.  Examples of valid targets:
-    # targets = 10
-    # targets = [0,1,2,3,4]
-    # targets = 'all'
-    #
-    # The fooAll methods correspond to foo('all',...), that is with targets='all'
-       
+     
     def execute(targets, lines):
         """"""
     
@@ -167,14 +166,17 @@ class IMultiEngine(Interface):
     def clearQueueAll():
         """"""
         
+        
 class IController(IRemoteController, IMultiEngine, results.INotifierParent):
     """The Controller is an IRemoteController, IMultiEngine & INotifierParent."""
     
     pass 
 
+
 #-------------------------------------------------------------------------------
 # Implementation of the ControllerService
 #-------------------------------------------------------------------------------
+
 
 def addAllMethods(obj, interface=IMultiEngine):
     """Dynamically generate the fooAll methods in IController."""
@@ -194,6 +196,7 @@ def allMethod(self, %s):
             setattr(obj, m+'All', instancemethod(allMethod, obj, obj.__class__))
             del allMethod
     return obj
+
 
 class ControllerService(service.Service, results.NotifierParent):
     """A Controller represented as a Twisted Service.

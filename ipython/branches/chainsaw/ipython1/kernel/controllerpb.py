@@ -22,6 +22,7 @@ from zope.interface import Interface, implements
 
 from ipython1.kernel import controllerservice as cs, results
 
+
 #-------------------------------------------------------------------------------
 # The Controller side of things
 #-------------------------------------------------------------------------------
@@ -29,8 +30,9 @@ from ipython1.kernel import controllerservice as cs, results
 class IPBController(Interface):
     """Perspective Broker interface to controller.  
     
-    Same as IMultiEngine, but with 'remote_' prefix.  See the documentation
-    of IMultiEngine for details.
+    The methods in this interface are similar to those from IMultiEngine, 
+    but their arguments and return values are pickled if they are not already
+    a string so they can be send over PB.
     """
     
     def remote_verifyTargets(targets):
@@ -81,10 +83,13 @@ class IPBController(Interface):
     def remote_addNotifier(reference):    
         """"""
         
+        
 class PBControllerRootFromService(pb.Root):
-    """Perspective Broker interface to controller.  Same as IMultiEngine, but
-    with 'remote_'
+    """Perspective Broker interface to controller.
+    
+    See IPBController for documentation. 
     """
+    
     implements(IPBController)
     
     def __init__(self, cs):
@@ -159,11 +164,14 @@ class PBControllerRootFromService(pb.Root):
                 rlist[rlist.index(r)] = pickle.dumps(r, 2)
         return rlist
 
+
 components.registerAdapter(PBControllerRootFromService,
             cs.ControllerService, IPBController)
 
+
 class IPBControllerFactory(Interface):
     pass
+    
     
 def PBServerFactoryFromService(service):
     """Adapt a ControllerService to a PBServerFactory.
@@ -172,6 +180,7 @@ def PBServerFactoryFromService(service):
     """
     
     return pb.PBServerFactory(IPBController(service))
+    
     
 components.registerAdapter(PBServerFactoryFromService,
             cs.ControllerService, IPBControllerFactory)
@@ -266,8 +275,10 @@ class PBRemoteController(pb.Referenceable, results.NotifierParent):
             return map(self.checkReturn, r)
         return r
 
+
 components.registerAdapter(PBRemoteController, 
         pb.RemoteReference, cs.IMultiEngine)
+    
     
 class PBNotifierChild(results.BaseNotifierChild):
     """Can we document the Notifier stuff?"""
@@ -279,6 +290,7 @@ class PBNotifierChild(results.BaseNotifierChild):
     
     def notify(self, result):
         return self.callRemote('notify', result).addErrback(self.onDisconnect)
+    
     
 components.registerAdapter(PBNotifierChild,
         pb.RemoteReference, results.INotifierChild)

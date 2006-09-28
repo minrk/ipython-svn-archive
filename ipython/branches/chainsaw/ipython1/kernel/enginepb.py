@@ -51,6 +51,7 @@ from ipython1.kernel import controllerservice, protocols
 class IPBEngineClientFactory(Interface):
     pass
 
+
 class PBEngineClientFactory(pb.PBClientFactory, object):
     """PBClientFactory on the Engine that connects to the Controller."""
     
@@ -92,8 +93,10 @@ class PBEngineClientFactory(pb.PBClientFactory, object):
         log.msg("got ID: %r" % id)
         return id
 
+
 components.registerAdapter(PBEngineClientFactory, 
                     EngineService, IPBEngineClientFactory)
+
 
 # Expose a PB interface to the EngineService
      
@@ -154,7 +157,7 @@ class IPBEngine(Interface):
     
 
 class PBEngineReferenceFromService(pb.Referenceable, object):
-    """Adapt and EngineService to an IPBEngine implementer."""
+    """Adapt an EngineService to an IPBEngine implementer."""
         
     implements(IPBEngine)
     
@@ -216,6 +219,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
 components.registerAdapter(PBEngineReferenceFromService,
                            EngineService,
                            IPBEngine)
+
 
 #-------------------------------------------------------------------------------
 # Now the server (Controller) side of things
@@ -316,9 +320,12 @@ class EngineFromReference(object):
         if len(package) < self.MAX_LENGTH:
             return True
     
+    
 components.registerAdapter(EngineFromReference,
                         pb.RemoteReference,
                         IEngineBase)
+
+
 
 class IPBRemoteEngineRoot(Interface):
     """Interface that tells how an Engine sees a Controller.
@@ -354,6 +361,7 @@ class PBRemoteEngineRootFromService(pb.Root):
         engineReference.broker.notifyOnDisconnect(notify)
         return id
 
+
 components.registerAdapter(PBRemoteEngineRootFromService,
                         controllerservice.ControllerService,
                         IPBRemoteEngineRoot)
@@ -362,6 +370,7 @@ components.registerAdapter(PBRemoteEngineRootFromService,
 class IPBEngineServerFactory(Interface):
     pass
 
+
 def PBEngineServerFactoryFromService(service):
     """Adapt a ControllerService to a IPBEngineServerFactory.
     
@@ -369,6 +378,7 @@ def PBEngineServerFactoryFromService(service):
     """
     
     return pb.PBServerFactory(IPBRemoteEngineRoot(service))
+
 
 components.registerAdapter(PBEngineServerFactoryFromService,
                         controllerservice.ControllerService,

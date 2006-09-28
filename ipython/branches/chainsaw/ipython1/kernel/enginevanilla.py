@@ -54,6 +54,7 @@ defer.setDebugging(1)
 class IVanillaEngineClientProtocol(zi.Interface):
     pass
 
+
 class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
     """The client side of the vanilla protocol."""
     
@@ -425,11 +426,13 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
         self._reset()
         self.sendString('STATUS FAIL')
     
+    
 class IVanillaEngineClientFactory(engineservice.IEngineBase,
     engineservice.IEngineSerialized):
     """Interface or the client factory of the Engine."""
     
     pass
+
 
 class VanillaEngineClientFactoryFromEngineService(protocols.EnhancedClientFactory):
     """Adapt an EngineService to a vanilla protocol client factory."""
@@ -504,10 +507,12 @@ components.registerAdapter(VanillaEngineClientFactoryFromEngineService,
 # Controller side of things
 #-------------------------------------------------------------------------------
 
+
 class IVanillaEngineServerProtocol(engineservice.IEngineBase,
     engineservice.IEngineSerialized):
     
     pass
+    
     
 class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
     """Server side of the vanilla protocol."""
@@ -980,6 +985,7 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         else:
             return s
 
+
 class IVanillaEngineServerFactory(IRemoteController):
     """Interface the vanillized controller presents to an Engine.
     
@@ -987,6 +993,7 @@ class IVanillaEngineServerFactory(IRemoteController):
     """
     
     pass
+
 
 class VanillaEngineServerFactoryFromControllerService(protocols.EnhancedServerFactory):
     """Adapts a ControllerService to an IVanillaEngineServerFactory implementer.
@@ -1017,6 +1024,7 @@ class VanillaEngineServerFactoryFromControllerService(protocols.EnhancedServerFa
                 serialized.ArraySerialized)
         else:
             return self.service.registerSerializationTypes(serialized.PickleSerialized)
+
 
 components.registerAdapter(VanillaEngineServerFactoryFromControllerService,
                            ControllerService,

@@ -105,12 +105,14 @@ class IEngineSerialized(zi.Interface):
         Returns a list of or one Serialized.
         """
     
+    
 class IEngineThreaded(zi.Interface):
     """A place holder for threaded commands.  
     
     All methods should return deferreds.
     """
     pass
+
 
 class IEngineQueued(zi.Interface):
     """Interface for an Engine with a queue.  
@@ -133,9 +135,11 @@ class IEngineComplete(IEngineBase, IEngineSerialized, IEngineQueued, IEngineThre
     """
     pass
 
+
 #-------------------------------------------------------------------------------
 # Functions and classes to implement the EngineService
 #-------------------------------------------------------------------------------
+
 
 def completeEngine(engine):
     """Completes an engine object.  
@@ -162,8 +166,9 @@ def completeEngine(engine):
     assert(IEngineComplete.providedBy(engine))
     return engine
 
+
 class EngineService(service.Service):
-    """Adapt an IPython shell into a IEngine implementing Twisted Service."""
+    """Adapt a IPython shell into a IEngine implementing Twisted Service."""
     
     zi.implements(IEngineBase, IEngineSerialized)
     
@@ -193,13 +198,53 @@ class EngineService(service.Service):
         d = defer.execute(self.shell.execute, lines)
         d.addCallback(self.addIDToResult)
         return d
-    
+
     def addIDToResult(self, result):
         return (self.id,) + result
-    
+
     def push(self, **namespace):
         return defer.execute(self.shell.update, namespace)
+
+    def pull(self, *keys):
+        if len(keys) > 1:
+            pulledDeferreds = []
+            for key in keys:
+                pulledDeferreds.append(defer.execute(self.shell.get,key))
+            d = gatherBoth(pulledDeferreds)
+            return d
+        else:
+            return defer.execute(self.shell.get, keys[0])
     
+    def pullNamespace(self, *keys):
+        ns = {}
+        for key in keys:
+            ns[key] = self.shell.get(key)
+        return defer.succeed(ns)
+    
+    def getResult(self, i=None):
+        d = defer.execute(self.shell.getCommand, i)
+        d.addCallback(self.addIDToResult)
+        return d
+    
+    def reset(self):
+        return defer.execute(self.shell.reset)
+    
+    def kill(self):
+        try:
+            reactor.stop()
+        except RuntimeError:
+            log.msg('The reactor was not running apparently.')
+            return defer.fail()
+        else:
+            return defer.succeed(None)
+
+    def status(self):
+        remotes = {}
+        for k,v in self.shell.locals.iteritems():
+            if k not in ['__name__', '__doc__', '__console__', '__builtins__']:
+                remotes[k] = repr(v) # want representation, not actual object
+        return defer.succeed(remotes)
+
     def pushSerialized(self, **sNamespace):
         ns = {}
         for k,v in sNamespace.iteritems():
@@ -211,16 +256,6 @@ class EngineService(service.Service):
             else:
                 ns[k] = v
         return defer.execute(self.shell.update, ns)
-    
-    def pull(self, *keys):
-        if len(keys) > 1:
-            pulledDeferreds = []
-            for key in keys:
-                pulledDeferreds.append(defer.execute(self.shell.get,key))
-            d = gatherBoth(pulledDeferreds)
-            return d
-        else:
-            return defer.execute(self.shell.get, keys[0])
     
     def pullSerialized(self, *keys):
         if len(keys) > 1:
@@ -242,35 +277,6 @@ class EngineService(service.Service):
     def handlePullProblems(self, reason):
         return serialized.serialize(reason, 'FAILURE')
     
-    def pullNamespace(self, *keys):
-        ns = {}
-        for key in keys:
-            ns[key] = self.shell.get(key)
-        return defer.succeed(ns)
-    
-    def reset(self):
-        return defer.execute(self.shell.reset)
-    
-    def kill(self):
-        try:
-            reactor.stop()
-        except RuntimeError:
-            log.msg('The reactor was not running apparently.')
-            return defer.fail()
-        else:
-            return defer.succeed(None)
-    
-    def getResult(self, i=None):
-        d = defer.execute(self.shell.getCommand, i)
-        d.addCallback(self.addIDToResult)
-        return d
-    
-    def status(self):
-        remotes = {}
-        for k,v in self.shell.locals.iteritems():
-            if k not in ['__name__', '__doc__', '__console__', '__builtins__']:
-                remotes[k] = repr(v) # want representation, not actual object
-        return defer.succeed(remotes)
     
 class QueuedEngine(object):
     """Add a queue to an IEngine implementing object.
@@ -455,7 +461,7 @@ class Command(object):
         if not self.args:
             args = ''
         else:
-            args = str(self.args)[1:-2]#cut off (...,)
+            args = str(self.args)[1:-2]  #cut off (...,)
         for k,v in self.kwargs.iteritems():
             if args:
                 args += ', '
