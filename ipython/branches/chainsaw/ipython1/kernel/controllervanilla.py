@@ -90,7 +90,7 @@ class RemoteController(RemoteControllerBase):
             and the port is an int.
         """
         self.addr = addr
-        self.block = False
+        self.block = True
         controllerservice.addAllMethods(self)
         self.activate()
     

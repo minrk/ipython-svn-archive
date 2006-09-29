@@ -27,34 +27,57 @@ import os
 # Utilities
 #-----------------------------------------------------------------------------
 
-print globals()
+_size = None
+_rank = None
 
-global size, rank
-print size, rank
+def setSizeAndRank(s, r):
+    global _size
+    global _rank
+    print "setting s,r: ", s, r
+    _size = s
+    _rank = r
 
 def getSizeAndRank():
-
-    try:
-        size, rank
-    except NameError:
-        return None
-    else:
-        return size, rank
-
+    return _size, _rank
+    
+def getPartitionIndices(p, q, seqLength):
+    """Return the lo, hi indices of the pth partition of a sequence of len q."""
+    
+    # Test for error conditions here
+    if p<0 or p>=q:
+      print "No partition exists."
+      return
+      
+    remainder = seqLength%q
+    basesize = seqLength/q
+    hi = []
+    lo = []
+    for n in range(q):
+        if n < remainder:
+            lo.append(n * (basesize + 1))
+            hi.append(lo[-1] + basesize + 1)
+        else:
+            lo.append(n*basesize + remainder)
+            hi.append(lo[-1] + basesize)
+            
+    return lo[p], hi[p]
+    
 #-------------------------------------------------------------------------------
 # Distributed versions of some standard Python datatypes.
 #-------------------------------------------------------------------------------
 
-def drange(start, stop, step):
+def drange(start, stop, step=1):
     """A distributed range object."""
     
-    sizerank = getSizeAndRank()
-    if sizerank is None:
-        print "Globals size and rank must be defined."
+    size, rank = getSizeAndRank()
+    if size is None or rank is None:
+        print "First set the size and rank using setSizeAndRank."
         return
-    else:
-        size, rank = sizerank
-    
+        
+    totalLength = stop - start
+    lo, hi = getPartitionIndices(rank, size, totalLength)
+    return range(lo, hi)
+        
 #-------------------------------------------------------------------------------
 # Distributed versions of numpy arrays.
 #-------------------------------------------------------------------------------
@@ -67,20 +90,15 @@ else:
     def darange(start, stop, step):
         """A distributed version of arange."""
         
-        sizerank = getSizeAndRank()
-        if sizerank is None:
-            print "Globals size and rank must be defined."
+        size, rank = getSizeAndRank()
+        if size is None or rank is None:
+            print "First set the size and rank using setSizeAndRank."
             return
-        else:
-            size, rank = sizerank
         
     def dlinspace(start, stop, n):
         """A distributed version of linspace."""
         
-        sizerank = getSizeAndRank()
-        if sizerank is None:
-            print "Globals size and rank must be defined."
+        size, rank = getSizeAndRank()
+        if size is None or rank is None:
+            print "First set the size and rank using setSizeAndRank."
             return
-        else:
-            size, rank = sizerank
-    
