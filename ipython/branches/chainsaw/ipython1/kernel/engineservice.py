@@ -253,10 +253,17 @@ class EngineService(object, service.Service):
             return defer.succeed(None)
 
     def status(self):
-        remotes = {}
-        for k,v in self.shell.locals.iteritems():
+        """Return the status of the Engine.
+        
+        This used to return a dict of all the keys/repr(values) in the 
+        user's namespace.  This was too much info for the ControllerService
+        to handle so it is now just a list of keys.
+        """
+        
+        remotes = []
+        for k in self.shell.locals.iterkeys():
             if k not in ['__name__', '__doc__', '__console__', '__builtins__']:
-                remotes[k] = repr(v) # want representation, not actual object
+                remotes.append(k)
         return defer.succeed(remotes)
 
     def pushSerialized(self, **sNamespace):
