@@ -70,7 +70,6 @@ class RemoteControllerBase(object):
      * statusAll
      * kill
      * killAll
-     * pushSerialized (why not pullSerialized?)
      * getIDs
      * getMappedIDs
      * scatter
@@ -273,10 +272,7 @@ class RemoteControllerView(RemoteControllerBase):
     
     def killAll(self):
         return self.kill('all')
-        
-    def pushSerialized():
-        pass
-        
+                
     def getIDs(self):
         """Return the ids of the Engines as the Controller indexes them."""
         

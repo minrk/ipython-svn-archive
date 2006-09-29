@@ -40,7 +40,7 @@ from IPython.ColorANSI import TermColors
 
 import ipython1.kernel.magic
 from ipython1.kernel import controllerservice, serialized, protocols, results
-from ipython1.kernel.util import _tar_module
+from ipython1.kernel.util import tarModule
 from ipython1.kernel.controllerclient import \
     RemoteControllerBase, RemoteControllerView, EngineProxy
 
@@ -103,7 +103,7 @@ class RemoteController(RemoteControllerBase):
         
         return self.disconnect()
     
-    def is_connected(self):
+    def isConnected(self):
         """Are we connected to the controller?
         
         Return True or False.
@@ -117,14 +117,14 @@ class RemoteController(RemoteControllerBase):
             else:
                 return True
     
-    def _check_connection(self):
+    def _checkConnection(self):
         """Reconnect if we are not connected to the controller."""
         
-        if not self.is_connected():
+        if not self.isConnected():
             return self.connect()
         return True
 
-    def parseTargets(self, targets):
+    def _parseTargets(self, targets):
         """Parse and validate the targets argument."""
         
         if isinstance(targets, int):
@@ -141,12 +141,12 @@ class RemoteController(RemoteControllerBase):
             return targets
         return False
     
-    def multiTargets(self, targets):
+    def _multiTargets(self, targets):
         """Are we dealing with multiple targets?"""
         
         return not isinstance(targets, int) and len(targets) > 1
     
-    def _push_moduleString(self, tarball_name, fileString):
+    def _pushModuleString(self, tarball_name, fileString):
         """This method send a tarball'd module to a kernel."""
         
         self.pushAll(tar_fileString=fileString)
@@ -156,6 +156,11 @@ class RemoteController(RemoteControllerBase):
         self.executeAll("tar_file.close()", block=False)
         self.executeAll("import os", block=False)
         self.executeAll("os.system('tar -xf %s')" % tarball_name)        
+    
+    def _sendSerialized(self, serial):
+        assert isinstance(serial, serialized.Serialized)
+        for line in serial:
+            self.es.writeNetstring(line)
     
     #-------------------------------------------------------------------------------
     # IMultiEngine methods
@@ -177,11 +182,11 @@ class RemoteController(RemoteControllerBase):
             False:
                 do not wait, return as soon as source has been sent, print nothing.
         """
-        targetstr = self.parseTargets(targets)
+        targetstr = self._parseTargets(targets)
         if not targetstr or not source:
             print "Need something to do!"
             return False
-        self._check_connection()
+        self._checkConnection()
         
         if self.block or block:
             string = "EXECUTE BLOCK %s::%s" % (source, targetstr)
@@ -278,8 +283,8 @@ class RemoteController(RemoteControllerBase):
         @arg namespace:
             The python objects to send and their remote keys.  i.e. a=1, b='asdf'
         """
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not namespace or not self._check_connection():
+        targetstr = self._parseTargets(targets)
+        if not targetstr or not namespace or not self._checkConnection():
             print "Need something to do!"
             return False
         
@@ -305,7 +310,7 @@ class RemoteController(RemoteControllerBase):
                 print "Object cannot be serialized: ", key, e
                 return False
             else:
-                self.pushSerialized(serialObject)
+                self._sendSerialized(serialObject)
         self.es.writeNetstring("PUSH DONE")
         string = self.es.readNetstring()
         if string == "PUSH OK":
@@ -316,6 +321,9 @@ class RemoteController(RemoteControllerBase):
         else:
             return string
 
+    def pushAll(self, **namespace):
+        return self.push('all', **namespace)
+        
     def pull(self, targets, *keys):
         """Get python object(s) from remote kernel(s).
                 
@@ -351,8 +359,8 @@ class RemoteController(RemoteControllerBase):
                     for t in targets:
                         l.append(rc.pull(t, *keys))
         """
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not keys or not self._check_connection():
+        targetstr = self._parseTargets(targets)
+        if not targetstr or not keys or not self._checkConnection():
             print "Need something to do!"
             return False
         
@@ -362,7 +370,7 @@ class RemoteController(RemoteControllerBase):
             print "keys must be strings"
             return False
         
-        multitargets = self.multiTargets(targets)
+        multitargets = self._multiTargets(targets)
         string = "PULL %s::%s" % (keystr, targetstr)
         try:
             self.es.writeNetstring(string)
@@ -435,6 +443,9 @@ class RemoteController(RemoteControllerBase):
             print string
             return False
 
+    def pullAll(self, *keys):
+        return self.pull('all', *keys)
+        
     def pullNamespace(self, targets, *keys):
         """Gets a namespace dict with keys from targets.  This is just a wrapper
         for pull, to construct namespace dicts from the results of pull.
@@ -447,12 +458,12 @@ class RemoteController(RemoteControllerBase):
                 is maintained.
                 
             """
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not keys or not self._check_connection():
+        targetstr = self._parseTargets(targets)
+        if not targetstr or not keys or not self._checkConnection():
             print "Need something to do!"
             return False
         
-        multitargets = self.multiTargets(targets)
+        multitargets = self._multiTargets(targets)
         values = self.pull(targets, *keys)
         if values == False:
             # could be bad, but not *necessarily*
@@ -488,11 +499,14 @@ class RemoteController(RemoteControllerBase):
             returns = returns[0]
         return returns
             
+    def pullNamespaceAll(self, *keys):
+        return self.pullNamespace('all', *keys)
+            
     def getResult(self, targets, i=None):
         """Gets a specific result from the kernels, returned as a tuple, or 
             list of tuples if multiple targets."""
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not self._check_connection():
+        targetstr = self._parseTargets(targets)
+        if not targetstr or not self._checkConnection():
             print "Need something to do!"
             return False
         
@@ -521,7 +535,7 @@ class RemoteController(RemoteControllerBase):
                 return False
             else:
                 if string == "GETRESULT OK":
-                    if not self.multiTargets(targets):
+                    if not self._multiTargets(targets):
                         data = data[0]
                     return data
                 else:
@@ -532,10 +546,13 @@ class RemoteController(RemoteControllerBase):
             print string
             return False
     
+    def getResultAll(self, i=None):
+        return self.getResult('all', i)
+    
     def status(self, targets):
         """Check the status of the kernel."""
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not self._check_connection():
+        targetstr = self._parseTargets(targets)
+        if not targetstr or not self._checkConnection():
             print "Need something to do!"
             return False
         
@@ -561,7 +578,7 @@ class RemoteController(RemoteControllerBase):
                 return False
             else:
                 if string == "STATUS OK":
-                    if not self.multiTargets(targets):
+                    if not self._multiTargets(targets):
                         data = data[0][1]
                     return data
                 else:
@@ -571,10 +588,13 @@ class RemoteController(RemoteControllerBase):
             print "Could not handle: "+string
             return False
     
+    def statusAll(self):
+        return self.status('all')
+    
     def reset(self, targets):
         """Clear the namespace if the kernel."""
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not self._check_connection():
+        targetstr = self._parseTargets(targets)
+        if not targetstr or not self._checkConnection():
             print "Need something to do!"
             return False
         
@@ -596,10 +616,13 @@ class RemoteController(RemoteControllerBase):
             print string
             return False      
     
+    def resetAll(self):
+        return self.reset('all')
+    
     def kill(self, targets):
         """Kill the engine completely."""
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not self._check_connection():
+        targetstr = self._parseTargets(targets)
+        if not targetstr or not self._checkConnection():
             print "Need something to do!"
             return False
         string = "KILL ::%s" %targetstr
@@ -618,15 +641,13 @@ class RemoteController(RemoteControllerBase):
         else:
             print string
             return False     
-
-    def pushSerialized(self, serial):
-        assert isinstance(serial, serialized.Serialized)
-        for line in serial:
-            self.es.writeNetstring(line)
+                
+    def killAll(self):
+        return self.kill('all')
                 
     def getIDs(self):
         """Return the id list of the currently connected Engines."""
-        if not self._check_connection():
+        if not self._checkConnection():
             print "Not Connected"
             return False
         
@@ -659,8 +680,9 @@ class RemoteController(RemoteControllerBase):
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         """distribute sequence object to targets"""
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not key or not self._check_connection()\
+        
+        targetstr = self._parseTargets(targets)
+        if not targetstr or not key or not self._checkConnection()\
                 or not isinstance(seq, (tuple, list)+arraytypes):
             print "Need something to do"
             return False
@@ -682,7 +704,7 @@ class RemoteController(RemoteControllerBase):
                 print "Not Connected"
                 return False
         
-        self.pushSerialized(serial)
+        self._sendSerialized(serial)
         reply = self.es.readNetstring()
         if reply == 'SCATTER OK':
             return True
@@ -690,10 +712,13 @@ class RemoteController(RemoteControllerBase):
             print reply
             return False
     
+    def scatterAll(self, key, seq, style='basic', flatten=False):
+        return self.scatter('all', key, seq, style=style, flatten=flatten)
+    
     def gather(self, targets, key, style='basic'):
         """gather a distributed object, and reassemble it"""
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not key or not self._check_connection():
+        targetstr = self._parseTargets(targets)
+        if not targetstr or not key or not self._checkConnection():
             print "Need something to do!"
             return False
         
@@ -739,6 +764,9 @@ class RemoteController(RemoteControllerBase):
             print "Gather Failed"
             return False
 
+    def gatherAll(self, key, style='basic'):
+        return self.gather('all', key, style=style)
+
     def notify(self, addr=None, flag=True):
         """Instruct the kernel to notify a result gatherer.
         
@@ -763,7 +791,7 @@ class RemoteController(RemoteControllerBase):
         @arg flag:
             A boolean to turn notification on (True) or off (False) 
         """
-        if not self._check_connection():
+        if not self._checkConnection():
             print "Not Connected"
             return False
         
@@ -849,7 +877,7 @@ class RemoteController(RemoteControllerBase):
     def disconnect(self):
         """Disconnect from the controller."""
         
-        if self.is_connected():
+        if self.isConnected():
             try:
                 self.es.writeNetstring("DISCONNECT")
             except socket.error:
@@ -919,8 +947,8 @@ class RemoteController(RemoteControllerBase):
         - There are cross platform issues. 
         """
         
-        tarball_name, fileString = _tar_module(mod)
-        self._push_moduleString(tarball_name, fileString)
+        tarball_name, fileString = tarModule(mod)
+        self._pushModuleString(tarball_name, fileString)
     
 
 #-------------------------------------------------------------------------------

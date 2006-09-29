@@ -450,11 +450,13 @@ class VanillaEngineClientFactoryFromEngineService(protocols.EnhancedClientFactor
         self.service = service
     
     # From IVanillaEngineClientFactory
+    
     def _getID(self):
         return self.service.id
     
     def _setID(self, id):
         """Set the engine id, but with a hook for tests."""
+
         self.service.id = id
         self.notifySetID()   # Use as a hook for tests
     
@@ -466,7 +468,7 @@ class VanillaEngineClientFactoryFromEngineService(protocols.EnhancedClientFactor
         """
         pass
     
-    id = property(_getID, _setID, "The engine's id.")
+    id = property(_getID, _setID)
     
     #---------------------------------------------------------------------------
     # Methods from EngineService/IEngine interfaces
@@ -540,7 +542,7 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
     def _setID(self, id):
         self._id = id
     
-    id = property(_getID, _setID, "The engine's id.")
+    id = property(_getID, _setID, doc="The engine's id.")
     
     #def sendString(self, s):
     #    log.msg('C: %s' % s)

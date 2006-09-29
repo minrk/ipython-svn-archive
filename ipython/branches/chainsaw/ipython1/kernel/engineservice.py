@@ -171,13 +171,11 @@ def completeEngine(engine):
     return engine
 
 
-class EngineService(service.Service):
+class EngineService(object, service.Service):
     """Adapt a IPython shell into a IEngine implementing Twisted Service."""
     
     zi.implements(IEngineBase, IEngineSerialized)
-    
-    id = None
-    
+                
     def __init__(self, shellClass, mpi=None):
         """Create an EngineService.
         
@@ -186,11 +184,23 @@ class EngineService(service.Service):
         """
         self.shell = shellClass()
         self.mpi = mpi
+        self.id = None
         if self.mpi is not None:
             log.msg("MPI started with rank = %i and size = %i" % 
                 (self.mpi.rank, self.mpi.size))
             self.id = self.mpi.rank
     
+    # Make id a property so that the shell can get the updated id
+        
+    def _setID(self, id):
+        self._id = id
+        self.shell.update({'id': id})
+        
+    def _getID(self):
+        return self._id
+        
+    id = property(_getID, _setID)
+        
     def startService(self):
         """Start the service and seed the user's namespace."""
         

@@ -33,7 +33,7 @@ def gatherBoth(dlist):
     d.addCallback(parseResults)
     return d
 
-def _tar_module(mod):
+def tarModule(mod):
     """Makes a tarball (as a string) of a locally imported module.
         
     This method looks at the __file__ attribute of an imported module
