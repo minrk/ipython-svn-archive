@@ -41,7 +41,8 @@ from IPython.ColorANSI import TermColors
 import ipython1.kernel.magic
 from ipython1.kernel import controllerservice, serialized, protocols, results
 from ipython1.kernel.util import _tar_module
-from ipython1.kernel.controllerclient import RemoteControllerView, EngineProxy
+from ipython1.kernel.controllerclient import \
+    RemoteControllerBase, RemoteControllerView, EngineProxy
 
 
 #-------------------------------------------------------------------------------
@@ -148,13 +149,13 @@ class RemoteController(RemoteControllerBase):
     def _push_moduleString(self, tarball_name, fileString):
         """This method send a tarball'd module to a kernel."""
         
-        self.push('tar_fileString',fileString)
-        self.execute("tar_file = open('%s','wb')" % \
+        self.pushAll(tar_fileString=fileString)
+        self.executeAll("tar_file = open('%s','wb')" % \
             tarball_name, block=False)
-        self.execute("tar_file.write(tar_fileString)", block=False)
-        self.execute("tar_file.close()", block=False)
-        self.execute("import os", block=False)
-        self.execute("os.system('tar -xf %s')" % tarball_name)        
+        self.executeAll("tar_file.write(tar_fileString)", block=False)
+        self.executeAll("tar_file.close()", block=False)
+        self.executeAll("import os", block=False)
+        self.executeAll("os.system('tar -xf %s')" % tarball_name)        
     
     #-------------------------------------------------------------------------------
     # IMultiEngine methods
@@ -304,7 +305,7 @@ class RemoteController(RemoteControllerBase):
                 print "Object cannot be serialized: ", key, e
                 return False
             else:
-                self.sendSerialized(serialObject)
+                self.pushSerialized(serialObject)
         self.es.writeNetstring("PUSH DONE")
         string = self.es.readNetstring()
         if string == "PUSH OK":
@@ -654,6 +655,8 @@ class RemoteController(RemoteControllerBase):
             print s
             return False
     
+    getMappedIDs = getIDs
+    
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         """distribute sequence object to targets"""
         targetstr = self.parseTargets(targets)
@@ -679,7 +682,7 @@ class RemoteController(RemoteControllerBase):
                 print "Not Connected"
                 return False
         
-        self.sendSerialized(serial)
+        self.pushSerialized(serial)
         reply = self.es.readNetstring()
         if reply == 'SCATTER OK':
             return True

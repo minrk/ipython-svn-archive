@@ -17,7 +17,7 @@ used and then loads the appropriate client.
 import ipython1.config.api as config
 clientConfig = config.getConfigObject('client')
 
-import ipython1.kernel.maÅgic
+import ipython1.kernel.magic
 
 RemoteController = clientConfig.RemoteController
 RemoteController.MAX_LENGTH = clientConfig.maxMessageSize

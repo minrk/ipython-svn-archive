@@ -25,7 +25,15 @@ TODOs:
 # Imports
 #-------------------------------------------------------------------------------
 
+import StringIO
+import sys
+
 import ipython1.kernel.magic
+
+
+#-------------------------------------------------------------------------------
+# RemoteController stuff
+#-------------------------------------------------------------------------------
 
 class RemoteControllerBase(object):
     """The base class for all RemoteController objects.
@@ -64,6 +72,7 @@ class RemoteControllerBase(object):
      * killAll
      * pushSerialized (why not pullSerialized?)
      * getIDs
+     * getMappedIDs
      * scatter
      * scatterAll
      * gather
@@ -94,8 +103,88 @@ class RemoteControllerBase(object):
     # Testing and timing methods
     #---------------------------------------------------------------------------
 
-    def test(self, level):
-        """Test a RemoteController Object"""
+    def test(self):
+        """Test a RemoteController Object.
+        
+        To work, this RemoteController must be connected to a ControllerService
+        that has Engines connected to it.
+        
+        We should rethink how the tests here are done to provide more feedback
+        for users.  But for now this is a start!
+        """
+        
+        # Setup
+        
+        ids = self.getMappedIDs()
+        hide = StringIO.StringIO('')    
+        print "Running tests on %i engines" %len(ids)
+        if not ids:
+            print "need some engines!"
+            return
+                
+        print "Testing execute..."
+        try:
+            assert self.execute(0, 'a'),"assert rc.execute(0, 'a')"
+            assert self.executeAll('print a'),"assert rc.execute([0,1], 'print a')"
+            assert self.execute('all', 'b-3'),"assert rc.execute('all', 'b-3')"
+            assert not self.execute(0, ''),"assert not rc.execute(0, '')"
+            assert not self.execute([], 'locals'),"assert not rc.execute([], 'locals')"
+            s = sys.stdout
+            sys.stdout = hide
+            assert self.execute(0, 'a', block=True),"assert rc.execute(0, 'a', block=True)"
+            assert self.execute([0,0], 'print a', block=True),"assert rc.execute([0,1], 'print a', block=True)"
+            assert self.execute('all', 'b-3', block=True),"assert rc.execute('all', 'b-3', block=True)"
+            assert not self.execute(0, '', block=True),"assert not rc.execute(0, '', block=True)"
+            assert not self.execute([], 'locals', block=True),"assert not rc.execute([], 'locals', block=True)"
+            sys.stdout = s
+        except Exception, e:
+            print "execute FAIL: ", e
+        else:
+            print "execute OK"
+        
+        print "Testing push/pull"
+        try:
+            assert self.push(0, a=5),"assert rc.push(0, a=5)"
+            assert self.pull(0, 'a') == 5,"assert rc.pull(0, 'a') == 5"
+            assert not self.push(0),"assert not rc.push(0)"
+            assert not self.push([], a=5),"assert not rc.push([], a=5)"
+            assert self.push([0], b='asdf', c=[1,2]),"assert rc.push([0], b='asdf', c=[1,2])"
+            assert self.pull([0], 'b', 'c') == ['asdf', [1,2]],"assert rc.pull([0], 'b', 'c') == ['asdf', [1,2]]"
+            assert self.pushAll(c=[1,2,3]),"assert rc.pushAll(c=[1,2,3])"
+            assert self.pullAll('c') == ([1,2,3],)*len(ids),"assert rc.pullAll('c') == ([1,2,3],)*len(ids)"
+            assert self.push([0,0], a=14),"assert rc.push([0,0], a=14)"
+            assert self.pull([0,0,0], 'a') == (14,14,14),"assert rc.pull([0,0,0], 'a') == (14,14,14)"
+            assert self.pushAll(a=1, b=2, c=3),"assert rc.pushAll(a=1, b=2, c=3)"
+            assert self.pullAll('a','b','c') == [(1,)*len(ids),(2,)*len(ids),(3,)*len(ids)],"assert rc.pullAll('a','b','c') == [(1,1)*len(ids),(2,2)*len(ids),(3,3)*len(ids)]"
+            q={'a':5}
+            assert self.push(ids, q=q),"assert rc.push(ids, q=q)"
+            assert self.pull(ids,'q') == (q,)*len(ids) or len(ids) is 1,"assert rc.pull(ids,'q') == (q,)*len(ids)"
+            self['z'] = 'test'
+            self[1]['t'] = [1,2,3]
+            self[0:max(ids)]['r'] = 'asdf'
+            self[0:max(ids):2]['asdf'] = 4
+            self[1:max(ids)][0]['qwert'] = 3
+        except Exception, e:
+           print "push/pull FAIL: ", e
+           raise
+        else:
+           print "push/pull OK"
+        
+        print "Testing push/pullNamespace"
+        try:
+            ns = {'a':5}
+            assert self.pushAll(**ns),"assert rc.pushAll(a=5)"
+            assert self.pullNamespace(0, 'a') == ns,"assert rc.pullNamespace(0, 'a') == {'a':5}"
+            assert self.pullNamespaceAll('a') == [ns]*len(ids),"assert rc.pullNamespaceAll('a') == [{'a':5}]*len(ids)"
+            ns['b'] = 6
+            ns['cd'] = 'asdf'
+            assert self.pushAll(**ns),"assert rc.pushAll(a=5, b=6, cd='asdf')"
+            assert self.pullNamespace(0, *ns.keys()) == ns,"assert rc.pullNamespace(0, *ns.keys()) == ns"
+            assert self.pullNamespaceAll(*ns.keys()) == [ns]*len(ids),"assert rc.pullNamespaceAll(*ns.keys) == [ns]*len(ids)"
+        except Exception, e:
+            print "pushAll/pullNamespace FAIL: ", e
+        else:
+            print "pushAll/pullNamespace OK"
            
 class RemoteControllerView(RemoteControllerBase):
     """A subset interface for RemoteController.__getitem__"""
@@ -189,6 +278,8 @@ class RemoteControllerView(RemoteControllerBase):
         pass
         
     def getIDs(self):
+        """Return the ids of the Engines as the Controller indexes them."""
+        
         return self._originalIDs
 
     def scatter(self, targets, key, seq, style='basic', flatten=False):
@@ -239,6 +330,7 @@ class RemoteControllerView(RemoteControllerBase):
     #---------------------------------------------------------------------------
         
     def getMappedIDs(self):
+        """Return the ids that current operations will succeed on."""
         return self._ids
         
     def _mapIDsToOriginal(self, ids):
