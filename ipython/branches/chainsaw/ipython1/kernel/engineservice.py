@@ -36,6 +36,7 @@ import zope.interface as zi
 from ipython1.kernel import serialized, error, util
 from ipython1.kernel.util import gatherBoth, curry
 
+
 #-------------------------------------------------------------------------------
 # Interface specification for the Engine
 #-------------------------------------------------------------------------------
@@ -79,7 +80,11 @@ class IEngineBase(zi.Interface):
         Returns a deferred to a tuple."""
     
     def reset():
-        """Reset the shell."""
+        """Reset the shell.
+        
+        This clears the users namespace.  But won't cause modules to be
+        reloaded.
+        """
     
     def kill():
         """Kill the engine by stopping the reactor."""
@@ -139,7 +144,6 @@ class IEngineComplete(IEngineBase, IEngineSerialized, IEngineQueued, IEngineThre
 #-------------------------------------------------------------------------------
 # Functions and classes to implement the EngineService
 #-------------------------------------------------------------------------------
-
 
 def completeEngine(engine):
     """Completes an engine object.  
@@ -436,6 +440,7 @@ def queuedMethod(self%s%s):
         else:
             return defer.succeed(cmd)
     
+    
 class Command(object):
     """A command object that encapslates queued commands.
     
@@ -476,7 +481,6 @@ class Command(object):
     def handleError(self, reason):
         """When an error has occured, relay it to self.deferred."""
         
-        # log.msg("Traceback from remote host: " + reason.getErrorMessage())
         self.deferred.errback(reason)
     
 

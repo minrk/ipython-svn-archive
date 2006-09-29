@@ -17,6 +17,10 @@ On the Controller (server) side:
  * IPBRemoteEngineRoot
  * PBRemoteEngineRootFromService
  * IPBEngineServerFactory
+ 
+To do:
+
+ * Why is PBEngineServerFactoryFromService a function rather than a class?
 """
 
 #-------------------------------------------------------------------------------
@@ -43,6 +47,7 @@ from zope.interface import Interface, implements
 
 from ipython1.kernel.engineservice import *
 from ipython1.kernel import controllerservice, protocols
+
 
 #-------------------------------------------------------------------------------
 # The client (Engine) side of things
@@ -105,7 +110,7 @@ class IPBEngine(Interface):
     
     The methods in this interface are similar to those from IEngine, 
     but their arguments and return values are pickled if they are not already
-    a string so they can be send over PB.
+    simple Python types so they can be send over PB.
     """
     
     def remote_getID():
@@ -115,7 +120,10 @@ class IPBEngine(Interface):
         """set this.id"""
     
     def remote_execute(lines):
-        """"""
+        """Execute lines of Python code.
+        
+        Return a deferred to a result tuple.
+        """
         
     def remote_push(self, pNamespace):
         """Push a namespace into the users namespace.
@@ -124,9 +132,16 @@ class IPBEngine(Interface):
         """
 
     def remote_pull(*keys):
-        """"""
+        """Pull objects from a users namespace by keys.
+        
+        Returns a deferred to a pickled tuple of objects.
+        """
 
     def remote_pullNamespace(*keys):
+        """Pull a namespace of objects by key.
+        
+        Returns a deferred to a dict of keys and objects all pickled up.
+        """
 
     def remote_getResult(i=None):
         """Get result i.
@@ -135,13 +150,16 @@ class IPBEngine(Interface):
         """
         
     def remote_reset():
-        """"""
+        """Reset the Engine."""
         
     def remote_kill():
-        """"""
+        """Stop the Engines reactor."""
         
     def remote_status():
-        """"""
+        """Get the status of the Engine.
+        
+        Returns a deferred to a status dict or tuple.
+        """
         
     def remote_pushSerialized(pNamespace):
         """Push a dict of keys and serialized objects into users namespace.
@@ -152,7 +170,7 @@ class IPBEngine(Interface):
     def remote_pullSerialized(*keys):
         """Pull objects from users namespace by key as Serialized.
         
-        Returns a deferred to a pickled namespace.
+        Returns a deferred to a pickled namespace of keys and Serialized.
         """
     
 
@@ -211,6 +229,12 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         return d.addBoth(pickle.dumps, 2).addCallback(self.checkSize)
     
     def checkSize(self, package):
+        """Check the outgoiing size of the package. 
+        
+        If it is greater than self.MAX_LENGTH, replace with a 
+        Failure pointing to a MessageSizeError.
+        """
+
         if len(package) > self.MAX_LENGTH:
             package = pickle.dumps(Failure(protocols.MessageSizeError()),2)
         return package
@@ -244,11 +268,11 @@ class EngineFromReference(object):
             return defer.fail()
     
     def getID(self):
-        """return this.id"""
+        """Return the Engines id."""
         return self._id
     
     def setID(self, id):
-        """set this.id"""
+        """Set the Engines id."""
         self._id = id
         return self.callRemote('setID', id)
     

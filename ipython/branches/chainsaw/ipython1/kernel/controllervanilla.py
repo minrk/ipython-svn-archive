@@ -2,6 +2,18 @@
 
 The client side of this uses standard blocking python sockets and can 
 be used from an interactive python session.
+
+The server side is written as a Twisted protocol/factory and follows the 
+adapter/interface design pattern of the other client protocols.
+
+To do:
+ * IVanillaControllerFactory is missing lots of method that are implemented
+   in VanillaControllerFactoryFromService.  I now understand why the fooAll 
+   methods and push/pull aren't there, but what about the other methods?
+ * VanillaControllerFactoryFromService implements addNotifier and delnotifier, 
+   but these methods are not in the IVanillaControllerFactory interface or
+   anywhere in the ControllerService interface or implementation.
+
 """
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
@@ -29,27 +41,32 @@ from IPython.ColorANSI import TermColors
 import ipython1.kernel.magic
 from ipython1.kernel import controllerservice, serialized, protocols, results
 from ipython1.kernel.util import _tar_module
-from ipython1.kernel.controllerclient import RCView, EngineProxy
+from ipython1.kernel.controllerclient import RemoteControllerView, EngineProxy
+
+
+#-------------------------------------------------------------------------------
+# Figure out what array packages are present and their types.
+#-------------------------------------------------------------------------------
 
 arraytypeList = []
-# try:
-#    import Numeric
-# except ImportError:
-#    pass
-# else:
-#    arraytypeList.append(Numeric.arraytype)
+try:
+    import Numeric
+except ImportError:
+    pass
+else:
+    arraytypeList.append(Numeric.arraytype)
 try:
     import numpy
 except ImportError:
     pass
 else:
     arraytypeList.append(numpy.ndarray)
-# try:
-#    import numarray
-# except ImportError:
-#    pass
-# else:
-#    arraytypeList.append(numarray.numarraycore.NumArray)
+try:
+    import numarray
+except ImportError:
+    pass
+else:
+    arraytypeList.append(numarray.numarraycore.NumArray)
 
 arraytypes = tuple(arraytypeList)
 del arraytypeList
@@ -59,7 +76,7 @@ del arraytypeList
 # The client side of things
 #-------------------------------------------------------------------------------
 
-class RemoteController(object):
+class RemoteController(RemoteControllerBase):
     """A high level interface to a remotely running ipython controller."""
     
     MAX_LENGTH = 99999999
@@ -76,34 +93,21 @@ class RemoteController(object):
         controllerservice.addAllMethods(self)
         self.activate()
     
-    def activate(self):
-        """Make this cluster the active one for ipython magics.
-        
-        IPython has a magic syntax to work with InteractiveCluster objects.
-        In a given ipython session there is a single active cluster.  While
-        there can be many clusters created and used by the user, there is only
-        one active one.  The active cluster is used when ever the magic syntax
-        is used.  
-        
-        The activate() method is called on a given cluster to make it the active
-        one.  Once this has been done, the magic command can be used:
-        
-        >>> %px a = 5       # Same as execute('a = 5')
-        
-        >>> %autopx         # Now every command is sent to execute()
-        
-        >>> %autopx         # The second time it toggles autoparallel mode off
-        """
-        try:
-            __IPYTHON__.activeController = self
-        except NameError:
-            print "The IPython Controller magics only work within IPython."
-    
+    #-------------------------------------------------------------------------------
+    # Internal implementation methods
+    #-------------------------------------------------------------------------------
+
     def __del__(self):
+        """Disconnect upon deleting the self."""
+        
         return self.disconnect()
     
     def is_connected(self):
-        """Are we connected to the controller?""" 
+        """Are we connected to the controller?
+        
+        Return True or False.
+        """ 
+        
         if hasattr(self, 's'):
             try:
                 self.s.send('')
@@ -113,36 +117,15 @@ class RemoteController(object):
                 return True
     
     def _check_connection(self):
-        """Are we connected to the controller?  If not reconnect."""
+        """Reconnect if we are not connected to the controller."""
+        
         if not self.is_connected():
             return self.connect()
         return True
-    
-    def connect(self):
-        """Initiate a new connection to the controller."""
-        
-        print "Connecting to controller: ", self.addr
-        try:
-            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        except socket.error, e:
-            print "Strange error creating socket: %s" % e
-            return False
-        try:
-            self.s.connect(self.addr)
-        except socket.gaierror, e:
-            print "Address related error connecting to sever: %s" % e
-            return False
-        except socket.error, e:
-            print "Not Connected: %s" % e
-            return False
-                
-        # Turn off Nagle's algorithm to prevent the 200 ms delay :)
-        self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
-        self.es = protocols.NetstringSocket(self.s)
-        self.es.MAX_LENGTH = self.MAX_LENGTH
-        return True
-    
+
     def parseTargets(self, targets):
+        """Parse and validate the targets argument."""
+        
         if isinstance(targets, int):
             if targets >= 0:
                 return str(targets)
@@ -158,11 +141,25 @@ class RemoteController(object):
         return False
     
     def multiTargets(self, targets):
+        """Are we dealing with multiple targets?"""
+        
         return not isinstance(targets, int) and len(targets) > 1
     
-    def executeAll(self, source, block=False):
-        return self.execute('all', source, block)
+    def _push_moduleString(self, tarball_name, fileString):
+        """This method send a tarball'd module to a kernel."""
+        
+        self.push('tar_fileString',fileString)
+        self.execute("tar_file = open('%s','wb')" % \
+            tarball_name, block=False)
+        self.execute("tar_file.write(tar_fileString)", block=False)
+        self.execute("tar_file.close()", block=False)
+        self.execute("import os", block=False)
+        self.execute("os.system('tar -xf %s')" % tarball_name)        
     
+    #-------------------------------------------------------------------------------
+    # IMultiEngine methods
+    #-------------------------------------------------------------------------------
+        
     def execute(self, targets, source, block=False):
         """Execute python source code on the ipython kernel.
         
@@ -258,27 +255,10 @@ class RemoteController(object):
         else:
             print string
             return False
-    
-    def run(self, targets, fname):
-        """Run a file on the kernel."""
-        
-        fileobj = open(fname,'r')
-        source = fileobj.read()
-        fileobj.close()
-        # if the compilation blows, we get a local error right away
-        code = compile(source,fname,'exec')
-        
-        # Now run the code
-        return self.execute(targets, source)
-    
-    def runAll(self, fname):
-        return self.run('all', fname)
-    
-    def sendSerialized(self, serial):
-        assert isinstance(serial, serialized.Serialized)
-        for line in serial:
-            self.es.writeNetstring(line)
-    
+
+    def executeAll(self, source, block=False):
+        return self.execute('all', source, block)
+
     def push(self, targets, **namespace):
         """Send python object(s) to the namespace of remote kernel(s).
         
@@ -334,10 +314,7 @@ class RemoteController(object):
             return False
         else:
             return string
-    
-    def __setitem__(self, key, value):
-            return self.push('all', **{key:value})
-    
+
     def pull(self, targets, *keys):
         """Get python object(s) from remote kernel(s).
                 
@@ -456,17 +433,7 @@ class RemoteController(object):
         else:
             print string
             return False
-    
-    def __getitem__(self, id):
-        if isinstance(id, slice):
-            return RCView(self, id)
-        elif isinstance(id, int):
-            return EngineProxy(self, id)
-        elif isinstance(id, str):
-            return self.pull('all', *(id,))
-        else:
-            raise TypeError("__getitem__ only takes strs, ints, and slices")
-    
+
     def pullNamespace(self, targets, *keys):
         """Gets a namespace dict with keys from targets.  This is just a wrapper
         for pull, to construct namespace dicts from the results of pull.
@@ -519,89 +486,7 @@ class RemoteController(object):
         if not multitargets:
             returns = returns[0]
         return returns
-    
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        """distribute sequence object to targets"""
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not key  or not self._check_connection()\
-                or not isinstance(seq, (tuple, list)+arraytypes):
-            print "Need something to do"
-            return False
-        
-        try:
-            serial = serialized.serialize(seq, key)
-        except:
-            print "Could not serialize "+key
-            return False
-        string = 'SCATTER style=%s flatten=%i::%s' %(
-                        style, int(flatten), targetstr)
-        try:
-            self.es.writeNetstring(string)
-        except socket.error:
-            try:
-                self.connect()
-                self.es.writeNetstring(string)
-            except socket.error:
-                print "Not Connected"
-                return False
-        
-        self.sendSerialized(serial)
-        reply = self.es.readNetstring()
-        if reply == 'SCATTER OK':
-            return True
-        else:
-            print reply
-            return False
-    
-    def gather(self, targets, key, style='basic'):
-        """gather a distributed object, and reassemble it"""
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not key or not self._check_connection():
-            print "Need something to do!"
-            return False
-        
-        string = 'GATHER %s style=%s::%s' %(key, style, targetstr)
-        try:
-            self.es.writeNetstring(string)
-        except socket.error:
-            try:
-                self.connect()
-                self.es.writeNetstring(string)
-            except socket.error:
-                print "Not Connected"
-                return False
-        
-        split = self.es.readNetstring().split(' ',1)
-        if len(split) is not 2:
-            print "Bad response: "+split[0]
-            return False
-        if split[0] == 'PICKLE':
-            serial = serialized.PickleSerialized(key)
-            serial.addToPackage(self.es.readNetstring())
-            try:
-                obj = serial.unpack()
-            except pickle.PickleError, e:
-                print 'could not unpickle: ', e
-                return False
-        elif split[0] == 'ARRAY':
-            serial = serialized.ArraySerialized(key)
-            for i in range(3):
-                serial.addToPackage(self.es.readNetstring())
-            try:
-                obj = serial.unpack()
-            except Exception, e:
-                print 'could not build array: ', e
-                return False
-        else:
-            print "Could not handle: "+''.join(split)
-            return False
-        
-        if self.es.readNetstring() == 'GATHER OK':
-            return obj
-        else:
-            print "Gather Failed"
-            return False
-    
+            
     def getResult(self, targets, i=None):
         """Gets a specific result from the kernels, returned as a tuple, or 
             list of tuples if multiple targets."""
@@ -685,7 +570,61 @@ class RemoteController(object):
             print "Could not handle: "+string
             return False
     
+    def reset(self, targets):
+        """Clear the namespace if the kernel."""
+        targetstr = self.parseTargets(targets)
+        if not targetstr or not self._check_connection():
+            print "Need something to do!"
+            return False
+        
+        string = "RESET ::%s" %targetstr
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                print "Not Connected"
+                return False
+        
+        string = self.es.readNetstring()
+        if string == "RESET OK":
+            return True
+        else:
+            print string
+            return False      
+    
+    def kill(self, targets):
+        """Kill the engine completely."""
+        targetstr = self.parseTargets(targets)
+        if not targetstr or not self._check_connection():
+            print "Need something to do!"
+            return False
+        string = "KILL ::%s" %targetstr
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                print "Not Connected"
+                return False
+        string = self.es.readNetstring()
+        if string == "KILL OK":
+            return True
+        else:
+            print string
+            return False     
+
+    def pushSerialized(self, serial):
+        assert isinstance(serial, serialized.Serialized)
+        for line in serial:
+            self.es.writeNetstring(line)
+                
     def getIDs(self):
+        """Return the id list of the currently connected Engines."""
         if not self._check_connection():
             print "Not Connected"
             return False
@@ -714,7 +653,89 @@ class RemoteController(object):
         else:
             print s
             return False
-            
+    
+    def scatter(self, targets, key, seq, style='basic', flatten=False):
+        """distribute sequence object to targets"""
+        targetstr = self.parseTargets(targets)
+        if not targetstr or not key or not self._check_connection()\
+                or not isinstance(seq, (tuple, list)+arraytypes):
+            print "Need something to do"
+            return False
+        
+        try:
+            serial = serialized.serialize(seq, key)
+        except:
+            print "Could not serialize "+key
+            return False
+        string = 'SCATTER style=%s flatten=%i::%s' %(
+                        style, int(flatten), targetstr)
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                print "Not Connected"
+                return False
+        
+        self.sendSerialized(serial)
+        reply = self.es.readNetstring()
+        if reply == 'SCATTER OK':
+            return True
+        else:
+            print reply
+            return False
+    
+    def gather(self, targets, key, style='basic'):
+        """gather a distributed object, and reassemble it"""
+        targetstr = self.parseTargets(targets)
+        if not targetstr or not key or not self._check_connection():
+            print "Need something to do!"
+            return False
+        
+        string = 'GATHER %s style=%s::%s' %(key, style, targetstr)
+        try:
+            self.es.writeNetstring(string)
+        except socket.error:
+            try:
+                self.connect()
+                self.es.writeNetstring(string)
+            except socket.error:
+                print "Not Connected"
+                return False
+        
+        split = self.es.readNetstring().split(' ',1)
+        if len(split) is not 2:
+            print "Bad response: "+split[0]
+            return False
+        if split[0] == 'PICKLE':
+            serial = serialized.PickleSerialized(key)
+            serial.addToPackage(self.es.readNetstring())
+            try:
+                obj = serial.unpack()
+            except pickle.PickleError, e:
+                print 'could not unpickle: ', e
+                return False
+        elif split[0] == 'ARRAY':
+            serial = serialized.ArraySerialized(key)
+            for i in range(3):
+                serial.addToPackage(self.es.readNetstring())
+            try:
+                obj = serial.unpack()
+            except Exception, e:
+                print 'could not build array: ', e
+                return False
+        else:
+            print "Could not handle: "+''.join(split)
+            return False
+        
+        if self.es.readNetstring() == 'GATHER OK':
+            return obj
+        else:
+            print "Gather Failed"
+            return False
+
     def notify(self, addr=None, flag=True):
         """Instruct the kernel to notify a result gatherer.
         
@@ -770,57 +791,61 @@ class RemoteController(object):
         else:
             print "Notify Failed"
             return False
-    
-    def reset(self, targets):
-        """Clear the namespace if the kernel."""
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not self._check_connection():
-            print "Need something to do!"
-            return False
+
+    #-------------------------------------------------------------------------------
+    # Additional methods
+    #-------------------------------------------------------------------------------
         
-        string = "RESET ::%s" %targetstr
-        try:
-            self.es.writeNetstring(string)
-        except socket.error:
-            try:
-                self.connect()
-                self.es.writeNetstring(string)
-            except socket.error:
-                print "Not Connected"
-                return False
+    def activate(self):
+        """Make this cluster the active one for ipython magics.
         
-        string = self.es.readNetstring()
-        if string == "RESET OK":
-            return True
-        else:
-            print string
-            return False      
-    
-    def kill(self, targets):
-        """Kill the engine completely."""
-        targetstr = self.parseTargets(targets)
-        if not targetstr or not self._check_connection():
-            print "Need something to do!"
-            return False
-        string = "KILL ::%s" %targetstr
+        IPython has a magic syntax to work with InteractiveCluster objects.
+        In a given ipython session there is a single active cluster.  While
+        there can be many clusters created and used by the user, there is only
+        one active one.  The active cluster is used when ever the magic syntax
+        is used.  
+        
+        The activate() method is called on a given cluster to make it the active
+        one.  Once this has been done, the magic command can be used:
+        
+        >>> %px a = 5       # Same as execute('a = 5')
+        
+        >>> %autopx         # Now every command is sent to execute()
+        
+        >>> %autopx         # The second time it toggles autoparallel mode off
+        """
         try:
-            self.es.writeNetstring(string)
-        except socket.error:
-            try:
-                self.connect()
-                self.es.writeNetstring(string)
-            except socket.error:
-                print "Not Connected"
-                return False
-        string = self.es.readNetstring()
-        if string == "KILL OK":
-            return True
-        else:
-            print string
-            return False      
+            __IPYTHON__.activeController = self
+        except NameError:
+            print "The IPython Controller magics only work within IPython."
+    
+    def connect(self):
+        """Initiate a new connection to the controller."""
+        
+        print "Connecting to controller: ", self.addr
+        try:
+            self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        except socket.error, e:
+            print "Strange error creating socket: %s" % e
+            return False
+        try:
+            self.s.connect(self.addr)
+        except socket.gaierror, e:
+            print "Address related error connecting to sever: %s" % e
+            return False
+        except socket.error, e:
+            print "Not Connected: %s" % e
+            return False
+                
+        # Turn off Nagle's algorithm to prevent the 200 ms delay :)
+        self.s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY,1)
+        self.es = protocols.NetstringSocket(self.s)
+        self.es.MAX_LENGTH = self.MAX_LENGTH
+        return True
     
     def disconnect(self):
-        """Disconnect from the kernel, but leave it running."""
+        """Disconnect from the controller."""
+        
         if self.is_connected():
             try:
                 self.es.writeNetstring("DISCONNECT")
@@ -838,6 +863,34 @@ class RemoteController(object):
         else:
             return True
     
+    def run(self, targets, fname):
+        """Run a file on the kernel."""
+        
+        fileobj = open(fname,'r')
+        source = fileobj.read()
+        fileobj.close()
+        # if the compilation blows, we get a local error right away
+        code = compile(source,fname,'exec')
+        
+        # Now run the code
+        return self.execute(targets, source)
+    
+    def runAll(self, fname):
+        return self.run('all', fname)
+    
+    def __setitem__(self, key, value):
+            return self.push('all', **{key:value})
+    
+    def __getitem__(self, id):
+        if isinstance(id, slice):
+            return RemoteControllerView(self, id)
+        elif isinstance(id, int):
+            return EngineProxy(self, id)
+        elif isinstance(id, str):
+            return self.pull('all', *(id,))
+        else:
+            raise TypeError("__getitem__ only takes strs, ints, and slices")
+  
     def pushModule(self, mod):
         """Send a locally imported module to a kernel.
         
@@ -865,17 +918,6 @@ class RemoteController(object):
         
         tarball_name, fileString = _tar_module(mod)
         self._push_moduleString(tarball_name, fileString)
-    
-    def _push_moduleString(self, tarball_name, fileString):
-        """This method send a tarball'd module to a kernel."""
-        
-        self.push('tar_fileString',fileString)
-        self.execute("tar_file = open('%s','wb')" % \
-            tarball_name, block=False)
-        self.execute("tar_file.write(tar_fileString)", block=False)
-        self.execute("tar_file.close()", block=False)
-        self.execute("import os", block=False)
-        self.execute("os.system('tar -xf %s')" % tarball_name)        
     
 
 #-------------------------------------------------------------------------------
@@ -1444,10 +1486,18 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     
 
 class IVanillaControllerFactory(results.INotifierParent):
-    """Interface to clients for controller.  
+    """Interface to the ControllerService seen by the vanilla procotol.
     
-    Very much like IControllerService, but excludes some methods such as 
-    push/pull without serialization.
+    Not all methods of the ControllerService are needed here.  
+    
+     * The fooAll(...) methods are not needed as the protocol just calls 
+       the foo() methods with targets='all'
+     * push/pull are not needed as everything should be serialized at this point.
+
+    But there are a number of methods implemented in 
+    VanillaControllerFactoryFromService that are not implemented here.  Why?
+    
+    See the documentation for IMultiEngine for details about these methods.
     """
         
     def execute(self, targets, lines):
@@ -1496,40 +1546,16 @@ class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
     def __init__(self, service):
         self.service = service
         self.notifiers = self.service.notifiers
-    
-    def addNotifier(self, n):
-        return self.service.addNotifier(n)
-    
-    def delNotifier(self, n):
-        return self.service.delNotifier(n)
-    
-    def verifyTargets(self, targets):
-        return self.service.verifyTargets(targets)
-    
-    def getIDs(self):
-        return self.service.getIDs()
-    
-    def cleanQueue(self, targets):
-        return self.service.cleanQueue(targets)
-    
+
     def execute(self, targets, lines):
         d = self.service.execute(targets, lines)
         return d
         
-    def pushSerialized(self, targets, **namespace):
-        return self.service.pushSerialized(targets, **namespace)
-    
-    def pullSerialized(self, targets, *keys):
-        return self.service.pullSerialized(targets, *keys)
-    
     def pullNamespace(self, targets, *keys):
         return self.service.pullNamespace(targets, *keys)
-    
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        return self.service.scatter(targets, key, seq, style, flatten)
-    
-    def gather(self, targets, key, style='basic'):
-        return self.service.gather(targets, key, style)
+       
+    def getResult(self, targets, i=None):
+        return self.service.getResult(targets, i)
     
     def status(self, targets):
         return self.service.status(targets)
@@ -1539,9 +1565,35 @@ class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
     
     def kill(self, targets):
         return self.service.kill(targets)
+
+    def pushSerialized(self, targets, **namespace):
+        return self.service.pushSerialized(targets, **namespace)
     
-    def getResult(self, targets, i=None):
-        return self.service.getResult(targets, i)
+    def pullSerialized(self, targets, *keys):
+        return self.service.pullSerialized(targets, *keys)
+    
+    def cleanQueue(self, targets):
+        return self.service.cleanQueue(targets)
+    
+    def addNotifier(self, n):
+        return self.service.addNotifier(n)
+    
+    def delNotifier(self, n):
+        return self.service.delNotifier(n)
+    
+    def verifyTargets(self, targets):
+        return self.service.verifyTargets(targets)
+
+    def getIDs(self):
+        return self.service.getIDs()
+
+    def scatter(self, targets, key, seq, style='basic', flatten=False):
+        return self.service.scatter(targets, key, seq, style, flatten)
+    
+    def gather(self, targets, key, style='basic'):
+        return self.service.gather(targets, key, style)
+    
+
     
 components.registerAdapter(VanillaControllerFactoryFromService,
                         controllerservice.ControllerService,

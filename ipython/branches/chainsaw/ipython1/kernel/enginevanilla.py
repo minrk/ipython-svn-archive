@@ -17,6 +17,10 @@ On the Controller (server) side:
  * IPBRemoteEngineRoot
  * PBRemoteEngineRootFromService
  * IPBEngineServerFactory
+ 
+To do:
+
+ * Why are isStatusOK and statusOK commented out?  Are we using them?
 """
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
@@ -46,6 +50,7 @@ import ipython1.kernel.engineservice as engineservice
 # Verbose debugging of deferreds
 
 defer.setDebugging(1)
+
 
 #-------------------------------------------------------------------------------
 # Engine side of things
@@ -506,7 +511,6 @@ components.registerAdapter(VanillaEngineClientFactoryFromEngineService,
 #-------------------------------------------------------------------------------
 # Controller side of things
 #-------------------------------------------------------------------------------
-
 
 class IVanillaEngineServerProtocol(engineservice.IEngineBase,
     engineservice.IEngineSerialized):

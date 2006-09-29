@@ -7,6 +7,12 @@ The IPython Controller:
  * Listens for clients and passes commands from client to the Engines.
  * Exposes an asynchronous interfaces to the Engines which themselves can block.
  * Acts as a gateway to the Engines.
+ 
+To do:
+
+ * Where are the notifier related methods in the interface and implementation
+   of the ControllerService?
+ 
 """
 
 #-------------------------------------------------------------------------------
@@ -34,10 +40,10 @@ from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import map as Map
 from ipython1.kernel import results
 
+
 #-------------------------------------------------------------------------------
 # Interfaces for the Controller
 #-------------------------------------------------------------------------------
-
 
 class IRemoteController(Interface):
     """The Interface a ControllerService exposes to an EngineService."""
@@ -70,10 +76,85 @@ class IMultiEngine(Interface):
     targets = [0,1,2,3]     # A list of ints
     targets = 'all'         # A string to indicate all targets
     
-    All IMultiEngine methods must return a Deferred to a list with length 
-    equal to the number of targets, except for verifyTargets.
+    All IMultiEngine multiplexer methods must return a Deferred to a list 
+    with length equal to the number of targets.  The elements of the list will 
+    correspond to the return of the corresponding IEngine method.
     """
+        
+    #---------------------------------------------------------------------------
+    # Mutiplexed IEngine methos
+    #---------------------------------------------------------------------------
+     
+    def execute(targets, lines):
+        """Execute lines of Python code on target."""
     
+    def executeAll(lines):
+        """Execute on all targets."""
+        
+    def push(targets, **namespace):
+        """Push dict namespace into the user's namespace on targets."""
+        
+    def pushAll(**namespace):
+        """Push to all targets."""
+        
+    def pull(targets, *keys):
+        """Pull values out of the user's namespace on targets by keys."""
+        
+    def pullAll(*keys):
+        """Pull from all targets."""
+    
+    def pullNamespace(targets, *keys):
+        """Pull from targets by keys as a dict namespace."""
+    
+    def pullNamespaceAll(*keys):
+        """Pull namespace from all targets."""
+        
+    def getResult(targets, i=None):
+        """Get the result tuple for command i from targets."""
+        
+    def getResultAll(i=None):
+        """Get the result tuple for command i from all targets."""
+        
+    def reset(targets):
+        """Reset targets.
+        
+        This clears the users namespace of the Engines, but won't cause
+        modules to be reloaded.
+        """
+        
+    def resetAll():
+        """Reset all targets."""
+        
+    def status(targets):
+        """Get the status of targets."""
+        
+    def statusAll():
+        """Get the status of all targets."""
+        
+    def kill(targets):
+        """Kill the targets Engines."""
+        
+    def killAll():
+        """Kill all the Engines."""
+        
+    def pushSerialized(targets, **namespace):
+        """Push a namespace of Serialized objects to targets."""
+        
+    def pushSerializedAll(**namespace):
+        """Push Serialized to all targets."""
+        
+    def pullSerialized(targets, *keys):
+        """Pull Serialized objects by keys from targets."""
+        
+    def pullSerializedAll(*keys):
+        """Pull Serialized from all targets."""
+        
+    def clearQueue(targets):
+        """Clear the queue of pending command for targets."""
+        
+    def clearQueueAll():
+        """Clear the queue of pending commands for all targets."""
+        
     #---------------------------------------------------------------------------
     # Non multiplexed methods
     #---------------------------------------------------------------------------
@@ -83,7 +164,7 @@ class IMultiEngine(Interface):
     
     def getIDs():
         """Return list of currently registered ids."""
-    
+     
     def scatter(targets, key, seq, style='basic', flatten=False):
         """Partition and distribute a sequence to targets."""
     
@@ -96,76 +177,6 @@ class IMultiEngine(Interface):
     def gatherAll(key, style='basic'):
         """Gather from all targets."""
         
-    #---------------------------------------------------------------------------
-    # Mutiplexed IEngine methos
-    #---------------------------------------------------------------------------
-     
-    def execute(targets, lines):
-        """"""
-    
-    def executeAll(lines):
-        """"""
-        
-    def push(targets, **namespace):
-        """"""
-        
-    def pushAll(**namespace):
-        """"""
-        
-    def pull(targets, *keys):
-        """"""
-        
-    def pullAll(*keys):
-        """"""
-    
-    def pullNamespace(targets, *keys):
-        """"""
-    
-    def pullNamespaceAll(*keys):
-        """"""
-        
-    def getResult(targets, i=None):
-        """"""
-        
-    def getResultAll(i=None):
-        """"""
-        
-    def reset(targets):
-        """"""
-        
-    def resetAll():
-        """"""
-        
-    def status(targets):
-        """"""
-        
-    def statusAll():
-        """"""
-        
-    def kill(targets):
-        """"""
-        
-    def killAll():
-        """"""
-        
-    def pushSerialized(targets, **namespace):
-        """"""
-        
-    def pushSerializedAll(**namespace):
-        """"""
-        
-    def pullSerialized(targets, *keys):
-        """"""
-        
-    def pullSerializedAll(*keys):
-        """"""
-        
-    def clearQueue(targets):
-        """"""
-        
-    def clearQueueAll():
-        """"""
-        
         
 class IController(IRemoteController, IMultiEngine, results.INotifierParent):
     """The Controller is an IRemoteController, IMultiEngine & INotifierParent."""
@@ -176,7 +187,6 @@ class IController(IRemoteController, IMultiEngine, results.INotifierParent):
 #-------------------------------------------------------------------------------
 # Implementation of the ControllerService
 #-------------------------------------------------------------------------------
-
 
 def addAllMethods(obj, interface=IMultiEngine):
     """Dynamically generate the fooAll methods in IController."""
@@ -199,8 +209,7 @@ def allMethod(self, %s):
 
 
 class ControllerService(service.Service, results.NotifierParent):
-    """A Controller represented as a Twisted Service.
-    """
+    """A Controller represented as a Twisted Service."""
     
     implements(IController)
     

@@ -1,5 +1,17 @@
 # -*- test-case-name: ipython1.test.test_controllerpb -*-
-"""A Perspective Broker interface to a ControllerService."""
+"""A Perspective Broker interface to a ControllerService.
+
+This class lets PB clients talk to the ControllerService.  The main difficulty
+is that PB doesn't allow arbitrary objects to be sent over the wire - only
+basic Python types.  To get around this we simple pickle more complex objects
+on boths side of the wire.  That is the main thing these classes have to 
+manage.
+
+To do:
+
+ * remote_addNotifier is not in the ControllerService implem. or interf.
+ * PBNotifierChild need documentation.
+"""
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
@@ -32,21 +44,13 @@ class IPBController(Interface):
     
     The methods in this interface are similar to those from IMultiEngine, 
     but their arguments and return values are pickled if they are not already
-    a string so they can be send over PB.
+    simple Python types so they can be send over PB.  This is to deal with 
+    the fact that w/o a lot of work PB cannot send arbitrary objects over the
+    wire.
+
+    See the documentation of IMultiEngine for documentation about the methods.
     """
-    
-    def remote_verifyTargets(targets):
-        """"""
-    
-    def remote_getIDs():
-        """"""
-        
-    def remote_scatter(targets, key, seq, style='basic', flatten=False):
-        """"""
-        
-    def remote_gather(targets, key, style='basic'):
-        """"""
-        
+            
     def remote_execute(targets, lines):
         """"""
         
@@ -80,6 +84,18 @@ class IPBController(Interface):
     def remote_clearQueue(targets):
         """"""
         
+    def remote_verifyTargets(targets):
+        """"""
+    
+    def remote_getIDs():
+        """"""
+        
+    def remote_scatter(targets, key, seq, style='basic', flatten=False):
+        """"""
+        
+    def remote_gather(targets, key, style='basic'):
+        """"""
+        
     def remote_addNotifier(reference):    
         """"""
         
@@ -87,39 +103,13 @@ class IPBController(Interface):
 class PBControllerRootFromService(pb.Root):
     """Perspective Broker interface to controller.
     
-    See IPBController for documentation. 
+    See IPBController and IMultiEngine for documentation. 
     """
     
     implements(IPBController)
     
     def __init__(self, cs):
         self.service = cs
-    
-    def remote_verifyTargets(self, targets):
-        return self.service.verifyTargets(targets)
-    
-    def remote_getIDs(self):
-        return self.service.getIDs()
-    
-    def remote_scatter(self, targets, key, pseq, style='basic', flatten=False):
-        seq = pickle.loads(pseq)
-        d = self.service.scatter(targets, key, seq, style, flatten)
-        return d.addErrback(pickle.dumps, 2)
-    
-    def remote_gather(self, targets, key, style='basic'):
-        d = self.service.gather(targets, key, style)
-        return d.addBoth(pickle.dumps, 2)
-    
-    def remote_pushSerialized(self, targets, pns):
-        d = self.service.pushSerialized(targets, **pickle.loads(pns))
-        return d.addErrback(pickle.dumps, 2)
-    
-    def remote_pullSerialized(self, targets, *keys):
-        d = self.service.pullSerialized(targets, *keys)
-        return d.addBoth(pickle.dumps, 2)
-    
-    def remote_clearQueue(self, targets):
-        return self.service.clearQueue(targets).addErrback(pickle.dumps, 2)
     
     def remote_execute(self, targets, lines):
         d = self.service.execute(targets, lines)
@@ -148,6 +138,32 @@ class PBControllerRootFromService(pb.Root):
     
     def remote_kill(self, targets):
         return self.service.kill(targets).addErrback(pickle.dumps, 2)
+        
+    def remote_pushSerialized(self, targets, pns):
+        d = self.service.pushSerialized(targets, **pickle.loads(pns))
+        return d.addErrback(pickle.dumps, 2)
+    
+    def remote_pullSerialized(self, targets, *keys):
+        d = self.service.pullSerialized(targets, *keys)
+        return d.addBoth(pickle.dumps, 2)
+    
+    def remote_clearQueue(self, targets):
+        return self.service.clearQueue(targets).addErrback(pickle.dumps, 2)
+    
+    def remote_verifyTargets(self, targets):
+        return self.service.verifyTargets(targets)
+    
+    def remote_getIDs(self):
+        return self.service.getIDs()
+    
+    def remote_scatter(self, targets, key, pseq, style='basic', flatten=False):
+        seq = pickle.loads(pseq)
+        d = self.service.scatter(targets, key, seq, style, flatten)
+        return d.addErrback(pickle.dumps, 2)
+    
+    def remote_gather(self, targets, key, style='basic'):
+        d = self.service.gather(targets, key, style)
+        return d.addBoth(pickle.dumps, 2)
     
     def remote_addNotifier(self, reference):
         """Adds a notifier.
@@ -191,7 +207,7 @@ components.registerAdapter(PBServerFactoryFromService,
 #-------------------------------------------------------------------------------
 
 class PBRemoteController(pb.Referenceable, results.NotifierParent):
-    """Adapt a PB reference to a remote ControllerService to an IMultiEngine implementer.
+    """Adapt a PB ref to a remote ControllerService to an IMultiEngine implementer.
     """
     
     implements(cs.IMultiEngine)
@@ -202,37 +218,7 @@ class PBRemoteController(pb.Referenceable, results.NotifierParent):
         cs.addAllMethods(self)
         self.deferred = self.callRemote('addNotifier', self)
         self.remote_notify = self.notify
-    
-    def verifyTargets(self, targets):
-        d = self.callRemote('verifyTargets', targets)
-        return d.addCallback(self.checkReturn)
-    
-    def getIDs(self):
-        d = self.callRemote('getIDs')
-        return d.addCallback(self.checkReturn)
-    
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        pseq = pickle.dumps(seq, 2)
-        d = self.callRemote('scatter', targets, key, pseq, style, flatten)
-        return d.addCallback(self.checkReturn)
-    
-    def gather(self, targets, key, style='basic'):
-        d = self.callRemote('gather', targets, key, style='basic')
-        return d.addCallback(pickle.loads)
-    
-    def pushSerialized(self, targets, **namespace):
-        pns = pickle.dumps(namespace, 2)
-        d = self.callRemote('pushSerialized', targets, pns)
-        return d.addCallback(self.checkReturn)
-    
-    def pullSerialized(self, targets, *keys):
-        d = self.callRemote('pullSerialized', targets, *keys)
-        return d.addCallback(pickle.loads)
-    
-    def clearQueue(self, targets):
-        d = self.callRemote('clearQueue', targets)
-        return d.addCallback(self.checkReturn)
-    
+        
     def execute(self, targets, lines):
         d = self.callRemote('execute', targets, lines)
         return d.addCallback(self.checkReturn)
@@ -265,6 +251,36 @@ class PBRemoteController(pb.Referenceable, results.NotifierParent):
         d = self.callRemote('kill', targets)
         return d.addCallback(self.checkReturn)
     
+    def pushSerialized(self, targets, **namespace):
+        pns = pickle.dumps(namespace, 2)
+        d = self.callRemote('pushSerialized', targets, pns)
+        return d.addCallback(self.checkReturn)
+    
+    def pullSerialized(self, targets, *keys):
+        d = self.callRemote('pullSerialized', targets, *keys)
+        return d.addCallback(pickle.loads)
+    
+    def clearQueue(self, targets):
+        d = self.callRemote('clearQueue', targets)
+        return d.addCallback(self.checkReturn)
+    
+    def verifyTargets(self, targets):
+        d = self.callRemote('verifyTargets', targets)
+        return d.addCallback(self.checkReturn)
+    
+    def getIDs(self):
+        d = self.callRemote('getIDs')
+        return d.addCallback(self.checkReturn)
+    
+    def scatter(self, targets, key, seq, style='basic', flatten=False):
+        pseq = pickle.dumps(seq, 2)
+        d = self.callRemote('scatter', targets, key, pseq, style, flatten)
+        return d.addCallback(self.checkReturn)
+    
+    def gather(self, targets, key, style='basic'):
+        d = self.callRemote('gather', targets, key, style='basic')
+        return d.addCallback(pickle.loads)
+    
     def checkReturn(self, r):
         if isinstance(r, str):
             try: 
@@ -281,7 +297,7 @@ components.registerAdapter(PBRemoteController,
     
     
 class PBNotifierChild(results.BaseNotifierChild):
-    """Can we document the Notifier stuff?"""
+    """Can we document this class?"""
     
     def __init__(self, reference):
         self.key = repr(reference)
