@@ -189,7 +189,7 @@ class ResultWidget(athena.LiveElement):
     def handleResult(self, result):
         if not self.validResult(result):
             return
-        print s
+        # print s
         s = resultToHTML(result)
         print s
         return self.callRemote('handleResult', unicode(s))
