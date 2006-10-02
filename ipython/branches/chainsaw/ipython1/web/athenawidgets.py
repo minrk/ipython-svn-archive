@@ -189,7 +189,9 @@ class ResultWidget(athena.LiveElement):
     def handleResult(self, result):
         if not self.validResult(result):
             return
+        print s
         s = resultToHTML(result)
+        print s
         return self.callRemote('handleResult', unicode(s))
     
     def setIDs(self, ids):
@@ -268,6 +270,7 @@ class CommandWidget(athena.LiveElement, results.NotifierParent):
             tags.td[tags.select(id="cmd", name="cmd",
             onchange="Nevow.Athena.Widget.get(this).changeCmd(this.options[cmd.selectedIndex].value);")[
                 tags.option(value="execute")["execute"],
+                tags.option(value="executeFile")["execute file"],
                 tags.option(value="pull")["pull"],
                 tags.option(value="reset")["reset"],
                 tags.option(value="kill")["kill"],
@@ -299,6 +302,11 @@ class CommandWidget(athena.LiveElement, results.NotifierParent):
         for r in resultList:
             s += resultToHTML(r)
         self.finish(unicode(s))
+    
+    def executeFile(self, targets, f):
+        print f
+    
+    athena.expose(executeFile)
     
     def pull(self, targets, keystr):
         keys = map(str, keystr.split(','))
