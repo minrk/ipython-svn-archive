@@ -75,8 +75,7 @@ def resultToHTML(cmd):
         cmd_stdin = cmd[2]
         cmd_stdout = cmd[3][:-1]
         cmd_stderr = cmd[4][:-1]
-        for c in [cmd_stdin, cmd_stdout, cmd_stderr]:
-            c = htmlString(c)
+        [cmd_stdin, cmd_stdout, cmd_stderr] = map(htmlString, [cmd_stdin, cmd_stdout, cmd_stderr])
         s += "<a id='stdin'>[%i]In [%i]:</a> %s<br>" % (target, cmd_num, cmd_stdin)
         if cmd_stdout:
             s += "<a id='stdout'>[%i]Out[%i]:</a> %s<br>" % (target, cmd_num, cmd_stdout)
@@ -138,7 +137,6 @@ class NotebookWidget(athena.LiveElement):
     athena.expose(execute)
     
     def returnResult(self, result, cmd_id):
-        print result
         n = len(result)
         if n is 1:
             id = unicode(result[0][1])
@@ -189,9 +187,7 @@ class ResultWidget(athena.LiveElement):
     def handleResult(self, result):
         if not self.validResult(result):
             return
-        print result
         s = resultToHTML(result)
-        print s
         return self.callRemote('handleResult', unicode(s))
     
     def setIDs(self, ids):
@@ -321,7 +317,7 @@ class CommandWidget(athena.LiveElement, results.NotifierParent):
     
     def pullOK(self, resultList):
         s = ''
-        print resultList
+        # print resultList
         for r in resultList:
             s += dictToHTML(r)
         return self.finish(s)
