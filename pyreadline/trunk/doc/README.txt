@@ -19,5 +19,3 @@ Dependencies
 
   * This in turn requires Tomas Heller's ctypes from
     http://starship.python.net/crew/theller/ctypes.
-
-# testing Trac issues - will remove soon.  fperez.
