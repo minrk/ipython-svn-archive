@@ -22,7 +22,7 @@ To do:
 
  * Why is PBEngineServerFactoryFromService a function rather than a class?
 """
-
+__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>

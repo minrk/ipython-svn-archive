@@ -12,6 +12,7 @@ TODOs:
   methods they should.
 - What should happen if the target given is an integer, but is not valid?
 """
+__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>

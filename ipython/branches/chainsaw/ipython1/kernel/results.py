@@ -10,6 +10,7 @@ method is meant to behave the same.
 
 Parents maintain a list of children in a dict {child.key: child,...}
 """
+__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>

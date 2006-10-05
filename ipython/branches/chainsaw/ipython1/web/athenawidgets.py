@@ -1,3 +1,5 @@
+__docformat__ = "restructuredtext en"
+
 from nevow import athena, loaders, tags, inevow, livepage
 from twisted.python import util
 from twisted.python.failure import Failure

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """General utilities for kernel related things."""
+__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>

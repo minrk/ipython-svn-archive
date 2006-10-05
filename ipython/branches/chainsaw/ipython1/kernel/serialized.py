@@ -4,7 +4,7 @@ Serialization objects and utilities for use in network protocols.
 TODO:  allow discontinuous array buffers (in ArraySerialized.packObj)
        The restriction is actually in EnhancedNetstring.
 """
-
+__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>

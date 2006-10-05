@@ -1,3 +1,5 @@
+__docformat__ = "restructuredtext en"
+
 from distutils.command import config as orig_config
 from distutils.command import build as orig_build
 from distutils.command import build_ext as orig_build_ext

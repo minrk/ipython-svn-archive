@@ -13,8 +13,8 @@ To do:
  * VanillaControllerFactoryFromService implements addNotifier and delnotifier, 
    but these methods are not in the IVanillaControllerFactory interface or
    anywhere in the ControllerService interface or implementation.
-
 """
+__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
@@ -43,6 +43,7 @@ from ipython1.kernel import controllerservice, serialized, protocols, results
 from ipython1.kernel.util import tarModule
 from ipython1.kernel.controllerclient import \
     RemoteControllerBase, RemoteControllerView, EngineProxy
+from ipython1.kernel.parallelfunction import ParallelFunction
 
 
 #-------------------------------------------------------------------------------
@@ -167,21 +168,24 @@ class RemoteController(RemoteControllerBase):
     #-------------------------------------------------------------------------------
         
     def execute(self, targets, source, block=False):
-        """Execute python source code on the ipython kernel.
+        """Execute python source code on engine(s).
         
         @arg targets:
-            the engine id(s) on which to execute.  targets can be an int, list of
+            The engine id(s) on which to execute.  Targets can be an int, list of
             ints, or the string 'all' to indicate that it should be executed on
             all engines connected to the controller.
         @arg source:
             A string containing valid python code
         @arg block:
-            whether or not to wait for the results of the command.
+            Whether or not to wait for the results of the command.
             True:
-                wait for results, which will be printed as stdin/out/err
+                Wait for results, which will be printed as stdin/out/err
             False:
-                do not wait, return as soon as source has been sent, print nothing.
+                Do not wait, return as soon as source has been sent, print nothing.
+            The blocking can also be controlled on a global basis by setting the 
+            block attribute of the RemoteController object.
         """
+        
         targetstr = self._parseTargets(targets)
         if not targetstr or not source:
             print "Need something to do!"
@@ -263,18 +267,18 @@ class RemoteController(RemoteControllerBase):
             return False
 
     def executeAll(self, source, block=False):
+        """Execute source on all engines.
+        
+        See the docstring for execute for more details.
+        """
         return self.execute('all', source, block)
 
     def push(self, targets, **namespace):
-        """Send python object(s) to the namespace of remote kernel(s).
+        """Send python object(s) to remote engine(s).
         
-        There is also a dictionary style interface to the push command:
-                
-        >>> rc = RemoteController(addr)
-        
-        >>> rc[0]['a'] = 10    # Same as rc.push(0, a=10)
-        >>> rc.push([1,2,3], a=5, b=[1], c=c)
-            #pushes 5 to a, [1] to b, and the local value c to c on engines [1,2,3]
+        This should be able to send any picklable Python object.  Any modules 
+        referenced in the object will need to be available on the engines.
+        Also, Numpy arrays are sent without pickling, using their buffers.
         
         @arg targets:
             the engine id(s) on which to execute.  targets can be an int, list of
@@ -282,7 +286,20 @@ class RemoteController(RemoteControllerBase):
             all engines connected to the controller.
         @arg namespace:
             The python objects to send and their remote keys.  i.e. a=1, b='asdf'
+            
+        Examples:
+        
+        >>> rc = RemoteController(addr)
+        >>> rc.push('all', a=5, b=10)      # push 5 as a, 10 as b to all
+        >>> rc.push(0, c=range(10))        # push range(10) to 0 as c
+        >>> rc.push([0,3], q='mystring')   # push 'mystring' to 0, 3 as q
+        
+        There is also a dictionary style interface to the push command:
+                
+        >>> rc['a'] = 10                   # Same as rc.push('all', a=10)
+        >>> rc[0]['b'] = 30                # Same as rc.push(0, b=30)
         """
+        
         targetstr = self._parseTargets(targets)
         if not targetstr or not namespace or not self._checkConnection():
             print "Need something to do!"
@@ -322,13 +339,19 @@ class RemoteController(RemoteControllerBase):
             return string
 
     def pushAll(self, **namespace):
+        """Push python objects to all engines.
+        
+        See the docstring of push for more details.
+        """
         return self.push('all', **namespace)
         
     def pull(self, targets, *keys):
-        """Get python object(s) from remote kernel(s).
+        """Get python object(s) from remote engines(s).
                 
         If the object does not exist in the kernel's namespace a NotDefined
         object will be returned.
+        
+        
         
         Like push, pull also has a dictionary interface:
         
@@ -338,26 +361,26 @@ class RemoteController(RemoteControllerBase):
         10
         
         @arg targets:
-            the engine id(s) on which to execute.  targets can be an int, list of
-            ints, or the string 'all' to indicate that it should be executed on
-            all engines connected to the controller.
-        @arg *keys:
-            The name of the python objects to get
-        
-        @returns:
-            4 cases:
-                1 target, 1 key:
-                    the value of key on target
-                1 target, >1 keys:
-                    a list of the values of keys on target
-                >1 targets, 1 key:
-                    a tuple of the values at key on targets
-                >1 targets, >1 keys:
-                    a list of length len(keys) of tuples for each key on targets.
-                    equivalent in form to:
-                    l = []
-                    for t in targets:
-                        l.append(rc.pull(t, *keys))
+             the engine id(s) on which to execute.  targets can be an int, list of
+             ints, or the string 'all' to indicate that it should be executed on
+             all engines connected to the controller.
+         @arg *keys:
+             The name of the python objects to get
+
+         @returns:
+             4 cases:
+                 1 target, 1 key:
+                     the value of key on target
+                 1 target, >1 keys:
+                     a list of the values of keys on target
+                 >1 targets, 1 key:
+                     a tuple of the values at key on targets
+                 >1 targets, >1 keys:
+                     a list of length len(keys) of tuples for each key on targets.
+                     equivalent in form to:
+                     l = []
+                     for t in targets:
+                         l.append(rc.pull(t, *keys))
         """
         targetstr = self._parseTargets(targets)
         if not targetstr or not keys or not self._checkConnection():
@@ -683,7 +706,8 @@ class RemoteController(RemoteControllerBase):
         
         targetstr = self._parseTargets(targets)
         if not targetstr or not key or not self._checkConnection()\
-                or not isinstance(seq, (tuple, list)+arraytypes):
+                or not isinstance(seq, (tuple, list)+arraytypes) \
+                or not len(seq) > 0:
             print "Need something to do"
             return False
         
@@ -899,6 +923,7 @@ class RemoteController(RemoteControllerBase):
         
         fileobj = open(fname,'r')
         source = fileobj.read()
+        print source
         fileobj.close()
         # if the compilation blows, we get a local error right away
         code = compile(source,fname,'exec')
@@ -921,6 +946,9 @@ class RemoteController(RemoteControllerBase):
             return self.pull('all', *(id,))
         else:
             raise TypeError("__getitem__ only takes strs, ints, and slices")
+
+    def __len__(self):
+        return len(self.getIDs())
   
     def pushModule(self, mod):
         """Send a locally imported module to a kernel.
@@ -950,6 +978,38 @@ class RemoteController(RemoteControllerBase):
         tarball_name, fileString = tarModule(mod)
         self._pushModuleString(tarball_name, fileString)
     
+
+    def map(self, targets, functionSource, seq, style='basic'):
+        """A parallelized version of python's builtin map.
+        
+        This version of map is designed to work similarly to python's
+        builtin map(), but the execution is done in parallel on the cluster.
+                
+        Example:
+        
+        >>> map('lambda x: x*x', range(10000))
+
+        @arg func_code:
+            A string of python code representing a cdallable.
+            It must be defined in the kernels namespace.
+        @arg seq:
+            A python sequence to call the callable on
+        """
+        rtcode = self.scatter(targets, '_ipython_map_seq', seq, style='basic')
+        if rtcode:
+            sourceToRun = \
+                '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
+                functionSource
+            self.execute(targets, sourceToRun, block = False)
+            return self.gather(targets, '_ipython_map_seq_result', style='basic')
+        else:
+            return False
+            
+    def mapAll(self, functionSource, seq, style='basic'):
+        return self.map('all', functionSource, seq, style)
+
+    def parallelize(self, functionName):
+        return ParallelFunction(functionName, self)
 
 #-------------------------------------------------------------------------------
 # The server (Controller) side of things

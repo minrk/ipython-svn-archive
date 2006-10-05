@@ -1,3 +1,5 @@
+__docformat__ = "restructuredtext en"
+
 print "Here is ipython1.distutils.sysconfig!!!!!!"
 
 import distutils.sysconfig

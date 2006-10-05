@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-epydoc -o doc/html ipython1
+epydoc --html -o doc/html ipython1

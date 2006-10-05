@@ -3,6 +3,7 @@
 Scattering consists of partitioning a sequence and sending the various
 pieces to individual nodes in a cluster.
 """
+__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>

@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
-"""This module contains the public API for working with a remote controller.
-
-It looks at the client configuration to see what network protocol should be
-used and then loads the appropriate client.
+"""
+A parallelized function that does scatter/execute/gather.
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -15,11 +13,10 @@ __docformat__ = "restructuredtext en"
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
-import ipython1.config.api as config
-clientConfig = config.getConfigObject('client')
-
-import ipython1.kernel.magic
-
-RemoteController = clientConfig.RemoteController
-RemoteController.MAX_LENGTH = clientConfig.maxMessageSize
-defaultController = clientConfig.connectToControllerOn
+class ParallelFunction:
+    def __init__(self, functionName, remoteController):
+        self.fname = functionName
+        self.rc = remoteController
+        
+    def __call__(self,sequence):
+        return self.rc.mapAll(self.fname,sequence)

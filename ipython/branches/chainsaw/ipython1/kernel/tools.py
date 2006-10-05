@@ -7,6 +7,7 @@ The functions and classes here are designed to be imported and used on Engines
 that have a rank and size defined.  The functions here use these to determine
 how to partition lists and arrays amongst the Engines.
 """
+__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>

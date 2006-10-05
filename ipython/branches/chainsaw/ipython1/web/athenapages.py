@@ -1,3 +1,5 @@
+__docformat__ = "restructuredtext en"
+
 from nevow import athena, loaders, tags, inevow, rend, livepage
 from twisted.internet import reactor
 from twisted.web import static

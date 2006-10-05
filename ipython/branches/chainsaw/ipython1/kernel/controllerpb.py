@@ -12,6 +12,7 @@ To do:
  * remote_addNotifier is not in the ControllerService implem. or interf.
  * PBNotifierChild need documentation.
 """
+__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>

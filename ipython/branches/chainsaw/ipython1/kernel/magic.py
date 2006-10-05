@@ -3,6 +3,7 @@
 """
 Magic command interface for interactive parallel work.
 """
+__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
@@ -19,6 +20,7 @@ Magic command interface for interactive parallel work.
 import new
 
 from IPython.iplib import InteractiveShell
+from IPython.Shell import MTInteractiveShell
 
 #-------------------------------------------------------------------------------
 # Definitions of magic functions for use with IPython
@@ -111,7 +113,7 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
         #    self.activeController.executeAll(source)
         self.activeController.executeAll(source)
         return False
-    
+        
 def magic_autopx(self, parameter_s=''):
     
     if hasattr(self, 'autopx'):
