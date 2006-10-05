@@ -324,6 +324,20 @@ class RemoteControllerView(RemoteControllerBase):
         else:
             raise TypeError("__getitem__ only takes strs, ints, and slices")
         
+    def map(self, targets, functionSource, seq, style='basic'):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.rc.map(actualTargets, functionSource, seq, style)
+    
+    def mapAll(self, functionSource, seq, style='basic'):
+        return self.map('all', functionSource, seq, style)
+    
+    def parallelize(self, targets, functionName):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.rc.parallelize(actualTargets, functionName)
+    
+    def parallelizeAll(self, functionName):
+        return self.parallelize('all', functionName)
+        
     #---------------------------------------------------------------------------
     # Methods specific to a RemoteControllerView
     #---------------------------------------------------------------------------

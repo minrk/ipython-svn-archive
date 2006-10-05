@@ -46,11 +46,11 @@ def tarModule(mod):
     
     Notes:
     
-     - It will handle both single module files, as well as packages.
-     - The byte code files (*.pyc) are not deleted.
-     - It has not been tested with modules containing extension code, but 
-       it should work in most cases.
-     - There are cross platform issues. 
+    - It will handle both single module files, as well as packages.
+    - The byte code files (\*.pyc) are not deleted.
+    - It has not been tested with modules containing extension code, but 
+      it should work in most cases.
+    - There are cross platform issues. 
      
     """
      

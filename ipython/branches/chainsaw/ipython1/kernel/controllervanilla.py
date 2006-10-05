@@ -1,4 +1,4 @@
-"""A vanilla protocol interface to a `ControllerService`.
+"""A vanilla protocol interface to a `controllerservice.ControllerService`.
 
 The client side of this uses standard blocking Python sockets and can 
 be used from an interactive Python session.
@@ -11,9 +11,10 @@ To do:
 - `IVanillaControllerFactory` is missing lots of method that are implemented
   in `VanillaControllerFactoryFromService`.  I now understand why the fooAll 
   methods and push/pull aren't there, but what about the other methods?
-- `VanillaControllerFactoryFromService` implements `addNotifier` and `delnotifier`, 
-  but these methods are not in the `IVanillaControllerFactory` interface or
-  anywhere in the `ControllerService` interface or implementation.
+- `VanillaControllerFactoryFromService` implements ``addNotifier`` and 
+  ``delnotifier``, but these methods are not in the `IVanillaControllerFactory` 
+  interface or anywhere in the `controllerservice.ControllerService` interface 
+  or implementation.
 
 """
 __docformat__ = "restructuredtext en"
@@ -151,8 +152,8 @@ class RemoteController(RemoteControllerBase):
         """Send a tarballed module to all engines.
         
         :Parameters:
-        - `tarballName`: The filename of the tarball as a string.
-        - `fileString`: The tarballed file as a string.
+         - `tarballName`: The filename of the tarball as a string.
+         - `fileString`: The tarballed file as a string.
         """
         
         self.pushAll(tar_fileString=fileString)
@@ -787,21 +788,17 @@ class RemoteController(RemoteControllerBase):
     getMappedIDs = getIDs
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
-        """Partition and distribute a sequence of objects to engines.
-        
-        Examples:
-        
-        Fill in examples!
+        """Partition and distribute a sequence of objects to engines.    
         
         :Parameters:
          - `targets`: The engine id(s) to scatter to. Targets can be 
            an int, list of ints, or the string 'all' to indicate all 
            available engines.  To see the current ids available on a 
            controller use `getIDs()`.
-         - `key': What to call the scattered partitions.
+         - `key`: What to call the scattered partitions.
          - `seq`: The list, tuple or array to scatter.
          - `style`: A string to determine how the sequence is scattered.
-           Currently only 'basic' is supported.
+           Currently only ``basic`` is supported.
          - `flatten`: A boolean flag to determine if partitions of lenth
            1 are scattered as scalars.  Defaults to ``False``.
            
@@ -855,9 +852,9 @@ class RemoteController(RemoteControllerBase):
            an int, list of ints, or the string 'all' to indicate all 
            available engines.  To see the current ids available on a 
            controller use `getIDs()`.
-         - `key': The name of the object to gather.
+         - `key`: The name of the object to gather.
          - `style`: A string to determine how the sequence is gathered.
-           Currently only 'basic' is supported.
+           Currently only ``basic`` is supported.
            
         :return:  Flattened list or array of objects. 
         """
@@ -1040,7 +1037,21 @@ class RemoteController(RemoteControllerBase):
             return True
     
     def run(self, targets, fname):
-        """Run a file on engine(s)."""
+        """Run a .py file on engine(s).
+        
+        This reads a local .py file named fname and sends it to be 
+        executed on remote engines.  It is executed in the user's
+        namespace, just like the IPython ``run`` magic command.
+        
+        :Parameters:
+         - `targets`: The engine id(s) to run on. Targets can be 
+           an int, list of ints, or the string 'all' to indicate all 
+           available engines.  To see the current ids available on a 
+           controller use `getIDs()`.
+         - `fname`: The filename to run.
+         
+        :return: ``True`` or ``False`` to indicate success or failure.    
+        """
         
         fileobj = open(fname,'r')
         source = fileobj.read()
@@ -1053,16 +1064,63 @@ class RemoteController(RemoteControllerBase):
         return self.execute(targets, source)
     
     def runAll(self, fname):
-        """Run a file on all engines.
+        """Run a .py file on all engines.
         
         See the docstring for `run` for more details.
         """
         return self.run('all', fname)
     
     def __setitem__(self, key, value):
-            return self.push('all', **{key:value})
+        """Add a dictionary interface to `RemoteController`.
+        
+        This functions as a shorthand for `push`.
+        
+        Examples:
+        
+        >>> rc = RemoteController(('localhost',10000))
+        >>> rc['a'] = 10                      # Same as rc.pushAll(a=10)
+        
+        :Parameters:
+         - `key`: What to call the remote object.
+         - `value`: The local Python object to push.
+        """
+        return self.push('all', **{key:value})
     
     def __getitem__(self, id):
+        """Add list and dict interface to `RemoteController`.
+        
+        This lets you index a `RemoteController` object as either a list
+        or a dictionary.  
+        
+        The dictionary interface is shorthand for pull:
+        
+        >>> rc = RemoteController(('localhost',10000))
+        >>> rc['a']                     # Same as rc.pullAll('a')
+        (10, 10, 10, 10)
+        
+        When indexed as a list, the rc object returns an `EngineProxy`
+        or RemoteControllerView object.  These objects have the same
+        interface as a RemoteController object, but work only on a single
+        engine:
+        
+        >>> engine0 = rc[0]               # Create an interface to engine 0
+        >>> engine0.execute('a=math.pi')  # Same as rc.execute(0,'a=math.pi')
+        
+        Or a subset of engines:
+        
+        >>> subset = rc[0:4]              # Subset is a RemoteControllerView
+        >>> subset.executeAll('c=30')     # Same as rc.execute(range(0,4),'c=30')
+        
+        You can use this notation in combination with the dictionary notation 
+        to do things like:
+        
+        >>> rc[0]['a'] = 30
+        >>> localresult = rc[5]['result']
+        
+        :Parameters:
+         - `id`: A string representing the key.
+        """
+        
         if isinstance(id, slice):
             return RemoteControllerView(self, id)
         elif isinstance(id, int):
@@ -1073,31 +1131,28 @@ class RemoteController(RemoteControllerBase):
             raise TypeError("__getitem__ only takes strs, ints, and slices")
 
     def __len__(self):
+        """Return the number of available engines."""
         return len(self.getIDs())
   
     def pushModule(self, mod):
-        """Send a locally imported module to a kernel.
+        """Send a locally imported module to all engines.
         
         This method makes a tarball of an imported module that exists 
-        on the local host and sends it to the working directory of the
-        kernel.  It then untars it.  
+        on the local machine and sends it to the working directory of the
+        engines.  It then untars it.  
         
-        After that, the module can be imported and used by the kernel.
+        After that, the module can be imported and used by the engines.
         
         Notes:
         
         - It DOES NOT handle eggs yet.
-        
         - The file must fit in the available RAM.
-        
         - It will handle both single module files, as well as packages.
-        
-        - The byte code files (*.pyc) are not deleted.
-        
-        - It has not been tested with modules containing extension code,
+        - The byte code files (\*.pyc) are not deleted.
+        - It has not been tested with modules containing extension code, 
           but it should work in most cases.
-        
         - There are cross platform issues. 
+        
         """
         
         tarball_name, fileString = tarModule(mod)
@@ -1105,20 +1160,31 @@ class RemoteController(RemoteControllerBase):
     
 
     def map(self, targets, functionSource, seq, style='basic'):
-        """A parallelized version of python's builtin map.
+        """A parallelized version of Python's builtin map.
         
-        This version of map is designed to work similarly to python's
-        builtin map(), but the execution is done in parallel on the cluster.
+        This function implements the following pattern:
+        1. The sequence seq is scattered to the given targets.
+        2. map(functionSource, seq) is called on each engine.
+        3. The resulting sequences are gathered back to the local machine.
                 
         Example:
         
         >>> map('lambda x: x*x', range(10000))
+        [0,2,4,9,25,36,...]
 
-        @arg func_code:
-            A string of python code representing a cdallable.
-            It must be defined in the kernels namespace.
-        @arg seq:
-            A python sequence to call the callable on
+        :Parameters:
+         - `targets`: The engine id(s) to map on. Targets can be 
+           an int, list of ints, or the string 'all' to indicate all 
+           available engines.  To see the current ids available on a 
+           controller use `getIDs()`.
+         - `functionSource`: A string representation of a callable that is
+           defined on the engines.
+         - `seq`: The local sequence to be scattered.
+         - `style`: The style of `scatter`/`gather` to use.  So far only ``basic``
+           is implemented.
+           
+        :return: A list of len(seq) with functionSource called on each element
+            of ``seq``.
         """
         rtcode = self.scatter(targets, '_ipython_map_seq', seq, style='basic')
         if rtcode:
@@ -1131,11 +1197,52 @@ class RemoteController(RemoteControllerBase):
             return False
             
     def mapAll(self, functionSource, seq, style='basic'):
+        """Parallel map on all engines.
+        
+        See the docstring for `map` for more details.
+        """
         return self.map('all', functionSource, seq, style)
 
-    def parallelize(self, functionName):
-        return ParallelFunction(functionName, self)
-
+    def parallelize(self, targets, functionName):
+        """Build a `ParallelFunction` object for functionName on engines.
+        
+        The returned object will implement a parallel version of functionName
+        that takes a local sequence as its only argument and calls (in 
+        paralle) functionName on each element of that sequence.
+        
+        Examples:
+        
+        >>> rc = RemoteController(('localhost',10000))
+        >>> psin = rc.parallelize('all','lambda x:x*x')
+        >>> psin(range(10000))
+        [0,2,4,9,25,36,...]
+        
+        :Parameters:
+         - `targets`: The engine id(s) to use. Targets can be 
+           an int, list of ints, or the string 'all' to indicate all 
+           available engines.  To see the current ids available on a 
+           controller use `getIDs()`.
+         - `functionName`: The string representation of a Python callable
+           that is defined on the engines.  This functions will be parallelized.
+           
+        :return:  A `ParallelFunction` object for targets.
+        """
+        
+        if targets == 'all':
+            rcview = self
+        elif isinstance(targets, int):
+            rcview = RemoteControllerView(self, [targets])
+        elif isinstance(targets, (list, tuple)):
+            rcview = RemoteControllerView(self, targets)
+        return ParallelFunction(functionName, rcview)
+        
+    def parallelizeAll(self, functionName):
+        """Build a `ParallelFunction` that operates on all engines.
+        
+        See the docstring for `parallelize` for more details.
+        """
+        return self.parallelize('all', functionName)
+        
 #-------------------------------------------------------------------------------
 # The server (Controller) side of things
 #-------------------------------------------------------------------------------

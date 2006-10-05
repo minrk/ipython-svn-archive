@@ -2,8 +2,54 @@
 # encoding: utf-8
 """This module contains the public API for working with a remote controller.
 
-It looks at the client configuration to see what network protocol should be
-used and then loads the appropriate client.
+The classes defined in this module are dynamically imported based on a users
+configuration file.  This allows things like the network protocol to be 
+selected dynamically at run time.
+
+Depending on the configuration files, one of the following RemoteController classes
+will be imported into this module as RemoteController:
+
+- `controllervanilla.RemoteController` (the default)
+
+For more information about RemoteController consult the docstrings of the 
+particular RemoteController classe you are using.
+
+Magic Functions:
+
+- ``%px``
+- ``%pn``
+- ``%autopx``
+
+Attributes:
+
+- `defaultController`: The (ip,port) tuple of the default local controller.
+
+Basic Usage
+===========
+
+1. Import the api module:
+
+    >>> import ipython1.kernel.api as kernel
+
+2. Then create a RemoteController object:
+
+    >>> rc = kernel.RemoteController(('localhost',10000))
+
+If you are running everything on your local machine with the defaults, you
+can also do:
+
+    >>> rc = kernel.RemoteController(kernel.defaultController)
+    
+3. Now see if you can connect and check the engines:
+
+    >>> rc.connect()
+    Connecting to controller:  ('127.0.0.1', 10105)
+    >>> rc.getIDs()
+    (0, 1, 2, 3)
+
+4. You are ready to go.  Next, check out the execute, push and pull methods of
+   RemoteController.
+
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -21,5 +67,9 @@ clientConfig = config.getConfigObject('client')
 import ipython1.kernel.magic
 
 RemoteController = clientConfig.RemoteController
+"""The default RemoteController class obtained from config information."""
+
 RemoteController.MAX_LENGTH = clientConfig.maxMessageSize
+
 defaultController = clientConfig.connectToControllerOn
+"""The (ip,port) tuple of the default local controller."""
