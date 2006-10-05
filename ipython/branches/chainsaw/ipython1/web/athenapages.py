@@ -171,7 +171,7 @@ class CommandPage(athena.LivePage):
     
 
 class ControllerPageAthena(athena.LivePage):
-    "This is broken"
+    """This is broken"""
     chat=None
     addSlash = True
     docFactory = loaders.stan(tags.html[

@@ -1,9 +1,10 @@
 """This file contains unittests for the shell.py module.
 
 Things that should be tested:
-- Methods should return XML-RPC/PB friendly things (no None allowed)
-- Each interface method should be tested thoroughly
-- Don't worry about implementation methods
+
+ - Methods should return XML-RPC/PB friendly things (no None allowed)
+ - Each interface method should be tested thoroughly
+ - Don't worry about implementation methods
 """
 
 #*****************************************************************************

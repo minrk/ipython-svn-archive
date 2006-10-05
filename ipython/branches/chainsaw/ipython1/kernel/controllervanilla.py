@@ -1,18 +1,20 @@
-"""A vanilla protocol interface to a ControllerService.
+"""A vanilla protocol interface to a `ControllerService`.
 
-The client side of this uses standard blocking python sockets and can 
-be used from an interactive python session.
+The client side of this uses standard blocking Python sockets and can 
+be used from an interactive Python session.
 
 The server side is written as a Twisted protocol/factory and follows the 
 adapter/interface design pattern of the other client protocols.
 
 To do:
- * IVanillaControllerFactory is missing lots of method that are implemented
-   in VanillaControllerFactoryFromService.  I now understand why the fooAll 
-   methods and push/pull aren't there, but what about the other methods?
- * VanillaControllerFactoryFromService implements addNotifier and delnotifier, 
-   but these methods are not in the IVanillaControllerFactory interface or
-   anywhere in the ControllerService interface or implementation.
+
+- `IVanillaControllerFactory` is missing lots of method that are implemented
+  in `VanillaControllerFactoryFromService`.  I now understand why the fooAll 
+  methods and push/pull aren't there, but what about the other methods?
+- `VanillaControllerFactoryFromService` implements `addNotifier` and `delnotifier`, 
+  but these methods are not in the `IVanillaControllerFactory` interface or
+  anywhere in the `ControllerService` interface or implementation.
+
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -79,16 +81,14 @@ del arraytypeList
 #-------------------------------------------------------------------------------
 
 class RemoteController(RemoteControllerBase):
-    """A high level interface to a remotely running ipython controller."""
+    """A high level interface to a remotely running IPython controller."""
     
     MAX_LENGTH = 99999999
     
     def __init__(self, addr):
-        """Create a RemoteController instance pointed at a specific controller.
+        """Create a `RemoteController` instance pointed at a specific controller.
         
-        @arg addr:
-            The (ip,port) tuple of the kernel.  The ip in a string
-            and the port is an int.
+        :arg addr:  The (ip,port) tuple of the kernel, like ('192.168.0.1',10000)
         """
         self.addr = addr
         self.block = True
@@ -100,14 +100,14 @@ class RemoteController(RemoteControllerBase):
     #-------------------------------------------------------------------------------
 
     def __del__(self):
-        """Disconnect upon deleting the self."""
+        """Disconnect upon being deleted."""
         
         return self.disconnect()
     
     def isConnected(self):
         """Are we connected to the controller?
         
-        Return True or False.
+        :return: True or False.
         """ 
         
         if hasattr(self, 's'):
@@ -147,8 +147,13 @@ class RemoteController(RemoteControllerBase):
         
         return not isinstance(targets, int) and len(targets) > 1
     
-    def _pushModuleString(self, tarball_name, fileString):
-        """This method send a tarball'd module to a kernel."""
+    def _pushModuleString(self, tarballName, fileString):
+        """Send a tarballed module to all engines.
+        
+        :Parameters:
+        - `tarballName`: The filename of the tarball as a string.
+        - `fileString`: The tarballed file as a string.
+        """
         
         self.pushAll(tar_fileString=fileString)
         self.executeAll("tar_file = open('%s','wb')" % \
@@ -156,7 +161,7 @@ class RemoteController(RemoteControllerBase):
         self.executeAll("tar_file.write(tar_fileString)", block=False)
         self.executeAll("tar_file.close()", block=False)
         self.executeAll("import os", block=False)
-        self.executeAll("os.system('tar -xf %s')" % tarball_name)        
+        self.executeAll("os.system('tar -xf %s')" % tarballName)        
     
     def _sendSerialized(self, serial):
         assert isinstance(serial, serialized.Serialized)
@@ -170,20 +175,29 @@ class RemoteController(RemoteControllerBase):
     def execute(self, targets, source, block=False):
         """Execute python source code on engine(s).
         
-        @arg targets:
-            The engine id(s) on which to execute.  Targets can be an int, list of
-            ints, or the string 'all' to indicate that it should be executed on
-            all engines connected to the controller.
-        @arg source:
-            A string containing valid python code
-        @arg block:
-            Whether or not to wait for the results of the command.
-            True:
-                Wait for results, which will be printed as stdin/out/err
-            False:
-                Do not wait, return as soon as source has been sent, print nothing.
-            The blocking can also be controlled on a global basis by setting the 
-            block attribute of the RemoteController object.
+        Examples:
+        
+        >>> rc = RemoteController(('localhost',10000))
+        >>> rc.execute('all', a=5)
+        >>> rc.execute(0, 'import math')
+        >>> rc.execute(range(0,10,2) 'print a', block=True)
+        
+        There is also a magic command interface for executing commands in IPython.
+        See `activate` for more information.
+        
+        :Parameters:
+         - `targets`: The engine id(s) on which to execute. Targets can be an int, 
+           list of ints, or the string 'all' to indicate all available engines.  
+           To see the current ids available on a controller use `getIDs()`.
+         - `source`: A string containing valid python code.
+         - `block`:  Whether or not to wait for the results of the action.  Using 
+           ``block=True`` will wait for results, which will be printed as 
+           stdin/out/err.  Using ``block=False`` will submit the action to the 
+           controller and return immediately. Blocking can also be controlled on a
+           global basis by setting the ``block`` attribute of the `RemoteController` 
+           object.
+            
+        :return: ``True`` or ``False`` to indicate success or failure.
         """
         
         targetstr = self._parseTargets(targets)
@@ -269,7 +283,7 @@ class RemoteController(RemoteControllerBase):
     def executeAll(self, source, block=False):
         """Execute source on all engines.
         
-        See the docstring for execute for more details.
+        See the docstring for `execute` for more details.
         """
         return self.execute('all', source, block)
 
@@ -278,26 +292,28 @@ class RemoteController(RemoteControllerBase):
         
         This should be able to send any picklable Python object.  Any modules 
         referenced in the object will need to be available on the engines.
-        Also, Numpy arrays are sent without pickling, using their buffers.
+        Also, Numpy arrays are sent without pickling using their buffers.
         
-        @arg targets:
-            the engine id(s) on which to execute.  targets can be an int, list of
-            ints, or the string 'all' to indicate that it should be executed on
-            all engines connected to the controller.
-        @arg namespace:
-            The python objects to send and their remote keys.  i.e. a=1, b='asdf'
-            
         Examples:
         
-        >>> rc = RemoteController(addr)
+        >>> rc = RemoteController(('localhost',10000))
         >>> rc.push('all', a=5, b=10)      # push 5 as a, 10 as b to all
-        >>> rc.push(0, c=range(10))        # push range(10) to 0 as c
-        >>> rc.push([0,3], q='mystring')   # push 'mystring' to 0, 3 as q
+        >>> rc.push(0, c=range(10))        # push range(10) as c to 0
+        >>> rc.push([0,3], q='mystring')   # push 'mystring' as q to 0, 3
         
         There is also a dictionary style interface to the push command:
                 
         >>> rc['a'] = 10                   # Same as rc.push('all', a=10)
         >>> rc[0]['b'] = 30                # Same as rc.push(0, b=30)
+        
+        :Parameters:
+         - `targets`: The engine id(s) to push to. Targets can be an int, 
+           list of ints, or the string 'all' to indicate all available engines.  
+           To see the current ids available on a controller use `getIDs()`.
+         - `**namespace`:  The python objects to send and their names represented as
+           keyword arguments: a=10, b=20.
+          
+        :return: ``True`` or ``False`` to indicate success or failure.
         """
         
         targetstr = self._parseTargets(targets)
@@ -341,46 +357,41 @@ class RemoteController(RemoteControllerBase):
     def pushAll(self, **namespace):
         """Push python objects to all engines.
         
-        See the docstring of push for more details.
+        See the docstring for `push` for more details.
         """
         return self.push('all', **namespace)
         
     def pull(self, targets, *keys):
         """Get python object(s) from remote engines(s).
                 
-        If the object does not exist in the kernel's namespace a NotDefined
-        object will be returned.
+        The object must be pickable.  If the object does not exist in the 
+        engines's namespace a NotDefined object will be returned.
         
+        Examples:
         
+        >>> rc = RemoteController(('localhost',10000))
+        >>> rc.pushAll(a=5,b=10)
+        >>> rc.pull(0,'a','b')
+        (5, 10)
         
         Like push, pull also has a dictionary interface:
-        
-        >>> rc = RemoteController(addr)
-        >>> rc[0]['a'] = 10    # Same as rc.push(0, a=10)
+
+        >>> rc['a'] = 10       # Same as rc.push('all', a=10)
         >>> rc[0]['a']         # Same as rc.pull(0,'a')
         10
         
-        @arg targets:
-             the engine id(s) on which to execute.  targets can be an int, list of
-             ints, or the string 'all' to indicate that it should be executed on
-             all engines connected to the controller.
-         @arg *keys:
-             The name of the python objects to get
+        :Parameters:
+         - `targets`: The engine id(s) to pull from. Targets can be an int, 
+           list of ints, or the string 'all' to indicate all available engines.  
+           To see the current ids available on a controller use `getIDs()`.
+         - `*keys`: The name of the python objects to pull as positional 
+           arguments, like 'a', 'b', 'c'.
 
-         @returns:
-             4 cases:
-                 1 target, 1 key:
-                     the value of key on target
-                 1 target, >1 keys:
-                     a list of the values of keys on target
-                 >1 targets, 1 key:
-                     a tuple of the values at key on targets
-                 >1 targets, >1 keys:
-                     a list of length len(keys) of tuples for each key on targets.
-                     equivalent in form to:
-                     l = []
-                     for t in targets:
-                         l.append(rc.pull(t, *keys))
+        :return:  There are four cases depending on the number of keys and 
+            targets: i) (1 target, 1 key) the value of key on target, ii) 
+            (1 target, >1 keys) a list of the values of keys on target, iii) 
+            (>1 target, 1 key) a tuple of the values of key on targets and iv)
+            (>1 targets, >1 keys) a list of length(keys) of tuples of len(targets).
         """
         targetstr = self._parseTargets(targets)
         if not targetstr or not keys or not self._checkConnection():
@@ -467,20 +478,26 @@ class RemoteController(RemoteControllerBase):
             return False
 
     def pullAll(self, *keys):
+        """Pull objects specified by keys from all engines.
+        
+        See the docstring for `pull` for more details.
+        """
         return self.pull('all', *keys)
         
     def pullNamespace(self, targets, *keys):
-        """Gets a namespace dict with keys from targets.  This is just a wrapper
-        for pull, to construct namespace dicts from the results of pull.
+        """Like `pull`, but returns a dict of key, value pairs.
         
-        returns:
-            1 target:
-                a dictionary of keys/values on remote engine
-            >1 targets:
-                a list of dictionaries of the form of 1 target.  Order of targets
-                is maintained.
-                
-            """
+        :Parameters:
+         - `targets`: The engine id(s) to pull from. Targets can be an int, 
+           list of ints, or the string 'all' to indicate all available engines.  
+           To see the current ids available on a controller use `getIDs()`.
+         - `*keys`: The name of the python objects to pull as positional 
+           arguments, like 'a', 'b', 'c'.
+        
+        :return:  For 1 target, returns a dict of key value pairs.  For >1
+            targets, a list of dicts of key, value pairs.
+        """
+        
         targetstr = self._parseTargets(targets)
         if not targetstr or not keys or not self._checkConnection():
             print "Need something to do!"
@@ -523,11 +540,24 @@ class RemoteController(RemoteControllerBase):
         return returns
             
     def pullNamespaceAll(self, *keys):
+        """`pullNamespace` on all engines.
+        
+        See the docstring for `pullNamespace` for more details.
+        """
         return self.pullNamespace('all', *keys)
             
     def getResult(self, targets, i=None):
-        """Gets a specific result from the kernels, returned as a tuple, or 
-            list of tuples if multiple targets."""
+        """Gets a result (#, stdin, stdout, stderr) from engine(s).
+        
+        :Parameters:
+         - `targets`: The engine id(s) to get the result from. Targets can be 
+           an int, list of ints, or the string 'all' to indicate all 
+           available engines.  To see the current ids available on a 
+           controller use `getIDs()`.        
+         - `i`: The result number to get.  If ``None``, the most recent result.
+        :return:  A tuple of (#, stdin, stdout, stderr) for each target.
+        """
+        
         targetstr = self._parseTargets(targets)
         if not targetstr or not self._checkConnection():
             print "Need something to do!"
@@ -570,10 +600,25 @@ class RemoteController(RemoteControllerBase):
             return False
     
     def getResultAll(self, i=None):
+        """Get result ``i`` from all engines.
+        
+        See the docstring for `getResult` for more details.
+        """
         return self.getResult('all', i)
     
     def status(self, targets):
-        """Check the status of the kernel."""
+        """Check the status of the controller and engines.
+        
+        We have not yet settled on exaclty what information this method
+        should return.  The particulars of this may change in the future.
+        
+        :Parameters:
+         - `targets`: The engine id(s) to get the status from. Targets can be 
+           an int, list of ints, or the string 'all' to indicate all 
+           available engines.  To see the current ids available on a 
+           controller use `getIDs()`.
+        """
+        
         targetstr = self._parseTargets(targets)
         if not targetstr or not self._checkConnection():
             print "Need something to do!"
@@ -612,10 +657,29 @@ class RemoteController(RemoteControllerBase):
             return False
     
     def statusAll(self):
+        """Get the status of the controller and all engines.
+        
+        See the docstring for `status` for more details.
+        """
         return self.status('all')
     
     def reset(self, targets):
-        """Clear the namespace if the kernel."""
+        """Clear the users namespace on the engine(s).
+        
+        This tries to give the user a clean slate on an engine.  But
+        any modules that have been imported will remain in memory, so doing
+        a `reset` and then an ``import foo`` will not cause the ``foo`` to
+        be reloaded.
+        
+        :Parameters:
+         - `targets`: The engine id(s) to reset. Targets can be 
+           an int, list of ints, or the string 'all' to indicate all 
+           available engines.  To see the current ids available on a 
+           controller use `getIDs()`.
+           
+        :return: ``True`` or ``False`` to indicate success or failure. 
+        """
+        
         targetstr = self._parseTargets(targets)
         if not targetstr or not self._checkConnection():
             print "Need something to do!"
@@ -640,10 +704,29 @@ class RemoteController(RemoteControllerBase):
             return False      
     
     def resetAll(self):
+        """Clear the users's namespace on all engines.
+        
+        See the docstring for `reset` for more details.
+        """
         return self.reset('all')
     
     def kill(self, targets):
-        """Kill the engine completely."""
+        """Kill the engine completely by stopping their reactors.
+        
+        This method kills the engines specified by targets by stopping
+        their reactors.  For this to succeed, the engines must be in a state
+        in which they can be reached.  Thus, if they have hung, this may not
+        work.
+        
+        :Parameters:
+         - `targets`: The engine id(s) to kill. Targets can be 
+           an int, list of ints, or the string 'all' to indicate all 
+           available engines.  To see the current ids available on a 
+           controller use `getIDs()`.
+           
+        :return: ``True`` or ``False`` to indicate success or failure.
+        """
+        
         targetstr = self._parseTargets(targets)
         if not targetstr or not self._checkConnection():
             print "Need something to do!"
@@ -666,10 +749,12 @@ class RemoteController(RemoteControllerBase):
             return False     
                 
     def killAll(self):
+        """Kill all active engines."""
         return self.kill('all')
                 
     def getIDs(self):
-        """Return the id list of the currently connected Engines."""
+        """Return the id list of the currently connected engines."""
+        
         if not self._checkConnection():
             print "Not Connected"
             return False
@@ -702,7 +787,26 @@ class RemoteController(RemoteControllerBase):
     getMappedIDs = getIDs
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
-        """distribute sequence object to targets"""
+        """Partition and distribute a sequence of objects to engines.
+        
+        Examples:
+        
+        Fill in examples!
+        
+        :Parameters:
+         - `targets`: The engine id(s) to scatter to. Targets can be 
+           an int, list of ints, or the string 'all' to indicate all 
+           available engines.  To see the current ids available on a 
+           controller use `getIDs()`.
+         - `key': What to call the scattered partitions.
+         - `seq`: The list, tuple or array to scatter.
+         - `style`: A string to determine how the sequence is scattered.
+           Currently only 'basic' is supported.
+         - `flatten`: A boolean flag to determine if partitions of lenth
+           1 are scattered as scalars.  Defaults to ``False``.
+           
+        :return: ``True`` or ``False`` to indicate success or failure.   
+        """
         
         targetstr = self._parseTargets(targets)
         if not targetstr or not key or not self._checkConnection()\
@@ -737,10 +841,27 @@ class RemoteController(RemoteControllerBase):
             return False
     
     def scatterAll(self, key, seq, style='basic', flatten=False):
+        """Scatter sequence to all engines.
+        
+        See the docstring for `scatter` for more details.
+        """
         return self.scatter('all', key, seq, style=style, flatten=flatten)
     
     def gather(self, targets, key, style='basic'):
-        """gather a distributed object, and reassemble it"""
+        """Gather a objects, and assemble them into a list.
+        
+        :Parameters:
+         - `targets`: The engine id(s) to gather from. Targets can be 
+           an int, list of ints, or the string 'all' to indicate all 
+           available engines.  To see the current ids available on a 
+           controller use `getIDs()`.
+         - `key': The name of the object to gather.
+         - `style`: A string to determine how the sequence is gathered.
+           Currently only 'basic' is supported.
+           
+        :return:  Flattened list or array of objects. 
+        """
+        
         targetstr = self._parseTargets(targets)
         if not targetstr or not key or not self._checkConnection():
             print "Need something to do!"
@@ -789,31 +910,19 @@ class RemoteController(RemoteControllerBase):
             return False
 
     def gatherAll(self, key, style='basic'):
+        """Gather from all engines.
+        
+        See the docstring for `gather` for more information.
+        """
         return self.gather('all', key, style=style)
 
     def notify(self, addr=None, flag=True):
-        """Instruct the kernel to notify a result gatherer.
+        """Instruct the controller to notify a result gatherer.
         
-        When the IPython kernel runs code, it traps the stdout and stderr
-        of each command and stores them in a list.  The tuple of stdin, stdout
-        and stderr of each executed command is called the result of the command.
-        
-        The result of each command is sent by the kernel to the user who 
-        collects and handles the results using instances of the ResultGatherer
-        class.  This class is bound to a UDP port and handles results from one
-        or more kernels that are sending results to the ResultGatherer.
-        
-        This design was choosen to allow complete flexibility in monitoring
-        the activity of groups of ipython kernels.  Each kernel keeps a list of    
-        (ip, port) tuples to which results should be sent.  New addresses are
-        added to this list using the notify() method.  This way each kernel can
-        send results to multple observers and each observer can watch a 
-        different set of kernels. 
-            
-        @arg addr:
-            The (ip, port) tuple of the result gatherer
-        @arg flag:
-            A boolean to turn notification on (True) or off (False) 
+        :Parameters:
+         - `addr`: The (ip,port) tuple of the result gatherer.
+         - `flag`: A boolean to turn notification on (``True``) or off 
+           (``False``)
         """
         if not self._checkConnection():
             print "Not Connected"
@@ -852,30 +961,39 @@ class RemoteController(RemoteControllerBase):
     #-------------------------------------------------------------------------------
         
     def activate(self):
-        """Make this cluster the active one for ipython magics.
+        """Make this `RemoteController` active for parallel magic commands.
         
-        IPython has a magic syntax to work with InteractiveCluster objects.
-        In a given ipython session there is a single active cluster.  While
-        there can be many clusters created and used by the user, there is only
-        one active one.  The active cluster is used when ever the magic syntax
-        is used.  
+        IPython has a magic command syntax to work with `RemoteController` objects.
+        In a given IPython session there is a single active cluster.  While
+        there can be many `RemoteController` created and used by the user, 
+        there is only one active one.  The active `RemoteController` is used whenever 
+        the magic commands %px, %pn, and %autopx are used.
         
-        The activate() method is called on a given cluster to make it the active
-        one.  Once this has been done, the magic command can be used:
+        The activate() method is called on a given `RemoteController` to make it 
+        active.  Once this has been done, the magic commands can be used.
         
-        >>> %px a = 5       # Same as execute('a = 5')
+        Examples
         
+        >>> rc = RemoteController(('localhost',10000))
+        >>> rc.activate()
+        >>> %px a = 5       # Same as executeAll('a = 5')        
+        >>> %pn 0 b = 10    # Same as execute(0,'b=10')
         >>> %autopx         # Now every command is sent to execute()
-        
+        ...
         >>> %autopx         # The second time it toggles autoparallel mode off
         """
+        
         try:
             __IPYTHON__.activeController = self
         except NameError:
             print "The IPython Controller magics only work within IPython."
     
     def connect(self):
-        """Initiate a new connection to the controller."""
+        """Initiate a new connection to the controller.
+        
+        The (ip,port) of the controller is set when the `RemoteController` 
+        object is created.
+        """
         
         print "Connecting to controller: ", self.addr
         try:
@@ -899,7 +1017,10 @@ class RemoteController(RemoteControllerBase):
         return True
     
     def disconnect(self):
-        """Disconnect from the controller."""
+        """Disconnect from the controller.
+        
+        The controller and all engines are left running.
+        """
         
         if self.isConnected():
             try:
@@ -919,7 +1040,7 @@ class RemoteController(RemoteControllerBase):
             return True
     
     def run(self, targets, fname):
-        """Run a file on the kernel."""
+        """Run a file on engine(s)."""
         
         fileobj = open(fname,'r')
         source = fileobj.read()
@@ -932,6 +1053,10 @@ class RemoteController(RemoteControllerBase):
         return self.execute(targets, source)
     
     def runAll(self, fname):
+        """Run a file on all engines.
+        
+        See the docstring for `run` for more details.
+        """
         return self.run('all', fname)
     
     def __setitem__(self, key, value):

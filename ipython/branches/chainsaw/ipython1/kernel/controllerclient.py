@@ -6,11 +6,13 @@ to a running ipython kernel instance.  Currently these classes use blocking
 sockets, and thus, do not require Twisted.
 
 TODOs:
-- Organize methods of RemoteController, RemoteControllerView and EngineProxy in 
-  a consistent and logical manner.
-- Check to make sure that RemoteControllerView and EngineProxy implement all the 
-  methods they should.
-- What should happen if the target given is an integer, but is not valid?
+
+ - Organize methods of RemoteController, RemoteControllerView and EngineProxy in 
+   a consistent and logical manner.
+ - Check to make sure that RemoteControllerView and EngineProxy implement all the 
+   methods they should.
+ - What should happen if the target given is an integer, but is not valid?
+
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------

@@ -1,10 +1,11 @@
 """This file contains unittests for the kernel.engineservice.py module.
 
 Things that should be tested:
-- Should the EngineService return Deferred objects?
-- Run the same tests that are run in shell.py.
-- Make sure that the Interface is really implemented.
-- The startService and stopService methods.
+
+ - Should the EngineService return Deferred objects?
+ - Run the same tests that are run in shell.py.
+ - Make sure that the Interface is really implemented.
+ - The startService and stopService methods.
 """
 
 #*****************************************************************************

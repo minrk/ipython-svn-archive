@@ -2,15 +2,15 @@
 
 Things that should be tested:
 The methods of Controller Service:
-    registerEngine √
-    unregisterEngine √
-    execute/All √o
-    push/Serial/All √/√/oo
-    pull/Serial/All √/√/oo
-    getResult/All √/o
-    status/All oo
-    reset/All oo
-    *kill/All - do not test this, it calls reactor.stop
+ - registerEngine √
+ - unregisterEngine √
+ - execute/All √o
+ - push/Serial/All √/√/oo
+ - pull/Serial/All √/√/oo
+ - getResult/All √/o
+ - status/All oo
+ - reset/All oo
+ - *kill/All - do not test this, it calls reactor.stop
 
 """
 

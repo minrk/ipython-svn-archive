@@ -226,13 +226,16 @@ class ControllerService(service.Service, results.NotifierParent):
         
         what they look like:
         
-        def <fname>(self, targets, *args, **kwargs):
-            log.msg("<fname> on %s" %(targets))
-            engines = self.engineList(targets)
-            l = []
-            for e in engines:
-                l.append(e.<fname>(*args, **kwargs))
-            d = gatherBoth(l)
+        ::
+        
+            def <fname>(self, targets, *args, **kwargs):
+                log.msg("<fname> on %s" %(targets))
+                engines = self.engineList(targets)
+                l = []
+                for e in engines:
+                    l.append(e.<fname>(*args, **kwargs))
+                    d = gatherBoth(l)
+                    
         """
         for m in IMultiEngine:
             IM = IMultiEngine[m]

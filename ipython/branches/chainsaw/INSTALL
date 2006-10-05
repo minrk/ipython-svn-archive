@@ -4,9 +4,11 @@ IPython Kernel Installation
 
 :Author:  Brian E. Granger
 :Contact: ellisonbg@gmail.com
-:Date: August 29, 2006
+:Date: October 5, 2006
 
 .. contents::
+
+NOTE:  This document is in the process of being updated (10/5/06) and may not accurately reflect the state of IPython1.
 
 Introduction
 ============
