@@ -67,6 +67,8 @@ class RemoteControllerBase(object):
      * pullNamespaceAll
      * getResult
      * getResultAll
+     * printResult
+     * printResultAll
      * reset
      * resetAll
      * status
@@ -86,8 +88,8 @@ class RemoteControllerBase(object):
      * runAll
      * __setitem__
      * __getitem__
-     * map/reduce
-     * vectorize?
+     * map (eventually reduce as well)
+     * parallelize
      
      Some methods don't always make sense on RemoteControllerViews:
      
@@ -252,6 +254,13 @@ class RemoteControllerView(RemoteControllerBase):
             r = [r]
         return r
         
+    def printResult(self, targets, i=None):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.rc.printResult(actualTargets, i)
+             
+    def printResultAll(self, i=None):
+        return self.printResult('all', i)
+             
     def reset(self, targets):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.reset(actualTargets)

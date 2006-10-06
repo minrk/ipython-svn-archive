@@ -607,6 +607,50 @@ class RemoteController(RemoteControllerBase):
         """
         return self.getResult('all', i)
     
+    def printResult(self, targets, i=None):
+        """Get result ``i`` and print it in a pretty form.
+        
+        This function works just like `getResult` but prints the result
+        rather than returning it as a tuple.
+        
+        There is also a `result` magic command that can be used as a short hand
+        for this method. 
+        """
+        data = self.getResult(targets, i)
+        if len(data) == 0:
+            data = [data]
+            
+        blue = TermColors.Blue
+        normal = TermColors.Normal
+        red = TermColors.Red
+        green = TermColors.Green
+        for cmd in data:
+            if isinstance(cmd, Failure):
+                print cmd
+            else:
+                target = cmd[0]
+                cmd_num = cmd[1]
+                cmd_stdin = cmd[2]
+                cmd_stdout = cmd[3][:-1]
+                cmd_stderr = cmd[4][:-1]
+                print "%s[%s:%i]%s In [%i]:%s %s" % \
+                    (green, self.addr[0], target,
+                    blue, cmd_num, normal, cmd_stdin)
+                if cmd_stdout:
+                    print "%s[%s:%i]%s Out[%i]:%s %s" % \
+                        (green, self.addr[0], target,
+                        red, cmd_num, normal, cmd_stdout)
+                if cmd_stderr:
+                    print "%s[%s:%i]%s Err[%i]:\n%s %s" % \
+                        (green, self.addr[0], target,
+                        red, cmd_num, normal, cmd_stderr)
+    
+    def printResultAll(self, i=None):
+        """Print result ``i`` from all engines.
+        
+        See the docstring for `printResult` for more details."""
+        return self.printResult('all', i)
+    
     def status(self, targets):
         """Check the status of the controller and engines.
         

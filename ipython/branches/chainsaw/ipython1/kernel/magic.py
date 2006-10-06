@@ -31,6 +31,37 @@ Error:  No Controller is activated
 Use activate() on a RemoteController object to activate it for magics.
 """
 
+def magic_result(self,parameter_s=''):
+    """Print the result of command i on all engines of the active controller.
+    
+    To activate a controller in IPython, first create it and then call
+    the activate() method.
+    
+    Then you can do the following:
+    
+    >>> result                                # Print the latest result
+    Printing result... 
+    [127.0.0.1:0] In [1]: b = 10
+    [127.0.0.1:1] In [1]: b = 10
+    
+    >>> result 0                              # Print result 0
+    In [14]: result 0
+    Printing result... 
+    [127.0.0.1:0] In [0]: a = 5
+    [127.0.0.1:1] In [0]: a = 5
+    """
+    try:
+        activeController = __IPYTHON__.activeController
+    except AttributeError:
+        print NO_ACTIVE_CONTROLLER
+    else:
+        try:
+            index = int(parameter_s)
+        except:
+            index = None
+        print "Printing result... "
+        activeController.printResultAll(index)
+
 def magic_px(self,parameter_s=''):
     """Executes the given python command on the active IPython Controller.
     
@@ -115,6 +146,20 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
         return False
         
 def magic_autopx(self, parameter_s=''):
+    """Toggles auto parallel mode for the active IPython Controller.
+    
+    To activate a Controller in IPython, first create it and then call
+    the activate() method.
+    
+    Then you can do the following:
+     
+    >>> %autopx                    # Now all commands are executed in parallel
+    Auto Parallel Enabled
+    Type %autopx to disable
+    ...
+    >>> %autopx                    # Now all commands are locally executed
+    Auto Parallel Disabled
+    """
     
     if hasattr(self, 'autopx'):
         if self.autopx == True:
@@ -144,12 +189,14 @@ def magic_autopx(self, parameter_s=''):
             
 # Add the new magic function to the class dict:
 
+InteractiveShell.magic_result = magic_result
 InteractiveShell.magic_px = magic_px
 InteractiveShell.magic_pn = magic_pn
 InteractiveShell.magic_autopx = magic_autopx
 
 # And remove the global name to keep global namespace clean.  Don't worry, the
 # copy bound to IPython stays, we're just removing the global name.
+del magic_result
 del magic_px
 del magic_autopx
 del magic_pn
