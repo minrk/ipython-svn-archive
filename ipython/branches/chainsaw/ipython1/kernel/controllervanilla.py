@@ -1041,7 +1041,9 @@ class RemoteController(RemoteControllerBase):
         
         This reads a local .py file named fname and sends it to be 
         executed on remote engines.  It is executed in the user's
-        namespace, just like the IPython ``run`` magic command.
+        namespace.  This is intended to function like IPython's run
+        magic, but its implementation doesn't work quite right.  But
+        for simple files it should work.  
         
         :Parameters:
          - `targets`: The engine id(s) to run on. Targets can be 

@@ -29,24 +29,22 @@ def main():
     efac = controllerConfig.engineServerProtocolInterface(cs)
     efac.MAX_LENGTH = controllerConfig.maxMessageSize
     reactor.listenTCP(
-        port=controllerConfig.listenForEnginesOn[1],
+        port=controllerConfig.listenForEnginesOn['port'],
         factory=efac,
-        interface=controllerConfig.listenForEnginesOn[0])
+        interface=controllerConfig.listenForEnginesOn['ip'])
     for ci in controllerConfig.clientInterfaces:
-        fac = ci[0](cs)
+        fac = ci['interface'](cs)
         fac.MAX_LENGTH = controllerConfig.maxMessageSize
         reactor.listenTCP(
-            port=ci[1][1],
+            port=ci['port'],
             factory=fac,
-            interface=ci[1][0])
+            interface=ci['ip'])
     cs.startService()
     reactor.run()
 
 def start():
     parser = OptionParser()
-    parser.set_defaults(engineport=controllerConfig.listenForEnginesOn[1])
-    parser.set_defaults(engineip=controllerConfig.listenForEnginesOn[0])
-    
+        
     parser.add_option("--engine-port", type="int", dest="engineport",
         help="the TCP port the controller will listen on for engine connections")
     parser.add_option("--engine-ip", type="string", dest="engineip",
@@ -70,7 +68,11 @@ def start():
         config.updateConfigWithFile('ipcontrollerrc.py', options.ipythondir)
         
     # Update withh command line options
-    controllerConfig.listenForEnginesOn = (options.engineip, options.engineport)
+    if options.engineip is not None:
+        controllerConfig.listenForEnginesOn['ip'] = options.engineip
+    if options.engineport is not None:
+        controllerConfig.listenForEnginesOn['port'] = options.engineport
+        
     main()
     
     

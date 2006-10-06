@@ -26,6 +26,7 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
+import os
 import cPickle as pickle
 from new import instancemethod
 
@@ -36,7 +37,6 @@ import zope.interface as zi
 
 from ipython1.kernel import serialized, error, util
 from ipython1.kernel.util import gatherBoth, curry
-import ipython1.config.api as config
 
 #-------------------------------------------------------------------------------
 # Interface specification for the Engine
@@ -177,14 +177,15 @@ class EngineService(object, service.Service):
     
     zi.implements(IEngineBase, IEngineSerialized)
                 
-    def __init__(self, mpi=None):
+    def __init__(self, shellClass, filesToRun=[], mpi=None):
         """Create an EngineService.
         
         shellClass: a subclass of core.InteractiveShell
         mpi:        an mpi module that has rank and size attributes
         """
-        self.shellConfig = config.getConfigObject('shell')
-        self.shell = self.shellConfig.shellClass()
+        self.shellClass = shellClass
+        self.shell = self.shellClass()
+        self.filesToRun = filesToRun
         self.mpi = mpi
         self.id = None
         if self.mpi is not None:
@@ -208,9 +209,19 @@ class EngineService(object, service.Service):
         
         self.shell.update({'mpi': self.mpi, 'id' : self.id})
 
-        for f in self.shellConfig.filesToRun:
-            if os.path.isfile(f):
-                self.shell.execute('execfile(%s)' % f)
+        # This implementation of dealing with filesToRun doesn't work
+        # very well on complex things.  I need to move to an approach
+        # that calls execfile withh the right namespaces instead.
+        # But this has the same functionality that RemoteController.run
+        # does.
+        for fname in self.filesToRun:
+            fname = os.path.expanduser(fname)
+            if os.path.isfile(fname):
+                fileobj = open(fname,'r')
+                source = fileobj.read()
+                fileobj.close()
+                print "Running:", fname
+                self.shell.execute(source)
         
     # The IEngine methods.  See the interface for documentation.
     

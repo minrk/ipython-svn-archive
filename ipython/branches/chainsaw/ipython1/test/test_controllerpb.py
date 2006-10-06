@@ -22,6 +22,7 @@ from twisted.spread import pb, interfaces
 
 from ipython1.kernel import controllerservice as cs, serialized
 from ipython1.kernel import controllerpb, util
+from ipython1.kernel.results import INotifierParent
 from ipython1.test import multienginetest as met
 
 class BasicControllerPBTest(met.MultiEngineTestCase):
@@ -54,7 +55,7 @@ class BasicControllerPBTest(met.MultiEngineTestCase):
     def testInterfaces(self):
         p = list(self.controller.__provides__)
         p.sort()
-        l = [cs.IMultiEngine, interfaces.IJellyable]
+        l = [cs.IMultiEngine, interfaces.IJellyable, INotifierParent]
         l.sort()
         return self.assertEquals(p, l)
     

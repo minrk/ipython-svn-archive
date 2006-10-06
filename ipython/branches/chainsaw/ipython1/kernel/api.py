@@ -71,5 +71,6 @@ RemoteController = clientConfig.RemoteController
 
 RemoteController.MAX_LENGTH = clientConfig.maxMessageSize
 
-defaultController = clientConfig.connectToControllerOn
+defaultController = (clientConfig.connectToControllerOn['ip'],
+    clientConfig.connectToControllerOn['port'])
 """The (ip,port) tuple of the default local controller."""

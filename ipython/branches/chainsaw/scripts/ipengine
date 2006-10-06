@@ -26,37 +26,38 @@ import ipython1.config.api as config
 
 engineConfig = config.getConfigObject('engine')
 shellConfig = config.getConfigObject('shell')
+mpiConfig = config.getConfigObject('mpi')
+config.updateConfigWithFile('mpirc.py')
 
 # MPI module should be loaded first
 
 mpi = None
-if engineConfig.mpiImportStatement:
+if mpiConfig.mpiImportStatement:
     try:
-        exec engineConfig.mpiImportStatement
+        exec mpiConfig.mpiImportStatement
     except ImportError:
         mpi = None
 
 def main(n):
     log.startLogging(sys.stdout)
     for i in range(n):
-        service = EngineService(mpi=mpi)
+        service = EngineService(shellConfig.shellClass, 
+            shellConfig.filesToRun, 
+            mpi=mpi)
         fac = engineConfig.engineClientProtocolInterface(service)
         # I don't like that we have to set MAX_LENGTH like this, 
         # but it seems to work
         fac.MAX_LENGTH = engineConfig.maxMessageSize
         reactor.connectTCP(
-            engineConfig.connectToControllerOn[0],
-            engineConfig.connectToControllerOn[1],
-            fac)      
+            host=engineConfig.connectToControllerOn['ip'], 
+            port=engineConfig.connectToControllerOn['port'],
+            factory=fac)
         service.startService()
     reactor.run()
 
 def start(n=1):
     parser = OptionParser()
-    parser.set_defaults(controllerport=engineConfig.connectToControllerOn[1])
-    parser.set_defaults(controllerip=engineConfig.connectToControllerOn[0])
     parser.set_defaults(n=n)
-    parser.set_defaults(filetorun = '')
     parser.set_defaults(profile = '')
     parser.set_defaults(rcfile='')
     parser.set_defaults(ipythondir='')
@@ -88,10 +89,13 @@ def start(n=1):
         config.updateConfigWithFile('ipenginerc.py', options.ipythondir)
         
     # Now override with command line options
-    if options.filetorun:
+    if options.filetorun is not None:
         shellConfig.filesToRun.append(options.filetorun)
-    engineConfig.connectToControllerOn = (options.controllerip, 
-        options.controllerport)
+    if options.controllerip is not None:
+        engineConfig.connectToControllerOn['ip'] = options.controllerip
+    if options.controllerport is not None:
+        engineConfig.connectToControllerOn['port'] = options.controllerport
+        
     main(options.n)
     
 if __name__ == "__main__":
