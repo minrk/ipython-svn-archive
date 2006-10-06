@@ -208,7 +208,7 @@ class RemoteController(RemoteControllerBase):
         self._checkConnection()
         
         if self.block or block:
-            string = "EXECUTE BLOCK %s::%s" % (source, targetstr)
+            string = "EXECUTE BLOCK " + source + "::" + targetstr
             try:
                 self.es.writeNetstring(string)
             except socket.error:

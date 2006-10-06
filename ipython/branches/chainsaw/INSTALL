@@ -149,7 +149,7 @@ options, the mpiImportStatement configuration variable should read:
 
 	mpiImportStatement = 'from ipython1.kernel import mpi'
 
-	mpiImportStatment = 'from mpi4py ipmort MPI as mpi'
+	mpiImportStatment = 'from mpi4py import MPI as mpi'
 
 Our ipython1.kernel.mpi module is not a full MPI wrapper.  It only calls
 MPI_Init() and sets the rank and size attributes.  Thus it will only be

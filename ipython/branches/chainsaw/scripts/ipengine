@@ -39,8 +39,10 @@ if engineConfig.mpiImportStatement:
 def main(n):
     log.startLogging(sys.stdout)
     for i in range(n):
-        service = EngineService(shellConfig.shellClass, mpi=mpi)
+        service = EngineService(mpi=mpi)
         fac = engineConfig.engineClientProtocolInterface(service)
+        # I don't like that we have to set MAX_LENGTH like this, 
+        # but it seems to work
         fac.MAX_LENGTH = engineConfig.maxMessageSize
         reactor.connectTCP(
             engineConfig.connectToControllerOn[0],
@@ -60,12 +62,13 @@ def start(n=1):
     parser.set_defaults(ipythondir='')
 
     parser.add_option("--controller-port", type="int", dest="controllerport",
-        help="the TCP port the controller listens on")
+        help="the TCP port the controller is listening on")
     parser.add_option("--controller-ip", type="string", dest="controllerip",
-        help="the address of the controller")
+        help="the TCP ip address of the controller")
     parser.add_option("-n", "--num", type="int", dest="n",
         help="the number of engines to start in this process")
-    parser.add_option("-r", "--run", type="string", dest="filetorun")
+    parser.add_option("-r", "--run", type="string", dest="filetorun",
+        help="a file to run after the engine has started")
     
     # Configuration files and profiles
     parser.add_option("-p", "--profile", type="string", dest="profile",

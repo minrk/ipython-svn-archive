@@ -61,44 +61,25 @@ __docformat__ = "restructuredtext en"
 
 import os
 from IPython.genutils import get_home_dir
-from ipython1.config.objects import configHelperClasses
+from ipython1.config.objects import configClasses
 
 _configObjects = {}
 
 def getConfigObject(key):
-    """Return a new or previously created configuration object by key.
+    """Return a new or previously created `Config` object by key.
     
     Configuration objects for a given key are created only once for each process.
-    Thus configurationi objects needs to be created/configured only once per process.
 
     This function returns a configuration object either by creating a new one or by
     finding an already existing one in the cache.
     """
     
     global _configObjects
-    global configHelperClasses
     co = _configObjects.get(key)
     if co is None:
-        klass = configHelperClasses[key]
-        _configObjects[key] = klass()
-    return _configObjects[key].data
-        
-
-def getConfigHelperObject(key):
-    """Return a new or previously created configuration helper object by key.
-    
-    This function works the same way as getConfigObject, but it returns the 
-    configuration helper object rather than its data attribute.
-    """
-    
-    global _configObjects
-    global configHelperClasses
-    co = _configObjects.get(key)
-    if co is None:
-        klass = configHelperClasses[key]
+        klass = configClasses[key]
         _configObjects[key] = klass()
     return _configObjects[key]
-
 
 def updateConfigWithFile(filename, ipythondir = None):
     """Update all configuration objects from a config file."""
@@ -121,27 +102,27 @@ def resolveFilePath(filename, ipythondir = None):
     """
     
     # In cwd or by absolute path with ~ expanded
-    firstTry = os.path.expanduser(filename)
-    if os.path.isfile(firstTry):
-        return firstTry
+    trythis = os.path.expanduser(filename)
+    if os.path.isfile(trythis):
+        return trythis
         
     # In ipythondir if it is set
-    if ipythondir:
-        secondTry = ipythondir + '/' + filename
-        if os.path.isfile(secondTry):
-            return secondTry        
+    if ipythondir is not None:
+        trythis = ipythondir + '/' + filename
+        if os.path.isfile(trythis):
+            return trythis        
         
     # In the IPYTHONDIR environment variable if it exists
     IPYTHONDIR = os.environ.get('IPYTHONDIR')
     if IPYTHONDIR is not None:
-        thirdTry = IPYTHONDIR + '/' + filename
-        if os.path.isfile(thirdTry):
-            return thirdTry
+        trythis = IPYTHONDIR + '/' + filename
+        if os.path.isfile(trythis):
+            return trythis
         
     # In the ~/.ipython directory
-    forthTry = get_home_dir() + '/.ipython/' + filename
-    if os.path.isfile(forthTry):
-        return forthTry
+    trythis = get_home_dir() + '/.ipython/' + filename
+    if os.path.isfile(trythis):
+        return trythis
         
     return None
 

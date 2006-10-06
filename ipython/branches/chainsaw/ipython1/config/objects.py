@@ -1,7 +1,20 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-Configuration objects.
+Configuration objects for IPython.
+
+This module contains classes that contain configuration information.  These
+classes are subclasses of `base.Config` and define specific attributes that
+are needed to configure a particular entity.  
+
+These classes should not be instantiated directly by a user or developer.  
+Instead, `api.getConfigObject` should be used to retrieve an instance.  
+This ensures that only one config object of each class gets created in 
+a given process.
+
+The configuration objects are retrieved by key. A complete list of the classes 
+and corresponding keys can be found at the bottom of this file in the 
+`configClasses` dictionary.
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -15,7 +28,7 @@ __docformat__ = "restructuredtext en"
 
 # Imports
 
-from ipython1.config.base import ConfigHelper, Config
+from ipython1.config.base import Config
 
 # Global defaults
     
@@ -29,10 +42,16 @@ from ipython1.core.shell import InteractiveShell
 
 class ShellConfig(Config):
     shellClass = InteractiveShell
-    filesToRun = []
+    """The particular shell class to use.
     
-class ShellConfigHelper(ConfigHelper):
-    configClass = ShellConfig
+    Right now there is only one: `core.InteractiveShell`, but by creating a 
+    new shell class that implements the same api as this default the user
+    can customize its behavior.  For instance, the user could make a shell
+    that supports additional syntax.
+    """
+
+    filesToRun = []
+    """A list of local files the shell should run upon starting."""
 
 # Engine configrations
 
@@ -41,13 +60,23 @@ from ipython1.kernel.enginevanilla import \
 
 class EngineConfig(Config):
     connectToControllerOn = ('127.0.0.1', enginePort)
-    engineClientProtocolInterface = IVanillaEngineClientFactory
-    maxMessageSize = maxMesageSize
-    mpiImportStatement = ''
-    #mpiImportStatement = 'from mpi4py import MPI as mpi'
+    """The (ip, port) the controller is listening for engines on."""
     
-class EngineConfigHelper(ConfigHelper):
-    configClass = EngineConfig
+    engineClientProtocolInterface = IVanillaEngineClientFactory
+    """The interface corresponding to the network protocol used to connect
+    to the controller with."""
+
+    maxMessageSize = maxMesageSize
+    """The maximum message size supported by the network protocol."""
+
+    mpiImportStatement = ''
+    """The import statement that will be attempted in starting mpi.  
+    
+    Some common options are:
+    
+    - ``from mpi4py import MPi as mpi``
+    - ``from ipython1 import mpi``
+    """
     
 # Controller configuration
 
@@ -62,13 +91,21 @@ from ipython1.kernel.controllerpb import \
     
 class ControllerConfig(Config):
     engineServerProtocolInterface = IVanillaEngineServerFactory
+    """The interface for the network protocol for talking to engines."""
+    
     listenForEnginesOn  = ('', enginePort)
+    """The (ip, port) to listen for engine on."""
+    
     clientInterfaces = [(IVanillaControllerFactory, ('', clientVanillaPort)),
                         (IPBControllerFactory, ('', 10111))]
-    maxMessageSize = maxMesageSize
+    """A list of (interfaces, (ip,port)) for the protocols used to talk to clients.
     
-class ControllerConfigHelper(ConfigHelper):
-    configClass = ControllerConfig
+    The (ip,port) tuple for each interface determines what ip and port the 
+    controller will listen on with that network protocol.
+    """
+    
+    maxMessageSize = maxMesageSize
+    """The maximum message size supported by the network protocol."""
     
 # Client configuration
 
@@ -77,18 +114,24 @@ from ipython1.kernel.controllervanilla import \
 
 class ClientConfig(Config):    
     RemoteController = RemoteController
-    connectToControllerOn = ('127.0.0.1', clientVanillaPort)
-    maxMessageSize = maxMesageSize
+    """The RemoteController class to use.
+    
+    This allow new RemoteController classes that use different network
+    protocols to be used.
+    """
 
-class ClientConfigHelper(ConfigHelper):
-    configClass = ClientConfig
+    connectToControllerOn = ('127.0.0.1', clientVanillaPort)
+    """The (ip, port) tuple the client will use to connect to the controller."""
+    
+    maxMessageSize = maxMesageSize
+    """The maximum message size supported by the network protocol."""
 
 # All top-level config classes must be listed here.
 
-configHelperClasses = {'engine'     : EngineConfigHelper,
-                       'controller' : ControllerConfigHelper,
-                       'client'     : ClientConfigHelper,
-                       'shell'      : ShellConfigHelper}
+configClasses = {'engine'     : EngineConfig,
+                 'controller' : ControllerConfig,
+                 'client'     : ClientConfig,
+                 'shell'      : ShellConfig}
 
 
 

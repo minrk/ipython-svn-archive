@@ -14,7 +14,10 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 class ParallelFunction:
+    """A function that operates in parallel on sequences."""
     def __init__(self, functionName, remoteController):
+        """Create a `ParallelFunction`.
+        """
         self.fname = functionName
         self.rc = remoteController
         

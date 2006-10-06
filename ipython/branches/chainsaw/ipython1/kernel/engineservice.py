@@ -36,7 +36,7 @@ import zope.interface as zi
 
 from ipython1.kernel import serialized, error, util
 from ipython1.kernel.util import gatherBoth, curry
-
+import ipython1.config.api as config
 
 #-------------------------------------------------------------------------------
 # Interface specification for the Engine
@@ -177,13 +177,14 @@ class EngineService(object, service.Service):
     
     zi.implements(IEngineBase, IEngineSerialized)
                 
-    def __init__(self, shellClass, mpi=None):
+    def __init__(self, mpi=None):
         """Create an EngineService.
         
         shellClass: a subclass of core.InteractiveShell
         mpi:        an mpi module that has rank and size attributes
         """
-        self.shell = shellClass()
+        self.shellConfig = config.getConfigObject('shell')
+        self.shell = self.shellConfig.shellClass()
         self.mpi = mpi
         self.id = None
         if self.mpi is not None:
@@ -206,7 +207,11 @@ class EngineService(object, service.Service):
         """Start the service and seed the user's namespace."""
         
         self.shell.update({'mpi': self.mpi, 'id' : self.id})
-            
+
+        for f in self.shellConfig.filesToRun:
+            if os.path.isfile(f):
+                self.shell.execute('execfile(%s)' % f)
+        
     # The IEngine methods.  See the interface for documentation.
     
     def execute(self, lines):
