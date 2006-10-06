@@ -1,29 +1,39 @@
-===========================
-IPython Kernel README
-===========================
+===============
+IPython1 README
+===============
 
 :Author:  Brian E. Granger
 :Contact: ellisonbg@gmail.com
-:Date: October 5, 2006
+:Date: October 6, 2006
 
 .. contents::
-
-NOTE:  This document is in the process of being updated (10/5/06) and may not accurately reflect the state of IPython1.
 
 Overview
 ========
 
-This file gives an overview of the IPython kernel.  The IPython kernel exposes Python over the network and allows parallel and distributed applications to be developed, debugged, tested, executed and monitored interactively and collaboratively.
+This file gives an overview of the IPython1 kernel.  The IPython kernel exposes Python over the network and allows parallel and distributed applications to be developed, debugged, tested, executed and monitored interactively and collaboratively.
 
 For installation instructions, see the INSTALL file in this directory.
 
-The IPython kernel is a component of a future release of IPython - IPython1.  While IPython1 is not completed the kernel module is fully functional and can be used from the current stable IPython versions.  
+The IPython kernel is a component of a future release of IPython - IPython1.  While IPython1 is not completed the kernel module is fully functional and can be used with current stable IPython versions.  
 
-The IPython kernel is essentially a network enabled Python instance.  The kernel actually consists of three components:
+The IPython kernel is essentially a network enabled Python instance and consists of three components, the IPython Engine, Controller and various Controller Client.
 
-:IPython Engine: The IPython Engine is a Python instance that takes Python commands over a network connection.  Eventually, the IPython Engine will be an IPython instance, but for now, it is plain Python.  The Engine can also handle incoming and outgoing Python objects send over a network connection.  When multiple Engines are started, parallel and distributed computing becomes possible.  An important feature of the IPython Engines is that they block while user code is being executed.  
-:IPython Controller: The IPython Controller provides an interface for working with a set of Engines.  It manages a queue for each Engine and exposes a fully asynchronous interface to each Engine.  Because the Controller listens on a network port for Engines to connect to it, it must be started before any Engines are started.  The Controller also provides a single point of contact for users who wish to utilize the Engines connected to the Controller.
-:Controller Clients: Various Controller clients provide a way for users to interact with a Controller, and thus, with a set of Engines.  Our default client is RemoteController Python object that is designed to be used from within Python or IPython.  It be used both interactively and in scripts.  
+IPython Engine
+--------------
+
+The IPython Engine is a Python instance that takes Python commands over a network connection.  Eventually, the IPython Engine will be an IPython instance, but for now, it is plain Python.  The Engine can also handle incoming and outgoing Python objects send over a network connection.  When multiple Engines are started, parallel and distributed computing becomes possible.  An important feature of the IPython Engines is that they block while user code is being executed.  Read on for how the Controller deals with this
+limitation.  
+
+IPython Controller
+------------------
+
+The IPython Controller provides an interface for working with a set of Engines.  It manages a queue for each Engine and exposes a fully asynchronous interface to each Engine.  Because the Controller listens on a network port for Engines to connect to it, it must be started before any Engines are started.  The Controller also provides a single point of contact for users who wish to utilize the Engines connected to the Controller.
+
+Controller Clients
+------------------
+
+Various Controller clients provide a way for users to interact with a Controller, and thus, with a set of Engines.  Our default client is a RemoteController Python object that is designed to be used from within Python or IPython.  It be used both interactively and in scripts, although we provide a few nice magic commands for use within IPython.
 
 Getting Started
 ===============
@@ -48,15 +58,18 @@ The details of the Controller (which ports are used, etc.) can also be configure
 Starting Engines
 ----------------
 
-Instances of the IPython Engine can be started with the command:
-
-::
+Instances of the IPython Engine can be started with the command::
 
 	ipengine
 	
-Upon starting, the Engine should automatically connect to the Controller and register itself.  As long as the Controller was started with the default ports, the Engines should find the Controller just fine.  Multiple instances of the Engine can be started on a single machine or on multiple machines.  A single Controller can handle up to 256 Engines, but this number is somewhat dependent on OS related limits on the number of file descriptors per process.
+Upon starting, the Engine should automatically connect to the Controller and register itself.  This will happen as long as the engine and controller are configured to
+use the correct ports.
 
-Like the Controller, the Engine can be configured using command line options and configuration files.
+To see the command line options for ipengine try::
+
+	ipengine -h
+
+Multiple instances of the Engine can be started on a single machine or on multiple machines.  A single Controller can handle up to 256 Engines, but this number is somewhat dependent on OS related limits on the number of file descriptors per process.
 
 To run an Engine in the background, you may need to issue the command as:
 
@@ -72,11 +85,18 @@ If you have MPI installed, it is also possible to start the Engines using mpiexe
 
 	mpiexec -n 8 ipengine
 	
+This will work with some MPI implementations (like OpenMPI) even if the engines don't 
+call MPI_Init.  This can be used as a quick way of starting lots of engines on a
+cluster.
+
 Once the Controller and Engines have been started you ready to use them from a client.
 
 Using the Controller and Engines from a Client
 ==============================================
 
+The best source of documentation about how to use the controller and engines
+is the docstrings of kernel modules.  Eventually, we will provide more 
+details in this readme.
 
 Create an RemoteController object
 ---------------------------------
@@ -85,17 +105,11 @@ Create an RemoteController object
 Executing commands on the engines
 ---------------------------------
 
-
-
 Moving Python objecst around
 ----------------------------
 
-
 The map and parallelize commands
 --------------------------------
-
-
-
 
 Other commands
 --------------

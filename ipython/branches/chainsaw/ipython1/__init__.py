@@ -6,6 +6,7 @@ IPython1 also provides an architecture for interactive parallel computing.
 This architecture is already very functional.  For more information see
 the docstrings for:
 
-- `ipython1.kernel`
-- `ipython1.kernel.api`
+ - `ipython1.kernel`
+ - `ipython1.kernel.api`
+
 """

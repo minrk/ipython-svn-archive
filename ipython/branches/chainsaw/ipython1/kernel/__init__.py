@@ -2,9 +2,9 @@
 
 The IPython kernel actually refers to three things:
 
-- The IPython Engine
-- The IPython Controller
-- Clients to the IPython Controller
+ - The IPython Engine
+ - The IPython Controller
+ - Clients to the IPython Controller
 
 The kernel module implements the engine, controller and client and all the 
 network protocols needed for the various entities to talk to each other.
