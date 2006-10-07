@@ -126,22 +126,12 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
         return True
 
     # Case 3
-    # We store the code object so that threaded shells and
-    # custom exception handlers can access all this info if needed.
-    # The source corresponding to this can be obtained from the
-    # buffer attribute as '\n'.join(self.buffer).
-    self.code_to_run = code
-    # now actually execute the code object
-    if '_ip.magic("%autopx' in source:
-        if self.runcode(code) == 0:
-            return False
-        else:
-            return None
+    # Because autopx is enabled, we now call executeAll or disable autopx if
+    # %autopx or autopx has been called
+    if '_ip.magic("%autopx' in source or '_ip.magic("autopx' in source:
+        _disable_autopx(self)
+        return False
     else:
-        #if isinstance(activeController, cc.SubCluster):
-        #    self.activeController.execute(source)
-        #else:
-        #    self.activeController.executeAll(source)
         self.activeController.executeAll(source)
         return False
         
@@ -163,29 +153,33 @@ def magic_autopx(self, parameter_s=''):
     
     if hasattr(self, 'autopx'):
         if self.autopx == True:
-            self.runsource = new.instancemethod(InteractiveShell.runsource,
-                self, self.__class__)
-            self.autopx = False
-            print "Auto Parallel Disabled" 
+            _disable_autopx(self)
         else:
-            try:
-                activeController = __IPYTHON__.activeController
-            except AttributeError:
-                print NO_ACTIVE_CONTROLLER
-            else:
-                self.runsource = new.instancemethod(pxrunsource, self, self.__class__)
-                self.autopx = True
-                print "Auto Parallel Enabled\nType %autopx to disable"
+            _enable_autopx(self)
     else:
-        try:
-            activeController = __IPYTHON__.activeController
-        except AttributeError:
-            print NO_ACTIVE_CONTROLLER
-        else:
-            self.runsource = new.instancemethod(pxrunsource, self, self.__class__)
-            self.autopx = True
-            print "Auto Parallel Enabled\nType %autopx to disable"
+        _enable_autopx(self)
 
+def _enable_autopx(self):
+    """Enable %autopx mode by saving the original runsource and installing 
+    pxrunsource.
+    """
+    try:
+        activeController = __IPYTHON__.activeController
+    except AttributeError:
+        print "No active RemoteController found, use RemoteController.activate()."
+    else:
+        self._original_runsource = self.runsource
+        self.runsource = new.instancemethod(pxrunsource, self, self.__class__)
+        self.autopx = True
+        print "Auto Parallel Enabled\nType %autopx to disable"
+
+def _disable_autopx(self):
+    """Disable %autopx by restoring the original runsource."""
+    if hasattr(self, 'autopx'):
+        if self.autopx == True:
+            self.runsource = self._original_runsource
+            self.autopx = False
+            print "Auto Parallel Disabled"
             
 # Add the new magic function to the class dict:
 
