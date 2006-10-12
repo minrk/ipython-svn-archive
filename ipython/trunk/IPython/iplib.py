@@ -1584,6 +1584,33 @@ want to merge them back into the new files.""" % locals()
       """
       self.showtraceback((etype,value,tb),tb_offset=0)
 
+    def expand_aliases(self,fn,rest):
+        """ Expand multiple levels of aliases:
+        
+        if:
+        
+        alias foo bar /tmp
+        alias baz foo
+        
+        then:
+        
+        baz huhhahhei -> bar /tmp huhhahhei
+        
+        """
+        line = fn + " " + rest
+        while 1:
+            pre,fn,rest = self.split_user_input(line)
+            if fn in self.alias_table:
+                l2 = self.transform_alias(fn,rest)
+                if l2 == line:
+                    break
+                line = l2
+                # print "al expand to",line #dbg
+            else:
+                break
+                
+        return line
+
     def transform_alias(self, alias,rest=''):
         """ Transform alias to system command string.
         """
@@ -2094,7 +2121,7 @@ want to merge them back into the new files.""" % locals()
 
         # pre is needed, because it carries the leading whitespace.  Otherwise
         # aliases won't work in indented sections.
-        transformed = self.transform_alias(iFun, theRest)        
+        transformed = self.expand_aliases(iFun, theRest)        
         line_out = '%s_ip.system(%s)' % (pre, make_quoted_expr( transformed ))        
         self.log(line,line_out,continue_prompt)
         #print 'line out:',line_out # dbg
