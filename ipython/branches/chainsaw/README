@@ -15,9 +15,9 @@ This file gives an overview of the IPython1 kernel.  The IPython kernel exposes 
 
 For installation instructions, see the INSTALL file in this directory.
 
-The IPython kernel is a component of a future release of IPython - IPython1.  While IPython1 is not completed the kernel module is fully functional and can be used with current stable IPython versions.  
+The IPython kernel is a component of a future release of IPython called IPython1.  While IPython1 is not completed, the kernel module is fully functional and can be used with current IPython versions.  
 
-The IPython kernel is essentially a network enabled Python instance and consists of three components, the IPython Engine, Controller and various Controller Client.
+The IPython kernel is essentially a network enabled Python instance and consists of three components: the IPython Engine, the IPython Controller and various Controller Client.
 
 IPython Engine
 --------------
@@ -38,58 +38,50 @@ Various Controller clients provide a way for users to interact with a Controller
 Getting Started
 ===============
 
-Starting the Controller
+To use IPython1 for parallel computing, you need to start one instance of the controller and one or more instances of the engine.  The controller and each engine can run on different machines or on the same machine.  Because of this, there are many different possibilities for setting up the ip addresses and ports used by the various processes.
+
+Starting the controller and engine on your local machine
+--------------------------------------------------------
+
+This is the simplest configuration that can be used and is useful for testing the system and on machines that have multiple cores and/or multple CPUs.  First start the controler::
+
+	ipcontroller &
+	
+Next, start however many instances of the engine you want to use::
+
+	ipengine &
+	
+On some platforms you may need to give these commands in the form ``(ipcontroller &)`` and ``(ipengine &)`` for them to work properly.  The engines should start and automatically connect to the controller on the default ports, which are chosen for this type of setup.
+The logs are fairly verbose and you should see various messages about the engines being registered with the controller.  You are now ready to use the controller and engines from IPython.
+
+Starting the controller and engines on different machines
+---------------------------------------------------------
+
+To start the engines and controller on different machines you simply need to specify the ip addresses where the controller is running.  Let's say you want to start the controller on host0 and the engines on hosts1 - host16.  First start the controller on host0::
+
+	host0> ipcontroller &
+	
+Next, start the engines on host1 - host16 specifying the where the controller is running::
+
+	host1> ipengine --controller-ip=host0 &
+	
+Repeat this on host2 - host16 and you should be ready to go.
+
+Specifying custom ports
 -----------------------
 
-The IPython Controller can be started with the command:
+The controller can be configured to use different ports that the default.  Both the controller and engines must be told to use the same port::
 
-::
-
-	ipcontroller
+	ipcontroller --engine-port=10001              # listen on 10001
+	ipengine --controller-port=10001              # connect to 10001
 	
-This will start a controller that listens on the default ports for connections from Engines and Clients.  To see command line options for the Controller give the command:
+Starting engines using mpirun
+-----------------------------
 
-::
+The IPython engine can be started using mpirun/mpiexec, even if the engines don't call MPI_Init() or use the MPI API.  This is supported on modern MPI implementations like OpenMPI.  On a system with MPI installed you can do::
 
-	ipcontroller -h
-
-The details of the Controller (which ports are used, etc.) can also be configured using configuration files. 
-
-Starting Engines
-----------------
-
-Instances of the IPython Engine can be started with the command::
-
-	ipengine
+	mpirun -n 4 ipengine --controller-port=10000 --controller-ip=host0
 	
-Upon starting, the Engine should automatically connect to the Controller and register itself.  This will happen as long as the engine and controller are configured to
-use the correct ports.
-
-To see the command line options for ipengine try::
-
-	ipengine -h
-
-Multiple instances of the Engine can be started on a single machine or on multiple machines.  A single Controller can handle up to 256 Engines, but this number is somewhat dependent on OS related limits on the number of file descriptors per process.
-
-To run an Engine in the background, you may need to issue the command as:
-
-::
-
-	(ipengine &)
-	
-For some reason, running 'ipengine &' without the parentheses dones't work on some platforms.
-
-If you have MPI installed, it is also possible to start the Engines using mpiexec:
-
-::
-
-	mpiexec -n 8 ipengine
-	
-This will work with some MPI implementations (like OpenMPI) even if the engines don't 
-call MPI_Init.  This can be used as a quick way of starting lots of engines on a
-cluster.
-
-Once the Controller and Engines have been started you ready to use them from a client.
 
 Using the Controller and Engines from a Client
 ==============================================
@@ -101,6 +93,17 @@ details in this readme.
 Create an RemoteController object
 ---------------------------------
 
+Once the controller and one or more engines are running, you connect to the controller in IPython be creating a RemoteController object.  In the following examples, the usual Python prompt ``>>>`` will be shown, but all the commands should be issued within an IPython session.  So fire up IPython and then do::
+
+	>>> import ipython1.kernel.api as kernel
+	>>> rc = kernel.RemoteController(('host0',10000))
+	
+This will create a RemoteController object for talking to a controller with hostname ``host0`` on port ``10000``.  It is this easy.  The RemoteController object doesn't connect at this point.  To see if it works, do::
+
+	>>> rc.getIDs()
+	[0, 1, 2, 3]
+	
+and you will see a list of the ids of the engines that are currently connected to the controller.
 
 Executing commands on the engines
 ---------------------------------

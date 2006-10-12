@@ -131,11 +131,11 @@ http://projects.scipy.org/mailman/listinfo/ipython-dev
 MPI Support
 ===========
 
-The IPython kernel includes MPI support.  With MPI support IPython engines can pass data between each other using MPI.  There are many ways to call MPI from within Python:
+The IPython kernel includes MPI support.  With MPI support IPython engines can pass data between each other using MPI.  There are many ways to call the actual MPI API:
 
-1. Call into an MPI shared library directly using ctypes
-2. Use one of the many Python/MPI bindings such as mpi4py
-3. Call wrapped C/C++/Fortran code that itself calls MPI
+1. Call into an MPI shared library directly using ctypes.
+2. Use one of the many Python/MPI bindings such as mpi4py.
+3. Call wrapped C/C++/Fortran code that itself calls MPI.
 
 For any of these options to work, MPI must be initialized by a call to
 MPI_Init().  This needs to be done by having the engines import a python
@@ -148,9 +148,7 @@ module that calls MPI_Init.  To enable mpi support:
    make sure it is built when you install ipython1. 
 
 By default, the ipython1.kernel.mpi module is not built.  To build it,
-give the build command
-
-::
+give the build command::
 
 	python setup.py build --mpicc=your-mpicc-command
 
