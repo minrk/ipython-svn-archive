@@ -1,0 +1,447 @@
+IPython Protocol
+
+This document describes the network protocol used by IPython to communicate
+with  instances of the IPython kernel over a network.  The IPython kernel is
+a multithreaded and queued python interpreter that gets commands from network
+ports rather than from a local interactive prompt.  This network protocol 
+enables python objects and python commands to be sent to and from instances of 
+the IPython kernel.  The protocol also provides capabilities for remote 
+debugging command completion in the kernel's namespace and other kernel
+management functions.
+
+In many ways the IPython kernel is a network server in the classic sense.  
+It listens on network ports and responds to commands that come from clients 
+on those ports.  On the other hand, the kernel can also act as the "client" 
+for other instances of the kernel.  That is, in addition to listening on network
+ports, the kernel can also initiate network connections with other listening 
+kernels.  Because of this, some care must be used when talking about the
+"server" and the "client."  In this document, the client is always the party
+initiating the connection, and could itself be an IPython kernel instance.
+Likewise, the server is the passive party listening for and responds to the
+client's connection.
+
+It is worth mentioning why a custom protocol is being designed for this purpose
+when there are a number of other general protocols such as XML-RPC that could be 
+used.  Probably the most important reason is flexibility.  When the kernel is
+being run over the network it is often necessary to transmit python objects 
+back and forth to the kernel.  While much of this can be done by pickling 
+the objects and sending them as strings, we would like to have the option to
+send objects in other formats, including raw binary data.  Additionally, when
+the objects being send are large, we wish to avoid the overhead of copying them
+into an XML structure.  Designing a custom protocol gives the flexibility to
+deal with all of these issues.  Another reason to design a custom protocol is 
+the need to optimize simultaneous communications with multiple kernels.  This
+functionality is needed to perform efficient parallel computations with
+multiple instances of the IPython kernel.  Having a custom network protocol
+enables us to exploring many ways of optimizing these types of communications.
+One option is to have certain commands send using UDP, so that multicasting and
+broadcasting can by used.  Finally, there are security reasons to design a 
+custom protocol.  While it would be possible to encrypt all communications with
+the kernel this solution is not acceptable for performance reasons.
+The idea is to provide multiple communication channels, some of which are secure
+and some of which are insecure.  This will give us the flexibility to lock down 
+only the communications that absolutely need to be secure.
+
+1.      Protocol Overview
+1.1.    Link Level
+1.2.    Commands and Responses
+1.2.1   Performance
+
+
+1.      Protocol Overview
+
+1.1.    Link Level
+
+    The IPython kernel protocol uses both TCP and UDP sockets.  Communications
+    with the kernel are organized into channels.  These channels represent
+    either TCP connections or connectionless UDP sockets.  The kernel will 
+    typicaly have multiple channels running at a given time.  For example
+    python objects might be sent over a TCP connection, while small strings
+    representing python commands could be send over UDP.
+    
+    This model of multiple channels is used to provide the maximum flexibility
+    in optimizing performance and security.  
+    
+1.2.    Commands and Responses
+
+    Communications between a client and server over a given channel
+    are organized into sessions.  A TCP based session consists of one or more 
+    client commands and server responses.  A TCP based session is terminated by
+    the client with a disconnect command.  A UDP session consists of a single
+    client command and server response.  
+    
+    Most interactions transmitted by the client and server consist of strings
+    terminated by CR LF.  The exception is when a data command has been given.
+    Raw data can be sent after a data command has been given and the data
+    command will determine the size and format of the raw data.
+    
+    Client commands must be completed before the client initiates a new
+    command.  If, for some reason, the server does not respond to a client
+    command, the client should issue a STATUS command which should reset
+    the server state.  Then the client can proceed with a new
+    command.
+    
+    If a command cannot be parsed by the server, the server should give a
+    response of FAIL and reset its state.
+    
+    Commands can be blocking or nonblocking.  In a blocking command, the server
+    gives its final response only after it is completely done processing the
+    command.  In a nonblocking command, the server gives its final response
+    after it has received the command, but before it has fully processed it.
+    Some command can either blocking or nonblocking, but others can only be
+    blocking.
+
+1.2.1   Performance
+
+    This section is to describe the performance considerations that are relevant
+    in the design of this protocol.  Because this protocol involves many small
+    messages being transmitted between the client and server, the latency of
+    the protocol is extremely important.  Moreover, it is important to have
+    a protocol that prpperly deals with the 200 ms Nagle delays.
+    
+    To quantify these issues, I have done some benchmarking.  It these 
+    benchmarks, I have used twisted for the server and the socket module
+    for the client.  In all cases, the socket setup time is factored out by
+    trasmitting many (typically 100) client commands over a single TCP 
+    connection.  So far I have done tests using a line based approach, but
+    I suspect that similar things would be found for an int32 prefixed
+    approach.  All these test were performed on the loopback interface of
+    a 100Mb connection with a ping time of 0.1 ms.
+    
+    I now outline some of the results.  Oh, I have also seen that writing
+    to a log each time there is a client command takes 1-2 ms.  Thus, per
+    command logging should be off in a production server.
+    
+    First, I tried a basic command/response:
+        
+        C: msg1
+        S: reply1
+        
+    This type of interaction tool about 1 ms per request.
+    
+    Having multiple client messages, followed by a single esrver reply:
+    
+        C: msg1
+        C: msg2
+        S: reply12
+        
+    Took 200 ms with TCP_NODELAY off and 1 ms with TCP_NODELAY on.  Having
+    this flag on disables Nagle's algorithm.
+    
+    For PUSH commands, the implementation:
+    
+        C: PUSH b
+        C: ARRAY 30
+        C: asdf[2j4[09j8sd;lkm209
+        S: PUSH OK
+        
+    Took 200 ms with nagling on and 2 ms with nagling off.  This is consistent
+    with each command/response taking 1 ms.
+    
+    The more verbose implementation:
+    
+        C: PUSH a
+        S: PUSH READY
+        C: PICKLE 25
+        S: PICKLE READY
+        C: asdfasdf
+        S: PUSH OK
+
+    Does not require that nagling be turned off and took 3 ms.  
+    
+    Thus it appears that each pair of client/server transmissions takes about
+    1 ms on a 100Mb connection.  When nagling is on, it is critical that all
+    data is sent in a single sendall command.  
+
+
+2.      Server States
+
+    The server can be in a number of different states.  These states
+    determine what client commands can be issued.
+    
+2.1.    The init state
+
+    When a session begins the server is in the init state.  This state
+    signifies that the server is ready to receive a client command.  When
+    a client command/server response is completed, the server returns to
+    the init state.
+
+2.2.    Command related states
+
+    The server can define states that are associated with specific 
+    client commands:
+    
+    pulling
+    pushing
+    executing
+    moving
+    completing
+    debugging
+
+    The server enters one of these states upon receiving the associated 
+    command from the client.  The server remains in that state until the server
+    has sent its final response, after which it changes back to the init state.
+
+3.      Data Commands
+
+    When the server is in certain states, data commands can be issued by the 
+    server or client.  These commands are used to send data back and forth
+    in various formats.
+    
+    In all cases a data command consists of the command (like PICKLE) and 
+    the actual data.  Typically there is one argument to a data command,
+    an integer specifying the length of the data.  The data, in whatever
+    format, is sent after the line giving the data command.
+    
+    If the data command is being issued over a UDP port, the data must
+    arrive on the same line as the command and the receiver must reply
+    with an OK.  
+    
+3.1.    PICKLE Command
+
+    Arguments: number of bytes to be send
+
+        The PICKLE command is used to send a pickled python object.  It is the
+        most commonly used data command.
+     
+    Examples:
+                C: PICKLE 10
+                C: stringofpickleddata
+                                          
+3.3.    RESULT Command
+
+    Arguments:  number of bytes
+
+        The RESULT command is used to transmit the stdin, stdout and stderr 
+        of a command executed by the kernel.  These strings should be sent
+        in a pickled 4-tuple (command_number, stdin, stdout, stderr).
+        
+        The RESULT command is always given by the server and can be issued
+        in two contexts.  First, RESULT can be given to a client over a
+        connected TCP channel in response to a PULL RESULT command.  This
+        is for the client to request a specific command's results.
+        
+        Second, RESULT can be issued by the server when the kernel complete's
+        executing python code in its namespace.  These commands can come
+        at any time and must arrive on a second communications channel.  This
+        is done so that frontends can monitor the progress of a group of 
+        kernel's without being connected to them.  It also makes it possible
+        to easily write both blocking and non-blocking frontends.
+        
+        The server will send these commands to all client added via the
+        NOTIFY command.
+        
+        This channel will probably be a UDP channel because it is fast!  
+        
+        Eventually we should have the RESULT command send more information,
+        such as the ip and port of the kernel's TCP channel.
+        
+    Examples:
+        
+        S: RESULT 7
+        S: rawdata
+        
+        S: RESULT 7 rawdata
+        C: RESULT OK
+        
+4.      Client Commands
+
+4.1.    PUSH Command
+
+    Arguments:  FORWARD
+                name
+                
+    Responses:  none
+                
+    Result:     OK - push completed
+                FAIL - object could not be handled or insufficient memory
+                
+        Sends a python object to a server.  The data sent is loaded into the
+        namespace of the server with the name given in the name argument.  After
+        the client sends the PUSH command, the client must then send the data
+        using a data command.
+        
+        If the FORWARD argument is given, the data will be forwarded to
+        the server's list of forwarders as well.  The forwarders are other
+        instances of the IPython kernel.  These are given to the server using
+        the FORWARDTO command.  This capability can be used to optimize
+        communications with large numbers of kernels.
+        
+        PUSH commands are, at this point, nonblocking.  In this mode, the server
+        gives its final response immediately after receiving the data from 
+        the client and placing the data on the queue.  But in GUI kernels, 
+        there is not queue, so on GUI kernels PUSH is basically blocks until
+        the data in in the kernel's namespace.
+        
+               
+    Examples (must have TCP_NODELAY = 1):
+        C: PUSH a
+        C: PICKLE 25
+        C: asdf098u42oijasr09j234f'ljf
+        S: PUSH OK
+        
+        C: PUSH FORWARD BLOCK b
+        C: PICKLE 20
+        C: asdfasdfasdfasdfasdfasf
+        S: PUSH OK
+        
+        This should take 2 ms over 100Mb.
+                
+    Verbose Example:
+        C: PUSH a
+        S: PUSH READY
+        C: PICKLE 25
+        S: PICKLE READY
+        C: asdfasdf
+        S: PUSH OK
+        
+        This would take 3 ms over 100Mb.
+        
+    Int32 Based Version (must have TCP_NODELAY = 1):
+        C: PUSH a FORWARD PICKLE
+        C: asdfasdf
+        S: PUSH OK
+        
+        This would take 1.5 ms over 100Mb
+    
+    Performance Considerations:
+    
+        PUSH does not use deferToThread to submit the data to the interactive
+        console, so almost all the overhead is from the network side of things.
+        
+        For now I am going to use the first approach and require that
+        TCP_NODELAY is set on client sockets.
+        
+        
+4.2.    PULL Command
+
+    Arguments:  variable name
+                RESULT command#
+    
+    Responses:  none
+    
+    Result:     OK - data did exist and was sent
+                FAIL - data could not be handled
+    
+        Gets data from the kernel.  Pull commands are always blocking.
+        The argument to PULL specifies what data is being requested.  After
+        the PULL command is given, the kernel replies with a data command and
+        then gives its final response.
+        
+        If the data does not exist, the object None will be returned.  Thus
+        PUSH FAIL should only occur if the data could not be handled (pickled).
+        
+        The RESULT argument requests the stdin, stdout and stderr of a executed
+        command.  The RESULT argument can optionally be followed by an integer
+        that specifies what command should be pulled.  If no command number is
+        specified, the most recent command executed will be pulled.
+    
+    Examples:
+    
+        C: PULL a
+        S: PICKLE 10
+        S: send a back
+        S: PULL OK 
+        
+        C: PULL b
+        S: PULL FAIL
+        
+        C: PULL RESULT
+        S: RESULT 10
+        S: mostrecentresult
+        S: PULL OK
+        
+        C: PULL RESULT 30
+        S: RESULT 10
+        S: result30
+        S: PULL OK        
+  
+    Performance Considerations:
+    
+        The performance characteristics of PULL should be similar to those
+        of PUSH.  In my tests, they are similar, but PULL takes about an
+        additional 1 ms as it has to get the data back.  This is, of course
+        if the queue is empty already.
+
+4.3.    EXECUTE Command
+
+    Arguments:  BLOCK
+                command string
+    
+    Reponses:   OK
+                FAIL
+    
+    Result:
+    
+        Send a python command to the server to be executed in its namespace.
+        The EXECUTE command is carried out in one of two mode: nonblocking
+        (the default) or blocking. 
+        
+        In nonblocking mode the server reponse is given once the command has 
+        been received and placed in the server's queue.  The important thing 
+        is that the server will give the OK or FAIL response after the command 
+        is queued, but BEFORE the command is executed by the kernel.
+        
+        With the BLOCK argument, the EXECUTE command is run in blocking more.
+        In this mode, the server does not reply until the command has been 
+        executed.  Then the server will reply with a COMMAND command before 
+        giving OK or FAIL.
+                    
+    Examples:
+    
+        C: EXECUTE a = 5 + 3  
+        S: EXECUTE OK
+        
+        C: EXECUTE BLOCK a = 5 + 3
+        S: COMMAND 10
+        S: rawdata
+        S: EXECUTE OK     
+
+    Performance Considerations:
+    
+        Because EXECUTE involves a single command/response, it should take
+        1 ms per EXECUTE command on a 100Mb connection.  This is fast and
+        should not depend on having nagling on/off.  The same performance
+        should be possible when using an int32 prefixed transmission approach.
+        
+        Currently, the factory function that actually submits the code to
+        the interactive console to be run uses deferToThread.  This method
+        takes about 2 ms to return, so that the total time for an execute
+        command is 3 ms.  I would _love_ to get rid of this extra time!!!!
+        
+4.4.    MOVE Commmand
+
+    The MOVE command has the server initiate a PUSH command with another IPython
+    kernel instance.  This is used to have one kernel send a python object
+    to another kernel.
+
+4.5.    COMPLETE Command
+    
+4.5.    VALIDATE Command
+
+4.6.    NOTIFY Command
+
+4.7.    FORWARDTO Command
+
+4.8.    STATUS Command
+    
+4.9.    RESET Command
+    
+4.10.   KILL Command
+    
+4.11.   DISCONNECT Command
+
+5.      Notes, Questions and Unresolved Issues
+
+5.1.    Asynchronous stdout and stderr.  
+
+    It is possible that the stdout or stderr of some commands will pop up 
+    when the command is not being trapped.  This would be the case if the user 
+    creates a second thread which writes to stdout or stderr.  How should this 
+    output be captured and reported to the user?
+    
+5.2.    What type of source code should EXECUTE accept?
+
+    Currently, EXECUTE is written to accept code that can already be compiled
+    in the python code.  This will be more difficult to test for when the 
+    kernel starts to accept ipython input with magics, etc.  
