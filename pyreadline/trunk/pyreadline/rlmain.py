@@ -85,7 +85,7 @@ class Readline:
         self.paste_line_buffer=[]
 
 
-    def rl_settings_to_string(self):
+    def rl_settings_to_string(self,e=None):
         out=["%-20s: %s"%("show all if ambigous",self.show_all_if_ambiguous)]
         out.append("%-20s: %s"%("mark_directories",self.mark_directories))
         out.append("%-20s: %s"%("bell_style",self.bell_style))
@@ -96,6 +96,7 @@ class Readline:
         bindings.sort()
         for key in bindings:
             out.append("%7s %7s %7s %7d %7s %7s"%(key))
+        log("\n".join(out))
         return out
     
     def _bell(self):
@@ -1106,7 +1107,10 @@ class Readline:
         output stream. If a numeric argument is supplied, the output is
         formatted in such a way that it can be made part of an inputrc
         file. This command is unbound by default.'''
-        pass
+        print
+        txt="\n".join(self.rl_settings_to_string())
+        print txt
+        self._print_prompt()
 
     def dump_variables(self, e): # ()
         '''Print all of the settable variables and their values to the
@@ -1128,9 +1132,10 @@ class Readline:
     def _bind_key(self, key, func):
         '''setup the mapping from key to call the function.'''
         keyinfo = key_text_to_keyinfo(key)
-#        print key,keyinfo,func.__name__
-        self.key_dispatch[keyinfo] = func
-
+        if keyinfo is not None:
+            log("bindkey>>%s %s<<"%(keyinfo,func.__name__))
+            self.key_dispatch[keyinfo] = func
+            
     def _bind_exit_key(self, key):
         '''setup the mapping from key to call the function.'''
         keyinfo = key_text_to_keyinfo(key)

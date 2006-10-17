@@ -6,6 +6,22 @@
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
+
+# Codepage information
+# 437 USA 
+# 850  (Latin I) 
+# 852 Slavic (Latin II) 
+# 855 Kyrilliska (Ryska) 
+# 857 Turkiska 
+# 860 Portugisiska 
+# 861 Islandic
+# 863 Fransk-kanadensiska 
+# 865 Nordiska 
+# 866 Ryska 
+# 869 Modern grekiska 
+
+
+
 import winconstants as c32
 from ctypes import windll
 import ctypes
@@ -164,9 +180,10 @@ def keyseq_to_keyinfo(keyseq):
             meta = True
             keyseq = keyseq[3:]
         elif keyseq.startswith('\\e'):
-            res.append(char_to_keyinfo('\033', control, meta, shift))
-            control = meta = shift = False
-            keyseq = keyseq[2:]
+            return None  #escape sequences are not possible so ignore
+#            res.append(char_to_keyinfo('\033', control, meta, shift))
+#            control = meta = shift = False
+#            keyseq = keyseq[2:]
         elif len(keyseq) >= 1:
             res.append(char_to_keyinfo(keyseq[0], control, meta, shift))
             control = meta = shift = False
