@@ -15,7 +15,7 @@ ipenginepb -p 9999 -c '127.0.0.1'
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
-import sys
+import sys, os
 from optparse import OptionParser
 
 from twisted.internet import reactor
@@ -38,8 +38,16 @@ if mpiConfig.mpiImportStatement:
     except ImportError:
         mpi = None
 
-def main(n):
-    log.startLogging(sys.stdout)
+def main(n, logfile):
+    if logfile:
+        logfile = logfile + str(os.getpid()) + '.log'
+        try:
+            openLogFile = open(logfile, 'w')
+        except:
+            openLogFile = sys.stdout
+    else:
+        openLogFile = sys.stdout
+    log.startLogging(openLogFile)
     for i in range(n):
         service = EngineService(shellConfig.shellClass, 
             shellConfig.filesToRun, 
@@ -61,6 +69,7 @@ def start(n=1):
     parser.set_defaults(profile = '')
     parser.set_defaults(rcfile='')
     parser.set_defaults(ipythondir='')
+    parser.set_defaults(logfile='')
 
     parser.add_option("--controller-port", type="int", dest="controllerport",
         help="the TCP port the controller is listening on")
@@ -70,6 +79,8 @@ def start(n=1):
         help="the number of engines to start in this process")
     parser.add_option("-r", "--run", type="string", dest="filetorun",
         help="a file to run after the engine has started")
+    parser.add_option("-l", "--logfile", type="string", dest="logfile",
+        help="log file name (default is stdout)")
     
     # Configuration files and profiles
     parser.add_option("-p", "--profile", type="string", dest="profile",
@@ -96,7 +107,7 @@ def start(n=1):
     if options.controllerport is not None:
         engineConfig.connectToControllerOn['port'] = options.controllerport
         
-    main(options.n)
+    main(options.n, options.logfile)
     
 if __name__ == "__main__":
     start()

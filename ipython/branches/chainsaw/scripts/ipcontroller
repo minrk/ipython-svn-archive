@@ -11,7 +11,7 @@
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
-import sys, time
+import sys, time, os
 from optparse import OptionParser
 
 from twisted.internet import reactor, error
@@ -22,8 +22,16 @@ import ipython1.config.api as config
 
 controllerConfig = config.getConfigObject('controller')
 
-def main():
-    log.startLogging(sys.stdout)
+def main(logfile):
+    if logfile:
+        logfile = logfile + str(os.getpid()) + '.log'
+        try:
+            openLogFile = open(logfile, 'w')
+        except:
+            openLogFile = sys.stdout
+    else:
+        openLogFile = sys.stdout
+    log.startLogging(openLogFile)
     
     cs = controllerservice.ControllerService()
     efac = controllerConfig.engineServerProtocolInterface(cs)
@@ -44,11 +52,14 @@ def main():
 
 def start():
     parser = OptionParser()
+    parser.set_defaults(logfile='')
         
     parser.add_option("--engine-port", type="int", dest="engineport",
         help="the TCP port the controller will listen on for engine connections")
     parser.add_option("--engine-ip", type="string", dest="engineip",
         help="the TCP ip address the controller will listen on for engine connections")
+    parser.add_option("-l", "--logfile", type="string", dest="logfile",
+        help="log file name (default is stdout)")
         
     # Configuration files and profiles
     parser.add_option("-p", "--profile", type="string", dest="profile",
@@ -73,7 +84,7 @@ def start():
     if options.engineport is not None:
         controllerConfig.listenForEnginesOn['port'] = options.engineport
         
-    main()
+    main(options.logfile)
     
     
 if __name__ == "__main__":
