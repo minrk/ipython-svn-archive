@@ -2,6 +2,8 @@
 	* backporting ansi color changes from pyreadline-refactor
 	* Added color descriptions to example ini file
 	* log inital color to debug file
+	* Changed handling of default color in ansi sequences to 
+	  keep ipython prompt color ok even if default color is bold.
 	
 2006-10-19 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Fix of ticket #94. Ignore escape sequences when binding keys using readline syntax.
