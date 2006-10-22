@@ -1247,6 +1247,7 @@ class Readline:
             
     
         loc={"branch":release.branch,
+             "version":release.version,
              "bind_key":bind_key,
              "bind_exit_key":bind_exit_key,
              "un_bind_key":un_bind_key,

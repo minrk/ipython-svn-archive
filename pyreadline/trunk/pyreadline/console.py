@@ -181,6 +181,10 @@ class Console(object):
         else:
             self.hout = self.GetStdHandle(STD_OUTPUT_HANDLE)
 
+        self.hin = self.GetStdHandle(STD_INPUT_HANDLE)
+        self.inmode = c_int(0)
+        self.GetConsoleMode(self.hin, byref(self.inmode))
+        self.SetConsoleMode(self.hin, 0xf)
         info = CONSOLE_SCREEN_BUFFER_INFO()
         self.GetConsoleScreenBufferInfo(self.hout, byref(info))
         self.attr = info.wAttributes
@@ -188,33 +192,27 @@ class Console(object):
         
         self.defaultstate=AnsiState()
         self.defaultstate.winattr=info.wAttributes
-        
         self.ansiwriter=AnsiWriter(self.defaultstate)
         
-        
+        background = self.attr & 0xf0
+        for escape in self.escape_to_color:
+            if self.escape_to_color[escape] is not None:
+                self.escape_to_color[escape] |= background
         log('initial attr=%x' % self.attr)
-
-        self.hin = self.GetStdHandle(STD_INPUT_HANDLE)
-        self.inmode = c_int(0)
-        self.GetConsoleMode(self.hin, byref(self.inmode))
-        self.SetConsoleMode(self.hin, 0xf)
         self.softspace = 0 # this is for using it as a file-like object
         self.serial = 0
 
         self.pythondll = CDLL('python%s%s' % (sys.version[0], sys.version[2]))
         self.inputHookPtr = c_int.from_address(addressof(self.pythondll.PyOS_InputHook)).value
         setattr(Console, 'PyMem_Malloc', self.pythondll.PyMem_Malloc)
+
+
         def exit():
             self.SetConsoleTextAttribute(self.hout, self.saveattr)
             self.SetConsoleMode(self.hin, self.inmode)
             self.FreeConsole()
         import atexit
         atexit.register(exit)
-        
-        
-        
-        
-        
 
     def __del__(self):
         '''Cleanup the console when finished.'''
@@ -251,8 +249,26 @@ class Console(object):
 
 # Map ANSI color escape sequences into Windows Console Attributes
 
-    terminal_escape = re.compile('(\001?\033\\[[0-9;]*m\002?)')
-    escape_parts = re.compile('\001?\033\\[([0-9;]*)m\002?')
+    terminal_escape = re.compile('(\001?\033\\[[0-9;]+m\002?)')
+    escape_parts = re.compile('\001?\033\\[([0-9;]+)m\002?')
+    escape_to_color = { '0;30': 0x0,             #black
+                        '0;31': 0x4,             #red
+                        '0;32': 0x2,             #green
+                        '0;33': 0x4+0x2,         #brown?
+                        '0;34': 0x1,             #blue
+                        '0;35': 0x1+0x4,         #purple
+                        '0;36': 0x2+0x4,         #cyan
+                        '0;37': 0x1+0x2+0x4,     #grey
+                        '1;30': 0x1+0x2+0x4,     #dark gray
+                        '1;31': 0x4+0x8,         #red
+                        '1;32': 0x2+0x8,         #light green
+                        '1;33': 0x4+0x2+0x8,     #yellow
+                        '1;34': 0x1+0x8,         #light blue
+                        '1;35': 0x1+0x4+0x8,     #light purple
+                        '1;36': 0x1+0x2+0x8,     #light cyan
+                        '1;37': 0x1+0x2+0x4+0x8, #white
+                        '0': None,
+                       }
 
     # This pattern should match all characters that change the cursor position differently
     # than a normal character.

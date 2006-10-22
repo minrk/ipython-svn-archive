@@ -1,4 +1,7 @@
 2006-10-19 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* backporting ansi color changes from pyreadline-refactor
+
+2006-10-19 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Fix of ticket #94. Ignore escape sequences when binding keys using readline syntax.
 
 2006-07-20 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
