@@ -50,6 +50,7 @@ class Readline:
         self.undo_stack = [] # each entry is a tuple with cursor_position and line_text
         self.line_buffer = []
         self.line_cursor = 0
+
         self.console = console.Console()
         self.size = self.console.size()
         self.prompt_color = self.console.saveattr
@@ -71,6 +72,7 @@ class Readline:
         self.bell_style = 'none'
         self.mark=-1
         self.read_inputrc()
+        log("Initial color attributes=%s"%self.console.saveattr)
         log("\n".join(self.rl_settings_to_string()))
 
         #Paste settings    

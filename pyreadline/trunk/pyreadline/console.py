@@ -157,7 +157,6 @@ key_modifiers = { VK_SHIFT:1,
                  }
 from ansi import AnsiState,AnsiWriter
 
-
 class Console(object):
     '''Console driver for Windows.
 
