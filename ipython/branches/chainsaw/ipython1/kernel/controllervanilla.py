@@ -173,7 +173,7 @@ class RemoteController(RemoteControllerBase):
     # IMultiEngine methods
     #-------------------------------------------------------------------------------
         
-    def execute(self, targets, source, block=False):
+    def execute(self, targets, source, block=None):
         """Execute python source code on engine(s).
         
         Examples:
@@ -194,9 +194,8 @@ class RemoteController(RemoteControllerBase):
          - `block`:  Whether or not to wait for the results of the action.  Using 
            ``block=True`` will wait for results, which will be printed as 
            stdin/out/err.  Using ``block=False`` will submit the action to the 
-           controller and return immediately. Blocking can also be controlled on a
-           global basis by setting the ``block`` attribute of the `RemoteController` 
-           object.
+           controller and return immediately. If block is not set, the value of
+           RemoteController.block will be used.
             
         :return: ``True`` or ``False`` to indicate success or failure.
         """
@@ -207,7 +206,7 @@ class RemoteController(RemoteControllerBase):
             return False
         self._checkConnection()
         
-        if self.block or block:
+        if (self.block and block is None) or block:
             string = "EXECUTE BLOCK " + source + "::" + targetstr
             try:
                 self.es.writeNetstring(string)
@@ -281,7 +280,7 @@ class RemoteController(RemoteControllerBase):
             print string
             return False
 
-    def executeAll(self, source, block=False):
+    def executeAll(self, source, block=None):
         """Execute source on all engines.
         
         See the docstring for `execute` for more details.

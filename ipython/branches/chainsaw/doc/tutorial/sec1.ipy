@@ -1,0 +1,45 @@
+%autoindent off
+
+# Creating a RemoteController Instance
+
+import ipython1.kernel.api as kernel
+rc = kernel.RemoteController(('127.0.0.1',10105))
+rc.getIDs()
+
+# Running Python Commands
+
+rc.executeAll('a=5')
+rc.executeAll('b=10')                       # b=10 on all
+rc.executeAll('print a, b, a+b')            
+rc.execute([0,2], 'c=a+b')                        # c=a+b on [0,2] only
+rc.execute(3, 'c=a-b')                        # c=a-b on 3 only
+rc.executeAll('import time',block=False)          # won't block 
+#rc.executeAll('time.sleep(10)',block=False)       #  won't block
+rc.block = False                                  
+rc.executeAll('y = [x**4 for x in xrange(1000)]')                   #this is a big test of thigns
+rc.executeAll('print sum(y)',block = True)
+
+%px import numpy
+%px a = numpy.random.rand(2,2)
+%px print numpy.linalg.eigvals(a)
+%result
+
+%autopx
+max_evals = []
+for i in range(100):
+    a = numpy.random.rand(10,10)
+    a = a + a.transpose()
+    evals = numpy.linalg.eigvals(a)
+    max_evals.append(evals[0].real)
+
+%autopx
+%px print "Average max eigenvalue is: ", sum(max_evals)/len(max_evals)
+%result
+
+
+
+
+
+
+
+
