@@ -24,6 +24,7 @@ import __main__
 import commands
 import os
 import re
+import shlex
 import shutil
 import sys
 import tempfile
@@ -232,6 +233,17 @@ def timing(func,*args,**kw):
 
 #****************************************************************************
 # file and system
+
+def arg_split(s,posix=False):
+    """Split a command line's arguments in a shell-like manner.
+
+    This is a modified version of the standard library's shlex.split()
+    function, but with a default of posix=False for splitting, so that quotes
+    in inputs are respected."""
+    
+    lex = shlex.shlex(s, posix=posix)
+    lex.whitespace_split = True
+    return list(lex)
 
 def system(cmd,verbose=0,debug=0,header=''):
     """Execute a system command, return its exit status.
