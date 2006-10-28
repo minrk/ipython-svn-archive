@@ -244,7 +244,7 @@ class BasePrompt:
                             ('${self.sep}${self.col_p}',
                              multiple_replace(prompt_specials, self.p_template),
                              '${self.col_norm}'),self.cache.user_ns,loc)
-        
+
         self.p_str_nocolor = ItplNS(multiple_replace(prompt_specials_nocolor,
                                                      self.p_template),
                                     self.cache.user_ns,loc)
