@@ -47,7 +47,6 @@ import inspect
 import keyword
 import new
 import os
-import pdb
 import pydoc
 import re
 import shutil
@@ -1361,11 +1360,20 @@ want to merge them back into the new files.""" % locals()
         self.SyntaxTB(etype,value,[])
 
     def debugger(self):
-        """Call the pdb debugger."""
+        """Call the pydb/pdb debugger."""
 
         if not self.rc.pdb:
             return
-        pdb.pm()
+        have_pydb = False
+        if sys.version[:3] >= '2.5':
+            try:
+                from pydb import pm
+                have_pydb = True
+            except ImportError:
+                pass
+        if not have_pydb:
+            from pdb import pm
+        pm()
 
     def showtraceback(self,exc_tuple = None,filename=None,tb_offset=None):
         """Display the exception that just occurred.
