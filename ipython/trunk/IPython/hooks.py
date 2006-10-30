@@ -145,6 +145,13 @@ class CommandChainDispatcher:
         """ Add a func to the cmd chain with given priority """
         bisect.insort(self.chain,(priority,func))
 
+    def __iter__(self):
+        """ Return all objects in chain.
+        
+        Handy if the objects are not callable.
+        """
+        return iter(self.chain)
+    
 def result_display(self,arg):
     """ Default display hook.
     
