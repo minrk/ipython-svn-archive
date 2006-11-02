@@ -1650,6 +1650,7 @@ want to merge them back into the new files.""" % locals()
 
                 l2 = self.transform_alias(fn,rest)
                 # dir -> dir 
+                # print "alias",line, "->",l2  #dbg
                 if l2 == line:
                     break
                 # ls -> ls -F should not recurse forever
