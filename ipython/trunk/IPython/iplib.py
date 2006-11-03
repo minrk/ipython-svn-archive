@@ -2381,11 +2381,6 @@ want to merge them back into the new files.""" % locals()
     def safe_execfile(self,fname,*where,**kw):
         fname = os.path.expanduser(fname)
 
-        # find things also in current directory
-        dname = os.path.dirname(fname)
-        if not sys.path.count(dname):
-            sys.path.append(dname)
-
         try:
             xfile = open(fname)
         except:
