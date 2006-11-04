@@ -218,6 +218,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       separate_in = '\n',
                       separate_out = '\n',
                       separate_out2 = '',
+                      system_header = 'IPython system call: ',
                       system_verbose = 0,
                       gthread = 0,
                       qthread = 0,

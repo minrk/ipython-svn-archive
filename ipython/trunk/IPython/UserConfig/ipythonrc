@@ -340,6 +340,15 @@ xmode Context
 
 multi_line_specials 1
 
+
+# System calls: When IPython makes system calls (e.g. via special syntax like
+# !cmd or !!cmd, or magics like %sc or %sx), it can print the command it is
+# executing to standard output, prefixed by a header string.
+
+system_header "IPython system call: "
+
+system_verbose 1
+
 # wxversion: request a specific wxPython version (used for -wthread)
 
 # Set this to the value of wxPython you want to use, but note that this
