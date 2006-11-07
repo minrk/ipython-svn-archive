@@ -8,11 +8,21 @@ IPython Kernel Installation
 
 .. contents::
 
+Warning
+=======
+
+IPython1 depends heavily on the Twisted framework for all its network support,
+and as of Nov. 5 2006, Twisted still does NOT work with Python 2.5 (see [WWW]
+http://glyf.livejournal.com/62308.html for details). So for now, if you want
+to use IPython1, you must unfortunately work with Python 2.4. We'll update
+this information as the situation improves with Twisted.
+
+
 Introduction
 ============
 
 This INSTALL file describes the steps required to install the IPython1 kernel
-for interactive parallel computing.  For a description of the kernel, see the 
+for interactive parallel computing.  For a description of the kernel, see the
 README file in this directory.
 
 Please let us know if you have problems installing ipython1 or any of its
