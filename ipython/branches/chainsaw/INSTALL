@@ -13,9 +13,9 @@ Warning
 
 IPython1 depends heavily on the Twisted framework for all its network support,
 and as of Nov. 5 2006, Twisted still does NOT work with Python 2.5 (see [WWW]
-http://glyf.livejournal.com/62308.html for details). So for now, if you want
-to use IPython1, you must unfortunately work with Python 2.4. We'll update
-this information as the situation improves with Twisted.
+http://glyf.livejournal.com/62308.html for details). So for now, if you want to
+use IPython1, you must unfortunately work with Python 2.4. We'll update this
+information as the situation improves with Twisted.
 
 
 Introduction
@@ -26,8 +26,8 @@ for interactive parallel computing.  For a description of the kernel, see the
 README file in this directory.
 
 Please let us know if you have problems installing ipython1 or any of its
-dependencies.  Currently we have tested ipython1 extensively with Python 2.4.3, 
-but it should work with Python 2.3.x and Python 2.5 as well.  
+dependencies.  Currently we have tested ipython1 extensively with Python 2.4.3,
+but it should work with Python 2.3.x and Python 2.5 as well.
 
 The IPython kernel requires four things:
 
@@ -36,42 +36,57 @@ The IPython kernel requires four things:
 3. Zope Interface
 4. Twisted
 
-If you are comfortable using subversion and installing Python packages, you can probably just get and install these packages without further instructions  If not, read on.
+If you are comfortable using subversion and installing Python packages, you can
+probably just get and install these packages without further instructions If
+not, read on.
 
-To get these packages, you will need Subversion (or svn).  Many systems will already have Subversion installed; if you need more information about Subversion, see http://svnbook.red-bean.com/.
+To get these packages, you will need Subversion (or svn).  Many systems will
+already have Subversion installed; if you need more information about
+Subversion, see http://svnbook.red-bean.com/.
 
-There are also a number of optional dependencies that provide additional capabilities.
+There are also a number of optional dependencies that provide additional
+capabilities.
 
-We also provide a script in this directory called getdependencies.sh that will download (but not install) the dependencies into the parent directory using svn and wget or curl.
+We also provide a script in this directory called getdependencies.sh that will
+download (but not install) the dependencies into the parent directory using svn
+and wget or curl.
 
 Installation Instructions
 =========================
 
-Unless otherwise stated, all of the following packages can be installed by changing to the source directory and issuing the command:
+Unless otherwise stated, all of the following packages can be installed by
+changing to the source directory and issuing the command:
 
 ::
 
 	python setup.py install
 	
-To install into the site-packages directory of your system Python you will need admin privileges.  If you do not have such privileges, you can use set a --home flag when you install to select a different directory for your packages:
+To install into the site-packages directory of your system Python you will need
+admin privileges.  If you do not have such privileges, you can use set a --home
+flag when you install to select a different directory for your packages:
 
 ::
 
 	python setup.py install --home=some-dir-in-your-PYTHONPATH
 	
-You will then need to set you PYTHONPATH environment variable to point to this directory.
-More information about installing Python packages can be found in the Python documentation at http://docs.python.org/.
+You will then need to set you PYTHONPATH environment variable to point to this
+directory.  More information about installing Python packages can be found in
+the Python documentation at http://docs.python.org/.
 
 IPython1
 ---------
 
-The latest prototype of the IPython kernel can be retrieved from the IPython Subversion repository with the command:
+The latest prototype of the IPython kernel can be retrieved from the IPython
+Subversion repository with the command:
 
 ::
 
     svn co http://ipython.scipy.org/svn/ipython/ipython/branches/chainsaw ipython1
 
-In addition to installing the ipython1 python package, this will also install a few scripts for starting the controller and engine into an appropriate location.  To control where these scripts are installed, you can do the following:
+In addition to installing the ipython1 python package, this will also install a
+few scripts for starting the controller and engine into an appropriate
+location.  To control where these scripts are installed, you can do the
+following:
 
 ::
 
@@ -93,7 +108,8 @@ You can also get the latest development version using Subversion:
 Zope Interface
 --------------
 
-Next, download and install the zope.interface package: http://www.zope.org/Products/ZopeInterface.
+Next, download and install the zope.interface package:
+http://www.zope.org/Products/ZopeInterface.
 
 We recommend the 3.1.0c1 build:
 
@@ -113,7 +129,11 @@ Get the trunk version of Twisted using Subversion:
 Nevow (Optional)
 ----------------
 
-Nevow is a web development framework that is based on Twisted.  Nevow is an optional dependency that is only needed if you want to have a nice Ajaxy web interface to the IPython Controller and Engines.  You should get the trunk version of Nevow at the same time you get Twisted as they are developed in parallel:
+Nevow is a web development framework that is based on Twisted.  Nevow is an
+optional dependency that is only needed if you want to have a nice Ajaxy web
+interface to the IPython Controller and Engines.  You should get the trunk
+version of Nevow at the same time you get Twisted as they are developed in
+parallel:
 
 ::
 
@@ -122,34 +142,42 @@ Nevow is a web development framework that is based on Twisted.  Nevow is an opti
 Configuration
 =============
 
-IPython1 uses configuration files and objects to configure itself.  Information about the basic configuration objects, their options and default values can be found in ipython1.config.api and ipython1.config.objects.  
+IPython1 uses configuration files and objects to configure itself.  Information
+about the basic configuration objects, their options and default values can be
+found in ipython1.config.api and ipython1.config.objects.
 
 Testing
 =======
 
-Once you have completed the installation of the IPython1 kernel you can run our test suite with the command:
+Once you have completed the installation of the IPython1 kernel you can run our
+test suite with the command:
 
 ::
 
 	trial ipython1
 	
-The trial command is part of Twisted and allows asynchronous network based applications to be tested using python's unittest framework.  Please let us know if the tests do not pass.
-The best way to get in touch with us is on the IPython developer mailing list:
+The trial command is part of Twisted and allows asynchronous network based
+applications to be tested using python's unittest framework.  Please let us
+know if the tests do not pass.  The best way to get in touch with us is on the
+IPython developer mailing list:
 
 http://projects.scipy.org/mailman/listinfo/ipython-dev
+
 
 MPI Support
 ===========
 
-The IPython kernel includes MPI support.  With MPI support IPython engines can pass data between each other using MPI.  There are many ways to call the actual MPI API:
+The IPython kernel includes MPI support.  With MPI support IPython engines can
+pass data between each other using MPI.  There are many ways to call the actual
+MPI API:
 
 1. Call into an MPI shared library directly using ctypes.
 2. Use one of the many Python/MPI bindings such as mpi4py.
 3. Call wrapped C/C++/Fortran code that itself calls MPI.
 
 For any of these options to work, MPI must be initialized by a call to
-MPI_Init().  This needs to be done by having the engines import a python
-module that calls MPI_Init.  To enable mpi support:
+MPI_Init().  This needs to be done by having the engines import a python module
+that calls MPI_Init.  To enable mpi support:
 
 1. Copy the configfiles/mpirc.py into your .ipython directory
 2. Set the mpiImportStatement to an appropriate value.  See examples and the
@@ -157,8 +185,8 @@ module that calls MPI_Init.  To enable mpi support:
 3. If you want to use ipython1.mpi for calling MPI_Init, you will need to 
    make sure it is built when you install ipython1. 
 
-By default, the ipython1.kernel.mpi module is not built.  To build it,
-give the build command::
+By default, the ipython1.kernel.mpi module is not built.  To build it, give the
+build command::
 
 	python setup.py build --mpicc=your-mpicc-command
 
