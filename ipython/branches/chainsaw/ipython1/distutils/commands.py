@@ -1,3 +1,4 @@
+# encoding: utf-8
 __docformat__ = "restructuredtext en"
 
 from distutils.command import config as orig_config

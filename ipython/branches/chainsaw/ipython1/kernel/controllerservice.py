@@ -1,3 +1,4 @@
+# encoding: utf-8
 # -*- test-case-name: ipython1.test.test_controllerservice -*-
 """A Twisted Service for the IPython Controller.
 
@@ -297,14 +298,18 @@ def autoMethod(self, %s:
         """eliminate remote engine object"""
         msg = "unregistered engine %r" %id
         log.msg(msg)
-        del self.engines[id]
-        if not self.saveIDs:
-            self.availableIDs.append(id)
-            # Sort to assign lower ids first
-            self.availableIDs.sort(reverse=True) 
+        try:
+            del self.engines[id]
+        except KeyError:
+            log.msg("engine %i was not registered" % id)
         else:
-            log.msg("preserving id %i" %id)
-        self.notify((id, -1, msg, '', ''))
+            if not self.saveIDs:
+                self.availableIDs.append(id)
+                # Sort to assign lower ids first
+                self.availableIDs.sort(reverse=True) 
+            else:
+                log.msg("preserving id %i" %id)
+            self.notify((id, -1, msg, '', ''))
     
     def registerSerializationTypes(self, *serialTypes):
         """Register the set of allowed subclasses of Serialized."""

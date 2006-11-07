@@ -1,3 +1,5 @@
+# encoding: utf-8
+
 from twisted.internet import defer
 
 from ipython1.core.shell import InteractiveShell

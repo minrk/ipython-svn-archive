@@ -1,3 +1,4 @@
+# encoding: utf-8
 # -*- test-case-name: ipython1.test.test_enginepb -*-
 """Expose the IPython EngineService using Twisted's Perspective Broker.
 

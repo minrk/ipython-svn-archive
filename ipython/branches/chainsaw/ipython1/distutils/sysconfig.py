@@ -1,3 +1,4 @@
+# encoding: utf-8
 __docformat__ = "restructuredtext en"
 
 print "Here is ipython1.distutils.sysconfig!!!!!!"

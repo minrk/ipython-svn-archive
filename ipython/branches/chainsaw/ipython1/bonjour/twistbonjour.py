@@ -1,3 +1,4 @@
+# encoding: utf-8
 """Classes for using Apple's Bonjour with Twisted."""
 __docformat__ = "restructuredtext en"
 #*****************************************************************************

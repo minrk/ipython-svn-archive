@@ -1,4 +1,5 @@
- # -*- test-case-name: ipython1.test.test_engineservice -*-
+# encoding: utf-8
+# -*- test-case-name: ipython1.test.test_engineservice -*-
 """A Twisted Service Representation of the IPython core.
 
 The IPython Core exposed to the network is called the Engine.  Its

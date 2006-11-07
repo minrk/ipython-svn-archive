@@ -1,3 +1,4 @@
+# encoding: utf-8
 """Classes used in scattering and gathering sequences.
 
 Scattering consists of partitioning a sequence and sending the various

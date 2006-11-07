@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # encoding: utf-8
 """General utilities for kernel related things."""
 __docformat__ = "restructuredtext en"

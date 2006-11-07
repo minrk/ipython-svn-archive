@@ -1,3 +1,4 @@
+# encoding: utf-8
 # -*- test-case-name: ipython1.test.test_controllerclient -*-
 """The kernel interface.
 
@@ -209,15 +210,20 @@ class RemoteControllerView(RemoteControllerBase):
         # print self._ids
         # print self._originalIDs
     
+    def _getBlock(self): return self.rc.block
+    def _setBlock(self, block): self.rc.block = block
+    
+    block = property(_getBlock, _setBlock, None, None)
+    
     #---------------------------------------------------------------------------
     # RemoteController methods
     #---------------------------------------------------------------------------
     
-    def execute(self, targets, lines, block=False):
+    def execute(self, targets, lines, block=None):
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.execute(actualTargets, lines, block)
     
-    def executeAll(self, lines, block=False):
+    def executeAll(self, lines, block=None):
         return self.execute('all', lines, block)
         
     def push(self, targets, **namespace):
@@ -309,9 +315,9 @@ class RemoteControllerView(RemoteControllerBase):
         
     def activate(self):
         try:
-            __IPYTHON__.active_cluster = self
+            __IPYTHON__.activeController = self
         except NameError:
-            print "The %px and %autopx magic's are not active."
+            print "The IPython Controller magics only work within IPython."
         
     def run(self, targets, fname):
         actualTargets = self._mapIDsToOriginal(targets)
@@ -376,11 +382,12 @@ class EngineProxy(object):
         self.id = id
         self.rc = rc
     
-    def execute(self, strings, block=False):
-        if block:
-            return self.rc.execute(self.id, strings, block=True)[0]
-        else:
-            return self.rc.execute(self.id, strings)
+    def execute(self, strings, block=None):
+        return self.rc.execute(self.id, strings, block=block)
+        #if block:
+        #    return self.rc.execute(self.id, strings, block=True)[0]
+        #else:
+        #    return self.rc.execute(self.id, strings)
     
     def push(self, **namespace):
         return self.rc.push(self.id, **namespace)

@@ -1,3 +1,4 @@
+# encoding: utf-8
 """This file contains unittests for the kernel.engineservice.py module.
 
 Things that should be tested:

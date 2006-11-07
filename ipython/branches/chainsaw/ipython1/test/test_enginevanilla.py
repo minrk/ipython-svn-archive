@@ -1,15 +1,16 @@
+# encoding: utf-8
 """This file contains unittests for the enginepb.py module.
 
 Things that should be tested:
 The methods of Controller Service:
- - registerEngine √
- - unregisterEngine √
- - execute/All √o
- - push/Serial/All √/√/oo
- - pull/Serial/All √/√/oo
- - getResult/All √/o
- - status/All oo
- - reset/All oo
+ - registerEngine
+ - unregisterEngine
+ - execute/All
+ - push/Serial/All
+ - pull/Serial/All
+ - getResult/All
+ - status/All
+ - reset/All
  - *kill/All - do not test this, it calls reactor.stop
 
 """

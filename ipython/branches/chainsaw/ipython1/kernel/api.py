@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # encoding: utf-8
 """This module contains the public API for working with a remote controller.
 

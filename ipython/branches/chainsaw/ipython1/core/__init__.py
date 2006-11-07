@@ -1,3 +1,4 @@
+# encoding: utf-8
 """The IPython Core."""
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------

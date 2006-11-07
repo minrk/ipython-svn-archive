@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# encoding: utf-8   -> do we need these now?
+# encoding: utf-8
 """
 Magic command interface for interactive parallel work.
 """

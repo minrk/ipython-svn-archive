@@ -1,3 +1,4 @@
+# encoding: utf-8
 __docformat__ = "restructuredtext en"
 
 from nevow import athena, loaders, tags, inevow, rend, livepage

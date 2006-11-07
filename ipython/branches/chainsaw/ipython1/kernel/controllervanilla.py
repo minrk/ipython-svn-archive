@@ -1,3 +1,4 @@
+# encoding: utf-8
 """A vanilla protocol interface to a `controllerservice.ControllerService`.
 
 The client side of this uses standard blocking Python sockets and can 
@@ -321,6 +322,18 @@ class RemoteController(RemoteControllerBase):
             print "Need something to do!"
             return False
         
+        # Serialize all the objects first to see if there are problems
+        serializedNamespace = {}
+        for key in namespace:
+            value = namespace[key]
+            try:
+                serialObject = serialized.serialize(value, key)
+            except Exception, e:
+                print "Object cannot be serialized: ", key, e
+                return False
+            else:
+                serializedNamespace[key] = serialObject
+        
         string = "PUSH ::%s" % targetstr
         try:
             self.es.writeNetstring(string)
@@ -336,14 +349,7 @@ class RemoteController(RemoteControllerBase):
             print "Expected 'PUSH READY', got '%s'" %string
             return False
         for key in namespace:
-            value = namespace[key]
-            try:
-                serialObject = serialized.serialize(value, key)
-            except Exception, e:
-                print "Object cannot be serialized: ", key, e
-                return False
-            else:
-                self._sendSerialized(serialObject)
+            self._sendSerialized(serializedNamespace[key])
         self.es.writeNetstring("PUSH DONE")
         string = self.es.readNetstring()
         if string == "PUSH OK":

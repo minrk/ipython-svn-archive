@@ -1,3 +1,4 @@
+# encoding: utf-8
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>

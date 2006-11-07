@@ -1,3 +1,4 @@
+# encoding: utf-8
 """Classes for gathering results from kernels.
 
 This module introduces the notion of a Notifier, which is the mchanism a 

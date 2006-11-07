@@ -1,3 +1,4 @@
+# encoding: utf-8
 """This file contains utility classes for performing tests with Deferreds.
 """
 

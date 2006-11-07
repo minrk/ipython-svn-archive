@@ -1,3 +1,4 @@
+# encoding: utf-8
 """Classes and functions for kernel related errors and exceptions.
 """
 __docformat__ = "restructuredtext en"
@@ -43,6 +44,9 @@ class ProtocolError(KernelError):
     pass
     
 class InvalidEngineID(KernelError):
+    pass
+    
+class SerializationError(KernelError):
     pass
     
 

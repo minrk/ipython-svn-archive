@@ -1,3 +1,4 @@
+# encoding: utf-8
 """The IPython1 kernel.
 
 The IPython kernel actually refers to three things:

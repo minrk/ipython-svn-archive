@@ -1,3 +1,4 @@
+# encoding: utf-8
 """The IPython1 package.
 
 IPython1 represents the next-generation IPython that is being developed.

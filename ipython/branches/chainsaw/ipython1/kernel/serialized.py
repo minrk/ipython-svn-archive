@@ -1,3 +1,4 @@
+# encoding: utf-8
 """
 Serialization objects and utilities for use in network protocols.
 
@@ -15,6 +16,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import cPickle as pickle
+from ipython1.kernel.error import SerializationError
 
 def serialize(obj, key):
     """Serialize obj using an appropriate subclass of Serialized."""
@@ -96,6 +98,8 @@ else:
                 raise TypeError('obj must be a numpy ndarray object')
             # Our send method requires contiguous arrays, so if it is not
             # contiguous, we must make a contiguous copy, which is undesirable
+            if len(obj) == 0:         # length 0 arrays can't be reconstructed
+                raise SerializationError("You cannot send a length 0 array")
             array = numpy.ascontiguousarray(obj, dtype=None)
             p = []
             p.append(pickle.dumps(array.shape, 2))

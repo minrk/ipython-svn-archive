@@ -1,3 +1,4 @@
+# encoding: utf-8
 """Low level network protocols."""
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------

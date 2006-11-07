@@ -1,3 +1,4 @@
+# encoding: utf-8
 # -*- test-case-name: ipython1.test.test_controllerpb -*-
 """A Perspective Broker interface to a ControllerService.
 

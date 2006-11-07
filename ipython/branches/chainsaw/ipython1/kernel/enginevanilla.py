@@ -1,3 +1,4 @@
+# encoding: utf-8
 # -*- test-case-name: ipython1.test.test_enginevanilla -*-
 """Expose the IPython EngineService using our vanilla protocol.
 
