@@ -121,12 +121,11 @@ class RemoteControllerBase(object):
         # Setup
         
         ids = self.getMappedIDs()
-        hide = StringIO.StringIO('')    
+        hide = StringIO.StringIO('')
+        if len(ids) < 4:
+            raise Exception("The client test() need to be run with at least 4 engines")    
         print "Running tests on %i engines" %len(ids)
-        if not ids:
-            print "need some engines!"
-            return
-                
+
         print "Testing execute..."
         try:
             assert self.execute(0, 'a'),"assert rc.execute(0, 'a')"

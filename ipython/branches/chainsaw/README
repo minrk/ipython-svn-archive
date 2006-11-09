@@ -70,7 +70,7 @@ Starting the controller and engine on your local machine
 
 This is the simplest configuration that can be used and is useful for testing
 the system and on machines that have multiple cores and/or multple CPUs.  First
-start the controler::
+start the controller::
 
 	ipcontroller &
 	
