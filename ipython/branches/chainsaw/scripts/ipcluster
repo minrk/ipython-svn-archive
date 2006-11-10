@@ -95,23 +95,33 @@ def main():
     controller = Popen(['ipcontroller','--logfile',opt.logfile])
     print 'Controller PID:',controller.pid
 
-    print 'Starting engines:',
+    print 'Starting engines:   ',
     time.sleep(2)
     engines = [ Popen(['ipengine','--logfile',
                        '%s%s-' % (opt.logfile,controller.pid)])
                 for i in range(opt.n) ]
     eids = [e.pid for e in engines]
-    print 'Engines PIDs:',eids
+    print 'Engines PIDs:  ',eids
     
     proc_ids = eids + [controller.pid]
     procs = engines + [controller]
     
     try:
         print
-        print 'Cluster is up and running.  Hit Ctrl-C to stop...'
+        print 'Your cluster is up and running.  Hit Ctrl-C to stop...'
+        print
+        print 'For interactive use, you can make a Remote Controller with:'
+        print
+        print 'import ipython1.kernel.api as kernel'
+        print "rc = kernel.RemoteController(('127.0.0.1',10105))"
+        print
+        print 'You can stop the cluster from IPython using:'
+        print
+        print 'import os,signal;os.killpg(%s,signal.SIGINT)' % os.getpgrp()
+        print
         try:
             while True:
-                time.sleep(10)
+                time.sleep(5)
         except:
             pass
     finally:
