@@ -48,7 +48,7 @@ from ipython1.kernel.util import tarModule
 from ipython1.kernel.controllerclient import \
     RemoteControllerBase, RemoteControllerView, EngineProxy
 from ipython1.kernel.parallelfunction import ParallelFunction
-
+from ipython1.tools import utils
 
 #-------------------------------------------------------------------------------
 # Figure out what array packages are present and their types.
@@ -97,9 +97,9 @@ class RemoteController(RemoteControllerBase):
         controllerservice.addAllMethods(self)
         self.activate()
     
-    #-------------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     # Internal implementation methods
-    #-------------------------------------------------------------------------------
+    #---------------------------------------------------------------------------
 
     def __del__(self):
         """Disconnect upon being deleted."""
@@ -288,7 +288,7 @@ class RemoteController(RemoteControllerBase):
         """
         return self.execute('all', source, block)
 
-    def push(self, targets, **namespace):
+    def push(self, targets, *keys, **namespace):
         """Send python object(s) to remote engine(s).
         
         This should be able to send any picklable Python object.  Any modules 
@@ -299,6 +299,7 @@ class RemoteController(RemoteControllerBase):
         
         >>> rc = RemoteController(('localhost',10000))
         >>> rc.push('all', a=5, b=10)      # push 5 as a, 10 as b to all
+        >>> rc.push('all','a','b')         # push local variables a and b
         >>> rc.push(0, c=range(10))        # push range(10) as c to 0
         >>> rc.push([0,3], q='mystring')   # push 'mystring' as q to 0, 3
         
@@ -308,19 +309,28 @@ class RemoteController(RemoteControllerBase):
         >>> rc[0]['b'] = 30                # Same as rc.push(0, b=30)
         
         :Parameters:
-         - `targets`: The engine id(s) to push to. Targets can be an int, 
-           list of ints, or the string 'all' to indicate all available engines.  
-           To see the current ids available on a controller use `getIDs()`.
-         - `**namespace`:  The python objects to send and their names represented as
-           keyword arguments: a=10, b=20.
+        
+         - `targets`: The engine id(s) to push to. Targets can be an int, list
+           of ints, or the string 'all' to indicate all available engines.  To
+           see the current ids available on a controller use `getIDs()`.
+
+         - `*keys`: one or more strings containing the names of variables to be
+           extracted from your local namespace.
+         
+         - `**namespace`: The python objects to send and their names
+           represented as keyword arguments: a=10, b=20.
           
         :return: ``True`` or ``False`` to indicate success or failure.
         """
         
         targetstr = self._parseTargets(targets)
-        if not targetstr or not namespace or not self._checkConnection():
+        if not targetstr or (not namespace and not keys) \
+               or not self._checkConnection():
             print "Need something to do!"
             return False
+
+        # Extract any keys given to us by the caller
+        if keys: namespace.update(utils.extractVarsAbove(*keys))
         
         # Serialize all the objects first to see if there are problems
         serializedNamespace = {}
@@ -360,11 +370,13 @@ class RemoteController(RemoteControllerBase):
         else:
             return string
 
-    def pushAll(self, **namespace):
+    def pushAll(self,*keys,**namespace):
         """Push python objects to all engines.
         
         See the docstring for `push` for more details.
         """
+
+        if keys: namespace.update(utils.extractVarsAbove(*keys))
         return self.push('all', **namespace)
         
     def pull(self, targets, *keys):

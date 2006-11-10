@@ -1,0 +1,148 @@
+#!/usr/bin/env python
+# encoding: utf-8
+"""Start an IPython cluster conveniently.
+
+For now, Unix-only.
+
+    %prog [options]
+"""
+
+__docformat__ = "restructuredtext en"
+
+#-------------------------------------------------------------------------------
+#       Copyright (C) 2006  Fernando Perez <fperez@colorado.edu>
+#                           Brian E Granger <ellisonbg@gmail.com>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#-------------------------------------------------------------------------------
+
+#---------------------------------------------------------------------------
+# Stdlib imports
+#---------------------------------------------------------------------------
+
+import os
+import signal
+import subprocess
+import sys
+import time
+
+from optparse import OptionParser
+
+#---------------------------------------------------------------------------
+# IPython imports
+#---------------------------------------------------------------------------
+from ipython1.tools import utils
+
+#---------------------------------------------------------------------------
+# Normal code begins
+#---------------------------------------------------------------------------
+
+def parse_args():
+    "Parse command line and return opts,args"
+
+    parser = OptionParser(usage=__doc__)
+    newopt = parser.add_option
+
+
+    newopt("--controller-port", type="int", dest="controllerport",
+           help="the TCP port the controller is listening on")
+    newopt("--controller-ip", type="string", dest="controllerip",
+           help="the TCP ip address of the controller")
+
+    newopt("-n", "--num", type="int", dest="n",default=2,
+           help="the number of engines to start")
+
+    newopt("--engine-port", type="int", dest="engineport",
+           help="the TCP port the controller will listen on for engine "
+           "connections")
+    newopt("--engine-ip", type="string", dest="engineip",
+           help="the TCP ip address the controller will listen on "
+           "for engine connections")
+    newopt("-l", "--logfile", type="string", dest="logfile",
+           default='ipcluster',
+           help="log file name (default is 'ipcluster')")
+    
+    return parser.parse_args()
+
+def numAlive(controller,engines):
+    """Return the number of processes still alive."""
+    retcodes = [controller.poll()] + \
+               [e.poll() for e in engines]
+    return retcodes.count(None)
+
+stop = lambda pid: os.kill(pid,signal.SIGINT)
+kill = lambda pid: os.kill(pid,signal.SIGTERM)
+
+def cleanup(clean,controller,engines):
+    """Stop the controller and engines with the given cleanup method."""
+    
+    for e in engines:
+        if e.poll() is None:
+            print 'Stopping engine, pid',e.pid
+            clean(e.pid)
+    if controller.poll() is None:
+        print 'Stopping controller, pid',controller.pid
+        clean(controller.pid)
+        
+def main():
+    """Start a cluster."""
+    
+    opt,arg = parse_args()
+
+    Popen = subprocess.Popen
+    print 'Starting controller:',
+    controller = Popen(['ipcontroller','--logfile',opt.logfile])
+    print 'Controller PID:',controller.pid
+
+    print 'Starting engines:',
+    time.sleep(2)
+    engines = [ Popen(['ipengine','--logfile',
+                       '%s%s-' % (opt.logfile,controller.pid)])
+                for i in range(opt.n) ]
+    eids = [e.pid for e in engines]
+    print 'Engines PIDs:',eids
+    
+    proc_ids = eids + [controller.pid]
+    procs = engines + [controller]
+    
+    try:
+        print
+        print 'Cluster is up and running.  Hit Ctrl-C to stop...'
+        try:
+            while True:
+                time.sleep(10)
+        except:
+            pass
+    finally:
+        print 'Cleanup...'
+        cleanup(stop,controller,engines)
+        for i in range(4):
+            time.sleep(i+2)
+            nZombies = numAlive(controller,engines)
+            if  nZombies== 0:
+                print 'OK: All processes cleaned up.'
+                break
+            print 'Trying again, %d processes did not stop...' % nZombies
+            cleanup(kill,controller,engines)
+            if numAlive(controller,engines) == 0:
+                print 'OK: All processes cleaned up.'
+                break
+        else:
+            print '*'*75
+            print 'ERROR: could not kill some processes, try to do it',
+            print 'manually.'
+            zombies = []
+            if controller.returncode is None:
+                print 'Controller is alive: pid =',controller.pid
+                zombies.append(controller.pid)
+            liveEngines = [ e for e in engines if e.returncode is None ]
+            for e in liveEngines:
+                print 'Engine is alive:     pid =',e.pid
+                zombies.append(e.pid)
+            print
+            print 'Zombie summary:',' '.join(map(str,zombies))
+
+            
+if __name__=='__main__':
+    main()

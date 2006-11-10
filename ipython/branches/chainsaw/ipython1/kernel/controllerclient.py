@@ -33,7 +33,7 @@ import StringIO
 import sys
 
 import ipython1.kernel.magic
-
+from ipython1.tools import utils
 
 #-------------------------------------------------------------------------------
 # RemoteController stuff
@@ -225,11 +225,13 @@ class RemoteControllerView(RemoteControllerBase):
     def executeAll(self, lines, block=None):
         return self.execute('all', lines, block)
         
-    def push(self, targets, **namespace):
+    def push(self, targets, *keys,**namespace):
+        if keys: namespace.update(utils.extractVarsAbove(*keys))
         actualTargets = self._mapIDsToOriginal(targets)
         return self.rc.push(actualTargets, **namespace)
     
-    def pushAll(self, **namespace):
+    def pushAll(self, *keys,**namespace):
+        if keys: namespace.update(utils.extractVarsAbove(*keys))
         return self.push('all', **namespace)
         
     def pull(self, targets, *keys):

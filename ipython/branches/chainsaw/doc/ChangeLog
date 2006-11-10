@@ -1,3 +1,16 @@
+2006-11-10  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* scripts/ipcluster (parse_args): Added a script to more
+	conveniently manage clusters.  Still incomplete, but already
+	useful for working on a local multiprocessor machine.
+
+2006-11-09  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* ipython1/tools/utils.py: New directory for general-purpose tools
+	which don't really fit anywhere else.  Similar to genutils in
+	trunk, but as a directory so we can organize a bit more as time
+	goes by.
+
 2006-04-10  Brian Granger <ellisonbg@gmail.com>
  
         * ipython1/test: Setup a test directory as a sub-module of
