@@ -772,7 +772,7 @@ class RemoteController(RemoteControllerBase):
         """
         return self.reset('all')
     
-    def kill(self, targets):
+    def kill(self, targets, controller=False):
         """Kill the engine completely by stopping their reactors.
         
         This method kills the engines specified by targets by stopping
@@ -793,7 +793,10 @@ class RemoteController(RemoteControllerBase):
         if not targetstr or not self._checkConnection():
             print "Need something to do!"
             return False
-        string = "KILL ::%s" %targetstr
+        if controller:
+            string = "KILL 1::%s" %targetstr
+        else:
+            string = "KILL 0::%s" %targetstr            
         try:
             self.es.writeNetstring(string)
         except socket.error:
@@ -810,9 +813,9 @@ class RemoteController(RemoteControllerBase):
             print string
             return False     
                 
-    def killAll(self):
+    def killAll(self, controller=False):
         """Kill all active engines."""
-        return self.kill('all')
+        return self.kill('all', controller)
                 
     def getIDs(self):
         """Return the id list of the currently connected engines."""
@@ -1860,9 +1863,13 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
         return self.factory.reset(targets)
     
     def handle_KILL(self, args, targets):
+        try: 
+            controller = int(args)
+        except ValueError:
+            controller = 0
         self._reset()
         self.sendString('KILL OK')
-        return self.factory.kill(targets)
+        return self.factory.kill(targets, controller)
     
     def handle_DISCONNECT(self, args, targets):
         log.msg("Disconnecting client...")
@@ -1901,7 +1908,7 @@ class IVanillaControllerFactory(results.INotifierParent):
     def reset(self, targets):
         """"""
         
-    def kill(self, targets):
+    def kill(self, targets, controller=False):
         """"""
     
     def pushSerialized(self, targets, **namespace):
@@ -1949,8 +1956,8 @@ class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
     def reset(self, targets):
         return self.service.reset(targets)
     
-    def kill(self, targets):
-        return self.service.kill(targets)
+    def kill(self, targets, controller=False):
+        return self.service.kill(targets, controller)
 
     def pushSerialized(self, targets, **namespace):
         return self.service.pushSerialized(targets, **namespace)

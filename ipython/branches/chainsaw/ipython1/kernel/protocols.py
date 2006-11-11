@@ -16,8 +16,9 @@ __docformat__ = "restructuredtext en"
 
 import socket
 
+import zope.interface as zi
 from twisted.protocols import basic
-from twisted.internet import protocol
+from twisted.internet import protocol, interfaces
 
 from ipython1.kernel import error
 
@@ -30,6 +31,26 @@ class MessageSizeError(error.KernelError):
 #-------------------------------------------------------------------------------
 # EnhancedNetstringReceiver
 #-------------------------------------------------------------------------------
+
+class NetstringProducer(object):
+    """A producer for sending large Netstrings."""
+    
+    zi.implements(interfaces.IProducer)
+    
+    def __init__(self, consumer, d):
+        self.consumer = consumer
+        self.d = d
+        self.consumer.registerProducer(self, False)
+        
+        
+    def resumeProducing(self):
+        pass
+        
+    def stopProducing(self):
+        pass
+        
+    def pauseProducingv(self):
+        pass
 
 class EnhancedNetstringReceiver(basic.NetstringReceiver, object):
     """This class provides some basic enhancements of NetstringReceiver."""

@@ -390,7 +390,8 @@ class EngineProxy(object):
         #else:
         #    return self.rc.execute(self.id, strings)
     
-    def push(self, **namespace):
+    def push(self, *keys,**namespace):
+        if keys: namespace.update(utils.extractVarsAbove(*keys))
         return self.rc.push(self.id, **namespace)
     
     def pull(self, *keys):

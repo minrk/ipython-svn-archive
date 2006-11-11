@@ -757,6 +757,9 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
                 except Exception, e:
                     log.msg('You tried to push an unserializable type, ignoring: ' + k) 
                 else:
+                    # This is where the Serialized gets sent.  Here we should
+                    # put the Serialized into an IProducer and register it using
+                    # self.transport.registerProducer(foo)
                     self.sendSerialized(s)
             self.finishPush()
         else:
@@ -970,6 +973,7 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
     def isPushSerializedReady(self, msg):
         if msg == 'READY':
             for v in self.workVars['namespace'].itervalues():
+                # Instead register a producer here!!!
                 self.sendSerialized(v)
             self.finishPush()
         else:

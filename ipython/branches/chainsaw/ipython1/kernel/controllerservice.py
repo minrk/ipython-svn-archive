@@ -32,7 +32,7 @@ __docformat__ = "restructuredtext en"
 
 from new import instancemethod
 from twisted.application import service
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from twisted.python import log
 from zope.interface import Interface, implements
 
@@ -133,11 +133,11 @@ class IMultiEngine(Interface):
     def statusAll():
         """Get the status of all targets."""
         
-    def kill(targets):
-        """Kill the targets Engines."""
+    def kill(targets, controller=False):
+        """Kill the targets Engines and possibly the controller."""
         
-    def killAll():
-        """Kill all the Engines."""
+    def killAll(controller=False):
+        """Kill all the Engines and possibly the controller."""
         
     def pushSerialized(targets, **namespace):
         """Push a namespace of Serialized objects to targets."""
@@ -403,6 +403,22 @@ def autoMethod(self, %s:
             l.append(e.status().addCallback(lambda s:(e.id, s)))
         return gatherBoth(l)
         
+    def kill(self, targets, controller=False):
+        log.msg("killing engines %s" % targets)
+        if controller: targets = 'all'              # kill all engines if killing controller
+        engines = self.engineList(targets)
+        l = []
+        for e in engines:
+            l.append(e.kill())
+        d = gatherBoth(l)
+        if controller:
+            log.msg("Killing controller")
+            reactor.callLater(2.0, reactor.stop)
+        return d
+        
+    def killAll(self, controller=False):
+        return self.kill('all', controller)
+
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         log.msg("scattering %s to %s" %(key, targets))
         engines = self.engineList(targets)

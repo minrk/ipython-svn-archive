@@ -74,7 +74,7 @@ class IPBController(Interface):
     def remote_status(targets):
         """"""
         
-    def remote_kill(targets):
+    def remote_kill(targets, controller=False):
         """"""
         
     def remote_pushSerialized(targets, **namespace):
@@ -138,8 +138,8 @@ class PBControllerRootFromService(pb.Root):
     def remote_status(self, targets):
         return self.service.status(targets).addErrback(pickle.dumps, 2)
     
-    def remote_kill(self, targets):
-        return self.service.kill(targets).addErrback(pickle.dumps, 2)
+    def remote_kill(self, targets, controller=False):
+        return self.service.kill(targets, controller).addErrback(pickle.dumps, 2)
         
     def remote_pushSerialized(self, targets, pns):
         d = self.service.pushSerialized(targets, **pickle.loads(pns))
@@ -249,8 +249,8 @@ class PBRemoteController(pb.Referenceable, results.NotifierParent):
         d = self.callRemote('status', targets)
         return d.addCallback(self.checkReturn)
     
-    def kill(self, targets):
-        d = self.callRemote('kill', targets)
+    def kill(self, targets, controller=False):
+        d = self.callRemote('kill', targets, controller)
         return d.addCallback(self.checkReturn)
     
     def pushSerialized(self, targets, **namespace):
