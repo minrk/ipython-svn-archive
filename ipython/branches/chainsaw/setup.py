@@ -36,12 +36,14 @@ with_packages = ['ipython1',
                  'ipython1.core',
                  'ipython1.test',
                  'ipython1.config',
-                 'ipython1.web']
+                 'ipython1.web',
+                 'ipython1.tools']
                 
 with_scripts =  ['scripts/ipcontroller',
                  'scripts/ipengine',
                  'scripts/ipresults',
-                 'scripts/ipwebserver']
+                 'scripts/ipwebserver',
+                 'scripts/ipcluster']
 
 with_package_data = {'ipython1': ['web/*.js', 
                                  'web/*.css',

@@ -104,10 +104,18 @@ class RemoteController(RemoteControllerBase):
     def __del__(self):
         """Disconnect upon being deleted."""
         
-        return self.disconnect()
+        try:
+            self.disconnect()
+        except socket.error:
+            # ignore socket.error when shutting down
+            pass
     
     def isConnected(self):
         """Are we connected to the controller?
+        
+        This is currently only a reliable test of whether or not this side has
+        made a connection.  It will not properly detect if the other side has
+        died silently.
         
         :return: True or False.
         """ 
@@ -808,6 +816,7 @@ class RemoteController(RemoteControllerBase):
                 return False
         string = self.es.readNetstring()
         if string == "KILL OK":
+            self.disconnect()
             return True
         else:
             print string
@@ -1088,14 +1097,17 @@ class RemoteController(RemoteControllerBase):
                 self.es.writeNetstring("DISCONNECT")
             except socket.error:
                 return True
-            string = self.es.readNetstring()
+            try:
+                string = self.es.readNetstring()
+            except socket.error:
+                return True
             if string == "DISCONNECT OK":
                 self.s.close()
                 del self.s
                 del self.es
                 return True
             else:
-                print string
+                print "Unexpected reponse received: ", string
                 return False
         else:
             return True
@@ -1874,10 +1886,11 @@ class VanillaControllerProtocol(protocols.EnhancedNetstringReceiver):
     def handle_DISCONNECT(self, args, targets):
         log.msg("Disconnecting client...")
         self._reset()
+        d = defer.Deferred().addCallback(self.transport.loseConnection)
+        self.producer.register(self.transport, d)
         self.sendString("DISCONNECT OK")
-        self.transport.loseConnection()
-    
-
+        return d
+ 
 class IVanillaControllerFactory(results.INotifierParent):
     """Interface to the ControllerService seen by the vanilla procotol.
     
