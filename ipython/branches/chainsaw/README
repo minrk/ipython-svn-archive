@@ -69,8 +69,21 @@ Starting the controller and engine on your local machine
 --------------------------------------------------------
 
 This is the simplest configuration that can be used and is useful for testing
-the system and on machines that have multiple cores and/or multple CPUs.  First
-start the controller::
+the system and on machines that have multiple cores and/or multple CPUs.  The
+easiest way of doing this is using the ``ipcluster`` command::
+
+	ipcluster -n 4
+	
+This will start an IPython controller and then 4 engines that connect to the 
+controller.  Lastly, the script will print out the Python commands that you
+can use to connect to the controller.  It is that easy.
+
+Underneath the hood, the ``ipcluster`` script uses two other top-level scripts
+that you can also use yourself.  These scripts are ``ipcontroller``, which
+starts the controller and ``ipengine`` which starts an engine.  To use these
+scripts to start things on your local machine, do the following.
+
+First start the controller::
 
 	ipcontroller &
 	
