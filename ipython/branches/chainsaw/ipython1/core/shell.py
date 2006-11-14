@@ -114,9 +114,20 @@ class InteractiveShell(InteractiveConsole):
         # Save stdin, stdout and stderr to lists
         self._command_lock.acquire()
         self._stdin.append(lines)
-        self._stdout.append(self._trap.out.getvalue())
-        self._stderr.append(self._trap.err.getvalue())
+        self._stdout.append(self.prune_output(self._trap.out.getvalue()))
+        self._stderr.append(self.prune_output(self._trap.err.getvalue()))
         self._command_lock.release()
+
+    def prune_output(self, s):
+        """Only return the first and last 160 chars of stdout and stderr.
+        
+        Something like this is required to make sure that the engine and
+        controller don't become overwhelmed by the size of stdout/stderr.
+        """
+        if len(s) > 320:
+            return s[:160] + '\n............\n' + s[-160:]
+        else: 
+            return s
 
     # Lifted from iplib.InteractiveShell
     def _runlines(self,lines):
