@@ -29,6 +29,7 @@ __docformat__ = "restructuredtext en"
 
 import cPickle as pickle
 
+from twisted.internet import reactor
 from twisted.python import components
 from twisted.python.failure import Failure
 from twisted.spread import pb
@@ -313,3 +314,44 @@ class PBNotifierChild(results.BaseNotifierChild):
 components.registerAdapter(PBNotifierChild,
         pb.RemoteReference, results.INotifierChild)
 
+#-------------------------------------------------------------------------------
+# The PB version of RemoteController
+#-------------------------------------------------------------------------------
+
+class RemoteController(object):
+    """A high level PB RemoteController Prototype."""
+    
+    def __init__(self, addr):
+        self.addr = addr
+        self.pbClient = None
+        self.factory = None
+        
+    def connect(self):
+        print "Connecting to ", self.addr
+        self.factory = pb.PBClientFactory()
+        d = self.factory.getRootObject()
+        d.addCallback(self._gotRoot)
+        reactor.connectTCP(self.addr[0], self.addr[1], self.factory)
+        return d
+
+    def disconnect(self):
+        self.pbClient.disconnect()
+        self.pbClient = None
+        self.factory = None
+            
+    def _gotRoot(self, rootObj):
+        print "Got root: ", rootObj
+        self.pbClient = cs.IMultiEngine(rootObj)
+        return True
+
+    def execute(self, targets, lines):
+        return self.pbClient.execute(targets, lines)
+
+        # Spin the reactor
+        #while not d.called:
+        #     reactor.runUntilCurrent()
+        #     t2 = reactor.timeout()
+        #     t = reactor.running and t2
+        #     reactor.doIteration(t)
+        #print d.result
+        #return d.result
