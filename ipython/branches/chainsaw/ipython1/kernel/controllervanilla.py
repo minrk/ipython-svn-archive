@@ -33,6 +33,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import socket, cPickle as pickle
+import types
 
 from twisted.internet import defer
 from twisted.internet.interfaces import IProducer
@@ -47,6 +48,7 @@ from ipython1.kernel import controllerservice, serialized, protocols, results
 from ipython1.kernel.util import tarModule
 from ipython1.kernel.controllerclient import \
     RemoteControllerBase, RemoteControllerView, EngineProxy
+from ipython1.kernel.map import Map
 from ipython1.kernel.parallelfunction import ParallelFunction
 from ipython1.tools import utils
 
@@ -986,6 +988,65 @@ class RemoteController(RemoteControllerBase):
         """
         return self.gather('all', key, style=style)
 
+    # New scatter and gather
+    
+    def _createTargetsList(self, targetsArg):
+        if isinstance(targetsArg, (types.ListType, types.TupleType)):
+            return targetsArg
+        elif isinstance(targetsArg, int):
+            return [targetsArg]
+        elif targetsArg == 'all':
+            return self.getIDs()
+        else:
+            raise Exception("Invalid targets argument")
+    
+    def newScatter(self, targets, key, seq, mapClass=None, flatten=False):
+        
+        targetList = self._createTargetsList(targets)
+        nTargets = len(targetList)
+        
+        if mapClass is None:
+            mapObject = Map()
+        else:
+            if issubclass(mapClass, Map):
+                mapObject = mapClass()
+            else:
+                raise Exception("mapClass must be a subclass of Map")
+            
+        for index, item in enumerate(targetList):
+            partition = mapObject.getPartition(seq, index, nTargets)
+            if flatten and len(partition) == 1:    
+                self.push(item, **{key: partition[0]})
+            else:
+                self.push(item, **{key: partition})
+                
+    def newScatterAll(self, key, seq, mapClass=None, flatten=False):
+        return self.newScatter('all', key, seq, mapClass, flatten)
+        
+    def newGather(self, targets, key, mapClass=None):
+        targetList = self._createTargetsList(targets)
+        nTargets = len(targetList)
+        
+        if mapClass is None:
+            mapObject = Map()
+        else:
+            if issubclass(mapClass, Map):
+                mapObject = mapClass()
+            else:
+                raise Exception("mapClass must be a subclass of Map")
+            
+        gatheredPartitions = []
+        for w in targetList:
+            gatheredPartitions.append(self.pull(w, key))
+            
+        return mapObject.joinPartitions(gatheredPartitions)
+
+
+    def newGatherAll(self, key, mapClass=None):
+        return self.newGather('all', key, mapClass)
+        
+    # End of new scatter and gather
+        
     def notify(self, addr=None, flag=True):
         """Instruct the controller to notify a result gatherer.
         
