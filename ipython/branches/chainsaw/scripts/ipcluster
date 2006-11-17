@@ -1,8 +1,68 @@
 #!/usr/bin/env python
 # encoding: utf-8
-"""Start an IPython cluster conveniently.
+"""Start an IPython cluster conveniently, either locally or remotely.
 
-For now, Unix-only.
+Basic usage
+-----------
+
+For local operation, the simplest mode of usage is:
+
+  %prog -n N
+
+where N is the number of engines you want started.
+
+For remote operation, you must call it with a cluster description file:
+
+  %prog -f clusterfile.py
+
+The cluster file is a normal Python script which gets run via execfile().  You
+can have arbitrary logic in it, but all that matters is that at the end of the
+execution, it declares the variables 'controller', 'engines', and optionally
+'sshx'.  See the accompanying examples for details on what these variables must
+contain.
+
+
+Notes
+-----
+
+WARNING: this code is still UNFINISHED and EXPERIMENTAL!  It is incomplete,
+some listed options are not really implemented, and all of its interfaces are
+subject to change.
+
+When operating over SSH for a remote cluster, this program relies on the
+existence of a particular script called 'sshx'.  This script must live in the
+target systems where you'll be running your controller and engines, and is
+needed to configure your PATH and PYTHONPATH variables for further execution of
+python code at the other end of an SSH connection.  The script can be as simple
+as:
+
+#!/bin/sh
+. $HOME/.bashrc
+"$@"
+
+which is the default one provided by IPython.  You can modify this or provide
+your own.  Since it's quite likely that for different clusters you may need
+this script to configure things differently or that it may live in different
+locations, its full path can be set in the same file where you define the
+cluster setup.  IPython's order of evaluation for this variable is the
+following:
+
+  a) Internal default: 'sshx'.  This only works if it is in the default system
+  path which SSH sets up in non-interactive mode.
+
+  b) Environment variable: if $IPYTHON_SSHX is defined, this overrides the
+  internal default.
+
+  c) Variable 'sshx' in the cluster configuration file: finally, this will
+  override the previous two values.
+ 
+This code is Unix-only, with precious little hope of any of this ever working
+under Windows, since we need SSH from the ground up, we background processes,
+etc.  Ports of this functionality to Windows are welcome.
+
+
+Call summary
+------------
 
     %prog [options]
 """
@@ -23,30 +83,31 @@ __docformat__ = "restructuredtext en"
 
 import os
 import signal
-import subprocess
 import sys
 import time
 
 from optparse import OptionParser
+from subprocess import Popen,call
 
 #---------------------------------------------------------------------------
 # IPython imports
 #---------------------------------------------------------------------------
 from ipython1.tools import utils
+from ipython1.config import cutils
 
 #---------------------------------------------------------------------------
 # Normal code begins
 #---------------------------------------------------------------------------
 
 def parse_args():
-    "Parse command line and return opts,args"
+    """Parse command line and return opts,args."""
 
     parser = OptionParser(usage=__doc__)
-    newopt = parser.add_option
-
+    newopt = parser.add_option  # shorthand
 
     newopt("--controller-port", type="int", dest="controllerport",
            help="the TCP port the controller is listening on")
+
     newopt("--controller-ip", type="string", dest="controllerip",
            help="the TCP ip address of the controller")
 
@@ -56,13 +117,17 @@ def parse_args():
     newopt("--engine-port", type="int", dest="engineport",
            help="the TCP port the controller will listen on for engine "
            "connections")
+    
     newopt("--engine-ip", type="string", dest="engineip",
            help="the TCP ip address the controller will listen on "
            "for engine connections")
+
     newopt("-l", "--logfile", type="string", dest="logfile",
-           default='ipcluster',
-           help="log file name (default is 'ipcluster')")
-    
+           help="log file name")
+
+    newopt('-f','--cluster-file',dest='clusterfile',
+           help='file describing a remote cluster')
+
     return parser.parse_args()
 
 def numAlive(controller,engines):
@@ -84,40 +149,67 @@ def cleanup(clean,controller,engines):
     if controller.poll() is None:
         print 'Stopping controller, pid',controller.pid
         clean(controller.pid)
-        
-def main():
-    """Start a cluster."""
-    
-    opt,arg = parse_args()
 
-    Popen = subprocess.Popen
+
+def ensureDir(path):
+    """Ensure a directory exists or raise an exception."""
+    if not os.path.isdir(path):
+        os.makedirs(path)
+
+
+def startMsg(control_host,control_port=10105):
+    """Print a startup message"""
+    print
+    print 'Your cluster is up and running.'
+    print
+    print 'For interactive use, you can make a Remote Controller with:'
+    print
+    print 'import ipython1.kernel.api as kernel'
+    print "ipc = kernel.RemoteController((%r,%s))" % \
+          (control_host,control_port)
+    print
+    print 'You can then cleanly stop the cluster from IPython using:'
+    print
+    print 'ipc.killAll(controller=True)'
+    print
+
+    
+def clusterLocal(opt,arg):
+    """Start a cluster on the local machine."""
+    
+    # Store all logs inside the ipython directory
+    ipdir = cutils.getIpythonDir()
+    pjoin = os.path.join
+
+    logfile = opt.logfile
+    if logfile is None:
+        logdir_base = pjoin(ipdir,'log')
+        ensureDir(logdir_base)
+        logfile = pjoin(logdir_base,'ipcluster-')
+
     print 'Starting controller:',
-    controller = Popen(['ipcontroller','--logfile',opt.logfile])
+    controller = Popen(['ipcontroller','--logfile',logfile])
     print 'Controller PID:',controller.pid
 
     print 'Starting engines:   ',
     time.sleep(2)
-    engines = [ Popen(['ipengine','--logfile',
-                       '%s%s-' % (opt.logfile,controller.pid)])
+
+    englogfile = '%s%s-' % (logfile,controller.pid)
+    engines = [ Popen(['ipengine','--logfile',englogfile])
                 for i in range(opt.n) ]
     eids = [e.pid for e in engines]
     print 'Engines PIDs:  ',eids
+    print 'Log files: %s*' % englogfile
     
     proc_ids = eids + [controller.pid]
     procs = engines + [controller]
-    
+
+    grpid = os.getpgrp()
     try:
+        startMsg('127.0.0.1')
+        print 'You can also hit Ctrl-C to stop it, or use from the cmd line:'
         print
-        print 'Your cluster is up and running.  Hit Ctrl-C to stop...'
-        print
-        print 'For interactive use, you can make a Remote Controller with:'
-        print
-        print 'import ipython1.kernel.api as kernel'
-        print "rc = kernel.RemoteController(('127.0.0.1',10105))"
-        print
-        print 'You can stop the cluster from IPython using:'
-        print
-        print 'import os,signal;os.killpg(%s,signal.SIGINT)' % os.getpgrp()
+        print 'kill -INT',grpid
         print
         try:
             while True:
@@ -125,7 +217,7 @@ def main():
         except:
             pass
     finally:
-        print 'Cleanup...'
+        print 'Stopping cluster.  Cleaning up...'
         cleanup(stop,controller,engines)
         for i in range(4):
             time.sleep(i+2)
@@ -153,6 +245,72 @@ def main():
             print
             print 'Zombie summary:',' '.join(map(str,zombies))
 
+def clusterRemote(opt,arg):
+    """Start a remote cluster over SSH"""
+
+    # Load the remote cluster configuration
+    clConfig = {}
+    execfile(opt.clusterfile,clConfig)
+    contConfig = clConfig['controller']
+    engConfig = clConfig['engines']
+    # Determine where to find sshx:
+    sshx = clConfig.get('sshx',os.environ.get('IPYTHON_SSHX','sshx'))
+    
+    # Store all logs inside the ipython directory
+    ipdir = cutils.getIpythonDir()
+    pjoin = os.path.join
+
+    logfile = opt.logfile
+    if logfile is None:
+        logdir_base = pjoin(ipdir,'log')
+        ensureDir(logdir_base)
+        logfile = pjoin(logdir_base,'ipcluster')
+
+    # Append this script's PID to the logfile name always
+    logfile = '%s-%s' % (logfile,os.getpid())
+    
+    print 'Starting controller:'
+    # Controller data:
+    xsys = os.system
+
+    contHost = contConfig['host']
+    contLog = '%s-con-%s-' % (logfile,contHost)
+    cmd = "ssh %s '%s' 'ipcontroller --logfile %s' &" % \
+          (contHost,sshx,contLog)
+    #print 'cmd:<%s>' % cmd  # dbg
+    xsys(cmd)
+    time.sleep(2)
+
+    print 'Starting engines:   '
+    for engineHost,engineData in engConfig.iteritems():
+        if isinstance(engineData,int):
+            numEngines = engineData
+        else:
+            raise NotImplementedError('port configuration not finished for engines')
+
+        print 'Sarting %d engines on %s' % (numEngines,engineHost)
+        engLog = '%s-eng-%s-' % (logfile,engineHost)
+        for i in range(numEngines):
+            cmd = "ssh %s '%s' 'ipengine --controller-ip %s --logfile %s' &" % \
+                      (engineHost,sshx,contHost,engLog)
+            #print 'cmd:<%s>' % cmd  # dbg
+            xsys(cmd)
+        # Wait after each host a little bit
+        time.sleep(1)
+            
+        startMsg(contConfig['host'])
+        
+def main():
+    """Main driver for the two big options: local or remote cluster."""
+    
+    opt,arg = parse_args()
+
+    clusterfile = opt.clusterfile
+    if clusterfile:
+        clusterRemote(opt,arg)
+    else:
+        clusterLocal(opt,arg)
+        
             
 if __name__=='__main__':
     main()

@@ -1,3 +1,10 @@
+2006-11-13  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* ipython1/kernel/controllervanilla.py (RemoteController.execute):
+	small optimization to the unpacking, the newlines in the
+	stdout/err can be ommitted just by using the 'print x,' syntax
+	with a trailing comma.
+
 2006-11-10  Fernando Perez  <Fernando.Perez@colorado.edu>
 
 	* scripts/ipcluster (parse_args): Added a script to more

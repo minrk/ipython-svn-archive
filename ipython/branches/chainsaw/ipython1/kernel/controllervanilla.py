@@ -255,22 +255,18 @@ class RemoteController(RemoteControllerBase):
                 if isinstance(cmd, Failure):
                     print cmd
                 else:
-                    target = cmd[0]
-                    cmd_num = cmd[1]
-                    cmd_stdin = cmd[2]
-                    cmd_stdout = cmd[3][:-1]
-                    cmd_stderr = cmd[4][:-1]
+                    target,cmd_num,cmd_stdin,cmd_stdout,cmd_stderr = cmd
                     print "%s[%s:%i]%s In [%i]:%s %s" % \
                         (green, self.addr[0], target,
                         blue, cmd_num, normal, cmd_stdin)
                     if cmd_stdout:
                         print "%s[%s:%i]%s Out[%i]:%s %s" % \
                             (green, self.addr[0], target,
-                            red, cmd_num, normal, cmd_stdout)
+                            red, cmd_num, normal, cmd_stdout),
                     if cmd_stderr:
                         print "%s[%s:%i]%s Err[%i]:\n%s %s" % \
                             (green, self.addr[0], target,
-                            red, cmd_num, normal, cmd_stderr)
+                            red, cmd_num, normal, cmd_stderr),
         else:
             string = "EXECUTE %s::%s" % (source, targetstr)
             try:
