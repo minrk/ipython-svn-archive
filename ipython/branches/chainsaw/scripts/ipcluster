@@ -298,7 +298,7 @@ def clusterRemote(opt,arg):
         # Wait after each host a little bit
         time.sleep(1)
             
-        startMsg(contConfig['host'])
+    startMsg(contConfig['host'])
         
 def main():
     """Main driver for the two big options: local or remote cluster."""

@@ -119,13 +119,13 @@ class InteractiveShell(InteractiveConsole):
         self._command_lock.release()
 
     def prune_output(self, s):
-        """Only return the first and last 160 chars of stdout and stderr.
+        """Only return the first and last 1600 chars of stdout and stderr.
         
         Something like this is required to make sure that the engine and
         controller don't become overwhelmed by the size of stdout/stderr.
         """
-        if len(s) > 320:
-            return s[:160] + '\n............\n' + s[-160:]
+        if len(s) > 3200:
+            return s[:1600] + '\n............\n' + s[-1600:]
         else: 
             return s
 
