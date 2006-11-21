@@ -618,13 +618,25 @@ Currently the magic system has the following functions:\n"""
     def magic_page(self, parameter_s=''):
         """Pretty print the object and display it through a pager.
         
-        If no parameter is given, use _ (last output)."""
+        %page [options] OBJECT
+
+        If no object is given, use _ (last output).
+        
+        Options:
+
+          -r: page str(object), don't pretty-print it."""
+
         # After a function contributed by Olivier Aubert, slightly modified.
 
-        oname = parameter_s and parameter_s or '_' 
+        # Process options/args
+        opts,args = self.parse_options(parameter_s,'r')
+        raw = 'r' in opts
+
+        oname = args and args or '_'
         info = self._ofind(oname)
         if info['found']:
-            page(pformat(info['obj']))
+            txt = (raw and str or pformat)( info['obj'] )
+            page(txt)
         else:
             print 'Object `%s` not found' % oname
 
