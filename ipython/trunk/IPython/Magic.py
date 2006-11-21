@@ -36,16 +36,11 @@ from cStringIO import StringIO
 from getopt import getopt,GetoptError
 from pprint import pprint, pformat
 
-# cProfile was added in Python2.5
+# profile isn't bundled by default in Debian for license reasons
 try:
-    import cProfile as profile
-    import pstats
+    import profile,pstats
 except ImportError:
-    # profile isn't bundled by default in Debian for license reasons
-    try:
-        import profile,pstats
-    except ImportError:
-        profile = pstats = None
+    profile = pstats = None
 
 # Homebrewed
 import IPython
