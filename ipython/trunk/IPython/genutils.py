@@ -30,6 +30,7 @@ import sys
 import tempfile
 import time
 import types
+import warnings
 
 # Other IPython utilities
 from IPython.Itpl import Itpl,itpl,printpl
@@ -1697,6 +1698,7 @@ def import_fail_info(mod_name,fns=None):
 #----------------------------------------------------------------------------
 # Proposed popitem() extension, written as a method
 
+
 class NotGiven: pass
 
 def popkey(dct,key,default=NotGiven):
@@ -1715,5 +1717,15 @@ def popkey(dct,key,default=NotGiven):
     else:
         del dct[key]
         return val
+
+def wrap_deprecated(func, suggest = '<nothing>'):
+    def newFunc(*args, **kwargs):
+        warnings.warn("Call to deprecated function %s, use %s instead" % 
+                      ( func.__name__, suggest),
+                      category=DeprecationWarning,
+                      stacklevel = 2)
+        return func(*args, **kwargs)
+    return newFunc
+    
 #*************************** end of file <genutils.py> **********************
 
