@@ -105,6 +105,7 @@ class Struct:
         Both can be used, but the dictionary must come first:
         Struct(dict), Struct(k1=v1,k2=v2) or Struct(dict,k1=v1,k2=v2).
         """
+        self.__dict__['__allownew'] = True
         if dict is None:
             dict = {}
         if isinstance(dict,Struct):
@@ -117,11 +118,17 @@ class Struct:
         # safety-checked __setitem__
         for k,v in dict.items():
             self[k] = v
+        
 
     def __setitem__(self,key,value):
         """Used when struct[key] = val calls are made."""
         if key in Struct.__protected:
             raise KeyError,'Key '+`key`+' is a protected key of class Struct.'
+        if not self['__allownew'] and key not in self.__dict__:
+            raise KeyError(
+            "Can't create unknown attribute %s - Check for typos, or use allow_new_attr to create new attributes!" %
+            key)
+            
         self.__dict__[key] = value
 
     def __setattr__(self, key, value):
@@ -372,5 +379,15 @@ class Struct:
         if not self.has_key(attr):
             self[attr] = val
         return self.get(attr,val)
+    
+    def allow_new_attr(self, allow = True):
+        """ Set whether new attributes can be created inside struct
+        
+        This can be used to catch typos by verifying that the attribute user tries to 
+        change already exists in this Struct.
+        """
+        self['__allownew'] = allow
+        
+        
 # end class Struct
 
