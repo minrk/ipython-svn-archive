@@ -49,13 +49,12 @@ from IPython.excolors import ExceptionColors
 # See if we can use pydb.
 has_pydb = False
 prompt = 'ipdb>'
-if sys.version[:3] >= '2.5':
-    try:
-        import pydb
-        if hasattr(pydb.pydb, "runl"):
-            has_pydb = True
-            from pydb import Pdb as OldPdb
-            prompt = 'ipydb>'
+try:
+    import pydb
+    if hasattr(pydb.pydb, "runl"):
+        has_pydb = True
+        from pydb import Pdb as OldPdb
+        prompt = 'ipydb>'
     except ImportError:
         pass
 
@@ -93,7 +92,7 @@ def _file_lines(fname):
 class Pdb(OldPdb):
     """Modified Pdb class, does not load readline."""
 
-    if sys.version[:3] >= '2.5':
+    if sys.version[:3] >= '2.5' or has_pydb:
         def __init__(self,color_scheme='NoColor',completekey=None,
                      stdin=None, stdout=None):
 
