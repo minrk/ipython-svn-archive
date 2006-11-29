@@ -55,8 +55,8 @@ try:
         has_pydb = True
         from pydb import Pdb as OldPdb
         prompt = 'ipydb>'
-    except ImportError:
-        pass
+except ImportError:
+    pass
 
 if has_pydb:
     from pydb import Pdb as OldPdb
