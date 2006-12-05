@@ -2538,7 +2538,8 @@ Defaulting color scheme to 'NoColor'"""
 
         This command automatically maintains an internal list of directories
         you visit during your IPython session, in the variable _dh. The
-        command %dhist shows this history nicely formatted.
+        command %dhist shows this history nicely formatted. You can also
+        do 'cd -<tab>' to see directory history conveniently.
 
         Usage:
 
@@ -2551,6 +2552,7 @@ Defaulting color scheme to 'NoColor'"""
           cd -b <bookmark_name>: jump to a bookmark set by %bookmark
              (note: cd <bookmark_name> is enough if there is no
               directory <bookmark_name>, but a bookmark with the name exists.)
+              'cd -b <tab>' allows you to tab-complete bookmark names. 
 
         Options:
 
