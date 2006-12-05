@@ -693,7 +693,6 @@ Currently the magic system has the following functions:\n"""
         """Print the definition header for any callable object.
 
         If the object is a class, print the constructor information."""
-        print "+++"
         self._inspect('pdef',parameter_s, namespaces)
         
     def magic_pdoc(self, parameter_s='', namespaces=None):

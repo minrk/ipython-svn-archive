@@ -1427,13 +1427,12 @@ want to merge them back into the new files.""" % locals()
             return
 
         have_pydb = False
-        if sys.version[:3] >= '2.5':
-            # use pydb if available
-            try:
-                from pydb import pm
-                have_pydb = True
-            except ImportError:
-                pass
+        # use pydb if available
+        try:
+            from pydb import pm
+            have_pydb = True
+        except ImportError:
+            pass
         if not have_pydb:
             # fallback to our internal debugger
             pm = lambda : self.InteractiveTB.debugger(force=True)
