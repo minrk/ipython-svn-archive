@@ -1426,6 +1426,10 @@ want to merge them back into the new files.""" % locals()
         if not (force or self.call_pdb):
             return
 
+        if not hasattr(sys,'last_traceback'):
+            error('No traceback has been produced, nothing to debug.')
+            return
+
         have_pydb = False
         # use pydb if available
         try:
