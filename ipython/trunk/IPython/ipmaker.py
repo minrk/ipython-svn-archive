@@ -576,13 +576,13 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
             import_fail_info(mod)
 
     for mod_fn in IP_rc.import_some:
-        if mod_fn == []: break
-        mod,fn = mod_fn[0],','.join(mod_fn[1:])
-        try:
-            exec 'from '+mod+' import '+fn in IP.user_ns
-        except :
-            IP.InteractiveTB()
-            import_fail_info(mod,fn)
+        if not mod_fn == []: 
+            mod,fn = mod_fn[0],','.join(mod_fn[1:])
+            try:
+                exec 'from '+mod+' import '+fn in IP.user_ns
+            except :
+                IP.InteractiveTB()
+                import_fail_info(mod,fn)
 
     for mod in IP_rc.import_all:
         try:

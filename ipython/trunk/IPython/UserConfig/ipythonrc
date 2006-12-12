@@ -5,6 +5,13 @@
 #
 # Configuration file for IPython -- ipythonrc format
 #
+# ===========================================================
+# Deprecation note: you should look into modifying ipy_user_conf.py (located 
+# in ~/.ipython or ~/_ipython, depending on your platform) instead, it's a 
+# more flexible and robust (and better supported!) configuration
+# method.
+# ===========================================================
+#
 # The format of this file is simply one of 'key value' lines.
 # Lines containing only whitespace at the beginning and then a # are ignored
 # as comments. But comments can NOT be put on lines with data.
