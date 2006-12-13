@@ -1,0 +1,11 @@
+syntax: glob
+
+*~
+*.tmp
+*.pyc
+.svn/
+.bzr/
+.settings/
+.project
+*.diff
+IPython_crash_report.txt
