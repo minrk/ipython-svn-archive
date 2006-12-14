@@ -1,3 +1,8 @@
+2006-12-14  Ville Vainio  <vivainio@gmail.com>
+
+	* scripts/ipython_win_post_install: Overwrite old shortcuts
+	if they already exist
+
 2006-12-13  Ville Vainio  <vivainio@gmail.com>
 
 	* Branch and update Release.py for 0.7.3rc1
