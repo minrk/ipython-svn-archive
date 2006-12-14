@@ -3,12 +3,11 @@
 
 import os, sys
 
-def create_shortcut_safe(target,description,link_file,*args,**kw):
+def mkshortcut(target,description,link_file,*args,**kw):
     """make a shortcut if it doesn't exist, and register its creation"""
     
-    if not os.path.isfile(link_file):
-        create_shortcut(target, description, link_file,*args,**kw)
-        file_created(link_file)
+    create_shortcut(target, description, link_file,*args,**kw)
+    file_created(link_file)
 
 def install():
     """Routine to be run by the win32 installer with the -install switch."""
@@ -49,20 +48,20 @@ def install():
     # Create program shortcuts ...
     f = ip_dir + r'\IPython.lnk'
     a = prefix + r'\scripts\ipython'
-    create_shortcut_safe(python,'IPython',f,a)
+    mkshortcut(python,'IPython',f,a)
 
     f = ip_dir + r'\pysh.lnk'
-    a = prefix + r'\scripts\ipython -p pysh'
-    create_shortcut_safe(python,'pysh',f,a)
+    a = prefix + r'\scripts\ipython -p sh'
+    mkshortcut(python,'IPython command prompt mode',f,a)
 
     # Create documentation shortcuts ...    
     t = prefix + r'\share\doc\ipython-%s\manual.pdf' % version
     f = ip_dir + r'\Manual in PDF.lnk'
-    create_shortcut_safe(t,r'IPython Manual - PDF-Format',f)
+    mkshortcut(t,r'IPython Manual - PDF-Format',f)
 
     t = prefix + r'\share\doc\ipython-%s\manual\manual.html' % version
     f = ip_dir + r'\Manual in HTML.lnk'
-    create_shortcut_safe(t,'IPython Manual - HTML-Format',f)
+    mkshortcut(t,'IPython Manual - HTML-Format',f)
 
 def remove():
     """Routine to be run by the win32 installer with the -remove switch."""
