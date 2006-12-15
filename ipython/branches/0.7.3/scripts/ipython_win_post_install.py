@@ -1,7 +1,7 @@
 #!python
 """Windows-specific part of the installation"""
 
-import os, sys
+import os, sys, shutil
 
 def mkshortcut(target,description,link_file,*args,**kw):
     """make a shortcut if it doesn't exist, and register its creation"""
@@ -63,6 +63,9 @@ def install():
     f = ip_dir + r'\Manual in HTML.lnk'
     mkshortcut(t,'IPython Manual - HTML-Format',f)
 
+    # make ipython.py
+    shutil.copy(prefix + r'\scripts\ipython', prefix + r'\scripts\ipython.py')
+    
 def remove():
     """Routine to be run by the win32 installer with the -remove switch."""
     pass
