@@ -26,10 +26,12 @@ import sys
 def extractVars(*names,**kw):
     """Extract a set of variables by name from another frame.
 
+
     :Parameters:
       - `*names`: strings
         One or more variable names which will be extracted from the caller's
     frame.
+
 
     :Keywords:
       - `depth`: integer (0)
@@ -61,12 +63,31 @@ def extractVarsAbove(*names):
 
     This is simply a convenience function so that the very common case (for us)
     of skipping exactly 1 frame doesn't have to construct a special dict for
-    keyword passing."""
+    keyword passing.
+
+
+    :Parameters:
+      - `*names`: strings
+        One or more variable names which will be extracted from the caller's
+    frame.
+
+
+    Examples:
+
+        >>> x,y = 1,2
+
+        >>> def func():
+        ...     print extractVarsAbove('x','y')
+        ...
+
+        >>> func()
+        {'y': 2, 'x': 1}
+    """
 
     callerNS = sys._getframe(2).f_locals
     return dict((k,callerNS[k]) for k in names)
-    
-def shexp(s):
-    "Expand $VARS and ~names in a string, like a shell"
-    return os.path.expandvars(os.path.expanduser(s))
-    
+
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod() 
