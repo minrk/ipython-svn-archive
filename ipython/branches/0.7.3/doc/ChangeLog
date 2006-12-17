@@ -3,7 +3,7 @@
 	* Extensions/jobctrl.py: Fixed &cmd arg arg... 
 	to work properly on posix too
 	
-	* Release.py: Update revnum (is still 1.0 though)
+	* Release.py: Update revnum (version is still just 0.7.3).
 
 2006-12-15  Ville Vainio  <vivainio@gmail.com>
 
