@@ -1,0 +1,102 @@
+%autoindent off
+
+# Creating a RemoteController Instance
+
+import ipython1.kernel.api as kernel
+rc = kernel.RemoteController(('127.0.0.1',10105))
+rc.getIDs()                                         # get the IDs of the available engines
+rc.resetAll()                                       # REMOVE
+
+# Running Python Commands
+
+# Blocking Execution
+
+rc.executeAll('a=5')                                # a=5 on all
+rc.executeAll('b=10')                               # b=10 on all         
+rc.execute([0,2], 'c=a+b')                          # c=a+b on [0,2] only
+rc.execute(3, 'c=a-b')                              # c=a-b on 3 only
+rc.execute([0,2,3], 'print c')
+
+# Non-Blocking Execution
+
+rc.executeAll('import time')                        # blocking 
+rc.executeAll('time.sleep(10)',block=False)         # non-blocking
+rc.block = False                                    # now commands won't block by default
+rc.executeAll('y = [x**4 for x in xrange(1000)]')   # non-blocking
+rc.executeAll('print sum(y)',block = True)          # blocking:  override rc.block=False
+
+# Magic Commands
+
+# %px and %result
+
+import numpy                                        # local import
+%px import numpy                                    
+%px a = numpy.random.rand(2,2)
+%px print numpy.linalg.eigvals(a)
+%result
+
+# %autopx
+
+%autopx
+max_evals = []
+for i in range(100):
+    a = numpy.random.rand(10,10)
+    a = a + a.transpose()
+    evals = numpy.linalg.eigvals(a)
+    max_evals.append(evals[0].real)
+
+%autopx
+rc.block=True
+%px print "Average max eigenvalue is: ", sum(max_evals)/len(max_evals)
+rc.block = False
+
+# Moving Python objects around
+
+# Basic push and pull
+
+rc.pushAll(a=1.02345, b=3453)                       # 1.02345 and 3453 to all calling them a and b
+rc.pullAll('a')                                     # pull a from all
+
+rc.pull(0,'b')                                      # pull c from 0
+rc.pull([0,2], 'b')                                 # pull b from [0,2]
+rc.push([1,3], c='speed')                           # push 'speed' to [1,3] as c
+rc.execute([1,3], 'print c', block=True)            
+
+# Dictionary Interface
+
+rc['a'] = ['foo', 'bar']                            # like pushAll(a=['foo', 'bar'])
+rc['a']                                             # like pullAll('a')
+
+rc[0]['b'] = numpy.linspace(0.0,2.0,5)              # push object to 0 as b
+rc[0].execute('print b', block=True)
+rc[0]['b']                                          # pull b from 0 
+
+rc[0]['c'] = 'this is a string'
+rc[1]['c_upper'] = rc[0]['c'].upper()               # pull c from 0 push to 1 as c_upper, first call upper()
+rc.execute(1,'print c_upper',block=True)
+
+for i in range(4):                                  # iterate over engines and local variable
+    rc[i]['id'] = i
+
+rc.executeAll('print id',block=True)
+
+# Scatter/Gather
+
+rc.scatterAll('a', range(8))                        # push partitions of range(8) to all  
+rc.executeAll('print a', block=True)
+rc.gatherAll('a')                                   # gather is the inverse os scatter
+
+rc.scatterAll('b', numpy.linspace(0.0,3.5,8))       # scatter/gather maintain the sequence type
+rc.executeAll('print b', block=True)
+rc.gatherAll('b')
+
+# Trivial Parallelization
+
+rc.scatterAll('xdata', range(64))
+px ydata = [x**10 for x in xdata]
+print rc.gatherAll('ydata')
+
+
+
+
+

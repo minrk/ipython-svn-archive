@@ -1,0 +1,33 @@
+#statusWidget {
+	text-align: center;
+	border: 1px solid #999;
+	vertical-align: top;	
+    font-family: monospace;
+/*    margin-top: 2em;*/
+	height: 72%;
+    margin-left: 2em;
+    margin-right: 2em;
+}
+#statusOut{
+	text-align: center;
+	overflow: auto;
+	height: 72%;
+    margin-left: 1em;
+    margin-right: 1em;
+/*	padding: 1em;*/
+}
+#statusTable{
+    text-align: center;
+	vertical-align: top;	
+}
+#statusElement{
+    border: 1px solid #999;	
+	text-align: left;
+	vertical-align: top;	
+}
+#statusidfield {
+    border: 1px solid #999;
+}
+#statusidform {
+    border: 0px solid #999;
+}

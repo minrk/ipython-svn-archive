@@ -1,0 +1,129 @@
+body
+{
+  border: thin solid gray;
+}
+div.pageHeader
+{
+  font-family: Tahoma, sans-serif;
+  font-size: 20pt;
+  background-color: #DDDDFF;
+  border-bottom: thin solid gray;
+  padding: 5px;
+}
+div.controlCol
+{
+  float: left;
+  font-family: Tahoma, sans-serif;
+  font-size: 10pt;
+  padding: 5px;
+}
+div.notebook
+{
+  height: 500px;
+  overflow: auto;
+  border-left: thin solid gray;
+  padding: 5px;
+}
+
+div.controlLink
+{
+  text-decoration: none;
+  cursor: pointer;
+  color: blue;
+}
+
+/*
+  An ioCell consists of two columns: inOut and collapse
+  inOut consists of an inRow and outRow, each of which has its Label and Content
+*/
+div.ioCell
+{
+  margin-bottom: 10px;
+  font-family: Courier New, monospace;
+  font-size: 10pt;
+}
+
+div.inOut
+{
+  margin-right: 10px; /* should be same as div.collapse width plus some spacing (5px)*/
+}
+
+div.inRow
+{
+}
+div.inLabel
+{
+  float: left;
+  color: blue;
+}
+div.inContent
+{
+  overflow: hidden;
+}
+textarea.ioCell
+{
+  font-family: Courier New, monospace;
+  font-size: 10pt;
+}
+
+div.outRow
+{
+}
+div.outLabel
+{
+  float: left;
+  color: red;
+}
+div.outContent
+{
+  overflow: hidden;
+}
+
+div.collapse
+{
+  float: right;
+  width: 5px; /* width should be same as div.inOut margin-right */
+  border-width: 1px 1px 1px 0px;
+  border-style: solid;
+  border-color: black;
+  cursor: pointer;
+}
+
+/*
+  A Text Cell consists of two columns: text and collapse
+*/
+div.textCell
+{
+  margin-bottom: 10px;
+}
+div.textCol
+{
+  margin-right: 10px; /* should be same as div.collapse width plus some spacing (5px)*/
+}
+textarea.textCell
+{
+  font-family: Tahoma, sans-serif;
+  font-size: 10pt;
+}
+
+/*
+  A Group consists of two columns: content and collapse
+*/
+div.group
+{
+  margin-bottom: 10px;
+}
+div.content
+{
+  margin-right: 10px; /* should be same as div.collapse width plus some spacing (5px)*/
+}
+
+/* -------------- */
+textarea,div.bottom
+{
+  margin-top: 0px;
+  width: 100%;
+  border: thin dashed green;
+  overflow-x: auto;
+  overflow-y: hidden;
+}

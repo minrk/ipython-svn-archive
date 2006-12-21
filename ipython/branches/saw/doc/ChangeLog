@@ -1,0 +1,67 @@
+2006-11-13  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* ipython1/kernel/controllervanilla.py (RemoteController.execute):
+	small optimization to the unpacking, the newlines in the
+	stdout/err can be ommitted just by using the 'print x,' syntax
+	with a trailing comma.
+
+2006-11-10  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* scripts/ipcluster (parse_args): Added a script to more
+	conveniently manage clusters.  Still incomplete, but already
+	useful for working on a local multiprocessor machine.
+
+2006-11-09  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* ipython1/tools/utils.py: New directory for general-purpose tools
+	which don't really fit anywhere else.  Similar to genutils in
+	trunk, but as a directory so we can organize a bit more as time
+	goes by.
+
+2006-04-10  Brian Granger <ellisonbg@gmail.com>
+ 
+        * ipython1/test: Setup a test directory as a sub-module of
+        ipython1.  This makes it possible to test ipython1 using Twisted's
+        trial command:
+
+        trial ipython1
+
+        This command will find and run the unittests in the test module 
+        in files named tests_*.py.  Most importantly, it will manage the 
+        Twisted reactor and deferreds.  I have written initial tests for 
+        ipython1.core.shell.py.
+
+        * ipython1/kernel: I have begun to write the code for the two process 
+        kernel.  I need to write unittests for this stuff.
+
+2006-04-03  Brian Granger <ellisonbg@gmail.com>
+
+        * core/shell.py: Began to rework the TrappingInteractiveConsole class
+        into something that will become the IPython core.
+
+2006-02-14  Brian Granger <ellisonbg@gmail.com>
+
+        * kernel_client.py: Added a block property to the InteractiveCluster
+        class.  When this is set, calls to execute() will block and print
+        stdin/stdout/stderr.  It also sets the block attribute on the 
+        RemoteKernels in the cluster.
+
+        * kernel_client.py: Renamed "worker" and "workers" to "kernel"
+        and "kernels" to better reflect the naming of things.
+        
+        * kernel_magic.py: Made block=False by default for auto-executed
+        code.
+
+2006-02-11  Brian Granger <ellisonbg@gmail.com>
+
+        * Renamed vectorfunction.py to parallelfunction.py
+
+        * parallelfunction.py, README, kernelclient.py: Renamed all usages
+        of VectorFunction to ParallelFunction to better reflect what it does.
+
+        * kernelclient.py: Fixed intermodule imports.
+
+2006-02-11  Brian Granger <ellisonbg@gmail.com>
+
+        * ChangeLog: Started the ChangeLog for ipython1.
+
