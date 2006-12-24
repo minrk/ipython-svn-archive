@@ -627,8 +627,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                 warn("Could not start with profile '%s'!\n"
                      "('%s/%s.py' does not exist? run '%%upgrade')" %
                      (opts_all.profile, opts_all.ipythondir, profmodname) )
-        except:
-            print "Error importing",profmodname
+        except:            
+            print "Error importing",profmodname,"- perhaps you should run %upgrade?"
             IP.InteractiveTB()
             import_fail_info(profmodname)
                       
@@ -640,7 +640,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
              "('%s/ipy_user_conf.py' does not exist? Please run '%%upgrade')\n"
              % opts_all.ipythondir)
     except:
-        print "Error importing ipy_user_conf"
+        print "Error importing ipy_user_conf - perhaps you should run %upgrade?"
         IP.InteractiveTB()
         import_fail_info("ipy_user_conf")
     
