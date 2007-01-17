@@ -26,7 +26,7 @@ from twisted.internet import reactor, defer
 from twisted.spread import pb, interfaces
 
 from ipython1.kernel import controllerservice as cs, serialized
-from ipython1.kernel import controllerpb, util
+from ipython1.kernel import multienginepb, util
 
 from ipython1.test.util import DeferredTestCase
 
@@ -35,7 +35,7 @@ class BasicControllerPBTest(DeferredTestCase):
     def setUp(self):
         self.rc = cs.ControllerService()
         self.rc.startService()
-        self.root = controllerpb.IPBController(self.rc)
+        self.root = multienginepb.IPBController(self.rc)
         self.root.remote_addNotifier = lambda _:None
         self.sf = pb.PBServerFactory(self.root)
         self.s = reactor.listenTCP(10111, self.sf)

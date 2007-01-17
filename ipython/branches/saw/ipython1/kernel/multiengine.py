@@ -9,7 +9,7 @@ designed for interactive clients.
 The classes here are exposed to the network in the files:
 
  * controllervanilla.py
- * controllerpb.py
+ * multienginepb.py
  
 Eventually, these should be named multiengine*.py.
 """

@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_controllerclient -*-
+# -*- test-case-name: ipython1.test.test_multiengineclient -*-
 """The kernel interface.
 
 The kernel interface is a set of classes that providse a high level interface

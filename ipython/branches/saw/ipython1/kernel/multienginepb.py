@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_controllerpb -*-
+# -*- test-case-name: ipython1.test.test_multienginepb -*-
 """A Perspective Broker interface to a MultiEngine.
 
 This class lets PB clients talk to the ControllerService.  The main difficulty
