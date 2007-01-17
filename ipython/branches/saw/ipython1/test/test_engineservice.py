@@ -27,7 +27,7 @@ from twisted.application.service import IService
 
 from ipython1.kernel import engineservice as es
 from ipython1.test.util import DeferredTestCase
-from ipython1.test.completeenginetest import \
+from ipython1.test.engineservicetest import \
     IEngineCoreTestCase, \
     IEngineSerializedTestCase, \
     IEngineQueuedTestCase, \

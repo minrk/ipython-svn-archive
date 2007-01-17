@@ -28,7 +28,7 @@ from ipython1.kernel.enginevanilla import \
     VanillaEngineServerFactoryFromControllerService, \
     VanillaEngineClientFactoryFromEngineService
 
-from ipython1.test.completeenginetest import \
+from ipython1.test.engineservicetest import \
     IEngineCoreTestCase, \
     IEngineSerializedTestCase, \
     IEngineQueuedTestCase

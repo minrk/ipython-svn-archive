@@ -262,7 +262,11 @@ class RemoteController(RemoteControllerBase):
                 if isinstance(cmd, Failure):
                     print cmd
                 else:
-                    target,cmd_num,cmd_stdin,cmd_stdout,cmd_stderr = cmd
+                    target = cmd['id']
+                    cmd_num = cmd['commandIndex']
+                    cmd_stdin = cmd['stdin']
+                    cmd_stdout = cmd['stdout']
+                    cmd_stderr = cmd['stderr']
                     print "%s[%s:%i]%s In [%i]:%s %s" % \
                         (green, self.addr[0], target,
                         blue, cmd_num, normal, cmd_stdin)
@@ -658,11 +662,11 @@ class RemoteController(RemoteControllerBase):
             if isinstance(cmd, Failure):
                 print cmd
             else:
-                target = cmd[0]
-                cmd_num = cmd[1]
-                cmd_stdin = cmd[2]
-                cmd_stdout = cmd[3][:-1]
-                cmd_stderr = cmd[4][:-1]
+                target = cmd['id']
+                cmd_num = cmd['commandIndex']
+                cmd_stdin = cmd['stdin']
+                cmd_stdout = cmd['stdout']
+                cmd_stderr = cmd['stderr']
                 print "%s[%s:%i]%s In [%i]:%s %s" % \
                     (green, self.addr[0], target,
                     blue, cmd_num, normal, cmd_stdin)
