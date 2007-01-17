@@ -117,10 +117,10 @@ class MPIConfig(Config):
 from ipython1.kernel.enginevanilla import \
     IVanillaEngineServerFactory
 
-from ipython1.kernel.controllervanilla import \
+from ipython1.kernel.multienginevanilla import \
     IVanillaControllerFactory
     
-from ipython1.kernel.controllerpb import \
+from ipython1.kernel.multienginepb import \
     IPBMultiEngineFactory
     
 from ipython1.kernel.enginepb import \
@@ -152,7 +152,7 @@ class ControllerConfig(Config):
     
 # Client configuration
 
-from ipython1.kernel.controllervanilla import \
+from ipython1.kernel.multienginevanilla import \
     RemoteController
 
 class ClientConfig(Config):    

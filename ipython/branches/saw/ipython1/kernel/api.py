@@ -8,7 +8,7 @@ selected dynamically at run time.
 Depending on the configuration files, one of the following RemoteController classes
 will be imported into this module as RemoteController:
 
-- `controllervanilla.RemoteController` (the default)
+- `multienginevanilla.RemoteController` (the default)
 
 For more information about RemoteController consult the docstrings of the 
 particular RemoteController classe you are using.
