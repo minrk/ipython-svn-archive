@@ -35,7 +35,7 @@ class BasicControllerPBTest(DeferredTestCase):
     def setUp(self):
         self.rc = cs.ControllerService()
         self.rc.startService()
-        self.root = multienginepb.IPBController(self.rc)
+        self.root = multienginepb.IPBMultiEngine(self.rc)
         self.root.remote_addNotifier = lambda _:None
         self.sf = pb.PBServerFactory(self.root)
         self.s = reactor.listenTCP(10111, self.sf)
@@ -62,5 +62,5 @@ class BasicControllerPBTest(DeferredTestCase):
         l = [cs.IEngineMultiplexer, interfaces.IJellyable, INotifierParent]
         l.sort()
         return self.assertEquals(p, l)
-    testInterfaces.skip = 'The ControllerPB tests need to be updated when ControllerPB is gone through.'
+    testInterfaces.skip = 'The MultiEnginePB tests need to be updated when multienginepb.py is updated.'
     
