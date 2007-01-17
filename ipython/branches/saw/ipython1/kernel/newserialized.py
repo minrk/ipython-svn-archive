@@ -97,20 +97,22 @@ class SerializeIt(object):
                 self.metadata = {}
         else:
             self.typeDescriptor = 'pickle'
-            self.metadata = {}            
+            self.metadata = {}
+        self._generateData()            
     
+    def _generateData(self):
+        if self.typeDescriptor == 'ndarray':
+            self.data = numpy.getbuffer(self.obj)
+        elif self.typeDescriptor == 'pickle':
+            self.data = pickle.dumps(self.obj, 2)
+        else:
+            raise SerializationError("Really wierd serialization error.")
+        del self.obj
+        
     def getData(self):
-        if self.data is None:
-            if self.typeDescriptor == 'ndarray':
-                self.data = numpy.getbuffer(self.obj)
-            elif self.typeDescriptor == 'pickle':
-                self.data = pickle.dumps(self.obj, 2)
-            else:
-                raise SerializationError("Really wierd serialization error.")
         return self.data
         
     def getDataSize(self, units=10.0**6):
-        self.getData()            # Generate self.data
         return len(self.data)/units
         
     def getTypeDescriptor(self):

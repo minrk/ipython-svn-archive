@@ -18,10 +18,6 @@ On the Controller (server) side:
  * IPBRemoteEngineRoot
  * PBRemoteEngineRootFromService
  * IPBEngineServerFactory
- 
-To do:
-
- * Why is PBEngineServerFactoryFromService a function rather than a class?
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -42,12 +38,16 @@ import cPickle as pickle
 from twisted.python import components, log
 from twisted.python.failure import Failure
 from twisted.spread import pb
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from twisted.spread import banana
 from twisted.internet.interfaces import IProtocolFactory
 from zope.interface import Interface, implements, Attribute
 from twisted.spread.util import Pager, StringPager, CallbackPageCollector
 
+from twisted.internet.base import DelayedCall
+DelayedCall.debug = True
+
+from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import newserialized
 from ipython1.kernel import controllerservice, protocols
 from ipython1.kernel.controllerservice import IControllerBase
@@ -63,14 +63,19 @@ from ipython1.kernel.engineservice import \
 #-------------------------------------------------------------------------------
     
 #banana.SIZE_LIMIT = 640*1024           # The default of 640 kB
-#banana.SIZE_LIMIT = 10*1024*1024       # 10 MB
+banana.SIZE_LIMIT = 50*1024*1024       # 10 MB
 #banana.SIZE_LIMIT = 50*1024*1024       # 50 MB
+    
+CHUNK_SIZE = 64*1024
     
 
 #-------------------------------------------------------------------------------
 # Classes to enable paging of large objects
 #-------------------------------------------------------------------------------
   
+# NOTE:  The paging versions of push/pull/etc are not being used as there is 
+# a problem with the way that deferreds are created but not handled in the 
+# internals of pb.brokers (BG 1/15/07).
   
 class SerializedPager(StringPager):
     
@@ -106,8 +111,12 @@ class DeferredCollector(pb.Referenceable):
         self.pages.append(page)
 
     def remote_endedPaging(self):
-        self.pagesReceived()
-        #reactor.callLater(0, self.pagesReceived)       
+        #self.pagesReceived()
+        # The pagesReceived method triggers the actual object to be returned to the
+        # requester.  This callLater is needed to ensure that other Deferreds are
+        # first closed up.  This is related to the internal problems in PBs paging
+        # machinery  (BG 1/15/07).
+        reactor.callLater(0.1, self.pagesReceived)       
         
     def getDeferredToCollected(self):
         return self._deferred
@@ -134,6 +143,9 @@ class SerializedCollector(DeferredCollector):
             serial = newserialized.Serialized(dataString, typeDescriptor, metadata)
             self._deferred.callback(serial)
 
+class CollectorCollision(Exception):
+    pass
+    
     
 #-------------------------------------------------------------------------------
 # The client (Engine) side of things
@@ -163,9 +175,9 @@ class PBEngineClientFactory(pb.PBClientFactory, object):
     
     def _getRootFailure(self, reason):
         """errback for pb.PBClientFactory.getRootObject"""
+        log.err(reason)
+        #return reason
         
-        reason.raiseException()
-    
     def _gotRoot(self, obj):
         """callback for pb.PBClientFactory.getRootObject"""
         
@@ -189,8 +201,12 @@ class IPBEngine(Interface):
     """An interface that exposes an EngineService over PB.
     
     The methods in this interface are similar to those from IEngine, 
-    but their arguments and return values are pickled if they are not already
-    simple Python types so they can be send over PB.
+    but their arguments and return values slightly different to reflect
+    that PB cannot send arbitrary objects.  We handle this by pickling/
+    unpickling that the two endpoints.
+    
+    If a remote or local exception is raised, the appropriate Failure
+    will be returned instead.
     """
         
     def remote_getID():
@@ -202,34 +218,34 @@ class IPBEngine(Interface):
     def remote_execute(lines):
         """Execute lines of Python code.
         
-        Return a deferred to a result tuple.
+        Returns a deferred to a result dict.
+        
+        Upon failure returns a pickled Failure.
         """
         
     def remote_push(self, pNamespace):
         """Push a namespace into the users namespace.
         
-        @arg pNamespace: a pickled namespace.
+        pNamespace is a pickled dict of key, object pairs. 
         """
-
-    def remote_pushPaging(key):
-        """Push using paging."""
 
     def remote_pull(*keys):
         """Pull objects from a users namespace by keys.
         
-        Returns a deferred to a pickled tuple of objects.
+        Returns a deferred to a pickled tuple of objects.  If any single
+        key has a problem, the Failure of that will be returned.
         """
 
     def remote_pullNamespace(*keys):
         """Pull a namespace of objects by key.
         
-        Returns a deferred to a dict of keys and objects all pickled up.
+        Returns a deferred to a pickled dict of keys, object pairs.
         """
 
     def remote_getResult(i=None):
         """Get result i.
         
-        Returns a deferred to a pickled result tuple.
+        Returns a deferred to a pickled result dict.
         """
         
     def remote_reset():
@@ -241,7 +257,7 @@ class IPBEngine(Interface):
     def remote_keys():
         """Get variable names that are currently defined in the user's namespace.
         
-        Returns a deferred to a tuple.
+        Returns a deferred to a tuple of keys.
         """
         
     def remote_pushSerialized(pNamespace):
@@ -253,9 +269,9 @@ class IPBEngine(Interface):
     def remote_pullSerialized(*keys):
         """Pull objects from users namespace by key as Serialized.
         
-        Returns a deferred to a pickled namespace of keys and Serialized.
+        Returns a deferred to a pickled dict of key, Serialized pairs.
         """
-    
+
 
 class PBEngineReferenceFromService(pb.Referenceable, object):
     """Adapt an IEngineBase to an IPBEngine implementer exposing it to PB.
@@ -273,6 +289,11 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         self.service = service
         self.collectors = {}
     
+    def packageFailure(self, f):
+        f.cleanFailure()
+        pString = pickle.dumps(f, 2)
+        return pString
+    
     def remote_getID(self):
         return self.service.id
     
@@ -280,20 +301,32 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         self.service.id = id
     
     def remote_execute(self, lines):
-        return self.service.execute(lines).addErrback(pickle.dumps, 2)
-    
+        return self.service.execute(lines).addErrback(self.packageFailure)
+        
+    #---------------------------------------------------------------------------
+    # Old version of push
+    #---------------------------------------------------------------------------
+        
     def remote_push(self, pNamespace):
-        namespace = pickle.loads(pNamespace)
-        return self.service.push(**namespace).addErrback(pickle.dumps, 2)
+        try:
+            namespace = pickle.loads(pNamespace)
+        except:
+            return failure.Failure()
+        else:
+            return self.service.push(**namespace).addErrback(self.packageFailure)
         
     #---------------------------------------------------------------------------
     # Paging version of push
     #---------------------------------------------------------------------------
 
+    # NOTE:  These are not being used right now due to problems with PBs 
+    # paging handling  (BG 1/15/07).
+
     def remote_getCollectorForKey(self, key):
-        log.msg("Creating a collector for key" + key)
+        #log.msg("Creating a collector for key" + key)
         if self.collectors.has_key(key):
-            return 'collectors for key already exists'
+            return self.packageFailure(failure.fail(failure.Failure( \
+                CollectorCollision("Collector for key %s already exists" % key))))
         coll = SerializedCollector()
         self.collectors[key] = coll
         return coll
@@ -303,7 +336,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
             self.collectors.pop(key)
         
     def remote_finishPushPaging(self, key):
-        log.msg("finishPushPaging for key: " + key)
+        #log.msg("finishPushPaging for key: " + key)
         coll = self.collectors.get(key, None)
         if coll is None:
             return 'no collector for key'
@@ -311,11 +344,6 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
             d = coll.getDeferredToCollected()
             d.addCallback(self.handlePagedPush, key)
             return d
-        
-    def packageFailure(self, f):
-        f.cleanFailure()
-        pString = pickle.dumps(f, 2)
-        return pickle.dumps(f, 2)
         
     def handlePagedPush(self, serial, key):
         log.msg("I got a serial! " + repr(serial) + key)
@@ -332,32 +360,55 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         d = self.service.pull(*keys)
         return d.addBoth(pickle.dumps, 2)
     
+    # NOTE:  The paging version of pull is not being used right now  (BG 1/15/07).
+    
+    def remote_pullPaging(self, key, collector):
+        d = self.service.pull(key)
+        d.addCallback(newserialized.serialize)
+        d.addCallbacks(self._startPaging, self.packageFailure, callbackArgs=(collector,))
+        return d
+        
+    def _startPaging(self, serial, collector):
+        pager = SerializedPager(collector, serial, chunkSize=CHUNK_SIZE)
+    
+    #---------------------------------------------------------------------------
+    # pullNamespace
+    #---------------------------------------------------------------------------
+    
     def remote_pullNamespace(self, *keys):
         d = self.service.pullNamespace(*keys)
         return d.addBoth(pickle.dumps, 2)
     
+    #---------------------------------------------------------------------------
+    # Other methods
+    #---------------------------------------------------------------------------
+    
     def remote_getResult(self, i=None):
-        d = self.service.getResult(i).addBoth(pickle.dumps, 2)
-        return d
+        return self.service.getResult(i).addErrback(self.packageFailure)
     
     def remote_reset(self):
-        return self.service.reset().addErrback(pickle.dumps, 2)
+        return self.service.reset().addErrback(self.packageFailure)
     
     def remote_kill(self):
-        return self.service.kill().addErrback(pickle.dumps, 2)
+        return self.service.kill().addErrback(self.packageFailure)
     
     def remote_keys(self):
-        d = self.service.keys().addBoth(pickle.dumps, 2)
-        return d
+        return self.service.keys().addErrback(self.packageFailure)
+    
+    #---------------------------------------------------------------------------
+    # push/pullSerialized
+    #---------------------------------------------------------------------------
     
     def remote_pushSerialized(self, pNamespace):
         namespace = pickle.loads(pNamespace)
         d = self.service.pushSerialized(**namespace)
-        return d.addErrback(pickle.dumps, 2)
+        return d.addErrback(self.packageFailure)
     
     def remote_pullSerialized(self, *keys):
         d = self.service.pullSerialized(*keys)
-        return d.addBoth(pickle.dumps, 2)
+        d.addCallback(pickle.dumps, 2)
+        d.addErrback(self.packageFailure)
+        return d
 
 
 components.registerAdapter(PBEngineReferenceFromService,
@@ -403,49 +454,105 @@ class EngineFromReference(object):
     #---------------------------------------------------------------------------
     # Methods from IEngine
     #---------------------------------------------------------------------------
+
+    #---------------------------------------------------------------------------
+    # execute
+    #---------------------------------------------------------------------------
     
     def execute(self, lines):
         return self.callRemote('execute', lines).addCallback(self.checkReturn)
 
-    # old version of this!
-    #def push(self, **namespace):
-    #    package = pickle.dumps(namespace, 2)
-    #    d = self.callRemote('push', package)
-    #    return d.addCallback(self.checkReturn)
-    
-    def push(self, **namespace):
-        log.msg(repr(namespace))
+    #---------------------------------------------------------------------------
+    # push
+    #---------------------------------------------------------------------------
+
+    def pushOld(self, **namespace):
+        try:
+            package = pickle.dumps(namespace, 2)
+        except:
+            return failure.Failure()
+        else:
+            d = self.callRemote('push', package)
+            return d.addCallback(self.checkReturn)
+            
+    # Paging version
+
+    def pushNew(self, **namespace):
         dList = []
         for k, v in namespace.iteritems():
             d = self.pushPaging(k, v)
             dList.append(d)
-        return defer.DeferredList(dList)
-        
-    # Paging version of push
-        
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          logErrors=0, 
+                          consumeErrors=1)
+                        
     def pushPaging(self, key, obj):
-        log.msg(key + repr(obj))
-        serial = newserialized.serialize(obj)
-        log.msg(repr(serial))
+        try:
+            serial = newserialized.serialize(obj)
+        except:
+            return failure.Failure()
+        else:
+            return self.pushPagingSerialized(key, serial)
+    
+    def pushPagingSerialized(self, key, serial):
         d = self.callRemote('getCollectorForKey', key)
-        d.addCallback(self._beginPaging, serial, key)    
+        d.addCallback(self.checkReturn)
+        d.addCallback(self._beginPaging, serial, key) 
         return d
     
     def _beginPaging(self, collector, serial, key):
-        log.msg("Beginnign to page" + repr(collector))
-        pager = SerializedPager(collector, serial, chunkSize=64*1024)
+        #log.msg("Beginning to page" + repr(collector))
+        pager = SerializedPager(collector, serial, chunkSize=CHUNK_SIZE)
         d = self.callRemote('finishPushPaging', key)
         return d
+
+    push = pushOld
     
+    #---------------------------------------------------------------------------
     # pull
-    
-    def pull(self, *keys):
+    #---------------------------------------------------------------------------
+
+    def pullOld(self, *keys):
         d = self.callRemote('pull', *keys)
         return d.addCallback(pickle.loads)
+        
+    # Paging version
+        
+    def pullPaging(self, key):
+        collector = SerializedCollector()
+        # This will fire if the object cannot be serialized on the other side
+        d = self.callRemote('pullPaging', key, collector)
+        d.addCallback(lambda _: collector.getDeferredToCollected())
+        d.addCallback(newserialized.unserialize)
+        return d
+        
+    def pullNew(self, *keys):
+        if len(keys) == 1:
+            return self.pullPaging(keys[0])
+        else:
+            pulledDeferreds = []
+            for k in keys:
+                pulledDeferreds.append(self.pullPaging(k))
+            d = gatherBoth(pulledDeferreds,
+                           fireOnOneErrback=1,
+                           logErrors=0, 
+                           consumeErrors=1)
+            return d
+                          
+    pull = pullOld
+
+    #---------------------------------------------------------------------------
+    # pullNamespace
+    #---------------------------------------------------------------------------
     
     def pullNamespace(self, *keys):
         return self.callRemote('pullNamespace', *keys).addCallback(pickle.loads)
 
+    #---------------------------------------------------------------------------
+    # Other methods
+    #---------------------------------------------------------------------------
+    
     def getResult(self, i=None):
         return self.callRemote('getResult', i).addCallback(self.checkReturn)
     
@@ -460,22 +567,42 @@ class EngineFromReference(object):
     def keys(self):
         return self.callRemote('keys').addCallback(self.checkReturn)
     
-    # old version of this
-    #def pushSerialized(self, **namespace):
-    #    log.msg(repr(namespace))
-    #    package = pickle.dumps(namespace, 2)
-    #    d = self.callRemote('pushSerialized', package)
-    #    return d.addCallback(self.checkReturn)
-     
-    def pushSerialized(self, **namespace):
-        ns = {}
+    #---------------------------------------------------------------------------
+    # push/pullSerialized
+    #---------------------------------------------------------------------------
+        
+    def pushSerializedOld(self, **namespace):
+        """Older version of pushSerialize."""
+        #log.msg(repr(namespace))
+        try:
+            package = pickle.dumps(namespace, 2)
+        except:
+            return failure.Failure()
+        else:
+            d = self.callRemote('pushSerialized', package)
+            return d.addCallback(self.checkReturn)
+       
+    # The new paging version
+    
+    def pushSerializedNew(self, **namespace):      
+        dList = []
         for k, v in namespace.iteritems():
-            ns[k] = newserialized.unserialize(v)
-        return self.push(**ns)
+            d = self.pushPagingSerialized(k, v)
+            dList.append(d)
+        return gatherBoth(dList,
+                          fireOnOneErrback=1,
+                          logErrors=0, 
+                          consumeErrors=1)
         
     def pullSerialized(self, *keys):
         d = self.callRemote('pullSerialized', *keys)
         return d.addCallback(pickle.loads)
+
+    pushSerialized = pushSerializedOld
+ 
+    #---------------------------------------------------------------------------
+    # Misc
+    #---------------------------------------------------------------------------
  
     def killBack(self, f):
         try:
@@ -484,16 +611,18 @@ class EngineFromReference(object):
             return
     
     def checkReturn(self, r):
-        # is this needed?
-        # 
+        """See if a returned value is a pickled object."""
         if isinstance(r, str):
             try: 
-                return pickle.loads(r)
+                result = pickle.loads(r)
             except pickle.PickleError:
-                pass
-        return r
-    
-    
+                return r
+            else:
+                return result
+        else:
+            return r
+
+
 components.registerAdapter(EngineFromReference,
     pb.RemoteReference,
     IEngineBase)

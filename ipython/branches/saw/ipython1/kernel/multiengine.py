@@ -60,6 +60,9 @@ class IEngineMultiplexer(Interface):
     All IEngineMultiplexer multiplexer methods must return a Deferred to a list 
     with length equal to the number of targets.  The elements of the list will 
     correspond to the return of the corresponding IEngine method.
+    
+    Failures are aggressive:  if the action fails for any target, the overall
+    action will fail immediately with that Failure.
     """
         
     #---------------------------------------------------------------------------
@@ -258,12 +261,15 @@ class MultiEngine(ControllerAdapterBase):
             linestr = lines
         log.msg("executing %s on %s" %(linestr, targets))
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for e in engines:
             d = e.execute(lines)
             # This would be the place to addCallback to any notification methods
-            l.append(d)
-        return gatherBoth(l)
+            dList.append(d)
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)
     
     def executeAll(self, lines):
         return self.execute('all', lines)
@@ -271,10 +277,13 @@ class MultiEngine(ControllerAdapterBase):
     def push(self, targets, **ns):
         log.msg("pushing to %s" % targets)
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for e in engines:
-            l.append(e.push(**ns))
-        return gatherBoth(l)
+            dList.append(e.push(**ns))
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)
     
     def pushAll(self, **ns):
         return self.push('all', **ns)
@@ -282,10 +291,13 @@ class MultiEngine(ControllerAdapterBase):
     def pull(self, targets, *keys):
         log.msg("pulling from %s" % targets)
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for e in engines:
-            l.append(e.pull(*keys))
-        return gatherBoth(l)
+            dList.append(e.pull(*keys))
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)
     
     def pullAll(self, *keys):
         return self.pull('all', *keys)
@@ -293,10 +305,13 @@ class MultiEngine(ControllerAdapterBase):
     def pullNamespace(self, targets, *keys):
         log.msg("pulling from %s" % targets)
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for e in engines:
-            l.append(e.pullNamespace(*keys))
-        return gatherBoth(l)
+            dList.append(e.pullNamespace(*keys))
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)
     
     def pullNamespaceAll(self, *keys):
         return pullNamespace('all', *keys)
@@ -304,33 +319,40 @@ class MultiEngine(ControllerAdapterBase):
     def getResult(self, targets, i=None):
         log.msg("getResult on %s" % targets)
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for e in engines:
-            l.append(e.getResult(i))
-        return gatherBoth(l)
-                
+            dList.append(e.getResult(i))
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)                
     def getResultAll(self, i=None):
         return self.getResult('all', i)
     
     def reset(self, targets):
         log.msg("reseting %s" % targets)
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for e in engines:
-            l.append(e.reset())
-        return gatherBoth(l)
-    
+            dList.append(e.reset())
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)    
     def resetAll(self):
         return self.reset('all')
     
     def keys(self, targets):
         log.msg("getting keys from %s" % targets)
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for e in engines:
-            l.append(e.keys())
-        return gatherBoth(l)
-    
+            dList.append(e.keys())
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)    
+
     def keysAll(self):
         return self.keys('all')
     
@@ -338,10 +360,13 @@ class MultiEngine(ControllerAdapterBase):
         log.msg("killing engines %s" % targets)
         if controller: targets = 'all'              # kill all engines if killing controller
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for e in engines:
-            l.append(e.kill())
-        d = gatherBoth(l)
+            dList.append(e.kill())
+        d = gatherBoth(dList, 
+                       fireOnOneErrback=1,
+                       consumeErrors=1,
+                       logErrors=0)        
         if controller:
             log.msg("Killing controller")
             reactor.callLater(2.0, reactor.stop)
@@ -353,32 +378,37 @@ class MultiEngine(ControllerAdapterBase):
     def pushSerialized(self, targets, **namespace):
         log.msg("pushing Serialized to %s" % targets)
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for k, v in namespace.iteritems():
             log.msg("Pushed object %s is %f MB" % (k, v.getDataSize()))
         for e in engines:
-            l.append(e.pushSerialized(**namespace))
-        return gatherBoth(l)
-    
+            dList.append(e.pushSerialized(**namespace))
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)  
+                              
     def pushSerializedAll(self, **namespace):
         return self.pushSerialized('all', **namespace)
         
     def pullSerialized(self, targets, *keys):
         log.msg("pulling serialized from %s" % targets)
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for e in engines:
             d = e.pullSerialized(*keys)
             d.addCallback(self._logSizes)
-            l.append(d)
-        return gatherBoth(l)
-    
+            dList.append(d)
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)  
+                              
     def _logSizes(self, listOfSerialized):
         if isinstance(listOfSerialized, (list, tuple)):
             for s in listOfSerialized:
                 log.msg("Pulled object is %f MB" % s.getDataSize())
         else:
-        #if newserialized.ISerialized.providedBy(listOfSerialized):
             log.msg("Pulled object is %f MB" % listOfSerialized.getDataSize())
         return listOfSerialized
     
@@ -388,22 +418,28 @@ class MultiEngine(ControllerAdapterBase):
     def clearQueue(self, targets):
         log.msg("clearing queue on %s" % targets)
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for e in engines:
-            l.append(e.clearQueue())
-        return gatherBoth(l)
-    
+            dList.append(e.clearQueue())
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)  
+                              
     def clearQueueAll(self):
         return self.clearQueue('all')
     
     def queueStatus(self, targets):
         log.msg("getting queue status on %s" % targets)
         engines = self.engineList(targets)
-        l = []
+        dList = []
         for e in engines:
-            l.append(e.queueStatus().addCallback(lambda s:(e.id, s)))
-        return gatherBoth(l)
-
+            dList.append(e.queueStatus().addCallback(lambda s:(e.id, s)))
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)  
+                          
     def queueStatusAll(self):
         return self.queueStatus('all')
 
@@ -418,15 +454,18 @@ class MultiEngine(ControllerAdapterBase):
         
         mapClass = Map.styles[style]
         mapObject = mapClass()
-        l = []
+        dList = []
         for index, engine in enumerate(engines):
             partition = mapObject.getPartition(seq, index, nEngines)
             if flatten and len(partition) == 1:    
-                l.append(engine.push(**{key: partition[0]}))
+                dList.append(engine.push(**{key: partition[0]}))
             else:
-                l.append(engine.push(**{key: partition}))
-        return gatherBoth(l)
-    
+                dList.append(engine.push(**{key: partition}))
+        return gatherBoth(dList, 
+                          fireOnOneErrback=1,
+                          consumeErrors=1,
+                          logErrors=0)  
+                              
     def scatterAll(self, key, seq, style='basic', flatten=False):
         return self.scatter('all', key, seq, style, flatten)
     
@@ -436,13 +475,17 @@ class MultiEngine(ControllerAdapterBase):
         engines = self.engineList(targets)
         nEngines = len(engines)
                 
-        l = []
+        dList = []
         for e in engines:
-            l.append(e.pull(key))
+            dList.append(e.pull(key))
         
         mapClass = Map.styles[style]
         mapObject = mapClass()
-        return gatherBoth(l).addCallback(mapObject.joinPartitions)
+        d = gatherBoth(dList, 
+                       fireOnOneErrback=1,
+                       consumeErrors=1,
+                       logErrors=0)  
+        return d.addCallback(mapObject.joinPartitions)
     
     def gatherAll(self, key, style='basic'):
         return self.gather('all', key, style)

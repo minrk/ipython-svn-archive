@@ -24,6 +24,7 @@ from ipython1.test.multienginetest import \
     IEngineMultiplexerTestCase, \
     IEngineCoordinatorTestCase
     
+    
 class BasicMultiEngineTestCase(DeferredTestCase,
     IEngineMultiplexerTestCase,
     IEngineCoordinatorTestCase):

@@ -62,8 +62,8 @@ class EngineConfig(Config):
     connectToControllerOn = {'ip': '127.0.0.1', 'port': enginePort}
     """The ip, port the controller is listening for engines on."""
     
-    #engineClientProtocolInterface = IVanillaEngineClientFactory
-    engineClientProtocolInterface = PBEngineClientFactory
+    engineClientProtocolInterface = IVanillaEngineClientFactory
+    #engineClientProtocolInterface = PBEngineClientFactory
     """The interface corresponding to the network protocol used to connect
     to the controller with."""
 
@@ -127,8 +127,8 @@ from ipython1.kernel.enginepb import \
     IPBEngineServerFactory
     
 class ControllerConfig(Config):
-    #engineServerProtocolInterface = IVanillaEngineServerFactory
-    engineServerProtocolInterface = IPBEngineServerFactory
+    engineServerProtocolInterface = IVanillaEngineServerFactory
+    #engineServerProtocolInterface = IPBEngineServerFactory
     """The interface for the network protocol for talking to engines."""
     
     listenForEnginesOn  = {'ip': '', 'port': enginePort}

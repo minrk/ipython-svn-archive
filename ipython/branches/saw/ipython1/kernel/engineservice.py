@@ -18,11 +18,6 @@ felt that we had over-engineered things.  To improve the maintainability of the
 code we have taken out the ICompleteEngine interface and the completeEngine
 method that automatically added methods to engines.
 
-To do:
-
- * Should push/pull method support multiple objects?
-
-
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -49,7 +44,7 @@ import zope.interface as zi
 
 from ipython1.core.shell import InteractiveShell
 from ipython1.kernel import newserialized, error, util
-from ipython1.kernel.util import gatherBoth
+from ipython1.kernel.util import gatherBoth, DeferredList
 
 
 #-------------------------------------------------------------------------------
@@ -62,6 +57,16 @@ class IEngineCore(zi.Interface):
     This interface provides a formal specification of the IPython core.
     All these methods should return deferreds regardless of what side of a
     network connection they are on.
+    
+    In general, this class simply wraps a shell class and wraps its return
+    values as Deferred objects.  If the underlying shell class method raises
+    an exception, this class should convert it to a twisted.failure.Failure
+    that will be propagated along the Deferred's errback chain.
+    
+    In addition, Failures are aggressive.  By this, we mean that if a method
+    is performing multiple actions (like pulling multiple object) if any
+    single one fails, the entire method will fail with that Failure.  It is
+    all or nothing. 
     """
     
     id = zi.interface.Attribute("the id of the Engine object")
@@ -69,30 +74,43 @@ class IEngineCore(zi.Interface):
     def execute(lines):
         """Execute lines of Python code.
         
-        Returns a deferred to tuple of (id, stdin, stdout, stderr).
+        Returns a dictionary with keys (id, commandIndex, stdin, stdout, stderr)
+        upon success.
+        
+        Returns a failure object if the execution of lines raises an exception.
         """
     
     def push(**namespace):
         """Push dict namespace into the user's namespace.
         
-        Returns a deferred to None.
+        Returns a deferred to None or a failure.
         """
     
     def pull(*keys):
         """Pulls values out of the user's namespace by keys.
         
         Returns a deferred to tuple objects or a single object.
+        
+        Raises NameError is any one of objects does not exist.
         """
     
     def pullNamespace(*keys):
         """Pulls values by key from user's namespace as dict.
         
-        Returns a defered to a dict."""
+        Returns a defered to a dict of key/value pairs.
+        
+        Raises NameError if any one of the objects does not exist.
+        """
     
     def getResult(i=None):
         """Get the stdin/stdout/stderr of command i.
         
-        Returns a deferred to a tuple."""
+        Returns a deferred to a dict with keys
+        (id, commandIndex, stdin, stdout, stderr).
+        
+        Raises IndexError if command i does not exist.
+        Raises TypeError if i in not an int.
+        """
     
     def reset():
         """Reset the shell.
@@ -123,6 +141,8 @@ class IEngineSerialized(zi.Interface):
         """Pull objects by key from the user's namespace as Serialized.
         
         Returns a list of or one Serialized.
+        
+        Raises NameError is any one of the objects does not exist.
         """
     
 class IEngineBase(IEngineCore, IEngineSerialized):
@@ -149,6 +169,17 @@ class IEngineQueued(IEngineBase):
         
     def queueStatus():
         """Get the queued and pending commands in the queue."""
+        
+    def registerFailureObserver(obs):
+        """Register an observer of pending Failures.
+        
+        The observer must implement IFailureObserver.
+        """
+    
+    def unregisterFailureObserver(obs):
+        """Unregister an observer of pending Failures."""
+
+    
     
 class IEngineThreaded(zi.Interface):
     """A place holder for threaded commands.  
@@ -206,7 +237,8 @@ class EngineService(object, service.Service):
         return d
 
     def addIDToResult(self, result):
-        return (self.id,) + result
+        result['id'] = self.id
+        return result
 
     def push(self, **namespace):
         return defer.execute(self.shell.update, namespace)
@@ -216,16 +248,27 @@ class EngineService(object, service.Service):
             pulledDeferreds = []
             for key in keys:
                 pulledDeferreds.append(defer.execute(self.shell.get,key))
-            d = gatherBoth(pulledDeferreds)
+            # This will fire on the first failure and log the rest.
+            d = gatherBoth(pulledDeferreds, 
+                           fireOnOneErrback=1,
+                           logErrors=1, 
+                           consumeErrors=1)
             return d
         else:
             return defer.execute(self.shell.get, keys[0])
     
     def pullNamespace(self, *keys):
-        ns = {}
+        pulledDeferreds = []
         for key in keys:
-            ns[key] = self.shell.get(key)
-        return defer.succeed(ns)
+            pulledDeferreds.append(defer.execute(self.shell.get, key))
+        d = gatherBoth(pulledDeferreds,
+                       fireOnOneErrback=1,
+                       logErrors=0,
+                       consumeErrors=1)
+        def toDict(values, keys):
+            return dict(zip(keys, values))
+        d.addCallback(toDict, keys)
+        return d
     
     def getResult(self, i=None):
         d = defer.execute(self.shell.getCommand, i)
@@ -273,25 +316,27 @@ class EngineService(object, service.Service):
             pulledDeferreds = []
             for key in keys:
                 d = defer.execute(self.shell.get,key)
-                d.addCallback(self._packItUp)
-                d.addErrback(self.handlePullProblems)
                 pulledDeferreds.append(d)
-            dList = gatherBoth(pulledDeferreds)               
-            return dList
+            # This will fire on the first failure and log the rest.
+            dList = gatherBoth(pulledDeferreds, 
+                              fireOnOneErrback=1,
+                              logErrors=0, 
+                              consumeErrors=1)
+            @dList.addCallback
+            def packThemUp(values):
+                serials = []
+                for v in values:
+                    try:
+                        serials = newserialized.serialize(v)
+                    except:
+                        return failure.Failure()
+                return dict(zip(keys, values))
+            return packThemUp
         else:
             key = keys[0]
             d = defer.execute(self.shell.get, key)
-            d.addCallback(self._packItUp)
-            d.addErrback(self.handlePullProblems)
+            d.addCallback(newserialized.serialize)
             return d
-    
-    def _packItUp(self, it):
-        unser = newserialized.UnSerialized(it)
-        return newserialized.ISerialized(unser)
-        
-    def handlePullProblems(self, reason):
-        reason.raiseException()
-        #return serialized.serialize(reason, 'FAILURE')
     
     
 class QueuedEngine(object):
@@ -329,6 +374,7 @@ class QueuedEngine(object):
         self.history = {}
         self.engineStatus = {}
         self.currentCommand = None
+        self.failureObservers = []
         
     # Queue management methods.  You should not call these directly
     
@@ -338,10 +384,14 @@ class QueuedEngine(object):
         d = defer.Deferred()
         cmd.setDeferred(d)
         if self.currentCommand is not None:
-            self.queued.append(cmd)
-            return d
-        self.currentCommand = cmd
-        self.runCurrentCommand()
+            if self.currentCommand.finished:
+                self.currentCommand = cmd
+                self.runCurrentCommand()
+            else:  # command is still running  
+                self.queued.append(cmd)
+        else:
+            self.currentCommand = cmd
+            self.runCurrentCommand()
         return d
     
     def runCurrentCommand(self):
@@ -368,15 +418,15 @@ class QueuedEngine(object):
     def saveResult(self, result):
         """Put the result in the history."""
         
-        self.history[result[1]] = result
+        self.history[result['commandIndex']] = result
         return result
     
     def finishCommand(self, result):
         """Finish currrent command."""
         
+        # The order of these commands is absolutely critical.
         self.currentCommand.handleResult(result)
-        del self.currentCommand
-        self.currentCommand = None
+        self.currentCommand.finished = True
         self._flushQueue()
         return result
     
@@ -385,12 +435,21 @@ class QueuedEngine(object):
         
         This eats the Failure but first passes it onto the Deferred that the 
         user has.
-        """
         
+        It also clear out the queue so subsequence commands don't run.
+        """
+
+        # The order of these 3 commands is absolutely critical.  The currentCommand
+        # must first be marked as finished BEFORE the queue is cleared and before
+        # the current command is sent the failure.
+        # Also, the queue must be cleared BEFORE the current command is sent the Failure
+        # otherwise the errback chain could trigger new commands to be added to the 
+        # queue before we clear it.  We should clear ONLY the commands that were in
+        # the queue when the error occured. 
+        self.currentCommand.finished = True
+        self.clearQueue()
         self.currentCommand.handleError(reason)
-        del self.currentCommand
-        self.currentCommand = None
-        self._flushQueue()
+        
         return None
     
     # methods from IEngineCore.
@@ -452,6 +511,12 @@ class QueuedEngine(object):
     def queueStatus(self):
         dikt = {'queue':map(repr,self.queued), 'pending':repr(self.currentCommand)}
         return defer.succeed(dikt)
+        
+    def registerFailureObserver(obs):
+        self.failureObservers.append(obs)
+    
+    def unregisterFailureObserver(obs):
+        self.failureObservers.remove(obs)
     
 
 # Now register QueuedEngine as an adpater class that makes an IEngineBase into a
@@ -474,6 +539,7 @@ class Command(object):
         self.remoteMethod = remoteMethod
         self.args = args
         self.kwargs = kwargs
+        self.finished = False
     
     def setDeferred(self, d):
         """Sets the deferred attribute of the Command."""  

@@ -30,7 +30,9 @@ from ipython1.test.util import DeferredTestCase
 from ipython1.test.completeenginetest import \
     IEngineCoreTestCase, \
     IEngineSerializedTestCase, \
-    IEngineQueuedTestCase
+    IEngineQueuedTestCase, \
+    FailingEngineService, \
+    FailingEngineError
     
 
 class BasicEngineServiceTest(DeferredTestCase,
@@ -57,6 +59,15 @@ class QueuedEngineServiceTest(DeferredTestCase,
     def tearDown(self):
         return self.rawEngine.stopService()
         
-
+class FailingEngineServiceTest(DeferredTestCase):
     
+    def setUp(self):
+        self.failingEngine = FailingEngineService()
+        self.engine = es.IEngineQueued(self.failingEngine)
+
+    def testFailingMethods(self):
+        dList = [self.engine.execute('a=5')]
+        for d in dList:
+            d.addErrback(lambda f: self.assertRaises(FailingEngineError, f.raiseException))
+        return defer.DeferredList(dList)
  

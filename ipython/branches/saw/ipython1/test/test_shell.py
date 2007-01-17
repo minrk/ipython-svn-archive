@@ -19,6 +19,8 @@ from twisted.trial import unittest
 from ipython1.core import shell
 from ipython1.kernel.error import NotDefined
 
+resultKeys = ('commandIndex', 'stdin', 'stdout', 'stderr')
+
 class BasicShellTest(unittest.TestCase):
 
     def setUp(self):
@@ -33,7 +35,7 @@ class BasicShellTest(unittest.TestCase):
             (5,"2.0*math.pi","6.2831853071795862\n","")]
         for c in commands:
             result = self.s.execute(c[1])
-            self.assertEquals(result, c)
+            self.assertEquals(result, dict(zip(resultKeys,c)))
             
     def testPutGet(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
@@ -41,10 +43,10 @@ class BasicShellTest(unittest.TestCase):
             self.s.put("key",o)
             value = self.s.get("key")
             self.assertEquals(value,o)
-        self.assertRaises(TypeError,self.s.put,10)
-        self.assertRaises(TypeError,self.s.get,10)
+        self.assertRaises(TypeError, self.s.put,10)
+        self.assertRaises(TypeError, self.s.get,10)
         self.s.reset()
-        self.assert_(isinstance(self.s.get("a"),NotDefined))
+        self.assertRaises(NameError, self.s.get, 'a')
         
     def testUpdate(self):
         d = {"a": 10, "b": 34.3434, "c": "hi there"}
@@ -57,8 +59,8 @@ class BasicShellTest(unittest.TestCase):
     def testCommand(self):
         self.assertRaises(IndexError,self.s.getCommand)
         self.s.execute("a = 5")
-        self.assertEquals(self.s.getCommand(),(0,"a = 5","",""))
-        self.assertEquals(self.s.getCommand(0),(0,"a = 5","",""))
+        self.assertEquals(self.s.getCommand(), dict(zip(resultKeys, (0,"a = 5","",""))))
+        self.assertEquals(self.s.getCommand(0), dict(zip(resultKeys, (0,"a = 5","",""))))
         self.s.reset()
         self.assertEquals(self.s.getLastCommandIndex(),-1)
         self.assertRaises(IndexError,self.s.getCommand)

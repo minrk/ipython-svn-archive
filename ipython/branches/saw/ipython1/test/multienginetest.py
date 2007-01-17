@@ -23,6 +23,8 @@ from ipython1.kernel.error import NotDefined
 from ipython1.test import util
 
 
+resultKeys = ('id', 'commandIndex', 'stdin', 'stdout', 'stderr')
+
 class IMultiEngineBaseTestCase(object):
     """Basic utilities for working with multiengine tests.
     
@@ -38,6 +40,7 @@ class IMultiEngineBaseTestCase(object):
             regDict = self.multiengine.registerEngine(es.QueuedEngine(e), None)
             e.id = regDict['id']
             self.engines.append(e)
+
 
 class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
     """A test for any object that implements IEngineMultiplexer.
@@ -68,20 +71,20 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         ]
         for d in l:
             self.assert_(isinstance(d, defer.Deferred))
-        return defer.DeferredList(l)
+        return defer.DeferredList(l, consumeErrors=1)
     
     def testExecute(self):
         self.addEngine(6)
-        commands = [(0,"a = 5","",""),
-            (1,"b = 10","",""),
-            (2,"c = a + b","",""),
-            (3,"print c","15\n",""),
-            (4,"import math","",""),
-            (5,"2.0*math.pi","6.2831853071795862\n","")]
+        commands = [(0, 0,"a = 5","",""),
+            (0, 1,"b = 10","",""),
+            (0, 2,"c = a + b","",""),
+            (0, 3,"print c","15\n",""),
+            (0, 4,"import math","",""),
+            (0, 5,"2.0*math.pi","6.2831853071795862\n","")]
         d = defer.succeed(None)
         for c in commands:
-            result = self.multiengine.execute(0, c[1])
-            d = self.assertDeferredEquals(result, [(0,)+c], d)
+            result = self.multiengine.execute(0, c[2])
+            d = self.assertDeferredEquals(result, [dict(zip(resultKeys, c))], d)
         return d
     
     def testPushPull(self):
@@ -93,8 +96,8 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
             value = self.multiengine.pull(0, 'key')
             d = self.assertDeferredEquals(value, [o] , d)
         self.multiengine.reset(0)
-        d1 = self.multiengine.pull(0, "a").addCallback(lambda nd:
-            self.assert_(isinstance(nd[0],NotDefined)))
+        d1 = self.multiengine.pull(0, "a")
+        d1.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
         return defer.DeferredList([d, d0, d1])
     
     def testPushPullSerialized(self):
@@ -123,9 +126,9 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         d = self.assertDeferredRaises(d, IndexError)
         d.addCallback(lambda _:self.multiengine.execute(0, "a = 5"))
         d.addCallback(lambda _:self.multiengine.getResult(0))
-        d = self.assertDeferredEquals(d,[(0, 0,"a = 5","","")])
+        d = self.assertDeferredEquals(d,[dict(zip(resultKeys, (0, 0,"a = 5","","")))])
         d.addCallback(lambda _:self.multiengine.getResult(0, 0))
-        d = self.assertDeferredEquals(d,[(0, 0,"a = 5","","")])
+        d = self.assertDeferredEquals(d,[dict(zip(resultKeys, (0, 0,"a = 5","","")))])
         d.addCallback(lambda _:self.multiengine.reset(0))
         return d
     

@@ -18,12 +18,13 @@ import sys
 import threading
 import signal
 
-from code import InteractiveConsole
+from code import InteractiveConsole, softspace
 from StringIO import StringIO
 
 from IPython.OutputTrap import OutputTrap
 
 from ipython1.kernel.error import NotDefined
+
 
 class InteractiveShell(InteractiveConsole):
     """The Basic IPython Shell class.  
@@ -78,8 +79,9 @@ class InteractiveShell(InteractiveConsole):
         self._stdin = []
         self._stdout = []
         self._stderr = []
-        self._namespace_lock = threading.Lock()
-        self._command_lock = threading.Lock()
+        self._tracebackTuple = None
+        #self._namespace_lock = threading.Lock()
+        #self._command_lock = threading.Lock()
         self.lastCommandIndex = -1
         # I am using this user defined signal to interrupt the currently 
         # running command.  I am not sure if this is the best way, but
@@ -103,20 +105,20 @@ class InteractiveShell(InteractiveConsole):
         """
         
         # Execute the code
-        self._namespace_lock.acquire()
+        #self._namespace_lock.acquire()
         self._trap.flush()
         self._trap.trap()
         self._runlines(lines)
         self.lastCommandIndex += 1
         self._trap.release()
-        self._namespace_lock.release()
+        #self._namespace_lock.release()
                 
         # Save stdin, stdout and stderr to lists
-        self._command_lock.acquire()
+        #self._command_lock.acquire()
         self._stdin.append(lines)
         self._stdout.append(self.prune_output(self._trap.out.getvalue()))
         self._stderr.append(self.prune_output(self._trap.err.getvalue()))
-        self._command_lock.release()
+        #self._command_lock.release()
 
     def prune_output(self, s):
         """Only return the first and last 1600 chars of stdout and stderr.
@@ -159,6 +161,29 @@ class InteractiveShell(InteractiveConsole):
         if more:
             self.push('\n')
 
+    def runcode(self, code):
+        """Execute a code object.
+
+        When an exception occurs, self.showtraceback() is called to
+        display a traceback.  All exceptions are caught except
+        SystemExit, which is reraised.
+
+        A note about KeyboardInterrupt: this exception may occur
+        elsewhere in this code, and may not always be caught.  The
+        caller should be prepared to deal with it.
+
+        """
+        try:
+            exec code in self.locals
+        except SystemExit:
+            raise
+        except:
+            self.showtraceback()
+            self._tracebackTuple = sys.exc_info()
+        else:
+            if softspace(sys.stdout, 0):
+                print
+
     ##################################################################
     # Methods that are a part of the official interface
     #
@@ -178,7 +203,11 @@ class InteractiveShell(InteractiveConsole):
     # Methods for running code
     
     def execute(self, lines):
+        self._tracebackTuple = None
         self._trapRunlines(lines)
+        if self._tracebackTuple is not None:
+            pass
+            #raise self._tracebackTuple
         return self.getCommand()
         
     # Methods for working with the namespace
@@ -198,52 +227,57 @@ class InteractiveShell(InteractiveConsole):
     def get(self, key):
         """Gets an item out of the self.locals dict by key.
         
-        What should this return if the key is not defined?  Currently, I return
-        a NotDefined() object.
+        Raise NameError if the object doesn't exist.
         
         I have often called this pull().  I still like that better.
         """
         
         if not isinstance(key, str):
             raise TypeError, "Objects must be keyed by strings."
-        self._namespace_lock.acquire()
-        result = self.locals.get(key, NotDefined(key))
-        self._namespace_lock.release()
-        return result
+        result = self.locals.get(key, None)
+        if result is None:
+            raise NameError('name %s is not defined' % key)
+        else:
+            return result
+
 
     def update(self, dictOfData):
         """Loads a dict of key value pairs into the self.locals namespace."""
         if not isinstance(dictOfData, dict):
             raise TypeError, "update() takes a dict object."
-        self._namespace_lock.acquire()
+        #self._namespace_lock.acquire()
         self.locals.update(dictOfData)
-        self._namespace_lock.release()
+        #self._namespace_lock.release()
         
     # Methods for getting stdout/stderr/stdin
            
     def reset(self):
         """Reset the InteractiveShell."""
         
-        self._command_lock.acquire()        
+        #self._command_lock.acquire()        
         self._stdin = []
         self._stdout = []
         self._stderr = []
         self.lastCommandIndex = -1
-        self._command_lock.release()
+        #self._command_lock.release()
 
-        self._namespace_lock.acquire()
+        #self._namespace_lock.acquire()
         # preserve id, mpi objects
         mpi = self.locals.get('mpi', None)
         id = self.locals.get('id', None)
         del self.locals
         self.locals = {'mpi': mpi, 'id': id}
-        self._namespace_lock.release()
+        #self._namespace_lock.release()
                 
     def getCommand(self,i=None):
         """Get the stdin/stdout/stderr of command i."""
         
-        self._command_lock.acquire()
+        #self._command_lock.acquire()
         
+        
+        if i is not None and not isinstance(i, int):
+            raise TypeError("Command index not an int: " + str(i))
+            
         if i in range(self.lastCommandIndex + 1):
             inResult = self._stdin[i]
             outResult = self._stdout[i]
@@ -259,17 +293,17 @@ class InteractiveShell(InteractiveConsole):
             outResult = None
             errResult = None
         
-        self._command_lock.release()
+        #self._command_lock.release()
         
         if inResult is not None:
-            return (cmdNum, inResult, outResult, errResult)
+            return dict(commandIndex=cmdNum, stdin=inResult, stdout=outResult, stderr=errResult)
         else:
-            raise IndexError, "Command with index does not exist."
+            raise IndexError("Command with index %s does not exist" % str(i))
             
     def getLastCommandIndex(self):
         """Get the index of the last command."""
-        self._command_lock.acquire()
+        #self._command_lock.acquire()
         ind = self.lastCommandIndex
-        self._command_lock.release()
+        #self._command_lock.release()
         return ind
 

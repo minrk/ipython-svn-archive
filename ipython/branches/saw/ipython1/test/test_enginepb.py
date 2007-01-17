@@ -15,9 +15,12 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
+
 from twisted.python import components
 from twisted.internet import reactor, defer
 from twisted.spread import pb
+from twisted.internet.base import DelayedCall
+DelayedCall.debug = True
 
 import zope.interface as zi
 
@@ -27,7 +30,7 @@ from ipython1.kernel.controllerservice import IControllerBase
 from ipython1.kernel.enginepb import \
     PBRemoteEngineRootFromService, \
     PBEngineClientFactory
-
+    
 from ipython1.test.completeenginetest import \
     IEngineCoreTestCase, \
     IEngineSerializedTestCase, \
@@ -45,7 +48,7 @@ class EnginePBTest(DeferredTestCase,
         self.services = []
         self.clients = []
         self.servers = []
-        
+
         # Start a server and append to self.servers
         self.sroot = PBRemoteEngineRootFromService(self)
         self.sf = pb.PBServerFactory(self.sroot)
@@ -90,7 +93,8 @@ class EnginePBTest(DeferredTestCase,
     def registerEngine(self, remoteEngine, id):
         self.engine = remoteEngine
         # This fires the callbackchain to allow the tests to run
-        reactor.callLater(0, self.setUpDeferred.callback, None)
+        # The time delay seems to be important
+        reactor.callLater(0.1, self.setUpDeferred.callback, None)
         return {'id':id}
     
     def unregisterEngine(self, id):

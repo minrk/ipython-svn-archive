@@ -60,17 +60,27 @@ class BlockingDeferred(object):
         """
         
         self.d.addBoth(self.gotResult)
+        self.d.addErrback(self.gotFailure)
+        
         while not self.finished:
             reactor.iterate(TIMEOUT)
             self.count += 1
-        if isinstance(self.d.result, failure.Failure):
-            self.d.result.raiseException()
+        
+        if isinstance(self.d.result, dict):
+            f = self.d.result.get('failure', None)
+            if isinstance(f, failure.Failure):
+                f.raiseException()
         else:
             return self.d.result
 
     def gotResult(self, result):
         self.finished = True
         return result
+        
+    def gotFailure(self, f):
+        self.finished = True
+        # Now make it look like a success so the failure isn't unhandled
+        return {'failure':f}
         
 def _parseResults(resultList):
     newResult = [r[1] for r in resultList]

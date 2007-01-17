@@ -16,14 +16,74 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-from twisted.internet import defer
+from twisted.internet import defer, reactor
+from twisted.python import failure
+from twisted.application import service
 import zope.interface as zi
 
 from ipython1.kernel import newserialized
 from ipython1.kernel import error 
 import ipython1.kernel.engineservice as es
 
+resultKeys = ('id', 'commandIndex', 'stdin', 'stdout', 'stderr')
 
+
+class FailingEngineError(Exception):
+    pass
+
+class FailingEngineService(object, service.Service):
+    """An EngineSerivce whose methods always raise FailingEngineError.
+    
+    This class is used in tests to see if errors propagate correctly.
+    """
+    
+    zi.implements(es.IEngineBase)
+                
+    def __init__(self, shellClass=None, mpi=None):
+        self.id = None
+    
+    def _setID(self, id):
+        self._id = id
+        
+    def _getID(self):
+        return self._id
+        
+    id = property(_getID, _setID)
+        
+    def startService(self):
+        pass
+            
+    def execute(self, lines):
+        return defer.fail(failure.Failure(FailingEngineError("error text")))
+
+    def push(self, **namespace):
+        return defer.fail(failure.Failure(FailingEngineError("error text")))
+
+    def pull(self, *keys):
+        return defer.fail(failure.Failure(FailingEngineError("error text")))
+    
+    def pullNamespace(self, *keys):
+        return defer.fail(failure.Failure(FailingEngineError("error text")))
+    
+    def getResult(self, i=None):
+        return defer.fail(failure.Failure(FailingEngineError("error text")))
+    
+    def reset(self):
+        return defer.fail(failure.Failure(FailingEngineError("error text")))
+    
+    def kill(self):
+        return defer.fail(failure.Failure(FailingEngineError("error text")))
+
+    def keys(self):
+        return defer.fail(failure.Failure(FailingEngineError("error text")))
+
+    def pushSerialized(self, **sNamespace):
+        return defer.fail(failure.Failure(FailingEngineError("error text")))
+    
+    def pullSerialized(self, *keys):
+        return defer.fail(failure.Failure(FailingEngineError("error text")))
+        
+        
 class IEngineCoreTestCase(object):
     """Test an IEngineCore implementer."""
 
@@ -66,25 +126,50 @@ class IEngineCoreTestCase(object):
             (self.engine.id, 3,"print c","15\n",""),
             (self.engine.id, 4,"import math","",""),
             (self.engine.id, 5,"2.0*math.pi","6.2831853071795862\n","")]
-        d = defer.succeed(None)
-        for c in commands:
-            result = self.engine.execute(c[2])
-            d = self.assertDeferredEquals(result, c, d)
+        # I tried getting these into a loop but the dependencies of the Deferred's
+        # were extremely buggy and wierd
+        d1 = self.engine.execute(commands[0][2])
+        d2 = self.assertDeferredEquals(d1, dict(zip(resultKeys,commands[0])))
+        d2.addCallback(lambda _: self.engine.execute(commands[1][2]))
+        d3 = self.assertDeferredEquals(d2, dict(zip(resultKeys,commands[1])))
+        d3.addCallback(lambda _: self.engine.execute(commands[2][2]))
+        d4 = self.assertDeferredEquals(d3, dict(zip(resultKeys,commands[2])))
+        d4.addCallback(lambda _: self.engine.execute(commands[3][2]))
+        d5 = self.assertDeferredEquals(d4, dict(zip(resultKeys,commands[3])))
+        d5.addCallback(lambda _: self.engine.execute(commands[4][2]))
+        d6 = self.assertDeferredEquals(d5, dict(zip(resultKeys,commands[4])))        
+        d6.addCallback(lambda _: self.engine.execute(commands[5][2]))
+        d7 = self.assertDeferredEquals(d6, dict(zip(resultKeys,commands[5])))
+        return d7    
+        
+    def testExecuteFailures(self):
+        d = self.engine.execute('a=1/0')
+        d.addErrback(lambda f: self.assertRaises(ZeroDivisionError, f.raiseException))
         return d
     
     def testPushPull(self):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
-        d = defer.succeed(None)
+        dList = []
         for o in objs:
-            self.engine.push(key=o)
-            value = self.engine.pull('key')
-            d = self.assertDeferredEquals(value, o, d)
+            d1 = self.engine.push(key=o)
+            d1.addCallback(lambda _: self.engine.pull('key'))
+            d1.addCallback(lambda r: self.assertEquals(r, o))
+            dList.append(d1)
+        d = defer.DeferredList(dList, consumeErrors=1)
         d.addCallback(lambda _:self.engine.reset())
         d.addCallback(lambda _: self.engine.pull("a"))
-        d.addCallback(lambda nd:
-            self.assert_(isinstance(nd,error.NotDefined)))
+        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
         return d
-    
+
+    def testSimplePushPull(self):
+        d = self.engine.push(a=10)
+        d.addCallback(lambda _: self.engine.pull('a'))
+        d.addCallback(lambda r: self.assertEquals(r, 10))
+        d.addCallback(lambda _: self.engine.push(b=10))
+        d.addCallback(lambda _: self.engine.pull('a'))
+        d.addCallback(lambda r: self.assertEquals(r, 10))        
+        return d
+        
     def testPushPullArray(self):
         try:
             import numpy
@@ -107,12 +192,15 @@ class IEngineCoreTestCase(object):
     
     def testGetResult(self):
         d = self.engine.getResult()
-        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
-        d.addCallback(lambda _:self.engine.execute("a = 5"))
-        d.addCallback(lambda _: self.engine.getResult())
-        d = self.assertDeferredEquals(d, (self.engine.id, 0,"a = 5","",""))
+        @d.addErrback
+        def nextd(f):
+            self.assertRaises(IndexError, f.raiseException)
+            return self.engine.execute('a = 5')
+        nextd.addCallback(lambda _: self.engine.getResult())
+        d = self.assertDeferredEquals(nextd, 
+            dict(zip(resultKeys, (self.engine.id, 0,"a = 5","",""))))
         d.addCallback(lambda _: self.engine.getResult(0))
-        d = self.assertDeferredEquals(d, (self.engine.id, 0,"a = 5","",""))
+        d = self.assertDeferredEquals(d, dict(zip(resultKeys, (self.engine.id, 0,"a = 5","",""))))
         return d
     
     def testKeys(self):
@@ -178,10 +266,14 @@ class IEngineQueuedTestCase(object):
         return D
             
     def testClearQueue(self):
-        return
+        #status = self.engine.queueStatus()
+        #d = self.assertDeferredEquals(status, {'queue':[], 'pending':'None'})
+        #return d
         result = self.engine.clearQueue()
-        d = self.assertDeferredEquals(result, True)
-        return d
+        d1 = self.assertDeferredEquals(result, True)
+        d1.addCallback(lambda _: self.engine.queueStatus())
+        d2 = self.assertDeferredEquals(d1, {'queue':[], 'pending':'None'})
+        return d2
         
     def testQueueStatus(self):
         result = self.engine.queueStatus()
