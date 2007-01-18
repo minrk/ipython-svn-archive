@@ -1,5 +1,9 @@
 2007-01-18  Fernando Perez  <Fernando.Perez@colorado.edu>
 
+	* ipython1/kernel/serialized.py (ArraySerialized.unpack): Add
+	.copy() to returned result to ensure arrays are properly writeable
+	after transmission.
+
 	* ipython1/kernel/controllervanilla.py
 	(RemoteController._pushModuleString): Fix small typo.
 

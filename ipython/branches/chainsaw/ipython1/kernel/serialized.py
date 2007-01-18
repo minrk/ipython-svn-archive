@@ -110,6 +110,9 @@ else:
         def unpack(self):
             result = numpy.frombuffer(self.package[3], dtype = self.package[2])
             result.shape = pickle.loads(self.package[1])
-            return result
+            # For now, do a copy because otherwise the result ends up being a
+            # read-only array (because the buffer we got was read-only).  We'll
+            # need to talk to Travis about ways to minimize these copies.
+            return result.copy()
         
     
