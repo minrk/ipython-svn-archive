@@ -35,7 +35,7 @@ __docformat__ = "restructuredtext en"
 
 import cPickle as pickle
 
-from twisted.python import components, log
+from twisted.python import components, log, failure
 from twisted.python.failure import Failure
 from twisted.spread import pb
 from twisted.internet import defer, reactor
@@ -292,7 +292,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     def packageFailure(self, f):
         f.cleanFailure()
         pString = pickle.dumps(f, 2)
-        return pString
+        return 'FAILURE:' + pString
     
     def remote_getID(self):
         return self.service.id
@@ -311,7 +311,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         try:
             namespace = pickle.loads(pNamespace)
         except:
-            return failure.Failure()
+            return defer.fail(failure.Failure()).addErrback(self.packageFailure)
         else:
             return self.service.push(**namespace).addErrback(self.packageFailure)
         
@@ -325,7 +325,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     def remote_getCollectorForKey(self, key):
         #log.msg("Creating a collector for key" + key)
         if self.collectors.has_key(key):
-            return self.packageFailure(failure.fail(failure.Failure( \
+            return self.packageFailure(defer.fail(failure.Failure( \
                 CollectorCollision("Collector for key %s already exists" % key))))
         coll = SerializedCollector()
         self.collectors[key] = coll
@@ -358,8 +358,10 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         
     def remote_pull(self, *keys):
         d = self.service.pull(*keys)
-        return d.addBoth(pickle.dumps, 2)
-    
+        d.addCallback(pickle.dumps, 2)
+        d.addErrback(self.packageFailure)
+        return d
+        
     # NOTE:  The paging version of pull is not being used right now  (BG 1/15/07).
     
     def remote_pullPaging(self, key, collector):
@@ -377,7 +379,9 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     
     def remote_pullNamespace(self, *keys):
         d = self.service.pullNamespace(*keys)
-        return d.addBoth(pickle.dumps, 2)
+        d.addCallback(pickle.dumps, 2)
+        d.addErrback(self.packageFailure)
+        return d
     
     #---------------------------------------------------------------------------
     # Other methods
@@ -420,6 +424,9 @@ components.registerAdapter(PBEngineReferenceFromService,
 # Now the server (Controller) side of things
 #-------------------------------------------------------------------------------
 
+class FailureUnpickleable(Exception):
+    pass
+
 class EngineFromReference(object):
     """Adapt a PBReference to an IEngineBase implementing object.
     
@@ -460,7 +467,7 @@ class EngineFromReference(object):
     #---------------------------------------------------------------------------
     
     def execute(self, lines):
-        return self.callRemote('execute', lines).addCallback(self.checkReturn)
+        return self.callRemote('execute', lines).addCallback(self.checkReturnForFailure)
 
     #---------------------------------------------------------------------------
     # push
@@ -470,10 +477,10 @@ class EngineFromReference(object):
         try:
             package = pickle.dumps(namespace, 2)
         except:
-            return failure.Failure()
+            return defer.fail(failure.Failure())
         else:
             d = self.callRemote('push', package)
-            return d.addCallback(self.checkReturn)
+            return d.addCallback(self.checkReturnForFailure)
             
     # Paging version
 
@@ -491,13 +498,13 @@ class EngineFromReference(object):
         try:
             serial = newserialized.serialize(obj)
         except:
-            return failure.Failure()
+            return defer.fail(failure.Failure())
         else:
             return self.pushPagingSerialized(key, serial)
     
     def pushPagingSerialized(self, key, serial):
         d = self.callRemote('getCollectorForKey', key)
-        d.addCallback(self.checkReturn)
+        d.addCallback(self.checkReturnForFailure)
         d.addCallback(self._beginPaging, serial, key) 
         return d
     
@@ -515,7 +522,9 @@ class EngineFromReference(object):
 
     def pullOld(self, *keys):
         d = self.callRemote('pull', *keys)
-        return d.addCallback(pickle.loads)
+        d.addCallback(self.checkReturnForFailure)
+        d.addCallback(pickle.loads)
+        return d
         
     # Paging version
         
@@ -547,25 +556,34 @@ class EngineFromReference(object):
     #---------------------------------------------------------------------------
     
     def pullNamespace(self, *keys):
-        return self.callRemote('pullNamespace', *keys).addCallback(pickle.loads)
+        d = self.callRemote('pullNamespace', *keys)
+        d.addCallback(self.checkReturnForFailure)
+        d.addCallback(pickle.loads)
+        return d
 
     #---------------------------------------------------------------------------
     # Other methods
     #---------------------------------------------------------------------------
     
     def getResult(self, i=None):
-        return self.callRemote('getResult', i).addCallback(self.checkReturn)
+        return self.callRemote('getResult', i).addCallback(self.checkReturnForFailure)
     
     def reset(self):
-        return self.callRemote('reset').addCallback(self.checkReturn)
+        return self.callRemote('reset').addCallback(self.checkReturnForFailure)
 
     def kill(self):
         #this will raise pb.PBConnectionLost on success
-        self.callRemote('kill').addErrback(self.killBack)
-        return defer.succeed(None)
+        d = self.callRemote('kill')
+        d.addCallback(self.checkReturnForFailure)
+        d.addErrback(self.killBack)
+        return d
+        
+    def killBack(self, f):
+        f.trap(pb.PBConnectionLost)
+        return None
 
     def keys(self):
-        return self.callRemote('keys').addCallback(self.checkReturn)
+        return self.callRemote('keys').addCallback(self.checkReturnForFailure)
     
     #---------------------------------------------------------------------------
     # push/pullSerialized
@@ -577,10 +595,10 @@ class EngineFromReference(object):
         try:
             package = pickle.dumps(namespace, 2)
         except:
-            return failure.Failure()
+            return defer.fail(failure.Failure())
         else:
             d = self.callRemote('pushSerialized', package)
-            return d.addCallback(self.checkReturn)
+            return d.addCallback(self.checkReturnForFailure)
        
     # The new paging version
     
@@ -596,32 +614,32 @@ class EngineFromReference(object):
         
     def pullSerialized(self, *keys):
         d = self.callRemote('pullSerialized', *keys)
-        return d.addCallback(pickle.loads)
+        d.addCallback(self.checkReturnForFailure)
+        d.addCallback(pickle.loads)
+        return d
 
     pushSerialized = pushSerializedOld
  
     #---------------------------------------------------------------------------
     # Misc
     #---------------------------------------------------------------------------
- 
-    def killBack(self, f):
-        try:
-            f.raiseException()
-        except pb.PBConnectionLost:
-            return
-    
-    def checkReturn(self, r):
-        """See if a returned value is a pickled object."""
+     
+    def checkReturnForFailure(self, r):
+        """See if a returned value is a pickled Failure object.
+        
+        To distinguish between general pickled objects and pickled Failures, the
+        other side should prepend the string FAILURE: to any pickled Failure.
+        """
         if isinstance(r, str):
-            try: 
-                result = pickle.loads(r)
-            except pickle.PickleError:
-                return r
-            else:
-                return result
-        else:
-            return r
-
+            if r.startswith('FAILURE:'):
+                try: 
+                    result = pickle.loads(r[8:])
+                except pickle.PickleError:
+                    return failure.Failure( \
+                        FailureUnpickleable("Could not unpickle failure."))
+                else:
+                    return result
+        return r
 
 components.registerAdapter(EngineFromReference,
     pb.RemoteReference,

@@ -16,6 +16,8 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
+import cPickle as pickle
+
 from twisted.internet import defer, reactor
 from twisted.python import failure
 from twisted.application import service
@@ -145,6 +147,20 @@ class IEngineCoreTestCase(object):
     def testExecuteFailures(self):
         d = self.engine.execute('a=1/0')
         d.addErrback(lambda f: self.assertRaises(ZeroDivisionError, f.raiseException))
+        d.addCallback(lambda _: self.engine.execute('print v'))
+        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addCallback(lambda _: self.engine.execute('a = 2**1000000'))
+        d.addErrback(lambda f: self.assertRaises(OverflowError, f.raiseException))
+        d.addCallback(lambda _: self.engine.execute('l=[];l[0]'))
+        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
+        d.addCallback(lambda _: self.engine.execute("d={};d['a']"))
+        d.addErrback(lambda f: self.assertRaises(KeyError, f.raiseException))
+        d.addCallback(lambda _: self.engine.execute("assert 1==0"))
+        d.addErrback(lambda f: self.assertRaises(AssertionError, f.raiseException))
+        d.addCallback(lambda _: self.engine.execute("import abababsdbfsbaljasdlja"))
+        d.addErrback(lambda f: self.assertRaises(ImportError, f.raiseException))
+        d.addCallback(lambda _: self.engine.execute("raise Exception()"))
+        d.addErrback(lambda f: self.assertRaises(Exception, f.raiseException))
         return d
     
     def testPushPull(self):
@@ -159,6 +175,16 @@ class IEngineCoreTestCase(object):
         d.addCallback(lambda _:self.engine.reset())
         d.addCallback(lambda _: self.engine.pull("a"))
         d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        return d
+
+    def testPushPullFailures(self):
+        d = self.engine.pull('a')
+        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addCallback(lambda _: self.engine.execute('l = lambda x: x'))
+        d.addCallback(lambda _: self.engine.pull('l'))
+        d.addErrback(lambda f: self.assertRaises(pickle.PicklingError, f.raiseException))
+        d.addCallback(lambda _: self.engine.push(l=lambda x: x))
+        d.addErrback(lambda f: self.assertRaises(pickle.PicklingError, f.raiseException))
         return d
 
     def testSimplePushPull(self):
@@ -189,7 +215,16 @@ class IEngineCoreTestCase(object):
         d.addCallback(lambda _: self.engine.pullNamespace(*ns.keys()))
         d = self.assertDeferredEquals(d,ns)
         return d
-    
+        
+    def testPullNamespaceFailures(self):
+        d = self.engine.push(a=10)
+        d.addCallback(lambda _: self.engine.pullNamespace('a', 'l'))
+        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addCallback(lambda _: self.engine.execute('l = lambda x: x'))
+        d.addCallback(lambda _: self.engine.pullNamespace('a', 'l'))
+        d.addErrback(lambda f: self.assertRaises(pickle.PicklingError, f.raiseException))
+        return d
+        
     def testGetResult(self):
         d = self.engine.getResult()
         @d.addErrback
@@ -206,7 +241,8 @@ class IEngineCoreTestCase(object):
     def testKeys(self):
         d = self.engine.keys()
         d.addCallback(lambda s: isinstance(s, list))
-        return self.assertDeferredEquals(d, True)
+        d.addCallback(lambda r: self.assertEquals(r, True))
+        return d
             
             
 class IEngineSerializedTestCase(object):

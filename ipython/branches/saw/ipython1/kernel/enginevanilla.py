@@ -747,7 +747,8 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
                 try:
                     s = newserialized.serialize(v)
                 except Exception, e:
-                    log.msg('You tried to push an unserializable type, ignoring: ' + k) 
+                    log.msg('You tried to push an unserializable type, ignoring: ' + k)
+                    self.pushFail(Failure())
                 else:
                     self.sendSerialized(s, k)
             self.finishPush()
