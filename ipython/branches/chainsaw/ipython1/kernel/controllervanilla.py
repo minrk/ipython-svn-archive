@@ -169,7 +169,7 @@ class RemoteController(RemoteControllerBase):
         
         self.pushAll(tar_fileString=fileString)
         self.executeAll("tar_file = open('%s','wb')" % \
-            tarball_name, block=False)
+            tarballName, block=False)
         self.executeAll("tar_file.write(tar_fileString)", block=False)
         self.executeAll("tar_file.close()", block=False)
         self.executeAll("import os", block=False)
