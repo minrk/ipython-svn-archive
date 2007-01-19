@@ -64,7 +64,6 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         self.multiengine.push(0, a=5),
         self.multiengine.push(0, a=5, b='asdf', c=[1,2,3]),
         self.multiengine.pull(0, 'a', 'b', 'c'),
-        self.multiengine.pullNamespace(0, 'qwer', 'asdf', 'zcxv'),
         self.multiengine.getResult(0),
         self.multiengine.reset(0),
         self.multiengine.keys(0)
@@ -85,6 +84,14 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         for c in commands:
             result = self.multiengine.execute(0, c[2])
             d = self.assertDeferredEquals(result, [dict(zip(resultKeys, c))], d)
+        return d
+    
+    def testExecuteFailures(self):
+        self.addEngine(4)
+        d = self.multiengine.execute(0, 'a=1/0')
+        d.addErrback(lambda f: self.assertRaises(ZeroDivisionError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.execute('all', 'a=1/0'))
+        d.addErrback(lambda f: self.assertRaises(ZeroDivisionError, f.raiseException))
         return d
     
     def testPushPull(self):
@@ -109,14 +116,6 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
             value = self.multiengine.pullSerialized(0, 'key')
             value.addCallback(lambda serial: newserialized.IUnSerialized(serial[0]).getObject())
             d = self.assertDeferredEquals(value,o,d)
-        return d
-    
-    def testPullNamespace(self):
-        self.addEngine(1)
-        ns = {'a':10,'b':"hi there",'c3':1.2342354,'door':{"p":(1,2)}}
-        d = self.multiengine.push(0, **ns)
-        d.addCallback(lambda _: self.multiengine.pullNamespace(0, *ns.keys()))
-        d = self.assertDeferredEquals(d,[ns])
         return d
     
     def testResult(self):

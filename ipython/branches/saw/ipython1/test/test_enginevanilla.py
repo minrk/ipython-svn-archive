@@ -109,11 +109,11 @@ class EngineVanillaTest(DeferredTestCase,
 enginevanilla doesn't propagate remote Failures properly.  Because
 enginevanilla is being depreciated, this will not be fixed.
 """
-    
-    def testPullNamespaceFailures(self):
+
+    def testPullSerializedFailures(self):
         pass
-    testPullNamespaceFailures.skip = \
-"""testPullNamespaceFailures is known to fail on enginevanilla because
+    testPullSerializedFailures.skip = \
+"""testPullSerializedFailures is known to fail on enginevanilla because
 enginevanilla doesn't propagate remote Failures properly.  Because
 enginevanilla is being depreciated, this will not be fixed.
 """

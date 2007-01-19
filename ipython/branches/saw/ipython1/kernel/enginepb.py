@@ -236,12 +236,6 @@ class IPBEngine(Interface):
         key has a problem, the Failure of that will be returned.
         """
 
-    def remote_pullNamespace(*keys):
-        """Pull a namespace of objects by key.
-        
-        Returns a deferred to a pickled dict of keys, object pairs.
-        """
-
     def remote_getResult(i=None):
         """Get result i.
         
@@ -301,7 +295,10 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         self.service.id = id
     
     def remote_execute(self, lines):
-        return self.service.execute(lines).addErrback(self.packageFailure)
+        d = self.service.execute(lines)
+        #d.addCallback(lambda r: log.msg("Got result: " + str(r)))
+        d.addErrback(self.packageFailure)
+        return d
         
     #---------------------------------------------------------------------------
     # Old version of push
@@ -372,17 +369,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         
     def _startPaging(self, serial, collector):
         pager = SerializedPager(collector, serial, chunkSize=CHUNK_SIZE)
-    
-    #---------------------------------------------------------------------------
-    # pullNamespace
-    #---------------------------------------------------------------------------
-    
-    def remote_pullNamespace(self, *keys):
-        d = self.service.pullNamespace(*keys)
-        d.addCallback(pickle.dumps, 2)
-        d.addErrback(self.packageFailure)
-        return d
-    
+        
     #---------------------------------------------------------------------------
     # Other methods
     #---------------------------------------------------------------------------
@@ -404,9 +391,13 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     #---------------------------------------------------------------------------
     
     def remote_pushSerialized(self, pNamespace):
-        namespace = pickle.loads(pNamespace)
-        d = self.service.pushSerialized(**namespace)
-        return d.addErrback(self.packageFailure)
+        try:
+            namespace = pickle.loads(pNamespace)
+        except:
+            return defer.fail(failure.Failure()).addErrback(self.packageFailure)
+        else:
+            d = self.service.pushSerialized(**namespace)
+            return d.addErrback(self.packageFailure)
     
     def remote_pullSerialized(self, *keys):
         d = self.service.pullSerialized(*keys)
@@ -550,16 +541,6 @@ class EngineFromReference(object):
             return d
                           
     pull = pullOld
-
-    #---------------------------------------------------------------------------
-    # pullNamespace
-    #---------------------------------------------------------------------------
-    
-    def pullNamespace(self, *keys):
-        d = self.callRemote('pullNamespace', *keys)
-        d.addCallback(self.checkReturnForFailure)
-        d.addCallback(pickle.loads)
-        return d
 
     #---------------------------------------------------------------------------
     # Other methods

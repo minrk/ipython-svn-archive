@@ -135,6 +135,9 @@ class UnSerializeIt(UnSerialized):
             if typeDescriptor == 'ndarray':
                 result = numpy.frombuffer(self.serialized.getData(), dtype = self.serialized.metadata['dtype'])
                 result.shape = self.serialized.metadata['shape']
+                # This is a hack to make the array writable.  We are working with
+                # the numpy folks to address this issue.
+                result = result.copy()
             elif typeDescriptor == 'pickle':
                 result = pickle.loads(self.serialized.getData())
             else:

@@ -169,7 +169,7 @@ class RemoteController(RemoteControllerBase):
         
         self.pushAll(tar_fileString=fileString)
         self.executeAll("tar_file = open('%s','wb')" % \
-            tarball_name, block=False)
+            tarballName, block=False)
         self.executeAll("tar_file.write(tar_fileString)", block=False)
         self.executeAll("tar_file.close()", block=False)
         self.executeAll("import os", block=False)
@@ -518,68 +518,6 @@ class RemoteController(RemoteControllerBase):
         See the docstring for `pull` for more details.
         """
         return self.pull('all', *keys)
-        
-    def pullNamespace(self, targets, *keys):
-        """Like `pull`, but returns a dict of key, value pairs.
-        
-        :Parameters:
-         - `targets`: The engine id(s) to pull from. Targets can be an int, 
-           list of ints, or the string 'all' to indicate all available engines.  
-           To see the current ids available on a controller use `getIDs()`.
-         - `*keys`: The name of the python objects to pull as positional 
-           arguments, like 'a', 'b', 'c'.
-        
-        :return:  For 1 target, returns a dict of key value pairs.  For >1
-            targets, a list of dicts of key, value pairs.
-        """
-        
-        targetstr = self._parseTargets(targets)
-        if not targetstr or not keys or not self._checkConnection():
-            print "Need something to do!"
-            return False
-        
-        multitargets = self._multiTargets(targets)
-        values = self.pull(targets, *keys)
-        if values == False:
-            # could be bad, but not *necessarily*
-            if multitargets or len(keys) > 1:
-                # definitely bad
-                return False
-            elif not self.execute(targets, ' '):
-                # check bad target failure
-                # probably do not want to do this 
-                return False
-        
-        if len(keys) > 1 and multitargets:
-            results = zip(*values)
-        elif multitargets:
-            results = values
-        elif len(keys) > 1:
-            results = [values]
-        else:
-            dikt = {}
-            dikt[keys[0]] = values
-            return dikt
-        returns = []
-        for r in results:
-            dikt = {}
-            if len(keys) == 1:
-                kv = ((keys[0], r),)
-            else:
-                kv = zip(keys, r)
-            for k,v in kv:
-                dikt[k] = v
-            returns.append(dikt)
-        if not multitargets:
-            returns = returns[0]
-        return returns
-            
-    def pullNamespaceAll(self, *keys):
-        """`pullNamespace` on all engines.
-        
-        See the docstring for `pullNamespace` for more details.
-        """
-        return self.pullNamespace('all', *keys)
             
     def getResult(self, targets, i=None):
         """Gets a result (#, stdin, stdout, stderr) from engine(s).
@@ -1968,9 +1906,6 @@ class IVanillaControllerFactory(Interface):
         
     def execute(self, targets, lines):
         """"""
-        
-    def pullNamespace(self, targets, *keys):
-        """"""
 
     def getResult(self, targets, i=None):
         """"""
@@ -2019,9 +1954,6 @@ class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
     def execute(self, targets, lines):
         d = self.service.execute(targets, lines)
         return d
-        
-    def pullNamespace(self, targets, *keys):
-        return self.service.pullNamespace(targets, *keys)
        
     def getResult(self, targets, i=None):
         return self.service.getResult(targets, i)

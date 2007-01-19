@@ -289,38 +289,7 @@ class VanillaEngineClientProtocol(protocols.EnhancedNetstringReceiver):
     def pullFail(self, reason):
         self._reset()
         self.sendString('PULL FAIL')
-    
-    #---------------------------------------------------------------------------
-    # The PULLNAMESPACE command
-    #---------------------------------------------------------------------------
-
-    def handle_PULLNAMESPACE(self, args):
-
-        keys = args.split(',')
-        self.nextHandler = self.handleUnexpectedData
-        d = self.factory.pullNamespace(*keys)
-        d.addCallbacks(self.handleNamespacePulled, self.pullNamespaceFail)
-        return d
-    
-    def handleNamespacePulled(self, namespace):
-        serialNS = {}
-        try:
-            for k,v in namespace.iteritems():
-                serialNS[k] = newserialized.serialize(v)
-        except Exception, e:
-            self.dieLoudly("serialization error: ", e)
-        for k, v in serialNS.iteritems():
-            self.sendSerialized(v, k)
-        self.pullNamespaceOK()
-    
-    def pullNamespaceOK(self):
-        self._reset()
-        self.sendString('PULLNAMESPACE OK')
-    
-    def pullNamespaceFail(self, reason):
-        self._reset()
-        self.sendString('PULLNAMESPACE FAIL')
-    
+        
     #---------------------------------------------------------------------------
     # The GETRESULT command
     #---------------------------------------------------------------------------
@@ -468,9 +437,6 @@ class VanillaEngineClientFactoryFromEngineService(protocols.EnhancedClientFactor
     
     def pull(self, *keys):
         return self.service.pull(*keys)
-    
-    def pullNamespace(self, *keys):
-        return self.service.pullNamespace(*keys)
     
     def getResult(self, i=None):
         return self.service.getResult(i)
@@ -805,38 +771,7 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
     def pullFail(self, reason):
         self._reset()
         return reason
-    
-    #---------------------------------------------------------------------------
-    # The PULLNAMESPACE command
-    #---------------------------------------------------------------------------
-    
-    def pullNamespace(self, *keys):
-        keyString = ','.join(keys)
-        self.sendString('PULLNAMESPACE %s' % keyString)
-        d = self.setupForIncomingSerialized('PULLNAMESPACE OK', 'PULLNAMESPACE FAIL')
-        d.addCallback(self.handlePulledNamespaceSerialized)
-        d.addErrback(self.pullNamespaceFail)
-        return d
-    
-    def handlePulledNamespaceSerialized(self, dictOfSerialized):
-        result = {}
-        for k, v in dictOfSerialized.iteritems():
-            try:
-                obj = newserialized.unserialize(v)
-            except:
-                log.msg('You pulled an unserializable type, ignoring: ' + k)
-            else:
-                result[k] = obj
-        self.pullNamespaceOK()
-        return result
-    
-    def pullNamespaceOK(self):
-        self._reset
-    
-    def pullNamespaceFail(self, reason):
-        self._reset()
-        return reason
-    
+
     #---------------------------------------------------------------------------
     # The GETRESULT command
     #---------------------------------------------------------------------------

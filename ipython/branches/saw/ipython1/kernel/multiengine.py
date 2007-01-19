@@ -86,13 +86,7 @@ class IEngineMultiplexer(Interface):
         
     def pullAll(*keys):
         """Pull from all targets."""
-    
-    def pullNamespace(targets, *keys):
-        """Pull from targets by keys as a dict namespace."""
-    
-    def pullNamespaceAll(*keys):
-        """Pull namespace from all targets."""
-        
+                
     def getResult(targets, i=None):
         """Get the result tuple for command i from targets."""
         
@@ -301,20 +295,6 @@ class MultiEngine(ControllerAdapterBase):
     
     def pullAll(self, *keys):
         return self.pull('all', *keys)
-    
-    def pullNamespace(self, targets, *keys):
-        log.msg("pulling from %s" % targets)
-        engines = self.engineList(targets)
-        dList = []
-        for e in engines:
-            dList.append(e.pullNamespace(*keys))
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)
-    
-    def pullNamespaceAll(self, *keys):
-        return pullNamespace('all', *keys)
     
     def getResult(self, targets, i=None):
         log.msg("getResult on %s" % targets)

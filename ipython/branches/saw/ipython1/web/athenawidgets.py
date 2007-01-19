@@ -313,6 +313,7 @@ class CommandWidget(athena.LiveElement, results.NotifierParent):
         idlist = parseTargets(targets)
         if not idlist or not keys:
             return self.fail(None)
+        # Pull namespace has gone away so this needs to be refactored!!!!!
         d = self.controller.pullNamespace(idlist, *keys)
         self.notify(None)
         return d.addCallbacks(self.pullOK, self.fail)

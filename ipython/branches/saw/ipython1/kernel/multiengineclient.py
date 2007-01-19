@@ -64,8 +64,6 @@ class RemoteControllerBase(object):
      * pushAll
      * pull
      * pullAll
-     * pullNamespace
-     * pullNamespaceAll
      * getResult
      * getResultAll
      * printResult
@@ -173,22 +171,7 @@ class RemoteControllerBase(object):
            raise
         else:
            print "push/pull OK"
-        
-        print "Testing push/pullNamespace"
-        try:
-            ns = {'a':5}
-            assert self.pushAll(**ns),"assert rc.pushAll(a=5)"
-            assert self.pullNamespace(0, 'a') == ns,"assert rc.pullNamespace(0, 'a') == {'a':5}"
-            assert self.pullNamespaceAll('a') == [ns]*len(ids),"assert rc.pullNamespaceAll('a') == [{'a':5}]*len(ids)"
-            ns['b'] = 6
-            ns['cd'] = 'asdf'
-            assert self.pushAll(**ns),"assert rc.pushAll(a=5, b=6, cd='asdf')"
-            assert self.pullNamespace(0, *ns.keys()) == ns,"assert rc.pullNamespace(0, *ns.keys()) == ns"
-            assert self.pullNamespaceAll(*ns.keys()) == [ns]*len(ids),"assert rc.pullNamespaceAll(*ns.keys) == [ns]*len(ids)"
-        except Exception, e:
-            print "pushAll/pullNamespace FAIL: ", e
-        else:
-            print "pushAll/pullNamespace OK"
+
            
 class RemoteControllerView(RemoteControllerBase):
     """A subset interface for RemoteController.__getitem__"""
@@ -243,13 +226,6 @@ class RemoteControllerView(RemoteControllerBase):
         if len(self._ids) is 1:
             r = [r]
         return r
-        
-    def pullNamespace(self, targets, *keys):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.pullNamespace(actualTargets, *keys)
-    
-    def pullNamespaceAll(self, *keys):
-        return self.pullNamespace('all', *keys)
         
     def getResult(self, targets, i=None):
         actualTargets = self._mapIDsToOriginal(targets)
@@ -396,9 +372,6 @@ class EngineProxy(object):
     
     def pull(self, *keys):
         return self.rc.pull(self.id, *keys)
-    
-    def pullNamespace(self, *keys):
-        return self.rc.pullNamespace(self.id, *keys)
 
     def getResult(self, i=None):
         return self.rc.getResult(self.id, i)

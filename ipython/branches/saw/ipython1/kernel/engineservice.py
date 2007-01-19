@@ -94,14 +94,6 @@ class IEngineCore(zi.Interface):
         Raises NameError is any one of objects does not exist.
         """
     
-    def pullNamespace(*keys):
-        """Pulls values by key from user's namespace as dict.
-        
-        Returns a defered to a dict of key/value pairs.
-        
-        Raises NameError if any one of the objects does not exist.
-        """
-    
     def getResult(i=None):
         """Get the stdin/stdout/stderr of command i.
         
@@ -257,19 +249,6 @@ class EngineService(object, service.Service):
         else:
             return defer.execute(self.shell.get, keys[0])
     
-    def pullNamespace(self, *keys):
-        pulledDeferreds = []
-        for key in keys:
-            pulledDeferreds.append(defer.execute(self.shell.get, key))
-        d = gatherBoth(pulledDeferreds,
-                       fireOnOneErrback=1,
-                       logErrors=0,
-                       consumeErrors=1)
-        def toDict(values, keys):
-            return dict(zip(keys, values))
-        d.addCallback(toDict, keys)
-        return d
-    
     def getResult(self, i=None):
         d = defer.execute(self.shell.getCommand, i)
         d.addCallback(self.addIDToResult)
@@ -329,7 +308,7 @@ class EngineService(object, service.Service):
                     try:
                         serials = newserialized.serialize(v)
                     except:
-                        return failure.Failure()
+                        return defer.fail(failure.Failure())
                 return dict(zip(keys, values))
             return packThemUp
         else:
@@ -462,9 +441,6 @@ class QueuedEngine(object):
     
     def pull(self, *keys):
         return self.submitCommand(Command('pull', *keys))
-    
-    def pullNamespace(self, *keys):
-        return self.submitCommand(Command('pullNamespace', *keys))
         
     def getResult(self, i=None):
         if i is None:

@@ -70,7 +70,7 @@ class IControllerCore(Interface):
             and IEngineQueued
         id: requested id
         
-        Returns a dict of {'id':id, 'MAX_MESSAGE_SIZE':MAX_MESSAGE_SIZE}.
+        Returns a dict of {'id':id} and possibly other key, value pairs..
         """
     
     def unregisterEngine(id):

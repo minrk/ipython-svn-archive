@@ -63,10 +63,7 @@ class FailingEngineService(object, service.Service):
 
     def pull(self, *keys):
         return defer.fail(failure.Failure(FailingEngineError("error text")))
-    
-    def pullNamespace(self, *keys):
-        return defer.fail(failure.Failure(FailingEngineError("error text")))
-    
+        
     def getResult(self, i=None):
         return defer.fail(failure.Failure(FailingEngineError("error text")))
     
@@ -107,7 +104,6 @@ class IEngineCoreTestCase(object):
     def testIEngineCoreDeferreds(self):
         commands = [(self.engine.execute, ('a=5',)), 
             (self.engine.pull, ('a',)),
-            (self.engine.pullNamespace, ('a',)),
             (self.engine.getResult, ()),
             (self.engine.keys, ())]
         dList = []
@@ -208,23 +204,7 @@ class IEngineCoreTestCase(object):
         d.addCallback(lambda b: b==a)
         d.addCallback(lambda c: c.all())
         return self.assertDeferredEquals(d, True)
-    
-    def testPullNamespace(self):
-        ns = {'a':10,'b':"hi there",'c3':1.2342354,'door':{"p":(1,2)}}
-        d = self.engine.push(**ns)
-        d.addCallback(lambda _: self.engine.pullNamespace(*ns.keys()))
-        d = self.assertDeferredEquals(d,ns)
-        return d
-        
-    def testPullNamespaceFailures(self):
-        d = self.engine.push(a=10)
-        d.addCallback(lambda _: self.engine.pullNamespace('a', 'l'))
-        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
-        d.addCallback(lambda _: self.engine.execute('l = lambda x: x'))
-        d.addCallback(lambda _: self.engine.pullNamespace('a', 'l'))
-        d.addErrback(lambda f: self.assertRaises(pickle.PicklingError, f.raiseException))
-        return d
-        
+            
     def testGetResult(self):
         d = self.engine.getResult()
         @d.addErrback
@@ -278,6 +258,14 @@ class IEngineSerializedTestCase(object):
             d = self.assertDeferredEquals(value,o,d)
         return d
 
+    def testPullSerializedFailures(self):
+        d = self.engine.pullSerialized('a')
+        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addCallback(lambda _: self.engine.execute('l = lambda x: x'))
+        d.addCallback(lambda _: self.engine.pullSerialized('l'))
+        d.addErrback(lambda f: self.assertRaises(pickle.PicklingError, f.raiseException))
+        return d
+
 class IEngineQueuedTestCase(object):
     """Test an IEngineCore implementer."""
         
@@ -302,9 +290,6 @@ class IEngineQueuedTestCase(object):
         return D
             
     def testClearQueue(self):
-        #status = self.engine.queueStatus()
-        #d = self.assertDeferredEquals(status, {'queue':[], 'pending':'None'})
-        #return d
         result = self.engine.clearQueue()
         d1 = self.assertDeferredEquals(result, True)
         d1.addCallback(lambda _: self.engine.queueStatus())

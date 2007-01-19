@@ -25,9 +25,8 @@ from ipython1.kernel import serialized
 
 def parseResults(results):
     """Pull out results/Failures from a DeferredList."""
-    
     return [x[1] for x in results]
-
+        
 def gatherBoth(dlist, fireOnOneCallback=0, 
                       fireOnOneErrback=0,
                       consumeErrors=0,
@@ -35,14 +34,8 @@ def gatherBoth(dlist, fireOnOneCallback=0,
     """This is like gatherBoth, but sets consumeErrors=1."""
     d = DeferredList(dlist, fireOnOneCallback, fireOnOneErrback,
                      consumeErrors, logErrors)
-    d.addCallback(parseResults)
-    return d
-
-def gatherResultsOrRaiseFirstErrorAndLog(dlist):
-    d = defer.DeferredList(dlist, fireOnOneErrback=True)
-    d.addCallback(parseResults)
-    for x in dlist:
-        x.addErrback(log.err)
+    if not fireOnOneCallback:
+        d.addCallback(parseResults)
     return d
 
 SUCCESS = True

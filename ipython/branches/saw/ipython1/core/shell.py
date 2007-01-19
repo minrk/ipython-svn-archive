@@ -206,8 +206,7 @@ class InteractiveShell(InteractiveConsole):
         self._tracebackTuple = None
         self._trapRunlines(lines)
         if self._tracebackTuple is not None:
-            pass
-            #raise self._tracebackTuple
+            raise self._tracebackTuple
         return self.getCommand()
         
     # Methods for working with the namespace

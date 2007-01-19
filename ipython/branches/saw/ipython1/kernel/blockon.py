@@ -40,6 +40,34 @@ from twisted.internet import reactor
 from twisted.python import failure
 from twisted.internet import defer
 
+from ipython1.kernel.util import gatherBoth
+
+
+#-------------------------------------------------------------------------------
+# Manage the reactor
+#-------------------------------------------------------------------------------
+
+def startReactor():
+    """Initialize the twisted reactor, but don't start its main loop."""
+    if not reactor.running:
+        reactor.startRunning()
+    
+def stopReactor():
+    """Stop the twisted reactor when its main loop isn't running."""
+    if reactor.running:
+        reactor.callLater(0, reactor.stop)
+        while reactor.running:
+            reactor.iterate(TIMEOUT)
+
+# The reactor must be stopped before Python quits or it will hang
+from atexit import register
+register(stopReactor)
+
+
+#-------------------------------------------------------------------------------
+# Implementation of the blocking mechanism
+#-------------------------------------------------------------------------------
+
 TIMEOUT = 0.05                  # Set the timeout for poll/select
 
 class BlockingDeferred(object):
@@ -82,14 +110,19 @@ class BlockingDeferred(object):
         # Now make it look like a success so the failure isn't unhandled
         return {'failure':f}
         
-def _parseResults(resultList):
-    newResult = [r[1] for r in resultList]
-    if len(newResult) == 1:
-        return newResult[0]
-    else:
-        return newResult
         
-def blockOn(*deferredList):
+def _parseResults(result):
+    if isinstance(result, (list, tuple)):
+        if len(result) == 1:
+            return result[0]
+        else:
+            return result
+    else:
+        return result
+        
+        
+def blockOn(deferredList, fireOnOneCallback=0, fireOnOneErrback=0,
+            consumeErrors=0):
     """Make a Deferred look synchronous.
     
     Given a Deferred object, this will run the Twisted event look until
@@ -105,22 +138,21 @@ def blockOn(*deferredList):
     >>> blockOn(d0, d1, d2)
     ['this', 'is', 'heresy']
     """
+    if isinstance(deferredList, defer.Deferred):
+        deferredList = [deferredList]
     
-    d = defer.DeferredList(deferredList, consumeErrors=True)
-    d.addCallback(_parseResults)
+    d = gatherBoth(deferredList,
+                   fireOnOneCallback, 
+                   fireOnOneErrback,
+                   consumeErrors,
+                   logErrors=0)
+    if not fireOnOneCallback:
+        d.addCallback(_parseResults)
     bd = BlockingDeferred(d)
     return bd.blockOn()
     
-def startReactor():
-    """Initialize the twisted reactor, but don't start its main loop."""
-    if not reactor.running:
-        reactor.startRunning()
-    
-def stopReactor():
-    """Stop the twisted reactor when its main loop isn't running."""
-    if reactor.running:
-        reactor.callLater(0, reactor.stop)
-        while reactor.running:
-            reactor.iterate(TIMEOUT)
-    
+
+# Start the reactor
 startReactor()
+
+

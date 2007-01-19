@@ -52,10 +52,27 @@ class IControllerCoreTestCase(object):
         engine = es.EngineService()
         qengine = es.QueuedEngine(engine)
         regDict = self.controller.registerEngine(qengine, 0)
-        # Do more complete testing of regDict registering multiple engines here
         self.assert_(isinstance(regDict, dict))
+        self.assert_(regDict.has_key('id'))
+        self.assert_(regDict['id']==0)
         self.controller.unregisterEngine(0)
         self.assert_(self.controller.engines.get(0, None) == None)
-        
-        
-        
+
+    def testRegisterUnregisterMultipleEngines(self):
+        e1 = es.EngineService()
+        qe1 = es.QueuedEngine(e1)
+        e2 = es.EngineService()
+        qe2 = es.QueuedEngine(e2)
+        rd1 = self.controller.registerEngine(qe1, 0)
+        self.assertEquals(rd1['id'], 0)
+        rd2 = self.controller.registerEngine(qe2, 1)
+        self.assertEquals(rd2['id'], 1)
+        self.controller.unregisterEngine(0)
+        rd1 = self.controller.registerEngine(qe1, 0)
+        self.assertEquals(rd1['id'], 0)
+        self.controller.unregisterEngine(1)
+        rd2 = self.controller.registerEngine(qe2, 0)
+        self.assertEquals(rd2['id'], 1)
+        self.controller.unregisterEngine(0)
+        self.controller.unregisterEngine(1)
+        self.assertEquals(self.controller.engines,{})
