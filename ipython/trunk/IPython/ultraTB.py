@@ -248,6 +248,8 @@ class ListTB(TBTools):
         TBTools.__init__(self,color_scheme = color_scheme,call_pdb=0)
         
     def __call__(self, etype, value, elist):
+        Term.cout.flush()
+        Term.cerr.flush()
         print >> Term.cerr, self.text(etype,value,elist)
 
     def text(self,etype, value, elist,context=5):
@@ -716,6 +718,8 @@ class VerboseTB(TBTools):
     def handler(self, info=None):
         (etype, evalue, etb) = info or sys.exc_info()
         self.tb = etb
+        Term.cout.flush()
+        Term.cerr.flush()
         print >> Term.cerr, self.text(etype, evalue, etb)
 
     # Changed so an instance can just be called as VerboseTB_inst() and print
@@ -833,6 +837,8 @@ class AutoFormattedTB(FormattedTB):
         
         if out is None:
             out = Term.cerr
+        Term.cout.flush()
+        out.flush()
         if tb_offset is not None:
             tb_offset, self.tb_offset = self.tb_offset, tb_offset
             print >> out, self.text(etype, evalue, etb)
