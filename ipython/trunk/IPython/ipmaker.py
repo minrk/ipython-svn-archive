@@ -431,8 +431,6 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     rcfiledata = None
     if opts_all.quick:
         print 'Launching IPython in quick mode. No config file read.'
-    elif opts_all.classic:
-        print 'Launching IPython in classic mode. No config file read.'
     elif opts_all.rcfile:
         try:
             cfg_loader = ConfigLoader(conflict)
