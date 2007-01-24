@@ -485,7 +485,14 @@ class QueuedEngine(object):
         return defer.succeed(True)
     
     def queueStatus(self):
-        dikt = {'queue':map(repr,self.queued), 'pending':repr(self.currentCommand)}
+        if self.currentCommand is not None:
+            if self.currentCommand.finished:
+                pending = repr(None)
+            else:
+                pending = repr(self.currentCommand)
+        else:
+            pending = repr(None)
+        dikt = {'queue':map(repr,self.queued), 'pending':pending}
         return defer.succeed(dikt)
         
     def registerFailureObserver(obs):

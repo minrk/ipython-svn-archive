@@ -39,7 +39,6 @@ from twisted.python import components, log, failure
 from twisted.python.failure import Failure
 from twisted.spread import pb
 from twisted.internet import defer, reactor
-from twisted.spread import banana
 from twisted.internet.interfaces import IProtocolFactory
 from zope.interface import Interface, implements, Attribute
 from twisted.spread.util import Pager, StringPager, CallbackPageCollector
@@ -47,6 +46,8 @@ from twisted.spread.util import Pager, StringPager, CallbackPageCollector
 from twisted.internet.base import DelayedCall
 DelayedCall.debug = True
 
+import ipython1.kernel.pbconfig
+from ipython1.kernel.pbconfig import CHUNK_SIZE
 from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import newserialized
 from ipython1.kernel import controllerservice, protocols
@@ -55,19 +56,7 @@ from ipython1.kernel.engineservice import \
     IEngineBase, \
     IEngineQueued, \
     EngineService
-    
-#-------------------------------------------------------------------------------
-# This is where you configure the size limit of the banana protocol that
-# PB uses.  WARNING, this only works if you are NOT using cBanana, which is
-# faster than banana.py.  
-#-------------------------------------------------------------------------------
-    
-#banana.SIZE_LIMIT = 640*1024           # The default of 640 kB
-banana.SIZE_LIMIT = 50*1024*1024       # 10 MB
-#banana.SIZE_LIMIT = 50*1024*1024       # 50 MB
-    
-CHUNK_SIZE = 64*1024
-    
+
 
 #-------------------------------------------------------------------------------
 # Classes to enable paging of large objects

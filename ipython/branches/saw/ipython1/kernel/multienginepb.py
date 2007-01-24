@@ -7,12 +7,6 @@ is that PB doesn't allow arbitrary objects to be sent over the wire - only
 basic Python types.  To get around this we simple pickle more complex objects
 on boths side of the wire.  That is the main thing these classes have to 
 manage.
-
-To do:
-
- * remote_addNotifier is not in the ControllerService implem. or interf.
- * PBNotifierChild need documentation.
- * How are objects moving through PB?
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -36,6 +30,7 @@ from twisted.python.failure import Failure
 from twisted.spread import pb
 from zope.interface import Interface, implements
 
+import ipython1.kernel.pbconfig
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
 from ipython1.kernel.blockon import blockOn
 from ipython1.kernel.util import gatherBoth
