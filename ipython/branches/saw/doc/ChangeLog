@@ -1,3 +1,61 @@
+
+2006-01-24  Brian Granger <ellisonbg@gmail.com>
+
+	This covers commits over the last month and a half.  During this
+	time the mainline development has moved to the saw branch.  From 
+	here out, the saw branch should be used.  However, it should be noted
+	that certain things that worked in the chainsaw branch are being
+	depreciated in the saw branch:
+	
+	* All the vanilla protocols are being depreciated.  This is because
+	they do not propagate errors properly.  With this said, they should
+	still work for most things our interactive RemoteController class
+	still uses this protocol.  Until we have a full PB or XML-RPC
+	replacement for this client, the vanilla client will remain the
+	default in kernel.api.  
+	
+	* The global setting of a MAX_MESSAGE_SIZE variable for network
+	protocols.  Currently, this should be set internally to each specific
+	network protocol.  I have created a pbconfig.py file that sets it 
+	for any PB users.
+	
+	The saw branch has significant changes to the way errors are handled:
+	
+	* Errors are now propagated fully in the PB protocols and we now have
+	tests to make sure that errors do propagate properly.
+	
+	* Our error propagation mechanism insures that the type of the 
+	exception in preserved and that *some* reasonable message is given
+	to the user.  The message still needs work though.
+	
+	* Remote exceptions should always raise in the users namespace.
+	
+	* Exceptions are always agressive.  If one of many actions fail they the
+	overall action will fail upon the first failure.
+	
+	* A failure in a QueuedEngine method will clear the queue of any pending 
+	commands.
+	
+	Design and API changes:
+	
+	* The controller has been factored into downward (towards the engines) and upward
+	(towards the client) interfaces.  This is done to make it easy to adapt the basic
+	controller to different interfaces.  Our current one is the multiengine interface.
+	
+	* The notification API has been completely removed from the controller.  Different
+	controller interfaces should add this in as needed.
+	
+	New Features:
+	
+	* New blockon modules that makes Deferreds synchronous.
+	
+	* New PB client that uses blockon.
+	
+	* Many new tests.
+	
+	* New testing tools that integrate doctests and unittests and allow IPython code
+	to be tested :)
+
 2006-11-13  Fernando Perez  <Fernando.Perez@colorado.edu>
 
 	* ipython1/kernel/controllervanilla.py (RemoteController.execute):
@@ -20,48 +78,48 @@
 
 2006-04-10  Brian Granger <ellisonbg@gmail.com>
  
-        * ipython1/test: Setup a test directory as a sub-module of
-        ipython1.  This makes it possible to test ipython1 using Twisted's
-        trial command:
+    * ipython1/test: Setup a test directory as a sub-module of
+    ipython1.  This makes it possible to test ipython1 using Twisted's
+    trial command:
 
-        trial ipython1
+    trial ipython1
 
-        This command will find and run the unittests in the test module 
-        in files named tests_*.py.  Most importantly, it will manage the 
-        Twisted reactor and deferreds.  I have written initial tests for 
-        ipython1.core.shell.py.
+    This command will find and run the unittests in the test module 
+    in files named tests_*.py.  Most importantly, it will manage the 
+    Twisted reactor and deferreds.  I have written initial tests for 
+    ipython1.core.shell.py.
 
-        * ipython1/kernel: I have begun to write the code for the two process 
-        kernel.  I need to write unittests for this stuff.
+    * ipython1/kernel: I have begun to write the code for the two process 
+    kernel.  I need to write unittests for this stuff.
 
 2006-04-03  Brian Granger <ellisonbg@gmail.com>
 
-        * core/shell.py: Began to rework the TrappingInteractiveConsole class
-        into something that will become the IPython core.
+    * core/shell.py: Began to rework the TrappingInteractiveConsole class
+    into something that will become the IPython core.
 
 2006-02-14  Brian Granger <ellisonbg@gmail.com>
 
-        * kernel_client.py: Added a block property to the InteractiveCluster
-        class.  When this is set, calls to execute() will block and print
-        stdin/stdout/stderr.  It also sets the block attribute on the 
-        RemoteKernels in the cluster.
+    * kernel_client.py: Added a block property to the InteractiveCluster
+    class.  When this is set, calls to execute() will block and print
+    stdin/stdout/stderr.  It also sets the block attribute on the 
+    RemoteKernels in the cluster.
 
-        * kernel_client.py: Renamed "worker" and "workers" to "kernel"
-        and "kernels" to better reflect the naming of things.
+    * kernel_client.py: Renamed "worker" and "workers" to "kernel"
+    and "kernels" to better reflect the naming of things.
         
-        * kernel_magic.py: Made block=False by default for auto-executed
-        code.
+    * kernel_magic.py: Made block=False by default for auto-executed
+    code.
 
 2006-02-11  Brian Granger <ellisonbg@gmail.com>
 
-        * Renamed vectorfunction.py to parallelfunction.py
+    * Renamed vectorfunction.py to parallelfunction.py
 
-        * parallelfunction.py, README, kernelclient.py: Renamed all usages
-        of VectorFunction to ParallelFunction to better reflect what it does.
+    * parallelfunction.py, README, kernelclient.py: Renamed all usages
+    of VectorFunction to ParallelFunction to better reflect what it does.
 
-        * kernelclient.py: Fixed intermodule imports.
+    * kernelclient.py: Fixed intermodule imports.
 
 2006-02-11  Brian Granger <ellisonbg@gmail.com>
 
-        * ChangeLog: Started the ChangeLog for ipython1.
+    * ChangeLog: Started the ChangeLog for ipython1.
 
