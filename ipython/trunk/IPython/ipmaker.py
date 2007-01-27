@@ -162,7 +162,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                     'separate_out2|so2=s xmode=s wildcards_case_sensitive! '
                     'magic_docstrings system_verbose! '
                     'multi_line_specials! '
-                    'wxversion=s '
+                    'term_title! wxversion=s '
                     'autoedit_syntax!')
 
     # Options that can *only* appear at the cmd line (not in rcfiles).
@@ -225,6 +225,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
                       q4thread = 0,
                       wthread = 0,
                       pylab = 0,
+                      term_title = 1,
                       tk = 0,
                       upgrade = 0,
                       Version = 0,
