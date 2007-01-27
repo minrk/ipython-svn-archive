@@ -61,13 +61,9 @@ from doctest import *
 
 import IPython
 
-# Disable terminal title setting, which confuses doctest.  This must be done
-# BEFORE making the actual ipython instance
-IPython.platutils.set_term_title = lambda x: None # make it a no-op
-
 # Hack to restore __main__, which ipython modifies upon startup
 _main = sys.modules.get('__main__')
-ipython = IPython.Shell.IPShell(['--classic']).IP
+ipython = IPython.Shell.IPShell(['--classic','--noterm_title']).IP
 sys.modules['__main__'] = _main
 
 # Deactivate the various python system hooks added by ipython for
@@ -78,11 +74,27 @@ sys.excepthook = sys.__excepthook__
 # So that ipython magics and aliases can be doctested
 __builtin__._ip = IPython.ipapi.get()
 
+
+# runner
+from IPython.irunner import IPythonRunner
+iprunner = IPythonRunner(echo=False)
+
 ###########################################################################
 
 # A simple subclassing of the original with a different class name, so we can
 # distinguish and treat differently IPython examples from pure python ones.
 class IPExample(doctest.Example): pass
+
+class IPExternalExample(doctest.Example):
+    """Doctest examples to be run in an external process."""
+    
+    def __init__(self, source, want, exc_msg=None, lineno=0, indent=0,
+                 options=None):
+        # Parent constructor
+        doctest.Example.__init__(self,source,want,exc_msg,lineno,indent,options)
+
+        # An EXTRA newline is needed to prevent pexpect hangs
+        self.source += '\n'
 
 class IPDocTestParser(doctest.DocTestParser):
     """
@@ -150,6 +162,8 @@ class IPDocTestParser(doctest.DocTestParser):
         output = []
         charno, lineno = 0, 0
 
+        # Whether to convert the input from ipython to python syntax
+        ip2py = False
         # Find all doctest examples in the string.  First, try them as Python
         # examples, then as IPython ones
         terms = list(self._EXAMPLE_RE_PY.finditer(string))
@@ -157,9 +171,16 @@ class IPDocTestParser(doctest.DocTestParser):
             # Normal Python example
             Example = doctest.Example
         else:
-            # It's an ipython example
+            # It's an ipython example.  Note that IPExamples are run
+            # in-process, so their syntax must be turned into valid python.
+            # IPExternalExamples are run out-of-process (via pexpect) so they
+            # don't need any filtering (a real ipython will be executing them).
             terms = list(self._EXAMPLE_RE_IP.finditer(string))
-            Example = IPExample
+            if re.search(r'#\s*ipython-doctest:\s*EXTERNAL',string):
+                Example = IPExternalExample
+            else:
+                Example = IPExample
+                ip2py = True
         
         for m in terms:
             # Add the pre-example text to `output`.
@@ -168,13 +189,15 @@ class IPDocTestParser(doctest.DocTestParser):
             lineno += string.count('\n', charno, m.start())
             # Extract info from the regexp match.
             (source, options, want, exc_msg) = \
-                     self._parse_example(m, name, lineno)
+                     self._parse_example(m, name, lineno,ip2py)
+            if Example is IPExternalExample:
+                options[doctest.NORMALIZE_WHITESPACE] = True
             # Create an Example, and add it to the list.
             if not self._IS_BLANK_OR_COMMENT(source):
                 output.append(Example(source, want, exc_msg,
-                                    lineno=lineno,
-                                    indent=min_indent+len(m.group('indent')),
-                                    options=options))
+                                      lineno=lineno,
+                                      indent=min_indent+len(m.group('indent')),
+                                      options=options))
             # Update lineno (lines inside this example)
             lineno += string.count('\n', m.start(), m.end())
             # Update charno.
@@ -184,7 +207,7 @@ class IPDocTestParser(doctest.DocTestParser):
 
         return output
 
-    def _parse_example(self, m, name, lineno):
+    def _parse_example(self, m, name, lineno,ip2py=False):
         """
         Given a regular expression match from `_EXAMPLE_RE` (`m`),
         return a pair `(source, want)`, where `source` is the matched
@@ -194,7 +217,12 @@ class IPDocTestParser(doctest.DocTestParser):
 
         `name` is the string's name, and `lineno` is the line number
         where the example starts; both are used for error messages.
+
+        Optional:
+        `ip2py`: if true, filter the input via IPython to convert the syntax
+        into valid python.
         """
+        
         # Get the example's indentation level.
         indent = len(m.group('indent'))
 
@@ -213,8 +241,9 @@ class IPDocTestParser(doctest.DocTestParser):
 
         source = '\n'.join([sl[indent+ps1_len+1:] for sl in source_lines])
 
-        # Convert source input from IPython into valid Python syntax
-        source = self.ip2py(source)
+        if ip2py:
+            # Convert source input from IPython into valid Python syntax
+            source = self.ip2py(source)
 
         # Divide want into lines; check that it's properly indented; and
         # then strip the indentation.  Spaces before the last newline should
@@ -262,6 +291,134 @@ class IPDocTestParser(doctest.DocTestParser):
                                  (lineno+i+1, name,
                                   line[indent:space_idx], line))
 
+
+SKIP = register_optionflag('SKIP')
+
+class IPDocTestRunner(doctest.DocTestRunner):
+    """Modified DocTestRunner which can also run IPython tests.
+
+    This runner is capable of handling IPython doctests that require
+    out-of-process output capture (such as system calls via !cmd or aliases).
+    Note however that because these tests are run in a separate process, many
+    of doctest's fancier capabilities (such as detailed exception analysis) are
+    not available.  So try to limit such tests to simple cases of matching
+    actual output.
+    """
+    
+    #/////////////////////////////////////////////////////////////////
+    # DocTest Running
+    #/////////////////////////////////////////////////////////////////
+
+    def _run_iptest(self, test, out):
+        """
+        Run the examples in `test`.  Write the outcome of each example with one
+        of the `DocTestRunner.report_*` methods, using the writer function
+        `out`.  Return a tuple `(f, t)`, where `t` is the number of examples
+        tried, and `f` is the number of examples that failed.  The examples are
+        run in the namespace `test.globs`.
+
+        IPython note: this is a modified version of the original __run()
+        private method to handle out-of-process examples.
+        """
+
+        if out is None:
+            out = sys.stdout.write
+
+        # Keep track of the number of failures and tries.
+        failures = tries = 0
+
+        # Save the option flags (since option directives can be used
+        # to modify them).
+        original_optionflags = self.optionflags
+
+        SUCCESS, FAILURE, BOOM = range(3) # `outcome` state
+
+        check = self._checker.check_output
+
+        # Process each example.
+        for examplenum, example in enumerate(test.examples):
+
+            # If REPORT_ONLY_FIRST_FAILURE is set, then supress
+            # reporting after the first failure.
+            quiet = (self.optionflags & REPORT_ONLY_FIRST_FAILURE and
+                     failures > 0)
+
+            # Merge in the example's options.
+            self.optionflags = original_optionflags
+            if example.options:
+                for (optionflag, val) in example.options.items():
+                    if val:
+                        self.optionflags |= optionflag
+                    else:
+                        self.optionflags &= ~optionflag
+
+            # If 'SKIP' is set, then skip this example.
+            if self.optionflags & SKIP:
+                continue
+
+            # Record that we started this example.
+            tries += 1
+            if not quiet:
+                self.report_start(out, test, example)
+
+            # Run the example in the given context (globs), and record
+            # any exception that gets raised.  (But don't intercept
+            # keyboard interrupts.)
+            try:
+                # Don't blink!  This is where the user's code gets run.
+                got = ''
+                # The code is run in an external process
+                got = iprunner.run_source(example.source,get_output=True)
+            except KeyboardInterrupt:
+                raise
+            except:
+                self.debugger.set_continue() # ==== Example Finished ====
+
+            outcome = FAILURE   # guilty until proved innocent or insane
+
+            if check(example.want, got, self.optionflags):
+                outcome = SUCCESS
+
+            # Report the outcome.
+            if outcome is SUCCESS:
+                if not quiet:
+                    self.report_success(out, test, example, got)
+            elif outcome is FAILURE:
+                if not quiet:
+                    self.report_failure(out, test, example, got)
+                failures += 1
+            elif outcome is BOOM:
+                if not quiet:
+                    self.report_unexpected_exception(out, test, example,
+                                                     exc_info)
+                failures += 1
+            else:
+                assert False, ("unknown outcome", outcome)
+
+        # Restore the option flags (in case they were modified)
+        self.optionflags = original_optionflags
+
+        # Record and return the number of failures and tries.
+
+        # Hack to access a parent private method by working around Python's
+        # name mangling (which is fortunately simple).
+        doctest.DocTestRunner._DocTestRunner__record_outcome(self,test,
+                                                             failures, tries)
+        return failures, tries
+
+    def run(self, test, compileflags=None, out=None, clear_globs=True):
+        """Run examples in `test`.
+
+        This method will defer to the parent for normal Python examples, but it
+        will run IPython ones via pexpect.
+        """
+        if not test.examples:
+            return
+        
+        if isinstance(test.examples[0],IPExternalExample):
+            self._run_iptest(test,out)
+        else:
+            DocTestRunner.run(self,test,compileflags,out,clear_globs)
 
 class IPDocTestLoader(unittest.TestLoader):
     """A test loader with IPython-enhanced doctest support.
@@ -321,16 +478,20 @@ def my_import(name):
         mod = getattr(mod, comp)
     return mod
 
-def makeTestSuite(module_name,module=None):
+def makeTestSuite(module_name,dt_module=None):
     """Make a TestSuite object for a given module, specified by name.
 
     This extracts all the doctests associated with a module using an
     IPDocTestLoader object.
 
-    Inputs:
+    :Parameters:
 
-      - module_name: a string containing 
-    Optional inputs:
+      - module_name: a string containing the name of a module with unittests.
+
+    :Keywords:
+
+      - `dt_module` : string
+        Name of a module to be scanned for doctests in docstrings.
     """
 
     mod = my_import(module_name)
@@ -356,7 +517,7 @@ def testmod(m=None,name=None):
     # Find, parse, and run all tests in the given module.
     finder = DocTestFinder(parser=IPDocTestParser())
 
-    runner = DocTestRunner()
+    runner = IPDocTestRunner()
 
     for test in finder.find(m, name):
         runner.run(test)
@@ -421,6 +582,47 @@ if __name__ == "__main__":
         In [8]: _+3
         Out[8]: 10
   
+        """
+
+    def ipfunc2():
+        """
+        Tests that must be run in an external process
+
+
+        # ipython-doctest: EXTERNAL
+
+        In [11]: for i in range(10):
+           ....:     print i,
+           ....:     print i+1,
+           ....:
+        0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 10
+
+
+        In [1]: import os
+
+        In [1]: print "hello"
+        hello
+        
+        In [19]: cd /tmp
+        /tmp
+
+        In [20]: mkdir foo_ipython2
+
+        In [21]: cd foo_ipython2
+        /tmp/foo_ipython2
+
+        In [23]: !touch bar baz
+
+        In [24]: ls
+        bar  baz
+
+        In [24]: !ls
+        bar  baz
+
+        In [25]: cd /tmp
+        /tmp
+
+        In [26]: rm -rf foo_ipython2
         """
 
     def pyfunc():

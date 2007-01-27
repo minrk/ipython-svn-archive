@@ -13,12 +13,12 @@ from tcommon import *
 
 # If you have standalone doctests in a separate file, load them here and
 # assign them to the __doc__ attribute, so doctest can pick them up:
-#__doc__ = open(test_path('test_FEATURE.txt'), 'r').read()
+__doc__ = open(test_path('test_tools_utils_doctest.txt'), 'r').read()
 
 # If you have any module whose docstrings should be scanned for embedded tests
 # as examples (accorging to standard doctest practice), set it here:
 DOCTEST_MOD = 'ipython1.tools.utils'
-    
+
 ##########################################################################
 ### Test classes go here
 

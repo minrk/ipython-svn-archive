@@ -1,3 +1,7 @@
+2007-01-27  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* ipdoctest.py (IPDocTestRunner): major extensions to doctest that
+	add real IPython support.
 
 2006-01-24  Brian Granger <ellisonbg@gmail.com>
 

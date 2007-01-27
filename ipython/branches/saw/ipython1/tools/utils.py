@@ -38,13 +38,13 @@ def extractVars(*names,**kw):
 
     Examples:
 
-        >>> def func(x):
-        ...     y = 1
-        ...     print extractVars('x','y')
-        ...
+        In [2]: def func(x):
+           ...:     y = 1
+           ...:     print extractVars('x','y')
+           ...:
 
-        >>> func('some string')
-        {'y': 1, 'x': 'some string'}
+        In [3]: func('hello')
+        {'y': 1, 'x': 'hello'}
     """
 
     depth = kw.get('depth',0)
