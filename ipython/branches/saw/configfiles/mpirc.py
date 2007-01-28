@@ -12,7 +12,7 @@ For more information see the `ipython1.config.objects.MPIConfig` docstrings.
 from ipython1.config.api import getConfigObject
 
 mpiConfig = getConfigObject('mpi')
-I
+# I
 # For IPython's basic mpi module.  This only calls MPI_Init
 # and then defines mpi.rank and mpi.size.  This is useful
 # for the many cases where you just need to know those two things.

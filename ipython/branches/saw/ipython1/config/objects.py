@@ -122,6 +122,9 @@ from ipython1.kernel.multienginevanilla import \
     
 from ipython1.kernel.multienginepb import \
     IPBMultiEngineFactory
+
+from ipython1.kernel.multienginexmlrpc import \
+    IXMLRPCMultiEngineFactory
     
 from ipython1.kernel.enginepb import \
     IPBEngineServerFactory
@@ -142,7 +145,10 @@ class ControllerConfig(Config):
                          'port': clientVanillaPort},
                         {'interface': IPBMultiEngineFactory, 
                          'ip': '', 
-                         'port': 10111}]
+                         'port': 10111},
+                         {'interface': IXMLRPCMultiEngineFactory, 
+                          'ip': '', 
+                          'port': 10112}]
     """A list of interface, ip, and port for the protocols used to talk to clients.
     
     The ip and port for each interface determines what ip and port the 
