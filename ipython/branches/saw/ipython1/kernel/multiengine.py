@@ -239,7 +239,7 @@ class MultiEngine(ControllerAdapterBase):
                     return False
             print 
             return True
-        elif targets is 'all':
+        elif targets == 'all':
             return True
         else:
             return False
