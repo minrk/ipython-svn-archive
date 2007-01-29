@@ -27,7 +27,7 @@ import xmlrpclib
 
 from zope.interface import Interface, implements
 # from twisted.application import 
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
 from twisted.python import components
 from twisted.python.failure import Failure
 
@@ -35,6 +35,7 @@ from twisted.spread import pb
 
 from twisted.web2 import xmlrpc, server, channel
 # import ipython1.kernel.pbconfig
+from ipython1.kernel import error
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
 from ipython1.kernel.blockon import blockOn
 from ipython1.kernel.util import gatherBoth
@@ -63,7 +64,7 @@ class IXMLRPCMultiEngine(Interface):
     def xmlrpc_execute(request,targets, lines):
         """"""
         
-    def xmlrpc_push(request,targets, **namespace):
+    def xmlrpc_push(request,targets, namespace):
         """"""
         
     def xmlrpc_pull(request,targets, *keys):
@@ -81,7 +82,7 @@ class IXMLRPCMultiEngine(Interface):
     def xmlrpc_kill(request,targets, controller=False):
         """"""
         
-    def xmlrpc_pushSerialized(request,targets, **namespace):
+    def xmlrpc_pushSerialized(request,targets, namespace):
         """"""
         
     def xmlrpc_pullSerialized(request,targets, *keys):
@@ -130,100 +131,142 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     # Non interface methods
     #---------------------------------------------------------------------------
     
-    def checkReturns(self, rlist):
-        for r in rlist:
-            if isinstance(r, (Failure, Exception)):
-                rlist[rlist.index(r)] = pickle.dumps(r, 2)
-        return rlist
-    
     def packageFailure(self, f):
         f.cleanFailure()
-        pString = pickle.dumps(f, 2)
-        return 'FAILURE:' + pString
+        pString = pickle.dumps(f)
+        return "FAILURE:"+pString
     
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
     
     def xmlrpc_execute(self, request, targets, lines):
-        d = self.multiEngine.execute(targets, lines)
-        return d.addErrback(self.packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
+        else:
+            d = self.multiEngine.execute(targets, lines)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     def xmlrpc_push(self, request, targets, pNamespace):
-        try:
-            namespace = pickle.loads(pNamespace)
-        except:
-            return defer.fail(self.packageFailure(failure.Failure()))
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
-            return blockOn(self.multiEngine.push(targets, **namespace).addErrback(self.packageFailure))
+            try:
+                namespace = pickle.loads(pNamespace)
+            except:
+                d = defer.fail()
+            else:
+                d = self.multiEngine.push(targets, **namespace)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     def xmlrpc_pull(self, request, targets, *keys):
-        d = self.multiEngine.pull(targets, *keys)
-        d.addCallback(pickle.dumps, 2)
-        d.addErrback(self.packageFailure)
-        return blockOn(d)
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
+        else:
+            d = self.multiEngine.pull(targets, *keys)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     def xmlrpc_getResult(self, request, targets, i=None):
-        return self.multiEngine.getResult(targets, i).addErrback(self.packageFailure)
+        if i == -1:
+            i = None
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
+        else:
+            d = self.multiEngine.getResult(targets, i)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     def xmlrpc_reset(self, request, targets):
-        return self.multiEngine.reset(targets).addErrback(self.packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
+        else:
+            d = self.multiEngine.reset(targets)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     def xmlrpc_keys(self, request, targets):
-        return self.multiEngine.keys(targets).addErrback(self.packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
+        else:
+            d = self.multiEngine.keys(targets)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     def xmlrpc_kill(self, request, targets, controller=False):
-        return self.multiEngine.kill(targets, controller).addErrback(self.packageFailure)
-        
-    def xmlrpc_pushSerialized(self, request, targets, pNamespace):
-        try:
-            namespace = pickle.loads(pNamespace)
-        except:
-            return defer.fail(failure.Failure()).addErrback(self.packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
-            d = self.multiEngine.pushSerialized(targets, **namespace)
-            return d.addErrback(self.packageFailure)
+            d = self.multiEngine.kill(targets, controller)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        
+    def xmlrpc_pushSerialized(self, request, targets, namespace):
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
+        else:
+            try:
+                namespace = pickle.loads(pNamespace)
+            except:
+                return defer.fail(Failure()).addErrback(self.packageFailure)
+            else:
+                d = self.multiEngine.pushSerialized(targets, **namespace)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     def xmlrpc_pullSerialized(self, request, targets, *keys):
-        d = self.multiEngine.pullSerialized(targets, *keys)
-        d.addCallback(pickle.dumps, 2)
-        d.addErrback(self.packageFailure)
-        return d
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
+        else:
+            d = self.multiEngine.pullSerialized(targets, *keys)
+            d.addCallback(pickle.dumps)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     def xmlrpc_clearQueue(self, request, targets):
-        return self.multiEngine.clearQueue(targets).addErrback(self.packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
+        else:
+            d = self.multiEngine.clearQueue(targets)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     def xmlrpc_queueStatus(self, request, targets):
-        return self.multiEngine.queueStatus(targets).addErrback(self.packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
+        else:
+            d = self.multiEngine.queueStatus(targets)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
     def xmlrpc_getIDs(self, request):
-        return self.multiEngine.getIDs().addErrback(self.packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
+        else:
+            d = self.multiEngine.getIDs()
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     def xmlrpc_verifyTargets(self, request, targets):
-        return self.multiEngine.verifyTargets(targets).addErrback(self.packageFailure)
+        return self.multiEngine.verifyTargets(targets)
     
     #---------------------------------------------------------------------------
     # IEngineCoordinator related methods
     #---------------------------------------------------------------------------
     
     def xmlrpc_scatter(self, request, targets, key, pseq, style='basic', flatten=False):
-        try:
-            seq = pickle.loads(pseq)
-        except:
-            return defer.fail(failure.Failure()).addErrback(self.packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
-            d = self.multiEngine.scatter(targets, key, seq, style, flatten)
-            return d.addErrback(self.packageFailure)
+            try:
+                seq = pickle.loads(pseq)
+            except:
+                return defer.fail(Failure()).addErrback(self.packageFailure)
+            else:
+                d = self.multiEngine.scatter(targets, key, seq, style, flatten)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
     def xmlrpc_gather(self, request, targets, key, style='basic'):
-        d = self.multiEngine.gather(targets, key, style)
-        d.addCallback(pickle.dumps, 2)
-        d.addErrback(self.packageFailure)
-        return d
+        if not self.multiEngine.verifyTargets(targets):
+            d = defer.fail(error.InvalidEngineID(str(targets)))
+        else:
+            d = self.multiEngine.gather(targets, key, style)
+            d.addCallback(pickle.dumps)
+        return d.addCallbacks(pickle.dumps, self.packageFailure)
     
 
 components.registerAdapter(XMLRPCMultiEngineFromMultiEngine,
@@ -265,91 +308,92 @@ class XMLRPCMultiEngineClient(object):
     # Non interface methods
     #---------------------------------------------------------------------------
         
-    def checkReturnForFailure(self, r):
-        """See if a returned value is a pickled Failure object.
-        
-        To distinguish between general pickled objects and pickled Failures, the
-        other side should prepend the string FAILURE: to any pickled Failure.
+    def handleReturn(self, r):
+        """Remote methods should either return a pickled object or a pickled
+        failure object prefixed with "FAILURE:"
         """
-        if isinstance(r, str):
-            if r.startswith('FAILURE:'):
-                try: 
-                    result = pickle.loads(r[8:])
-                except pickle.PickleError:
-                    return failure.Failure( \
-                        FailureUnpickleable("Could not unpickle failure."))
-                else:
-                    return result
-        return r
         
+        if r.startswith('FAILURE:'):
+            r = r[8:]
+        try:
+            result = pickle.loads(r)
+        except pickle.PickleError:
+            return defer.fail(error.KernelError("Could not unpickle return."))
+        else:
+            if isinstance(result, Failure):
+                # Raise the exception if it is a failure
+                return defer.fail(result)
+            return defer.succeed(result)
+    
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
         
     def execute(self, targets, lines):
-        return self.checkReturnForFailure(self.server.execute(targets, lines))
+        return self.handleReturn(self.server.execute(targets, lines))
     
     def executeAll(self, lines):
         return self.execute('all', lines)
     
     def push(self, targets, **namespace):
         try:
-            package = pickle.dumps(namespace, 2)
+            package = pickle.dumps(namespace)
         except:
-            return failure.Failure()
+            return Failure()
         else:
-            return self.checkReturnForFailure(self.server.push(targets, package))
+            return self.handleReturn(self.server.push(targets, package))
     
     def pushAll(self, **ns):
         return self.push('all', **ns)
     
     def pull(self, targets, *keys):
-        r = self.checkReturnForFailure(self.server.pull(targets, *keys))
-        if not isinstance(r, failure.Failure):
-            return pickle.loads(r)
-        return r
+        return self.handleReturn(self.server.pull(targets, *keys))
     
     def pullAll(self, *keys):
         return self.pull('all', *keys)
         
     def getResult(self, targets, i=None):
-        return self.checkReturnForFailure(self.server.getResult(targets, i))
+        if i is None: # This is because None cannot be marshalled by xml-rpc
+            i = -1
+        return self.handleReturn(self.server.getResult(targets, i))
     
     def getResultAll(self, i=None):
+        if i is None: # This is because None cannot be marshalled by xml-rpc
+            i = -1
         return self.getResult('all', i)
     
     def reset(self, targets):
-        return self.checkReturnForFailure(self.server.reset(targets))
+        return self.handleReturn(self.server.reset(targets))
     
     def resetAll(self):
         return self.reset('all')
     
     def keys(self, targets):
-        return self.checkReturnForFailure(self.server.keys(targets))
+        return self.handleReturn(self.server.keys(targets))
     
     def keysAll(self):
         return self.keys('all')
     
     def kill(self, targets, controller=False):
-        return self.checkReturnForFailure(self.server.kill(targets, controller))
+        return self.handleReturn(self.server.kill(targets, controller))
     
     def killAll(self, controller=False):
         return self.kill('all', controller)
     
     def pushSerialized(self, targets, **namespace):
         try:
-            package = pickle.dumps(namespace, 2)
+            package = pickle.dumps(namespace)
         except:
-            return failure.Failure()
+            return Failure()
         else:
-            return self.checkReturnForFailure(self.server.pushSerialized(targets, package))
+            return self.handleReturn(self.server.pushSerialized(targets, namespace))
     
     def pushSerializedAll(self, **namespace):
         return self.pushSerialized('all', **namespace)
     
     def pullSerialized(self, targets, *keys):
-        r = self.checkReturnForFailure(self.server.pullSerialized(targets, *keys))
-        if not isinstance(r, failure.Failure):
+        r = self.handleReturn(self.server.pullSerialized(targets, *keys))
+        if not isinstance(r, Failure):
             return pickle.loads(r)
         return r
     
@@ -357,13 +401,13 @@ class XMLRPCMultiEngineClient(object):
         return self.pullSerialized('all', *keys)
     
     def clearQueue(self, targets):
-        return self.checkReturnForFailure(self.server.clearQueue(targets))
+        return self.handleReturn(self.server.clearQueue(targets))
     
     def clearQueueAll(self):
         return self.clearQueue('all')
     
     def queueStatus(self, targets):
-        return self.checkReturnForFailure(self.server.queueStatus(targets))
+        return self.handleReturn(self.server.queueStatus(targets))
     
     def queueStatusAll(self):
         return self.queueStatus('all')
@@ -373,10 +417,10 @@ class XMLRPCMultiEngineClient(object):
     #---------------------------------------------------------------------------
     
     def getIDs(self):
-        return self.checkReturnForFailure(self.server.getIDs())
+        return self.handleReturn(self.server.getIDs())
     
     def verifyTargets(self, targets):
-        return self.checkReturnForFailure(self.server.verifyTargets(targets))
+        return self.handleReturn(self.server.verifyTargets(targets))
     
     #---------------------------------------------------------------------------
     # IEngineCoordinator related methods
@@ -384,17 +428,23 @@ class XMLRPCMultiEngineClient(object):
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         try:
-            pseq = pickle.dumps(seq, 2)
+            pseq = pickle.dumps(seq)
         except:
-            return failure.Failure()
+            return Failure()
         else:
-            return self.checkReturnForFailure(self.server.scatter(targets, key, pseq, style, flatten))
+            return self.handleReturn(self.server.scatter(targets, key, pseq, style, flatten))
+    
+    def scatterAll(self, key, seq, style='basic', flatten=False):
+        return self.scatter('all', key, seq, style, flatten)
     
     def gather(self, targets, key, style='basic'):
-        r = self.checkReturnForFailure(self.server.gather(targets, key, style='basic'))
-        if not isinstance(r, failure.Failure):
+        r = self.handleReturn(self.server.gather(targets, key, style='basic'))
+        if not isinstance(r, Failure):
             return pickle.loads(r)
         return r
+    
+    def gatherAll(self, key, style='basic'):
+        return self.gather('all', key, style)
     
 
 components.registerAdapter(XMLRPCMultiEngineClient, 
@@ -406,11 +456,16 @@ components.registerAdapter(XMLRPCMultiEngineClient,
 #-------------------------------------------------------------------------------
 
 class RemoteController(object):
-    """A high-level XMLRPCRemoteController."""
+    """A high-level XMLRPCRemoteController.
+    Note: The connect/disconnect methods are not yet fully implemented.  
+    They are leftover from PB RemoteController
+    """
     
     def __init__(self, addr):
-        """addr is a string address"""
+        """addr is a URL of the form: 'http://ipaddress:port/"""
         self.addr = addr
+        if self.addr[-1] != '/': # it requires the slash at the moment
+            self.addr += '/'
         self.multiengine = None
         self.pendingDeferreds = []
         self.connected = False
@@ -422,9 +477,8 @@ class RemoteController(object):
             self.connected = True
     
     def disconnect(self):
-        self.factory.disconnect()
-        for i in range(10):
-            reactor.iterate(0.1)
+        # disconnections are not handled
+        self.handleDisconnect(None)
     
     def handleDisconnect(self, thingy):
         print "Disconnecting from ", self.addr
@@ -438,94 +492,99 @@ class RemoteController(object):
     
     def execute(self, targets, lines):
         self.connect()
-        return self.multiengine.execute(targets, lines)
+        return blockOn(self.multiengine.execute(targets, lines))
     
     def executeAll(self, lines):
         return self.execute('all', lines)
     
     def push(self, targets, **namespace):
         self.connect()
-        return self.multiengine.push(targets, **namespace)
+        return blockOn(self.multiengine.push(targets, **namespace))
     
     def pushAll(self, **namespace):
         return self.push('all', **namespace)
     
     def pull(self, targets, *keys):
         self.connect()
-        return self.multiengine.pull(targets, *keys)
+        return blockOn(self.multiengine.pull(targets, *keys))
     
     def pullAll(self, *keys):
         return self.pull('all', *keys)
     
     def getResult(self, targets, i=None):
         self.connect()
-        return self.multiengine.getResult(targets, i)
+        return blockOn(self.multiengine.getResult(targets, i))
     
     def getResultAll(self, i=None):
         return self.getResult('all', i)
     
     def reset(self, targets):
         self.connect()
-        return self.multiengine.reset(targets)
+        return blockOn(self.multiengine.reset(targets))
     
     def resetAll(self):
         return self.reset('all')
     
     def keys(self, targets):
         self.connect()
-        return self.multiengine.keys(targets)
+        return blockOn(self.multiengine.keys(targets))
     
     def keysAll(self):
         return self.keys('all')
     
     def kill(self, targets, controller=False):
         self.connect()
-        return self.multiengine.kill(targets, controller)
+        return blockOn(self.multiengine.kill(targets, controller))
     
     def killAll(self, controller=False):
         return self.kill('all', controller)
     
     def pushSerialized(self, targets, **namespace):
         self.connect()
-        return self.multiengine.pushSerialized(targets, **namespace)
+        return blockOn(self.multiengine.pushSerialized(targets, **namespace))
     
     def pushSerializedAll(self, **namespace):
         return self.pushSerialized('all', **namespace)
     
     def pullSerialized(self, targets, *keys):
         self.connect()
-        return self.multiengine.pullSerialized(targets, *keys)
+        return blockOn(self.multiengine.pullSerialized(targets, *keys))
     
     def pullSerializedAll(self, *keys):
         return self.pullSerialized('all', *keys)
     
     def clearQueue(self, targets):
         self.connect()
-        return self.multiengine.clearQueue(targets)
+        return blockOn(self.multiengine.clearQueue(targets))
     
     def clearQueueAll(self):
         return self.clearQueue('all')
     
     def queueStatus(self, targets):
         self.connect()
-        return self.multiengine.queueStatus(targets)
+        return blockOn(self.multiengine.queueStatus(targets))
     
     def queueStatusAll(self):
         return self.queueStatus('all')
     
     def getIDs(self):
         self.connect()
-        return self.multiengine.getIDs()
+        return blockOn(self.multiengine.getIDs())
     
     def verifyTargets(self, targets):
         self.connect()
-        return self.multiengine.verifyTargets(targets)
+        return blockOn(self.multiengine.verifyTargets(targets))
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         self.connect()
-        return self.multiengine.scatter(targets, key, seq, style, flatten)
+        return blockOn(self.multiengine.scatter(targets, key, seq, style, flatten))
+    
+    def scatterAll(self, key, seq, style='basic', flatten=False):
+        return self.scatter('all', key, seq, style, flatten)
     
     def gather(self, targets, key, style='basic'):
         self.connect()
-        return self.multiengine.gather(targets, key, style)
+        return blockOn(self.multiengine.gather(targets, key, style))
     
+    def gatherAll(self, key, style='basic'):
+        return self.gather('all', key, style)
