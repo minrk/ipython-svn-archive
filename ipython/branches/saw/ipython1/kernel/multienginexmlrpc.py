@@ -26,19 +26,15 @@ import cPickle as pickle
 import xmlrpclib
 
 from zope.interface import Interface, implements
-# from twisted.application import 
-from twisted.internet import reactor, defer
+from twisted.internet import defer
 from twisted.python import components
 from twisted.python.failure import Failure
 
-from twisted.spread import pb
-
 from twisted.web2 import xmlrpc, server, channel
-# import ipython1.kernel.pbconfig
+
 from ipython1.kernel import error
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
 from ipython1.kernel.blockon import blockOn
-from ipython1.kernel.util import gatherBoth
 
 
 #-------------------------------------------------------------------------------
@@ -133,10 +129,8 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     # Non interface methods
     #---------------------------------------------------------------------------
     
-    def packageFailure(self, f):
-        f.cleanFailure()
-        pString = pickle.dumps(f)
-        return "FAILURE:"+pString
+    def packageReturn(self, r):
+        return xmlrpc.Binary(pickle.dumps(r,2))
     
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
@@ -147,26 +141,26 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.execute(targets, lines)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
-    def xmlrpc_push(self, request, targets, pNamespace):
+    def xmlrpc_push(self, request, targets, binaryNS):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             try:
-                namespace = pickle.loads(pNamespace)
+                namespace = pickle.loads(binaryNS.data)
             except:
                 d = defer.fail()
             else:
                 d = self.multiEngine.push(targets, **namespace)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
     def xmlrpc_pull(self, request, targets, *keys):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.pull(targets, *keys)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
     def xmlrpc_getResult(self, request, targets, i=None):
         if i == -1:
@@ -175,61 +169,61 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.getResult(targets, i)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
     def xmlrpc_reset(self, request, targets):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.reset(targets)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
     def xmlrpc_keys(self, request, targets):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.keys(targets)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
     def xmlrpc_kill(self, request, targets, controller=False):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.kill(targets, controller)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
         
-    def xmlrpc_pushSerialized(self, request, targets, pNamespace):
+    def xmlrpc_pushSerialized(self, request, targets, binaryNS):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             try:
-                namespace = pickle.loads(pNamespace)
+                namespace = pickle.loads(binaryNS.data)
             except:
                 d = defer.fail(Failure())
             else:
                 d = self.multiEngine.pushSerialized(targets, **namespace)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
     def xmlrpc_pullSerialized(self, request, targets, *keys):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.pullSerialized(targets, *keys)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
     def xmlrpc_clearQueue(self, request, targets):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.clearQueue(targets)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
     def xmlrpc_queueStatus(self, request, targets):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.queueStatus(targets)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
@@ -240,7 +234,7 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.getIDs()
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
     def xmlrpc_verifyTargets(self, request, targets):
         return self.multiEngine.verifyTargets(targets)
@@ -259,7 +253,7 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
                 d = defer.fail(Failure())
             else:
                 d = self.multiEngine.scatter(targets, key, seq, style, flatten)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
     def xmlrpc_gather(self, request, targets, key, style='basic'):
         if not self.multiEngine.verifyTargets(targets):
@@ -267,7 +261,7 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         else:
             d = self.multiEngine.gather(targets, key, style)
             d.addCallback(pickle.dumps)
-        return d.addCallbacks(pickle.dumps, self.packageFailure)
+        return d.addBoth(self.packageReturn)
     
 
 components.registerAdapter(XMLRPCMultiEngineFromMultiEngine,
@@ -313,16 +307,13 @@ class XMLRPCMultiEngineClient(object):
         """Remote methods should either return a pickled object or a pickled
         failure object prefixed with "FAILURE:"
         """
-        
-        if r.startswith('FAILURE:'):
-            r = r[8:]
+        assert isinstance(r, xmlrpc.Binary), "Should return xmlrpc Binary object"
         try:
-            result = pickle.loads(r)
+            result = pickle.loads(r.data)
         except pickle.PickleError:
             return defer.fail(error.KernelError("Could not unpickle return."))
         else:
             if isinstance(result, Failure):
-                # Raise the exception if it is a failure
                 return defer.fail(result)
             return defer.succeed(result)
     
@@ -338,11 +329,11 @@ class XMLRPCMultiEngineClient(object):
     
     def push(self, targets, **namespace):
         try:
-            package = pickle.dumps(namespace)
+            binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
         except:
             return Failure()
         else:
-            return self.handleReturn(self.server.push(targets, package))
+            return self.handleReturn(self.server.push(targets, binPackage))
     
     def pushAll(self, **ns):
         return self.push('all', **ns)
@@ -383,11 +374,11 @@ class XMLRPCMultiEngineClient(object):
     
     def pushSerialized(self, targets, **namespace):
         try:
-            package = pickle.dumps(namespace)
+            binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
         except:
             return Failure()
         else:
-            return self.handleReturn(self.server.pushSerialized(targets, package))
+            return self.handleReturn(self.server.pushSerialized(targets, binPackage))
     
     def pushSerializedAll(self, **namespace):
         return self.pushSerialized('all', **namespace)
