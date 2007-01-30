@@ -34,8 +34,7 @@ from twisted.web2 import xmlrpc, server, channel
 
 from ipython1.kernel import error
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
-from ipython1.kernel.blockon import blockOn
-
+from ipython1.kernel.multiengineclient import ConnectingMultiEngineClient
 
 #-------------------------------------------------------------------------------
 # The Controller side of things
@@ -243,12 +242,12 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     # IEngineCoordinator related methods
     #---------------------------------------------------------------------------
     
-    def xmlrpc_scatter(self, request, targets, key, pseq, style='basic', flatten=False):
+    def xmlrpc_scatter(self, request, targets, key, bseq, style='basic', flatten=False):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             try:
-                seq = pickle.loads(pseq)
+                seq = pickle.loads(bseq.data)
             except:
                 d = defer.fail(Failure())
             else:
@@ -260,7 +259,7 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.gather(targets, key, style)
-            d.addCallback(pickle.dumps)
+            # d.addCallback(pickle.dumps, 2)
         return d.addBoth(self.packageReturn)
     
 
@@ -289,9 +288,6 @@ components.registerAdapter(XMLRPCServerFactoryFromMultiEngine,
 class XMLRPCMultiEngineClient(object):
     """XMLRPC based MultiEngine client that implements IMultiEngine.
     
-    One could have this inherit from pb.Referencable and implement xmlrpc_foo
-    methods to allow the MultiEngine to call methods on this class.  This is
-    how the old notification system worked.
     """
     
     implements(IMultiEngine)
@@ -331,7 +327,7 @@ class XMLRPCMultiEngineClient(object):
         try:
             binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
         except:
-            return Failure()
+            return defer.fail()
         else:
             return self.handleReturn(self.server.push(targets, binPackage))
     
@@ -376,7 +372,7 @@ class XMLRPCMultiEngineClient(object):
         try:
             binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
         except:
-            return Failure()
+            return defer.fail()
         else:
             return self.handleReturn(self.server.pushSerialized(targets, binPackage))
     
@@ -417,19 +413,17 @@ class XMLRPCMultiEngineClient(object):
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         try:
-            pseq = pickle.dumps(seq)
+            bseq = xmlrpc.Binary(pickle.dumps(seq,2))
         except:
             return Failure()
         else:
-            return self.handleReturn(self.server.scatter(targets, key, pseq, style, flatten))
+            return self.handleReturn(self.server.scatter(targets, key, bseq, style, flatten))
     
     def scatterAll(self, key, seq, style='basic', flatten=False):
         return self.scatter('all', key, seq, style, flatten)
     
     def gather(self, targets, key, style='basic'):
-        r = self.handleReturn(self.server.gather(targets, key, style='basic'))
-        if not isinstance(r, Failure):
-            return pickle.loads(r)
+        r = self.handleReturn(self.server.gather(targets, key, style))
         return r
     
     def gatherAll(self, key, style='basic'):
@@ -437,143 +431,27 @@ class XMLRPCMultiEngineClient(object):
     
 
 components.registerAdapter(XMLRPCMultiEngineClient, 
-        xmlrpclib.Server, IMultiEngine)
+        xmlrpclib.ServerProxy, IMultiEngine)
     
     
 #-------------------------------------------------------------------------------
-# The XMLRPC version of RemoteController
+# The XMLRPC version of ConnectingMultiEngineClient
 #-------------------------------------------------------------------------------
 
-class RemoteController(object):
-    """A high-level XMLRPCRemoteController.
-    Note: The connect/disconnect methods are not yet fully implemented.  
-    They are leftover from PB RemoteController
-    """
-    
-    def __init__(self, addr):
-        """addr is a URL of the form: 'http://ipaddress:port/"""
-        self.addr = addr
-        if self.addr[-1] != '/': # it requires the slash at the moment
-            self.addr += '/'
-        self.multiengine = None
-        self.pendingDeferreds = []
-        self.connected = False
+class XMLRPCConnectingMultiEngineClient(ConnectingMultiEngineClient):
+    """XML-RPC version of the Connecting MultiEngineClient"""
     
     def connect(self):
         if not self.connected:
-            print "Connecting to ", self.addr
-            self.multiengine = XMLRPCMultiEngineClient(xmlrpclib.Server(self.addr))
+            addr = 'http://%s:%s/'%self.addr
+            print "Connecting to ", addr
+            self.multiengine = XMLRPCMultiEngineClient(xmlrpclib.Server(addr))
             self.connected = True
     
     def disconnect(self):
-        # disconnections are not handled
-        self.handleDisconnect(None)
+        if self.connected:
+            print "Disconnecting from ", self.addr
+            del self.multiengine
+            self.multiengine = None
+            self.connected = False
     
-    def handleDisconnect(self, thingy):
-        print "Disconnecting from ", self.addr
-        self.connected = False
-        del self.multiengine
-        self.multiengine = None
-    
-    #---------------------------------------------------------------------------
-    # Interface methods
-    #---------------------------------------------------------------------------
-    
-    def execute(self, targets, lines):
-        self.connect()
-        return blockOn(self.multiengine.execute(targets, lines))
-    
-    def executeAll(self, lines):
-        return self.execute('all', lines)
-    
-    def push(self, targets, **namespace):
-        self.connect()
-        return blockOn(self.multiengine.push(targets, **namespace))
-    
-    def pushAll(self, **namespace):
-        return self.push('all', **namespace)
-    
-    def pull(self, targets, *keys):
-        self.connect()
-        return blockOn(self.multiengine.pull(targets, *keys))
-    
-    def pullAll(self, *keys):
-        return self.pull('all', *keys)
-    
-    def getResult(self, targets, i=None):
-        self.connect()
-        return blockOn(self.multiengine.getResult(targets, i))
-    
-    def getResultAll(self, i=None):
-        return self.getResult('all', i)
-    
-    def reset(self, targets):
-        self.connect()
-        return blockOn(self.multiengine.reset(targets))
-    
-    def resetAll(self):
-        return self.reset('all')
-    
-    def keys(self, targets):
-        self.connect()
-        return blockOn(self.multiengine.keys(targets))
-    
-    def keysAll(self):
-        return self.keys('all')
-    
-    def kill(self, targets, controller=False):
-        self.connect()
-        return blockOn(self.multiengine.kill(targets, controller))
-    
-    def killAll(self, controller=False):
-        return self.kill('all', controller)
-    
-    def pushSerialized(self, targets, **namespace):
-        self.connect()
-        return blockOn(self.multiengine.pushSerialized(targets, **namespace))
-    
-    def pushSerializedAll(self, **namespace):
-        return self.pushSerialized('all', **namespace)
-    
-    def pullSerialized(self, targets, *keys):
-        self.connect()
-        return blockOn(self.multiengine.pullSerialized(targets, *keys))
-    
-    def pullSerializedAll(self, *keys):
-        return self.pullSerialized('all', *keys)
-    
-    def clearQueue(self, targets):
-        self.connect()
-        return blockOn(self.multiengine.clearQueue(targets))
-    
-    def clearQueueAll(self):
-        return self.clearQueue('all')
-    
-    def queueStatus(self, targets):
-        self.connect()
-        return blockOn(self.multiengine.queueStatus(targets))
-    
-    def queueStatusAll(self):
-        return self.queueStatus('all')
-    
-    def getIDs(self):
-        self.connect()
-        return blockOn(self.multiengine.getIDs())
-    
-    def verifyTargets(self, targets):
-        self.connect()
-        return blockOn(self.multiengine.verifyTargets(targets))
-    
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        self.connect()
-        return blockOn(self.multiengine.scatter(targets, key, seq, style, flatten))
-    
-    def scatterAll(self, key, seq, style='basic', flatten=False):
-        return self.scatter('all', key, seq, style, flatten)
-    
-    def gather(self, targets, key, style='basic'):
-        self.connect()
-        return blockOn(self.multiengine.gather(targets, key, style))
-    
-    def gatherAll(self, key, style='basic'):
-        return self.gather('all', key, style)

@@ -41,7 +41,7 @@ from twisted.spread import pb
 from nevow import appserver
 
 from ipython1.kernel import multienginepb #for IMulti adapter
-from ipython1.kernel.controllerservice import IEngineMultiplexer
+from ipython1.kernel.multiengine import IEngineMultiplexer
 from ipython1.kernel.util import printer
 from ipython1.web.athenapages import PageRoot, ControllerPage, ResultsPage
 
