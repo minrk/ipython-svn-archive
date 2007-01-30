@@ -27,4 +27,4 @@ from pprint import pformat, pprint
 import tutils
 from tutils import test_path
 
-from ipython1.test import ipdoctest
+from ipython1.test.ipdoctest import IPDocTestLoader,makeTestSuite
