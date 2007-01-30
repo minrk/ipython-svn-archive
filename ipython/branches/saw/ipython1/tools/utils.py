@@ -20,6 +20,11 @@ import os
 import sys
 
 #---------------------------------------------------------------------------
+# Other IPython utilities
+#---------------------------------------------------------------------------
+
+
+#---------------------------------------------------------------------------
 # Normal code begins
 #---------------------------------------------------------------------------
 
@@ -97,3 +102,26 @@ def list_strings(arg):
 
     if isinstance(arg,basestring): return [arg]
     else: return arg
+
+def marquee(txt='',width=78,mark='*'):
+    """Return the input string centered in a 'marquee'.
+
+    :Examples:
+
+        In [16]: marquee('A test',40)
+        Out[16]: '**************** A test ****************'
+
+        In [17]: marquee('A test',40,'-')
+        Out[17]: '---------------- A test ----------------'
+
+        In [18]: marquee('A test',40,' ')
+        Out[18]: '                 A test                 '
+
+    """
+    if not txt:
+        return (mark*width)[:width]
+    nmark = (width-len(txt)-2)/len(mark)/2
+    if nmark < 0: nmark =0
+    marks = mark*nmark
+    return '%s %s %s' % (marks,txt,marks)
+
