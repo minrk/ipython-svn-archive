@@ -11,9 +11,8 @@ import tcommon
 
 from tcommon import *
 
-# If you have standalone doctests in a separate file, load them here and
-# assign them to the __doc__ attribute, so doctest can pick them up:
-#__doc__ = open(test_path('test_tools_utils_doctest.txt'), 'r').read()
+# If you have standalone doctests in a separate file, set their names in the
+# doctest_files variable (a single string  or 
 
 doctest_files = 'tst_tools_utils_doctest.txt'
 
