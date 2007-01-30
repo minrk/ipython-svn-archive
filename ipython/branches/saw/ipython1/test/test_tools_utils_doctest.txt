@@ -9,7 +9,9 @@ rather than multiple individual ones, unfortunately.
 Auto-generated tests
 ====================
 
-............................................................................
+
+----------------------------------------------------------------------------
+
 Begin included file test_tools_utils_doctest.py::
 
     # Setup - all imports are done in tcommon
@@ -38,11 +40,12 @@ Begin included file test_tools_utils_doctest.py::
     simple loop is over
     
 End included file test_tools_utils_doctest.py
-............................................................................
+
+----------------------------------------------------------------------------
+
 
 
 Manually generated tests
 ========================
 
 These are one-off tests written by hand, copied from an interactive prompt.
-    
