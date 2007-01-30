@@ -50,7 +50,7 @@ from ipython1.kernel.util import gatherBoth
 def startReactor():
     """Initialize the twisted reactor, but don't start its main loop."""
     if not reactor.running:
-        reactor.startRunning()
+        reactor.startRunning(installSignalHandlers=0)
     
 def stopReactor():
     """Stop the twisted reactor when its main loop isn't running."""
