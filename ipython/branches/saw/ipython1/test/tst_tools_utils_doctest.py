@@ -1,5 +1,5 @@
 # Setup - all imports are done in tcommon
-import tcommon; reload(tcommon)  # for interactive use
+import tcommon; _=reload(tcommon)  # for interactive use
 from tcommon import *
 
 # Doctest code begins here

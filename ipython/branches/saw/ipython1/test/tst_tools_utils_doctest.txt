@@ -12,11 +12,10 @@ Auto-generated tests
 
 ----------------------------------------------------------------------------
 
-Begin included file test_tools_utils_doctest.py::
+Begin included file tst_tools_utils_doctest.py::
 
     # Setup - all imports are done in tcommon
-    >>> import tcommon; reload(tcommon)  # for interactive use
-    <module 'tcommon' from 'tcommon.pyc'>
+    >>> import tcommon; _=reload(tcommon)  # for interactive use
     >>> from tcommon import *
     
     # Doctest code begins here
@@ -39,7 +38,7 @@ Begin included file test_tools_utils_doctest.py::
     >>> print 'simple loop is over'
     simple loop is over
     
-End included file test_tools_utils_doctest.py
+End included file tst_tools_utils_doctest.py
 
 ----------------------------------------------------------------------------
 

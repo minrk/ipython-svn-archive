@@ -9,7 +9,7 @@ rather than multiple individual ones, unfortunately.
 Auto-generated tests
 ====================
 
-%run test_tools_utils_doctest.py
+%run tst_tools_utils_doctest.py
 
 
 Manually generated tests

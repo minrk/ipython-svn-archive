@@ -39,7 +39,6 @@ Limitations:
    previously numbered results (such as testing _35==True, for example) will
    fail.  The single-previous input '_' variable /is/ correctly set, so that
    can still be used (see example at the end of this file).
-
 """
 
 # Standard library imports
@@ -51,6 +50,9 @@ import sys
 import unittest
 
 from doctest import *
+
+# Our own imports
+from ipython1.tools import utils
 
 ###########################################################################
 #
@@ -73,6 +75,9 @@ sys.excepthook = sys.__excepthook__
 
 # So that ipython magics and aliases can be doctested
 __builtin__._ip = IPython.ipapi.get()
+
+# for debugging only!!!
+from IPython.Shell import IPShellEmbed;ipshell=IPShellEmbed(['--noterm_title']) # dbg
 
 
 # runner
@@ -177,8 +182,14 @@ class IPDocTestParser(doctest.DocTestParser):
             # don't need any filtering (a real ipython will be executing them).
             terms = list(self._EXAMPLE_RE_IP.finditer(string))
             if re.search(r'#\s*ipython-doctest:\s*EXTERNAL',string):
+                #print '-'*70  # dbg
+                #print 'IPExternalExample, Source:\n',string  # dbg
+                #print '-'*70  # dbg
                 Example = IPExternalExample
             else:
+                #print '-'*70  # dbg
+                #print 'IPExample, Source:\n',string  # dbg
+                #print '-'*70  # dbg
                 Example = IPExample
                 ip2py = True
         
@@ -256,7 +267,7 @@ class IPDocTestParser(doctest.DocTestParser):
                            lineno + len(source_lines))
 
         # Remove ipython output prompt that might be present in the first line
-        want_lines[0] = re.sub(r'^Out\[\d+\]: \s*?\n?','',want_lines[0])
+        want_lines[0] = re.sub(r'Out\[\d+\]: \s*?\n?','',want_lines[0])
 
         want = '\n'.join([wl[indent:] for wl in want_lines])
 
@@ -290,6 +301,167 @@ class IPDocTestParser(doctest.DocTestParser):
                                  'lacks blank after %s: %r' %
                                  (lineno+i+1, name,
                                   line[indent:space_idx], line))
+
+
+#XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+# Special string markers for use in `want` strings:
+## BLANKLINE_MARKER = '<BLANKLINE>'
+## ELLIPSIS_MARKER = '...'
+
+## def _indent(s, indent=4):
+##     """
+##     Add the given number of space characters to the beginning every
+##     non-blank line in `s`, and return the result.
+##     """
+##     # This regexp matches the start of non-blank lines:
+##     return re.sub('(?m)^(?!$)', indent*' ', s)
+
+## def _exception_traceback(exc_info):
+##     """
+##     Return a string containing a traceback message for the given
+##     exc_info tuple (as returned by sys.exc_info()).
+##     """
+##     # Get a traceback message.
+##     excout = StringIO()
+##     exc_type, exc_val, exc_tb = exc_info
+##     traceback.print_exception(exc_type, exc_val, exc_tb, file=excout)
+##     return excout.getvalue()
+
+
+## class IPOutputChecker:
+##     """
+##     A class used to check the whether the actual output from a doctest
+##     example matches the expected output.  `OutputChecker` defines two
+##     methods: `check_output`, which compares a given pair of outputs,
+##     and returns true if they match; and `output_difference`, which
+##     returns a string describing the differences between two outputs.
+##     """
+##     def check_output(self, want, got, optionflags):
+##         """
+##         Return True iff the actual output from an example (`got`)
+##         matches the expected output (`want`).  These strings are
+##         always considered to match if they are identical; but
+##         depending on what option flags the test runner is using,
+##         several non-exact match types are also possible.  See the
+##         documentation for `TestRunner` for more information about
+##         option flags.
+##         """
+##         # Handle the common case first, for efficiency:
+##         # if they're string-identical, always return true.
+##         if got == want:
+##             return True
+
+##         # The values True and False replaced 1 and 0 as the return
+##         # value for boolean comparisons in Python 2.3.
+##         if not (optionflags & DONT_ACCEPT_TRUE_FOR_1):
+##             if (got,want) == ("True\n", "1\n"):
+##                 return True
+##             if (got,want) == ("False\n", "0\n"):
+##                 return True
+
+##         # <BLANKLINE> can be used as a special sequence to signify a
+##         # blank line, unless the DONT_ACCEPT_BLANKLINE flag is used.
+##         if not (optionflags & DONT_ACCEPT_BLANKLINE):
+##             # Replace <BLANKLINE> in want with a blank line.
+##             want = re.sub('(?m)^%s\s*?$' % re.escape(BLANKLINE_MARKER),
+##                           '', want)
+##             # If a line in got contains only spaces, then remove the
+##             # spaces.
+##             got = re.sub('(?m)^\s*?$', '', got)
+##             if got == want:
+##                 return True
+
+##         # This flag causes doctest to ignore any differences in the
+##         # contents of whitespace strings.  Note that this can be used
+##         # in conjunction with the ELLIPSIS flag.
+##         if optionflags & NORMALIZE_WHITESPACE:
+##             got = ' '.join(got.split())
+##             want = ' '.join(want.split())
+##             if got == want:
+##                 return True
+
+##         # The ELLIPSIS flag says to let the sequence "..." in `want`
+##         # match any substring in `got`.
+##         if optionflags & ELLIPSIS:
+##             if _ellipsis_match(want, got):
+##                 return True
+
+##         # We didn't find any match; return false.
+##         return False
+
+##     # Should we do a fancy diff?
+##     def _do_a_fancy_diff(self, want, got, optionflags):
+##         # Not unless they asked for a fancy diff.
+##         if not optionflags & (REPORT_UDIFF |
+##                               REPORT_CDIFF |
+##                               REPORT_NDIFF):
+##             return False
+
+##         # If expected output uses ellipsis, a meaningful fancy diff is
+##         # too hard ... or maybe not.  In two real-life failures Tim saw,
+##         # a diff was a major help anyway, so this is commented out.
+##         # [todo] _ellipsis_match() knows which pieces do and don't match,
+##         # and could be the basis for a kick-ass diff in this case.
+##         ##if optionflags & ELLIPSIS and ELLIPSIS_MARKER in want:
+##         ##    return False
+
+##         # ndiff does intraline difference marking, so can be useful even
+##         # for 1-line differences.
+##         if optionflags & REPORT_NDIFF:
+##             return True
+
+##         # The other diff types need at least a few lines to be helpful.
+##         return want.count('\n') > 2 and got.count('\n') > 2
+
+##     def output_difference(self, example, got, optionflags):
+##         """
+##         Return a string describing the differences between the
+##         expected output for a given example (`example`) and the actual
+##         output (`got`).  `optionflags` is the set of option flags used
+##         to compare `want` and `got`.
+##         """
+##         want = example.want
+##         # If <BLANKLINE>s are being used, then replace blank lines
+##         # with <BLANKLINE> in the actual output string.
+##         if not (optionflags & DONT_ACCEPT_BLANKLINE):
+##             got = re.sub('(?m)^[ ]*(?=\n)', BLANKLINE_MARKER, got)
+
+##         # Check if we should use diff.
+##         if self._do_a_fancy_diff(want, got, optionflags):
+##             # Split want & got into lines.
+##             want_lines = want.splitlines(True)  # True == keep line ends
+##             got_lines = got.splitlines(True)
+##             # Use difflib to find their differences.
+##             if optionflags & REPORT_UDIFF:
+##                 diff = difflib.unified_diff(want_lines, got_lines, n=2)
+##                 diff = list(diff)[2:] # strip the diff header
+##                 kind = 'unified diff with -expected +actual'
+##             elif optionflags & REPORT_CDIFF:
+##                 diff = difflib.context_diff(want_lines, got_lines, n=2)
+##                 diff = list(diff)[2:] # strip the diff header
+##                 kind = 'context diff with expected followed by actual'
+##             elif optionflags & REPORT_NDIFF:
+##                 engine = difflib.Differ(charjunk=difflib.IS_CHARACTER_JUNK)
+##                 diff = list(engine.compare(want_lines, got_lines))
+##                 kind = 'ndiff with -expected +actual'
+##             else:
+##                 assert 0, 'Bad diff option'
+##             # Remove trailing whitespace on diff output.
+##             diff = [line.rstrip() + '\n' for line in diff]
+##             return 'Differences (%s):\n' % kind + _indent(''.join(diff))
+
+##         # If we're not using diff, then simply list the expected
+##         # output followed by the actual output.
+##         if want and got:
+##             return 'Expected:\n%rGot:\n%r' % (_indent(want), _indent(got))
+##         elif want:
+##             return 'Expected:\n%sGot nothing\n' % _indent(want)
+##         elif got:
+##             return 'Expected nothing\nGot:\n%s' % _indent(got)
+##         else:
+##             return 'Expected nothing\nGot nothing\n'
+#XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
 
 SKIP = register_optionflag('SKIP')
@@ -420,6 +592,17 @@ class IPDocTestRunner(doctest.DocTestRunner):
         else:
             DocTestRunner.run(self,test,compileflags,out,clear_globs)
 
+
+class IPDebugRunner(IPDocTestRunner,doctest.DebugRunner):
+    """IPython-modified DebugRunner, see the original class for details."""
+    
+    def run(self, test, compileflags=None, out=None, clear_globs=True):
+        r = IPDocTestRunner.run(self, test, compileflags, out, False)
+        if clear_globs:
+            test.globs.clear()
+        return r
+
+
 class IPDocTestLoader(unittest.TestLoader):
     """A test loader with IPython-enhanced doctest support.
 
@@ -430,7 +613,7 @@ class IPDocTestLoader(unittest.TestLoader):
     its docstring, coming from an external source."""
 
     
-    def __init__(self,doctests=None,dt_module=None,test_finder=None):
+    def __init__(self,dt_files=None,dt_modules=None,test_finder=None):
         """Initialize the test loader.
 
         Optional inputs:
@@ -440,9 +623,11 @@ class IPDocTestLoader(unittest.TestLoader):
           - dt_module(None): a module object whose docstrings should be
           scanned for embedded doctests, following the normal doctest API.
         """
-        
-        self.doctests = doctests
-        self.dt_module = dt_module
+
+        if dt_files is None: dt_files = []
+        if dt_modules is None: dt_modules = []
+        self.dt_files = utils.list_strings(dt_files)
+        self.dt_modules = utils.list_strings(dt_modules)
         if test_finder is None:
             test_finder = doctest.DocTestFinder(parser=IPDocTestParser())
         self.test_finder = test_finder
@@ -453,18 +638,19 @@ class IPDocTestLoader(unittest.TestLoader):
         If the loader was initialized with a doctests argument, then this
         string is assigned as the module's docstring."""
 
+        # Start by loading any tests in the called module itself
         suite = super(self.__class__,self).loadTestsFromModule(module)
-        if self.doctests is not None:
-            module.__doc__ = self.doctests
-        try:
-            suite.addTest(doctest.DocTestSuite(module,
-                                               test_finder=self.test_finder))
-        except ValueError:
-            pass
+
+        # Now, load also tests referenced at construction time as companion
+        # doctests that reside in standalone files
+        for fname in self.dt_files:
+            suite.addTest(doctest.DocFileSuite(fname))
         # Add docstring tests from module, if given at construction time
-        if self.dt_module is not None:
-            suite.addTest(doctest.DocTestSuite(self.dt_module,
+        for mod in self.dt_modules:
+            suite.addTest(doctest.DocTestSuite(mod,
                                                test_finder=self.test_finder))
+
+        #ipshell()  # dbg
         return suite
 
 def my_import(name):
@@ -478,7 +664,7 @@ def my_import(name):
         mod = getattr(mod, comp)
     return mod
 
-def makeTestSuite(module_name,dt_module=None):
+def makeTestSuite(module_name,dt_files=None,dt_modules=None):
     """Make a TestSuite object for a given module, specified by name.
 
     This extracts all the doctests associated with a module using an
@@ -495,10 +681,86 @@ def makeTestSuite(module_name,dt_module=None):
     """
 
     mod = my_import(module_name)
-    return IPDocTestLoader(dt_module=module).loadTestsFromModule(mod)
+    return IPDocTestLoader(dt_files,dt_modules).loadTestsFromModule(mod)
 
-def testmod(m=None,name=None):
-    
+# Copied from doctest in py2.5 and modified for our purposes (since they don't
+# parametrize what we need)
+
+# For backward compatibility, a global instance of a DocTestRunner
+# class, updated by testmod.
+master = None
+
+def testmod(m=None, name=None, globs=None, verbose=None,
+            report=True, optionflags=0, extraglobs=None,
+            raise_on_error=False, exclude_empty=False):
+    """m=None, name=None, globs=None, verbose=None, report=True,
+       optionflags=0, extraglobs=None, raise_on_error=False,
+       exclude_empty=False
+
+    Note: IPython-modified version which loads test finder and runners that
+    recognize IPython syntax in doctests.
+
+    Test examples in docstrings in functions and classes reachable
+    from module m (or the current module if m is not supplied), starting
+    with m.__doc__.
+
+    Also test examples reachable from dict m.__test__ if it exists and is
+    not None.  m.__test__ maps names to functions, classes and strings;
+    function and class docstrings are tested even if the name is private;
+    strings are tested directly, as if they were docstrings.
+
+    Return (#failures, #tests).
+
+    See doctest.__doc__ for an overview.
+
+    Optional keyword arg "name" gives the name of the module; by default
+    use m.__name__.
+
+    Optional keyword arg "globs" gives a dict to be used as the globals
+    when executing examples; by default, use m.__dict__.  A copy of this
+    dict is actually used for each docstring, so that each docstring's
+    examples start with a clean slate.
+
+    Optional keyword arg "extraglobs" gives a dictionary that should be
+    merged into the globals that are used to execute examples.  By
+    default, no extra globals are used.  This is new in 2.4.
+
+    Optional keyword arg "verbose" prints lots of stuff if true, prints
+    only failures if false; by default, it's true iff "-v" is in sys.argv.
+
+    Optional keyword arg "report" prints a summary at the end when true,
+    else prints nothing at the end.  In verbose mode, the summary is
+    detailed, else very brief (in fact, empty if all tests passed).
+
+    Optional keyword arg "optionflags" or's together module constants,
+    and defaults to 0.  This is new in 2.3.  Possible values (see the
+    docs for details):
+
+        DONT_ACCEPT_TRUE_FOR_1
+        DONT_ACCEPT_BLANKLINE
+        NORMALIZE_WHITESPACE
+        ELLIPSIS
+        SKIP
+        IGNORE_EXCEPTION_DETAIL
+        REPORT_UDIFF
+        REPORT_CDIFF
+        REPORT_NDIFF
+        REPORT_ONLY_FIRST_FAILURE
+
+    Optional keyword arg "raise_on_error" raises an exception on the
+    first unexpected exception or failure. This allows failures to be
+    post-mortem debugged.
+
+    Advanced tomfoolery:  testmod runs methods of a local instance of
+    class doctest.Tester, then merges the results into (or creates)
+    global Tester instance doctest.master.  Methods of doctest.master
+    can be called directly too, if you want to do something unusual.
+    Passing report=0 to testmod is especially useful then, to delay
+    displaying a summary.  Invoke doctest.master.summarize(verbose)
+    when you're done fiddling.
+    """
+    global master
+
     # If no module was given, then use __main__.
     if m is None:
         # DWA - m will still be None if this wasn't invoked from the command
@@ -514,17 +776,35 @@ def testmod(m=None,name=None):
     if name is None:
         name = m.__name__
 
+    #----------------------------------------------------------------------
+    # fperez - make IPython finder and runner:
     # Find, parse, and run all tests in the given module.
-    finder = DocTestFinder(parser=IPDocTestParser())
+    finder = DocTestFinder(exclude_empty=exclude_empty,
+                           parser=IPDocTestParser())
 
-    runner = IPDocTestRunner()
+    if raise_on_error:
+        runner = IPDebugRunner(verbose=verbose, optionflags=optionflags)
+    else:
+        runner = IPDocTestRunner(verbose=verbose, optionflags=optionflags,
+                                 #checker=IPOutputChecker()  # dbg
+                                 )
 
-    for test in finder.find(m, name):
+    # /fperez - end of ipython changes
+    #----------------------------------------------------------------------
+
+    for test in finder.find(m, name, globs=globs, extraglobs=extraglobs):
         runner.run(test)
 
-    runner.summarize()
+    if report:
+        runner.summarize()
+
+    if master is None:
+        master = runner
+    else:
+        master.merge(runner)
 
     return runner.failures, runner.tries
+
 
 # Simple testing and example code
 if __name__ == "__main__":
@@ -581,7 +861,6 @@ if __name__ == "__main__":
 
         In [8]: _+3
         Out[8]: 10
-  
         """
 
     def ipfunc2():
