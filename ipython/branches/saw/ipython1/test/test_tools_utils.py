@@ -33,5 +33,7 @@ class FooTestCase(unittest.TestCase):
 if __name__ == '__main__':
     unittest.main(testLoader=ipdoctest.IPDocTestLoader(__doc__,DOCTEST_MOD))
 else:
-    print 'name:',__name__
-    testSuite = lambda : ipdoctest.makeTestSuite(__name__,DOCTEST_MOD)
+    #print 'name:',__name__
+    
+    #testSuite = lambda : ipdoctest.makeTestSuite(__name__,DOCTEST_MOD)
+    pass

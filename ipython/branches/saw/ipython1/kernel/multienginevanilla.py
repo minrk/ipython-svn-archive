@@ -47,7 +47,7 @@ import ipython1.kernel.magic
 from ipython1.kernel.multiengine import IMultiEngine
 from ipython1.kernel import controllerservice, newserialized, protocols, results
 from ipython1.kernel.util import tarModule
-from ipython1.kernel.multiengineclient import \
+from ipython1.kernel.remotecontroller import \
     RemoteControllerBase, RemoteControllerView, EngineProxy
 from ipython1.kernel.map import Map
 from ipython1.kernel.parallelfunction import ParallelFunction

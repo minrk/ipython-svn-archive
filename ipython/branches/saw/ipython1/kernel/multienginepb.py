@@ -33,7 +33,7 @@ from zope.interface import Interface, implements
 import ipython1.kernel.pbconfig
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
 from ipython1.kernel.blockon import blockOn
-from ipython1.kernel.util import gatherBoth
+from ipython1.kernel.multiengineclient import ConnectingMultiEngineClient
 
 
 #-------------------------------------------------------------------------------
@@ -410,22 +410,10 @@ class PBMultiEngineClient(object):
 
 components.registerAdapter(PBMultiEngineClient, 
         pb.RemoteReference, IMultiEngine)
-    
-    
-#-------------------------------------------------------------------------------
-# The PB version of RemoteController
-#-------------------------------------------------------------------------------
 
-class RemoteController(object):
-    """A synchronous high-level PBRemoteController."""
+
+class PBConnectingMultiEngineClient(ConnectingMultiEngineClient):
     
-    def __init__(self, addr):
-        self.addr = addr
-        self.pbClient = None
-        self.factory = None
-        self.pendingDeferreds = []
-        self.connected = False
-        
     def connect(self):
         if not self.connected:
             print "Connecting to ", self.addr
@@ -443,150 +431,11 @@ class RemoteController(object):
     def handleDisconnect(self, thingy):
         print "Disconnecting from ", self.addr
         self.connected = False
-        self.pbClient = None
+        self.multiengine = None
         self.factory = None
             
     def _gotRoot(self, rootObj):
-        self.pbClient = IMultiEngine(rootObj)
+        self.multiengine = IMultiEngine(rootObj)
         self.connected = True
-        self.pbClient.reference.notifyOnDisconnect(self.handleDisconnect)
+        self.multiengine.reference.notifyOnDisconnect(self.handleDisconnect)
 
-    def block(self, fireOnOneCallback=0, fireOnOneErrback=0, consumeErrors=0):
-        totalD = gatherBoth(self.pendingDeferreds,
-                       fireOnOneCallback, 
-                       fireOnOneErrback,
-                       consumeErrors,
-                       logErrors=0)
-        def removeFromPendingDeferreds(r, d):
-            self.pendingDeferreds.remove(d)
-            return r
-        for d in self.pendingDeferreds:
-            d.addBoth(removeFromPendingDeferreds, d)
-        return blockOn(totalD)
-                
-    #---------------------------------------------------------------------------
-    # Interface methods
-    #---------------------------------------------------------------------------
-
-    def execute(self, targets, lines):
-        self.connect()
-        d = self.pbClient.execute(targets, lines)
-        self.pendingDeferreds.append(d)
-        return d
-        
-    def executeAll(self, lines):
-        return self.execute('all', lines)
-        
-    def push(self, targets, **namespace):
-        self.connect()
-        d = self.pbClient.push(targets, **namespace)
-        self.pendingDeferreds.append(d)
-        return d
-        
-    def pushAll(self, **namespace):
-        return self.push('all', **namespace)
-        
-    def pull(self, targets, *keys):
-        self.connect()
-        d = self.pbClient.pull(targets, *keys)
-        self.pendingDeferreds.append(d)
-        return d
-    
-    def pullAll(self, *keys):
-        return self.pull('all', *keys)
-    
-    def getResult(self, targets, i=None):
-        self.connect()
-        d = self.pbClient.getResult(targets, i)
-        self.pendingDeferreds.append(d)
-        return d       
-    
-    def getResultAll(self, i=None):
-        return self.getResult('all', i)
-    
-    def reset(self, targets):
-        self.connect()
-        d = self.pbClient.reset(targets)
-        self.pendingDeferreds.append(d)
-        return d
-    
-    def resetAll(self):
-        return self.reset('all')
-    
-    def keys(self, targets):
-        self.connect()
-        d = self.pbClient.keys(targets)
-        self.pendingDeferreds.append(d)
-        return d
-    
-    def keysAll(self):
-        return self.keys('all')
-    
-    def kill(self, targets, controller=False):
-        self.connect()
-        d = self.pbClient.kill(targets, controller)
-        self.pendingDeferreds.append(d)
-        return d
-        
-    def killAll(self, controller=False):
-        return self.kill('all', controller)
-    
-    def pushSerialized(self, targets, **namespace):
-        self.connect()
-        d = self.pbClient.pushSerialized(targets, **namespace)
-        self.pendingDeferreds.append(d)
-        return d
-    
-    def pushSerializedAll(self, **namespace):
-        return self.pushSerialized('all', **namespace)
-    
-    def pullSerialized(self, targets, *keys):
-        self.connect()
-        d = self.pbClient.pullSerialized(targets, *keys)
-        self.pendingDeferreds.append(d)
-        return d
-    
-    def pullSerializedAll(self, *keys):
-        return self.pullSerialized('all', *keys)
-    
-    def clearQueue(self, targets):
-        self.connect()
-        d = self.pbClient.clearQueue(targets)
-        self.pendingDeferreds.append(d)
-        return d
-    
-    def clearQueueAll(self):
-        return self.clearQueue('all')
-    
-    def queueStatus(self, targets):
-        self.connect()
-        d = self.pbClient.queueStatus(targets)
-        self.pendingDeferreds.append(d)
-        return d
-    
-    def queueStatusAll(self):
-        return self.queueStatus('all')
-        
-    def getIDs(self):
-        self.connect()
-        d = self.pbClient.getIDs()
-        self.pendingDeferreds.append(d)
-        return d
-    
-    def verifyTargets(self, targets):
-        self.connect()
-        d = self.pbClient.verifyTargets(targets)
-        self.pendingDeferreds.append(d)
-        return d
-        
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        self.connect()
-        d = self.pbClient.scatter(targets, key, seq, style, flatten)
-        self.pendingDeferreds.append(d)
-        return d
-    
-    def gather(self, targets, key, style='basic'):
-        self.connect()
-        d = self.pbClient.gather(targets, key, style)
-        self.pendingDeferreds.append(d)
-        return d
