@@ -1959,7 +1959,7 @@ class VanillaControllerFactoryFromService(protocols.EnhancedServerFactory):
         return self.service.getResult(targets, i)
     
     def status(self, targets):
-        return self.service.status(targets)
+        return self.service.queueStatus(targets)
     
     def reset(self, targets):
         return self.service.reset(targets)
