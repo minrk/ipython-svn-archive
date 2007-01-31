@@ -3068,5 +3068,4 @@ Defaulting color scheme to 'NoColor'"""
             suffix = (sys.platform == 'win32' and '.ini' or '')
             (userdir / ('ipythonrc' + suffix)).write_text('# Empty, see ipy_user_conf.py\n')
 
-
 # end Magic
