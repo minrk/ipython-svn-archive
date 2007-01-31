@@ -1,3 +1,11 @@
+2007-01-30  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* helpers/update_web2: helper script to keep our private copy of
+	Twisted's web2 in sync with SVN.  We're shipping it privately so
+	that our users can use an official Twisted release (>=2.5).  Once
+	Twisted releases Web2 into their core distribution and this
+	becomes unnecessary, we'll remove our private copy.
+
 2007-01-27  Fernando Perez  <Fernando.Perez@colorado.edu>
 
 	* ipdoctest.py (IPDocTestRunner): major extensions to doctest that
