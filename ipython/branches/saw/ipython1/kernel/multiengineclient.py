@@ -50,7 +50,7 @@ class ConnectingMultiEngineClient(object):
                 
     def _blockOrNot(self, d):
         if self.block:
-            return blockOn(d)
+            return self.blockOn(d)
         else:
             return d
            
