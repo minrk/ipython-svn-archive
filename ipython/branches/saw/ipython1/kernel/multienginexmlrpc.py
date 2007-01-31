@@ -30,10 +30,7 @@ from twisted.internet import defer
 from twisted.python import components
 from twisted.python.failure import Failure
 
-try:
-    from twisted.web2 import xmlrpc, server, channel
-except ImportError:
-    raise ImportError("You must install twisted.web2 for the xmlrpc client")
+from ipython1.external.twisted.web2 import xmlrpc, server, channel
 
 from ipython1.kernel import error, blockon
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine

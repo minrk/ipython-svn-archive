@@ -33,8 +33,6 @@ from ipython1.kernel.util import gatherBoth
 from ipython1.kernel.map import Map
 from ipython1.kernel.parallelfunction import ParallelFunction
 
-
-
 #-------------------------------------------------------------------------------
 # ConnectingMultiEngineClient
 #-------------------------------------------------------------------------------
