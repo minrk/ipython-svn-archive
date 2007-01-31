@@ -33,7 +33,7 @@ from zope.interface import Interface, implements
 import ipython1.kernel.pbconfig
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
 from ipython1.kernel.blockon import blockOn
-from ipython1.kernel.multiengineclient import ConnectingMultiEngineClient
+from ipython1.kernel.multiengineclient import InteractiveMultiEngineClient
 
 
 #-------------------------------------------------------------------------------
@@ -412,7 +412,7 @@ components.registerAdapter(PBMultiEngineClient,
         pb.RemoteReference, IMultiEngine)
 
 
-class PBConnectingMultiEngineClient(ConnectingMultiEngineClient):
+class PBInteractiveMultiEngineClient(InteractiveMultiEngineClient):
     
     def connect(self):
         if not self.connected:
@@ -438,4 +438,6 @@ class PBConnectingMultiEngineClient(ConnectingMultiEngineClient):
         self.multiengine = IMultiEngine(rootObj)
         self.connected = True
         self.multiengine.reference.notifyOnDisconnect(self.handleDisconnect)
+        
+
 
