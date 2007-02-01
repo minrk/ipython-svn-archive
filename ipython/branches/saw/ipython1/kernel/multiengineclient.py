@@ -178,12 +178,25 @@ class ConnectingMultiEngineClient(object):
 
 #-------------------------------------------------------------------------------
 # InteractiveMultiEngineClient
-#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------    
 
 class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
         
     #---------------------------------------------------------------------------
-    # Interactive Extensions
+    # Interactive Extensions:
+    #
+    # ipull/ipullAll
+    # iexecute/iexecuteAll
+    # igetResult/igetResultAll
+    # iqueueStatus/iqueueStatusAll
+    # activate
+    # run/runAll
+    # map/mapAll
+    # parallelize/parallelizeAll
+    # __len__
+    # __setitem__
+    # __getitem__
+    
     #---------------------------------------------------------------------------
         
     def _transformPullResult(self, pushResult, multitargets, lenKeys):
@@ -247,11 +260,11 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
     def igetResult(self, targets, i=None):
         self.connect()
         d = self.multiengine.getResult(targets, i)
-        d.addCallback(self,_printResult)
+        d.addCallback(self._printResult)
         return self._blockOrNot(d)   
     
-    def igetResultAll(self):
-        return self.igetResult('all')
+    def igetResultAll(self, i=None):
+        return self.igetResult('all', i)
     
     def _printQueueStatus(self, status):
         for e in status:
@@ -395,8 +408,10 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
             
     def __len__(self):
         """Return the number of available engines."""
-        return len(self.getIDs())
-
+        d = self.self.getIDs()
+        d.addCallback(len)
+        return self.blockOrNot(d)
+        
     def map(self, targets, functionSource, seq, style='basic'):
         """A parallelized version of Python's builtin map.
         
@@ -424,15 +439,17 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
         :return: A list of len(seq) with functionSource called on each element
             of ``seq``.
         """
-        rtcode = self.scatter(targets, '_ipython_map_seq', seq, style='basic')
-        if rtcode:
-            sourceToRun = \
-                '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
-                functionSource
-            self.execute(targets, sourceToRun, block = False)
-            return self.gather(targets, '_ipython_map_seq_result', style='basic')
-        else:
-            return False
+        saveBlock = self.block
+        self.block = False
+        sourceToRun = \
+            '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
+            functionSource        
+        d = self.scatter(targets, '_ipython_map_seq', seq, style='basic')
+        d.addCallback(lambda _: self.execute(targets, sourceToRun))
+        d.addCallback(lambda _: self.gather(targets, '_ipython_map_seq_result', style='basic'))
+        self.block = saveBlock
+        return self._blockOrNot(d)
+
             
     def mapAll(self, functionSource, seq, style='basic'):
         """Parallel map on all engines.
@@ -487,9 +504,9 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
 #-------------------------------------------------------------------------------
 
 class InteractiveMultiEngineClientView(object):
-    """A subset interface for RemoteController.__getitem__"""
-    def __init__(self, rc, ids):
-        self.rc = rc
+    """A subset interface for InteractiveMultiEngineClient.__getitem__"""
+    def __init__(self, imec, ids):
+        self.imec = imec
         if isinstance(ids, slice):
             self._originalIDs = range(*ids.indices(ids.stop))
         elif isinstance(ids, list):
@@ -497,7 +514,7 @@ class InteractiveMultiEngineClientView(object):
         else:
             raise TypeError("RemoteControllerView requires slice or list")
         # Make sure these exist as of now
-        currentIDs = rc.getIDs()
+        currentIDs = imec.getIDs()
         for id in self._originalIDs:
             if id not in currentIDs:
                 raise Exception("The engine with id %i does not exist" % id)
@@ -505,26 +522,26 @@ class InteractiveMultiEngineClientView(object):
         # print self._ids
         # print self._originalIDs
     
-    def _getBlock(self): return self.rc.block
-    def _setBlock(self, block): self.rc.block = block
+    def _getBlock(self): return self.imec.block
+    def _setBlock(self, block): self.imec.block = block
     
     block = property(_getBlock, _setBlock, None, None)
     
     #---------------------------------------------------------------------------
-    # RemoteController methods
+    # IMultiEngine Interface methods
     #---------------------------------------------------------------------------
     
-    def execute(self, targets, lines, block=None):
+    def execute(self, targets, lines):
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.execute(actualTargets, lines, block)
+        return self.imec.execute(actualTargets, lines)
     
-    def executeAll(self, lines, block=None):
+    def executeAll(self, lines):
         return self.execute('all', lines, block)
         
     def push(self, targets, *keys,**namespace):
         if keys: namespace.update(utils.extractVarsAbove(*keys))
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.push(actualTargets, **namespace)
+        return self.imec.push(actualTargets, **namespace)
     
     def pushAll(self, *keys,**namespace):
         if keys: namespace.update(utils.extractVarsAbove(*keys))
@@ -532,7 +549,7 @@ class InteractiveMultiEngineClientView(object):
         
     def pull(self, targets, *keys):
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.pull(actualTargets, *keys)
+        return self.imec.pull(actualTargets, *keys)
     
     def pullAll(self, *keys):
         r = self.pull('all', *keys)
@@ -542,41 +559,34 @@ class InteractiveMultiEngineClientView(object):
         
     def getResult(self, targets, i=None):
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.getResult(actualTargets, i)
+        return self.imec.getResult(actualTargets, i)
     
     def getResultAll(self, i=None):
         r = self.getResult('all', i)
         if len(self._ids) is 1:
             r = [r]
         return r
-        
-    def printResult(self, targets, i=None):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.printResult(actualTargets, i)
-             
-    def printResultAll(self, i=None):
-        return self.printResult('all', i)
              
     def reset(self, targets):
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.reset(actualTargets)
+        return self.imec.reset(actualTargets)
     
     def resetAll(self):
         return self.reset('all')
 
-    def status(self, targets):
+    def queueStatus(self, targets):
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.status(actualTargets)
+        return self.imec.queueStatus(actualTargets)
     
-    def statusAll(self):
-        r = self.status('all')
+    def queueStatusAll(self):
+        r = self.queueStatus('all')
         if len(self._ids) is 1:
             r = [r]
         return r
         
     def kill(self, targets):
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.kill(actualTargets)
+        return self.imec.kill(actualTargets)
     
     def killAll(self):
         return self.kill('all')
@@ -588,21 +598,22 @@ class InteractiveMultiEngineClientView(object):
 
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.scatter(actualTargets, key, seq, style, flatten)
+        return self.imec.scatter(actualTargets, key, seq, style, flatten)
     
     def scatterAll(self, key, seq, style='basic', flatten=False):
         return self.scatter('all', key, seq, style, flatten)
         
     def gather(self, targets, key, style='basic'):
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.gather(actualTargets, key, style)        
+        return self.imec.gather(actualTargets, key, style)        
     
     def gatherAll(self, key, style='basic'):
         return self.gather('all', key, style)
-        
-    def notify(self, addr=None, flag=True):
-        self.rc.notify(addr, flag)
-        
+                
+    #---------------------------------------------------------------------------
+    # InteractiveMultiEngineClient methods
+    #---------------------------------------------------------------------------
+                
     def activate(self):
         try:
             __IPYTHON__.activeController = self
@@ -611,7 +622,7 @@ class InteractiveMultiEngineClientView(object):
         
     def run(self, targets, fname):
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.run(actualTargets, fname)
+        return self.imec.run(actualTargets, fname)
     
     def runAll(self, fname):
         return self.run('all', fname)
@@ -621,9 +632,9 @@ class InteractiveMultiEngineClientView(object):
             
     def __getitem__(self, id):
         if isinstance(id, slice):
-            return RemoteControllerView(self.rc, self._originalIDs[id])
+            return RemoteControllerView(self.imec, self._originalIDs[id])
         elif isinstance(id, int):
-            return EngineProxy(self.rc, self._originalIDs[id])
+            return EngineProxy(self.imec, self._originalIDs[id])
         elif isinstance(id, str):
             return self.pull('all',*(id,))
         else:
@@ -631,17 +642,20 @@ class InteractiveMultiEngineClientView(object):
         
     def map(self, targets, functionSource, seq, style='basic'):
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.map(actualTargets, functionSource, seq, style)
+        return self.imec.map(actualTargets, functionSource, seq, style)
     
     def mapAll(self, functionSource, seq, style='basic'):
         return self.map('all', functionSource, seq, style)
     
     def parallelize(self, targets, functionName):
         actualTargets = self._mapIDsToOriginal(targets)
-        return self.rc.parallelize(actualTargets, functionName)
+        return self.imec.parallelize(actualTargets, functionName)
     
     def parallelizeAll(self, functionName):
         return self.parallelize('all', functionName)
+        
+    def __len__(self):
+        return self.imec.blockOn(self.imec.getIDs())
         
     #---------------------------------------------------------------------------
     # Methods specific to a RemoteControllerView
@@ -673,35 +687,31 @@ class EngineProxy(object):
     RemoteController class does that when a particular Engine is indexed.
     """
 
-    def __init__(self, rc, id):
+    def __init__(self, imec, id):
         self.id = id
-        self.rc = rc
+        self.imec = imec
     
     def execute(self, strings, block=None):
-        return self.rc.execute(self.id, strings, block=block)
-        #if block:
-        #    return self.rc.execute(self.id, strings, block=True)[0]
-        #else:
-        #    return self.rc.execute(self.id, strings)
+        return self.imec.execute(self.id, strings, block=block)
     
     def push(self, *keys,**namespace):
         if keys: namespace.update(utils.extractVarsAbove(*keys))
-        return self.rc.push(self.id, **namespace)
+        return self.imec.push(self.id, **namespace)
     
     def pull(self, *keys):
-        return self.rc.pull(self.id, *keys)
+        return self.imec.pull(self.id, *keys)
 
     def getResult(self, i=None):
-        return self.rc.getResult(self.id, i)
+        return self.imec.getResult(self.id, i)
     
     def status(self):
-        return self.rc.status(self.id)
+        return self.imec.status(self.id)
     
     def reset(self):
-        return self.rc.reset(self.id)
+        return self.imec.reset(self.id)
     
     def kill(self):
-        return self.rc.kill(self.id)
+        return self.imec.kill(self.id)
 
     def __setitem__(self, key, value):
         return self.push(**{key:value})

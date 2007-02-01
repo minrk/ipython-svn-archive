@@ -21,6 +21,9 @@ import new
 from IPython.iplib import InteractiveShell
 from IPython.Shell import MTInteractiveShell
 
+from twisted.internet.defer import Deferred
+
+
 #-------------------------------------------------------------------------------
 # Definitions of magic functions for use with IPython
 #-------------------------------------------------------------------------------
@@ -59,7 +62,9 @@ def magic_result(self,parameter_s=''):
         except:
             index = None
         print "Printing result... "
-        activeController.printResultAll(index)
+        d = activeController.igetResultAll(index)
+        if isinstance(d, Deferred):
+            activeController.blockOn(d)
 
 def magic_px(self,parameter_s=''):
     """Executes the given python command on the active IPython Controller.
@@ -78,7 +83,7 @@ def magic_px(self,parameter_s=''):
         print NO_ACTIVE_CONTROLLER
     else:
         print "Executing command on Controller"
-        activeController.executeAll(parameter_s)
+        activeController.iexecuteAll(parameter_s)
 
 def magic_pn(self,parameter_s=''):
     """Executes the given python command on the active IPython cluster.
@@ -109,7 +114,7 @@ def magic_pn(self,parameter_s=''):
         print NO_ACTIVE_CONTROLLER
     else:
         print "Executing command on cluster"
-        activeController.execute(k, cmd)
+        activeController.iexecute(k, cmd)
 
 def pxrunsource(self, source, filename="<input>", symbol="single"):
 
@@ -131,7 +136,7 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
         _disable_autopx(self)
         return False
     else:
-        self.activeController.executeAll(source)
+        self.activeController.iexecuteAll(source)
         return False
         
 def magic_autopx(self, parameter_s=''):
