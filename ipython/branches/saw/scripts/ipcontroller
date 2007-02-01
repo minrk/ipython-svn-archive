@@ -112,7 +112,8 @@ def start():
         elif s == 'false':
             controllerConfig.serveTasks = False
         else:
-            raise "-t,--task argument must be 'True' or 'False' (not case sensitive)"
+            print "-t,--task argument must be 'True' or 'False' (not case sensitive)"
+            sys.exit(1)
         
     main(options.logfile)
     
