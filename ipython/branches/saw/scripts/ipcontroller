@@ -71,7 +71,7 @@ def main(logfile):
 
 def start():
     parser = OptionParser()
-    parser.set_defaults(logfile='')
+    parser.set_defaults(logfile='', dotasks = False)
         
     parser.add_option("--engine-port", type="int", dest="engineport",
         help="the TCP port the controller will listen on for engine connections")
@@ -79,8 +79,8 @@ def start():
         help="the TCP ip address the controller will listen on for engine connections")
     parser.add_option("-l", "--logfile", type="string", dest="logfile",
         help="log file name (default is stdout)")
-    parser.add_option("-t", "--task", type="string", dest="dotasks",
-        help="do tasks: '-t False' will not allow tasks, '-t True' will allow tasks (not case sensitive)")
+    parser.add_option("-t", action="store_true", dest="dotasks",
+        help="do tasks flag")
     
     
     # Configuration files and profiles
@@ -105,16 +105,9 @@ def start():
         controllerConfig.listenForEnginesOn['ip'] = options.engineip
     if options.engineport is not None:
         controllerConfig.listenForEnginesOn['port'] = options.engineport
-    if options.dotasks is not None:
-        s = options.dotasks.lower()
-        if s == 'true':
+    if options.dotasks:
             controllerConfig.serveTasks = True
-        elif s == 'false':
-            controllerConfig.serveTasks = False
-        else:
-            print "-t,--task argument must be 'True' or 'False' (not case sensitive)"
-            sys.exit(1)
-        
+    
     main(options.logfile)
     
     
