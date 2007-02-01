@@ -155,6 +155,12 @@ class ControllerConfig(Config):
     controller will listen on with that network protocol.
     """
 
+from ipython1.kernel.taskxmlrpc import IXMLRPCTaskControllerFactory
+
+class TaskControllerConfig(ControllerConfig):
+    taskClientInterfaces = [{'interface':IXMLRPCTaskControllerFactory,
+                        'ip':'',
+                        'port':10113}]
     
 # Client configuration
 
@@ -177,6 +183,7 @@ class ClientConfig(Config):
 
 configClasses = {'engine'     : EngineConfig,
                  'controller' : ControllerConfig,
+                 'taskcontroller':TaskControllerConfig,
                  'client'     : ClientConfig,
                  'shell'      : ShellConfig,
                  'mpi'        : MPIConfig}

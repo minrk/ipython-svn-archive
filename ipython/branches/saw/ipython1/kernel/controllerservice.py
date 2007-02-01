@@ -75,7 +75,21 @@ class IControllerCore(Interface):
     
     def unregisterEngine(id):
         """Handle a disconnecting engine."""
-        
+    
+    def onRegisterEngineDo(f, includeID, *args, **kwargs):
+        """call f with *args and **kwargs when an engine is registered.  
+        If includeID is True, the first argument will be the id"""
+    
+    def onUnregisterEngineDo(f, includeID, *args, **kwargs):
+        """call f with *args and **kwargs when an engine is unregistered.  
+        If includeID is True, the first argument will be the id"""
+    
+    def onRegisterEngineDoNot(f):
+        """stop calling f on registration"""
+    
+    def onUnregisterEngineDo(f):
+        """stop calling f on unregistration"""
+    
                 
 class IControllerBase(IControllerCore):
     """The basic controller interface."""
@@ -100,6 +114,8 @@ class ControllerService(object, service.Service):
         self.saveIDs = saveIDs
         self.engines = {}
         self.availableIDs = range(maxEngines,-1,-1)   # [255,...,0]
+        self._onRegister = []
+        self._onUnregister = []
     
     #---------------------------------------------------------------------------
     # IControllerCore methods
@@ -130,6 +146,17 @@ class ControllerService(object, service.Service):
         self.engines[remoteEngine.id] = remoteEngine
         msg = "registered engine: " + repr(remoteEngine.id)
         log.msg(msg)
+        
+        for i in range(len(self._onRegister)):
+            (f,args,kwargs,ifid) = self._onRegister[i]
+            try:
+                if ifid:
+                    f(remoteEngine.id, *args, **kwargs)
+                else:
+                    f(*args, **kwargs)
+            except:
+                self._onRegister.pop(i)
+        
         return {'id':remoteEngine.id}
     
     def unregisterEngine(self, id):
@@ -148,7 +175,38 @@ class ControllerService(object, service.Service):
                 self.availableIDs.sort(reverse=True) 
             else:
                 log.msg("preserving id %i" %id)
+        
+        for i in range(len(self._onUnregister)):
+            (f,args,kwargs,ifid) = self._onUnregister[i]
+            try:
+                if ifid:
+                    f(id, *args, **kwargs)
+                else:
+                    f(*args, **kwargs)
+            except:
+                self._onUnregister.pop(i)
     
+    def onRegisterEngineDo(self, f, includeID, *args, **kwargs):
+        assert callable(f), "f must be callable"
+        self._onRegister.append((f,args,kwargs,includeID))
+
+    def onUnregisterEngineDo(self, f, includeID, *args, **kwargs):
+        assert callable(f), "f must be callable"
+        self._onUnregister.append((f,args,kwargs,includeID))
+    
+    def onRegisterEngineDoNot(self, f):
+        for i in range(len(self._onRegister)):
+            g = self._onRegister[i][0]
+            if f == g:
+                self._onRegister.pop(i)
+                return
+    
+    def onUnregisterEngineDoNot(self, f):
+        for i in range(len(self._onUnregister)):
+            g = self._onUnregister[i][0]
+            if f == g:
+                self._onUnregister.pop(i)
+                return
 
 #-------------------------------------------------------------------------------
 # Base class for adapting controller to different client APIs

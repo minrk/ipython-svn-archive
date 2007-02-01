@@ -425,6 +425,8 @@ class EngineFromReference(object):
         try:
             return self.reference.callRemote(*args, **kwargs)
         except pb.DeadReferenceError:
+            self.notifier()
+            self.stopNotifying(self.notifier)
             return defer.fail()
     
     def getID(self):
@@ -656,6 +658,9 @@ class PBRemoteEngineRootFromService(pb.Root):
         def notify(*args):
             return self.service.unregisterEngine(regDict['id'])        
         engineReference.broker.notifyOnDisconnect(notify)
+        
+        engine.notifier = notify
+        engine.stopNotifying = engineReference.broker.dontNotifyOnDisconnect
         
         return regDict
 
