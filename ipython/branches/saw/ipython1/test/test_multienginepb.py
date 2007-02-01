@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # encoding: utf-8
 """This file contains unittests for the kernel.engineservice.py module.
 
@@ -18,8 +19,27 @@ __docformat__ = "restructuredtext en"
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
+
 #-------------------------------------------------------------------------------
-# Imports
+# Doctests
+#-------------------------------------------------------------------------------
+
+# Module imports
+import tcommon
+from tcommon import *
+
+# If you have standalone doctests in a separate file, set their names in the
+# dt_files variable (as a single string  or a list thereof):
+dt_files = ['tst_multienginepb.txt']
+
+# If you have any modules whose docstrings should be scanned for embedded tests
+# as examples accorging to standard doctest practice, set them here (as a
+# single string or a list thereof):
+dt_modules = None
+
+
+#-------------------------------------------------------------------------------
+# Unittests
 #-------------------------------------------------------------------------------
 
 from twisted.internet import reactor, defer
@@ -64,3 +84,15 @@ class BasicControllerPBTest(DeferredTestCase):
         return self.assertEquals(p, l)
     testInterfaces.skip = 'The MultiEnginePB tests need to be updated when multienginepb.py is updated.'
     
+   
+#-------------------------------------------------------------------------------
+# Test coordination
+#-------------------------------------------------------------------------------
+ 
+# This ensures that the code will run either standalone as a script, or that it
+# can be picked up by Twisted's `trial` test wrapper to run all the tests.
+
+if __name__ == '__main__':
+    unittest.main(testLoader=IPDocTestLoader(dt_files,dt_modules))
+else:
+    testSuite = lambda : makeTestSuite(__name__,dt_files,dt_modules)
