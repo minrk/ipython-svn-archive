@@ -240,7 +240,7 @@ class XMLRPCConnectingTaskClient(object):
         if not self.connected:
             addr = 'http://%s:%s/'%self.addr
             print "Connecting to ", addr
-            self.taskcontroller = ITaskController(xmlrpclib.Server(addr))
+            self.taskcontroller = XMLRPCTaskControllerClient(xmlrpclib.Server(addr))
             self.connected = True
     
     def disconnect(self):
