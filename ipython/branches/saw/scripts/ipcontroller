@@ -19,6 +19,8 @@ from twisted.python import log
 
 from ipython1.kernel import controllerservice
 from ipython1.kernel.multiengine import IMultiEngine
+from ipython1.kernel.task import ITaskController
+
 import ipython1.config.api as config
 
 controllerConfig = config.getConfigObject('controller')
@@ -53,6 +55,16 @@ def main(logfile):
             factory=fac,
             interface=ci['ip'])
         
+    # Start listening for ITaskController clients
+    if controllerConfig.serveTasks:
+        taskController = ITaskController(cs)
+        for ci in controllerConfig.taskClientInterfaces:
+            fac = ci['interface'](taskController)
+            reactor.listenTCP(
+                port=ci['port'],
+                factory=fac,
+                interface=ci['ip'])
+        
     # Start the controller service and set things running
     cs.startService()
     reactor.run()
@@ -67,7 +79,10 @@ def start():
         help="the TCP ip address the controller will listen on for engine connections")
     parser.add_option("-l", "--logfile", type="string", dest="logfile",
         help="log file name (default is stdout)")
-        
+    parser.add_option("-t", "--task", type="string", dest="dotasks",
+        help="do tasks: '-t False' will not allow tasks, '-t True' will allow tasks (not case sensitive)")
+    
+    
     # Configuration files and profiles
     parser.add_option("-p", "--profile", type="string", dest="profile",
         help="the name of a profile")
@@ -90,6 +105,14 @@ def start():
         controllerConfig.listenForEnginesOn['ip'] = options.engineip
     if options.engineport is not None:
         controllerConfig.listenForEnginesOn['port'] = options.engineport
+    if options.dotasks is not None:
+        s = options.dotasks.lower()
+        if s == 'true':
+            controllerConfig.serveTasks = True
+        elif s == 'false':
+            controllerConfig.serveTasks = False
+        else:
+            raise "-t,--task argument must be 'True' or 'False' (not case sensitive)"
         
     main(options.logfile)
     

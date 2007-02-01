@@ -128,7 +128,10 @@ from ipython1.kernel.multienginexmlrpc import \
     
 from ipython1.kernel.enginepb import \
     IPBEngineServerFactory
-    
+
+from ipython1.kernel.taskxmlrpc import \
+    IXMLRPCTaskControllerFactory
+
 class ControllerConfig(Config):
     #engineServerProtocolInterface = IVanillaEngineServerFactory
     engineServerProtocolInterface = IPBEngineServerFactory
@@ -149,19 +152,17 @@ class ControllerConfig(Config):
                          {'interface': IXMLRPCMultiEngineFactory, 
                           'ip': '', 
                           'port': 10112}]
+    # client interfaces for taskcontroller
+    taskClientInterfaces = [{'interface':IXMLRPCTaskControllerFactory,
+                        'ip':'',
+                        'port':10113}]
+    serveTasks = False
     """A list of interface, ip, and port for the protocols used to talk to clients.
     
     The ip and port for each interface determines what ip and port the 
     controller will listen on with that network protocol.
     """
 
-from ipython1.kernel.taskxmlrpc import IXMLRPCTaskControllerFactory
-
-class TaskControllerConfig(ControllerConfig):
-    taskClientInterfaces = [{'interface':IXMLRPCTaskControllerFactory,
-                        'ip':'',
-                        'port':10113}]
-    
 # Client configuration
 
 from ipython1.kernel.multienginevanilla import \
@@ -183,7 +184,6 @@ class ClientConfig(Config):
 
 configClasses = {'engine'     : EngineConfig,
                  'controller' : ControllerConfig,
-                 'taskcontroller':TaskControllerConfig,
                  'client'     : ClientConfig,
                  'shell'      : ShellConfig,
                  'mpi'        : MPIConfig}
