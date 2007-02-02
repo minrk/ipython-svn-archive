@@ -132,6 +132,9 @@ from ipython1.kernel.enginepb import \
 from ipython1.kernel.taskxmlrpc import \
     IXMLRPCTaskControllerFactory
 
+from ipython1.kernel.taskpb import \
+    IPBTaskControllerFactory
+
 class ControllerConfig(Config):
     #engineServerProtocolInterface = IVanillaEngineServerFactory
     engineServerProtocolInterface = IPBEngineServerFactory
@@ -155,7 +158,10 @@ class ControllerConfig(Config):
     # client interfaces for taskcontroller
     taskClientInterfaces = [{'interface':IXMLRPCTaskControllerFactory,
                         'ip':'',
-                        'port':10113}]
+                        'port':10113},
+                        {'interface':IPBTaskControllerFactory,
+                        'ip':'',
+                        'port':10114}]
     serveTasks = False
     """A list of interface, ip, and port for the protocols used to talk to clients.
     

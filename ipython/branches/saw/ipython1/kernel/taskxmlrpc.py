@@ -31,9 +31,7 @@ from twisted.python import components, failure
 
 from ipython1.external.twisted.web2 import xmlrpc, server, channel
 
-from ipython1.kernel import error, blockon, task
-# from ipython1.kernel.task import TaskController, ITaskController
-# from ipython1.kernel.taskcontrollerclient import ConnectingTaskControllerClient
+from ipython1.kernel import error, blockon, task, taskclient
 
 #-------------------------------------------------------------------------------
 # The Controller side of things
@@ -144,7 +142,6 @@ components.registerAdapter(XMLRPCTaskControllerFromTaskController,
 class IXMLRPCTaskControllerFactory(Interface):
     pass
     
-    
 def XMLRPCServerFactoryFromTaskController(taskController):
     """Adapt a TaskController to a XMLRPCServerFactory."""
     s = server.Site(IXMLRPCTaskController(taskController))
@@ -183,7 +180,10 @@ class XMLRPCTaskControllerClient(object):
             (taskID, key, results) = pickle.loads(r.data)
         except pickle.PickleError:
             raise error.KernelError("Could not unpickle returned object.")
-        self.pendingDeferreds[key] = d = defer.Deferred()
+        if key == -1:# not linked through
+            d = defer.succeed(None)
+        else:
+            self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return (taskID, key, d)
     
@@ -238,20 +238,8 @@ components.registerAdapter(XMLRPCTaskControllerClient,
 # The XMLRPC version of ConnectingTaskControllerClient
 #-------------------------------------------------------------------------------
 
-class XMLRPCConnectingTaskClient(object):
+class XMLRPCConnectingTaskClient(taskclient.ConnectingTaskClient):
     """XML-RPC version of the Connecting TaskControllerClient"""
-    
-    def __init__(self, addr):
-        self.addr = addr
-        self.taskcontroller = None
-        self.block = False
-        self.connected = False
-                
-    def _blockOrNot(self, d):
-        if self.block:
-            return self.blockOn(d)
-        else:
-            return d
     
     def connect(self):
         if not self.connected:
@@ -266,22 +254,4 @@ class XMLRPCConnectingTaskClient(object):
             del self.taskcontroller
             self.taskcontroller = None
             self.connected = False
-    
-    def run(self, *args, **kwargs):
-        """call with a task object"""
-        self.connect()
-        if len(args) == 1 and isinstance(args[0], task.Task):
-            t = args[0]
-        else:
-            t = task.Task(*args, **kwargs)
-        (taskID, d) = self.taskcontroller.run(t)
-        return taskID, self._blockOrNot(d)
-    
-    def getTaskResult(self, taskID):
-        self.connect()
-        return self._blockOrNot(self.taskcontroller.getTaskResult(taskID))
-    
-    def blockOn(self, d):
-        self.taskcontroller.blockOn(d)
-        return blockon.blockOn(d)
     
