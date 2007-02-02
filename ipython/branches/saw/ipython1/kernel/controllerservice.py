@@ -137,32 +137,32 @@ class ControllerService(object, service.Service):
             desiredID = None
             
         if desiredID in self.availableIDs:
-            remoteEngine.id = desiredID
+            getID = desiredID
             self.availableIDs.remove(desiredID)
         else:
-            remoteEngine.id = self.availableIDs.pop()
-            
+            getID = self.availableIDs.pop()
+        remoteEngine.id = getID
         remoteEngine.service = self
-        self.engines[remoteEngine.id] = remoteEngine
-        msg = "registered engine: " + repr(remoteEngine.id)
+        self.engines[getID] = remoteEngine
+        msg = "registered engine: %i" %getID
         log.msg(msg)
         
         for i in range(len(self._onRegister)):
             (f,args,kwargs,ifid) = self._onRegister[i]
             try:
                 if ifid:
-                    f(remoteEngine.id, *args, **kwargs)
+                    f(getID, *args, **kwargs)
                 else:
                     f(*args, **kwargs)
             except:
                 self._onRegister.pop(i)
         
-        return {'id':remoteEngine.id}
+        return {'id':getID}
     
     def unregisterEngine(self, id):
         """Unregister remote engine object"""
         
-        msg = "unregistered engine %r" %id
+        msg = "unregistered engine %i" %id
         log.msg(msg)
         try:
             del self.engines[id]

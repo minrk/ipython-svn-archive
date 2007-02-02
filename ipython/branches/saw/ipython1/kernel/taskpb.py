@@ -57,7 +57,6 @@ class PBTaskControllerFromTaskController(pb.Root):
     implements(IPBTaskController)
     
     def __init__(self, taskController):
-        # xmlrpc.PB.__init__(self)
         self.taskController = taskController
     
     #---------------------------------------------------------------------------
@@ -169,7 +168,7 @@ class PBTaskControllerClient(object):
         to the one returned by run."""
         d = self.callRemote('getTaskResult', taskID)
         return d.addCallback(self.checkReturnForFailure)
-        
+    
 
 components.registerAdapter(PBTaskControllerClient, 
         pb.RemoteReference, task.ITaskController)
