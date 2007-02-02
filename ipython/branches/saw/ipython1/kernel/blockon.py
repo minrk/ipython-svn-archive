@@ -98,8 +98,7 @@ class BlockingDeferred(object):
             f = self.d.result.get('failure', None)
             if isinstance(f, failure.Failure):
                 f.raiseException()
-        else:
-            return self.d.result
+        return self.d.result
 
     def gotResult(self, result):
         self.finished = True

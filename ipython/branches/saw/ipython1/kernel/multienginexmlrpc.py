@@ -120,43 +120,58 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         self.multiEngine = multiEngine
         self.pendingDeferreds = {}
         self.results = {}
+        self.clientIndex = 0
         
     
     #---------------------------------------------------------------------------
     # Non interface methods
     #---------------------------------------------------------------------------
     
-    def finishDeferred(self, r, key):
+    def finishDeferred(self, r, clientID, key):
         if isinstance(r, failure.Failure):
             r.cleanFailure()
-        self.results[key] = r
+        if not self.results.has_key(clientID):
+            self.results[clientID] = {}
+        self.results[clientID][key] = r
         try:
             del self.pendingDeferreds[key]
         except:
             pass
         return None
     
-    def returnResults(self, key):
-        bin = xmlrpc.Binary(pickle.dumps((key, self.results),2))
+    def returnResults(self, clientID, key):
+        if not self.results.has_key(clientID):
+            self.results[clientID] = {}
+        bin = xmlrpc.Binary(pickle.dumps((key, self.results[clientID]),2))
         self.results = {}
         return bin
+    
+    #---------------------------------------------------------------------------
+    # IXMLRPCTaskController related methods
+    #---------------------------------------------------------------------------
+    
+    def xmlrpc_getClientID(self, request):
+        clientID = self.clientIndex
+        self.clientIndex += 1
+        return clientID
     
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
     
-    def xmlrpc_execute(self, request, targets, lines, block):
+    def xmlrpc_execute(self, request, clientID, targets, lines, block):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.execute(targets, lines)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
         if block:
             blockon.blockOn(d)
-        return self.returnResults(key)
+        return self.returnResults(clientID, key)
     
-    def xmlrpc_push(self, request, targets, binaryNS):
+    def xmlrpc_push(self, request, clientID, targets, binaryNS):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
@@ -167,20 +182,22 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
             else:
                 d = self.multiEngine.push(targets, **namespace)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
-        return self.returnResults(key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
+        return self.returnResults(clientID, key)
     
-    def xmlrpc_pull(self, request, targets, *keys):
+    def xmlrpc_pull(self, request, clientID, targets, *keys):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.pull(targets, *keys)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
         blockon.blockOn(d)
-        return self.returnResults(key)
+        return self.returnResults(clientID, key)
     
-    def xmlrpc_getResult(self, request, targets, i=None):
+    def xmlrpc_getResult(self, request, clientID, targets, i=None):
         if i == 'None':
             i = None
         if not self.multiEngine.verifyTargets(targets):
@@ -188,40 +205,43 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         else:
             d = self.multiEngine.getResult(targets, i)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
         blockon.blockOn(d)
-        return self.returnResults(key)
+        return self.returnResults(clientID, key)
     
-    def xmlrpc_reset(self, request, targets):
+    def xmlrpc_reset(self, request, clientID, targets):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.reset(targets)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
-        # blockon.blockOn(d)
-        return self.returnResults(key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
+        return self.returnResults(clientID, key)
     
-    def xmlrpc_keys(self, request, targets):
+    def xmlrpc_keys(self, request, clientID, targets):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.keys(targets)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
-        return self.returnResults(key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
+        return self.returnResults(clientID, key)
     
-    def xmlrpc_kill(self, request, targets, controller=False):
+    def xmlrpc_kill(self, request, clientID, targets, controller=False):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.kill(targets, controller)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
         blockon.blockOn(d)
-        return self.returnResults(key)
+        return self.returnResults(clientID, key)
         
-    def xmlrpc_pushSerialized(self, request, targets, binaryNS):
+    def xmlrpc_pushSerialized(self, request, clientID, targets, binaryNS):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
@@ -232,55 +252,60 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
             else:
                 d = self.multiEngine.pushSerialized(targets, **namespace)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
-        return self.returnResults(key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
+        return self.returnResults(clientID, key)
     
-    def xmlrpc_pullSerialized(self, request, targets, *keys):
+    def xmlrpc_pullSerialized(self, request, clientID, targets, *keys):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.pullSerialized(targets, *keys)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
         blockon.blockOn(d)
-        return self.returnResults(key)
+        return self.returnResults(clientID, key)
     
-    def xmlrpc_clearQueue(self, request, targets):
+    def xmlrpc_clearQueue(self, request, clientID, targets):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.clearQueue(targets)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
         blockon.blockOn(d)
-        return self.returnResults(key)
+        return self.returnResults(clientID, key)
     
-    def xmlrpc_queueStatus(self, request, targets):
+    def xmlrpc_queueStatus(self, request, clientID, targets):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.queueStatus(targets)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
         blockon.blockOn(d)
-        return self.returnResults(key)
+        return self.returnResults(clientID, key)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
-    def xmlrpc_getIDs(self, request):
+    def xmlrpc_getIDs(self, request, clientID):
         d = self.multiEngine.getIDs()
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
         blockon.blockOn(d)
-        return self.returnResults(key)
+        return self.returnResults(clientID, key)
     
     #---------------------------------------------------------------------------
     # IEngineCoordinator related methods
     #---------------------------------------------------------------------------
     
-    def xmlrpc_scatter(self, request, targets, key, bseq, style='basic', flatten=False):
+    def xmlrpc_scatter(self, request, clientID, targets, key, bseq, style='basic', flatten=False):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
@@ -291,28 +316,32 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
             else:
                 d = self.multiEngine.scatter(targets, key, seq, style, flatten)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
-        return self.returnResults(key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
+        return self.returnResults(clientID, key)
     
-    def xmlrpc_gather(self, request, targets, key, style='basic'):
+    def xmlrpc_gather(self, request, clientID, targets, key, style='basic'):
         if not self.multiEngine.verifyTargets(targets):
             d = defer.fail(error.InvalidEngineID(str(targets)))
         else:
             d = self.multiEngine.gather(targets, key, style)
         key = hash(d)
-        self.pendingDeferreds[key] = d.addBoth(self.finishDeferred, key)
+        self.pendingDeferreds[key] = d
+        d.addBoth(self.finishDeferred, clientID, key)
         blockon.blockOn(d)
-        return self.returnResults(key)
+        return self.returnResults(clientID, key)
     
     
     #---------------------------------------------------------------------------
     # IXMLRPCMultiEngineClient
     #---------------------------------------------------------------------------
 
-    def xmlrpc_blockOn(self, request, key):
-        if not self.results.has_key(key):
+    def xmlrpc_blockOn(self, request, clientID, key):
+        if not self.results.has_key(clientID):
+            self.results[clientID] = {}
+        if not self.results[clientID].has_key(key) and self.pendingDeferreds.has_key(key):
             blockon.blockOn(self.pendingDeferreds[key])
-        return self.returnResults('')
+        return self.returnResults(clientID, -1)
     
 
 components.registerAdapter(XMLRPCMultiEngineFromMultiEngine,
@@ -347,7 +376,7 @@ class XMLRPCMultiEngineClient(object):
     def __init__(self, server):
         self.server = server
         self.pendingDeferreds = {}
-        
+        self.clientID = self.server.getClientID()
     #---------------------------------------------------------------------------
     # Non interface methods
     #---------------------------------------------------------------------------
@@ -375,7 +404,7 @@ class XMLRPCMultiEngineClient(object):
     def blockOn(self, d):
         for k,v in self.pendingDeferreds.iteritems():
             if d is v:
-                (key, results) = self.handleReturn(self.server.blockOn(k))
+                (key, results) = self.handleReturn(self.server.blockOn(self.clientID, k))
                 self.fireCallbacks(results)
                 break
     
@@ -384,7 +413,7 @@ class XMLRPCMultiEngineClient(object):
     #---------------------------------------------------------------------------
         
     def execute(self, targets, lines, block=False):
-        (key, results) = self.handleReturn(self.server.execute(targets, lines, block))
+        (key, results) = self.handleReturn(self.server.execute(self.clientID, targets, lines, block))
         self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return d
@@ -398,7 +427,7 @@ class XMLRPCMultiEngineClient(object):
         except:
             return defer.fail()
         else:
-            (key, results) = self.handleReturn(self.server.push(targets, binPackage))
+            (key, results) = self.handleReturn(self.server.push(self.clientID, targets, binPackage))
             self.pendingDeferreds[key] = d = defer.Deferred()
             self.fireCallbacks(results)
             return d
@@ -407,7 +436,7 @@ class XMLRPCMultiEngineClient(object):
         return self.push('all', **ns)
     
     def pull(self, targets, *keys):
-        (key, results) = self.handleReturn(self.server.pull(targets, *keys))
+        (key, results) = self.handleReturn(self.server.pull(self.clientID, targets, *keys))
         self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return d
@@ -418,7 +447,7 @@ class XMLRPCMultiEngineClient(object):
     def getResult(self, targets, i=None):
         if i is None: # This is because None cannot be marshalled by xml-rpc
             i = 'None'
-        (key, results) = self.handleReturn(self.server.getResult(targets, i))
+        (key, results) = self.handleReturn(self.server.getResult(self.clientID, targets, i))
         self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return d
@@ -427,7 +456,7 @@ class XMLRPCMultiEngineClient(object):
         return self.getResult('all', i)
     
     def reset(self, targets):
-        (key, results) = self.handleReturn(self.server.reset(targets))
+        (key, results) = self.handleReturn(self.server.reset(self.clientID, targets))
         self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return d
@@ -436,7 +465,7 @@ class XMLRPCMultiEngineClient(object):
         return self.reset('all')
     
     def keys(self, targets):
-        (key, results) = self.handleReturn(self.server.keys(targets))
+        (key, results) = self.handleReturn(self.server.keys(self.clientID, targets))
         self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return d
@@ -445,7 +474,7 @@ class XMLRPCMultiEngineClient(object):
         return self.keys('all')
     
     def kill(self, targets, controller=False):
-        (key, results) = self.handleReturn(self.server.kill(targets, controller))
+        (key, results) = self.handleReturn(self.server.kill(self.clientID, targets, controller))
         self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return d
@@ -459,7 +488,7 @@ class XMLRPCMultiEngineClient(object):
         except:
             return defer.fail()
         else:
-            (key, results) = self.handleReturn(self.server.pushSerialized(targets, binPackage))
+            (key, results) = self.handleReturn(self.server.pushSerialized(self.clientID, targets, binPackage))
             self.pendingDeferreds[key] = d = defer.Deferred()
             self.fireCallbacks(results)
             return d
@@ -468,7 +497,7 @@ class XMLRPCMultiEngineClient(object):
         return self.pushSerialized('all', **namespace)
     
     def pullSerialized(self, targets, *keys):
-        (key, results) = self.handleReturn(self.server.pullSerialized(targets, *keys))
+        (key, results) = self.handleReturn(self.server.pullSerialized(self.clientID, targets, *keys))
         self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return d
@@ -477,7 +506,7 @@ class XMLRPCMultiEngineClient(object):
         return self.pullSerialized('all', *keys)
     
     def clearQueue(self, targets):
-        (key, results) = self.handleReturn(self.server.clearQueue(targets))
+        (key, results) = self.handleReturn(self.server.clearQueue(self.clientID, targets))
         self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return d
@@ -486,7 +515,7 @@ class XMLRPCMultiEngineClient(object):
         return self.clearQueue('all')
     
     def queueStatus(self, targets):
-        (key, results) = self.handleReturn(self.server.queueStatus(targets))
+        (key, results) = self.handleReturn(self.server.queueStatus(self.clientID, targets))
         self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return d
@@ -499,7 +528,7 @@ class XMLRPCMultiEngineClient(object):
     #---------------------------------------------------------------------------
     
     def getIDs(self):
-        (key, results) = self.handleReturn(self.server.getIDs())
+        (key, results) = self.handleReturn(self.server.getIDs(self.clientID))
         self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return d
@@ -514,7 +543,7 @@ class XMLRPCMultiEngineClient(object):
         except:
             return defer.Fail(failure.Failure())
         else:
-            (key, results) = self.handleReturn(self.server.scatter(targets, key, bseq, style, flatten))
+            (key, results) = self.handleReturn(self.server.scatter(self.clientID, targets, key, bseq, style, flatten))
             self.pendingDeferreds[key] = d = defer.Deferred()
             self.fireCallbacks(results)
             return d
@@ -523,7 +552,7 @@ class XMLRPCMultiEngineClient(object):
         return self.scatter('all', key, seq, style, flatten)
     
     def gather(self, targets, key, style='basic'):
-        (key, results) = self.handleReturn(self.server.gather(targets, key, style))
+        (key, results) = self.handleReturn(self.server.gather(self.clientID, targets, key, style))
         self.pendingDeferreds[key] = d = defer.Deferred()
         self.fireCallbacks(results)
         return d

@@ -22,14 +22,31 @@ from twisted.python import components, log, failure
 
 from ipython1.kernel import engineservice as es
 from ipython1.kernel import controllerservice as cs
+from ipython1.kernel.util import gatherBoth
+
+
+class Task(object):
+    """The task object for the Task Controller"""
+    def __init__(self, expression, taskID=None, resultNames=None, setupNS={},
+            clearBefore=False, clearAfter=False):
+        self.taskID = taskID
+        self.expression = expression
+        if isinstance(resultNames, str):
+            self.resultNames = [resultNames]
+        else:
+            self.resultNames = resultNames
+        self.setupNS = setupNS
+        self.clearBefore = clearBefore
+        self.clearAfter = clearAfter
+        self.deferred = defer.Deferred()
+    
 
 class IWorker(zi.Interface):
     
-    def run(expression, resultName='', namespace={}):
+    def run(task):
         """Run expression in namespace."""
     
 
-        
 class WorkerFromQueuedEngine(object):
     
     zi.implements(IWorker)
@@ -37,32 +54,45 @@ class WorkerFromQueuedEngine(object):
     def __init__(self, qe):
         self.queuedEngine = qe
     
-    def run(self, expression, resultName='', namespace={}):
-        d1 = self.queuedEngine.push(**namespace)
-        d1.addCallback(lambda r: self.queuedEngine.execute(expression))
-        if resultName:
-            d1.addCallback(lambda r: self.queuedEngine.pull(resultName))
+    def run(self, task):
+        """run a task, return a deferred to its results"""
+        dl = []
+        index = 1
+        if task.clearBefore:
+            dl.append(self.queuedEngine.reset())
+            index += 1
+        if task.setupNS:
+            dl.append(self.queuedEngine.push(**task.setupNS))
+            index += 1
+        
+        dl.append(self.queuedEngine.execute(task.expression))
+        
+        if task.resultNames:
+            d = self.queuedEngine.pull(*task.resultNames)
         else:
-            d1.addCallback(lambda r: None)
-        return d1
+            d = defer.succeed(None)
+        dl.append(d)
+        if task.clearAfter:
+            dl.append(self.queuedEngine.reset())
+        
+        names = task.resultNames or ['result']
+        return gatherBoth(dl).addCallback(self.zipResults, names, index)
+    
+    def zipResults(self, rlist, names, index):
+        for r in rlist:
+            if isinstance(r, failure.Failure):
+                return r
+        if len(names) == 1:
+            return {names[0]:rlist[index]}
+        return dict(zip(names, rlist[index]))
     
 
-
-class Task(object):
-    """The task object for the Task Controller"""
-    def __init__(self, taskID, expression, resultName, namespace={}, workerID=None):
-        self.taskID = taskID
-        self.workerID = workerID
-        self.expression = expression
-        self.resultName = resultName
-        self.namespace = namespace
-        self.deferred = defer.Deferred()
 
 components.registerAdapter(WorkerFromQueuedEngine, es.IEngineQueued, IWorker)
 
 class ITaskController(zi.Interface):
     
-    def run(expression, resultName='', namespace=None):
+    def run(task):
         """Run a task"""
     
     def getTaskResult(taskID):
@@ -108,16 +138,15 @@ class TaskController(object):
     # Interface methods
     #############
     
-    def run(self, expression, resultName='', namespace={}):
+    def run(self, task):
         """returns a task ID and a deferred to its result"""
         empty = not self.queue
-        taskID = self.taskID
+        task.taskID = self.taskID
         self.taskID += 1
-        task = Task(taskID, expression, resultName, namespace)
         self.queue.append(task)
-        log.msg('queuing task #%i' %taskID)
+        log.msg('queuing task #%i' %task.taskID)
         self.distributeTasks()
-        return taskID, task.deferred
+        return task.taskID, task.deferred
     
     def getTaskResult(self, taskID):
         """returns a deferred to the result of a task"""
@@ -143,7 +172,7 @@ class TaskController(object):
             # add to pending
             self.pendingTasks.append(task)
             # run/link callbacks
-            d = self.workers[workerID].run(task.expression, task.resultName, task.namespace)
+            d = self.workers[workerID].run(task)
             log.msg("running task #%i on worker %i" %(task.taskID, workerID))
             d.addBoth(self.taskCompleted, workerID, task.taskID).chainDeferred(task.deferred)
             
