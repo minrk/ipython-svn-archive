@@ -112,7 +112,8 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
             taskID = -1
             d = defer.fail()
         else:
-            taskID, d = self.taskController.run(task)
+            d = self.taskController.run(task)
+            taskID = task.taskID
         key = hash(d)
         self.pendingDeferreds[key] = d
         d.addBoth(self.finishDeferred, clientID, key)
@@ -219,8 +220,9 @@ class XMLRPCTaskControllerClient(object):
         binTask = xmlrpc.Binary(pickle.dumps(task,2))
         (taskID, key, d) = self.handleReturn(
                 self.server.run(self.clientID, binTask))
-        
-        return (taskID, d)
+        task.taskID = taskID
+        task.result = d
+        return d
     
     def getTaskResult(self, taskID):
         """get the result of a task by its id.  This relinks your deferred

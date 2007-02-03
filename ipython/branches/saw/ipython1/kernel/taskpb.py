@@ -63,11 +63,8 @@ class PBTaskControllerFromTaskController(pb.Root):
     # Non interface methods
     #---------------------------------------------------------------------------
     
-    def checkReturns(self, rlist):
-        for r in rlist:
-            if isinstance(r, (failure.Failure, Exception)):
-                rlist[rlist.index(r)] = pickle.dumps(r, 2)
-        return rlist
+    def packageSuccess(self, r):
+        return pickle.dumps(r, 2)
     
     def packageFailure(self, f):
         f.cleanFailure()
@@ -85,13 +82,13 @@ class PBTaskControllerFromTaskController(pb.Root):
             taskID = -1
             d = defer.fail()
         else:
-            taskID, d = self.taskController.run(task)
-            d.addErrback(lambda f: None)# swallow error
-            return taskID
+            tr = self.taskController.run(task)
+            # tr.result.addErrback(lambda _:_)# errors are handled elsewhere
+            return tr.taskID
     
     def remote_getTaskResult(self, taskID):
-        d = self.taskController.getTaskResult(taskID)
-        return d.addCallback(pickle.dumps, 2).addErrback(self.packageFailure)
+        tr = self.taskController.getTaskResult(taskID)
+        return tr.result.addCallback(self.packageSuccess).addErrback(self.packageFailure)
     
 
 components.registerAdapter(PBTaskControllerFromTaskController,
@@ -160,14 +157,13 @@ class PBTaskControllerClient(object):
         the result of the task."""
         pTask = pickle.dumps(task,2)
         taskID = blockon.blockOn(self.callRemote('run', pTask))
-        d = self.getTaskResult(taskID)
-        return taskID, d
+        return self.getTaskResult(taskID)
     
     def getTaskResult(self, taskID):
         """get the result of a task by its id.  This relinks your deferred
         to the one returned by run."""
         d = self.callRemote('getTaskResult', taskID)
-        return d.addCallback(self.checkReturnForFailure)
+        return task.TaskResult(taskID, d.addCallback(self.checkReturnForFailure))
     
 
 components.registerAdapter(PBTaskControllerClient, 

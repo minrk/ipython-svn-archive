@@ -17,7 +17,9 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-from ipython1.kernel import task, blockon
+from twisted.python import failure
+
+from ipython1.kernel import task, blockon, util
 
 #-------------------------------------------------------------------------------
 # Connecting Task Client
@@ -31,7 +33,22 @@ class ConnectingTaskClient(object):
         self.taskcontroller = None
         self.block = False
         self.connected = False
-                
+        self.pendingDeferreds = set()
+        self.caughtFailures = []
+    
+    def _catchFailure(self, f):
+        return f
+    
+    def _passThrough(self,r,d):
+        self.pendingDeferreds.discard(d)
+        if isinstance(r, failure.Failure):
+            self.caughtFailures.append(r)
+        return r
+    
+    def __defer__(self):
+        """for blockOn(this)"""
+        return util.DeferredList(list(self.pendingDeferreds))
+    
     def _blockOrNot(self, d):
         if self.block:
             return self.blockOn(d)
@@ -49,16 +66,20 @@ class ConnectingTaskClient(object):
             t = args[0]
         else:
             t = task.Task(*args, **kwargs)
-        (taskID, d) = self.taskcontroller.run(t)
+        tr = self.taskcontroller.run(t)
+        self.pendingDeferreds.add(tr.result)
+        tr.result.addBoth(self._passThrough, tr.result)
         if block:
-            return taskID, self.blockOn(d)
+            return self.blockOn(tr)
         else:
-            return taskID, d
-        return taskID, self._blockOrNot(d)
+            return tr
     
     def getTaskResult(self, taskID):
         self.connect()
-        return self._blockOrNot(self.taskcontroller.getTaskResult(taskID))
+        tr = self.taskcontroller.getTaskResult(taskID)
+        self.pendingDeferreds.add(tr.result)
+        tr.result.addBoth(self._passThrough, tr.result)
+        return self._blockOrNot(tr)
     
     def blockOn(self, d):
         return blockon.blockOn(d)

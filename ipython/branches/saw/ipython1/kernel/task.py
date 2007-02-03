@@ -24,6 +24,12 @@ from ipython1.kernel import engineservice as es
 from ipython1.kernel import controllerservice as cs
 from ipython1.kernel.util import gatherBoth
 
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
+
+class ResubmittedTask(Exception):
+    pass
 
 class Task(object):
     """The task object for the Task Controller"""
@@ -39,7 +45,16 @@ class Task(object):
         self.clearBefore = clearBefore
         self.clearAfter = clearAfter
         self.retries=retries
-        self.deferred = defer.Deferred()
+    
+
+class TaskResult(object):
+    """The object that contains the result of a task"""
+    def __init__(self, taskID=None, result=None):
+        self.taskID = taskID
+        self.result = result
+    
+    def __defer__(self):
+        return self.result
     
 
 class IWorker(zi.Interface):
@@ -107,8 +122,9 @@ class TaskController(object):
         self.controller.onUnregisterEngineDo(self.unregisterWorker, True)
         self.taskID = 0
         self.queue = [] # list of task objects
-        self.pendingTasks = {} # dict of {workerID:task}
-        self.results = {} # dict of {id:result}
+        self.pendingTasks = {} # dict of {workerID:(taskID, task)}
+        self.deferredResults = {} # dict of {taskID:TaskResult}
+        self.finishedResults = {} # dict of {taskID:actualResult}
         self.workers = {} # dict of {workerID:worker}
         for id in self.controller.engines.keys():
                 self.workers[id] = IWorker(self.controller.engines[id])
@@ -119,7 +135,8 @@ class TaskController(object):
         if self.workers.get(id):
             raise "We already have one!  This should not happen"
         self.workers[id] = IWorker(self.controller.engines[id])
-        self.idleWorkers.append(id)
+        if not self.pendingTasks.has_key(id):
+            self.idleWorkers.append(id)
         self.distributeTasks()
     
     def unregisterWorker(self, id):
@@ -128,9 +145,7 @@ class TaskController(object):
             if id in self.idleWorkers:
                 self.idleWorkers.remove(id)
             elif self.pendingTasks.has_key(id):
-                task = self.pendingTasks.pop(id)
-                # if not task.deferred.called:
-                #     task.deferred.errback(failure.Failure(Exception("Worker Died")))
+                pass
             self.workers.pop(id)
     
     #############
@@ -139,34 +154,43 @@ class TaskController(object):
     
     def run(self, task):
         """returns a task ID and a deferred to its result"""
-        task.taskID = self.taskID
+        taskID = self.taskID
         self.taskID += 1
-        self.queue.append(task)
-        log.msg('queuing task #%i' %task.taskID)
+        tresult = TaskResult(taskID, defer.Deferred())
+        self.queue.append((taskID, task))
+        log.msg('queuing task #%i' %taskID)
+        tresult.result.addErrback(self.resubmit, task, taskID)
+        self.deferredResults[taskID] = tresult
         self.distributeTasks()
-        return task.taskID, task.deferred.addErrback(self.resubmit, task)
+        return tresult
     
-    def resubmit(self, r, task):
-        if task.retries:
+    def resubmit(self, r, task, taskID):
+        """an errback for a failed task"""
+        if task.retries > 0:
             task.retries -= 1
-            task.deferred = defer.Deferred().addErrback(self.resubmit, task)
-            self.queue.append(task)
-            log.msg("resubmitting task #%i, %i retries remaining"\
-                                %(task.taskID, task.retries))
+            self.queue.append((taskID, task))
+            s = "resubmitting task #%i, %i retries remaining" %(taskID, task.retries)
+            log.msg(s)
+            d = defer.Deferred().addErrback(self.resubmit, task, taskID)
+            # the previous result deferred is now stale
+            self.deferredResults[taskID].result.addErrback(lambda _:None)
+            # use the new one
+            self.deferredResults[taskID].result = d
             self.distributeTasks()
-            return task.deferred
+            return d
         else:
             return r
     
     def getTaskResult(self, taskID):
         """returns a deferred to the result of a task"""
-        if self.results.has_key(taskID):
-            return defer.succeed(self.results[taskID])
+        print self.finishedResults
+        print self.deferredResults
+        if self.finishedResults.has_key(taskID):
+            return TaskResult(taskID, defer.succeed(self.finishedResults[taskID]))
+        elif self.deferredResults.has_key(taskID):
+            return self.deferredResults[taskID]
         else:
-            for task in self.pendingTasks.values()+self.queue:
-                if task.taskID == taskID:
-                    return task.deferred
-        return defer.fail(KeyError("task ID not registered"))
+            return TaskResult(taskID, defer.fail(KeyError("task ID not registered")))
     
     #############
     # Queue methods
@@ -174,40 +198,55 @@ class TaskController(object):
     
     def distributeTasks(self):
         # check for unassigned tasks and idle workers
+        # print 'distributing'
+        # print self.queue
+        # print self.idleWorkers
+        # print self.pendingTasks
         while self.queue and self.idleWorkers:
             # get worker
             workerID = self.idleWorkers.pop(0)
             # get from queue
-            task = self.queue.pop(0)
+            (taskID, task) = self.queue.pop(0)
             # add to pending
-            self.pendingTasks[workerID] = task
+            self.pendingTasks[workerID] = (taskID, task)
             # run/link callbacks
+            d2 = self.deferredResults[taskID].result
             d = self.workers[workerID].run(task)
-            log.msg("running task #%i on worker %i" %(task.taskID, workerID))
-            d.addBoth(self.taskCompleted, workerID, task.taskID).chainDeferred(task.deferred)
+            # d.addErrback(self.resubmit, task, taskID)
+            # d.addErrback(self.check)
+            log.msg("running task #%i on worker %i" %(taskID, workerID))
+            d.addBoth(self.taskCompleted, workerID, taskID)
+            d.chainDeferred(d2)
             
     
     def taskCompleted(self, result, workerID, taskID):
         """This is the err/callback for a completed task"""
         # remove from pending
-        for key, task in self.pendingTasks.iteritems():
-            if task.taskID == taskID:
-                task = self.pendingTasks.pop(key)
-                break
-        if isinstance(result, failure.Failure):
+        # print self.pendingTasks
+        # print result
+        task = self.pendingTasks.pop(workerID)[1]
+        if isinstance(result, failure.Failure): # we failed
             log.msg("Task #%i failed"% taskID)
-        else:    
+            if task.retries < 1: # but we are done trying
+                print "done retrying"
+                self.finishedResults[taskID] = result
+                d = self.deferredResults.pop(taskID).result
+                d.addErrback(lambda _:None)
+                # print result, d.result
+                print d.callbacks
+        else: # we succeeded
             log.msg("Task #%i completed"% taskID)
-        # add to results
-        self.results[taskID] = result
+            self.finishedResults[taskID] = result
+            self.deferredResults.pop(taskID).result.addErrback(lambda _:None)
         
         # get new task if exists and worker was not unregistered
         if workerID in self.workers.keys():
             self.idleWorkers.append(workerID)
             self.distributeTasks()
         
-        # return result for callback chain purposes
+        #pass through result for callbacks
         return result
+
     
 
 components.registerAdapter(TaskController, cs.IControllerBase, ITaskController)

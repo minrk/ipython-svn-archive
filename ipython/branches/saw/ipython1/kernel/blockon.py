@@ -120,27 +120,31 @@ def _parseResults(result):
         return result
         
         
-def blockOn(deferredList, fireOnOneCallback=0, fireOnOneErrback=0,
+def blockOn(deferrable, fireOnOneCallback=0, fireOnOneErrback=0,
             consumeErrors=0):
     """Make a Deferred look synchronous.
     
-    Given a Deferred object, this will run the Twisted event look until
+    Given a Deferrable object, this will run the Twisted event look until
     the Deferred's callback and errback chains have run.  It will then 
     return the actual result or raise an exception if an error occured.
     
     >>> blockOn(functionReturningDeferred())
     10
     
-    You can also pass multiple Deferred's to this function and you will
+    You can also pass a list of Deferreds to this function and you will
     get a list of results.
     
-    >>> blockOn(d0, d1, d2)
+    >>> blockOn([d0, d1, d2])
     ['this', 'is', 'heresy']
     """
-    if isinstance(deferredList, defer.Deferred):
-        deferredList = [deferredList]
+    if not isinstance(deferrable, list):
+        deferrable = [deferrable]
     
-    d = gatherBoth(deferredList,
+    for i in range(len(deferrable)):
+        if hasattr(deferrable[i], '__defer__'):
+            deferrable[i] = deferrable[i].__defer__()
+    
+    d = gatherBoth(deferrable,
                    fireOnOneCallback, 
                    fireOnOneErrback,
                    consumeErrors,
