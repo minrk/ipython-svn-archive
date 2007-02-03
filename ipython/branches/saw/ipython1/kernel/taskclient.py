@@ -36,6 +36,10 @@ class ConnectingTaskClient(object):
         self.pendingDeferreds = set()
         self.caughtFailures = []
     
+    ############
+    # utility methods
+    ############
+    
     def _catchFailure(self, f):
         return f
     
@@ -55,9 +59,25 @@ class ConnectingTaskClient(object):
         else:
             return d
     
+    ############
+    # ConnectingTaskController
+    ############
+    
     def connect(self):
-        """sublcass and override this"""
-        
+        """override this"""
+        pass
+    
+    def barrier(self):
+        self.blockOn(self)
+    
+    def raisePending(self):
+        if self.caughtFailures:
+            f = self.caughtFailures.pop(0)
+            f.raiseException()
+    
+    def blockOn(self, d):
+        return blockon.blockOn(d)
+    
     def run(self, *args, **kwargs):
         """call with a task object"""
         self.connect()
@@ -81,6 +101,4 @@ class ConnectingTaskClient(object):
         tr.result.addBoth(self._passThrough, tr.result)
         return self._blockOrNot(tr)
     
-    def blockOn(self, d):
-        return blockon.blockOn(d)
     

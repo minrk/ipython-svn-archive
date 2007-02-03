@@ -173,7 +173,7 @@ class TaskController(object):
             log.msg(s)
             d = defer.Deferred().addErrback(self.resubmit, task, taskID)
             # the previous result deferred is now stale
-            self.deferredResults[taskID].result.addErrback(lambda _:None)
+            # self.deferredResults[taskID].result.addErrback(lambda _:None)
             # use the new one
             self.deferredResults[taskID].result = d
             self.distributeTasks()
@@ -183,8 +183,6 @@ class TaskController(object):
     
     def getTaskResult(self, taskID):
         """returns a deferred to the result of a task"""
-        print self.finishedResults
-        print self.deferredResults
         if self.finishedResults.has_key(taskID):
             return TaskResult(taskID, defer.succeed(self.finishedResults[taskID]))
         elif self.deferredResults.has_key(taskID):
@@ -198,10 +196,6 @@ class TaskController(object):
     
     def distributeTasks(self):
         # check for unassigned tasks and idle workers
-        # print 'distributing'
-        # print self.queue
-        # print self.idleWorkers
-        # print self.pendingTasks
         while self.queue and self.idleWorkers:
             # get worker
             workerID = self.idleWorkers.pop(0)
@@ -221,23 +215,16 @@ class TaskController(object):
     
     def taskCompleted(self, result, workerID, taskID):
         """This is the err/callback for a completed task"""
-        # remove from pending
-        # print self.pendingTasks
-        # print result
         task = self.pendingTasks.pop(workerID)[1]
         if isinstance(result, failure.Failure): # we failed
             log.msg("Task #%i failed"% taskID)
             if task.retries < 1: # but we are done trying
-                print "done retrying"
                 self.finishedResults[taskID] = result
-                d = self.deferredResults.pop(taskID).result
-                d.addErrback(lambda _:None)
-                # print result, d.result
-                print d.callbacks
+                result = None
         else: # we succeeded
             log.msg("Task #%i completed"% taskID)
             self.finishedResults[taskID] = result
-            self.deferredResults.pop(taskID).result.addErrback(lambda _:None)
+            # self.deferredResults.pop(taskID).result.addErrback(lambda _:None)
         
         # get new task if exists and worker was not unregistered
         if workerID in self.workers.keys():
