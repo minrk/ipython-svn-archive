@@ -46,10 +46,10 @@ def main():
     tasks = [task.Task("time.sleep(%f)"%t) for t in times]
     stime = sum(times)
     
-    print "executing %i tasks, totalling %.3f secs on %i engines"%(opts.n, stime, nengines)
-    print "min task time: %.3f"%min(times)
-    print "max task time: %.3f"%max(times)
-    
+    print "executing %i tasks, totalling %.1f secs on %i engines"%(opts.n, stime, nengines)
+    print "min task time: %.1f"%min(times)
+    print "max task time: %.1f"%max(times)
+    time.sleep(1)
     start = time.time()
     results = [rt.run(t) for t in tasks]
     rt.barrier()
@@ -58,7 +58,7 @@ def main():
     ptime = stop-start
     scale = stime/ptime
     
-    print "executed %.3f secs in %.3f secs"%(stime, ptime)
+    print "executed %.1f secs in %.1f secs"%(stime, ptime)
     print "%.3fx parallel performance on %i engines"%(scale, nengines)
     print "%.1f%% of theoretical max"%(100*scale/nengines)
 
