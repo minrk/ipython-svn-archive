@@ -46,7 +46,9 @@ def main():
     tasks = [task.Task("time.sleep(%f)"%t) for t in times]
     stime = sum(times)
     
-    print "executing %.3f secs on %i engines"%(stime, nengines)
+    print "executing %i tasks, totalling %.3f secs on %i engines"%(stime, nengines)
+    print "min task time: %.3f"%min(times)
+    print "max task time: %.3f"%max(times)
     
     start = time.time()
     results = [rt.run(t) for t in tasks]
@@ -57,8 +59,6 @@ def main():
     scale = stime/ptime
     
     print "executed %.3f secs in %.3f secs"%(stime, ptime)
-    print "min task time: %.3f"%min(times)
-    print "max task time: %.3f"%max(times)
     print "%.3fx parallel performance on %i engines"%(scale, nengines)
     print "%.1f%% of theoretical max"%(100*scale/nengines)
 
