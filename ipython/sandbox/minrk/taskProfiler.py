@@ -9,17 +9,17 @@ from ipython1.kernel import multienginepb, taskpb, task
 def main():
     parser = OptionParser()
     parser.set_defaults(n=100)
-    parser.set_defaults(t=1)
-    parser.set_defaults(TT=60)
+    parser.set_defaults(tmin=1)
+    parser.set_defaults(tmax=60)
     parser.set_defaults(controller='localhost')
     parser.set_defaults(meport=10111)
     parser.set_defaults(tport=10114)
     
     parser.add_option("-n", type='int', dest='n',
         help='the number of tasks to run')
-    parser.add_option("-t", type='float', dest='t', 
+    parser.add_option("-t", type='float', dest='tmin', 
         help='the minimum task length in seconds')
-    parser.add_option("-T", type='float', dest='TT',
+    parser.add_option("-T", type='float', dest='tmax',
         help='the maximum task length in seconds')
     parser.add_option("-c", type='string', dest='controller',
         help='the address of the controller')
@@ -29,7 +29,8 @@ def main():
         help="the port on which the controller listens for TaskPB")
     
     (opts, args) = parser.parse_args()
-    print opts.t, opts.TT
+    assert opts.tmax >= opts.tmin, "tmax must not be smaller than tmin"
+    
     rc = multienginepb.PBInteractiveMultiEngineClient((opts.controller, opts.meport))
     rt = taskpb.PBConnectingTaskClient((opts.controller, opts.tport))
     
@@ -41,7 +42,7 @@ def main():
     rc.executeAll('from IPython.genutils import time')
 
     # the jobs should take a random time within a range
-    times = [random.random()*(opts.TT-opts.t)+opts.t for i in range(opts.n)]
+    times = [random.random()*(opts.tmax-opts.tmin)+opts.tmin for i in range(opts.n)]
     tasks = [task.Task("time.sleep(%f)"%t) for t in times]
     stime = sum(times)
     
@@ -59,7 +60,7 @@ def main():
     print "min task time: %.3f"%min(times)
     print "max task time: %.3f"%max(times)
     print "%.3fx parallel performance on %i engines"%(scale, nengines)
-    print "%.3f%% of theoretical max"%(scale/nengines)
+    print "%.1f%% of theoretical max"%(100*scale/nengines)
 
 
 if __name__ == '__main__':
