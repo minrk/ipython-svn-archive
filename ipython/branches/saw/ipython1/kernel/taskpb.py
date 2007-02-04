@@ -83,7 +83,7 @@ class PBTaskControllerFromTaskController(pb.Root):
             d = defer.fail()
         else:
             tr = self.taskController.run(task)
-            # tr.result.addErrback(lambda _:_)# errors are handled elsewhere
+            # tr.result.addErrback(lambda _:None)# errors are handled elsewhere
             return tr.taskID
     
     def remote_getTaskResult(self, taskID):

@@ -33,9 +33,8 @@ class ResubmittedTask(Exception):
 
 class Task(object):
     """The task object for the Task Controller"""
-    def __init__(self, expression, taskID=None, resultNames=None, setupNS={},
+    def __init__(self, expression, resultNames=None, setupNS={},
             clearBefore=False, clearAfter=False, retries=0):
-        self.taskID = taskID
         self.expression = expression
         if isinstance(resultNames, str):
             self.resultNames = [resultNames]
@@ -55,6 +54,9 @@ class TaskResult(object):
     
     def __defer__(self):
         return self.result
+    
+    def __repr__(self):
+        return "TaskResult(id:%s, result:%s)"%(self.taskID, self.result)
     
 
 class IWorker(zi.Interface):
@@ -186,7 +188,7 @@ class TaskController(object):
         if self.finishedResults.has_key(taskID):
             return TaskResult(taskID, defer.succeed(self.finishedResults[taskID]))
         elif self.deferredResults.has_key(taskID):
-            return self.deferredResults[taskID]
+            return self.deferredResults[taskID]#.addErrback(self.getFinishedResult)
         else:
             return TaskResult(taskID, defer.fail(KeyError("task ID not registered")))
     
@@ -220,7 +222,7 @@ class TaskController(object):
             log.msg("Task #%i failed"% taskID)
             if task.retries < 1: # but we are done trying
                 self.finishedResults[taskID] = result
-                result = None
+                # result = None
         else: # we succeeded
             log.msg("Task #%i completed"% taskID)
             self.finishedResults[taskID] = result
