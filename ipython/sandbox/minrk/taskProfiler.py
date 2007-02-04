@@ -46,7 +46,7 @@ def main():
     tasks = [task.Task("time.sleep(%f)"%t) for t in times]
     stime = sum(times)
     
-    print "executing %i tasks, totalling %.3f secs on %i engines"%(stime, nengines)
+    print "executing %i tasks, totalling %.3f secs on %i engines"%(opts.n, stime, nengines)
     print "min task time: %.3f"%min(times)
     print "max task time: %.3f"%max(times)
     
