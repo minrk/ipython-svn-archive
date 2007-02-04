@@ -47,8 +47,7 @@ def main():
     stime = sum(times)
     
     print "executing %i tasks, totalling %.1f secs on %i engines"%(opts.n, stime, nengines)
-    print "min task time: %.1f"%min(times)
-    print "max task time: %.1f"%max(times)
+
     time.sleep(1)
     start = time.time()
     results = [rt.run(t) for t in tasks]
