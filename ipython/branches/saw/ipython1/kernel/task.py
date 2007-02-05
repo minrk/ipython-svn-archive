@@ -17,22 +17,26 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import zope.interface as zi
-from twisted.internet import defer
+from twisted.internet import defer, reactor
 from twisted.python import components, log, failure
 
 from ipython1.kernel import engineservice as es
 from ipython1.kernel import controllerservice as cs
 from ipython1.kernel.util import gatherBoth
 
-#-------------------------------------------------------------------------------
-# Imports
-#-------------------------------------------------------------------------------
-
-class ResubmittedTask(Exception):
-    pass
-
 class Task(object):
-    """The task object for the Task Controller"""
+    """The task object for the Task Controller
+    init requires string expression to be executed.
+    @resultNames: string or list of strings that are the names of objects to be
+    pulled as results.  If not specified, will return {'result', None}
+    @setupNS: a dict of objects to be pushed before execution of the expression
+        if not specified, nothing will be pushed
+    @clearBefore: boolean for whether to clear the namespace before running the job
+        default: False
+    @clearAfter: boolean for whether to clear the namespace after running the job
+        default: False
+    @retries: int number of times to resubmit the task if it fails.
+        default: 0"""
     def __init__(self, expression, resultNames=None, setupNS={},
             clearBefore=False, clearAfter=False, retries=0):
         self.expression = expression
@@ -47,22 +51,26 @@ class Task(object):
     
 
 class TaskResult(object):
-    """The object that contains the result of a task"""
+    """The object that contains the result of a task
+    @taskID: int taskID assigned by the TaskController, can be used as argument
+        to getTaskResult to reconstruct this TaskResult during multiple sessions
+    @result: a twisted Deferred object to the result of a task"""
     def __init__(self, taskID=None, result=None):
         self.taskID = taskID
         self.result = result
     
     def __defer__(self):
+        """member for synchronizing using ipython1.kernel.blockon"""
         return self.result
     
     def __repr__(self):
-        return "TaskResult(id:%s, result:%s)"%(self.taskID, self.result)
+        return "<TaskResult(id:%s, result:%s)>"%(self.taskID, self.result)
     
 
 class IWorker(zi.Interface):
     
     def run(task):
-        """Run expression in namespace."""
+        """Run task in namespace."""
     
 
 class WorkerFromQueuedEngine(object):
@@ -73,7 +81,7 @@ class WorkerFromQueuedEngine(object):
         self.queuedEngine = qe
     
     def run(self, task):
-        """run a task, return a deferred to its results"""
+        """run a task, return a deferred to its result"""
         dl = []
         index = 1
         if task.clearBefore:
@@ -98,6 +106,7 @@ class WorkerFromQueuedEngine(object):
         return d.addBoth(self.zipResults, names, index)
     
     def zipResults(self, rlist, names, index):
+        """callback for constructing the results dict"""
         for r in rlist:
             if isinstance(r, failure.Failure):
                 return r
@@ -109,6 +118,7 @@ class WorkerFromQueuedEngine(object):
 components.registerAdapter(WorkerFromQueuedEngine, es.IEngineQueued, IWorker)
 
 class ITaskController(zi.Interface):
+    """The Task based interface to a Controller object"""
     
     def run(task):
         """Run a task"""
@@ -117,12 +127,14 @@ class ITaskController(zi.Interface):
         """get a result"""
 
 class TaskController(object):
-    
+    """The Task based interface to a Controller object"""
     def __init__(self, controller):
         self.controller = controller
         self.controller.onRegisterEngineDo(self.registerWorker, True)
         self.controller.onUnregisterEngineDo(self.unregisterWorker, True)
         self.taskID = 0
+        self.failurePenalty = 1 # the time in seconds to penalize
+                                # a worker for failing a task
         self.queue = [] # list of task objects
         self.pendingTasks = {} # dict of {workerID:(taskID, task)}
         self.deferredResults = {} # dict of {taskID:TaskResult}
@@ -133,7 +145,7 @@ class TaskController(object):
         self.idleWorkers = self.workers.keys()
     
     def registerWorker(self, id):
-        """linked to controller.registerEngine"""
+        """called by controller.registerEngine"""
         if self.workers.get(id):
             raise "We already have one!  This should not happen"
         self.workers[id] = IWorker(self.controller.engines[id])
@@ -142,7 +154,7 @@ class TaskController(object):
         self.distributeTasks()
     
     def unregisterWorker(self, id):
-        """linked to controller.registerEngine"""
+        """called by controller.registerEngine"""
         if self.workers.has_key(id):
             if id in self.idleWorkers:
                 self.idleWorkers.remove(id)
@@ -155,7 +167,7 @@ class TaskController(object):
     #############
     
     def run(self, task):
-        """returns a task ID and a deferred to its result"""
+        """returns a task ID and a deferred to its TaskResult"""
         taskID = self.taskID
         self.taskID += 1
         tresult = TaskResult(taskID, defer.Deferred())
@@ -184,7 +196,7 @@ class TaskController(object):
             return r
     
     def getTaskResult(self, taskID):
-        """returns a deferred to the result of a task"""
+        """returns a deferred to a TaskResult"""
         if self.finishedResults.has_key(taskID):
             return TaskResult(taskID, defer.succeed(self.finishedResults[taskID]))
         elif self.deferredResults.has_key(taskID):
@@ -208,8 +220,6 @@ class TaskController(object):
             # run/link callbacks
             d2 = self.deferredResults[taskID].result
             d = self.workers[workerID].run(task)
-            # d.addErrback(self.resubmit, task, taskID)
-            # d.addErrback(self.check)
             log.msg("running task #%i on worker %i" %(taskID, workerID))
             d.addBoth(self.taskCompleted, workerID, taskID)
             d.chainDeferred(d2)
@@ -222,20 +232,24 @@ class TaskController(object):
             log.msg("Task #%i failed"% taskID)
             if task.retries < 1: # but we are done trying
                 self.finishedResults[taskID] = result
-                # result = None
+            # wait a second before readmitting a worker that failed
+            # it may have died, and not yet been unregistered
+            reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
         else: # we succeeded
             log.msg("Task #%i completed"% taskID)
             self.finishedResults[taskID] = result
-            # self.deferredResults.pop(taskID).result.addErrback(lambda _:None)
+            self.readmitWorker(workerID)
         
-        # get new task if exists and worker was not unregistered
+        #pass through result for callbacks
+        return result
+    
+    def readmitWorker(self, workerID):
+        """readmit a worker to the idleWorkers.  This is a outside taskCompleted
+        because of the failurePenalty being implemented through 
+        reactor.callLater"""
         if workerID in self.workers.keys():
             self.idleWorkers.append(workerID)
             self.distributeTasks()
         
-        #pass through result for callbacks
-        return result
-
     
-
 components.registerAdapter(TaskController, cs.IControllerBase, ITaskController)

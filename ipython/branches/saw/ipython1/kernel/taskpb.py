@@ -2,11 +2,7 @@
 # -*- test-case-name: ipython1.test.test_taskcontrollerxmlrpc -*-
 """A PB interface to a TaskController.
 
-This class lets PB clients talk to the ControllerService.  The main difficulty
-is that PB doesn't allow arbitrary objects to be sent over the wire - only
-basic Python types.  To get around this we simple pickle more complex objects
-on boths side of the wire.  That is the main thing these classes have to 
-manage.
+This class lets PB clients talk to the TaskController
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -148,20 +144,15 @@ class PBTaskControllerClient(object):
     #---------------------------------------------------------------------------
         
     def run(self, task):
-        """run @expression as a task, in a namespace initialized to @namespace,
-        wherein the desired result is stored in @resultName.  If @resultName 
-        is not specified, None will be stored as the result.
-        
-        Returns a tuple of (taskID, deferred), where taskID is the ID of 
-        the task associated with this call, and deferred is a deferred to 
-        the result of the task."""
+        """run a task, on the TaskController.  Returns a TaskResult object.
+        """
         pTask = pickle.dumps(task,2)
         taskID = blockon.blockOn(self.callRemote('run', pTask))
         return self.getTaskResult(taskID)
     
     def getTaskResult(self, taskID):
         """get the result of a task by its id.  This relinks your deferred
-        to the one returned by run."""
+        to the one returned by run.  Returns a TaskResult object"""
         d = self.callRemote('getTaskResult', taskID)
         return task.TaskResult(taskID, d.addCallback(self.checkReturnForFailure))
     
@@ -178,6 +169,7 @@ class PBConnectingTaskClient(taskclient.ConnectingTaskClient):
     """PB version of the Connecting TaskControllerClient"""
     
     def connect(self):
+        """connect to TaskController"""
         if not self.connected:
             print "Connecting to ", self.addr
             self.factory = pb.PBClientFactory()
