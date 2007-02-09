@@ -20,17 +20,22 @@ __author__  = '%s <%s>' % Release.authors['Fernando']
 __license__ = Release.license
 __version__ = Release.version
 
-credits._Printer__data = """
-Python: %s
+try:
+    credits._Printer__data = """
+    Python: %s
 
-IPython: Fernando Perez, Janko Hauser, Nathan Gray, and many users.
-See http://ipython.scipy.org for more information.""" \
-% credits._Printer__data
+    IPython: Fernando Perez, Janko Hauser, Nathan Gray, and many users.
+    See http://ipython.scipy.org for more information.""" \
+    % credits._Printer__data
 
-copyright._Printer__data += """
+    copyright._Printer__data += """
 
-Copyright (c) 2001-2004 Fernando Perez, Janko Hauser, Nathan Gray.
-All Rights Reserved."""
+    Copyright (c) 2001-2004 Fernando Perez, Janko Hauser, Nathan Gray.
+    All Rights Reserved."""
+except NameError:
+    # Can happen if ipython was started with 'python -S', so that site.py is
+    # not loaded
+    pass
 
 #****************************************************************************
 # Required modules
