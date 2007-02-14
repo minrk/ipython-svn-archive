@@ -89,7 +89,7 @@ class EngineVanillaTest(DeferredTestCase,
     
     MAX_MESSAGE_SIZE = 2*640*1024
     
-    def registerEngine(self, remoteEngine, id):
+    def registerEngine(self, remoteEngine, id=None, ip=None, port=None, pid=None):
         self.engine = remoteEngine
         self.engine.id = 0
         reactor.callLater(0, self.setUpDeferred.callback, None)

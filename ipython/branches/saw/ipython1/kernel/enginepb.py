@@ -33,6 +33,7 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
+import os
 import cPickle as pickle
 
 from twisted.python import components, log, failure
@@ -171,7 +172,10 @@ class PBEngineClientFactory(pb.PBClientFactory, object):
         """callback for pb.PBClientFactory.getRootObject"""
         
         self.rootObject = obj
-        d = self.rootObject.callRemote('registerEngine', self.engineReference, None)
+        # Now register myself with the controller
+        desiredID = self.service.id
+        d = self.rootObject.callRemote('registerEngine', self.engineReference, 
+            desiredID, os.getpid())
         return d.addCallbacks(self._referenceSent, self._getRootFailure)
     
     def _referenceSent(self, registrationDict):
@@ -630,7 +634,7 @@ class IPBRemoteEngineRoot(Interface):
     to PB.
     """
     
-    def remote_registerEngine(self, engineReference):
+    def remote_registerEngine(self, engineReference, id=None, pid=None):
         """Register new engine on controller."""
     
 
@@ -648,12 +652,16 @@ class PBRemoteEngineRootFromService(pb.Root):
             "IControllerBase is not provided by " + repr(service)
         self.service = service
     
-    def remote_registerEngine(self, engineReference, id, *interfaces):
+    def remote_registerEngine(self, engineReference, id=None, pid=None):
         # First adapt the engineReference to a basic non-queued engine
         engine = IEngineBase(engineReference)
         # Make it an IQueuedEngine before registration
         remoteEngine = IEngineQueued(engine)
-        regDict = self.service.registerEngine(remoteEngine, id)
+        # Get the ip/port of the remote side
+        peerAddress = engineReference.broker.transport.getPeer()
+        ip = peerAddress.host
+        port = peerAddress.port
+        regDict = self.service.registerEngine(remoteEngine, id, ip, port, pid)
         # Now setup callback for disconnect and unregistering the engine
         def notify(*args):
             return self.service.unregisterEngine(regDict['id'])        

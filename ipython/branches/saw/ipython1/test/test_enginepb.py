@@ -90,7 +90,7 @@ class EnginePBTest(DeferredTestCase,
     # Make me look like a basic controller
     #---------------------------------------------------------------------------
     
-    def registerEngine(self, remoteEngine, id):
+    def registerEngine(self, remoteEngine, id=None, ip=None, port=None, pid=None):
         self.engine = remoteEngine
         # This fires the callbackchain to allow the tests to run
         # The time delay seems to be important

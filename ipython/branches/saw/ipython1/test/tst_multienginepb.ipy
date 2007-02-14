@@ -1,0 +1,129 @@
+import time
+
+from ipython1.kernel.multienginepb import PBInteractiveMultiEngineClient as client
+from ipython1.kernel import magic
+
+# Setup
+
+c = client(('127.0.0.1',10111))
+c.connect()
+c.activate()
+c.block = True
+assert len(c) >= 4
+
+# Execute
+
+c.executeAll('a=5')
+c.execute([0,2],'b=10')
+c.execute([1,3],'b=20')
+c.executeAll('c=a*b')
+%result
+
+c.block=False
+
+d = c.executeAll('import time')
+d.addCallback(lambda _: c.executeAll('time.sleep(1)'))
+d.addCallback(lambda _: c.executeAll('import math'))
+c.blockOn(d)
+d = c.executeAll('a = 1.0/0')
+d.addErrback(lambda f: None)
+c.blockOn(d)
+
+c.block=True
+
+%px a = 5
+%px print a
+%pn 0 b = 10
+%pn 0 print b
+
+%autopx
+
+def f(x):
+    return x*2
+    
+
+print f(1000000000)
+
+%autopx
+
+# Push/Pull
+
+c.pushAll(a=10, b=20)
+c.pullAll('a', 'b')
+c.pullAll('a')
+c.push([0,1], c=range(5))
+c.push([2,3], c=range(5))
+c.pullAll('c')
+
+c.block = False
+
+d = c.pushAll(e=30)
+d.addCallback(lambda _: c.pullAll('e'))
+c.blockOn(d)
+
+c.block = True
+
+c['a'] = 30
+c['a']
+
+for i in c.getIDs():
+    c[i]['a'] = i
+
+    
+for i in c.getIDs():
+    print i
+
+
+# getResult
+
+c.getResultAll()
+
+# reset
+
+c.resetAll()
+c.getResultAll()
+
+# keys
+
+c.resetAll()
+c.pushAll(b=59)
+c.keysAll()
+
+# push/pullSerialized
+
+a = 10
+c.pushAll(a=a)
+s = c.pullSerialized(0, 'a')
+c.pushSerialized(0, a=s)
+assert a == c.pull(0, 'a')
+
+# Queue methods
+
+# getIDs/verifyTargets
+
+# scatter/gather
+
+c.scatterAll('a', range(24))
+c.executeAll('b = [2.0*x for x in a]')
+c.gatherAll('b')
+
+# interactive methods
+
+c.pushAll(a=10, b=30)
+c.iexecuteAll('c=a*b')
+c.igetResultAll()
+
+c.iqueueStatusAll()
+
+f = open('test.py', 'w')
+f.write('import math\nd = 2.0*math.pi')
+f.close()
+c.runAll('test.py')
+print c.ipullAll('d')
+
+c.mapAll('lambda x: 2.0*x', range(20))
+
+p = c.parallelizeAll('lambda x: 2.0*x')
+
+p(range(20))
+

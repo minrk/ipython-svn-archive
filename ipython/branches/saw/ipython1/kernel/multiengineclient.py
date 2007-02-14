@@ -170,11 +170,16 @@ class ConnectingMultiEngineClient(object):
         d = self.multiengine.scatter(targets, key, seq, style, flatten)
         return self._blockOrNot(d)
     
+    def scatterAll(self, key, seq, style='basic', flatten=False):
+        return self.scatter('all', key, seq, style, flatten)
+        
     def gather(self, targets, key, style='basic'):
         self.connect()
         d = self.multiengine.gather(targets, key, style)
         return self._blockOrNot(d)
         
+    def gatherAll(self, key, style='basic'):
+        return self.gather('all', key, style)
 
 #-------------------------------------------------------------------------------
 # InteractiveMultiEngineClient
@@ -328,7 +333,6 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
          
         :return: ``True`` or ``False`` to indicate success or failure.    
         """
-        
         fileobj = open(fname,'r')
         source = fileobj.read()
         print source
@@ -338,7 +342,7 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
         
         # Now run the code
         return self.execute(targets, source)
-    
+        
     def runAll(self, fname):
         """Run a .py file on all engines.
         
@@ -396,21 +400,24 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
         :Parameters:
          - `id`: A string representing the key.
         """
-        
         if isinstance(id, slice):
             return InteractiveMultiEngineClientView(self, id)
         elif isinstance(id, int):
             return EngineProxy(self, id)
         elif isinstance(id, str):
+            self.connect()
             return self.pull('all', *(id,))
         else:
             raise TypeError("__getitem__ only takes strs, ints, and slices")
             
     def __len__(self):
         """Return the number of available engines."""
-        d = self.self.getIDs()
+        saveBlock = self.block
+        self.block = False
+        d = self.getIDs()
         d.addCallback(len)
-        return self.blockOrNot(d)
+        self.block = saveBlock
+        return self._blockOrNot(d)
         
     def map(self, targets, functionSource, seq, style='basic'):
         """A parallelized version of Python's builtin map.
@@ -444,9 +451,11 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
         sourceToRun = \
             '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
             functionSource        
-        d = self.scatter(targets, '_ipython_map_seq', seq, style='basic')
-        d.addCallback(lambda _: self.execute(targets, sourceToRun))
-        d.addCallback(lambda _: self.gather(targets, '_ipython_map_seq_result', style='basic'))
+        d1 = self.scatter(targets, '_ipython_map_seq', seq, style)
+        d2 = self.execute(targets, sourceToRun)
+        d3 = self.gather(targets, '_ipython_map_seq_result', style)
+        d = gatherBoth([d1 ,d2, d3], fireOnOneErrback=1, consumeErrors=1)
+        d.addCallback(lambda r: r[2])
         self.block = saveBlock
         return self._blockOrNot(d)
 

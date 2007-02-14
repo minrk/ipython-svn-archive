@@ -1,11 +1,5 @@
 
 ----------------------------------------------------------------------------
 
-Begin included file tst_multiengineclient.py::
-
-    >>> from ipython1.kernel.multienginepb import PBInteractiveMultiEngineClient
-    
-End included file tst_multiengineclient.py
-
-----------------------------------------------------------------------------
+Begin included file tst_multienginepb.ipy::
 

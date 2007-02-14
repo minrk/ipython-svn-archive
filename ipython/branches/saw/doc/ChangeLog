@@ -1,3 +1,11 @@
+2007-02-13  Brian Granger <ellisonbg@gmail.com>
+
+	* Now the registerEngine method of the ControllerService takes the
+	ip, port and pid of the engine and logs them to a file in 
+	~/.ipython/log named ipcontroller-###-engine-info.log.  This is 
+	to make it easier to kill engines.  Fixes ticket #111.
+
+
 2007-01-30  Fernando Perez  <Fernando.Perez@colorado.edu>
 
 	* helpers/update_web2: helper script to keep our private copy of
