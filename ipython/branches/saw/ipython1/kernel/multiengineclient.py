@@ -232,7 +232,6 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
         red = TermColors.Red
         green = TermColors.Green
         for cmd in result:
-            print cmd
             if isinstance(cmd, Failure):
                 print cmd
             else:

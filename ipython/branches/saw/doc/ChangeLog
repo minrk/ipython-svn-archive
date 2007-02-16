@@ -4,6 +4,13 @@
 	rigorous message size testing.  Now any push/pull/scater/gather
 	that exceeds pbconfig.banana.SIZE_LIMIT will raise a
 	PBMessageSizeError that propagates back to the user.
+	
+	* kernel.multienginepb:  added calls to verifyTargets at the
+	start of every remote_foo method to ensure that we have a valid
+	targets argument.  If not InvalidEngineID is raised.  While
+	this does require a client-controller communication, it does a
+	real check against the list of registered engines as well as checks
+	that targets is an int, 'all' or a list of ints. 
 
 2007-02-13  Brian Granger <ellisonbg@gmail.com>
 

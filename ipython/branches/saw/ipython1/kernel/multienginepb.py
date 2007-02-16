@@ -36,6 +36,7 @@ from ipython1.kernel.pbutil import packageFailure, checkMessageSize
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
 from ipython1.kernel.blockon import blockOn
 from ipython1.kernel.error import PBMessageSizeError
+from ipython1.kernel import error
 from ipython1.kernel.multiengineclient import InteractiveMultiEngineClient
 
 
@@ -139,57 +140,89 @@ class PBMultiEngineFromMultiEngine(pb.Root):
     #---------------------------------------------------------------------------
     
     def remote_execute(self, targets, lines):
-        d = self.multiEngine.execute(targets, lines)
-        return d.addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
+        else:
+            return self.multiEngine.execute(targets, lines).addErrback(packageFailure)
     
     def remote_push(self, targets, pNamespace):
-        try:
-            namespace = pickle.loads(pNamespace)
-        except:
-            return defer.fail(failure.Failure()).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
         else:
-            return self.multiEngine.push(targets, **namespace).addErrback(packageFailure)
+            try:
+                namespace = pickle.loads(pNamespace)
+            except:
+                return defer.fail(failure.Failure()).addErrback(packageFailure)
+            else:
+                return self.multiEngine.push(targets, **namespace).addErrback(packageFailure)
     
     def remote_pull(self, targets, *keys):
-        d = self.multiEngine.pull(targets, *keys)
-        d.addCallback(pickle.dumps, 2)
-        d.addCallback(checkMessageSize, repr(keys))
-        d.addErrback(packageFailure)
-        return d
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
+        else:
+            d = self.multiEngine.pull(targets, *keys)
+            d.addCallback(pickle.dumps, 2)
+            d.addCallback(checkMessageSize, repr(keys))
+            d.addErrback(packageFailure)
+            return d
     
     def remote_getResult(self, targets, i=None):
-        return self.multiEngine.getResult(targets, i).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
+        else:
+            return self.multiEngine.getResult(targets, i).addErrback(packageFailure)
     
     def remote_reset(self, targets):
-        return self.multiEngine.reset(targets).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
+        else:
+            return self.multiEngine.reset(targets).addErrback(packageFailure)
     
     def remote_keys(self, targets):
-        return self.multiEngine.keys(targets).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
+        else:
+            return self.multiEngine.keys(targets).addErrback(packageFailure)
     
     def remote_kill(self, targets, controller=False):
-        return self.multiEngine.kill(targets, controller).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
+        else:
+            return self.multiEngine.kill(targets, controller).addErrback(packageFailure)
         
     def remote_pushSerialized(self, targets, pNamespace):
-        try:
-            namespace = pickle.loads(pNamespace)
-        except:
-            return defer.fail(failure.Failure()).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
         else:
-            d = self.multiEngine.pushSerialized(targets, **namespace)
-            return d.addErrback(packageFailure)
+            try:
+                namespace = pickle.loads(pNamespace)
+            except:
+                return defer.fail(failure.Failure()).addErrback(packageFailure)
+            else:
+                d = self.multiEngine.pushSerialized(targets, **namespace)
+                return d.addErrback(packageFailure)
     
     def remote_pullSerialized(self, targets, *keys):
-        d = self.multiEngine.pullSerialized(targets, *keys)
-        d.addCallback(pickle.dumps, 2)
-        d.addCallback(checkMessageSize, repr(keys))
-        d.addErrback(packageFailure)
-        return d
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
+        else:
+            d = self.multiEngine.pullSerialized(targets, *keys)
+            d.addCallback(pickle.dumps, 2)
+            d.addCallback(checkMessageSize, repr(keys))
+            d.addErrback(packageFailure)
+            return d
     
     def remote_clearQueue(self, targets):
-        return self.multiEngine.clearQueue(targets).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
+        else:
+            return self.multiEngine.clearQueue(targets).addErrback(packageFailure)
     
     def remote_queueStatus(self, targets):
-        return self.multiEngine.queueStatus(targets).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
+        else:
+            return self.multiEngine.queueStatus(targets).addErrback(packageFailure)
 
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
@@ -199,27 +232,36 @@ class PBMultiEngineFromMultiEngine(pb.Root):
         return self.multiEngine.getIDs().addErrback(packageFailure)
     
     def remote_verifyTargets(self, targets):
-        return self.multiEngine.verifyTargets(targets).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
+        else:
+            return self.multiEngine.verifyTargets(targets).addErrback(packageFailure)
     
     #---------------------------------------------------------------------------
     # IEngineCoordinator related methods
     #---------------------------------------------------------------------------
     
     def remote_scatter(self, targets, key, pseq, style='basic', flatten=False):
-        try:
-            seq = pickle.loads(pseq)
-        except:
-            return defer.fail(failure.Failure()).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
         else:
-            d = self.multiEngine.scatter(targets, key, seq, style, flatten)
-            return d.addErrback(packageFailure)
+            try:
+                seq = pickle.loads(pseq)
+            except:
+                return defer.fail(failure.Failure()).addErrback(packageFailure)
+            else:
+                d = self.multiEngine.scatter(targets, key, seq, style, flatten)
+                return d.addErrback(packageFailure)
     
     def remote_gather(self, targets, key, style='basic'):
-        d = self.multiEngine.gather(targets, key, style)
-        d.addCallback(pickle.dumps, 2)
-        d.addCallback(checkMessageSize, repr(key))
-        d.addErrback(packageFailure)
-        return d
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
+        else:
+            d = self.multiEngine.gather(targets, key, style)
+            d.addCallback(pickle.dumps, 2)
+            d.addCallback(checkMessageSize, repr(key))
+            d.addErrback(packageFailure)
+            return d
     
 
 components.registerAdapter(PBMultiEngineFromMultiEngine,
