@@ -16,6 +16,7 @@ and corresponding keys can be found at the bottom of this file in the
 `configClasses` dictionary.
 """
 __docformat__ = "restructuredtext en"
+__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
@@ -25,16 +26,27 @@ __docformat__ = "restructuredtext en"
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
+#-------------------------------------------------------------------------------
 # Imports
+#-------------------------------------------------------------------------------
 
 from ipython1.config.base import Config
 
-# Global defaults
+#-------------------------------------------------------------------------------
+# Default Port Values
+#-------------------------------------------------------------------------------
 
 enginePort = 10201
-clientVanillaPort = 10105
 
-# Shell configuration
+pbMEPort = 10111
+xmlrpcMEPort = 10112
+vanillaMEPort = 10105
+pbTCPort = 10114
+xmlrpcTCPort = 10113
+
+#-------------------------------------------------------------------------------
+# Shell Configuration
+#-------------------------------------------------------------------------------
 
 from ipython1.core.shell import InteractiveShell
 
@@ -47,11 +59,12 @@ class ShellConfig(Config):
     can customize its behavior.  For instance, the user could make a shell
     that supports additional syntax.
     """
-
-    filesToRun = []
-    """A list of local files the shell should run upon starting."""
-
-# Engine configrations
+    
+    shellImportStatement = 'import math'
+    
+#-------------------------------------------------------------------------------
+# Engine Configuration
+#-------------------------------------------------------------------------------
 
 from ipython1.kernel.enginevanilla import \
     IVanillaEngineClientFactory
@@ -81,7 +94,7 @@ class MPIConfig(Config):
     
         config.updateConfigWithFile('mpirc.py')
     
-    to get the MPi configuration information.  The mpirc.py file
+    to get the MPI configuration information.  The mpirc.py file
     will be looked for in:
     
     1.  The cwd
@@ -112,7 +125,9 @@ class MPIConfig(Config):
     this see the `ipython1.mpi` module or ``mpi4py``.
     """
     
-# Controller configuration
+#-------------------------------------------------------------------------------
+# Controller Configuration
+#-------------------------------------------------------------------------------
 
 from ipython1.kernel.enginevanilla import \
     IVanillaEngineServerFactory
@@ -135,6 +150,31 @@ from ipython1.kernel.taskxmlrpc import \
 from ipython1.kernel.taskpb import \
     IPBTaskControllerFactory
 
+from ipython1.kernel.multiengine import IMultiEngine
+from ipython1.kernel.task import ITaskController
+
+
+pbME = {'interface': IPBMultiEngineFactory, 
+        'ip': '', 
+        'port': pbMEPort}
+xmlrpcME = {'interface': IXMLRPCMultiEngineFactory, 
+          'ip': '', 
+          'port': xmlrpcMEPort}
+vanillaME = {'interface': IVanillaControllerFactory, 
+             'ip': '', 
+             'port': vanillaMEPort}
+networkInterfacesME = {'pb': pbME, 'xmlrpc': xmlrpcME}
+
+
+pbTC = {'interface':IPBTaskControllerFactory,
+        'ip':'',
+        'port':pbTCPort}
+xmlrpcTC = {'interface':IXMLRPCTaskControllerFactory,
+            'ip':'',
+            'port':xmlrpcTCPort}
+networkInterfacesTC = {'pb': pbTC, 'xmlrpc': xmlrpcTC}
+
+
 class ControllerConfig(Config):
     #engineServerProtocolInterface = IVanillaEngineServerFactory
     engineServerProtocolInterface = IPBEngineServerFactory
@@ -142,48 +182,40 @@ class ControllerConfig(Config):
     
     listenForEnginesOn  = {'ip': '', 'port': enginePort}
     """The ip and port to listen for engine on."""
-    
-    #clientInterfaces = [{'interface': IPBMultiEngineFactory, 
-    #                     'ip': '', 
-    #                     'port': 10111}]
-    clientInterfaces = [{'interface': IVanillaControllerFactory, 
-                         'ip': '', 
-                         'port': clientVanillaPort},
-                        {'interface': IPBMultiEngineFactory, 
-                         'ip': '', 
-                         'port': 10111},
-                         {'interface': IXMLRPCMultiEngineFactory, 
-                          'ip': '', 
-                          'port': 10112}]
-    # client interfaces for taskcontroller
-    taskClientInterfaces = [{'interface':IXMLRPCTaskControllerFactory,
-                        'ip':'',
-                        'port':10113},
-                        {'interface':IPBTaskControllerFactory,
-                        'ip':'',
-                        'port':10114}]
-    serveTasks = False
-    """A list of interface, ip, and port for the protocols used to talk to clients.
-    
-    The ip and port for each interface determines what ip and port the 
-    controller will listen on with that network protocol.
-    """
+   
+    controllerInterfaces = {'multiengine': {'controllerInterface': IMultiEngine, 
+                                            'networkInterfaces': networkInterfacesME},
+                            'task' : {'controllerInterface': ITaskController, 
+                                      'networkInterfaces': networkInterfacesTC}}
+                                      
+    controllerImportStatement = 'bar'
 
-# Client configuration
+
+#-------------------------------------------------------------------------------
+# Client Configuration
+#-------------------------------------------------------------------------------
 
 from ipython1.kernel.multienginevanilla import \
     RemoteController
 
+from ipython1.kernel.multienginepb import PBInteractiveMultiEngineClient
+
+from ipython1.kernel.taskpb import PBConnectingTaskClient
+
 class ClientConfig(Config):    
-    RemoteController = RemoteController
+    RemoteController = PBInteractiveMultiEngineClient
     """The RemoteController class to use.
     
     This allow new RemoteController classes that use different network
     protocols to be used.
     """
 
-    connectToControllerOn = {'ip': '127.0.0.1', 'port': clientVanillaPort}
+    connectToRemoteControllerOn = {'ip': '127.0.0.1', 'port': pbMEPort}
     """The (ip, port) tuple the client will use to connect to the controller."""
+    
+    TaskController = PBConnectingTaskClient
+    
+    connectToTaskControllerOn = {'ip': '127.0.0.1', 'port': pbTCPort}
     
 
 # All top-level config classes must be listed here.

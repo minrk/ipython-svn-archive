@@ -15,4 +15,3 @@ shellConfig = getConfigObject('shell')
 engineConfig.connectToControllerOn['ip'] = '127.0.0.1'
 engineConfig.connectToControllerOn['port'] = 20000
 
-#shellConfig.filesToRun = ['~/test.py']

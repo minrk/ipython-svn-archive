@@ -88,6 +88,10 @@ class BasicControllerPBTest(DeferredTestCase):
         pass
     testMessageSizeLimit.skip = 'testMessageSizeLimit needs to be implemented in test_multienginepb.py.'
     
+    def testInvalidTargets(self):
+        pass
+    testInvalidTargets.skip = 'add a test to make sure that InvalidEngineID is being raised appropriately.'
+    
 #-------------------------------------------------------------------------------
 # Test coordination
 #-------------------------------------------------------------------------------

@@ -43,7 +43,7 @@ class ConnectingMultiEngineClient(object):
     def __init__(self, addr):
         self.addr = addr
         self.multiengine = None
-        self.block = False
+        self.block = True
         self.connected = False
                 
     def _blockOrNot(self, d):

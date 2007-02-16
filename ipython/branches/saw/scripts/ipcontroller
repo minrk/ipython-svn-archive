@@ -25,6 +25,9 @@ import ipython1.config.api as config
 
 controllerConfig = config.getConfigObject('controller')
 
+
+        
+
 def main(logfile):
     if logfile:
         logfile = logfile + str(os.getpid()) + '.log'
@@ -36,6 +39,13 @@ def main(logfile):
         openLogFile = sys.stdout
     log.startLogging(openLogFile)
     
+    # Execute any user defined import statements
+    if controllerConfig.controllerImportStatement:
+        try:
+            exec controllerConfig.controllerImportStatement
+        except:
+            log.msg("Error running controllerImportStatement: %s" % controllerConfig.controllerImportStatement)
+    
     # Create and configure the core ControllerService
     cs = controllerservice.ControllerService()
     
@@ -46,32 +56,24 @@ def main(logfile):
         factory=efac,
         interface=controllerConfig.listenForEnginesOn['ip'])
         
-    # Start listening for IMultiEngine clients
-    multiEngine = IMultiEngine(cs)
-    for ci in controllerConfig.clientInterfaces:
-        fac = ci['interface'](multiEngine)
-        reactor.listenTCP(
-            port=ci['port'],
-            factory=fac,
-            interface=ci['ip'])
-        
-    # Start listening for ITaskController clients
-    if controllerConfig.serveTasks:
-        taskController = ITaskController(cs)
-        for ci in controllerConfig.taskClientInterfaces:
-            fac = ci['interface'](taskController)
+    for ciname, ci in controllerConfig.controllerInterfaces.iteritems():
+        log.msg("Starting controller interface: " + ciname)
+        adaptedController = ci['controllerInterface'](cs)
+        for niname, ni in ci['networkInterfaces'].iteritems():
+            log.msg("Starting controller network interface (%s): %s:%s:%i" % (ciname,niname,ni['ip'],ni['port']))
+            fac = ni['interface'](adaptedController)
             reactor.listenTCP(
-                port=ci['port'],
+                port=ni['port'],
                 factory=fac,
-                interface=ci['ip'])
-        
+                interface=ni['ip'])
+                    
     # Start the controller service and set things running
     cs.startService()
     reactor.run()
 
 def start():
     parser = OptionParser()
-    parser.set_defaults(logfile='', dotasks = False)
+    parser.set_defaults(logfile='')
         
     parser.add_option("--engine-port", type="int", dest="engineport",
         help="the TCP port the controller will listen on for engine connections")
@@ -79,9 +81,6 @@ def start():
         help="the TCP ip address the controller will listen on for engine connections")
     parser.add_option("-l", "--logfile", type="string", dest="logfile",
         help="log file name (default is stdout)")
-    parser.add_option("-t", action="store_true", dest="dotasks",
-        help="do tasks flag")
-    
     
     # Configuration files and profiles
     parser.add_option("-p", "--profile", type="string", dest="profile",
@@ -105,8 +104,6 @@ def start():
         controllerConfig.listenForEnginesOn['ip'] = options.engineip
     if options.engineport is not None:
         controllerConfig.listenForEnginesOn['port'] = options.engineport
-    if options.dotasks:
-            controllerConfig.serveTasks = True
     
     main(options.logfile)
     

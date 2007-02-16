@@ -68,6 +68,13 @@ import ipython1.kernel.magic
 RemoteController = clientConfig.RemoteController
 """The default RemoteController class obtained from config information."""
 
-defaultController = (clientConfig.connectToControllerOn['ip'],
-    clientConfig.connectToControllerOn['port'])
-"""The (ip,port) tuple of the default local controller."""
+defaultRemoteController = (clientConfig.connectToRemoteControllerOn['ip'],
+    clientConfig.connectToRemoteControllerOn['port'])
+"""The (ip,port) tuple of the default controller."""
+
+TaskController = clientConfig.TaskController
+"""The default TaskController class obtained from config information."""
+
+defaultTaskController = (clientConfig.connectToTaskControllerOn['ip'],
+    clientConfig.connectToTaskControllerOn['port'])
+"""The (ip,port) tuple of the default task controller."""

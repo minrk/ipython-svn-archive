@@ -57,6 +57,12 @@ def main(n, logfile):
             port=engineConfig.connectToControllerOn['port'],
             factory=fac)
         service.startService()
+        if shellConfig.shellImportStatement:
+            try:
+                service.execute(shellConfig.shellImportStatement)
+            except:
+                log.msg("Error running shellImportStatement: %s" % shellConfig.shellImportStatement)
+                
     reactor.run()
 
 def start(n=1):
