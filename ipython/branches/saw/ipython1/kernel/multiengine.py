@@ -36,6 +36,7 @@ from zope.interface import Interface, implements, Attribute
 from ipython1.kernel.serialized import Serialized
 from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import map as Map
+from ipython1.kernel import error
 from ipython1.kernel.controllerservice import \
     ControllerAdapterBase, \
     ControllerService
@@ -63,6 +64,9 @@ class IEngineMultiplexer(Interface):
     
     Failures are aggressive:  if the action fails for any target, the overall
     action will fail immediately with that Failure.
+    
+    :Exceptions:
+        - `InvalidEngineID`: If the targets argument is bad in any way.
     """
         
     #---------------------------------------------------------------------------
@@ -140,7 +144,11 @@ class IEngineMultiplexer(Interface):
         """Get the status of all the queues."""
         
 class IEngineCoordinator(Interface):
-    """Methods that work on multiple engines explicitly."""
+    """Methods that work on multiple engines explicitly.
+    
+    :Exceptions:
+        - `InvalidEngineID`: If the targets argument is bad in any way.
+    """
         
     #---------------------------------------------------------------------------
     # Coordinated methods
@@ -248,141 +256,170 @@ class MultiEngine(ControllerAdapterBase):
     # IEngineMultiplexer methods
     #---------------------------------------------------------------------------
         
-    def execute(self, targets, lines):        
-        if len(lines) > 64:
-            linestr = lines[:61]+'...'
+    def execute(self, targets, lines):
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
         else:
-            linestr = lines
-        log.msg("executing %s on %s" %(linestr, targets))
-        engines = self.engineList(targets)
-        dList = []
-        for e in engines:
-            d = e.execute(lines)
-            # This would be the place to addCallback to any notification methods
-            dList.append(d)
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)
+            if len(lines) > 64:
+                linestr = lines[:61]+'...'
+            else:
+                linestr = lines
+            log.msg("executing %s on %s" %(linestr, targets))
+            engines = self.engineList(targets)
+            dList = []
+            for e in engines:
+                d = e.execute(lines)
+                # This would be the place to addCallback to any notification methods
+                dList.append(d)
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)
     
     def executeAll(self, lines):
         return self.execute('all', lines)
     
     def push(self, targets, **ns):
-        log.msg("pushing to %s" % targets)
-        engines = self.engineList(targets)
-        dList = []
-        for e in engines:
-            dList.append(e.push(**ns))
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("pushing to %s" % targets)
+            engines = self.engineList(targets)
+            dList = []
+            for e in engines:
+                dList.append(e.push(**ns))
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)
     
     def pushAll(self, **ns):
         return self.push('all', **ns)
         
     def pull(self, targets, *keys):
-        log.msg("pulling from %s" % targets)
-        engines = self.engineList(targets)
-        dList = []
-        for e in engines:
-            dList.append(e.pull(*keys))
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("pulling from %s" % targets)
+            engines = self.engineList(targets)
+            dList = []
+            for e in engines:
+                dList.append(e.pull(*keys))
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)
     
     def pullAll(self, *keys):
         return self.pull('all', *keys)
     
     def getResult(self, targets, i=None):
-        log.msg("getResult on %s" % targets)
-        engines = self.engineList(targets)
-        dList = []
-        for e in engines:
-            dList.append(e.getResult(i))
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)                
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("getResult on %s" % targets)
+            engines = self.engineList(targets)
+            dList = []
+            for e in engines:
+                dList.append(e.getResult(i))
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)                
+
     def getResultAll(self, i=None):
         return self.getResult('all', i)
     
     def reset(self, targets):
-        log.msg("reseting %s" % targets)
-        engines = self.engineList(targets)
-        dList = []
-        for e in engines:
-            dList.append(e.reset())
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)    
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("reseting %s" % targets)
+            engines = self.engineList(targets)
+            dList = []
+            for e in engines:
+                dList.append(e.reset())
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)    
+
     def resetAll(self):
         return self.reset('all')
     
     def keys(self, targets):
-        log.msg("getting keys from %s" % targets)
-        engines = self.engineList(targets)
-        dList = []
-        for e in engines:
-            dList.append(e.keys())
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)    
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("getting keys from %s" % targets)
+            engines = self.engineList(targets)
+            dList = []
+            for e in engines:
+                dList.append(e.keys())
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)    
 
     def keysAll(self):
         return self.keys('all')
     
     def kill(self, targets, controller=False):
-        log.msg("killing engines %s" % targets)
-        if controller: targets = 'all'              # kill all engines if killing controller
-        engines = self.engineList(targets)
-        dList = []
-        for e in engines:
-            dList.append(e.kill())
-        d = gatherBoth(dList, 
-                       fireOnOneErrback=1,
-                       consumeErrors=1,
-                       logErrors=0)        
-        if controller:
-            log.msg("Killing controller")
-            reactor.callLater(2.0, reactor.stop)
-        return d
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("killing engines %s" % targets)
+            if controller: targets = 'all'              # kill all engines if killing controller
+            engines = self.engineList(targets)
+            dList = []
+            for e in engines:
+                dList.append(e.kill())
+            d = gatherBoth(dList, 
+                           fireOnOneErrback=1,
+                           consumeErrors=1,
+                           logErrors=0)        
+            if controller:
+                log.msg("Killing controller")
+                reactor.callLater(2.0, reactor.stop)
+            return d
         
     def killAll(self, controller=False):
         return self.kill('all', controller)
     
     def pushSerialized(self, targets, **namespace):
-        log.msg("pushing Serialized to %s" % targets)
-        engines = self.engineList(targets)
-        dList = []
-        for k, v in namespace.iteritems():
-            log.msg("Pushed object %s is %f MB" % (k, v.getDataSize()))
-        for e in engines:
-            dList.append(e.pushSerialized(**namespace))
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)  
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("pushing Serialized to %s" % targets)
+            engines = self.engineList(targets)
+            dList = []
+            for k, v in namespace.iteritems():
+                log.msg("Pushed object %s is %f MB" % (k, v.getDataSize()))
+            for e in engines:
+                dList.append(e.pushSerialized(**namespace))
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)  
                               
     def pushSerializedAll(self, **namespace):
         return self.pushSerialized('all', **namespace)
         
     def pullSerialized(self, targets, *keys):
-        log.msg("pulling serialized from %s" % targets)
-        engines = self.engineList(targets)
-        dList = []
-        for e in engines:
-            d = e.pullSerialized(*keys)
-            d.addCallback(self._logSizes)
-            dList.append(d)
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)  
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("pulling serialized from %s" % targets)
+            engines = self.engineList(targets)
+            dList = []
+            for e in engines:
+                d = e.pullSerialized(*keys)
+                d.addCallback(self._logSizes)
+                dList.append(d)
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)  
                               
     def _logSizes(self, listOfSerialized):
         if isinstance(listOfSerialized, (list, tuple)):
@@ -396,29 +433,35 @@ class MultiEngine(ControllerAdapterBase):
         return self.pullSerialized('all', *keys)
     
     def clearQueue(self, targets):
-        log.msg("clearing queue on %s" % targets)
-        engines = self.engineList(targets)
-        dList = []
-        for e in engines:
-            dList.append(e.clearQueue())
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)  
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("clearing queue on %s" % targets)
+            engines = self.engineList(targets)
+            dList = []
+            for e in engines:
+                dList.append(e.clearQueue())
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)  
                               
     def clearQueueAll(self):
         return self.clearQueue('all')
     
     def queueStatus(self, targets):
-        log.msg("getting queue status on %s" % targets)
-        engines = self.engineList(targets)
-        dList = []
-        for e in engines:
-            dList.append(e.queueStatus().addCallback(lambda s:(e.id, s)))
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)  
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("getting queue status on %s" % targets)
+            engines = self.engineList(targets)
+            dList = []
+            for e in engines:
+                dList.append(e.queueStatus().addCallback(lambda s:(e.id, s)))
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)  
                           
     def queueStatusAll(self):
         return self.queueStatus('all')
@@ -428,44 +471,50 @@ class MultiEngine(ControllerAdapterBase):
     #---------------------------------------------------------------------------
 
     def scatter(self, targets, key, seq, style='basic', flatten=False):
-        log.msg("scattering %s to %s" %(key, targets))
-        engines = self.engineList(targets)
-        nEngines = len(engines)
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("scattering %s to %s" %(key, targets))
+            engines = self.engineList(targets)
+            nEngines = len(engines)
         
-        mapClass = Map.styles[style]
-        mapObject = mapClass()
-        dList = []
-        for index, engine in enumerate(engines):
-            partition = mapObject.getPartition(seq, index, nEngines)
-            if flatten and len(partition) == 1:    
-                dList.append(engine.push(**{key: partition[0]}))
-            else:
-                dList.append(engine.push(**{key: partition}))
-        return gatherBoth(dList, 
-                          fireOnOneErrback=1,
-                          consumeErrors=1,
-                          logErrors=0)  
+            mapClass = Map.styles[style]
+            mapObject = mapClass()
+            dList = []
+            for index, engine in enumerate(engines):
+                partition = mapObject.getPartition(seq, index, nEngines)
+                if flatten and len(partition) == 1:    
+                    dList.append(engine.push(**{key: partition[0]}))
+                else:
+                    dList.append(engine.push(**{key: partition}))
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)  
                               
     def scatterAll(self, key, seq, style='basic', flatten=False):
         return self.scatter('all', key, seq, style, flatten)
     
     def gather(self, targets, key, style='basic'):
         """gather a distributed object, and reassemble it"""
-        log.msg("gathering %s from %s"%(key, targets))
-        engines = self.engineList(targets)
-        nEngines = len(engines)
+        if not self.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            log.msg("gathering %s from %s"%(key, targets))
+            engines = self.engineList(targets)
+            nEngines = len(engines)
                 
-        dList = []
-        for e in engines:
-            dList.append(e.pull(key))
+            dList = []
+            for e in engines:
+                dList.append(e.pull(key))
         
-        mapClass = Map.styles[style]
-        mapObject = mapClass()
-        d = gatherBoth(dList, 
-                       fireOnOneErrback=1,
-                       consumeErrors=1,
-                       logErrors=0)  
-        return d.addCallback(mapObject.joinPartitions)
+            mapClass = Map.styles[style]
+            mapObject = mapClass()
+            d = gatherBoth(dList, 
+                           fireOnOneErrback=1,
+                           consumeErrors=1,
+                           logErrors=0)  
+            return d.addCallback(mapObject.joinPartitions)
     
     def gatherAll(self, key, style='basic'):
         return self.gather('all', key, style)

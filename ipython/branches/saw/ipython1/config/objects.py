@@ -60,7 +60,7 @@ class ShellConfig(Config):
     that supports additional syntax.
     """
     
-    shellImportStatement = 'import math'
+    shellImportStatement = ''
     
 #-------------------------------------------------------------------------------
 # Engine Configuration
@@ -163,8 +163,9 @@ xmlrpcME = {'interface': IXMLRPCMultiEngineFactory,
 vanillaME = {'interface': IVanillaControllerFactory, 
              'ip': '', 
              'port': vanillaMEPort}
-networkInterfacesME = {'pb': pbME, 'xmlrpc': xmlrpcME}
-
+networkInterfacesME = {'pb': pbME}
+# Uncomment this to expose to multiple network interfaces
+#networkInterfacesME = {'pb': pbME, 'xmlrpc': xmlrpcME}
 
 pbTC = {'interface':IPBTaskControllerFactory,
         'ip':'',
@@ -172,7 +173,9 @@ pbTC = {'interface':IPBTaskControllerFactory,
 xmlrpcTC = {'interface':IXMLRPCTaskControllerFactory,
             'ip':'',
             'port':xmlrpcTCPort}
-networkInterfacesTC = {'pb': pbTC, 'xmlrpc': xmlrpcTC}
+networkInterfacesTC = {'pb': pbTC}
+# Uncomment this to expose to multiple network interfaces
+#networkInterfacesTC = {'pb': pbTC, 'xmlrpc': xmlrpcTC}
 
 
 class ControllerConfig(Config):
@@ -184,11 +187,19 @@ class ControllerConfig(Config):
     """The ip and port to listen for engine on."""
    
     controllerInterfaces = {'multiengine': {'controllerInterface': IMultiEngine, 
-                                            'networkInterfaces': networkInterfacesME},
+                                            'networkInterfaces': networkInterfacesME,
+                                            'default': 'pb'},
                             'task' : {'controllerInterface': ITaskController, 
-                                      'networkInterfaces': networkInterfacesTC}}
+                                      'networkInterfaces': networkInterfacesTC,
+                                      'default': 'pb'}}
+    """Specify what how the controller is exposed.
+    
+    :Parameters:
+        - `default`: for each controller interface determines which network
+          interface will be controlled by command-line flags to ipcontroller.
+    """
                                       
-    controllerImportStatement = 'bar'
+    controllerImportStatement = ''
 
 
 #-------------------------------------------------------------------------------

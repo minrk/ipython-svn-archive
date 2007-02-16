@@ -21,7 +21,8 @@ from ipython1.kernel.multiengine import IEngineMultiplexer, IEngineCoordinator
 from ipython1.kernel import newserialized
 from ipython1.kernel.error import NotDefined
 from ipython1.test import util
-
+from ipython1.kernel import newserialized
+from ipython1.kernel.error import InvalidEngineID
 
 resultKeys = ('id', 'commandIndex', 'stdin', 'stdout', 'stderr')
 
@@ -59,6 +60,7 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
     
     def testIEngineMultiplexerDeferreds(self):
         self.addEngine(1)
+        
         l = [
         self.multiengine.execute(0, 'a=5'),
         self.multiengine.push(0, a=5),
@@ -66,11 +68,38 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         self.multiengine.pull(0, 'a', 'b', 'c'),
         self.multiengine.getResult(0),
         self.multiengine.reset(0),
-        self.multiengine.keys(0)
+        self.multiengine.keys(0),
+        self.multiengine.pushSerialized(0, a=newserialized.serialize(10)),
+        self.multiengine.pullSerialized(0, 'a'),
+        self.multiengine.clearQueue(0),
+        self.multiengine.queueStatus(0),
         ]
         for d in l:
             self.assert_(isinstance(d, defer.Deferred))
         return defer.DeferredList(l, consumeErrors=1)
+    
+    def testInvalidEngineID(self):
+        self.addEngine(1)
+        badID = 100
+        d = self.multiengine.execute(badID, 'a=5')
+        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.push(badID, a=5))
+        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.pull(badID, 'a'))     
+        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.getResult(badID))   
+        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.reset(badID))     
+        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))   
+        d.addCallback(lambda _: self.multiengine.keys(badID))     
+        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.pushSerialized(badID, a=newserialized.serialize(10)))
+        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.pullSerialized(badID, 'a'))
+        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.queueStatus(badID))
+        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+        return d
     
     def testExecute(self):
         self.addEngine(6)
@@ -88,10 +117,54 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
     
     def testExecuteFailures(self):
         self.addEngine(4)
-        d = self.multiengine.execute(0, 'a=1/0')
+        d = self.multiengine.execute(0,'a=1/0')
         d.addErrback(lambda f: self.assertRaises(ZeroDivisionError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.execute('all', 'a=1/0'))
+        d.addCallback(lambda _: self.multiengine.execute(0,'print v'))
+        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.execute(0,'a = 2**1000000'))
+        d.addErrback(lambda f: self.assertRaises(OverflowError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.execute(0,'l=[];l[0]'))
+        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.execute(0,"d={};d['a']"))
+        d.addErrback(lambda f: self.assertRaises(KeyError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.execute(0,"assert 1==0"))
+        d.addErrback(lambda f: self.assertRaises(AssertionError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.execute(0,"import abababsdbfsbaljasdlja"))
+        d.addErrback(lambda f: self.assertRaises(ImportError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.execute(0,"raise Exception()"))
+        d.addErrback(lambda f: self.assertRaises(Exception, f.raiseException))
+        return d
+    
+    def testExecuteAll(self):
+        self.addEngine(2)
+        result = [{'commandIndex': 0, 'stdin': 'a=5', 'id': 0, 'stderr': '', 'stdout': ''},
+         {'commandIndex': 0, 'stdin': 'a=5', 'id': 1, 'stderr': '', 'stdout': ''}]
+        d = self.multiengine.execute('all', 'a=5')
+        d.addCallback(lambda r: self.assert_(r==result))
+        d.addCallback(lambda _: self.multiengine.execute(0, 'a=10'))
+        d.addCallback(lambda _: self.multiengine.execute(1, 'a=5'))
+        d.addCallback(lambda _: self.multiengine.pull([0,1],'a'))
+        d.addCallback(lambda r: self.assert_(r==[10,5]))        
+        return d
+    
+    def testExecuteAllFailures(self):
+        self.addEngine(4)
+        d = self.multiengine.executeAll('a=1/0')
         d.addErrback(lambda f: self.assertRaises(ZeroDivisionError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.executeAll('print v'))
+        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.executeAll('a = 2**1000000'))
+        d.addErrback(lambda f: self.assertRaises(OverflowError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.executeAll('l=[];l[0]'))
+        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.executeAll("d={};d['a']"))
+        d.addErrback(lambda f: self.assertRaises(KeyError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.executeAll("assert 1==0"))
+        d.addErrback(lambda f: self.assertRaises(AssertionError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.executeAll("import abababsdbfsbaljasdlja"))
+        d.addErrback(lambda f: self.assertRaises(ImportError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.executeAll("raise Exception()"))
+        d.addErrback(lambda f: self.assertRaises(Exception, f.raiseException))
         return d
     
     def testPushPull(self):
@@ -106,6 +179,19 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         d1 = self.multiengine.pull(0, "a")
         d1.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
         return defer.DeferredList([d, d0, d1])
+    
+    def testPushPullAll(self):
+        self.addEngine(4)
+        d = self.multiengine.pushAll(a=10)
+        d.addCallback(lambda _: self.multiengine.pullAll('a'))
+        d.addCallback(lambda r: self.assert_(r==[10,10,10,10]))
+        d.addCallback(lambda _: self.multiengine.pushAll(a=10, b=20))
+        d.addCallback(lambda _: self.multiengine.pullAll('a','b'))
+        d.addCallback(lambda r: self.assert_(r==4*[[10,20]]))
+        d.addCallback(lambda _: self.multiengine.push(0, a=10, b=20))
+        d.addCallback(lambda _: self.multiengine.pull(0,'a','b'))  
+        d.addCallback(lambda r: self.assert_(r==[[10,20]]))
+        return d
     
     def testPushPullSerialized(self):
         self.addEngine(1)

@@ -79,6 +79,17 @@ def start():
         help="the TCP port the controller will listen on for engine connections")
     parser.add_option("--engine-ip", type="string", dest="engineip",
         help="the TCP ip address the controller will listen on for engine connections")
+        
+    parser.add_option("--task-port", type="int", dest="taskport",
+        help="the TCP port the controller will listen on for task client connections")
+    parser.add_option("--task-ip", type="string", dest="taskip",
+        help="the TCP ip address the controller will listen on for task client connections")
+
+    parser.add_option("--remote-cont-port", type="int", dest="rcport",
+        help="the TCP port the controller will listen on for Remote Controller client connections")
+    parser.add_option("--remote-cont-ip", type="string", dest="rcip",
+        help="the TCP ip address the controller will listen on for Remote Controller client connections")
+
     parser.add_option("-l", "--logfile", type="string", dest="logfile",
         help="log file name (default is stdout)")
     
@@ -104,7 +115,17 @@ def start():
         controllerConfig.listenForEnginesOn['ip'] = options.engineip
     if options.engineport is not None:
         controllerConfig.listenForEnginesOn['port'] = options.engineport
-    
+    di = controllerConfig.controllerInterfaces['multiengine']['default']
+    if options.rcip is not None:
+        controllerConfig.controllerInterfaces['multiengine']['networkInterfaces'][di]['ip'] = options.rcip
+    if options.rcport is not None:
+        controllerConfig.controllerInterfaces['multiengine']['networkInterfaces'][di]['port'] = options.rcport
+    di = controllerConfig.controllerInterfaces['task']['default']
+    if options.taskip is not None:
+        controllerConfig.controllerInterfaces['task']['networkInterfaces'][di]['ip'] = options.taskip
+    if options.taskport is not None:
+        controllerConfig.controllerInterfaces['task']['networkInterfaces'][di]['port'] = options.taskport
+        
     main(options.logfile)
     
     

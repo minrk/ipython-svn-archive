@@ -1,3 +1,16 @@
+2007-02-16  Brian Granger <ellisonbg@gmail.com>
+
+	* multiengine, multienginepb: now testing the targets argument using
+	verifyTargets in the MultiEngine itself.  Specific network protocols
+	can also test if they want, but _any_ multiengine should now raise
+	InvalidEngineID if targets is bad in any way.  Added tests for this.
+	
+	* config.objects, ipcontroller: there is now the notion of a default
+	network interface for each controller interface.  The port/ip of the 
+	default connection can now be set using command line flags to 
+	ipcontroller.  See config.objects for info on how the default is
+	determined.  For now the default is pb.
+
 2007-02-15  Brian Granger <ellisonbg@gmail.com>
 
 	* kernel.pbutil, kernel.enginepb, kernel.multienginepb: added
