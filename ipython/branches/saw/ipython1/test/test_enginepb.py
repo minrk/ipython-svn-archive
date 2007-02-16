@@ -24,6 +24,8 @@ DelayedCall.debug = True
 
 import zope.interface as zi
 
+from ipython1.kernel import pbconfig
+from ipython1.kernel.error import PBMessageSizeError
 from ipython1.kernel import engineservice as es
 from ipython1.test.util import DeferredTestCase
 from ipython1.kernel.controllerservice import IControllerBase
@@ -104,3 +106,25 @@ class EnginePBTest(DeferredTestCase,
     # Specific tests
     #---------------------------------------------------------------------------
 
+    def testMessageSizeLimit(self):
+        sizeLimit = 64*1024
+        savedLimit = pbconfig.banana.SIZE_LIMIT
+        pbconfig.banana.SIZE_LIMIT = sizeLimit
+        # Test that smaller size is allows
+        toSend = (sizeLimit-1)*'0'
+        d = self.engine.push(a=toSend)
+        d.addCallback(lambda _: self.engine.pull('a'))
+        d.addCallback(lambda r: self.assert_(r==toSend))
+        d.addCallback(lambda _: self.engine.execute("a=%i*'0'" % sizeLimit-1))
+        d.addCallback(lambda _: self.engine.pull('a'))
+        d.addCallback(lambda r: self.assert_(r==toSend))
+        # Test for failure at the SIZE_LIMIT
+        toSend = (sizeLimit)*'0'
+        d.addCallback(lambda _: self.engine.push(a=toSend))
+        d.addErrback(lambda f: self.assertRaises(PBMessageSizeError, f.raiseException))
+        d.addCallback(lambda _: self.engine.execute("a=%i*'0'" % ((sizeLimit-1),)))
+        d.addCallback(lambda _: self.engine.pull('a'))
+        d.addErrback(lambda f: self.assertRaises(PBMessageSizeError, f.raiseException))
+
+        pbconfig.banana.SIZE_LIMIT = savedLimit
+        return d

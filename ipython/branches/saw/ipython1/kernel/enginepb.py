@@ -47,10 +47,12 @@ from twisted.spread.util import Pager, StringPager, CallbackPageCollector
 from twisted.internet.base import DelayedCall
 DelayedCall.debug = True
 
-import ipython1.kernel.pbconfig
+from ipython1.kernel import pbconfig
+from ipython1.kernel.pbutil import packageFailure, checkMessageSize
 from ipython1.kernel.pbconfig import CHUNK_SIZE
 from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import newserialized
+from ipython1.kernel.error import PBMessageSizeError
 from ipython1.kernel import controllerservice, protocols
 from ipython1.kernel.controllerservice import IControllerBase
 from ipython1.kernel.engineservice import \
@@ -275,12 +277,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
             "IEngineBase is not provided by" + repr(service)
         self.service = service
         self.collectors = {}
-    
-    def packageFailure(self, f):
-        f.cleanFailure()
-        pString = pickle.dumps(f, 2)
-        return 'FAILURE:' + pString
-    
+        
     def remote_getID(self):
         return self.service.id
     
@@ -290,7 +287,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     def remote_execute(self, lines):
         d = self.service.execute(lines)
         #d.addCallback(lambda r: log.msg("Got result: " + str(r)))
-        d.addErrback(self.packageFailure)
+        d.addErrback(packageFailure)
         return d
         
     #---------------------------------------------------------------------------
@@ -301,9 +298,9 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         try:
             namespace = pickle.loads(pNamespace)
         except:
-            return defer.fail(failure.Failure()).addErrback(self.packageFailure)
+            return defer.fail(failure.Failure()).addErrback(packageFailure)
         else:
-            return self.service.push(**namespace).addErrback(self.packageFailure)
+            return self.service.push(**namespace).addErrback(packageFailure)
         
     #---------------------------------------------------------------------------
     # Paging version of push
@@ -315,7 +312,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     def remote_getCollectorForKey(self, key):
         #log.msg("Creating a collector for key" + key)
         if self.collectors.has_key(key):
-            return self.packageFailure(defer.fail(failure.Failure( \
+            return packageFailure(defer.fail(failure.Failure( \
                 CollectorCollision("Collector for key %s already exists" % key))))
         coll = SerializedCollector()
         self.collectors[key] = coll
@@ -338,7 +335,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     def handlePagedPush(self, serial, key):
         log.msg("I got a serial! " + repr(serial) + key)
         d = self.service.pushSerialized(**{key:serial})           
-        d.addErrback(self.packageFailure)
+        d.addErrback(packageFailure)
         self.removeCollector(key)
         return d
         
@@ -349,7 +346,8 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     def remote_pull(self, *keys):
         d = self.service.pull(*keys)
         d.addCallback(pickle.dumps, 2)
-        d.addErrback(self.packageFailure)
+        d.addCallback(checkMessageSize, repr(keys))
+        d.addErrback(packageFailure)
         return d
         
     # NOTE:  The paging version of pull is not being used right now  (BG 1/15/07).
@@ -357,7 +355,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     def remote_pullPaging(self, key, collector):
         d = self.service.pull(key)
         d.addCallback(newserialized.serialize)
-        d.addCallbacks(self._startPaging, self.packageFailure, callbackArgs=(collector,))
+        d.addCallbacks(self._startPaging, packageFailure, callbackArgs=(collector,))
         return d
         
     def _startPaging(self, serial, collector):
@@ -368,16 +366,16 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     #---------------------------------------------------------------------------
     
     def remote_getResult(self, i=None):
-        return self.service.getResult(i).addErrback(self.packageFailure)
+        return self.service.getResult(i).addErrback(packageFailure)
     
     def remote_reset(self):
-        return self.service.reset().addErrback(self.packageFailure)
+        return self.service.reset().addErrback(packageFailure)
     
     def remote_kill(self):
-        return self.service.kill().addErrback(self.packageFailure)
+        return self.service.kill().addErrback(packageFailure)
     
     def remote_keys(self):
-        return self.service.keys().addErrback(self.packageFailure)
+        return self.service.keys().addErrback(packageFailure)
     
     #---------------------------------------------------------------------------
     # push/pullSerialized
@@ -387,15 +385,16 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         try:
             namespace = pickle.loads(pNamespace)
         except:
-            return defer.fail(failure.Failure()).addErrback(self.packageFailure)
+            return defer.fail(failure.Failure()).addErrback(packageFailure)
         else:
             d = self.service.pushSerialized(**namespace)
-            return d.addErrback(self.packageFailure)
+            return d.addErrback(packageFailure)
     
     def remote_pullSerialized(self, *keys):
         d = self.service.pullSerialized(*keys)
         d.addCallback(pickle.dumps, 2)
-        d.addErrback(self.packageFailure)
+        d.addCallback(checkMessageSize, repr(keys))
+        d.addErrback(packageFailure)
         return d
 
 
@@ -465,8 +464,12 @@ class EngineFromReference(object):
         except:
             return defer.fail(failure.Failure())
         else:
-            d = self.callRemote('push', package)
-            return d.addCallback(self.checkReturnForFailure)
+            package = checkMessageSize(package, namespace.keys())
+            if isinstance(package, failure.Failure):
+                return defer.fail(package)
+            else:
+                d = self.callRemote('push', package)
+                return d.addCallback(self.checkReturnForFailure)
             
     # Paging version
 
@@ -573,8 +576,12 @@ class EngineFromReference(object):
         except:
             return defer.fail(failure.Failure())
         else:
-            d = self.callRemote('pushSerialized', package)
-            return d.addCallback(self.checkReturnForFailure)
+            package = checkMessageSize(package, namespace.keys())
+            if isinstance(package, failure.Failure):
+                return defer.fail(package)
+            else:
+                d = self.callRemote('pushSerialized', package)
+                return d.addCallback(self.checkReturnForFailure)
        
     # The new paging version
     

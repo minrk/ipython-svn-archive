@@ -49,7 +49,11 @@ class InvalidEngineID(KernelError):
 class SerializationError(KernelError):
     pass
     
-
+class MessageSizeError(KernelError):
+    pass
+    
+class PBMessageSizeError(MessageSizeError):
+    pass
     
 
 

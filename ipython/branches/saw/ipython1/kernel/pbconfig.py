@@ -23,11 +23,12 @@ from twisted.spread import banana
 # PB uses.  WARNING, this only works if you are NOT using cBanana, which is
 # faster than banana.py.  
 #-------------------------------------------------------------------------------
-    
-#banana.SIZE_LIMIT = #640*1024           # The default of 640 kB
+
+
+
+#banana.SIZE_LIMIT = 640*1024           # The default of 640 kB
 banana.SIZE_LIMIT = 10*1024*1024       # 10 MB
-#banana.SIZE_LIMIT = 50*1024*1024       # 50 MB
-    
+#banana.SIZE_LIMIT = 50*1024*1024       # 50 MB   
     
 # This sets the size of chunks used when paging is used.    
 CHUNK_SIZE = 64*1024

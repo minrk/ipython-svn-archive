@@ -84,7 +84,10 @@ class BasicControllerPBTest(DeferredTestCase):
         return self.assertEquals(p, l)
     testInterfaces.skip = 'The MultiEnginePB tests need to be updated when multienginepb.py is updated.'
     
-   
+    def testMessageSizeLimit(self):
+        pass
+    testMessageSizeLimit.skip = 'testMessageSizeLimit needs to be implemented in test_multienginepb.py.'
+    
 #-------------------------------------------------------------------------------
 # Test coordination
 #-------------------------------------------------------------------------------
