@@ -7,6 +7,7 @@ Part of the mwadap library."""
 # Standard Python lib
 import doctest
 import os
+import re
 import sets
 import sys
 import unittest
