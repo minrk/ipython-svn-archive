@@ -23,10 +23,6 @@ the makeTestSuite utility function.
 
 Limitations:
 
- - IPython functions that produce output as a side-effect of calling a system
-   process can NOT be doc-tested, since that output is not captured by doctest
-   at runtime (things like 'ls', for example).
-
  - When generating examples for use as doctests, make sure that you have
    pretty-printing OFF.  This can be done either by starting ipython with the
    flag '--nopprint', by setting pprint to 0 in your ipythonrc file, or by
@@ -34,11 +30,25 @@ Limitations:
    output matches that of normal Python, which is used by doctest for internal
    execution.
 
- - The underlying IPython used to run the code is started in 'classic' mode,
-   which disables the output history.  So examples that rely on using
-   previously numbered results (such as testing _35==True, for example) will
-   fail.  The single-previous input '_' variable /is/ correctly set, so that
-   can still be used (see example at the end of this file).
+ - Do not rely on specific prompt numbers for results (such as using
+   '_34==True', for example).  For IPython tests run via an external process
+   the prompt numbers may be different, and IPython tests run as normal python
+   code won't even have these special _NN variables set at all.
+
+ - IPython functions that produce output as a side-effect of calling a system
+   process (e.g. 'ls') can be doc-tested, but they must be handled in an
+   external IPython process.  Such doctests must be tagged with:
+
+        # ipdoctest: EXTERNAL
+
+   so that the testing machinery handles them differently.  Since these are run
+   via pexpect in an external process, they can't deal with exceptions or other
+   fancy featurs of regular doctests.  You must limit such tests to simple
+   matching of the output.  For this reason, I recommend you limit these kinds
+   of doctests to features that truly require a separate process, and use the
+   normal IPython ones (which have all the features of normal doctests) for
+   everything else.  See the examples at the bottom of this file for a
+   comparison of what can be done with both types.
 """
 
 # Standard library imports
@@ -77,7 +87,7 @@ sys.excepthook = sys.__excepthook__
 __builtin__._ip = IPython.ipapi.get()
 
 # for debugging only!!!
-from IPython.Shell import IPShellEmbed;ipshell=IPShellEmbed(['--noterm_title']) # dbg
+#from IPython.Shell import IPShellEmbed;ipshell=IPShellEmbed(['--noterm_title']) # dbg
 
 
 # runner
@@ -702,7 +712,7 @@ if __name__ == "__main__":
         Out[8]: 10
         """
 
-    def ipfunc2():
+    def ipfunc_external():
         """
         Tests that must be run in an external process
 
