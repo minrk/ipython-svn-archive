@@ -140,6 +140,7 @@ def blockOn(deferrable, fireOnOneCallback=0, fireOnOneErrback=0,
     if not isinstance(deferrable, list):
         deferrable = [deferrable]
     
+    # Add a check to simply pass through plain objects.
     for i in range(len(deferrable)):
         if hasattr(deferrable[i], '__defer__'):
             deferrable[i] = deferrable[i].__defer__()

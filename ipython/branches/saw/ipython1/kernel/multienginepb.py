@@ -7,6 +7,14 @@ is that PB doesn't allow arbitrary objects to be sent over the wire - only
 basic Python types.  To get around this we simple pickle more complex objects
 on boths side of the wire.  That is the main thing these classes have to 
 manage.
+
+Todo:
+* Determine methods that won't use 2 phase submit/retrieve
+  - getIDs
+  - verfiyTargets
+  - queueStatus?
+* Scatter/gather has a problem
+
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -37,7 +45,8 @@ from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
 from ipython1.kernel.blockon import blockOn
 from ipython1.kernel.error import PBMessageSizeError
 from ipython1.kernel import error
-from ipython1.kernel.multiengineclient import InteractiveMultiEngineClient
+from ipython1.kernel.multiengineclient import InteractiveMultiEngineClient, \
+    IBlockingMultiEngine
 
 
 #-------------------------------------------------------------------------------
@@ -124,11 +133,37 @@ class PBMultiEngineFromMultiEngine(pb.Root):
     
     def __init__(self, multiEngine):
         self.multiEngine = multiEngine
-    
+        self.deferredID = 0
+        self.pendingDeferreds = {}
+
     #---------------------------------------------------------------------------
     # Non interface methods
     #---------------------------------------------------------------------------
-    
+
+    def _getNextDeferredID(self):
+        did = self.deferredID
+        self.deferredID += 1
+        return did
+        
+    def remote_getPendingDeferred(self, deferredID):
+        pd = self.pendingDeferreds.get(deferredID)
+        # Delete the pd after it is requested.
+        # 
+        if pd is not None:
+            if not pd.called:
+                log.msg("pendingDeferred has not been called: %s" % deferredID)
+                d = defer.Deferred()
+                pd.chainDeferred(d)
+                return d.addErrback(packageFailure)
+            else:
+                log.msg("pendingDeferred has been called: %s: %s" % (deferredID, repr(pd.result)))
+                if isinstance(pd.result, failure.Failure):
+                    return defer.fail(pd.result).addErrback(packageFailure)
+                else:
+                    return defer.succeed(pd.result)
+        else:
+            return defer.fail(failure.Failure(Exception('Invalid deferredID'))).addErrback(packageFailure)
+        
     def checkReturns(self, rlist):
         for r in rlist:
             if isinstance(r, (Failure, Exception)):
@@ -138,88 +173,161 @@ class PBMultiEngineFromMultiEngine(pb.Root):
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
-    
+
     def remote_execute(self, targets, lines):
-        return self.multiEngine.execute(targets, lines).addErrback(packageFailure)
-    
-    def remote_push(self, targets, pNamespace):
-        try:
-            namespace = pickle.loads(pNamespace)
-        except:
-            return defer.fail(failure.Failure()).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
         else:
-            return self.multiEngine.push(targets, **namespace).addErrback(packageFailure)
+            deferredID = self._getNextDeferredID()
+            d = self.multiEngine.execute(targets, lines)
+            self.pendingDeferreds[deferredID] = d
+            return defer.succeed(deferredID)
+            
+    def remote_push(self, targets, pNamespace):
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            try:
+                namespace = pickle.loads(pNamespace)
+            except:
+                return defer.fail(failure.Failure()).addErrback(packageFailure)
+            else:
+                deferredID = self._getNextDeferredID()
+                d = self.multiEngine.push(targets, **namespace)
+                self.pendingDeferreds[deferredID] = d
+                return defer.succeed(deferredID)
     
     def remote_pull(self, targets, *keys):
-        d = self.multiEngine.pull(targets, *keys)
-        d.addCallback(pickle.dumps, 2)
-        d.addCallback(checkMessageSize, repr(keys))
-        d.addErrback(packageFailure)
-        return d
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            deferredID = self._getNextDeferredID()
+            d = self.multiEngine.pull(targets, *keys)
+            d.addCallback(pickle.dumps, 2)
+            d.addCallback(checkMessageSize, repr(keys))
+            self.pendingDeferreds[deferredID] = d
+            return defer.succeed(deferredID)
     
     def remote_getResult(self, targets, i=None):
-        return self.multiEngine.getResult(targets, i).addErrback(packageFailure)
-    
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            deferredID = self._getNextDeferredID()
+            d = self.multiEngine.getResult(targets, i)
+            self.pendingDeferreds[deferredID] = d
+            return defer.succeed(deferredID)
+
     def remote_reset(self, targets):
-        return self.multiEngine.reset(targets).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            deferredID = self._getNextDeferredID()
+            d = self.multiEngine.reset(targets)
+            self.pendingDeferreds[deferredID] = d
+            return defer.succeed(deferredID)
     
     def remote_keys(self, targets):
-        return self.multiEngine.keys(targets).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            deferredID = self._getNextDeferredID()
+            d = self.multiEngine.keys(targets)
+            self.pendingDeferreds[deferredID] = d
+            return defer.succeed(deferredID)
     
     def remote_kill(self, targets, controller=False):
-        return self.multiEngine.kill(targets, controller).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            deferredID = self._getNextDeferredID()
+            d = self.multiEngine.kill(targets, controller)
+            self.pendingDeferreds[deferredID] = d
+            return defer.succeed(deferredID)
         
     def remote_pushSerialized(self, targets, pNamespace):
-        try:
-            namespace = pickle.loads(pNamespace)
-        except:
-            return defer.fail(failure.Failure()).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
         else:
-            d = self.multiEngine.pushSerialized(targets, **namespace)
-            return d.addErrback(packageFailure)
+            try:
+                namespace = pickle.loads(pNamespace)
+            except:
+                return defer.fail(failure.Failure()).addErrback(packageFailure)
+            else:
+                deferredID = self._getNextDeferredID()
+                d = self.multiEngine.pushSerialized(targets, **namespace)
+                self.pendingDeferreds[deferredID] = d
+                return defer.succeed(deferredID)
     
     def remote_pullSerialized(self, targets, *keys):
-        d = self.multiEngine.pullSerialized(targets, *keys)
-        d.addCallback(pickle.dumps, 2)
-        d.addCallback(checkMessageSize, repr(keys))
-        d.addErrback(packageFailure)
-        return d
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            deferredID = self._getNextDeferredID()
+            d = self.multiEngine.pullSerialized(targets, *keys)
+            d.addCallback(pickle.dumps, 2)
+            d.addCallback(checkMessageSize, repr(keys))
+            self.pendingDeferreds[deferredID] = d
+            return defer.succeed(deferredID)
     
     def remote_clearQueue(self, targets):
-        return self.multiEngine.clearQueue(targets).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            deferredID = self._getNextDeferredID()
+            d = self.multiEngine.clearQueue(targets)
+            self.pendingDeferreds[deferredID] = d
+            return defer.succeed(deferredID)
     
     def remote_queueStatus(self, targets):
-        return self.multiEngine.queueStatus(targets).addErrback(packageFailure)
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            deferredID = self._getNextDeferredID()
+            d = self.multiEngine.queueStatus(targets)
+            self.pendingDeferreds[deferredID] = d
+            return defer.succeed(deferredID)
 
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
 
     def remote_getIDs(self):
-        return self.multiEngine.getIDs().addErrback(packageFailure)
+        d = self.multiEngine.getIDs()
+        d.addErrback(packageFailure)
+        return d
     
     def remote_verifyTargets(self, targets):
-        return self.multiEngine.verifyTargets(targets).addErrback(packageFailure)
+        result = self.multiEngine.verifyTargets(targets)
+        return defer.succeed(result)
     
     #---------------------------------------------------------------------------
     # IEngineCoordinator related methods
     #---------------------------------------------------------------------------
     
-    def remote_scatter(self, targets, key, pseq, style='basic', flatten=False):
-        try:
-            seq = pickle.loads(pseq)
-        except:
-            return defer.fail(failure.Failure()).addErrback(packageFailure)
+    def remote_scatter(self, targets, key, pseq, style, flatten):
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
         else:
-            d = self.multiEngine.scatter(targets, key, seq, style, flatten)
-            return d.addErrback(packageFailure)
+            try:
+                seq = pickle.loads(pseq)
+            except:
+                return defer.fail(failure.Failure()).addErrback(packageFailure)
+            else:
+                deferredID = self._getNextDeferredID()
+                d = self.multiEngine.scatter(targets, key, seq, style, flatten)
+                self.pendingDeferreds[deferredID] = d
+                return defer.succeed(deferredID)
     
-    def remote_gather(self, targets, key, style='basic'):
-        d = self.multiEngine.gather(targets, key, style)
-        d.addCallback(pickle.dumps, 2)
-        d.addCallback(checkMessageSize, repr(key))
-        d.addErrback(packageFailure)
-        return d
+    def remote_gather(self, targets, key, style):
+        if not self.multiEngine.verifyTargets(targets):
+            return defer.fail(error.InvalidEngineID(repr(targets)))
+        else:
+            deferredID = self._getNextDeferredID()
+            d = self.multiEngine.gather(targets, key, style)
+            d.addCallback(pickle.dumps, 2)
+            d.addCallback(checkMessageSize, repr(key))
+            self.pendingDeferreds[deferredID] = d
+            return defer.succeed(deferredID)
     
 
 components.registerAdapter(PBMultiEngineFromMultiEngine,
@@ -252,11 +360,12 @@ class PBMultiEngineClient(object):
     how the old notification system worked.
     """
     
-    implements(IMultiEngine)
+    implements(IBlockingMultiEngine)
     
     def __init__(self, reference):
         self.reference = reference
         self.callRemote = reference.callRemote
+        self.block = True
         
     #---------------------------------------------------------------------------
     # Non interface methods
@@ -278,15 +387,39 @@ class PBMultiEngineClient(object):
                 else:
                     return result
         return r
-        
+
+    def _getPendingDeferred(self, deferredID):
+        d = self.callRemote('getPendingDeferred', deferredID)
+        return d.addCallback(self.checkReturnForFailure)
+                      
+    def _getActualDeferred(self, d):    
+        deferredID = self.blockOn(d)
+        print "Submitted action, got deferredID: ", deferredID
+        d2 = self._getPendingDeferred(deferredID)
+        return d2
+                      
+    def _blockOrNot(self, d):
+        if self.block:
+            return self.blockOn(d)
+        else:
+            return d
+           
+    def blockOn(self, d):
+        return blockOn(d)  
+
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
         
-    def execute(self, targets, lines):
+    def execute(self, targets, lines, block=None):
         d = self.callRemote('execute', targets, lines)
-        return d.addCallback(self.checkReturnForFailure)
-    
+        d.addCallback(self.checkReturnForFailure)
+        d2 = self._getActualDeferred(d)
+        if (self.block and block is None) or block:
+            return self.blockOn(d2)
+        else:
+            return d2
+
     def executeAll(self, lines):
         return self.execute('all', lines)
     
@@ -301,44 +434,63 @@ class PBMultiEngineClient(object):
                 return defer.fail(package)
             else:
                 d = self.callRemote('push', targets, package)
-                return d.addCallback(self.checkReturnForFailure)
-    
+                d.addCallback(self.checkReturnForFailure)
+                d2 = self._getActualDeferred(d)
+                return self._blockOrNot(d2)
+                    
     def pushAll(self, **ns):
         return self.push('all', **ns)
     
     def pull(self, targets, *keys):
         d = self.callRemote('pull', targets, *keys)
         d.addCallback(self.checkReturnForFailure)
-        d.addCallback(pickle.loads)
-        return d
-    
+        d2 = self._getActualDeferred(d)
+        d2.addCallback(pickle.loads)
+        return self._blockOrNot(d2)
+
     def pullAll(self, *keys):
         return self.pull('all', *keys)
         
     def getResult(self, targets, i=None):
-        return self.callRemote('getResult', targets, i).addCallback(self.checkReturnForFailure)
+        d = self.callRemote('getResult', targets, i)
+        d.addCallback(self.checkReturnForFailure)
+        d2 = self._getActualDeferred(d)
+        return self._blockOrNot(d2)
     
     def getResultAll(self, i=None):
         return self.getResult('all', i)
     
     def reset(self, targets):
-        return self.callRemote('reset', targets).addCallback(self.checkReturnForFailure)
-    
+        d = self.callRemote('reset', targets)
+        d.addCallback(self.checkReturnForFailure)
+        d2 = self._getActualDeferred(d)
+        return self._blockOrNot(d2)
+        
     def resetAll(self):
         return self.reset('all')
     
     def keys(self, targets):
-        return self.callRemote('keys', targets).addCallback(self.checkReturnForFailure)
-    
+        d = self.callRemote('keys', targets)
+        d.addCallback(self.checkReturnForFailure)
+        d2 = self._getActualDeferred(d)
+        return self._blockOrNot(d2)
+        
     def keysAll(self):
         return self.keys('all')
     
     def kill(self, targets, controller=False):
         d = self.callRemote('kill', targets, controller)
         d.addCallback(self.checkReturnForFailure)
-        d.addErrback(self.killBack)
-        return d
-    
+        try:
+            deferredID = self.blockOn(d)
+        except pb.PBConnectionLost:
+            pass
+        else:
+            print "Submitted action, got deferredID: ", deferredID
+            d2 = self._getPendingDeferred(deferredID)
+            d2.addErrback(self.killBack)
+            return d2
+        
     def killBack(self, f):
         f.trap(pb.PBConnectionLost)
         return None
@@ -357,7 +509,9 @@ class PBMultiEngineClient(object):
                 return defer.fail(package)
             else:
                 d = self.callRemote('pushSerialized', targets, package)
-                return d.addCallback(self.checkReturnForFailure)
+                d.addCallback(self.checkReturnForFailure)
+                d2 = self._getActualDeferred(d)
+                return self._blockOrNot(d2)
     
     def pushSerializedAll(self, **namespace):
         return self.pushSerialized('all', **namespace)
@@ -365,23 +519,28 @@ class PBMultiEngineClient(object):
     def pullSerialized(self, targets, *keys):
         d = self.callRemote('pullSerialized', targets, *keys)
         d.addCallback(self.checkReturnForFailure)
-        d.addCallback(pickle.loads)
-        return d
+        d2 = self._getActualDeferred(d)
+        d2.addCallback(pickle.loads)
+        return self._blockOrNot(d2)
     
     def pullSerializedAll(self, *keys):
         return self.pullSerialized('all', *keys)
     
     def clearQueue(self, targets):
         d = self.callRemote('clearQueue', targets)
-        return d.addCallback(self.checkReturnForFailure)
-    
+        d.addCallback(self.checkReturnForFailure)
+        d2 = self._getActualDeferred(d)
+        return self._blockOrNot(d2)
+        
     def clearQueueAll(self):
         return self.clearQueue('all')
     
     def queueStatus(self, targets):
         d = self.callRemote('queueStatus', targets)
-        return d.addCallback(self.checkReturnForFailure)
-    
+        d.addCallback(self.checkReturnForFailure)
+        d2 = self._getActualDeferred(d)
+        return self._blockOrNot(d2)
+            
     def queueStatusAll(self):
         return self.queueStatus('all')
     
@@ -391,12 +550,14 @@ class PBMultiEngineClient(object):
     
     def getIDs(self):
         d = self.callRemote('getIDs')
-        return d.addCallback(self.checkReturnForFailure)
-    
+        d.addCallback(self.checkReturnForFailure)
+        return self.blockOn(d)
+        
     def verifyTargets(self, targets):
         d = self.callRemote('verifyTargets', targets)
-        return d.addCallback(self.checkReturnForFailure)
-    
+        d.addCallback(self.checkReturnForFailure)
+        return self.blockOn(d)
+            
     #---------------------------------------------------------------------------
     # IEngineCoordinator related methods
     #---------------------------------------------------------------------------
@@ -411,14 +572,18 @@ class PBMultiEngineClient(object):
             if isinstance(pseq, failure.Failure):
                 return defer.fail(pseq)
             else:
-                d = self.callRemote('scatter', targets, key, pseq, style, flatten)
-                return d.addCallback(self.checkReturnForFailure)
-    
+                d = self.callRemote('scatter', targets=targets, key=key, 
+                                    pseq=pseq, style=style, flatten=flatten)
+                d.addCallback(self.checkReturnForFailure)
+                d2 = self._getActualDeferred(d)
+                return self._blockOrNot(d2)
+
     def gather(self, targets, key, style='basic'):
-        d = self.callRemote('gather', targets, key, style='basic')
+        d = self.callRemote('gather', targets=targets, key=key, style=style)
         d.addCallback(self.checkReturnForFailure)
-        d.addCallback(pickle.loads)
-        return d
+        d2 = self._getActualDeferred(d)
+        d2.addCallback(pickle.loads)
+        return self._blockOrNot(d2)
     
 
 components.registerAdapter(PBMultiEngineClient, 
@@ -449,6 +614,7 @@ class PBInteractiveMultiEngineClient(InteractiveMultiEngineClient):
             
     def _gotRoot(self, rootObj):
         self.multiengine = IMultiEngine(rootObj)
+        self.multiengine.block = self._block
         self.connected = True
         self.multiengine.reference.notifyOnDisconnect(self.handleDisconnect)
         
