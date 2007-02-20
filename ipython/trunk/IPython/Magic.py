@@ -454,15 +454,28 @@ Currently the magic system has the following functions:\n"""
     def magic_automagic(self, parameter_s = ''):
         """Make magic functions callable without having to type the initial %.
         
-        Toggles on/off (when off, you must call it as %automagic, of
-        course). Note that magic functions have lowest priority, so if there's
-        a variable whose name collides with that of a magic fn, automagic
-        won't work for that function (you get the variable instead). However,
-        if you delete the variable (del var), the previously shadowed magic
-        function becomes visible to automagic again."""
+        Without argumentsl toggles on/off (when off, you must call it as
+        %automagic, of course).  With arguments it sets the value, and you can
+        use any of (case insensitive):
+
+         - on,1,True: to activate
+         
+         - off,0,False: to deactivate.
+
+        Note that magic functions have lowest priority, so if there's a
+        variable whose name collides with that of a magic fn, automagic won't
+        work for that function (you get the variable instead). However, if you
+        delete the variable (del var), the previously shadowed magic function
+        becomes visible to automagic again."""
 
         rc = self.shell.rc
-        rc.automagic = not rc.automagic
+        arg = parameter_s.lower()
+        if parameter_s in ('on','1','true'):
+            rc.automagic = True
+        elif parameter_s in ('off','0','false'):
+            rc.automagic = False
+        else:
+            rc.automagic = not rc.automagic
         print '\n' + Magic.auto_status[rc.automagic]
 
     def magic_autocall(self, parameter_s = ''):
