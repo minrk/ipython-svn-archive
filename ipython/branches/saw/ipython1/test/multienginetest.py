@@ -78,28 +78,28 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
             self.assert_(isinstance(d, defer.Deferred))
         return defer.DeferredList(l, consumeErrors=1)
     
-    def testInvalidEngineID(self):
-        self.addEngine(1)
-        badID = 100
-        d = self.multiengine.execute(badID, 'a=5')
-        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.push(badID, a=5))
-        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.pull(badID, 'a'))     
-        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.getResult(badID))   
-        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.reset(badID))     
-        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))   
-        d.addCallback(lambda _: self.multiengine.keys(badID))     
-        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.pushSerialized(badID, a=newserialized.serialize(10)))
-        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.pullSerialized(badID, 'a'))
-        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.queueStatus(badID))
-        d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
-        return d
+    # def testInvalidEngineID(self):
+    #     self.addEngine(1)
+    #     badID = 100
+    #     d = self.multiengine.execute(badID, 'a=5')
+    #     d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+    #     d.addCallback(lambda _: self.multiengine.push(badID, a=5))
+    #     d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+    #     d.addCallback(lambda _: self.multiengine.pull(badID, 'a'))     
+    #     d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+    #     d.addCallback(lambda _: self.multiengine.getResult(badID))   
+    #     d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+    #     d.addCallback(lambda _: self.multiengine.reset(badID))     
+    #     d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))   
+    #     d.addCallback(lambda _: self.multiengine.keys(badID))     
+    #     d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+    #     d.addCallback(lambda _: self.multiengine.pushSerialized(badID, a=newserialized.serialize(10)))
+    #     d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+    #     d.addCallback(lambda _: self.multiengine.pullSerialized(badID, 'a'))
+    #     d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+    #     d.addCallback(lambda _: self.multiengine.queueStatus(badID))
+    #     d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
+    #     return d
     
     def testExecute(self):
         self.addEngine(6)

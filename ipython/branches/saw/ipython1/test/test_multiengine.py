@@ -18,11 +18,12 @@ __docformat__ = "restructuredtext en"
 from twisted.internet import defer
 from ipython1.test.util import DeferredTestCase
 from ipython1.kernel.controllerservice import ControllerService
-from ipython1.kernel.multiengine import IMultiEngine
+from ipython1.kernel.multiengine import IMultiEngine, SynchronousMultiEngine
 from ipython1.kernel import serialized
 from ipython1.test.multienginetest import \
     IEngineMultiplexerTestCase, \
-    IEngineCoordinatorTestCase
+    IEngineCoordinatorTestCase, \
+    IMultiEngineBaseTestCase
     
     
 class BasicMultiEngineTestCase(DeferredTestCase,
@@ -39,3 +40,38 @@ class BasicMultiEngineTestCase(DeferredTestCase,
         self.controller.stopService()
         for e in self.engines:
             e.stopService()
+            
+class SynchronousMultiEngineTestCase(DeferredTestCase,
+    IMultiEngineBaseTestCase):
+            
+    def setUp(self):
+        self.controller = ControllerService()
+        self.controller.startService()
+        self.multiengine = IMultiEngine(self.controller)
+        self.smultiengine = SynchronousMultiEngine(self.multiengine)
+        self.engines = []
+        
+    def tearDown(self):
+        self.controller.stopService()
+        for e in self.engines:
+            e.stopService()
+            
+    def testExecuteNoBlock(self):
+        self.addEngine(2)
+        result = [{'commandIndex': 0, 'stdin': 'a=5', 'id': 0, 'stderr': '', 'stdout': ''},
+         {'commandIndex': 0, 'stdin': 'a=5', 'id': 1, 'stderr': '', 'stdout': ''}]
+        cid = self.smultiengine.registerClient()
+        d = self.smultiengine.execute(cid, False, 'all', 'a=5')
+        d.addCallback(lambda r: self.smultiengine.getPendingDeferred(cid, r))
+        d.addCallback(lambda r: self.assert_(r==result))
+        return d
+        
+    def testExecuteBlock(self):
+        self.addEngine(2)
+        result = [{'commandIndex': 0, 'stdin': 'a=5', 'id': 0, 'stderr': '', 'stdout': ''},
+         {'commandIndex': 0, 'stdin': 'a=5', 'id': 1, 'stderr': '', 'stdout': ''}]
+        cid = self.smultiengine.registerClient()
+        d = self.smultiengine.execute(cid, True, 'all', 'a=5')
+        #d.addCallback(lambda r: self.smultiengine.getPendingDeferred(cid, r))
+        d.addCallback(lambda r: self.assert_(r==result))
+        return d

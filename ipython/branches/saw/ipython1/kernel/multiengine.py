@@ -30,7 +30,7 @@ __docformat__ = "restructuredtext en"
 from new import instancemethod
 from twisted.application import service
 from twisted.internet import defer, reactor
-from twisted.python import log, components
+from twisted.python import log, components, failure
 from zope.interface import Interface, implements, Attribute
 
 from ipython1.kernel.serialized import Serialized
@@ -40,7 +40,7 @@ from ipython1.kernel import error
 from ipython1.kernel.controllerservice import \
     ControllerAdapterBase, \
     ControllerService
-
+from ipython1.pendingdeferred import PendingDeferredAdapter, TwoPhase
 
 #-------------------------------------------------------------------------------
 # Interfaces for the MultiEngine representation of a controller
@@ -484,4 +484,54 @@ class MultiEngine(ControllerAdapterBase):
 components.registerAdapter(MultiEngine, 
                            ControllerService, 
                            IMultiEngine)
+
+
+#-------------------------------------------------------------------------------
+# Synchronous MultiEngine
+#-------------------------------------------------------------------------------
+
+
+class SynchronousMultiEngine(PendingDeferredAdapter):
+    
+    def __init__(self, multiengine):
+        self.multiengine = multiengine
+
+        # Now apply the TwoPhase wrapper class to all the methods of self.multiengine.
+        self.execute = TwoPhase(self, self.multiengine.execute)
+        self.executeAll = TwoPhase(self, self.multiengine.executeAll)
+        self.push = TwoPhase(self, self.multiengine.push)
+        self.pushAll = TwoPhase(self, self.multiengine.pushAll)
+        self.pull = TwoPhase(self, self.multiengine.pull)
+        self.pullAll = TwoPhase(self, self.multiengine.pullAll)
+        self.getResult = TwoPhase(self, self.multiengine.getResult)
+        self.getResultAll = TwoPhase(self, self.multiengine.getResultAll)
+        self.reset = TwoPhase(self, self.multiengine.reset)
+        self.resetAll = TwoPhase(self, self.multiengine.resetAll)
+        self.keys = TwoPhase(self, self.multiengine.keys)
+        self.keysAll = TwoPhase(self, self.multiengine.keysAll)
+        self.kill = TwoPhase(self, self.multiengine.kill)
+        self.killAll = TwoPhase(self, self.multiengine.killAll)
+        self.pushSerialized = TwoPhase(self, self.multiengine.pushSerialized)
+        self.pushSerializedAll = TwoPhase(self, self.multiengine.pushSerializedAll)
+        self.pullSerialized = TwoPhase(self, self.multiengine.pullSerialized)
+        self.pullSerializedAll = TwoPhase(self, self.multiengine.pullSerializedAll)
+        self.clearQueue = TwoPhase(self, self.multiengine.clearQueue)
+        self.clearQueueAll = TwoPhase(self, self.multiengine.clearQueueAll)
+        self.queueStatus = TwoPhase(self, self.multiengine.queueStatus)
+        self.queueStatusAll = TwoPhase(self, self.multiengine.queueStatusAll)
+        self.scatter = TwoPhase(self, self.multiengine.scatter)
+        self.scatterAll = TwoPhase(self, self.multiengine.scatterAll)
+        self.gather = TwoPhase(self, self.multiengine.gather)
+        self.gatherAll = TwoPhase(self, self.multiengine.gatherAll)
+                
+    #---------------------------------------------------------------------------
+    # IMultiEngine methods
+    #---------------------------------------------------------------------------
+
+    def getIDs(self):
+        return self.multiengine.getIDs()
+
+    def verifyTargets(self, targets):
+        return self.multiengine.verifyTargets(targets)
+
         

@@ -133,36 +133,10 @@ class PBMultiEngineFromMultiEngine(pb.Root):
     
     def __init__(self, multiEngine):
         self.multiEngine = multiEngine
-        self.deferredID = 0
-        self.pendingDeferreds = {}
 
     #---------------------------------------------------------------------------
     # Non interface methods
     #---------------------------------------------------------------------------
-
-    def _getNextDeferredID(self):
-        did = self.deferredID
-        self.deferredID += 1
-        return did
-        
-    def remote_getPendingDeferred(self, deferredID):
-        pd = self.pendingDeferreds.get(deferredID)
-        # Delete the pd after it is requested.
-        # 
-        if pd is not None:
-            if not pd.called:
-                log.msg("pendingDeferred has not been called: %s" % deferredID)
-                d = defer.Deferred()
-                pd.chainDeferred(d)
-                return d.addErrback(packageFailure)
-            else:
-                log.msg("pendingDeferred has been called: %s: %s" % (deferredID, repr(pd.result)))
-                if isinstance(pd.result, failure.Failure):
-                    return defer.fail(pd.result).addErrback(packageFailure)
-                else:
-                    return defer.succeed(pd.result)
-        else:
-            return defer.fail(failure.Failure(Exception('Invalid deferredID'))).addErrback(packageFailure)
         
     def checkReturns(self, rlist):
         for r in rlist:
@@ -174,14 +148,11 @@ class PBMultiEngineFromMultiEngine(pb.Root):
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
 
-    def remote_execute(self, targets, lines):
+    def remote_execute(self, clientID, targets, lines):
         if not self.multiEngine.verifyTargets(targets):
-            return defer.fail(error.InvalidEngineID(repr(targets)))
+            return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
         else:
-            deferredID = self._getNextDeferredID()
-            d = self.multiEngine.execute(targets, lines)
-            self.pendingDeferreds[deferredID] = d
-            return defer.succeed(deferredID)
+            return self.multiEngine.execute(clientID, targets, lines)
             
     def remote_push(self, targets, pNamespace):
         if not self.multiEngine.verifyTargets(targets):

@@ -46,6 +46,12 @@ class ProtocolError(KernelError):
 class InvalidEngineID(KernelError):
     pass
     
+class InvalidClientID(KernelError):
+    pass
+    
+class InvalidDeferredID(KernelError):
+    pass
+    
 class SerializationError(KernelError):
     pass
     
