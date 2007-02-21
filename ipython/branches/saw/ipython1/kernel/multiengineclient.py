@@ -35,27 +35,39 @@ from ipython1.kernel.parallelfunction import ParallelFunction
 
 
 #-------------------------------------------------------------------------------
-# The Blocking MultiEngine Inteface used by interactive clients
+# Core Client Interfaces
 #-------------------------------------------------------------------------------
 
-class IBlockingMultiEngine(IMultiEngine):
-    """A MultiEngine that can be used in semi-asynchronous settings.
+class IPendingResult(Interface):
     
-    The usual IMultiEngine interface methods usually return a Deferred to a list
-    of results.  This interface is most useful in truly asynchornous settings 
-    """
+    resultID=Attribute("ID of the deferred on the other side")
+    client=Attribute("An ISynchronousMultiEngineClient that I came from")
+    
+    def getResult(self):
+        """Block for the result."""
+        
+    def isDone(self):
+        """Boolean that determines if the result is ready."""
+        
+        
+class ISynchronousMultiEngineClient(Interface):
     
     block=Attribute("Should my methods block or not?")
     
     def execute(targets, lines, block=None):
-        """Execute lines of code with option to block.
+        """Execute lines on targets.
         
-        When block=True, this method should return a return or raise.  When
-        block=False, this method should submit the lines of code to the targets
-        and then return a deferred to the result or Failure.  When block=None
-        use the self.block attribute to determine the behavior.
+        The boolean block argument overrides the class attribute block.
+        
+        If block=True, the method submits the lines for execution, waits until
+        then have executed and then returns a result dict or raises an 
+        exception.
+        
+        If block=False, the method submits the command and returns a pendingResult
+        object that can be used to retrieve the result later.
         """
-
+        
+    
 
 #-------------------------------------------------------------------------------
 # ConnectingMultiEngineClient
@@ -83,15 +95,6 @@ class ConnectingMultiEngineClient(object):
         self._block = True
         self.connected = False
                            
-    def blockOn(self, d):
-        return blockOn(d)
-            
-    def _blockOrNot(self, d):
-        if self._block:
-            return self.blockOn(d)
-        else:
-            return d
-
     #---------------------------------------------------------------------------
     # Methods for subclasses to override
     #---------------------------------------------------------------------------

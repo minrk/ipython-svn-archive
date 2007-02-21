@@ -18,7 +18,7 @@ __docformat__ = "restructuredtext en"
 from twisted.internet import defer
 from ipython1.test.util import DeferredTestCase
 from ipython1.kernel.controllerservice import ControllerService
-from ipython1.kernel.multiengine import IMultiEngine, SynchronousMultiEngine
+from ipython1.kernel.multiengine import IMultiEngine, ISynchronousMultiEngine
 from ipython1.kernel import serialized
 from ipython1.test.multienginetest import \
     IEngineMultiplexerTestCase, \
@@ -48,7 +48,7 @@ class SynchronousMultiEngineTestCase(DeferredTestCase,
         self.controller = ControllerService()
         self.controller.startService()
         self.multiengine = IMultiEngine(self.controller)
-        self.smultiengine = SynchronousMultiEngine(self.multiengine)
+        self.smultiengine = ISynchronousMultiEngine(self.multiengine)
         self.engines = []
         
     def tearDown(self):

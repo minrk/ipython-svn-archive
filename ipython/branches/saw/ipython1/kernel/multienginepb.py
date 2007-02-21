@@ -41,7 +41,7 @@ from zope.interface import Interface, implements
 
 from ipython1.kernel import pbconfig
 from ipython1.kernel.pbutil import packageFailure, checkMessageSize
-from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
+from ipython1.kernel.multiengine import MultiEngine, IMultiEngine, ISynchronousMultiEngine
 from ipython1.kernel.blockon import blockOn
 from ipython1.kernel.error import PBMessageSizeError
 from ipython1.kernel import error
@@ -132,7 +132,7 @@ class PBMultiEngineFromMultiEngine(pb.Root):
     implements(IPBMultiEngine)
     
     def __init__(self, multiEngine):
-        self.multiEngine = multiEngine
+        self.multiEngine = ISynchronousMultiEngine(multiEngine)
 
     #---------------------------------------------------------------------------
     # Non interface methods
@@ -148,11 +148,11 @@ class PBMultiEngineFromMultiEngine(pb.Root):
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
 
-    def remote_execute(self, clientID, targets, lines):
+    def remote_execute(self, clientID, block, targets, lines):
         if not self.multiEngine.verifyTargets(targets):
             return defer.fail(error.InvalidEngineID(repr(targets))).addErrback(packageFailure)
         else:
-            return self.multiEngine.execute(clientID, targets, lines)
+            return self.multiEngine.execute(clientID, block, targets, lines)
             
     def remote_push(self, targets, pNamespace):
         if not self.multiEngine.verifyTargets(targets):
@@ -383,6 +383,11 @@ class PBMultiEngineClient(object):
     #---------------------------------------------------------------------------
         
     def execute(self, targets, lines, block=None):
+        if (self.block and block is None) or block:
+            pass
+            
+            
+            
         d = self.callRemote('execute', targets, lines)
         d.addCallback(self.checkReturnForFailure)
         d2 = self._getActualDeferred(d)
