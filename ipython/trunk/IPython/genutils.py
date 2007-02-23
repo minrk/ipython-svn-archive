@@ -163,15 +163,33 @@ StringTypes = types.StringTypes
 # If possible (Unix), use the resource module instead of time.clock()
 try:
     import resource
+    def clocku():
+        """clocku() -> floating point number
+
+        Return the *USER* CPU time in seconds since the start of the process.
+        This is done via a call to resource.getrusage, so it avoids the
+        wraparound problems in time.clock()."""
+        
+        return resource.getrusage(resource.RUSAGE_SELF)[0]
+    
+    def clocks():
+        """clocks() -> floating point number
+
+        Return the *SYSTEM* CPU time in seconds since the start of the process.
+        This is done via a call to resource.getrusage, so it avoids the
+        wraparound problems in time.clock()."""
+        
+        return resource.getrusage(resource.RUSAGE_SELF)[1]
+    
     def clock():
         """clock() -> floating point number
 
-        Return the CPU time in seconds (user time only, system time is
-        ignored) since the start of the process.  This is done via a call to
-        resource.getrusage, so it avoids the wraparound problems in
-        time.clock()."""
-        
-        return resource.getrusage(resource.RUSAGE_SELF)[0]
+        Return the *TOTAL USER+SYSTEM* CPU time in seconds since the start of
+        the process.  This is done via a call to resource.getrusage, so it
+        avoids the wraparound problems in time.clock()."""
+
+        u,s = resource.getrusage(resource.RUSAGE_SELF)[:2] 
+        return u+s
     
     def clock2():
         """clock2() -> (t_user,t_system)
@@ -180,7 +198,9 @@ try:
         return resource.getrusage(resource.RUSAGE_SELF)[:2]
 
 except ImportError:
-    clock = time.clock
+    # There is no distinction of user/system time under windows, so we just use
+    # time.clock() for everything...
+    clocku = clocks = clock = time.clock
     def clock2():
         """Under windows, system CPU time can't be measured.
 
