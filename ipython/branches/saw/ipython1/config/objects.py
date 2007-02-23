@@ -37,10 +37,7 @@ from ipython1.config.base import Config
 #-------------------------------------------------------------------------------
 
 enginePort = 10201
-
-pbMEPort = 10111
-xmlrpcMEPort = 10112
-vanillaMEPort = 10105
+xmlrpcMEPort = 10105
 pbTCPort = 10114
 xmlrpcTCPort = 10113
 httpMEPort = 8080
@@ -67,9 +64,7 @@ class ShellConfig(Config):
 # Engine Configuration
 #-------------------------------------------------------------------------------
 
-from ipython1.kernel.enginevanilla import \
-    IVanillaEngineClientFactory
-    
+
 from ipython1.kernel.enginepb import PBEngineClientFactory
 
 class EngineConfig(Config):
@@ -130,15 +125,6 @@ class MPIConfig(Config):
 # Controller Configuration
 #-------------------------------------------------------------------------------
 
-# from ipython1.kernel.enginevanilla import \
-#     IVanillaEngineServerFactory
-# 
-# from ipython1.kernel.multienginevanilla import \
-#     IVanillaControllerFactory
-#     
-# from ipython1.kernel.multienginepb import \
-#     IPBMultiEngineFactory
-# 
 from ipython1.kernel.multienginexmlrpc import \
     IXMLRPCMultiEngineFactory
     
@@ -157,23 +143,14 @@ from ipython1.kernel.taskpb import \
 from ipython1.kernel.multiengine import IMultiEngine
 from ipython1.kernel.task import ITaskController
 
-
-# pbME = {'interface': IPBMultiEngineFactory, 
-#         'ip': '', 
-#         'port': pbMEPort}
 xmlrpcME = {'interface': IXMLRPCMultiEngineFactory, 
             'ip': '', 
             'port': xmlrpcMEPort}
-# vanillaME = {'interface': IVanillaControllerFactory, 
-#              'ip': '', 
-#              'port': vanillaMEPort}
 httpME = {'interface': IHTTPMultiEngineFactory, 
           'ip': '', 
           'port': httpMEPort}
+
 networkInterfacesME = {'xmlrpc':xmlrpcME}
-#networkInterfacesME = {'http': httpME, 'xmlrpc':xmlrpcME}
-# Uncomment this to expose to multiple network interfaces
-#networkInterfacesME = {'pb': pbME, 'xmlrpc': xmlrpcME}
 
 pbTC = {'interface':IPBTaskControllerFactory,
         'ip':'',
@@ -181,9 +158,8 @@ pbTC = {'interface':IPBTaskControllerFactory,
 xmlrpcTC = {'interface':IXMLRPCTaskControllerFactory,
             'ip':'',
             'port':xmlrpcTCPort}
+
 networkInterfacesTC = {'pb': pbTC}
-# Uncomment this to expose to multiple network interfaces
-#networkInterfacesTC = {'pb': pbTC, 'xmlrpc': xmlrpcTC}
 
 
 class ControllerConfig(Config):
@@ -213,9 +189,6 @@ class ControllerConfig(Config):
 #-------------------------------------------------------------------------------
 # Client Configuration
 #-------------------------------------------------------------------------------
-
-from ipython1.kernel.multienginevanilla import \
-    RemoteController
 
 # from ipython1.kernel.multienginepb import PBInteractiveMultiEngineClient
 
