@@ -139,8 +139,8 @@ class MPIConfig(Config):
 # from ipython1.kernel.multienginepb import \
 #     IPBMultiEngineFactory
 # 
-# from ipython1.kernel.multienginexmlrpc import \
-#     IXMLRPCMultiEngineFactory
+from ipython1.kernel.multienginexmlrpc import \
+    IXMLRPCMultiEngineFactory
     
 from ipython1.kernel.multienginehttp import \
     IHTTPMultiEngineFactory
@@ -161,16 +161,16 @@ from ipython1.kernel.task import ITaskController
 # pbME = {'interface': IPBMultiEngineFactory, 
 #         'ip': '', 
 #         'port': pbMEPort}
-# xmlrpcME = {'interface': IXMLRPCMultiEngineFactory, 
-#           'ip': '', 
-#           'port': xmlrpcMEPort}
+xmlrpcME = {'interface': IXMLRPCMultiEngineFactory, 
+            'ip': '', 
+            'port': xmlrpcMEPort}
 # vanillaME = {'interface': IVanillaControllerFactory, 
 #              'ip': '', 
 #              'port': vanillaMEPort}
 httpME = {'interface': IHTTPMultiEngineFactory, 
           'ip': '', 
           'port': httpMEPort}
-networkInterfacesME = {'http': httpME}
+networkInterfacesME = {'http': httpME, 'xmlrpc':xmlrpcME}
 # Uncomment this to expose to multiple network interfaces
 #networkInterfacesME = {'pb': pbME, 'xmlrpc': xmlrpcME}
 

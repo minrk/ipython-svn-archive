@@ -26,6 +26,7 @@ from zope.interface import Interface, implements, Attribute
 
 from IPython.ColorANSI import TermColors
 
+from ipython1.kernel import error
 import ipython1.kernel.pbconfig
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
 from ipython1.kernel.blockon import blockOn
@@ -42,180 +43,139 @@ class IPendingResult(Interface):
     
     resultID=Attribute("ID of the deferred on the other side")
     client=Attribute("An ISynchronousMultiEngineClient that I came from")
+    r=Attribute("An attribute that is a property that calls and returns getResult")
     
     def getResult(self):
         """Block for the result."""
+
+class PendingResult(object):
+    
+    def __init__(self, client, resultID):
+        self.client = client
+        self.resultID = resultID
+        self.called = False
+        self.callbacks = []
         
-    def isDone(self):
-        """Boolean that determines if the result is ready."""
+    def getResult(self, block=True):
+        if self.called:
+            raise error.ResultAlreadyRetrieved('Result is already available as .result')
+        try:
+            result = self.client.getPendingResult(self.resultID, block)
+        except error.ResultNotCompleted:
+            pass
+        else:
+            for cb in self.callbacks:
+                result = cb[0](result, *cb[1], **cb[2])
+            self.result = result
+            self.called = True
+            return result
         
+    def addCallback(self, f, *args, **kwargs):
+        assert callable(f)
+        self.callbacks.append((f, args, kwargs))
+        
+    r = getResult 
         
 class ISynchronousMultiEngineClient(Interface):
     
     block=Attribute("Should my methods block or not?")
     
+    def getPendingResult(resultID, block=True):
+        """"""
+        
+    def getAllPendingResults():
+        """"""
+        
+    def barrier():
+        """"""
+        
+    #---------------------------------------------------------------------------
+    # IEngineMultiplexer related methods
+    #---------------------------------------------------------------------------
+        
     def execute(targets, lines, block=None):
-        """Execute lines on targets.
-        
-        The boolean block argument overrides the class attribute block.
-        
-        If block=True, the method submits the lines for execution, waits until
-        then have executed and then returns a result dict or raises an 
-        exception.
-        
-        If block=False, the method submits the command and returns a pendingResult
-        object that can be used to retrieve the result later.
-        """
-        
+        """"""
     
-
-#-------------------------------------------------------------------------------
-# ConnectingMultiEngineClient
-#-------------------------------------------------------------------------------
-
-class ConnectingMultiEngineClient(object):
-    """IBlockingMultiEngine Implementer."""
+    def executeAll(lines, block=None):
+        """"""
     
-    def _getBlock(self):
-        if self.multiengine is not None:
-            return self.multiengine.block
-        else:
-            return self._block
-            
-    def _setBlock(self, block):
-        self._block = block
-        if self.multiengine is not None:
-            self.multiengine.block = block
+    def push(targets, **namespace):
+        """"""
+                
+    def pushAll(**ns):
+        """"""
     
-    block = property(_getBlock, _setBlock, None, None)
+    def pull(targets, *keys):
+        """"""
     
-    def __init__(self, addr):
-        self.addr = addr
-        self.multiengine = None
-        self._block = True
-        self.connected = False
-                           
+    def pullAll(*keys):
+        """"""
+        
+    def getResult(targets, i=None):
+        """"""
+         
+    def getResultAll(i=None):
+        """"""
+    
+    def reset(targets):
+        """"""
+        
+    def resetAll():
+        """"""
+    
+    def keys(targets):
+        """"""
+          
+    def keysAll():
+        """"""
+    
+    def kill(targets, controller=False):
+        """"""
+    
+    def killAll(controller=False):
+        """"""
+        
+    def clearQueue(targets):
+        """"""
+        
+    def clearQueueAll():
+        """"""
+    
+    def queueStatus(targets):
+        """"""
+    
+    def queueStatusAll():
+        """"""
+    
     #---------------------------------------------------------------------------
-    # Methods for subclasses to override
+    # IMultiEngine related methods
     #---------------------------------------------------------------------------
-            
-    def connect(self):
-        """Create self.multiengine and set self.connected to True.
-        
-        Implementers of this method must also (after creating self.multiengine)
-        do self.multiengine.block = self._block to synchronize the blocking 
-        behavior of this class and the underlying multiengine.
-        """
-        pass
-            
+    
+    def getIDs():
+        """"""
+    
     #---------------------------------------------------------------------------
-    # Interface methods
+    # IEngineCoordinator related methods
     #---------------------------------------------------------------------------
+    
+    def scatter(targets, key, seq, style='basic', flatten=False):
+        """"""
+        
+    def scatterAll(key, seq, style='basic', flatten=False):
+        """"""
+    
+    def gather(targets, key, style='basic'):
+        """"""
+        
+    def gatherAll(key, style='basic'):
+        """"""
 
-    def execute(self, targets, lines, block=None):
-        self.connect()
-        return self.multiengine.execute(targets, lines, block)
-
-    def executeAll(self, lines, block=None):
-        return self.execute('all', lines, block)
-        
-    def push(self, targets, **namespace):
-        self.connect()
-        return self.multiengine.push(targets, **namespace)
-        
-    def pushAll(self, **namespace):
-        return self.push('all', **namespace)
-        
-    def pull(self, targets, *keys):
-        self.connect()
-        return self.multiengine.pull(targets, *keys)
-
-    def pullAll(self, *keys):
-        return self.pull('all', *keys)
-    
-    def getResult(self, targets, i=None):
-        self.connect()
-        return self.multiengine.getResult(targets, i)
-    
-    def getResultAll(self, i=None):
-        return self.getResult('all', i)
-    
-    def reset(self, targets):
-        self.connect()
-        return self.multiengine.reset(targets)
-    
-    def resetAll(self):
-        return self.reset('all')
-    
-    def keys(self, targets):
-        self.connect()
-        return self.multiengine.keys(targets)
-    
-    def keysAll(self):
-        return self.keys('all')
-    
-    def kill(self, targets, controller=False):
-        self.connect()
-        return self.multiengine.kill(targets, controller)
-        
-    def killAll(self, controller=False):
-        return self.kill('all', controller)
-    
-    def pushSerialized(self, targets, **namespace):
-        self.connect()
-        return self.multiengine.pushSerialized(targets, **namespace)
-    
-    def pushSerializedAll(self, **namespace):
-        return self.pushSerialized('all', **namespace)
-    
-    def pullSerialized(self, targets, *keys):
-        self.connect()
-        return self.multiengine.pullSerialized(targets, *keys)
-    
-    def pullSerializedAll(self, *keys):
-        return self.pullSerialized('all', *keys)
-    
-    def clearQueue(self, targets):
-        self.connect()
-        return self.multiengine.clearQueue(targets)
-    
-    def clearQueueAll(self):
-        return self.clearQueue('all')
-    
-    def queueStatus(self, targets):
-        self.connect()
-        return self.multiengine.queueStatus(targets)
-    
-    def queueStatusAll(self):
-        return self.queueStatus('all')
-        
-    def getIDs(self):
-        self.connect()
-        return self.multiengine.getIDs()
-    
-    def verifyTargets(self, targets):
-        self.connect()
-        return self.multiengine.verifyTargets(targets)
-        
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        self.connect()
-        return self.multiengine.scatter(targets, key, seq, style, flatten)
-    
-    def scatterAll(self, key, seq, style='basic', flatten=False):
-        return self.scatter('all', key, seq, style, flatten)
-        
-    def gather(self, targets, key, style='basic'):
-        self.connect()
-        return self.multiengine.gather(targets, key, style)
-        
-    def gatherAll(self, key, style='basic'):
-        return self.gather('all', key, style)
 
 #-------------------------------------------------------------------------------
 # InteractiveMultiEngineClient
 #-------------------------------------------------------------------------------    
 
-class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
+class InteractiveMultiEngineClient(object):
         
     #---------------------------------------------------------------------------
     # Interactive Extensions:
@@ -244,14 +204,15 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
         return result
         
     def ipull(self, targets, *keys):
-        saveBlock = self.block
-        self.block = False
-        d = self.pull(targets, *keys)
+        result = self.pull(targets, *keys)
         multitargets = not isinstance(targets, int) and len(targets) > 1
-        d.addCallback(self._transformPullResult, multitargets, len(keys))
-        self.block = saveBlock
-        return self._blockOrNot(d)
-    
+        lenKeys = len(keys)
+        if self.block:
+            result = self._transformPullResult(result, multitargets, lenKeys)
+        else:
+            result.addCallback(self._transformPullResult, multitargets, lenKeys)
+        return result
+            
     def ipullAll(self, *keys):
         return self.ipull('all', *keys)
         
@@ -286,23 +247,23 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
         return None
         
     def iexecute(self, targets, lines, block=None):
-        d = self.execute(targets, lines, block=False)
-        d.addCallback(self._printResult)
-        if (self.block and block is None) or block:
-            return self.blockOn(d)
+        result = self.execute(targets, lines, block)
+        if self._reallyBlock(block):
+            self._printResult(result)
         else:
-            return d
+            result.addCallback(self._printResult)
+            return result
         
-    def iexecuteAll(self, lines):
-        return self.iexecute('all', lines)
+    def iexecuteAll(self, lines, block=None):
+        return self.iexecute('all', lines, block)
         
     def igetResult(self, targets, i=None):
-        saveBlock = self.block
-        self.block = False
-        d = self.getResult(targets, i)
-        d.addCallback(self._printResult)
-        self.block = saveBlock
-        return self._blockOrNot(d)   
+        result = self.getResult(targets, i)
+        if self.block:
+            self._printResult(result)
+        else:
+            result.addCallback(self._printResult)
+            return result
     
     def igetResultAll(self, i=None):
         return self.igetResult('all', i)
@@ -315,12 +276,8 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
                 print "    Command: ", q
             
     def iqueueStatus(self, targets):
-        saveBlock = self.block
-        self.block = False
-        d = self.queueStatus(targets)
-        d.addCallback(self._printQueueStatus)
-        self.block = saveBlock
-        return self._blockOrNot(d)
+        result = self.queueStatus(targets)
+        self._printQueueStatus(result)
     
     def iqueueStatusAll(self):
         return self.iqueueStatus('all')
@@ -443,7 +400,6 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
         elif isinstance(id, int):
             return EngineProxy(self, id)
         elif isinstance(id, str):
-            self.connect()
             return self.pull('all', *(id,))
         else:
             raise TypeError("__getitem__ only takes strs, ints, and slices")
@@ -484,14 +440,13 @@ class InteractiveMultiEngineClient(ConnectingMultiEngineClient):
         sourceToRun = \
             '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
             functionSource        
-        d1 = self.scatter(targets, '_ipython_map_seq', seq, style)
-        d2 = self.execute(targets, sourceToRun)
-        d3 = self.gather(targets, '_ipython_map_seq_result', style)
-        d = gatherBoth([d1 ,d2, d3], fireOnOneErrback=1, consumeErrors=1)
-        d.addCallback(lambda r: r[2])
+        pd1 = self.scatter(targets, '_ipython_map_seq', seq, style)
+        pd2 = self.execute(targets, sourceToRun)
+        pd3 = self.gather(targets, '_ipython_map_seq_result', style)
         self.block = saveBlock
-        return self._blockOrNot(d)
-
+        pd1.getResult()
+        pd2.getResult()
+        return pd3.getResult()
             
     def mapAll(self, functionSource, seq, style='basic'):
         """Parallel map on all engines.

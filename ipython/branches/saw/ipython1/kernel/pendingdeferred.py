@@ -46,22 +46,28 @@ class PendingDeferredManager(object):
     def removePendingDeferred(self, deferredID):
         pd = self.pendingDeferreds.get(deferredID)
         if pd is not None:
-            pd.addErrback(log.err)
+            pd.addErrback(lambda f: None)
             del self.pendingDeferreds[deferredID]
         
     def cleanOutDeferreds(self):
         for k in self.pendingDeferreds.iterkeys():
             self.removePendingDeferred(k)
         
-    def getPendingDeferred(self, deferredID):
+    def _deleteAndPassThrough(self, r, deferredID):
+        self.removePendingDeferred(deferredID)
+        return r
+        
+    def getPendingDeferred(self, deferredID, block):
         pd = self.pendingDeferreds.get(deferredID)
         if pd is not None:
-            if not pd.called:    # pd has not fired
-                log.msg("pendingDeferred has not been called: %s" % deferredID)
-                pd.addCallback(lambda _: self.removePendingDeferred(deferredID))
+            if not pd.called and block:    # pd has not fired and we should block
+                #log.msg("pendingDeferred has not been called: %s" % deferredID)
+                pd.addCallback(self._deleteAndPassThrough, deferredID)
                 return pd
-            else:                # pd has fired
-                log.msg("pendingDeferred has been called: %s: %s" % (deferredID, repr(pd.result)))
+            elif not pd.called and not block:
+                return defer.fail(failure.Failure(error.ResultNotCompleted("Result not completed: %i" % deferredID)))
+            else:                          # pd has fired, but we shouldn't block for it
+                #log.msg("pendingDeferred has been called: %s: %s" % (deferredID, repr(pd.result)))
                 if isinstance(pd.result, failure.Failure):
                     dToReturn = defer.fail(pd.result)
                 else:
@@ -101,7 +107,7 @@ class TwoPhase(object):
                 return defer.succeed(deferredID)
         else:  
             return defer.fail(failure.Failure(
-                error.InvalidClientID("Client with ID %i has not been registered." % clientID)))        
+                error.InvalidClientID("Client with ID %r has not been registered." % clientID)))        
 
 
 class IPendingDeferredAdapter(Interface):
@@ -160,15 +166,19 @@ class PendingDeferredAdapter(object):
         else:
             raise error.InvalidClientID("Client with ID %i has not been registered." % clientID)
         
-    def getPendingDeferred(self, clientID, deferredID):
+    def getPendingDeferred(self, clientID, deferredID, block):
         if self._isValidClientID(clientID):
-            return self.pdManagers[clientID].getPendingDeferred(deferredID)
+            return self.pdManagers[clientID].getPendingDeferred(deferredID, block)
         else:
             return defer.fail(failure.Failure(
                 error.InvalidClientID("Client with ID %i has not been registered." % clientID)))
                 
     def getAllPendingDeferreds(self, clientID):
         dList = []
-        for k in self.pdManagers[clientID].pendingDeferreds.iterkeys():
-            dList.append(pbManagers[clientID].getPendingDeferred(k))
-        return gatherBoth(dList, consumeErrors=1)
+        keys = self.pdManagers[clientID].pendingDeferreds.keys()
+        for k in keys:
+            dList.append(self.pdManagers[clientID].getPendingDeferred(k, block=True))
+        if len(dList) > 0:  
+            return gatherBoth(dList, consumeErrors=1)
+        else:
+            return defer.succeed([None])

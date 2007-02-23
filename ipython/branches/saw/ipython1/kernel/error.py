@@ -61,5 +61,9 @@ class MessageSizeError(KernelError):
 class PBMessageSizeError(MessageSizeError):
     pass
     
-
+class ResultNotCompleted(KernelError):
+    pass
+    
+class ResultAlreadyRetrieved(KernelError):
+    pass
 

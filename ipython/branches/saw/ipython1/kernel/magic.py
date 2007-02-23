@@ -61,10 +61,7 @@ def magic_result(self,parameter_s=''):
             index = int(parameter_s)
         except:
             index = None
-        print "Printing result... "
-        d = activeController.igetResultAll(index)
-        if isinstance(d, Deferred):
-            activeController.blockOn(d)
+        activeController.igetResultAll(index)
 
 def magic_px(self,parameter_s=''):
     """Executes the given python command on the active IPython Controller.
@@ -136,7 +133,11 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
         _disable_autopx(self)
         return False
     else:
-        self.activeController.iexecuteAll(source)
+        try:
+            self.activeController.iexecuteAll(source)
+        except:
+            _disable_autopx(self)
+            print "Remote command failed, existing autopx"
         return False
         
 def magic_autopx(self, parameter_s=''):

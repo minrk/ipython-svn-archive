@@ -229,7 +229,7 @@ class MultiEngine(ControllerAdapterBase):
     def getIDs(self):
         """Return a list of active engine ids."""
         
-        return defer.succeed(self.engines.keys())
+        return self.engines.keys()
     
     def verifyTargets(self, targets):
         """Is targets a valid list of active engines."""
@@ -516,7 +516,7 @@ class SynchronousMultiEngine(PendingDeferredAdapter):
         self.queueStatus = TwoPhase(self, self.multiengine.queueStatus)
         self.scatter = TwoPhase(self, self.multiengine.scatter)
         self.gather = TwoPhase(self, self.multiengine.gather)
-                
+
     #---------------------------------------------------------------------------
     # IMultiEngine methods
     #---------------------------------------------------------------------------
