@@ -359,7 +359,7 @@ class MultiEngine(ControllerAdapterBase):
                        logErrors=0)        
         if controller:
             log.msg("Killing controller")
-            d.addCallback(lambda _: reactor.callLater(2,0, reactor.stop))
+            d.addCallback(lambda _: reactor.callLater(2.0, reactor.stop))
         return d
         
     def killAll(self, controller=False):

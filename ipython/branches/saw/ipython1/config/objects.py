@@ -170,7 +170,8 @@ xmlrpcME = {'interface': IXMLRPCMultiEngineFactory,
 httpME = {'interface': IHTTPMultiEngineFactory, 
           'ip': '', 
           'port': httpMEPort}
-networkInterfacesME = {'http': httpME, 'xmlrpc':xmlrpcME}
+networkInterfacesME = {'xmlrpc':xmlrpcME}
+#networkInterfacesME = {'http': httpME, 'xmlrpc':xmlrpcME}
 # Uncomment this to expose to multiple network interfaces
 #networkInterfacesME = {'pb': pbME, 'xmlrpc': xmlrpcME}
 
@@ -195,7 +196,7 @@ class ControllerConfig(Config):
    
     controllerInterfaces = {'multiengine': {'controllerInterface': IMultiEngine, 
                                             'networkInterfaces': networkInterfacesME,
-                                            'default': 'pb'},
+                                            'default': 'xmlrpc'},
                             'task' : {'controllerInterface': ITaskController, 
                                       'networkInterfaces': networkInterfacesTC,
                                       'default': 'pb'}}
@@ -218,6 +219,8 @@ from ipython1.kernel.multienginevanilla import \
 
 # from ipython1.kernel.multienginepb import PBInteractiveMultiEngineClient
 
+from ipython1.kernel.multienginexmlrpc import XMLRPCInteractiveMultiEngineClient
+
 from ipython1.kernel.taskpb import PBConnectingTaskClient
 
 class ClientConfig(Config):    
@@ -228,7 +231,9 @@ class ClientConfig(Config):
     protocols to be used.
     """
 
-    connectToRemoteControllerOn = {'ip': '127.0.0.1', 'port': pbMEPort}
+    RemoteController = XMLRPCInteractiveMultiEngineClient
+    
+    connectToRemoteControllerOn = {'ip': '127.0.0.1', 'port': xmlrpcMEPort}
     """The (ip, port) tuple the client will use to connect to the controller."""
     
     TaskController = PBConnectingTaskClient
