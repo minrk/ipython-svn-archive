@@ -102,9 +102,11 @@ def stopReactor():
     
 startReactor()
 
+# This was running when a %run blockon.py was done from IPython.
+# The problem is that stopReactor() was being called which killed it.
 if __name__ == '__main__':
     from twisted.web import client
     startReactor()
-    d = client.getPage('http://www.google.com')
+    d = client.getPage('http://www.google.com/')
     print blockOn(d)
     stopReactor()
