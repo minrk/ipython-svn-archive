@@ -1,52 +1,54 @@
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
+
 import time
 
-#from ipython1.kernel.multienginepb import PBInteractiveMultiEngineClient as client
+from ipython1.kernel.multienginexmlrpc import XMLRPCInteractiveMultiEngineClient as client
 from ipython1.kernel import magic
 
+#-------------------------------------------------------------------------------
 # Setup
+#-------------------------------------------------------------------------------
 
-#c = client(('127.0.0.1',10111))
-c.connect()
+c = client(('127.0.0.1',10105))
 c.activate()
 c.block = True
+c.getIDs()
 assert len(c) >= 4
+
+#-------------------------------------------------------------------------------
+# Blocking execution
+#-------------------------------------------------------------------------------
 
 # Execute
 
-c.executeAll('a=5')
-c.execute([0,2],'b=10')
-c.execute([1,3],'b=20')
-c.executeAll('c=a*b')
+c.iexecuteAll('a=5')
+c.iexecute([0,2],'b=10')
+c.iexecute([1,3],'b=20')
+c.iexecuteAll('c=a*b')
+
+# Magics
+
+%px import math
+%px a = math.sin(math.pi)
+
+%autopx
+
+import math
+def compute(x):
+    return math.pow(x, 2.0)
+
+
+%autopx
+
+
+for i in c.getIDs():
+    c.iexecute(i, 'myresult = compute(%i)' % i)
+
 %result
 
-c.block=False
-
-d = c.executeAll('import time')
-d.addCallback(lambda _: c.executeAll('time.sleep(1)'))
-d.addCallback(lambda _: c.executeAll('import math'))
-c.blockOn(d)
-d = c.executeAll('a = 1.0/0')
-d.addErrback(lambda f: None)
-c.blockOn(d)
-
-c.block=True
-
-%px a = 5
-%px print a
-%pn 0 b = 10
-%pn 0 print b
-
-%autopx
-
-def f(x):
-    return x*2
-    
-
-print f(1000000000)
-
-%autopx
-
-# Push/Pull
+# Push/pull
 
 c.pushAll(a=10, b=20)
 c.pullAll('a', 'b')
@@ -55,77 +57,36 @@ c.push([0,1], c=range(5))
 c.push([2,3], c=range(5))
 c.pullAll('c')
 
-c.block = False
+# getResult/reset
 
-d = c.pushAll(e=30)
-d.addCallback(lambda _: c.pullAll('e'))
-c.blockOn(d)
-
-c.block = True
-
-c['a'] = 30
-c['a']
-
-for i in c.getIDs():
-    c[i]['a'] = i
-
-    
-for i in c.getIDs():
-    print i
-
-
-# getResult
-
-c.getResultAll()
-
-# reset
-
+c.iexecuteAll('import math; print math.pi')
+c.igetResultAll()
 c.resetAll()
-c.getResultAll()
+c.iexecuteAll('a=5')
+c.iexecuteAll('b=10')
+c.igetResultAll(0)
+c.igetResultAll(1)
+print "keys: ", c.keysAll()
 
-# keys
+# Queue management
 
-c.resetAll()
-c.pushAll(b=59)
-c.keysAll()
+c.iexecuteAll('import time')
+for i in range(100):
+    c.iexecuteAll('time.sleep(0.01)', block=False)
 
-# push/pullSerialized
 
-a = 10
-c.pushAll(a=a)
-s = c.pullSerialized(0, 'a')
-c.pushSerialized(0, a=s)
-assert a == c.pull(0, 'a')
-
-# Queue methods
-
-# getIDs/verifyTargets
+c.iqueueStatusAll()
+c.clearQueueAll()
+c.iqueueStatusAll()
 
 # scatter/gather
 
-c.scatterAll('a', range(24))
-c.executeAll('b = [2.0*x for x in a]')
-c.gatherAll('b')
+c.scatterAll('a', range(20))
+c.gatherAll('a')
 
-# interactive methods
-
-c.pushAll(a=10, b=30)
-c.iexecuteAll('c=a*b')
-c.igetResultAll()
-
-c.iqueueStatusAll()
-
-f = open('test.py', 'w')
-f.write('import math\nd = 2.0*math.pi')
-f.close()
-c.runAll('test.py')
-print c.ipullAll('d')
+# map
 
 c.mapAll('lambda x: 2.0*x', range(20))
-
-p = c.parallelizeAll('lambda x: 2.0*x')
-
-p(range(20))
 
 # Using the .r attribute to simplify computations
 ipc.block = False
@@ -133,3 +94,6 @@ ipc.executeAll('x=1')
 x = ipc.pullAll('x')
 x = x.r  # this will block
 print sum(x)
+
+
+

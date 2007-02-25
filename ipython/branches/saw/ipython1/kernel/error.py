@@ -66,4 +66,6 @@ class ResultNotCompleted(KernelError):
     
 class ResultAlreadyRetrieved(KernelError):
     pass
-
+    
+class ClientError(KernelError):
+    pass

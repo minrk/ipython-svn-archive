@@ -78,7 +78,8 @@ class PendingDeferredManager(object):
         else:
             return defer.fail(failure.Failure(error.InvalidDeferredID('Invalid deferredID: ' + repr(deferredID))))
             
-class TwoPhase(object):
+
+def twoPhase(wrappedMethod):
     """Wrap methods that return a deferred into a two phase process.
     
     This transforms foo(arg1, arg2, ...) -> foo(clientID, block, arg1, arg2, ...).
@@ -90,28 +91,30 @@ class TwoPhase(object):
     At this point block does not have a default and it probably won't.
     """
     
-    def __init__(self, pendingDeferredAdapter, wrappedMethod):
-        self.wrappedMethod = wrappedMethod
-        self.pendingDeferredAdapter = pendingDeferredAdapter
-
-    def __call__(self, *args, **kwargs):
+    def wrapperTwoPhase(pendingDeferredAdapter, *args, **kwargs):
         clientID = args[0]
         block = args[1]
-        if self.pendingDeferredAdapter._isValidClientID(clientID):
+        if pendingDeferredAdapter._isValidClientID(clientID):
             if block:
-                return self.wrappedMethod(*args[2:], **kwargs)
+                return wrappedMethod(pendingDeferredAdapter, *args[2:], **kwargs)
             else:
-                deferredID = self.pendingDeferredAdapter.getNextPendingDeferredID(clientID)
-                d = self.wrappedMethod(*args[2:], **kwargs)
-                self.pendingDeferredAdapter.savePendingDeferred(clientID, deferredID, d)
+                deferredID = pendingDeferredAdapter.getNextPendingDeferredID(clientID)
+                d = wrappedMethod(pendingDeferredAdapter, *args[2:], **kwargs)
+                pendingDeferredAdapter.savePendingDeferred(clientID, deferredID, d)
                 return defer.succeed(deferredID)
         else:  
             return defer.fail(failure.Failure(
                 error.InvalidClientID("Client with ID %r has not been registered." % clientID)))        
-
+                
+    return wrapperTwoPhase
 
 class IPendingDeferredAdapter(Interface):
-    pass
+    
+    def getNextPendingDeferredID(clientID):
+        """"""
+        
+    def savePendingDeferred(clientID, deferredID, d):
+        """"""
 
 class PendingDeferredAdapter(object):
     

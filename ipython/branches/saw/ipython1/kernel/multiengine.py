@@ -40,7 +40,7 @@ from ipython1.kernel import error
 from ipython1.kernel.controllerservice import \
     ControllerAdapterBase, \
     ControllerService
-from ipython1.kernel.pendingdeferred import PendingDeferredAdapter, TwoPhase
+from ipython1.kernel.pendingdeferred import PendingDeferredAdapter, twoPhase
 
 #-------------------------------------------------------------------------------
 # Interfaces for the MultiEngine representation of a controller
@@ -502,21 +502,62 @@ class SynchronousMultiEngine(PendingDeferredAdapter):
         self.multiengine = multiengine
         PendingDeferredAdapter.__init__(self)
 
-        # Now apply the TwoPhase wrapper class to all the methods of self.multiengine.
-        self.execute = TwoPhase(self, self.multiengine.execute)
-        self.push = TwoPhase(self, self.multiengine.push)
-        self.pull = TwoPhase(self, self.multiengine.pull)
-        self.getResult = TwoPhase(self, self.multiengine.getResult)
-        self.reset = TwoPhase(self, self.multiengine.reset)
-        self.keys = TwoPhase(self, self.multiengine.keys)
-        self.kill = TwoPhase(self, self.multiengine.kill)
-        self.pushSerialized = TwoPhase(self, self.multiengine.pushSerialized)
-        self.pullSerialized = TwoPhase(self, self.multiengine.pullSerialized)
-        self.clearQueue = TwoPhase(self, self.multiengine.clearQueue)
-        self.queueStatus = TwoPhase(self, self.multiengine.queueStatus)
-        self.scatter = TwoPhase(self, self.multiengine.scatter)
-        self.gather = TwoPhase(self, self.multiengine.gather)
+    #---------------------------------------------------------------------------
+    # Decorated pending deferred methods
+    #---------------------------------------------------------------------------
 
+    @twoPhase
+    def execute(self, targets, lines):
+        return self.multiengine.execute(targets, lines)
+
+    @twoPhase
+    def push(self, targets, **namespace):
+        return self.multiengine.push(targets, **namespace)
+        
+    @twoPhase
+    def pull(self, targets, *keys):
+        return self.multiengine.pull(targets, *keys)
+        
+    @twoPhase
+    def getResult(self, targets, i=None):
+        return self.multiengine.getResult(targets, i=None)
+        
+    @twoPhase
+    def reset(self, targets):
+        return self.multiengine.reset(self, targets)
+        
+    @twoPhase
+    def keys(self, targets):
+        return self.multiengine.keys(self, targets)
+
+    @twoPhase
+    def kill(self, targets, controller=False):
+        return self.multiengine.kill(self, targets, controller=False)
+        
+    @twoPhase
+    def pushSerialized(self, targets, **namespace):
+        return self.multiengine.pushSerialized(targets, **namespace)
+        
+    @twoPhase
+    def pullSerialized(self, targets, *keys):
+        return self.multiengine.pullSerialized(targets, *keys)
+        
+    @twoPhase
+    def clearQueue(self, targets):
+        return self.multiengine.clearQueue(targets)
+        
+    @twoPhase
+    def queueStatus(self, targets):
+        return self.multiengine.queueStatus(targets)
+
+    @twoPhase
+    def scatter(self, targets, key, seq, style='basic', flatten=False):
+        return self.multiengine.scatter(targets, key, seq, style='basic', flatten=False)
+
+    @twoPhase
+    def gather(self, targets, key, style='basic'):
+        return self.multiengine.gather(self, targets, key, style='basic')
+        
     #---------------------------------------------------------------------------
     # IMultiEngine methods
     #---------------------------------------------------------------------------

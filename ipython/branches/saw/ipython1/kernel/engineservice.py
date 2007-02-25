@@ -318,6 +318,12 @@ class EngineService(object, service.Service):
             return d
     
     
+def queue(methodToQueue):
+    def queuedMethod(this, *args, **kwargs):
+        name = methodToQueue.__name__
+        return this.submitCommand(Command(name, *args, **kwargs))
+    return queuedMethod
+    
 class QueuedEngine(object):
     """Adapt an IEngineBase to an IEngineQueued by wrapping it.
     
@@ -431,16 +437,21 @@ class QueuedEngine(object):
         
         return None
     
-    # methods from IEngineCore.
+    #---------------------------------------------------------------------------
+    # IEngineCore methods
+    #---------------------------------------------------------------------------
     
+    @queue
     def execute(self, lines):
-        return self.submitCommand(Command('execute', lines))
+        pass
 
+    @queue
     def push(self, **namespace):
-        return self.submitCommand(Command('push', **namespace))        
+        pass      
     
+    @queue
     def pull(self, *keys):
-        return self.submitCommand(Command('pull', *keys))
+        pass
         
     def getResult(self, i=None):
         if i is None:
@@ -453,7 +464,7 @@ class QueuedEngine(object):
             return self.submitCommand(Command('getResult', i))
         else:
             return defer.succeed(cmd)
-    
+        
     def reset(self):
         self.clearQueue()
         self.history = {}  # reset the cache - I am not sure we should do this
@@ -463,18 +474,25 @@ class QueuedEngine(object):
         self.clearQueue()
         return self.submitCommand(Command('kill'))
     
+    @queue
     def keys(self):
-        return self.submitCommand(Command('keys'))
+        pass
     
-    # Methods from IEngineSerialized
-    
+    #---------------------------------------------------------------------------
+    # IEngineSerialized methods
+    #---------------------------------------------------------------------------
+
+    @queue
     def pushSerialized(self, **namespace):
-        return self.submitCommand(Command('pushSerialized', **namespace))
+        pass
         
+    @queue
     def pullSerialized(self, *keys):
-        return self.submitCommand(Command('pullSerialized', *keys))
+        pass
     
-    # Methods from IQueuedEngine
+    #---------------------------------------------------------------------------
+    # IQueuedEngine methods
+    #---------------------------------------------------------------------------
     
     def clearQueue(self):
         """Clear the queue, but doesn't cancel the currently running commmand."""
@@ -506,7 +524,7 @@ class QueuedEngine(object):
 # IEngineQueued.  
 components.registerAdapter(QueuedEngine, IEngineBase, IEngineQueued)
     
-    
+
 class Command(object):
     """A command object that encapslates queued commands.
     

@@ -56,14 +56,14 @@ class PendingResult(object):
         self.called = False
         self.callbacks = []
         
-    def getResult(self, block=True):
+    def getResult(self, default=None, block=True):
         if self.called:
             return self.result
-
+            #raise error.ResultAlreadyRetrieved('Result is already available as .result')
         try:
             result = self.client.getPendingResult(self.resultID, block)
         except error.ResultNotCompleted:
-            pass
+            return default
         else:
             for cb in self.callbacks:
                 result = cb[0](result, *cb[1], **cb[2])
@@ -531,6 +531,16 @@ class InteractiveMultiEngineClientView(object):
     block = property(_getBlock, _setBlock, None, None)
     
     #---------------------------------------------------------------------------
+    # Pending Results methods
+    #---------------------------------------------------------------------------
+    
+    def getAllPendingResults(self):
+        raise error.ClientError("Multiengine Views don't implement the getAllPendingResults method.")
+        
+    def barrier(self):
+        return error.ClientError("Multiengine Views don't implement the barrier method.")
+    
+    #---------------------------------------------------------------------------
     # IMultiEngine Interface methods
     #---------------------------------------------------------------------------
     
@@ -541,7 +551,7 @@ class InteractiveMultiEngineClientView(object):
     def executeAll(self, lines, block=None):
         return self.execute('all', lines, block)
         
-    def push(self, targets, *keys,**namespace):
+    def push(self, targets, *keys, **namespace):
         if keys: namespace.update(utils.extractVarsAbove(*keys))
         actualTargets = self._mapIDsToOriginal(targets)
         return self.imec.push(actualTargets, **namespace)
@@ -660,6 +670,34 @@ class InteractiveMultiEngineClientView(object):
     def __len__(self):
         return self.imec.blockOn(self.imec.getIDs())
         
+    def iexecute(self, targets, lines, block=None):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.imec.iexecuteAll(actualTargets, lines, block)
+        
+    def iexecuteAll(self, lines, block=None):
+        return self.iexecute('all', lines, block)
+        
+    def igetResult(self, targets, i=None):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.imec.igetResult(actualTargets, i)
+        
+    def igetResultAll(self, i=None):
+        return self.igetResult('all', i)
+        
+    def ipull(self, targets, *keys):
+        actualTargets = self._mapIDsToOriginal(targets)
+        return self.imec.ipull(actualTargets, *keys)
+        
+    def ipullAll(self, *keys):
+        return self.ipull('all', *keys)
+        
+    def iqueueStatus(self, targets):
+        actualTargets = self._mapIDsToOriginal(targets)
+        self.imec.iqueueStatus(actualTargets)
+            
+    def iqueueStatusAll(self):
+        return self.iqueueStatus('all')
+        
     #---------------------------------------------------------------------------
     # Methods specific to a RemoteControllerView
     #---------------------------------------------------------------------------
@@ -690,10 +728,21 @@ class EngineProxy(object):
     RemoteController class does that when a particular Engine is indexed.
     """
 
+    def _getBlock(self): return self.imec.block
+    def _setBlock(self, block): self.imec.block = block
+    
+    block = property(_getBlock, _setBlock, None, None)
+
     def __init__(self, imec, id):
         self.id = id
         self.imec = imec
-    
+        
+    def getAllPendingResults(self):
+        raise error.ClientError("EngineProxy's don't implement the getAllPendingResults method.")
+
+    def barrier(self):
+        return error.ClientError("EngineProxy's don't implement the barrier method.")
+
     def execute(self, strings, block=None):
         return self.imec.execute(self.id, strings, block)
     
@@ -721,3 +770,15 @@ class EngineProxy(object):
         
     def __getitem__(self, key):
         return self.pull(*(key,))
+        
+    def iexecute(self, lines, block=None):
+        return self.imec.iexecute(self.id, lines, block)
+        
+    def igetResult(self, i=None):
+        return self.imec.igetResult(self.id, i)
+        
+    def ipull(self, *keys):
+        return self.imec.ipull(self.id, *keys)
+        
+    def iqueueStatus(self):
+        self.imec.iqueueStatus(self.id)
