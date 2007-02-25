@@ -1,11 +1,11 @@
 import time
 
-from ipython1.kernel.multienginepb import PBInteractiveMultiEngineClient as client
+#from ipython1.kernel.multienginepb import PBInteractiveMultiEngineClient as client
 from ipython1.kernel import magic
 
 # Setup
 
-c = client(('127.0.0.1',10111))
+#c = client(('127.0.0.1',10111))
 c.connect()
 c.activate()
 c.block = True
@@ -127,5 +127,9 @@ p = c.parallelizeAll('lambda x: 2.0*x')
 
 p(range(20))
 
-
-
+# Using the .r attribute to simplify computations
+ipc.block = False
+ipc.executeAll('x=1')
+x = ipc.pullAll('x')
+x = x.r  # this will block
+print sum(x)

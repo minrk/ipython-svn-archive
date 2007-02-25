@@ -493,6 +493,8 @@ class IPDocTestLoader(unittest.TestLoader):
         # Now, load also tests referenced at construction time as companion
         # doctests that reside in standalone files
         for fname in self.dt_files:
+            #print 'mod:',module  # dbg
+            #print 'fname:',fname  # dbg
             suite.addTest(doctest.DocFileSuite(fname))
         # Add docstring tests from module, if given at construction time
         for mod in self.dt_modules:

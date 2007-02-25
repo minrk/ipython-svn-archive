@@ -378,7 +378,7 @@ class XMLRPCMultiEngineClient(object):
         if isinstance(result, failure.Failure):
             result.raiseException()
         else:
-            return result        
+            return result
         
     def _checkClientID(self):
         if self.clientID is None:

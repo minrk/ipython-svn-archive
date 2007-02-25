@@ -178,6 +178,7 @@ class InteractiveShell(InteractiveConsole):
         except SystemExit:
             raise
         except:
+            raise
             self.showtraceback()
             self._tracebackTuple = sys.exc_info()
         else:

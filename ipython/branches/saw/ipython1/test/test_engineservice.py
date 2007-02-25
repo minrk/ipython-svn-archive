@@ -45,7 +45,7 @@ class BasicEngineServiceTest(DeferredTestCase,
     
     def tearDown(self):
         return self.engine.stopService()
-    
+
 class QueuedEngineServiceTest(DeferredTestCase,
                               IEngineCoreTestCase, 
                               IEngineSerializedTestCase,

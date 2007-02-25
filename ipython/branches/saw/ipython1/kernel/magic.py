@@ -136,8 +136,7 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
         try:
             self.activeController.iexecuteAll(source)
         except:
-            _disable_autopx(self)
-            print "Remote command failed, existing autopx"
+            self.showtraceback()
         return False
         
 def magic_autopx(self, parameter_s=''):

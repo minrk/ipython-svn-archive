@@ -58,7 +58,8 @@ class PendingResult(object):
         
     def getResult(self, block=True):
         if self.called:
-            raise error.ResultAlreadyRetrieved('Result is already available as .result')
+            return self.result
+
         try:
             result = self.client.getPendingResult(self.resultID, block)
         except error.ResultNotCompleted:
@@ -74,7 +75,12 @@ class PendingResult(object):
         assert callable(f)
         self.callbacks.append((f, args, kwargs))
         
-    r = getResult 
+    def _get_r(self):
+        return self.getResult(True)
+
+    r = property(_get_r)
+        
+        
         
 class ISynchronousMultiEngineClient(Interface):
     
