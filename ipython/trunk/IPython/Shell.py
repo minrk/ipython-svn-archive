@@ -645,7 +645,7 @@ class IPShellGTK(threading.Thread):
         if sys.platform != 'win32':
             try:
                 if self.gtk.gtk_version[0] >= 2:
-                    self.gtk.threads_init()
+                    self.gtk.gdk.threads_init()
             except AttributeError:
                 pass
             except RuntimeError:
@@ -658,10 +658,11 @@ class IPShellGTK(threading.Thread):
                       'Note that matplotlib will most likely not work in its '
                       'current state!')
                 self.IP.InteractiveTB()
+
         self.start()
-        self.gtk.threads_enter()
+        self.gtk.gdk.threads_enter()
         self.gtk_mainloop()
-        self.gtk.threads_leave()
+        self.gtk.gdk.threads_leave()
         self.join()
 
     def on_timer(self):
