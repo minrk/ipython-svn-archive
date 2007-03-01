@@ -210,6 +210,7 @@ license. To use profiling, please install"python2.3-profiler" from non-free.""")
             except KeyError:
                 continue
             else:
+                #print 'oname_rest:', oname_rest  # dbg
                 for part in oname_rest:
                     try:
                         parent = obj
