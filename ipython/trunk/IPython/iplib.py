@@ -498,7 +498,7 @@ class InteractiveShell(object,Magic):
         # I'm afraid of breaking something; do it once the unit tests are in
         # place.
         self.line_split_fallback = re.compile(r'^(\s*)'
-                                              r'([\w\.]*)'
+                                              r'([%\w\.]*)'
                                               r'(.*)')
 
         # Original re, keep around for a while in case changes break something
