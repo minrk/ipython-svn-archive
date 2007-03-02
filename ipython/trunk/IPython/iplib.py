@@ -2020,8 +2020,26 @@ want to merge them back into the new files.""" % locals()
             return ''
         else:
             return lineout
-        
+
     def split_user_input(self,line):
+        """Split user input into pre-char, function part and rest."""
+
+        lsplit = self.line_split.match(line)
+        if lsplit is None:  # no regexp match returns None
+            try:
+                iFun,theRest = line.split(None,1)
+            except ValueError:
+                iFun,theRest = line,''
+            pre = re.match('^(\s*)(.*)',line).groups()[0]
+        else:
+            pre,iFun,theRest = lsplit.groups()
+
+        #print 'line:<%s>' % line # dbg
+        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest) # dbg
+        return pre,iFun.strip(),theRest
+
+        
+    def split_user_inputTMP(self,line):
         """Split user input into pre-char, function part and rest."""
 
         lsplit = self.line_split.match(line)
