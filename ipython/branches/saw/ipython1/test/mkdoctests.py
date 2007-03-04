@@ -1,9 +1,31 @@
 #!/usr/bin/env python
-"""Utility for making a doctest file out of a template.
+"""Utility for making a doctest file out of Python or IPython input.
 
-  %prog [options] template_file [output_file]
+  %prog [options] input_file [output_file]
 
-This script ...
+This script is a convenient generator of doctest files that uses IPython's
+irunner script to execute valid Python or IPython input in a separate process,
+capture all of the output, and write it to an output file.
+
+It can be used in one of two ways:
+
+1. With a plain Python or IPython input file (denoted by extensions '.py' or
+   '.ipy'.  In this case, the output is an auto-generated reST file with a
+   basic header, and the captured Python input and output contained in an
+   indented code block.
+
+   If no output filename is given, the input name is used, with the extension
+   replaced by '.txt'.
+
+2. With an input template file.  Template files are simply plain text files
+   with special directives of the form
+
+   %run filename
+
+   to include the named file at that point.
+
+   If no output filename is given and the input filename is of the form
+   'base.tpl.txt', the output will be automatically named 'base.txt'.
 """
 
 # Standard library imports
@@ -12,6 +34,7 @@ import optparse
 import os
 import re
 import sys
+import tempfile
 
 # IPython-specific libraries
 from IPython import irunner
@@ -125,7 +148,7 @@ def main():
            help='Force overwriting of the output file.')
 
     opts,args = parser.parse_args()
-    if len(args) != 1:
+    if len(args) < 1:
         parser.error("incorrect number of arguments")
 
     # We auto-generate the output file based on a trivial template to make it
@@ -133,19 +156,19 @@ def main():
     auto_gen_output = False
     
     fname = args[0]
-    if fname.endswith('.tpl.txt'):
+    try:
+        outfname = args[1]
+    except IndexError:
+        outfname = None
+        
+    if fname.endswith('.tpl.txt') and outfname is None:
         outfname = fname.replace('.tpl.txt','.txt')
     else:
-        try:
-            #print 'args:',args
-            outfname = args[1]
-        except IndexError:
-            bname, ext = os.path.splitext(fname)
-            if ext in ['.py','.ipy']:
-                outfname = bname+'.txt'
-                auto_gen_output = True
-            else:
-                parser.error("You must provide an output file name")
+        bname, ext = os.path.splitext(fname)
+        if ext in ['.py','.ipy']:
+            auto_gen_output = True
+        if outfname is None:
+            outfname = bname+'.txt'
 
     # Argument processing finished, start main code
     if os.path.isfile(outfname) and not opts.force:
@@ -156,12 +179,12 @@ def main():
     # In auto-gen mode, we actually change the name of the input file to be our
     # auto-generated template
     if auto_gen_output:
-        tmpl = open('_tpl.txt','w')
-        tmpl.write(TPL % fname)
-        tmpl.close()
-        fname = '_tpl.txt'
-
-    infile = open(fname)
+        infile = tempfile.TemporaryFile()
+        infile.write(TPL % fname)
+        infile.flush()
+        infile.seek(0)
+    else:
+        infile = open(fname)
         
     outfile = open(outfname,'w')
     write = outfile.write

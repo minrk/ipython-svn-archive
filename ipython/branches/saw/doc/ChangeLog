@@ -1,3 +1,19 @@
+2007-03-03  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* ipython1/test/mkdoctests.py: Improve documentation for this
+	script, fix a few bugs with filename handling.
+
+2007-02-24  Fernando Perez  <Fernando.Perez@colorado.edu>
+
+	* ipython1/kernel/magic.py (pxrunsource): Don't disable %autopx on
+	exceptions, just show the traceback.  Right now the actual tb is
+	bogus (it contains local rather than remote info), but the
+	exception type and message ARE correct, so it is useful.
+
+	* ipython1/test/mkdoctests.py (main): Improve support for easily
+	making standalone .txt files without a template that calls %run,
+	just using a regular .py/.ipy file.
+
 2007-02-16  Brian Granger <ellisonbg@gmail.com>
 
 	* multiengine, multienginepb: now testing the targets argument using
