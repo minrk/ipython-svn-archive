@@ -27,7 +27,7 @@ except ImportError:
     print 'you need the ctypes module to run this code'
     print 'http://starship.python.net/crew/theller/ctypes/'
     raise
-
+    
 # my code
 from keysyms import make_keysym, make_keyinfo
 
@@ -156,6 +156,13 @@ key_modifiers = { VK_SHIFT:1,
                   0x5b:1, # windows key
                  }
 from ansi import AnsiState,AnsiWriter
+
+consolecodepage=sys.stdout.encoding
+def ensure_text(text):
+    """helper to ensure that text passed to WriteConsoleA is ascii"""
+    if isinstance(text, unicode):
+        return text.encode(consolecodepage,"replace")
+    return text
 
 class Console(object):
     '''Console driver for Windows.
@@ -366,7 +373,7 @@ class Console(object):
             n += len(chunk)
             log('attr=%s' % attr)
             self.SetConsoleTextAttribute(self.hout, attr)
-            self.WriteConsoleA(self.hout, chunk, len(chunk), byref(junk), None)
+            self.WriteConsoleA(self.hout, ensure_text(chunk), len(chunk), byref(junk), None)
         return n
 
     def write_color(self, text, attr=None):
@@ -376,7 +383,7 @@ class Console(object):
             log(str(attr))
             log(str(chunk))
             self.SetConsoleTextAttribute(self.hout, attr.winattr)
-            self.WriteConsoleA(self.hout, chunk, len(chunk), byref(junk), None)
+            self.WriteConsoleA(self.hout, ensure_text(chunk), len(chunk), byref(junk), None)
         return n
 
     def write_plain(self, text, attr=None):
@@ -386,7 +393,7 @@ class Console(object):
             attr = self.attr
         n = c_int(0)
         self.SetConsoleTextAttribute(self.hout, attr)
-        self.WriteConsoleA(self.hout, text, len(text), byref(n), None)
+        self.WriteConsoleA(self.hout, ensure_text(text), len(text), byref(n), None)
         return len(text)
         
     if os.environ.has_key("EMACS"):
@@ -399,7 +406,7 @@ class Console(object):
     # make this class look like a file object
     def write(self, text):
         log('write("%s")' % text)
-        return self.write_color(text)
+        return self.write_color(ensure_text(text))
 
     #write = write_scrolling
 

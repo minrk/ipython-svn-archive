@@ -1,3 +1,6 @@
+2007-03-15 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Fix to ensure unicode strings can print something using the write_x methods on Console.
+	
 2006-10-20 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* backporting ansi color changes from pyreadline-refactor
 	* Added color descriptions to example ini file
