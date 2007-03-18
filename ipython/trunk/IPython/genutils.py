@@ -1247,7 +1247,8 @@ def get_pager_start(pager,start):
     return start_string
 
 #----------------------------------------------------------------------------
-if os.name == "nt":
+# (X)emacs on W32 doesn't like to be bypassed with msvcrt.getch()
+if os.name == 'nt' and os.environ.get('TERM','dumb') != 'emacs':
     import msvcrt
     def page_more():
         """ Smart pausing between pages

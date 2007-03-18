@@ -79,8 +79,14 @@ class InputTermColors:
     This class should be used as a mixin for building color schemes."""
     
     NoColor = ''  # for color schemes in color-less terminals.
-    Normal = '\001\033[0m\002'   # Reset normal coloring
-    _base  = '\001\033[%sm\002'  # Template for all other colors
+
+    if os.name == 'nt' and os.environ.get('TERM','dumb') != 'emacs':
+        # (X)emacs on W32 gets confused with \001 and \002 so we remove them
+        Normal = '\033[0m'   # Reset normal coloring
+        _base  = '\033[%sm'  # Template for all other colors
+    else:
+        Normal = '\001\033[0m\002'   # Reset normal coloring
+        _base  = '\001\033[%sm\002'  # Template for all other colors
 
 # Build the actual color table as a set of class attributes:
 make_color_table(InputTermColors)
