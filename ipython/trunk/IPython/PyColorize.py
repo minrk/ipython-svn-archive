@@ -120,6 +120,9 @@ class Parser:
         self.out = out
 
     def format(self, raw, out = None, scheme = ''):
+        return self.format2(raw, out, scheme)[0]
+
+    def format2(self, raw, out = None, scheme = ''):
         """ Parse and send the colored source.
 
         If out and scheme are not specified, the defaults (given to
@@ -153,6 +156,8 @@ class Parser:
         self.pos = 0
         text = cStringIO.StringIO(self.raw)
         #self.out.write('<pre><font face="Courier New">')
+
+        error = False
         try:
             tokenize.tokenize(text.readline, self)
         except tokenize.TokenError, ex:
@@ -163,11 +168,13 @@ class Parser:
                             msg, self.raw[self.lines[line]:],
                             colors.normal)
                            )
+            error = True
         self.out.write(colors.normal+'\n')
         if string_output:
             output = self.out.getvalue()
             self.out = out_old
-            return output
+            return (output, error)
+        return (None, error)
 
     def __call__(self, toktype, toktext, (srow,scol), (erow,ecol), line):
         """ Token handler, with syntax highlighting."""
