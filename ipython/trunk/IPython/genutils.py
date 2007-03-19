@@ -67,6 +67,10 @@ class IOStream:
                 # if we get here, something is seriously broken.
                 print >> sys.stderr, \
                       'ERROR - failed to write data to stream:', self.stream
+
+    def close(self):
+        pass
+                
         
 class IOTerm:
     """ Term holds the file or file-like objects for handling I/O operations.

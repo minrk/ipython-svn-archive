@@ -195,12 +195,13 @@ the second for a 'normal' command, and the third for a multiline command.")
     ;;^   File \"\\(.*?\\)\", line \\([0-9]+\\)"
 
     (setq py-traceback-line-re
-          "\\(^[^\t ].+?\\.py\\).*\n   +[0-9]+[^\00]*?\n-+> \\([0-9]+\\) +")
+          "\\(^[^\t >].+?\\.py\\).*\n   +[0-9]+[^\00]*?\n-+> \\([0-9]+\\)+")
+
     
     ;; Recognize the ipython pdb, whose prompt is 'ipdb>' or  'ipydb>'
     ;;instead of '(Pdb)'
     (setq py-pdbtrack-input-prompt "\n[(<]*[Ii]?[Pp]y?db[>)]+ ")
-    (setq py-pydbtrack-input-prompt "\n[(]*ipydb[>)]+ ")
+    (setq pydb-pydbtrack-input-prompt "\n[(]*ipydb[>)]+ ")
     
     (setq py-shell-input-prompt-1-regexp "^In \\[[0-9]+\\]: *"
           py-shell-input-prompt-2-regexp "^   [.][.][.]+: *" )
