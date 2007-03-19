@@ -583,7 +583,7 @@ class VanillaEngineServerProtocol(protocols.EnhancedNetstringReceiver):
         """Die loudly in case of protocol errors."""
         id = self.id
         for a in args:
-            log.msg('Protocol Error [%i]: ' % id + repr(a))
+            log.msg('Protocol Error [%s]: %s' % (repr(id), repr(a)))
         self.transport.loseConnection()
         reactor.stop()
     

@@ -301,7 +301,7 @@ def autoMethod(self, %s:
         try:
             del self.engines[id]
         except KeyError:
-            log.msg("engine %i was not registered" % id)
+            log.msg("engine %s was not registered" % repr(id))
         else:
             if not self.saveIDs:
                 self.availableIDs.append(id)
