@@ -36,7 +36,7 @@ class FakeModule:
             self.__dict__ = adict
 
         # modules should have a __file__ attribute
-        adict['__file__'] = __file__
+        adict.setdefault('__file__',__file__)
 
     def __getattr__(self,key):
         try:
