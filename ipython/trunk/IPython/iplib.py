@@ -491,6 +491,11 @@ class InteractiveShell(object,Magic):
                                      r'([\?\w\.]+\w*\s*)'
                                      r'(\(?.*$)')
 
+        self.shell_line_split = re.compile(r'^(\s*)'
+                                     r'(\S*\s*)'
+                                     r'(\(?.*$)')
+
+
         # A simpler regexp used as a fallback if the above doesn't work.  This
         # one is more conservative in how it partitions the input.  This code
         # can probably be cleaned up to do everything with just one regexp, but
@@ -1701,7 +1706,8 @@ want to merge them back into the new files.""" % locals()
         
         done = Set()
         while 1:
-            pre,fn,rest = self.split_user_input(line)
+            pre,fn,rest = self.split_user_input(line, pattern = self.shell_line_split)
+            # print "!",fn,"!",rest # dbg
             if fn in self.alias_table:
                 if fn in done:
                     warn("Cyclic alias definition, repeated '%s'" % fn)
@@ -2020,10 +2026,13 @@ want to merge them back into the new files.""" % locals()
         else:
             return lineout
 
-    def split_user_input(self,line):
+    def split_user_input(self,line, pattern = None):
         """Split user input into pre-char, function part and rest."""
 
-        lsplit = self.line_split.match(line)
+        if pattern is None:
+            pattern = self.line_split
+            
+        lsplit = pattern.match(line)
         if lsplit is None:  # no regexp match returns None
             #print "match failed for line '%s'" % line  # dbg
             try:
