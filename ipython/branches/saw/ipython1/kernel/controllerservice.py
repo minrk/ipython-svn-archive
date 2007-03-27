@@ -4,16 +4,16 @@
 
 The IPython Controller:
 
- * Listens for Engines to connect and then manages those Engines.
- * Listens for clients and passes commands from client to the Engines.
- * Exposes an asynchronous interfaces to the Engines which themselves can block.
- * Acts as a gateway to the Engines.
+* Listens for Engines to connect and then manages access to those engines.
+* Listens for clients and passes commands from client to the Engines.
+* Exposes an asynchronous interfaces to the Engines which themselves can block.
+* Acts as a gateway to the Engines.
 
 The design of the controller is somewhat abstract to allow flexibility in how 
 the controller is presented to clients.  This idea is that there is a basic
 ControllerService class that allows engines to connect to it.  But, this 
-basic class has no client interfaces.  To develop client interfaces developer
-provides an adapter that makes the ControllerService look like something.  For 
+basic class has no client interfaces.  To expose client interfaces developers
+provide an adapter that makes the ControllerService look like something.  For 
 example, one client interface might support task farming and another might
 support interactive usage.  The important thing is that by using interfaces
 and adapters, a single controller can be accessed from multiple interfaces.
@@ -70,29 +70,53 @@ class IControllerCore(Interface):
         pid=None):
         """Register new remote engine.
         
-        remoteEngine: an implementer of IEngineCore, IEngineSerialized
-            and IEngineQueued
-        id: requested id
+        The controller can use the ip, port, pid of the engine to do useful things
+        like kill the engines.
         
-        Returns a dict of {'id':id} and possibly other key, value pairs..
+        :Parameters:
+            remoteEngine
+                An implementer of IEngineCore, IEngineSerialized and IEngineQueued.
+            id : int
+                Requested id.
+            ip : str
+                IP address the engine is running on.
+            port : int
+                Port the engine is on.
+            pid : int
+                pid of the running engine.
+        
+        :Returns: A dict of {'id':id} and possibly other key, value pairs.
         """
     
     def unregisterEngine(id):
-        """Handle a disconnecting engine."""
+        """Handle a disconnecting engine.
+        
+        :Parameters:
+            id
+                The integer engine id of the engine to unregister.
+        """
         
     def onRegisterEngineDo(f, includeID, *args, **kwargs):
-        """call f with *args and **kwargs when an engine is registered.  
-        If includeID is True, the first argument will be the id"""
-    
+        """Call ``f(*args, **kwargs)`` when an engine is registered.
+        
+        :Parameters:
+            includeID : int
+                If True the first argument to f will be the id of the engine.
+        """
+            
     def onUnregisterEngineDo(f, includeID, *args, **kwargs):
-        """call f with *args and **kwargs when an engine is unregistered.  
-        If includeID is True, the first argument will be the id"""
+        """Call ``f(*args, **kwargs)`` when an engine is unregistered.
+        
+        :Parameters:
+            includeID : int
+                If True the first argument to f will be the id of the engine.
+        """
     
     def onRegisterEngineDoNot(f):
-        """stop calling f on registration"""
+        """Stop calling f on engine registration"""
     
-    def onUnregisterEngineDo(f):
-        """stop calling f on unregistration"""
+    def onUnregisterEngineDoNot(f):
+        """Stop calling f on engine unregistration"""
                 
 class IControllerBase(IControllerCore):
     """The basic controller interface."""
@@ -191,9 +215,9 @@ class ControllerService(object, service.Service):
         assert IEngineQueued.providedBy(remoteEngine), \
             "engine passed to registerEngine doesn't provide IEngineQueued"
         assert isinstance(id, int) or id is None, \
-            "id  to registerEngine must be an integer or None"
+            "id to registerEngine must be an integer or None"
         assert isinstance(ip, str) or ip is None, \
-            "ip  to registerEngine must be a string or None"
+            "ip to registerEngine must be a string or None"
         assert isinstance(port, int) or port is None, \
             "port to registerEngine must be an integer or None"
         assert isinstance(pid, int) or pid is None, \
@@ -231,7 +255,10 @@ class ControllerService(object, service.Service):
         return {'id':getID}
     
     def unregisterEngine(self, id):
-        """Unregister remote engine object"""
+        """Unregister engine by id."""
+        
+        assert isinstance(id, int) or id is None, \
+            "id to unregisterEngine must be an integer or None"
         
         msg = "unregistered engine %i" %id
         log.msg(msg)
@@ -284,7 +311,7 @@ class ControllerService(object, service.Service):
 #-------------------------------------------------------------------------------
 
 class ControllerAdapterBase(object):
-    """All Controller adapters should inherit from this.
+    """All Controller adapters should inherit from this class.
     
     This class provides a wrapped version of the IControllerBase interface that
     can be used to easily create new custom controllers.  Subclasses of this
@@ -309,4 +336,14 @@ class ControllerAdapterBase(object):
     def unregisterEngine(self, id):
         return self.controller.unregisterEngine(id)
 
+    def onRegisterEngineDo(self, f, includeID, *args, **kwargs):
+        return self.controller.onRegisterEngineDo(f, includeID, *args, **kwargs)
 
+    def onUnregisterEngineDo(self, f, includeID, *args, **kwargs):
+        return self.controller.onUnregisterEngineDo(f, includeID, *args, **kwargs)        
+    
+    def onRegisterEngineDoNot(self, f):
+        return self.controller.onRegisterEngineDoNot(f)
+    
+    def onUnregisterEngineDoNot(self, f):
+        return self.controller.onUnregisterEngineDoNot(f)        

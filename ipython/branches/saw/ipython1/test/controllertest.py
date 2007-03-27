@@ -76,3 +76,26 @@ class IControllerCoreTestCase(object):
         self.controller.unregisterEngine(0)
         self.controller.unregisterEngine(1)
         self.assertEquals(self.controller.engines,{})
+        
+    def testRegisterCallables(self):
+        e1 = es.EngineService()
+        qe1 = es.QueuedEngine(e1)
+        self.registerCallableCalled = ';lkj'
+        self.unregisterCallableCalled = ';lkj'
+        self.controller.onRegisterEngineDo(self._registerCallable, False)
+        self.controller.onUnregisterEngineDo(self._unregisterCallable, False)
+        self.controller.registerEngine(qe1, 0)
+        self.assertEquals(self.registerCallableCalled, 'asdf')
+        self.controller.unregisterEngine(0)
+        self.assertEquals(self.unregisterCallableCalled, 'asdf')
+        self.controller.onRegisterEngineDoNot(self._registerCallable)
+        self.controller.onUnregisterEngineDoNot(self._unregisterCallable)
+            
+    def _registerCallable(self):
+        self.registerCallableCalled = 'asdf'
+        
+    def _unregisterCallable(self):
+        self.unregisterCallableCalled = 'asdf'
+        
+    def testBadUnregister(self):
+        self.assertRaises(AssertionError, self.controller.unregisterEngine, 'foo')
