@@ -273,16 +273,16 @@ class ControllerService(object, service.Service):
                 self.availableIDs.sort(reverse=True) 
             else:
                 log.msg("preserving id %i" %id)
-    
-        for i in range(len(self._onUnregister)):
-            (f,args,kwargs,ifid) = self._onUnregister[i]
-            try:
-                if ifid:
-                    f(id, *args, **kwargs)
-                else:
-                    f(*args, **kwargs)
-            except:
-                self._onUnregister.pop(i)
+            
+            for i in range(len(self._onUnregister)):
+                (f,args,kwargs,ifid) = self._onUnregister[i]
+                try:
+                    if ifid:
+                        f(id, *args, **kwargs)
+                    else:
+                        f(*args, **kwargs)
+                except:
+                    self._onUnregister.pop(i)
     
     def onRegisterEngineDo(self, f, includeID, *args, **kwargs):
         assert callable(f), "f must be callable"
