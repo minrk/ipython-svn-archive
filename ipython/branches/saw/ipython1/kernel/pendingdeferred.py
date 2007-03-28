@@ -1,6 +1,11 @@
 # encoding: utf-8
 # -*- test-case-name: ipython1.test.test_pendingdeferred -*-
 """Classes to manage pending Deferreds.
+
+A pending deferred is a deferred that may or may not have fired.  This module
+is useful for taking a class whose methods return deferreds and wrapping it to
+provide API that keeps track of those deferreds for later retrieval.  See the
+tests for examples of its usage.
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -26,30 +31,70 @@ from ipython1.kernel import error
 
 
 class PendingDeferredManager(object):
+    """A class to track pending deferreds.
+    
+    To track a pending deferred, the user of this class must first
+    get a deferredID by calling `getNextDeferredID`.  Then the user
+    calls `savePendingDeferred` passing that id and the deferred to
+    be tracked.  To later retrieve it, the user calls
+    `getPendingDeferred` passing the id.
+    """
     
     def __init__(self, clientID):
+        """Manage pending deferreds for a client.
+        
+        :Parameters:
+            clientID : int
+                This is not used currently inside this class
+        """
+
         self.clientID = clientID
         self.deferredID = 0
         self.pendingDeferreds = {}
         
     def getNextDeferredID(self):
+        """Get the next available deferred id.
+        
+        :Returns:
+            deferredID : int
+                The deferred id that the client should use for the next
+                deferred is will save to me.
+        """
+
         did = self.deferredID
         self.deferredID += 1
         return did
         
     def savePendingDeferred(self, deferredID, d):
+        """Save a deferred to me by deferredID.
+        
+        :Parameters:
+            deferredID : int
+                A deferred id the client got by calling `getNextDeferredID`.
+            d : Deferred
+                The deferred to save.
+        """
+        
         pd = self.pendingDeferreds.get(deferredID)
         if pd is not None:
             self.removePendingDeferred(deferredID)
         self.pendingDeferreds[deferredID] = d
         
     def removePendingDeferred(self, deferredID):
+        """Remove a deferred I am tracking and add a null Errback.
+        
+        :Parameters:
+            deferredID : int
+                The id of a deferred that I am tracking.
+        """
+        
         pd = self.pendingDeferreds.get(deferredID)
         if pd is not None:
             pd.addErrback(lambda f: None)
             del self.pendingDeferreds[deferredID]
         
     def cleanOutDeferreds(self):
+        """Remove all the deferreds I am tracking."""
         for k in self.pendingDeferreds.iterkeys():
             self.removePendingDeferred(k)
         
@@ -58,15 +103,23 @@ class PendingDeferredManager(object):
         return r
         
     def getPendingDeferred(self, deferredID, block):
+        """Get a pending deferred that I am tracking by deferredID.
+        
+        :Parameters:
+            deferredID : int
+                The id of a deferred I am tracking
+            block : boolean
+                Should I block until the deferred has fired.
+        """
         pd = self.pendingDeferreds.get(deferredID)
         if pd is not None:
             if not pd.called and block:    # pd has not fired and we should block
                 #log.msg("pendingDeferred has not been called: %s" % deferredID)
                 pd.addCallback(self._deleteAndPassThrough, deferredID)
                 return pd
-            elif not pd.called and not block:
+            elif not pd.called and not block: # pd has not fired, but we should not block
                 return defer.fail(failure.Failure(error.ResultNotCompleted("Result not completed: %i" % deferredID)))
-            else:                          # pd has fired, but we shouldn't block for it
+            else:    # pd has fired
                 #log.msg("pendingDeferred has been called: %s: %s" % (deferredID, repr(pd.result)))
                 if isinstance(pd.result, failure.Failure):
                     dToReturn = defer.fail(pd.result)
@@ -82,13 +135,21 @@ class PendingDeferredManager(object):
 def twoPhase(wrappedMethod):
     """Wrap methods that return a deferred into a two phase process.
     
-    This transforms foo(arg1, arg2, ...) -> foo(clientID, block, arg1, arg2, ...).
+    This transforms::
     
-    :Parameters:
-        - `clientID`: The ID of the client making the request
-        - `block`:  Boolean that determines if a two phase process is not used.
-        
-    At this point block does not have a default and it probably won't.
+        foo(arg1, arg2, ...) -> foo(clientID, block, arg1, arg2, ...).
+    
+    The wrapped method will then return a deferred to a deferredID.  This will
+    only work on method of classes that inherit from `PendingDeferredAdapter`,
+    as that class provides an API for 
+    
+    clientID is the id of the client making the request.  Each client's pending
+    deferreds are tracked independently.  The client id is usually gotten by 
+    calling the `registerClient` method of `PendingDeferredAdapter`.
+    
+    block is a boolean to determine if we should use the two phase process or
+    just simply call the wrapped method.  At this point block does not have a
+    default and it probably won't.
     """
     
     def wrapperTwoPhase(pendingDeferredAdapter, *args, **kwargs):
@@ -110,13 +171,45 @@ def twoPhase(wrappedMethod):
 
 class IPendingDeferredAdapter(Interface):
     
-    def getNextPendingDeferredID(clientID):
-        """"""
+    def registerClient():
+        """Register a new client of this class.
         
-    def savePendingDeferred(clientID, deferredID, d):
-        """"""
+        :Returns:
+            clientID : int
+                The id the client is given.
+        """
+        
+    def unregisterClient(clientID):
+        """Unregister a client by its clientID.
+        
+        :Parameters:
+            clientID : int
+                The id that the client was given.
+        """
+        
+    def getPendingDeferred(clientID, deferredID, block):
+        """Get a pending deferred by it id.
+        
+        :Parameters:
+            clientID : int
+                The id that the client was given.
+            deferredID : int
+                The id of the deferred that was returned by the client calling
+                one of the wrapped methods.
+            block : boolean
+                Should I wait until the deferred has fired to just return
+                the unfired deferred immediately.
+        """
+
+    def getAllPendingDeferreds(clientID):
+        """Get a deferred to a list of result of all the pending deferreds.
+        
+        If there are pending deferreds d1, d2, this will return a deferred
+        to [d1.result, d2.result].
+        """
 
 class PendingDeferredAdapter(object):
+    """Convert a class to using pending deferreds."""
     
     implements(IPendingDeferredAdapter)
     
@@ -129,16 +222,32 @@ class PendingDeferredAdapter(object):
     #---------------------------------------------------------------------------
         
     def _isValidClientID(self, clientID):
+        """Check to see if a clientID is valid.
+        
+        :Parameters:
+            clientID : int
+                The clientID to verify.
+            
+        :Returns: True if clientID is valid, False if not.
+        """
         if self.pdManagers.has_key(clientID):
             return True
         else:
             return False
             
     def getNextPendingDeferredID(self, clientID):
-        """Get the next deferredId for clientID.
+        """Get the next deferredID for clientID.
         
-        The caller of this method must first call _isValidClientID to verfiy that
+        The caller of this method should first call _isValidClientID to verfiy that
         clientID is valid.
+
+        :Parameters:
+            clientID : int
+                The id the client was given.
+            
+        :Returns:
+            deferredID : int
+                The next deferred id that will be used.
         """
         return self.pdManagers[clientID].getNextDeferredID()
  
@@ -146,15 +255,25 @@ class PendingDeferredAdapter(object):
     def savePendingDeferred(self, clientID, deferredID, d):
         """Save d for clientID under deferredID.
         
-        The caller of this method must first call _isValidClientID to verfiy that
-        clientID is valid.        
+        The caller of this method should first call _isValidClientID to verfiy that
+        clientID is valid.
+        
+        :Parameters:
+            clientID : int
+                The client's id.
+            deferredID : int
+                The id under which d will be saved.  
+            d : Deferred
+                The deferred to save.
+        
         """
         return self.pdManagers[clientID].savePendingDeferred(deferredID, d)
  
         
-    #---------------------------------------------------------------------------
+    #--------------------------------------------------------------------------
     # Methods related to pending deferreds
-    #---------------------------------------------------------------------------
+    # See the docstrings for IPendingDeferredAdapter for details.
+    #--------------------------------------------------------------------------
         
     def registerClient(self):
         cid = self.clientID
