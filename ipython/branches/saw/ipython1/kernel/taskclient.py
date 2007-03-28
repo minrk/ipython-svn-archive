@@ -25,20 +25,8 @@ from ipython1.kernel import task, blockon, util
 # Connecting Task Client
 #-------------------------------------------------------------------------------
 
-class ConnectingTaskClient(object):
+class InteractiveTaskClient(object):
     """XML-RPC version of the Connecting TaskControllerClient"""
-    
-    def __init__(self, addr):
-        self.addr = addr
-        self.taskcontroller = None
-        self.block = False
-        self.connected = False
-        self.pendingDeferreds = set()
-        self.caughtFailures = []
-    
-    ############
-    # utility methods
-    ############
     
     def _catchFailure(self, f):
         return f
@@ -62,43 +50,19 @@ class ConnectingTaskClient(object):
     ############
     # ConnectingTaskController
     ############
-    
-    def connect(self):
-        """override this"""
-        pass
-    
-    def barrier(self):
-        self.blockOn(self)
-    
-    def raisePending(self):
-        if self.caughtFailures:
-            f = self.caughtFailures.pop(0)
-            f.raiseException()
-    
-    def blockOn(self, d):
-        return blockon.blockOn(d)
-    
-    def run(self, *args, **kwargs):
+    def irun(self, *args, **kwargs):
         """call with a task object"""
-        self.connect()
         block = kwargs.pop('block', self.block)
         if len(args) == 1 and isinstance(args[0], task.Task):
             t = args[0]
         else:
             t = task.Task(*args, **kwargs)
-        tr = self.taskcontroller.run(t)
-        self.pendingDeferreds.add(tr.result)
-        tr.result.addBoth(self._passThrough, tr.result)
-        if block:
-            return self.blockOn(tr)
-        else:
-            return tr
-    
-    def getTaskResult(self, taskID):
-        self.connect()
-        tr = self.taskcontroller.getTaskResult(taskID)
-        self.pendingDeferreds.add(tr.result)
-        tr.result.addBoth(self._passThrough, tr.result)
-        return self._blockOrNot(tr)
-    
+        tr = self.run(t, block)
+        return tr
+        # self.pendingDeferreds.add(tr.result)
+        # tr.result.addBoth(self._passThrough, tr.result)
+        # if block:
+        #     return self.blockOn(tr)
+        # else:
+        #     return tr
     

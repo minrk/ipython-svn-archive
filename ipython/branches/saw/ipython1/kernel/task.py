@@ -22,6 +22,7 @@ from twisted.python import components, log, failure
 
 from ipython1.kernel import engineservice as es
 from ipython1.kernel import controllerservice as cs
+from ipython1.kernel.pendingdeferred import PendingDeferredAdapter, twoPhase
 from ipython1.kernel.util import gatherBoth
 
 class Task(object):
@@ -36,9 +37,10 @@ class Task(object):
     @clearAfter: boolean for whether to clear the namespace after running the job
         default: False
     @retries: int number of times to resubmit the task if it fails.
-        default: 0"""
+        default: 0
+    @options: any other keyword options for more elaborate uses of tasks"""
     def __init__(self, expression, resultNames=None, setupNS={},
-            clearBefore=False, clearAfter=False, retries=0):
+            clearBefore=False, clearAfter=False, retries=0, **options):
         self.expression = expression
         if isinstance(resultNames, str):
             self.resultNames = [resultNames]
@@ -48,6 +50,7 @@ class Task(object):
         self.clearBefore = clearBefore
         self.clearAfter = clearAfter
         self.retries=retries
+        self.options = options
     
 
 class TaskResult(object):
@@ -117,7 +120,7 @@ class WorkerFromQueuedEngine(object):
 
 components.registerAdapter(WorkerFromQueuedEngine, es.IEngineQueued, IWorker)
 
-class ITaskController(zi.Interface):
+class ITaskController(cs.IControllerBase):
     """The Task based interface to a Controller object"""
     
     def run(task):
@@ -126,8 +129,11 @@ class ITaskController(zi.Interface):
     def getTaskResult(taskID):
         """get a result"""
 
-class TaskController(object):
+class TaskController(cs.ControllerAdapterBase):
     """The Task based interface to a Controller object"""
+    
+    zi.implements(ITaskController)
+    
     def __init__(self, controller):
         self.controller = controller
         self.controller.onRegisterEngineDo(self.registerWorker, True)
@@ -162,22 +168,6 @@ class TaskController(object):
                 pass
             self.workers.pop(id)
     
-    #############
-    # Interface methods
-    #############
-    
-    def run(self, task):
-        """returns a task ID and a deferred to its TaskResult"""
-        taskID = self.taskID
-        self.taskID += 1
-        tresult = TaskResult(taskID, defer.Deferred())
-        self.queue.append((taskID, task))
-        log.msg('queuing task #%i' %taskID)
-        tresult.result.addErrback(self.resubmit, task, taskID)
-        self.deferredResults[taskID] = tresult
-        self.distributeTasks()
-        return tresult
-    
     def resubmit(self, r, task, taskID):
         """an errback for a failed task"""
         if task.retries > 0:
@@ -186,27 +176,47 @@ class TaskController(object):
             s = "resubmitting task #%i, %i retries remaining" %(taskID, task.retries)
             log.msg(s)
             d = defer.Deferred().addErrback(self.resubmit, task, taskID)
+            d.addBoth(lambda r: (taskID, r))
             # the previous result deferred is now stale
             # self.deferredResults[taskID].result.addErrback(lambda _:None)
             # use the new one
-            self.deferredResults[taskID].result = d
+            self.deferredResults[taskID] = d
             self.distributeTasks()
             return d
         else:
             return r
     
+    #---------------------------------------------------------------------------
+    # Interface methods
+    #---------------------------------------------------------------------------
+    
+    def run(self, task):
+        """returns a task ID and a deferred to its TaskResult"""
+        taskID = self.taskID
+        self.taskID += 1
+        # tresult = TaskResult(taskID, defer.Deferred())
+        d = defer.Deferred()
+        self.queue.append((taskID, task))
+        log.msg('queuing task #%i' %taskID)
+        d.addErrback(self.resubmit, task, taskID)
+        d.addBoth(lambda r: (taskID, r))
+        self.deferredResults[taskID] = d
+        self.distributeTasks()
+        return defer.succeed(taskID)
+    
     def getTaskResult(self, taskID):
-        """returns a deferred to a TaskResult"""
+        """returns a deferred to a (taskID, result) tuple"""
+        log.msg("getting result %i"%taskID)
         if self.finishedResults.has_key(taskID):
-            return TaskResult(taskID, defer.succeed(self.finishedResults[taskID]))
+            return defer.succeed((taskID, self.finishedResults[taskID]))
         elif self.deferredResults.has_key(taskID):
             return self.deferredResults[taskID]#.addErrback(self.getFinishedResult)
         else:
-            return TaskResult(taskID, defer.fail(KeyError("task ID not registered")))
+            return defer.succeed((taskID, KeyError("task ID not registered")))
     
-    #############
+    #---------------------------------------------------------------------------
     # Queue methods
-    #############
+    #---------------------------------------------------------------------------
     
     def distributeTasks(self):
         # check for unassigned tasks and idle workers
@@ -218,7 +228,7 @@ class TaskController(object):
             # add to pending
             self.pendingTasks[workerID] = (taskID, task)
             # run/link callbacks
-            d2 = self.deferredResults[taskID].result
+            d2 = self.deferredResults[taskID]
             d = self.workers[workerID].run(task)
             log.msg("running task #%i on worker %i" %(taskID, workerID))
             d.addBoth(self.taskCompleted, workerID, taskID)
@@ -244,7 +254,7 @@ class TaskController(object):
         return result
     
     def readmitWorker(self, workerID):
-        """readmit a worker to the idleWorkers.  This is a outside taskCompleted
+        """readmit a worker to the idleWorkers.  This is outside taskCompleted
         because of the failurePenalty being implemented through 
         reactor.callLater"""
         if workerID in self.workers.keys():
@@ -253,3 +263,36 @@ class TaskController(object):
         
     
 components.registerAdapter(TaskController, cs.IControllerBase, ITaskController)
+
+class ISynchronousTaskController(zi.Interface):
+    pass
+
+class SynchronousTaskController(PendingDeferredAdapter):
+    
+    zi.implements(ISynchronousTaskController)
+    
+    def __init__(self, taskController):
+        self.taskController = taskController
+        PendingDeferredAdapter.__init__(self)
+    
+    #---------------------------------------------------------------------------
+    # Decorated pending deferred methods
+    #---------------------------------------------------------------------------
+    
+    # @twoPhase
+    def run(self, clientID, block, task):
+        d = self.taskController.run(task)
+        if block:
+            d.addCallback(self._runCallback, clientID, block)
+        return d
+    
+    def _runCallback(self, taskID, clientID, block):
+        return self.getTaskResult(clientID, block, taskID)
+    
+    @twoPhase
+    def getTaskResult(self, taskID):
+        return self.taskController.getTaskResult(taskID)
+    
+
+components.registerAdapter(SynchronousTaskController, ITaskController, 
+                                ISynchronousTaskController)

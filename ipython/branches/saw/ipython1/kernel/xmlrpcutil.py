@@ -16,20 +16,22 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-import cPickle as pickle
+# import cPickle as pickle
 import xmlrpclib
-import httplib
-import urllib
-import base64
-import socket
+# import httplib
+# import urllib
+# import base64
+# import socket
 
-import re, string, time, operator
+# import re, string, time, operator
+import string
 from types import *
 
-from ipython1.external.twisted.web2 import server, channel
-from ipython1.external.twisted.web2 import http, resource
-from ipython1.external.twisted.web2 import responsecode, stream
-from ipython1.external.twisted.web2 import http_headers
+from ipython1.kernel.error import ProtocolError
+# from ipython1.external.twisted.web2 import server, channel
+# from ipython1.external.twisted.web2 import http, resource
+# from ipython1.external.twisted.web2 import responsecode, stream
+# from ipython1.external.twisted.web2 import http_headers
 
 #-------------------------------------------------------------------------------
 # Actual Utilities

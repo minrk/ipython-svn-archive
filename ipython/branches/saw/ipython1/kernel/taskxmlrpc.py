@@ -1,14 +1,15 @@
 # encoding: utf-8
 # -*- test-case-name: ipython1.test.test_taskcontrollerxmlrpc -*-
 """An XML-RPC interface to a TaskController.
-
 This class lets XMLRPC clients talk to the ControllerService.  The main difficulty
 is that XMLRPC doesn't allow arbitrary objects to be sent over the wire - only
 basic Python types.  To get around this we simple pickle more complex objects
 on boths side of the wire.  That is the main thing these classes have to 
 manage.
 """
+
 __docformat__ = "restructuredtext en"
+
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
@@ -31,32 +32,43 @@ from twisted.python import components, failure
 
 from ipython1.external.twisted.web2 import xmlrpc, server, channel
 
-from ipython1.kernel import error, blockon, task, taskclient
+from ipython1.kernel import error, task as Task, taskclient
+from ipython1.kernel.multiengineclient import PendingResult
+from ipython1.kernel.xmlrpcutil import Transport
 
 #-------------------------------------------------------------------------------
 # The Controller side of things
 #-------------------------------------------------------------------------------
 
-class IXMLRPCTaskController(Interface):
-    """XML-RPC interface to task controller.  
+BETWEEN_REQUESTS_TIMEOUT = 15*60
 
+
+class IXMLRPCTaskController(Interface):
+    """XML-RPC interface to task controller.
+        
     See the documentation of ITaskController for documentation about the methods.
     """
-    def xmlrpc_getClientID(request):
-        """gets a client id"""
-    
-    def xmlrpc_run(request, clientID, binTask):
+    def xmlrpc_run(request, clientID, binTask, block):
         """see ITaskController"""
     
-    def xmlrpc_getTaskResult(request, clientID, taskID):
-        """see ITaskController"""
+    #---------------------------------------------------------------------------
+    # Pending Deferred related methods
+    #---------------------------------------------------------------------------            
+    def xmlrpc_registerClient(request):
+        """"""
     
-    def xmlrpc_blockOn(request, clientID, key):
-        """see IConnectingTaskController"""
-        
+    def xmlrpc_unregisterClient(request, clientID):
+        """"""
+    
+    def xmlrpc_getPendingResult(request, clientID, resultID):
+        """"""
+    
+    def xmlrpc_getAllPendingResults(self, clientID):
+        """"""
+    
 class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
     """XML-RPC attachmeot for controller.
-    
+        
     See IXMLRPCTaskController and ITaskController (and its children) for documentation. 
     """
     implements(IXMLRPCTaskController)
@@ -65,7 +77,7 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
     
     def __init__(self, taskController):
         xmlrpc.XMLRPC.__init__(self)
-        self.taskController = taskController
+        self.staskcontroller = Task.ISynchronousTaskController(taskController)
         self.pendingDeferreds = {}
         self.results = {}
         self.clientIndex = 0
@@ -74,186 +86,247 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
     # Non interface methods
     #---------------------------------------------------------------------------
     
-    def finishDeferred(self, r, clientID, key):
-        if isinstance(r, failure.Failure):
-            r.cleanFailure()
-        if not self.results.has_key(clientID):
-            self.results[clientID] = {}
-        self.results[clientID][key] = r
-        try:
-            del self.pendingDeferreds[key]
-        except:
-            pass
+    def packageFailure(self, f):
+        f.cleanFailure()
+        return self.packageSuccess(f)
     
-    def returnResults(self, clientID, taskID, key):
-        if not self.results.has_key(clientID):
-            self.results[clientID] = {}
-        bin = xmlrpc.Binary(pickle.dumps((taskID, key, self.results[clientID]),2))
-        self.results[clientID] = {}
-        return bin
-    
-    #---------------------------------------------------------------------------
-    # IXMLRPCTaskController related methods
-    #---------------------------------------------------------------------------
-    
-    def xmlrpc_getClientID(self, request):
-        clientID = self.clientIndex
-        self.clientIndex += 1
-        return clientID
+    def packageSuccess(self, obj):
+        serial = pickle.dumps(obj, 2)
+        return xmlrpc.Binary(serial)
     
     #---------------------------------------------------------------------------
     # ITaskController related methods
     #---------------------------------------------------------------------------
     
-    def xmlrpc_run(self, request, clientID, binTask):
+    def xmlrpc_run(self, request, clientID, block, binTask):
         try:
             task = pickle.loads(binTask.data)
         except:
-            taskID = -1
-            d = defer.fail()
+            d = defer.fail(pickle.UnPickleableError("Could not unmarshal task"))
         else:
-            d = self.taskController.run(task)
-            taskID = task.taskID
-        key = hash(d)
-        self.pendingDeferreds[key] = d
-        d.addBoth(self.finishDeferred, clientID, key)
-        return self.returnResults(clientID, taskID, key)
+            d = self.staskcontroller.run(clientID, block, task)
+            # print tr
+            # print block
+            # if block:
+            #     d.addCallback(self._runCallback, clientID, block)
+            # taskID = task.taskID
+        d.addCallback(self.packageSuccess)
+        d.addErrback(self.packageFailure)
+        return d
     
-    def xmlrpc_getTaskResult(self, request, clientID, taskID):
-        d = self.taskController.getTaskResult(taskID)
-        key = hash(d)
-        self.pendingDeferreds[key] = d
-        d.addBoth(self.finishDeferred, clientID, key)
-        return self.returnResults(clientID, taskID, key)
-
+    # def _runCallback(self, taskID, clientID, block):
+    #     return self.getTaskResult(clientID, taskID, block)
+        # d.addBoth(self.finishDeferred, clientID, key)
+        # return self.returnResults(clientID, taskID, key)
+    
+    def xmlrpc_getTaskResult(self, request, clientID, block, taskID):
+        d = self.staskcontroller.getTaskResult(clientID, block, taskID)
+        d.addCallback(self.packageSuccess)
+        d.addErrback(self.packageFailure)
+        return d
+    
     #---------------------------------------------------------------------------
-    # IConnectingTaskController related methods
+    # Pending Deferred related methods
     #---------------------------------------------------------------------------
     
-    def xmlrpc_blockOn(self, request, clientID, key):
-        if self.pendingDeferreds.has_key(key):
-            blockon.blockOn(self.pendingDeferreds[key])
-        return self.returnResults(clientID,-1,-1)
+    def xmlrpc_registerClient(self, request):
+        """"""
+        clientID = self.staskcontroller.registerClient()
+        return clientID
+    
+    def xmlrpc_unregisterClient(self, request, clientID):
+        """"""
+        try:
+            self.staskcontroller.unregisterClient(clientID)
+        except error.InvalidClientID:
+            f = failure.Failure()
+            return self.packageFailure(f)
+        else:
+            return True
+    
+    def xmlrpc_getPendingResult(self, request, clientID, resultID, block):
+        """"""
+        d = self.staskcontroller.getPendingDeferred(clientID, resultID, block)
+        d.addCallback(self.packageSuccess)
+        d.addErrback(self.packageFailure)
+        return d
+    
+    # xmlrpc_getTask
+    def xmlrpc_getAllPendingResults(self, request, clientID):
+        """"""    
+        d = self.staskcontroller.getAllPendingDeferreds(clientID)
+        d.addCallback(self.packageSuccess)
+        d.addErrback(self.packageFailure)
+        return d        
     
 
 components.registerAdapter(XMLRPCTaskControllerFromTaskController,
-            task.TaskController, IXMLRPCTaskController)
+            Task.TaskController, IXMLRPCTaskController)
 
 
 class IXMLRPCTaskControllerFactory(Interface):
     pass
-    
+
 def XMLRPCServerFactoryFromTaskController(taskController):
     """Adapt a TaskController to a XMLRPCServerFactory."""
     s = server.Site(IXMLRPCTaskController(taskController))
     return channel.HTTPFactory(s)
-    
-    
+
+
 components.registerAdapter(XMLRPCServerFactoryFromTaskController,
-            task.TaskController, IXMLRPCTaskControllerFactory)
+            Task.TaskController, IXMLRPCTaskControllerFactory)
         
 
 #-------------------------------------------------------------------------------
 # The Client side of things
 #-------------------------------------------------------------------------------
 
-class XMLRPCTaskControllerClient(object):
+class XMLRPCTaskClient(object):
     """XMLRPC based TaskController client that implements ITaskController.
-    
-    """
-    
-    implements(task.ITaskController)
-    
-    def __init__(self, server):
-        self.server = server
-        self.pendingDeferreds = {}
-        self.clientID = self.server.getClientID()
         
+    """
+    implements(Task.ITaskController)
+    
+    
+    #---------------------------------------------------------------------------
+    # Begin copy from XMLRPCMultiEngineClient
+    # Should these methods be in a base XMLRPCClient class?
+    #---------------------------------------------------------------------------
+    
+    def __init__(self, addr):
+        self.addr = addr
+        self.url = 'http://%s:%s/' % self.addr
+        self.server = xmlrpclib.ServerProxy(self.url, transport=Transport(), 
+            verbose=0)
+        self.clientID = None
+        self.block = True
+    
     #---------------------------------------------------------------------------
     # Non interface methods
     #---------------------------------------------------------------------------
         
-    def handleReturn(self, r):
-        """Remote methods should either return a pickled object or a pickled
-        failure object prefixed with "FAILURE:"
-        """
-        try:
-            (taskID, key, results) = pickle.loads(r.data)
-        except pickle.PickleError:
-            raise error.KernelError("Could not unpickle returned object.")
-        if key == -1:# not linked through
-            d = defer.succeed(None)
+    def _reallyBlock(self, block=None):
+        if block is None:
+            return self.block
         else:
-            self.pendingDeferreds[key] = d = defer.Deferred()
-        self.fireCallbacks(results)
-        return (taskID, key, d)
+            if block in (True, False):
+                return block
+            else:
+                raise ValueError("block must be True or False")
     
-    def fireCallbacks(self, results):
-        for key , result in results.iteritems():
-            if self.pendingDeferreds.has_key(key):
-                self.pendingDeferreds[key].callback(result)
-                del self.pendingDeferreds[key]
+    def _executeRemoteMethod(self, f, *args):
+        try:
+            rawResult = f(*args)
+            result = self._unpackageResult(rawResult)
+        except error.InvalidClientID:
+            self._getClientID()
+            rawResult = f(*args)
+            result = self._unpackageResult(rawResult)
+        return result
     
+    def _unpackageResult(self, result):
+        result = pickle.loads(result.data)
+        return self._returnOrRaise(result)
+    
+    def _returnOrRaise(self, result):
+        if isinstance(result, failure.Failure):
+            result.raiseException()
+        else:
+            return result
+    
+    def _checkClientID(self):
+        if self.clientID is None:
+            self._getClientID()
+    
+    def _getClientID(self):
+        clientID = self.server.registerClient()
+        self.clientID = clientID
     
     #---------------------------------------------------------------------------
-    # IXMLRPCTaskControllerClient
-    #---------------------------------------------------------------------------
+    # Pending results related methods
+    #--------------------------------------------------------------------------- 
     
-    def blockOn(self, d):
-        for k,v in self.pendingDeferreds.iteritems():
-            if d is v:
-                self.handleReturn(self.server.blockOn(self.clientID, k))
-                return blockon.blockOn(d)
+    def getPendingResult(self, resultID, block=True):
+        self._checkClientID()
+        return self._executeRemoteMethod(self.server.getPendingResult,
+            self.clientID, resultID, block)
+    
+    def getAllPendingResults(self):
+        self._checkClientID()
+        result = self._executeRemoteMethod(self.server.getAllPendingResults, self.clientID)
+        for r in result:
+            if isinstance(r, failure.Failure):
+                r.raiseException()
+        if len(result) == 1:
+            result = result[0]
+        return result
+    
+    def barrier(self):
+        self._checkClientID()
+        result = self._executeRemoteMethod(self.server.getAllPendingResults, self.clientID)
+        for r in result:
+            if isinstance(r, failure.Failure):
+                r.raiseException() 
+    
+    #---------------------------------------------------------------------------
+    # end copy from multienginexmlrpc
+    #---------------------------------------------------------------------------
     
     #---------------------------------------------------------------------------
     # ITaskController related methods
     #---------------------------------------------------------------------------
-        
-    def run(self, task):
+    def run(self, task, block=None):
         """run @expression as a task, in a namespace initialized to @namespace,
         wherein the desired result is stored in @resultName.  If @resultName 
         is not specified, None will be stored as the result.
-        
+            
         Returns a tuple of (taskID, deferred), where taskID is the ID of 
         the task associated with this call, and deferred is a deferred to 
         the result of the task."""
+        self._checkClientID()
+        assert isinstance(task, Task.Task), "task must be a Task object!"
+        localBlock = self._reallyBlock(block)
         binTask = xmlrpc.Binary(pickle.dumps(task,2))
-        (taskID, key, d) = self.handleReturn(
-                self.server.run(self.clientID, binTask))
-        task.taskID = taskID
-        task.result = d
-        return d
+        result = self._executeRemoteMethod(self.server.run, self.clientID, localBlock, binTask)
+        # if not localBlock:
+        #     result = PendingResult(self, result)
+        return result
     
-    def getTaskResult(self, taskID):
-        """get the result of a task by its id.  This relinks your deferred
-        to the one returned by run."""
-        (taskID, key, d) = self.handleReturn(
-            self.server.getTaskResult(self.clientID, taskID))
-        return d
-        
+    def getTaskResult(self, taskID, block=None):
+        """"""
+        self._checkClientID()
+        localBlock = self._reallyBlock(block)
+        result = self._executeRemoteMethod(self.server.getTaskResult, self.clientID, localBlock, taskID)
+        if not localBlock:
+            result = PendingResult(self, result)
+        return result
+    
 
-components.registerAdapter(XMLRPCTaskControllerClient, 
-        xmlrpclib.ServerProxy, task.ITaskController)
+components.registerAdapter(XMLRPCTaskClient, 
+        xmlrpclib.ServerProxy, Task.ITaskController)
     
-    
-#-------------------------------------------------------------------------------
-# The XMLRPC version of ConnectingTaskControllerClient
-#-------------------------------------------------------------------------------
 
-class XMLRPCConnectingTaskClient(taskclient.ConnectingTaskClient):
-    """XML-RPC version of the Connecting TaskControllerClient"""
-    
-    def connect(self):
-        if not self.connected:
-            addr = 'http://%s:%s/'%self.addr
-            print "Connecting to ", addr
-            self.taskcontroller = XMLRPCTaskControllerClient(xmlrpclib.Server(addr))
-            self.connected = True
-    
-    def disconnect(self):
-        if self.connected:
-            print "Disconnecting from ", self.addr
-            del self.taskcontroller
-            self.taskcontroller = None
-            self.connected = False
-    
+class XMLRPCInteractiveTaskClient(XMLRPCTaskClient, taskclient.InteractiveTaskClient):
+    pass
+
+# #-------------------------------------------------------------------------------
+# # The XMLRPC version of ConnectingTaskControllerClient
+# #-------------------------------------------------------------------------------
+# 
+# class XMLRPCConnectingTaskClient(taskclient.ConnectingTaskClient):
+#     """XML-RPC version of the Connecting TaskControllerClient"""
+#     
+#     def connect(self):
+#         if not self.connected:
+#             addr = 'http://%s:%s/'%self.addr
+#             print "Connecting to ", addr
+#             self.taskcontroller = XMLRPCTaskControllerClient(xmlrpclib.Server(addr))
+#             self.connected = True
+#     
+#     def disconnect(self):
+#         if self.connected:
+#             print "Disconnecting from ", self.addr
+#             del self.taskcontroller
+#             self.taskcontroller = None
+#             self.connected = False
+#     
