@@ -156,34 +156,25 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
     
-    def xmlrpc_execute(self, request, clientID, block, targets, lines):
-        if not self.smultiengine.verifyTargets(targets):
-            d = defer.fail(error.InvalidEngineID(str(targets)))
-        else:        
-            d = self.smultiengine.execute(clientID, block, targets, lines)
+    def xmlrpc_execute(self, request, clientID, block, targets, lines):     
+        d = self.smultiengine.execute(clientID, block, targets, lines)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d
     
     def xmlrpc_push(self, request, clientID, block, targets, binaryNS):
-        if not self.smultiengine.verifyTargets(targets):
-            d = defer.fail(error.InvalidEngineID(str(targets)))
+        try:
+            namespace = pickle.loads(binaryNS.data)
+        except:
+            d = defer.fail(failure.Failure())
         else:
-            try:
-                namespace = pickle.loads(binaryNS.data)
-            except:
-                d = defer.fail(failure.Failure())
-            else:
-                d = self.smultiengine.push(clientID, block, targets, **namespace)
+            d = self.smultiengine.push(clientID, block, targets, **namespace)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d
     
     def xmlrpc_pull(self, request, clientID, block, targets, *keys):
-        if not self.smultiengine.verifyTargets(targets):
-            d = defer.fail(error.InvalidEngineID(str(targets)))
-        else:
-            d = self.smultiengine.pull(clientID, block, targets, *keys)
+        d = self.smultiengine.pull(clientID, block, targets, *keys)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d
@@ -191,55 +182,37 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     def xmlrpc_getResult(self, request, clientID, block, targets, i=None):
         if i == 'None':
             i = None
-        if not self.smultiengine.verifyTargets(targets):
-            d = defer.fail(error.InvalidEngineID(str(targets)))
-        else:
-            d = self.smultiengine.getResult(clientID, block, targets, i)
+        d = self.smultiengine.getResult(clientID, block, targets, i)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d 
     
     def xmlrpc_reset(self, request, clientID, block, targets):
-        if not self.smultiengine.verifyTargets(targets):
-            d = defer.fail(error.InvalidEngineID(str(targets)))
-        else:
-            d = self.smultiengine.reset(clientID, block, targets)
+        d = self.smultiengine.reset(clientID, block, targets)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d 
     
     def xmlrpc_keys(self, request, clientID, block, targets):
-        if not self.smultiengine.verifyTargets(targets):
-            d = defer.fail(error.InvalidEngineID(str(targets)))
-        else:
-            d = self.smultiengine.keys(clientID, block, targets)
+        d = self.smultiengine.keys(clientID, block, targets)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d  
     
     def xmlrpc_kill(self, request, clientID, block, targets, controller=False):
-        if not self.smultiengine.verifyTargets(targets):
-            d = defer.fail(error.InvalidEngineID(str(targets)))
-        else:
-            d = self.smultiengine.kill(clientID, block, targets, controller)
+        d = self.smultiengine.kill(clientID, block, targets, controller)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d
         
     def xmlrpc_clearQueue(self, request, clientID, targets):
-        if not self.smultiengine.verifyTargets(targets):
-            d = defer.fail(error.InvalidEngineID(str(targets)))
-        else:
-            d = self.smultiengine.clearQueue(clientID, True, targets)
+        d = self.smultiengine.clearQueue(clientID, True, targets)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d   
     
     def xmlrpc_queueStatus(self, request, clientID, targets):
-        if not self.smultiengine.verifyTargets(targets):
-            d = defer.fail(error.InvalidEngineID(str(targets)))
-        else:
-            d = self.smultiengine.queueStatus(clientID, True, targets)
+        d = self.smultiengine.queueStatus(clientID, True, targets)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d  
@@ -256,24 +229,18 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     #---------------------------------------------------------------------------
     
     def xmlrpc_scatter(self, request, clientID, block, targets, key, bseq, style='basic', flatten=False):
-        if not self.smultiengine.verifyTargets(targets):
-            d = defer.fail(error.InvalidEngineID(str(targets)))
+        try:
+            seq = pickle.loads(bseq.data)
+        except:
+            d = defer.fail(failure.Failure())
         else:
-            try:
-                seq = pickle.loads(bseq.data)
-            except:
-                d = defer.fail(failure.Failure())
-            else:
-                d = self.smultiengine.scatter(clientID, block, targets, key, seq, style, flatten)
+            d = self.smultiengine.scatter(clientID, block, targets, key, seq, style, flatten)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d      
     
     def xmlrpc_gather(self, request, clientID, block, targets, key, style='basic'):
-        if not self.smultiengine.verifyTargets(targets):
-            d = defer.fail(error.InvalidEngineID(str(targets)))
-        else:
-            d = self.smultiengine.gather(clientID, block, targets, key, style)
+        d = self.smultiengine.gather(clientID, block, targets, key, style)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d     

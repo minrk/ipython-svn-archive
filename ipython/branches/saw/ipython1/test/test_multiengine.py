@@ -72,6 +72,5 @@ class SynchronousMultiEngineTestCase(DeferredTestCase,
          {'commandIndex': 0, 'stdin': 'a=5', 'id': 1, 'stderr': '', 'stdout': ''}]
         cid = self.smultiengine.registerClient()
         d = self.smultiengine.execute(cid, True, 'all', 'a=5')
-        #d.addCallback(lambda r: self.smultiengine.getPendingDeferred(cid, r))
         d.addCallback(lambda r: self.assert_(r==result))
         return d
