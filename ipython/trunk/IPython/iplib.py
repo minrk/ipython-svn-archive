@@ -1984,6 +1984,7 @@ want to merge them back into the new files.""" % locals()
 
         try:
             line = raw_input_original(prompt).decode(sys.stdin.encoding)
+            #line = raw_input_original(prompt)
         except ValueError:
             warn("\n********\nYou or a %run:ed script called sys.stdin.close() or sys.stdout.close()!\nExiting IPython!")
             self.exit_now = True
