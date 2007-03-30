@@ -107,6 +107,77 @@ class WorkerFromQueuedEngine(object):
 
 components.registerAdapter(WorkerFromQueuedEngine, es.IEngineQueued, IWorker)
 
+class IScheduler(zi.Interface):
+    """The interface for a scheduler"""
+    
+    def addTask(task, taskID):
+        """add a (taskID, task) to the task queue"""
+    
+    def popTask(id=None):
+        """pops a (taskID, task) tuple, the highest priority by default
+        if @i is specified, pops task corresponding to taskID
+        if no such task is registered, raises index error
+        """
+    
+    def addWorker(worker, workerID):
+        """add (workerID, worker) to the worker queue"""
+    
+    def popWorker(id=None):
+        """pops a (workerID, worker) tuple, the highest priority by default
+        if @i is specified, pops worker corresponding to workerID
+        if no such worker is registered, raises index error
+        """
+    
+    def ready():
+        """returns True if there is something to do, False otherwise"""
+    
+
+class FIFOScheduler(object):
+    """A basic First-In-First-Out (queue) Scheduler"""
+    
+    def __init__(self):
+        self.tasks = []
+        self.workers = []
+    
+    def addTask(self, task, taskID):
+        """add a (taskID, task) to the task queue"""
+        self.tasks.append((taskID, task))
+    
+    def popTask(self, id=None):
+        """pops a (taskID, task) tuple, the highest priority by default
+        if @i is specified, pops task corresponding to taskID
+        if no such task is registered, raises index error
+        """
+        if id is None:
+            return self.tasks.pop(0)
+        else:
+            for i in range(len(self.tasks)):
+                taskID = self.tasks[i][0]
+                if id == taskID:
+                    return self.tasks.pop(i)
+            raise IndexError("No task #%i"%id)
+    
+    def addWorker(self, worker, workerID):
+        """add a (workerID, worker) to the worker queue"""
+        self.workers.append((workerID, worker))
+    
+    def popWorker(self, id=None):
+        """pops a (workerID, worker) tuple, the highest priority by default
+        if @i is specified, pops worker corresponding to workerID
+        if no such worker is registered, raises index error
+        """
+        if id is None:
+            return self.workers.pop(0)
+        else:
+            for i in range(len(self.workers)):
+                workerID = self.workers[i][0]
+                if id == workerID:
+                    return self.workers.pop(i)
+            raise IndexError("No worker #%i"%id)
+    
+    def ready(self):
+        return bool(self.workers and self.tasks)
+
 class ITaskController(cs.IControllerBase):
     """The Task based interface to a Controller object"""
     
@@ -117,9 +188,12 @@ class ITaskController(cs.IControllerBase):
         """get a result"""
 
 class TaskController(cs.ControllerAdapterBase):
-    """The Task based interface to a Controller object"""
+    """The Task based interface to a Controller object.
+    If you want to use a different scheduler, just subclass this and set
+    the 'Scheduler' member to the *class* of your scheduler."""
     
     zi.implements(ITaskController)
+    Scheduler = FIFOScheduler
     
     def __init__(self, controller):
         self.controller = controller
@@ -128,30 +202,31 @@ class TaskController(cs.ControllerAdapterBase):
         self.taskID = 0
         self.failurePenalty = 1 # the time in seconds to penalize
                                 # a worker for failing a task
-        self.queue = [] # list of task objects
         self.pendingTasks = {} # dict of {workerID:(taskID, task)}
         self.deferredResults = {} # dict of {taskID:deferred}
         self.finishedResults = {} # dict of {taskID:actualResult}
         self.workers = {} # dict of {workerID:worker}
         for id in self.controller.engines.keys():
                 self.workers[id] = IWorker(self.controller.engines[id])
-        self.idleWorkers = self.workers.keys()
+        self.scheduler = self.Scheduler()
+        for id, worker in self.workers.iteritems():
+            self.scheduler.addWorker(worker, id)
     
     def registerWorker(self, id):
         """called by controller.registerEngine"""
         if self.workers.get(id):
-            raise "We already have one!  This should not happen"
+            raise "We already have one!  This should not happen."
         self.workers[id] = IWorker(self.controller.engines[id])
-        if not self.pendingTasks.has_key(id):
-            self.idleWorkers.append(id)
+        if not self.pendingTasks.has_key(id):# if not working
+            self.scheduler.addWorker(self.workers[id], id)
         self.distributeTasks()
     
     def unregisterWorker(self, id):
         """called by controller.unregisterEngine"""
         if self.workers.has_key(id):
-            if id in self.idleWorkers:
-                self.idleWorkers.remove(id)
-            elif self.pendingTasks.has_key(id):
+            try:
+                self.scheduler.popWorker(id)
+            except IndexError:
                 pass
             self.workers.pop(id)
     
@@ -164,9 +239,8 @@ class TaskController(cs.ControllerAdapterBase):
         taskID = self.taskID
         self.taskID += 1
         d = defer.Deferred()
-        self.queue.append((taskID, task))
+        self.scheduler.addTask(task, taskID)
         log.msg('queuing task #%i' %taskID)
-        # d.addErrback(self.resubmit, task, taskID)
         d.addBoth(lambda r: (taskID, r))
         self.deferredResults[taskID] = d
         self.distributeTasks()
@@ -188,30 +262,36 @@ class TaskController(cs.ControllerAdapterBase):
     
     def distributeTasks(self):
         # check for unassigned tasks and idle workers
-        while self.queue and self.idleWorkers:
+        while self.scheduler.ready():
             # get worker
-            workerID = self.idleWorkers.pop(0)
+            workerID, worker = self.scheduler.popWorker()
             # get task
-            (taskID, task) = self.queue.pop(0)
+            taskID, task = self.scheduler.popTask()
             # add to pending
             self.pendingTasks[workerID] = (taskID, task)
             # run/link callbacks
             # d2 = self.deferredResults[taskID]
-            d = self.workers[workerID].run(task)
+            d = worker.run(task)
             log.msg("running task #%i on worker %i" %(taskID, workerID))
-            d.addBoth(self.taskCompleted, workerID)
+            d.addBoth(self.taskCompleted, taskID, workerID)
             # d.addBoth(self.resubmit, task, taskID)
             # d.chainDeferred(d2)
             
-    def taskCompleted(self, result, workerID):
+    def taskCompleted(self, result, taskID, workerID):
         """This is the err/callback for a completed task"""
-        taskID, task = self.pendingTasks.pop(workerID)
+        try:
+            taskID, task = self.pendingTasks.pop(workerID)
+        except:
+            log.msg("tried to pop bad pending task#%i from worker #%i"%(taskID, workerID))
+            log.msg("result: %s"%result)
+            log.msg("pending tasks:%s"%self.pendingTasks)
+            return
         # d = None
         if isinstance(result, failure.Failure): # we failed
-            log.msg("Task #%i failed"% taskID)
+            log.msg("Task #%i failed on worker %i"% (taskID, workerID))
             if task.retries > 0: # resubmit
                 task.retries -= 1
-                self.queue.append((taskID, task))
+                self.scheduler.addTask(task, taskID)
                 s = "resubmitting task #%i, %i retries remaining" %(taskID, task.retries)
                 log.msg(s)
                 self.distributeTasks()
@@ -223,7 +303,7 @@ class TaskController(cs.ControllerAdapterBase):
             # it may have died, and not yet been unregistered
             reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
         else: # we succeeded
-            log.msg("Task #%i completed"% taskID)
+            log.msg("Task #%i completed "% taskID)
             d = self.deferredResults.pop(taskID)
             self.finishedResults[taskID] = result
             d.callback(result)
@@ -233,8 +313,8 @@ class TaskController(cs.ControllerAdapterBase):
         """readmit a worker to the idleWorkers.  This is outside taskCompleted
         because of the failurePenalty being implemented through 
         reactor.callLater"""
-        if workerID in self.workers.keys():
-            self.idleWorkers.append(workerID)
+        if workerID in self.workers.keys() and workerID not in self.pendingTasks.keys():
+            self.scheduler.addWorker(self.workers[workerID],workerID)
             self.distributeTasks()
         
     
