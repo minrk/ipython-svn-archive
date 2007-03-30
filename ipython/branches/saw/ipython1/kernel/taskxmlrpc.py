@@ -106,15 +106,9 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
             d = defer.fail(pickle.UnPickleableError("Could not unmarshal task"))
         else:
             d = self.staskcontroller.run(task)
-            
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d
-    
-    # def _runCallback(self, taskID, clientID, block):
-    #     return self.getTaskResult(clientID, taskID, block)
-        # d.addBoth(self.finishDeferred, clientID, key)
-        # return self.returnResults(clientID, taskID, key)
     
     def xmlrpc_getTaskResult(self, request, clientID, block, taskID):
         d = self.staskcontroller.getTaskResult(clientID, block, taskID)

@@ -155,26 +155,6 @@ class TaskController(cs.ControllerAdapterBase):
                 pass
             self.workers.pop(id)
     
-    def resubmit(self, r, task, taskID):
-        """an errback for a failed task"""
-        # print r
-        if task.retries > 0:
-            task.retries -= 1
-            self.queue.append((taskID, task))
-            s = "resubmitting task #%i, %i retries remaining" %(taskID, task.retries)
-            log.msg(s)
-            d = defer.Deferred().addErrback(self.resubmit, task, taskID)
-            # d.addBoth(_printer)
-            # d.addCallback(lambda r: (taskID, r))
-            # the previous result deferred is now stale
-            # self.deferredResults[taskID].result.addErrback(lambda _:None)
-            # use the new one
-            self.deferredResults[taskID] = d
-            self.distributeTasks()
-            return d
-        else:
-            return r
-    
     #---------------------------------------------------------------------------
     # Interface methods
     #---------------------------------------------------------------------------
@@ -186,8 +166,8 @@ class TaskController(cs.ControllerAdapterBase):
         d = defer.Deferred()
         self.queue.append((taskID, task))
         log.msg('queuing task #%i' %taskID)
-        d.addErrback(self.resubmit, task, taskID)
-        # d.addBoth(lambda r: (taskID, r))
+        # d.addErrback(self.resubmit, task, taskID)
+        d.addBoth(lambda r: (taskID, r))
         self.deferredResults[taskID] = d
         self.distributeTasks()
         return defer.succeed(taskID)
@@ -216,30 +196,38 @@ class TaskController(cs.ControllerAdapterBase):
             # add to pending
             self.pendingTasks[workerID] = (taskID, task)
             # run/link callbacks
-            d2 = self.deferredResults[taskID]
+            # d2 = self.deferredResults[taskID]
             d = self.workers[workerID].run(task)
             log.msg("running task #%i on worker %i" %(taskID, workerID))
-            d.addBoth(self.taskCompleted, workerID, taskID)
-            d.chainDeferred(d2)
+            d.addBoth(self.taskCompleted, workerID)
+            # d.addBoth(self.resubmit, task, taskID)
+            # d.chainDeferred(d2)
             
-    def taskCompleted(self, result, workerID, taskID):
+    def taskCompleted(self, result, workerID):
         """This is the err/callback for a completed task"""
-        task = self.pendingTasks.pop(workerID)[1]
+        taskID, task = self.pendingTasks.pop(workerID)
+        # d = None
         if isinstance(result, failure.Failure): # we failed
             log.msg("Task #%i failed"% taskID)
-            if task.retries < 1: # but we are done trying
+            if task.retries > 0: # resubmit
+                task.retries -= 1
+                self.queue.append((taskID, task))
+                s = "resubmitting task #%i, %i retries remaining" %(taskID, task.retries)
+                log.msg(s)
+                self.distributeTasks()
+            else: # done trying
+                d = self.deferredResults.pop(taskID)
                 self.finishedResults[taskID] = result
+                d.callback(result)
             # wait a second before readmitting a worker that failed
             # it may have died, and not yet been unregistered
             reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
         else: # we succeeded
             log.msg("Task #%i completed"% taskID)
+            d = self.deferredResults.pop(taskID)
             self.finishedResults[taskID] = result
+            d.callback(result)
             self.readmitWorker(workerID)
-        
-        # pass through result for callbacks
-        log.msg("with result %r"%result)
-        return result
     
     def readmitWorker(self, workerID):
         """readmit a worker to the idleWorkers.  This is outside taskCompleted
