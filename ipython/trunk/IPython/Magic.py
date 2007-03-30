@@ -670,8 +670,13 @@ Currently the magic system has the following functions:\n"""
         """Generic interface to the inspector system.
 
         This function is meant to be called by pdef, pdoc & friends."""
-        
-        oname = oname.strip()
+
+        try:
+            oname = oname.strip().encode('ascii')
+        except UnicodeEncodeError:
+            print 'Python identifiers can only contain ascii characters.'
+            return 'not found'
+            
         info = Struct(self._ofind(oname, namespaces))
         
         if info.found:
