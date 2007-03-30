@@ -137,9 +137,9 @@ from ipython1.kernel.enginepb import \
 from ipython1.kernel.taskxmlrpc import \
     IXMLRPCTaskControllerFactory
 
-from ipython1.kernel.taskpb import \
-    IPBTaskControllerFactory
-
+# from ipython1.kernel.taskpb import \
+#     IPBTaskControllerFactory
+# 
 from ipython1.kernel.multiengine import IMultiEngine
 from ipython1.kernel.task import ITaskController
 
@@ -152,14 +152,11 @@ httpME = {'interface': IHTTPMultiEngineFactory,
 
 networkInterfacesME = {'xmlrpc':xmlrpcME}
 
-pbTC = {'interface':IPBTaskControllerFactory,
-        'ip':'',
-        'port':pbTCPort}
 xmlrpcTC = {'interface':IXMLRPCTaskControllerFactory,
             'ip':'',
             'port':xmlrpcTCPort}
 
-networkInterfacesTC = {'pb': pbTC}
+networkInterfacesTC = {'xmlrpc':xmlrpcTC}
 
 
 class ControllerConfig(Config):
@@ -194,7 +191,7 @@ class ControllerConfig(Config):
 
 from ipython1.kernel.multienginexmlrpc import XMLRPCInteractiveMultiEngineClient
 
-from ipython1.kernel.taskpb import PBConnectingTaskClient
+from ipython1.kernel.taskxmlrpc import XMLRPCInteractiveTaskClient
 
 class ClientConfig(Config):    
     # RemoteController = PBInteractiveMultiEngineClient
@@ -209,9 +206,9 @@ class ClientConfig(Config):
     connectToRemoteControllerOn = {'ip': '127.0.0.1', 'port': xmlrpcMEPort}
     """The (ip, port) tuple the client will use to connect to the controller."""
     
-    TaskController = PBConnectingTaskClient
+    TaskController = XMLRPCInteractiveTaskClient
     
-    connectToTaskControllerOn = {'ip': '127.0.0.1', 'port': pbTCPort}
+    connectToTaskControllerOn = {'ip': '127.0.0.1', 'port': xmlrpcTCPort}
     
 
 # All top-level config classes must be listed here.
