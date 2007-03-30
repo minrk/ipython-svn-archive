@@ -123,6 +123,8 @@ class PendingDeferredManager(object):
                 #log.msg("pendingDeferred has been called: %s: %s" % (deferredID, repr(pd.result)))
                 if isinstance(pd.result, failure.Failure):
                     dToReturn = defer.fail(pd.result)
+                elif isinstance(pd.result, defer.Deferred):
+                    dToReturn = pd.result
                 else:
                     dToReturn = defer.succeed(pd.result)
                 # It has fired so remove it!

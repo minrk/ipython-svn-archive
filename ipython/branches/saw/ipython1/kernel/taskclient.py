@@ -57,12 +57,7 @@ class InteractiveTaskClient(object):
             t = args[0]
         else:
             t = task.Task(*args, **kwargs)
-        tr = self.run(t, block)
-        return tr
-        # self.pendingDeferreds.add(tr.result)
-        # tr.result.addBoth(self._passThrough, tr.result)
-        # if block:
-        #     return self.blockOn(tr)
-        # else:
-        #     return tr
-    
+        taskID = self.run(t)
+        print "TaskID = %i"%taskID
+        return self.getTaskResult(taskID, block)
+        # return tr    

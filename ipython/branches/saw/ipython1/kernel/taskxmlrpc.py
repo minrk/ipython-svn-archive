@@ -48,7 +48,7 @@ class IXMLRPCTaskController(Interface):
         
     See the documentation of ITaskController for documentation about the methods.
     """
-    def xmlrpc_run(request, clientID, binTask, block):
+    def xmlrpc_run(request, binTask):
         """see ITaskController"""
     
     #---------------------------------------------------------------------------
@@ -91,6 +91,7 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
         return self.packageSuccess(f)
     
     def packageSuccess(self, obj):
+        # print 'returning: ',obj
         serial = pickle.dumps(obj, 2)
         return xmlrpc.Binary(serial)
     
@@ -98,18 +99,14 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
     # ITaskController related methods
     #---------------------------------------------------------------------------
     
-    def xmlrpc_run(self, request, clientID, block, binTask):
+    def xmlrpc_run(self, request, binTask):
         try:
             task = pickle.loads(binTask.data)
         except:
             d = defer.fail(pickle.UnPickleableError("Could not unmarshal task"))
         else:
-            d = self.staskcontroller.run(clientID, block, task)
-            # print tr
-            # print block
-            # if block:
-            #     d.addCallback(self._runCallback, clientID, block)
-            # taskID = task.taskID
+            d = self.staskcontroller.run(task)
+            
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d
@@ -275,7 +272,7 @@ class XMLRPCTaskClient(object):
     #---------------------------------------------------------------------------
     # ITaskController related methods
     #---------------------------------------------------------------------------
-    def run(self, task, block=None):
+    def run(self, task):
         """run @expression as a task, in a namespace initialized to @namespace,
         wherein the desired result is stored in @resultName.  If @resultName 
         is not specified, None will be stored as the result.
@@ -285,11 +282,8 @@ class XMLRPCTaskClient(object):
         the result of the task."""
         self._checkClientID()
         assert isinstance(task, Task.Task), "task must be a Task object!"
-        localBlock = self._reallyBlock(block)
         binTask = xmlrpc.Binary(pickle.dumps(task,2))
-        result = self._executeRemoteMethod(self.server.run, self.clientID, localBlock, binTask)
-        # if not localBlock:
-        #     result = PendingResult(self, result)
+        result = self._executeRemoteMethod(self.server.run, binTask)
         return result
     
     def getTaskResult(self, taskID, block=None):
