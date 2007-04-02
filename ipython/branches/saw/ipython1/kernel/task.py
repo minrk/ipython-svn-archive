@@ -20,7 +20,7 @@ import zope.interface as zi
 from twisted.internet import defer, reactor
 from twisted.python import components, log, failure
 
-from ipython1.kernel import engineservice as es
+from ipython1.kernel import engineservice as es, error
 from ipython1.kernel import controllerservice as cs
 from ipython1.kernel.pendingdeferred import PendingDeferredAdapter, twoPhase
 from ipython1.kernel.util import gatherBoth
@@ -186,6 +186,9 @@ class ITaskController(cs.IControllerBase):
     
     def getTaskResult(taskID):
         """get a result"""
+    
+    def abort(taskID):
+        """remove task from queue if task is has not been submitted."""
 
 class TaskController(cs.ControllerAdapterBase):
     """The Task based interface to a Controller object.
@@ -206,6 +209,7 @@ class TaskController(cs.ControllerAdapterBase):
         self.deferredResults = {} # dict of {taskID:deferred}
         self.finishedResults = {} # dict of {taskID:actualResult}
         self.workers = {} # dict of {workerID:worker}
+        self.abortPending = [] # list of [(taskID, abortDeferred)]
         for id in self.controller.engines.keys():
                 self.workers[id] = IWorker(self.controller.engines[id])
         self.scheduler = self.Scheduler()
@@ -229,6 +233,12 @@ class TaskController(cs.ControllerAdapterBase):
             except IndexError:
                 pass
             self.workers.pop(id)
+    
+    def _pendingTaskIDs(self):
+        return [t[0] for t in self.pendingTasks.values()]
+    
+    def _abortedTaskIDs(self):
+        return [t[0] for t in self.abortPending]
     
     #---------------------------------------------------------------------------
     # Interface methods
@@ -254,7 +264,42 @@ class TaskController(cs.ControllerAdapterBase):
         elif self.deferredResults.has_key(taskID):
             return self.deferredResults[taskID]
         else:
-            return defer.succeed((taskID, KeyError("task ID not registered")))
+            return defer.succeed((taskID, IndexError("task ID not registered")))
+    
+    def abort(self, taskID):
+        """remove a task from the queue if it has not been run already"""
+        try:
+            self.scheduler.popTask(taskID)
+        except IndexError, e:
+            if taskID in self.finishedResults.keys():
+                d = defer.fail(IndexError("Task Already Completed"))
+            elif taskID in self._pendingTaskIDs():# task is pending
+                for id, d in self.abortPending:
+                    if taskID == id:# already aborted
+                        return d
+                d = defer.Deferred()
+                self.abortPending.append((taskID, d))
+            else:
+                return defer.fail(e)
+        else:
+            self._reallyAbort(taskID)
+            d = defer.succeed(None)
+        return d
+    
+    def _reallyAbort(self, taskID):
+        for i in range(len(self.abortPending)):
+            id,d = self.abortPending[i]
+            if taskID == id:
+                d.callback(None)
+                self.abortPending.pop(i)
+                d2 = self.deferredResults.pop(taskID)
+                log.msg("Task #%i Aborted"%taskID)
+                e = error.TaskAborted()
+                result = failure.Failure(e)
+                self.finishedResults[taskID] = result
+                d2.errback(result)
+                return
+        raise IndexError("Failed to Abort task #%i"%taskID)
     
     #---------------------------------------------------------------------------
     # Queue methods
@@ -282,32 +327,47 @@ class TaskController(cs.ControllerAdapterBase):
         try:
             taskID, task = self.pendingTasks.pop(workerID)
         except:
+            # this should not happen
             log.msg("tried to pop bad pending task#%i from worker #%i"%(taskID, workerID))
             log.msg("result: %s"%result)
             log.msg("pending tasks:%s"%self.pendingTasks)
             return
-        # d = None
-        if isinstance(result, failure.Failure): # we failed
-            log.msg("Task #%i failed on worker %i"% (taskID, workerID))
-            if task.retries > 0: # resubmit
-                task.retries -= 1
-                self.scheduler.addTask(task, taskID)
-                s = "resubmitting task #%i, %i retries remaining" %(taskID, task.retries)
-                log.msg(s)
-                self.distributeTasks()
-            else: # done trying
+        
+        # Check if aborted while pending
+        aborted = False
+        for id, d in self.abortPending:
+            if taskID == id:
+                self._reallyAbort(taskID)
+                aborted = True
+                break
+        
+        if not aborted:
+            if isinstance(result, failure.Failure): # we failed
+                log.msg("Task #%i failed on worker %i"% (taskID, workerID))
+                if task.retries > 0: # resubmit
+                    task.retries -= 1
+                    self.scheduler.addTask(task, taskID)
+                    s = "resubmitting task #%i, %i retries remaining" %(taskID, task.retries)
+                    log.msg(s)
+                    self.distributeTasks()
+                else: # done trying
+                    d = self.deferredResults.pop(taskID)
+                    self.finishedResults[taskID] = result
+                    d.callback(result)
+                # wait a second before readmitting a worker that failed
+                # it may have died, and not yet been unregistered
+                reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
+            else: # we succeeded
+                log.msg("Task #%i completed "% taskID)
                 d = self.deferredResults.pop(taskID)
                 self.finishedResults[taskID] = result
                 d.callback(result)
-            # wait a second before readmitting a worker that failed
-            # it may have died, and not yet been unregistered
-            reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
-        else: # we succeeded
-            log.msg("Task #%i completed "% taskID)
-            d = self.deferredResults.pop(taskID)
-            self.finishedResults[taskID] = result
-            d.callback(result)
-            self.readmitWorker(workerID)
+                self.readmitWorker(workerID)
+        else:# we aborted the task
+            if isinstance(result, failure.Failure): # it failed
+                reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
+            else:
+                self.readmitWorker(workerID)
     
     def readmitWorker(self, workerID):
         """readmit a worker to the idleWorkers.  This is outside taskCompleted
@@ -335,9 +395,12 @@ class SynchronousTaskController(PendingDeferredAdapter):
     # Decorated pending deferred methods
     #---------------------------------------------------------------------------
     
-    # @twoPhase
     def run(self, task):
         return self.taskController.run(task)
+    
+    @twoPhase
+    def abort(self, taskID):
+        return self.taskController.abort(taskID)
     
     @twoPhase
     def getTaskResult(self, taskID):

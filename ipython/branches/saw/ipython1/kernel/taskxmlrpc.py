@@ -110,6 +110,12 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
         d.addErrback(self.packageFailure)
         return d
     
+    def xmlrpc_abort(self, request, clientID, block, taskID):
+        d = self.staskcontroller.abort(clientID, block, taskID)
+        d.addCallback(self.packageSuccess)
+        d.addErrback(self.packageFailure)
+        return d
+        
     def xmlrpc_getTaskResult(self, request, clientID, block, taskID):
         d = self.staskcontroller.getTaskResult(clientID, block, taskID)
         d.addCallback(self.packageSuccess)
@@ -289,6 +295,15 @@ class XMLRPCTaskClient(object):
             result = PendingResult(self, result)
         return result
     
+    def abort(self, taskID, block=None):
+        self._checkClientID()
+        localBlock = self._reallyBlock(block)
+        result = self._executeRemoteMethod(self.server.abort, self.clientID, localBlock, taskID)
+        if not localBlock:
+            result = PendingResult(self, result)
+        return result
+        
+    
 
 components.registerAdapter(XMLRPCTaskClient, 
         xmlrpclib.ServerProxy, Task.ITaskController)
@@ -297,24 +312,3 @@ components.registerAdapter(XMLRPCTaskClient,
 class XMLRPCInteractiveTaskClient(XMLRPCTaskClient, taskclient.InteractiveTaskClient):
     pass
 
-# #-------------------------------------------------------------------------------
-# # The XMLRPC version of ConnectingTaskControllerClient
-# #-------------------------------------------------------------------------------
-# 
-# class XMLRPCConnectingTaskClient(taskclient.ConnectingTaskClient):
-#     """XML-RPC version of the Connecting TaskControllerClient"""
-#     
-#     def connect(self):
-#         if not self.connected:
-#             addr = 'http://%s:%s/'%self.addr
-#             print "Connecting to ", addr
-#             self.taskcontroller = XMLRPCTaskControllerClient(xmlrpclib.Server(addr))
-#             self.connected = True
-#     
-#     def disconnect(self):
-#         if self.connected:
-#             print "Disconnecting from ", self.addr
-#             del self.taskcontroller
-#             self.taskcontroller = None
-#             self.connected = False
-#     

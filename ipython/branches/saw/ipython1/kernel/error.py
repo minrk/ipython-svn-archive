@@ -69,3 +69,6 @@ class ResultAlreadyRetrieved(KernelError):
     
 class ClientError(KernelError):
     pass
+
+class TaskAborted(KernelError):
+    pass
