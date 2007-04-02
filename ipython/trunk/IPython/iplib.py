@@ -2571,7 +2571,14 @@ want to merge them back into the new files.""" % locals()
                     print >> sys.stderr, badline
         else:  # regular file execution
             try:
-                execfile(fname,*where)
+                if sys.platform == 'win32':
+                    # Work around a bug in Python for Windows.  The bug was
+                    # fixed in in Python 2.5 r54159 and 54158, but that's still
+                    # SVN Python as of March/07.  For details, see:
+                    # http://projects.scipy.org/ipython/ipython/ticket/123
+                    exec file(fname) in where[0],where[1]
+                else:
+                    execfile(fname,*where)
             except SyntaxError:
                 self.showsyntaxerror()
                 warn('Failure executing file: <%s>' % fname)
