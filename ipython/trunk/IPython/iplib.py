@@ -2045,6 +2045,14 @@ want to merge them back into the new files.""" % locals()
         else:
             pre,iFun,theRest = lsplit.groups()
 
+        # iFun has to be a valid python identifier, so it better be only pure
+        #ascii, no unicode:
+        try:
+            iFun = iFun.encode('ascii')
+        except UnicodeEncodeError:
+            theRest = iFun+u' '+theRest
+            iFun = u''
+            
         #print 'line:<%s>' % line # dbg
         #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest) # dbg
         return pre,iFun.strip(),theRest
