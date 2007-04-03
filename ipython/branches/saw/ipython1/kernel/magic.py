@@ -57,11 +57,12 @@ def magic_result(self,parameter_s=''):
     except AttributeError:
         print NO_ACTIVE_CONTROLLER
     else:
+        targets = activeController.magicTargets
         try:
             index = int(parameter_s)
         except:
             index = None
-        activeController.igetResultAll(index)
+        activeController.igetResult(targets, index)
 
 def magic_px(self,parameter_s=''):
     """Executes the given python command on the active IPython Controller.
@@ -79,39 +80,9 @@ def magic_px(self,parameter_s=''):
     except AttributeError:
         print NO_ACTIVE_CONTROLLER
     else:
+        targets = activeController.magicTargets
         print "Executing command on Controller"
-        activeController.iexecuteAll(parameter_s)
-
-def magic_pn(self,parameter_s=''):
-    """Executes the given python command on the active IPython cluster.
-    
-    To activate a Controller in IPython, first create it and then call
-    the activate() method.
-    
-    Then you can do the following:
-     
-    >>> %pn 0 a = 5       # Runs a = 5 on kernel 0
-    """
-    
-    args = parameter_s.split(" ", 1)
-    if len(args) == 2:
-        try:
-            k = int(args[0])
-        except:
-            print "Usage: %pn kernel command"
-            return
-    else:
-            print "Usage: %pn kernel command"
-            return
-    cmd = args[1]
-    
-    try:
-        activeController = __IPYTHON__.activeController
-    except AttributeError:
-        print NO_ACTIVE_CONTROLLER
-    else:
-        print "Executing command on cluster"
-        activeController.iexecute(k, cmd)
+        activeController.iexecute(targets, parameter_s)
 
 def pxrunsource(self, source, filename="<input>", symbol="single"):
 
@@ -134,7 +105,7 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
         return False
     else:
         try:
-            self.activeController.iexecuteAll(source)
+            self.activeController.iexecute(self.activeController.magicTargets, source)
         except:
             self.showtraceback()
         return False
@@ -154,7 +125,7 @@ def magic_autopx(self, parameter_s=''):
     >>> %autopx                    # Now all commands are locally executed
     Auto Parallel Disabled
     """
-    
+  
     if hasattr(self, 'autopx'):
         if self.autopx == True:
             _disable_autopx(self)
@@ -189,7 +160,6 @@ def _disable_autopx(self):
 
 InteractiveShell.magic_result = magic_result
 InteractiveShell.magic_px = magic_px
-InteractiveShell.magic_pn = magic_pn
 InteractiveShell.magic_autopx = magic_autopx
 
 # And remove the global name to keep global namespace clean.  Don't worry, the
@@ -197,5 +167,4 @@ InteractiveShell.magic_autopx = magic_autopx
 del magic_result
 del magic_px
 del magic_autopx
-del magic_pn
 

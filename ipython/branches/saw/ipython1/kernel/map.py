@@ -79,12 +79,16 @@ class Map:
                     
     def concatenate(self, listOfPartitions):
         testObject = listOfPartitions[0]
+        # First see if we have a known array type
         for m in arrayModules:
             #print m
             if isinstance(testObject, m['type']):
                 return m['module'].concatenate(listOfPartitions)
+        # Next try for Python sequence types
         if isinstance(testObject, (types.ListType, types.TupleType)):
-            return genutil_flatten(listOfPartitions)        
+            return genutil_flatten(listOfPartitions)
+        # If we have scalars, just return listOfPartitions
+        return listOfPartitions    
 
 class RoundRobinMap(Map):
     """Partitions a sequence in a roun robin fashion.
@@ -110,7 +114,7 @@ class RoundRobinMap(Map):
         #    result.append(concat[i:totalLength:maxPartitionLength])
         return self.concatenate(listOfPartitions)
         
-styles = {'basic':Map, 'roundrobin':RoundRobinMap}
+styles = {'basic':Map}
 
     
     

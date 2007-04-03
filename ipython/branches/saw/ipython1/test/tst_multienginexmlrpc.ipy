@@ -4,18 +4,19 @@
 
 import time
 
-from ipython1.kernel.multienginexmlrpc import XMLRPCInteractiveMultiEngineClient as client
-from ipython1.kernel import magic
+import ipython1.kernel.api as kernel
+
+rc = kernel.RemoteController(('127.0.0.1',10105))
 
 #-------------------------------------------------------------------------------
 # Setup
 #-------------------------------------------------------------------------------
 
-c = client(('127.0.0.1',10105))
-c.activate()
-c.block = True
-c.getIDs()
-assert len(c) >= 4
+rc = client(('127.0.0.1',10105))
+rc.activate()
+rc.block = True
+rc.getIDs()
+assert len(rc) >= 4
 
 #-------------------------------------------------------------------------------
 # Blocking execution
@@ -23,10 +24,10 @@ assert len(c) >= 4
 
 # Execute
 
-c.iexecuteAll('a=5')
-c.iexecute([0,2],'b=10')
-c.iexecute([1,3],'b=20')
-c.iexecuteAll('c=a*b')
+rc.iexecuteAll('a=5')
+rc.iexecute([0,2],'b=10')
+rc.iexecute([1,3],'b=20')
+rc.iexecuteAll('c=a*b')
 
 # Magics
 
@@ -43,30 +44,30 @@ def compute(x):
 %autopx
 
 
-for i in c.getIDs():
-    c.iexecute(i, 'myresult = compute(%i)' % i)
+for i in rc.getIDs():
+    rc.iexecute(i, 'myresult = compute(%i)' % i)
 
 %result
 
 # Push/pull
 
-c.pushAll(a=10, b=20)
-c.pullAll('a', 'b')
-c.pullAll('a')
-c.push([0,1], c=range(5))
-c.push([2,3], c=range(5))
-c.pullAll('c')
+rc.pushAll(a=10, b=20)
+rc.pullAll('a', 'b')
+rc.pullAll('a')
+rc.push([0,1], c=range(5))
+rc.push([2,3], c=range(5))
+rc.pullAll('c')
 
 # getResult/reset
 
-c.iexecuteAll('import math; print math.pi')
-c.igetResultAll()
-c.resetAll()
-c.iexecuteAll('a=5')
-c.iexecuteAll('b=10')
-c.igetResultAll(0)
-c.igetResultAll(1)
-print "keys: ", c.keysAll()
+rc.iexecuteAll('import math; print math.pi')
+rc.igetResultAll()
+rc.resetAll()
+rc.iexecuteAll('a=5')
+rc.iexecuteAll('b=10')
+rc.igetResultAll(0)
+rc.igetResultAll(1)
+print "keys: ", rc.keysAll()
 
 # Queue management
 

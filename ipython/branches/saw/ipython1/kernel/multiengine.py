@@ -410,6 +410,8 @@ class MultiEngine(ControllerAdapterBase):
         if controller:
             log.msg("Killing controller")
             d.addCallback(lambda _: reactor.callLater(2.0, reactor.stop))
+            # Consume any weird stuff coming back
+            d.addBoth(lambda _: None)
         return d
         
     def killAll(self, controller=False):
@@ -555,6 +557,7 @@ class ISynchronousMultiEngine(Interface):
 
 
 class SynchronousMultiEngine(PendingDeferredAdapter):
+    """Adapt an `IMultiEngine` -> `ISynchronousMultiEngine`"""
     
     implements(ISynchronousMultiEngine)
     
@@ -584,15 +587,15 @@ class SynchronousMultiEngine(PendingDeferredAdapter):
         
     @twoPhase
     def reset(self, targets):
-        return self.multiengine.reset(self, targets)
+        return self.multiengine.reset(targets)
         
     @twoPhase
     def keys(self, targets):
-        return self.multiengine.keys(self, targets)
+        return self.multiengine.keys(targets)
 
     @twoPhase
     def kill(self, targets, controller=False):
-        return self.multiengine.kill(self, targets, controller=False)
+        return self.multiengine.kill(targets, controller)
         
     @twoPhase
     def pushSerialized(self, targets, **namespace):
@@ -612,17 +615,21 @@ class SynchronousMultiEngine(PendingDeferredAdapter):
 
     @twoPhase
     def scatter(self, targets, key, seq, style='basic', flatten=False):
-        return self.multiengine.scatter(targets, key, seq, style='basic', flatten=False)
+        return self.multiengine.scatter(targets, key, seq, style, flatten)
 
     @twoPhase
     def gather(self, targets, key, style='basic'):
-        return self.multiengine.gather(self, targets, key, style='basic')
+        return self.multiengine.gather(targets, key, style)
         
     #---------------------------------------------------------------------------
     # IMultiEngine methods
     #---------------------------------------------------------------------------
 
     def getIDs(self):
+        """Return a list of registered engine ids.
+        
+        Does not return a deferred.
+        """
         return self.multiengine.getIDs()
 
 components.registerAdapter(SynchronousMultiEngine, IMultiEngine, ISynchronousMultiEngine)

@@ -1,12 +1,11 @@
 # encoding: utf-8
 # -*- test-case-name: ipython1.test.test_multienginexmlrpc -*-
-"""An XML-RPC interface to a MultiEngine.
+"""An XML-RPC interface for an `ISynchronousMultiEngine`.
 
-This class lets XMLRPC clients talk to the ControllerService.  The main difficulty
-is that XMLRPC doesn't allow arbitrary objects to be sent over the wire - only
-basic Python types.  To get around this we simple pickle more complex objects
-on boths side of the wire.  That is the main thing these classes have to 
-manage.
+This class lets XML-RPC clients talk to a `ControllerService` through the
+`ISynchronousMultiEngine` interface.  The main things this class needs to do
+is serialize/unserialize Python objects (using pickle) to be sent as XML-RPC
+binary entities.
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -35,6 +34,8 @@ from ipython1.kernel import error, blockon
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
 from ipython1.kernel.multiengine import ISynchronousMultiEngine
 from ipython1.kernel.multiengineclient import PendingResult
+from ipython1.kernel.multiengineclient import ResultList, QueueStatusList
+from ipython1.kernel.multiengineclient import wrapResultList
 from ipython1.kernel.multiengineclient import InteractiveMultiEngineClient
 from ipython1.kernel.xmlrpcutil import Transport
 
@@ -43,19 +44,33 @@ from ipython1.kernel.xmlrpcutil import Transport
 #-------------------------------------------------------------------------------
 
 
+# This sets the timeout that twisted/web2 uses between requests.
 BETWEEN_REQUESTS_TIMEOUT = 15*60
 
 
 class IXMLRPCMultiEngine(Interface):
-    """XML-RPC interface to controller.  
+    """XML-RPC interface to `ISynchronousMultiEngine`.  
 
-    The methods in this interface are similar to those from IEngineMultiplexer, 
-    but their arguments and return values are pickled if they are not already
-    simple Python types so they can be send over XMLRPC.  This is to deal with 
-    the fact that w/o a lot of work XMLRPC cannot send arbitrary objects over the
-    wire.
+    The methods in this interface are similar to those of 
+    `ISynchronousMultiEngine`, but their arguments and return values are pickled
+    if they are not already simple Python types that can be send over XML-RPC.
 
-    See the documentation of IEngineMultiplexer for documentation about the methods.
+    See the documentation of `ISynchronousMultiEngine` and `IMultiEngine` for 
+    documentation about the methods.
+
+    The methods here take one additional argument (request) that is required
+    by XML-RPC, but is not used.
+    
+    Most methods in this interface act like the `ISynchronousMultiEngine`
+    versions and can be called in blocking or non-blocking mode.  There are 
+    three methods that always block:
+    
+    * xmlrpc_queueStatus
+    * xmlrpc_clearQueue
+    * xmlrpc_getIDs
+    
+    These methods should always return actual results as they don't need to
+    touch the actual engines and can be completed instantly.
     """
             
     #---------------------------------------------------------------------------
@@ -90,17 +105,30 @@ class IXMLRPCMultiEngine(Interface):
         """"""
         
     def xmlrpc_clearQueue(request, clientID, targets):
-        """Always block!"""
+        """Clear the queue on targets.
+        
+        This method always blocks.  This means that it will always waits for
+        the queues to be cleared before returning.  This method will never
+        return the id of a pending deferred.
+        """
         
     def xmlrpc_queueStatus(request, clientID, targets):
-        """Always block!"""
+        """Get the queue status on targets.
+        
+        This method always blocks.  This means that it will always return
+        the queues status's.  This method will never return the id of a pending 
+        deferred.    
+        """
         
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
         
     def xmlrpc_getIDs(request):
-        """Always block"""
+        """Get the ids of the registered engines.
+        
+        This method always blocks.
+        """
         
     #---------------------------------------------------------------------------
     # IEngineCoordinator related methods
@@ -127,17 +155,34 @@ class IXMLRPCMultiEngine(Interface):
     def xmlrpc_getAllPendingResults(self, clientID):
         """"""
         
-class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
-    """XML-RPC attachmeot for controller.
+        
+def packageResult(wrappedMethod):
+    """Decorator for the methods of XMLRPCMultiEngineFromMultiEngine.
     
-    See IXMLRPCMultiEngine and IMultiEngine (and its children) for documentation. 
+    This decorator takes methods of XMLRPCMultiEngineFromMultiEngine
+    that return deferreds to results/failures and then registers
+    callbacks/errbacks that serialize the result/failure to be sent over
+    the wire."""
+    def wrappedPackageResult(self, *args, **kwargs):
+        d = wrappedMethod(self, *args, **kwargs)
+        d.addCallback(self.packageSuccess)
+        d.addErrback(self.packageFailure)
+        return d
+    return wrappedPackageResult
+
+
+class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
+    """Adapt `IMultiEngine` -> `ISynchronousMultiEngine` -> `IXMLRPCMultiEngine`.
     """
+    
     implements(IXMLRPCMultiEngine)
     
     addSlash = True
     
     def __init__(self, multiengine):
         xmlrpc.XMLRPC.__init__(self)
+        # Adapt the raw multiengine to `ISynchronousMultiEngine` before saving
+        # it.  This allow this class to do two adaptation steps.
         self.smultiengine = ISynchronousMultiEngine(multiengine)
 
     #---------------------------------------------------------------------------
@@ -156,12 +201,11 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
     
+    @packageResult
     def xmlrpc_execute(self, request, clientID, block, targets, lines):     
-        d = self.smultiengine.execute(clientID, block, targets, lines)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
-        return d
+        return self.smultiengine.execute(clientID, block, targets, lines)
     
+    @packageResult    
     def xmlrpc_push(self, request, clientID, block, targets, binaryNS):
         try:
             namespace = pickle.loads(binaryNS.data)
@@ -169,53 +213,37 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
             d = defer.fail(failure.Failure())
         else:
             d = self.smultiengine.push(clientID, block, targets, **namespace)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
         return d
-    
+
+    @packageResult
     def xmlrpc_pull(self, request, clientID, block, targets, *keys):
-        d = self.smultiengine.pull(clientID, block, targets, *keys)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
-        return d
+        return self.smultiengine.pull(clientID, block, targets, *keys)
     
+    @packageResult
     def xmlrpc_getResult(self, request, clientID, block, targets, i=None):
         if i == 'None':
             i = None
-        d = self.smultiengine.getResult(clientID, block, targets, i)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
-        return d 
+        return self.smultiengine.getResult(clientID, block, targets, i)
     
+    @packageResult
     def xmlrpc_reset(self, request, clientID, block, targets):
-        d = self.smultiengine.reset(clientID, block, targets)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
-        return d 
+        return self.smultiengine.reset(clientID, block, targets)
     
+    @packageResult
     def xmlrpc_keys(self, request, clientID, block, targets):
-        d = self.smultiengine.keys(clientID, block, targets)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
-        return d  
+        return self.smultiengine.keys(clientID, block, targets)
     
+    @packageResult
     def xmlrpc_kill(self, request, clientID, block, targets, controller=False):
-        d = self.smultiengine.kill(clientID, block, targets, controller)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
-        return d
-        
+        return self.smultiengine.kill(clientID, block, targets, controller)
+
+    @packageResult
     def xmlrpc_clearQueue(self, request, clientID, targets):
-        d = self.smultiengine.clearQueue(clientID, True, targets)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
-        return d   
-    
+        return self.smultiengine.clearQueue(clientID, True, targets)
+
+    @packageResult
     def xmlrpc_queueStatus(self, request, clientID, targets):
-        d = self.smultiengine.queueStatus(clientID, True, targets)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
-        return d  
+        return self.smultiengine.queueStatus(clientID, True, targets)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
@@ -228,6 +256,7 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     # IEngineCoordinator related methods
     #---------------------------------------------------------------------------
     
+    @packageResult
     def xmlrpc_scatter(self, request, clientID, block, targets, key, bseq, style='basic', flatten=False):
         try:
             seq = pickle.loads(bseq.data)
@@ -235,15 +264,11 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
             d = defer.fail(failure.Failure())
         else:
             d = self.smultiengine.scatter(clientID, block, targets, key, seq, style, flatten)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
         return d      
     
+    @packageResult
     def xmlrpc_gather(self, request, clientID, block, targets, key, style='basic'):
-        d = self.smultiengine.gather(clientID, block, targets, key, style)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
-        return d     
+        return self.smultiengine.gather(clientID, block, targets, key, style)
     
     #---------------------------------------------------------------------------
     # Pending Deferred related methods
@@ -264,37 +289,40 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         else:
             return True
             
+    @packageResult
     def xmlrpc_getPendingResult(self, request, clientID, resultID, block):
         """"""
-        d = self.smultiengine.getPendingDeferred(clientID, resultID, block)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
-        return d
+        return self.smultiengine.getPendingDeferred(clientID, resultID, block)
         
+    @packageResult
     def xmlrpc_getAllPendingResults(self, request, clientID):
         """"""    
-        d = self.smultiengine.getAllPendingDeferreds(clientID)
-        d.addCallback(self.packageSuccess)
-        d.addErrback(self.packageFailure)
-        return d        
+        return self.smultiengine.getAllPendingDeferreds(clientID)
     
 
+# The __init__ method of `XMLRPCMultiEngineFromMultiEngine` first adapts the
+# `IMultiEngine` to `ISynchronousMultiEngine` so this is actually doing a
+# two phase adaptation.
 components.registerAdapter(XMLRPCMultiEngineFromMultiEngine,
-            MultiEngine, IXMLRPCMultiEngine)
+            IMultiEngine, IXMLRPCMultiEngine)
 
 
 class IXMLRPCMultiEngineFactory(Interface):
     pass
     
     
-def XMLRPCServerFactoryFromMultiEngine(multiEngine):
+def XMLRPCServerFactoryFromMultiEngine(multiengine):
     """Adapt a MultiEngine to a XMLRPCServerFactory."""
-    s = server.Site(IXMLRPCMultiEngine(multiEngine))
+    s = server.Site(IXMLRPCMultiEngine(multiengine))
     cf = channel.HTTPFactory(s, betweenRequestsTimeOut=BETWEEN_REQUESTS_TIMEOUT)
     return cf
 
+# This adaptation does the final step in:
+# `IMultiEngine` -> `ISynchronousMultiEngine` ->
+# `IXMLRPCMultiEngine` -> `IXMLRPCMultiEngineFactory`
+# The first two steps of this are done above in XMLRPCMultiEngineFromMultiEngine
 components.registerAdapter(XMLRPCServerFactoryFromMultiEngine,
-            MultiEngine, IXMLRPCMultiEngineFactory)
+            IMultiEngine, IXMLRPCMultiEngineFactory)
         
 
 #-------------------------------------------------------------------------------
@@ -304,14 +332,15 @@ components.registerAdapter(XMLRPCServerFactoryFromMultiEngine,
 class XMLRPCMultiEngineClient(object):
     """XMLRPC based MultiEngine client that implements IMultiEngine.
     
+    Make all protected attributes _.
     """
     
     def __init__(self, addr):
         self.addr = addr
         self.url = 'http://%s:%s/' % self.addr
-        self.server = xmlrpclib.ServerProxy(self.url, transport=Transport(), 
+        self._server = xmlrpclib.ServerProxy(self.url, transport=Transport(), 
             verbose=0)
-        self.clientID = None
+        self._clientID = None
         self.block = True
 
     #---------------------------------------------------------------------------
@@ -326,7 +355,7 @@ class XMLRPCMultiEngineClient(object):
                 return block
             else:
                 raise ValueError("block must be True or False")
-        
+
     def _executeRemoteMethod(self, f, *args):
         try:
             rawResult = f(*args)
@@ -348,38 +377,29 @@ class XMLRPCMultiEngineClient(object):
             return result
         
     def _checkClientID(self):
-        if self.clientID is None:
+        if self._clientID is None:
             self._getClientID()
             
     def _getClientID(self):
-        clientID = self.server.registerClient()
-        self.clientID = clientID
+        clientID = self._server.registerClient()
+        self._clientID = clientID
+
+    def _getPendingResult(self, resultID, block=True):
+        self._checkClientID()
+        return self._executeRemoteMethod(self._server.getPendingResult,
+            self._clientID, resultID, block)
     
     #---------------------------------------------------------------------------
-    # Pending results related methods
+    # Methods to help manage pending results
     #--------------------------------------------------------------------------- 
-    
-    def getPendingResult(self, resultID, block=True):
+     
+    def barrier(self):
         self._checkClientID()
-        return self._executeRemoteMethod(self.server.getPendingResult,
-            self.clientID, resultID, block)
-        
-    def getAllPendingResults(self):
-        self._checkClientID()
-        result = self._executeRemoteMethod(self.server.getAllPendingResults, self.clientID)
+        # Optimize to not bring back all results
+        result = self._executeRemoteMethod(self._server.getAllPendingResults, self._clientID)
         for r in result:
             if isinstance(r, failure.Failure):
                 r.raiseException()
-        if len(result) == 1:
-            result = result[0]
-        return result
-        
-    def barrier(self):
-        self._checkClientID()
-        result = self._executeRemoteMethod(self.server.getAllPendingResults, self.clientID)
-        for r in result:
-            if isinstance(r, failure.Failure):
-                r.raiseException() 
         
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
@@ -388,9 +408,12 @@ class XMLRPCMultiEngineClient(object):
     def execute(self, targets, lines, block=None):
         self._checkClientID()
         localBlock = self._reallyBlock(block)
-        result = self._executeRemoteMethod(self.server.execute, self.clientID, localBlock, targets, lines)
+        result = self._executeRemoteMethod(self._server.execute, self._clientID, localBlock, targets, lines)
         if not localBlock:
             result = PendingResult(self, result)
+            result.addCallback(wrapResultList)
+        else:
+            result = ResultList(result)
         return result
     
     def executeAll(self, lines, block=None):
@@ -400,7 +423,7 @@ class XMLRPCMultiEngineClient(object):
         self._checkClientID()
         binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self.server.push, self.clientID, localBlock, targets, binPackage)
+        result = self._executeRemoteMethod(self._server.push, self._clientID, localBlock, targets, binPackage)
         if not localBlock:
             result = PendingResult(self, result)
         return result
@@ -411,7 +434,7 @@ class XMLRPCMultiEngineClient(object):
     def pull(self, targets, *keys):
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self.server.pull, self.clientID, localBlock, targets, *keys)
+        result = self._executeRemoteMethod(self._server.pull, self._clientID, localBlock, targets, *keys)
         if not localBlock:
             result = PendingResult(self, result)
         return result
@@ -424,10 +447,13 @@ class XMLRPCMultiEngineClient(object):
             i = 'None'
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self.server.getResult, self.clientID, localBlock, targets, i)
+        result = self._executeRemoteMethod(self._server.getResult, self._clientID, localBlock, targets, i)
         if not localBlock:
             result = PendingResult(self, result)
-        return result            
+            result.addCallback(wrapResultList)
+        else:
+            result = ResultList(result)
+        return result
          
     def getResultAll(self, i=None):
         return self.getResult('all', i)
@@ -435,7 +461,7 @@ class XMLRPCMultiEngineClient(object):
     def reset(self, targets):
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self.server.reset, self.clientID, localBlock, targets)
+        result = self._executeRemoteMethod(self._server.reset, self._clientID, localBlock, targets)
         if not localBlock:
             result = PendingResult(self, result)
         return result    
@@ -446,7 +472,7 @@ class XMLRPCMultiEngineClient(object):
     def keys(self, targets):
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self.server.keys, self.clientID, localBlock, targets)
+        result = self._executeRemoteMethod(self._server.keys, self._clientID, localBlock, targets)
         if not localBlock:
             result = PendingResult(self, result)
         return result 
@@ -457,7 +483,7 @@ class XMLRPCMultiEngineClient(object):
     def kill(self, targets, controller=False):
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self.server.kill, self.clientID, localBlock, targets, controller)
+        result = self._executeRemoteMethod(self._server.kill, self._clientID, localBlock, targets, controller)
         if not localBlock:
             result = PendingResult(self, result)
         return result
@@ -467,7 +493,7 @@ class XMLRPCMultiEngineClient(object):
         
     def clearQueue(self, targets):
         self._checkClientID()
-        result = self._executeRemoteMethod(self.server.clearQueue, self.clientID, targets)
+        result = self._executeRemoteMethod(self._server.clearQueue, self._clientID, targets)
         return result
         
     def clearQueueAll(self):
@@ -475,8 +501,8 @@ class XMLRPCMultiEngineClient(object):
     
     def queueStatus(self, targets):
         self._checkClientID()
-        result = self._executeRemoteMethod(self.server.queueStatus, self.clientID, targets)
-        return result
+        result = self._executeRemoteMethod(self._server.queueStatus, self._clientID, targets)
+        return QueueStatusList(result)
     
     def queueStatusAll(self):
         return self.queueStatus('all')
@@ -486,7 +512,7 @@ class XMLRPCMultiEngineClient(object):
     #---------------------------------------------------------------------------
     
     def getIDs(self):
-        return self.server.getIDs()
+        return self._server.getIDs()
     
     #---------------------------------------------------------------------------
     # IEngineCoordinator related methods
@@ -496,7 +522,7 @@ class XMLRPCMultiEngineClient(object):
         self._checkClientID()
         bseq = xmlrpc.Binary(pickle.dumps(seq,2))
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self.server.scatter, self.clientID, 
+        result = self._executeRemoteMethod(self._server.scatter, self._clientID, 
             localBlock, targets, key, bseq, style, flatten)
         if not localBlock:
             result = PendingResult(self, result)
@@ -508,7 +534,7 @@ class XMLRPCMultiEngineClient(object):
     def gather(self, targets, key, style='basic'):
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self.server.gather, self.clientID, 
+        result = self._executeRemoteMethod(self._server.gather, self._clientID, 
             localBlock, targets, key, style)
         if not localBlock:
             result = PendingResult(self, result)
@@ -522,6 +548,7 @@ class XMLRPCInteractiveMultiEngineClient(XMLRPCMultiEngineClient, InteractiveMul
     
     def __init__(self, addr):
         XMLRPCMultiEngineClient.__init__(self, addr)
+        InteractiveMultiEngineClient.__init__(self)
 
     
     

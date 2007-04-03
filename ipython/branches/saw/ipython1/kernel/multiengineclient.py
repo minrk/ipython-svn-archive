@@ -27,16 +27,11 @@ from zope.interface import Interface, implements, Attribute
 from IPython.ColorANSI import TermColors
 
 from ipython1.kernel import error
-import ipython1.kernel.pbconfig
-from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
-from ipython1.kernel.blockon import blockOn
-from ipython1.kernel.util import gatherBoth
-from ipython1.kernel.map import Map
 from ipython1.kernel.parallelfunction import ParallelFunction
 
 
 #-------------------------------------------------------------------------------
-# Core Client Interfaces
+# Pending Result things
 #-------------------------------------------------------------------------------
 
 class IPendingResult(Interface):
@@ -45,8 +40,11 @@ class IPendingResult(Interface):
     client=Attribute("An ISynchronousMultiEngineClient that I came from")
     r=Attribute("An attribute that is a property that calls and returns getResult")
     
-    def getResult(self):
+    def getResult(default=None, block=True):
         """Block for the result."""
+        
+    def addCallback(f, *args, **kwargs):
+        """"""
 
 class PendingResult(object):
     
@@ -59,9 +57,8 @@ class PendingResult(object):
     def getResult(self, default=None, block=True):
         if self.called:
             return self.result
-            #raise error.ResultAlreadyRetrieved('Result is already available as .result')
         try:
-            result = self.client.getPendingResult(self.resultID, block)
+            result = self.client._getPendingResult(self.resultID, block)
         except error.ResultNotCompleted:
             return default
         else:
@@ -81,100 +78,57 @@ class PendingResult(object):
     r = property(_get_r)
         
         
+#-------------------------------------------------------------------------------
+# Pretty printing wrappers for certain lists
+#-------------------------------------------------------------------------------    
+    
+class ResultList(list):
+    
+    def __repr__(self):
+        output = []
+        blue = TermColors.Blue
+        normal = TermColors.Normal
+        red = TermColors.Red
+        green = TermColors.Green
+        output.append("<Results List>\n")
+        for cmd in self:
+            if isinstance(cmd, Failure):
+                output.append(cmd)
+            else:
+                target = cmd['id']
+                cmd_num = cmd['commandIndex']
+                cmd_stdin = cmd['stdin']
+                cmd_stdout = cmd['stdout']
+                cmd_stderr = cmd['stderr']
+                output.append("%s[%i]%s In [%i]:%s %s\n" % \
+                    (green, target,
+                    blue, cmd_num, normal, cmd_stdin))
+                if cmd_stdout:
+                    output.append("%s[%i]%s Out[%i]:%s %s\n" % \
+                        (green, target,
+                        red, cmd_num, normal, cmd_stdout))
+                if cmd_stderr:
+                    output.append("%s[%i]%s Err[%i]:\n%s %s" % \
+                        (green, target,
+                        red, cmd_num, normal, cmd_stderr))
+        return ''.join(output)
         
-class ISynchronousMultiEngineClient(Interface):
+def wrapResultList(result):
+    if len(result) == 0:
+        result = [result]
+    return ResultList(result)
     
-    block=Attribute("Should my methods block or not?")
-    
-    def getPendingResult(resultID, block=True):
-        """"""
-        
-    def getAllPendingResults():
-        """"""
-        
-    def barrier():
-        """"""
-        
-    #---------------------------------------------------------------------------
-    # IEngineMultiplexer related methods
-    #---------------------------------------------------------------------------
-        
-    def execute(targets, lines, block=None):
-        """"""
-    
-    def executeAll(lines, block=None):
-        """"""
-    
-    def push(targets, **namespace):
-        """"""
-                
-    def pushAll(**ns):
-        """"""
-    
-    def pull(targets, *keys):
-        """"""
-    
-    def pullAll(*keys):
-        """"""
-        
-    def getResult(targets, i=None):
-        """"""
-         
-    def getResultAll(i=None):
-        """"""
-    
-    def reset(targets):
-        """"""
-        
-    def resetAll():
-        """"""
-    
-    def keys(targets):
-        """"""
-          
-    def keysAll():
-        """"""
-    
-    def kill(targets, controller=False):
-        """"""
-    
-    def killAll(controller=False):
-        """"""
-        
-    def clearQueue(targets):
-        """"""
-        
-    def clearQueueAll():
-        """"""
-    
-    def queueStatus(targets):
-        """"""
-    
-    def queueStatusAll():
-        """"""
-    
-    #---------------------------------------------------------------------------
-    # IMultiEngine related methods
-    #---------------------------------------------------------------------------
-    
-    def getIDs():
-        """"""
-    
-    #---------------------------------------------------------------------------
-    # IEngineCoordinator related methods
-    #---------------------------------------------------------------------------
-    
-    def scatter(targets, key, seq, style='basic', flatten=False):
-        """"""
-        
-    def scatterAll(key, seq, style='basic', flatten=False):
-        """"""
-    
-    def gather(targets, key, style='basic'):
-        """"""
-        
-    def gatherAll(key, style='basic'):
-        """"""
+class QueueStatusList(list):
+
+    def __repr__(self):
+        output = []
+        output.append("<Queue Status List>\n")
+        for e in self:
+            output.append("Engine: %s\n" % repr(e[0]))
+            output.append("    Pending: %s\n" % repr(e[1]['pending']))
+            for q in e[1]['queue']:
+                output.append("    Command: %s\n" % repr(q))
+        return ''.join(output)
 
 
 #-------------------------------------------------------------------------------
@@ -186,10 +140,6 @@ class InteractiveMultiEngineClient(object):
     #---------------------------------------------------------------------------
     # Interactive Extensions:
     #
-    # ipull/ipullAll
-    # iexecute/iexecuteAll
-    # igetResult/igetResultAll
-    # iqueueStatus/iqueueStatusAll
     # activate
     # run/runAll
     # map/mapAll
@@ -199,17 +149,27 @@ class InteractiveMultiEngineClient(object):
     # __getitem__
     
     #---------------------------------------------------------------------------
+    
+    _magicTargets = 'all'
+    
+    def _setMagicTargets(self, targets):
+        self._magicTargets = targets
         
+    def _getMagicTargets(self):
+        return self._magicTargets
+    
+    magicTargets = property(_getMagicTargets, _setMagicTargets, None, None)
+            
     def _transformPullResult(self, pushResult, multitargets, lenKeys):
         if not multitargets:
             result = pushResult[0]
         elif lenKeys > 1:
             result = zip(*pushResult)
         elif lenKeys is 1:
-            result = tuple(pushResult)
+            result = list(pushResult)
         return result
         
-    def ipull(self, targets, *keys):
+    def zipPull(self, targets, *keys):
         result = self.pull(targets, *keys)
         multitargets = not isinstance(targets, int) and len(targets) > 1
         lenKeys = len(keys)
@@ -219,75 +179,9 @@ class InteractiveMultiEngineClient(object):
             result.addCallback(self._transformPullResult, multitargets, lenKeys)
         return result
             
-    def ipullAll(self, *keys):
+    def zipPullAll(self, *keys):
         return self.ipull('all', *keys)
-        
-    def _printResult(self, result):
-        if len(result) == 0:
-            result = [result]
-            
-        blue = TermColors.Blue
-        normal = TermColors.Normal
-        red = TermColors.Red
-        green = TermColors.Green
-        for cmd in result:
-            if isinstance(cmd, Failure):
-                print cmd
-            else:
-                target = cmd['id']
-                cmd_num = cmd['commandIndex']
-                cmd_stdin = cmd['stdin']
-                cmd_stdout = cmd['stdout']
-                cmd_stderr = cmd['stderr']
-                print "%s[%s:%i]%s In [%i]:%s %s" % \
-                    (green, self.addr[0], target,
-                    blue, cmd_num, normal, cmd_stdin)
-                if cmd_stdout:
-                    print "%s[%s:%i]%s Out[%i]:%s %s" % \
-                        (green, self.addr[0], target,
-                        red, cmd_num, normal, cmd_stdout)
-                if cmd_stderr:
-                    print "%s[%s:%i]%s Err[%i]:\n%s %s" % \
-                        (green, self.addr[0], target,
-                        red, cmd_num, normal, cmd_stderr)
-        return None
-        
-    def iexecute(self, targets, lines, block=None):
-        result = self.execute(targets, lines, block)
-        if self._reallyBlock(block):
-            self._printResult(result)
-        else:
-            result.addCallback(self._printResult)
-            return result
-        
-    def iexecuteAll(self, lines, block=None):
-        return self.iexecute('all', lines, block)
-        
-    def igetResult(self, targets, i=None):
-        result = self.getResult(targets, i)
-        if self.block:
-            self._printResult(result)
-        else:
-            result.addCallback(self._printResult)
-            return result
-    
-    def igetResultAll(self, i=None):
-        return self.igetResult('all', i)
-    
-    def _printQueueStatus(self, status):
-        for e in status:
-            print "Engine: ", e[0]
-            print "    Pending: ", e[1]['pending']
-            for q in e[1]['queue']:
-                print "    Command: ", q
-            
-    def iqueueStatus(self, targets):
-        result = self.queueStatus(targets)
-        self._printQueueStatus(result)
-    
-    def iqueueStatusAll(self):
-        return self.iqueueStatus('all')
-        
+                    
     def activate(self):
         """Make this `RemoteController` active for parallel magic commands.
         
@@ -317,26 +211,9 @@ class InteractiveMultiEngineClient(object):
             print "The IPython Controller magics only work within IPython."
             
     def run(self, targets, fname, block=None):
-        """Run a .py file on engine(s).
-        
-        This reads a local .py file named fname and sends it to be 
-        executed on remote engines.  It is executed in the user's
-        namespace.  This is intended to function like IPython's run
-        magic, but its implementation doesn't work quite right.  But
-        for simple files it should work.  
-        
-        :Parameters:
-         - `targets`: The engine id(s) to run on. Targets can be 
-           an int, list of ints, or the string 'all' to indicate all 
-           available engines.  To see the current ids available on a 
-           controller use `getIDs()`.
-         - `fname`: The filename to run.
-         
-        :return: ``True`` or ``False`` to indicate success or failure.    
-        """
+        """Run a .py file on targets."""
         fileobj = open(fname,'r')
         source = fileobj.read()
-        print source
         fileobj.close()
         # if the compilation blows, we get a local error right away
         code = compile(source,fname,'exec')
@@ -344,12 +221,12 @@ class InteractiveMultiEngineClient(object):
         # Now run the code
         return self.execute(targets, source, block)
         
-    def runAll(self, fname):
+    def runAll(self, fname, block=None):
         """Run a .py file on all engines.
         
         See the docstring for `run` for more details.
         """
-        return self.run('all', fname)
+        return self.run('all', fname, block)
         
     def __setitem__(self, key, value):
         """Add a dictionary interface to `RemoteController`.
@@ -401,14 +278,10 @@ class InteractiveMultiEngineClient(object):
         :Parameters:
          - `id`: A string representing the key.
         """
-        if isinstance(id, slice):
-            return InteractiveMultiEngineClientView(self, id)
-        elif isinstance(id, int):
-            return EngineProxy(self, id)
-        elif isinstance(id, str):
+        if isinstance(id, str):
             return self.pull('all', *(id,))
         else:
-            raise TypeError("__getitem__ only takes strs, ints, and slices")
+            raise TypeError("__getitem__ only takes strs")
             
     def __len__(self):
         """Return the number of available engines."""
@@ -447,11 +320,11 @@ class InteractiveMultiEngineClient(object):
             '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
             functionSource        
         pd1 = self.scatter(targets, '_ipython_map_seq', seq, style)
+        print pd1.getResult()
         pd2 = self.execute(targets, sourceToRun)
+        print pd2.getResult()
         pd3 = self.gather(targets, '_ipython_map_seq_result', style)
         self.block = saveBlock
-        pd1.getResult()
-        pd2.getResult()
         return pd3.getResult()
             
     def mapAll(self, functionSource, seq, style='basic'):
@@ -486,13 +359,7 @@ class InteractiveMultiEngineClient(object):
         :return:  A `ParallelFunction` object for targets.
         """
         
-        if targets == 'all':
-            rcview = self
-        elif isinstance(targets, int):
-            rcview = InteractiveMultiEngineClientView(self, [targets])
-        elif isinstance(targets, (list, tuple)):
-            rcview = InteractiveMultiEngineClientView(self, targets)
-        return ParallelFunction(functionName, rcview)
+        return ParallelFunction(targets, functionName, self)
         
     def parallelizeAll(self, functionName):
         """Build a `ParallelFunction` that operates on all engines.
@@ -500,285 +367,3 @@ class InteractiveMultiEngineClient(object):
         See the docstring for `parallelize` for more details.
         """
         return self.parallelize('all', functionName)
-        
-
-#-------------------------------------------------------------------------------
-# InteractiveMultiEngineClient
-#-------------------------------------------------------------------------------
-
-class InteractiveMultiEngineClientView(object):
-    """A subset interface for InteractiveMultiEngineClient.__getitem__"""
-    def __init__(self, imec, ids):
-        self.imec = imec
-        if isinstance(ids, slice):
-            self._originalIDs = range(*ids.indices(ids.stop))
-        elif isinstance(ids, list):
-            self._originalIDs = ids
-        else:
-            raise TypeError("RemoteControllerView requires slice or list")
-        # Make sure these exist as of now
-        currentIDs = imec.getIDs()
-        for id in self._originalIDs:
-            if id not in currentIDs:
-                raise Exception("The engine with id %i does not exist" % id)
-        self._ids = range(len(self._originalIDs))
-        # print self._ids
-        # print self._originalIDs
-    
-    def _getBlock(self): return self.imec.block
-    def _setBlock(self, block): self.imec.block = block
-    
-    block = property(_getBlock, _setBlock, None, None)
-    
-    #---------------------------------------------------------------------------
-    # Pending Results methods
-    #---------------------------------------------------------------------------
-    
-    def getAllPendingResults(self):
-        raise error.ClientError("Multiengine Views don't implement the getAllPendingResults method.")
-        
-    def barrier(self):
-        return error.ClientError("Multiengine Views don't implement the barrier method.")
-    
-    #---------------------------------------------------------------------------
-    # IMultiEngine Interface methods
-    #---------------------------------------------------------------------------
-    
-    def execute(self, targets, lines, block=None):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.execute(actualTargets, lines, block)
-    
-    def executeAll(self, lines, block=None):
-        return self.execute('all', lines, block)
-        
-    def push(self, targets, *keys, **namespace):
-        if keys: namespace.update(utils.extractVarsAbove(*keys))
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.push(actualTargets, **namespace)
-    
-    def pushAll(self, *keys,**namespace):
-        if keys: namespace.update(utils.extractVarsAbove(*keys))
-        return self.push('all', **namespace)
-        
-    def pull(self, targets, *keys):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.pull(actualTargets, *keys)
-    
-    def pullAll(self, *keys):
-        r = self.pull('all', *keys)
-        if len(self._ids) is 1:
-            r = [r]
-        return r
-        
-    def getResult(self, targets, i=None):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.getResult(actualTargets, i)
-    
-    def getResultAll(self, i=None):
-        r = self.getResult('all', i)
-        if len(self._ids) is 1:
-            r = [r]
-        return r
-             
-    def reset(self, targets):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.reset(actualTargets)
-    
-    def resetAll(self):
-        return self.reset('all')
-
-    def queueStatus(self, targets):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.queueStatus(actualTargets)
-    
-    def queueStatusAll(self):
-        r = self.queueStatus('all')
-        if len(self._ids) is 1:
-            r = [r]
-        return r
-        
-    def kill(self, targets):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.kill(actualTargets)
-    
-    def killAll(self):
-        return self.kill('all')
-                
-    def getIDs(self):
-        """Return the ids of the Engines as the Controller indexes them."""
-        
-        return self._originalIDs
-
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.scatter(actualTargets, key, seq, style, flatten)
-    
-    def scatterAll(self, key, seq, style='basic', flatten=False):
-        return self.scatter('all', key, seq, style, flatten)
-        
-    def gather(self, targets, key, style='basic'):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.gather(actualTargets, key, style)        
-    
-    def gatherAll(self, key, style='basic'):
-        return self.gather('all', key, style)
-                
-    #---------------------------------------------------------------------------
-    # InteractiveMultiEngineClient methods
-    #---------------------------------------------------------------------------
-                
-    def activate(self):
-        try:
-            __IPYTHON__.activeController = self
-        except NameError:
-            print "The IPython Controller magics only work within IPython."
-        
-    def run(self, targets, fname):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.run(actualTargets, fname)
-    
-    def runAll(self, fname):
-        return self.run('all', fname)
-        
-    def __setitem__(self, key, value):
-        return self.push('all', **{key:value})
-            
-    def __getitem__(self, id):
-        if isinstance(id, slice):
-            return RemoteControllerView(self.imec, self._originalIDs[id])
-        elif isinstance(id, int):
-            return EngineProxy(self.imec, self._originalIDs[id])
-        elif isinstance(id, str):
-            return self.pull('all',*(id,))
-        else:
-            raise TypeError("__getitem__ only takes strs, ints, and slices")
-        
-    def map(self, targets, functionSource, seq, style='basic'):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.map(actualTargets, functionSource, seq, style)
-    
-    def mapAll(self, functionSource, seq, style='basic'):
-        return self.map('all', functionSource, seq, style)
-    
-    def parallelize(self, targets, functionName):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.parallelize(actualTargets, functionName)
-    
-    def parallelizeAll(self, functionName):
-        return self.parallelize('all', functionName)
-        
-    def __len__(self):
-        return self.imec.blockOn(self.imec.getIDs())
-        
-    def iexecute(self, targets, lines, block=None):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.iexecuteAll(actualTargets, lines, block)
-        
-    def iexecuteAll(self, lines, block=None):
-        return self.iexecute('all', lines, block)
-        
-    def igetResult(self, targets, i=None):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.igetResult(actualTargets, i)
-        
-    def igetResultAll(self, i=None):
-        return self.igetResult('all', i)
-        
-    def ipull(self, targets, *keys):
-        actualTargets = self._mapIDsToOriginal(targets)
-        return self.imec.ipull(actualTargets, *keys)
-        
-    def ipullAll(self, *keys):
-        return self.ipull('all', *keys)
-        
-    def iqueueStatus(self, targets):
-        actualTargets = self._mapIDsToOriginal(targets)
-        self.imec.iqueueStatus(actualTargets)
-            
-    def iqueueStatusAll(self):
-        return self.iqueueStatus('all')
-        
-    #---------------------------------------------------------------------------
-    # Methods specific to a RemoteControllerView
-    #---------------------------------------------------------------------------
-        
-    def getMappedIDs(self):
-        """Return the ids that current operations will succeed on."""
-        return self._ids
-        
-    def _mapIDsToOriginal(self, ids):
-        if ids == 'all':
-            return self._originalIDs
-        elif isinstance(ids, int) and ids in self._ids:
-            return self._originalIDs[ids]
-        elif isinstance(ids, (list, tuple)):
-            return [self._originalIDs[i] for i in ids]
-        else:
-            raise TypeError("targets/ids must be int, list or tuple")
-    
-    
-#-------------------------------------------------------------------------------
-# EngineProxy
-#-------------------------------------------------------------------------------
-    
-class EngineProxy(object):
-    """A proxy for an Engine that goes through a RemoteController.
-
-    The user won't ever create these directly.  Instead, the actual
-    RemoteController class does that when a particular Engine is indexed.
-    """
-
-    def _getBlock(self): return self.imec.block
-    def _setBlock(self, block): self.imec.block = block
-    
-    block = property(_getBlock, _setBlock, None, None)
-
-    def __init__(self, imec, id):
-        self.id = id
-        self.imec = imec
-        
-    def getAllPendingResults(self):
-        raise error.ClientError("EngineProxy's don't implement the getAllPendingResults method.")
-
-    def barrier(self):
-        return error.ClientError("EngineProxy's don't implement the barrier method.")
-
-    def execute(self, strings, block=None):
-        return self.imec.execute(self.id, strings, block)
-    
-    def push(self, *keys,**namespace):
-        if keys: namespace.update(utils.extractVarsAbove(*keys))
-        return self.imec.push(self.id, **namespace)
-    
-    def pull(self, *keys):
-        return self.imec.pull(self.id, *keys)
-
-    def getResult(self, i=None):
-        return self.imec.getResult(self.id, i)
-    
-    def status(self):
-        return self.imec.status(self.id)
-    
-    def reset(self):
-        return self.imec.reset(self.id)
-    
-    def kill(self):
-        return self.imec.kill(self.id)
-
-    def __setitem__(self, key, value):
-        return self.push(**{key:value})
-        
-    def __getitem__(self, key):
-        return self.pull(*(key,))
-        
-    def iexecute(self, lines, block=None):
-        return self.imec.iexecute(self.id, lines, block)
-        
-    def igetResult(self, i=None):
-        return self.imec.igetResult(self.id, i)
-        
-    def ipull(self, *keys):
-        return self.imec.ipull(self.id, *keys)
-        
-    def iqueueStatus(self):
-        self.imec.iqueueStatus(self.id)

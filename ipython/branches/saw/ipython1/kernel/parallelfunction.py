@@ -14,11 +14,12 @@ __docformat__ = "restructuredtext en"
 
 class ParallelFunction:
     """A function that operates in parallel on sequences."""
-    def __init__(self, functionName, remoteController):
+    def __init__(self, targets, functionName, remoteController):
         """Create a `ParallelFunction`.
         """
         self.fname = functionName
         self.rc = remoteController
+        self.targets = targets
         
     def __call__(self,sequence):
-        return self.rc.mapAll(self.fname,sequence)
+        return self.rc.map(self.targets, self.fname, sequence)

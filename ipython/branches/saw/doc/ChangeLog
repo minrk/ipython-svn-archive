@@ -1,4 +1,19 @@
-2007-02-16  Brian Granger <ellisonbg@gmail.com>
+2007-04-02  Brian Granger <ellisonbg@gmail.com>
+
+	* ipython1.kernel.multiengine.py: Improve documentation
+	and test coverage.
+	
+	* ipython1.kernel.multienginexmlrpc.py:  Reduced boilerplate code
+	using decorators.  Improve documentation and tests.  Misc 
+	debugging.
+	
+	* ipython1.kernel.multiengineclient.py:  Got rid of ifoo methods
+	and replaced them by types with custom __repr__ methods.  ipull
+	is now zipPull.  Got rid of slicing and indexing notation in 
+	client class.  It led to an API that was simply too complex.
+
+
+2007-03-20  Brian Granger <ellisonbg@gmail.com>
 
 	* ipython1.kernel.controllerservice.py: Improve documentation
 	and test coverage for the base controller implementation.
