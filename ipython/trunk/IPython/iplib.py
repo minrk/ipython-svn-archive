@@ -2142,7 +2142,7 @@ want to merge them back into the new files.""" % locals()
 
         # First check for explicit escapes in the last/first character
         handler = None
-        if line[-1] == self.ESC_HELP:
+        if line[-1] == self.ESC_HELP and line[0] != self.ESC_SHELL:
             handler = self.esc_handlers.get(line[-1])  # the ? can be at the end
         if handler is None:
             # look at the first character of iFun, NOT of line, so we skip
