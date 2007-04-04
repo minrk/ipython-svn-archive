@@ -72,6 +72,8 @@ defaultRemoteController = (clientConfig.connectToRemoteControllerOn['ip'],
     clientConfig.connectToRemoteControllerOn['port'])
 """The (ip,port) tuple of the default controller."""
 
+from ipython1.kernel.task import Task
+
 TaskController = clientConfig.TaskController
 """The default TaskController class obtained from config information."""
 

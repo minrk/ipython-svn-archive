@@ -330,12 +330,31 @@ components.registerAdapter(XMLRPCServerFactoryFromMultiEngine,
 #-------------------------------------------------------------------------------
 
 class XMLRPCMultiEngineClient(object):
-    """XMLRPC based MultiEngine client that implements IMultiEngine.
+    """Client that talks to a IMultiEngine adapted controller over XML-RPC.
     
-    Make all protected attributes _.
+    This class will usually be alias to RemoteController so create one like 
+    this:
+    
+    >>> rc = RemoteController(('myhost.work.com', 10105))
+    
+    This class has a attribute named block that controls how most methods
+    work.  If block=True (default) all methods will actually block until
+    their action has been completed.  Then they will return their result
+    or raise any Exceptions.  If block=False, the method will simply
+    return a `PendingResult` object whose `getResult` method can then be
+    used to later retrieve the result.
     """
     
     def __init__(self, addr):
+        """Create a client that will connect to addr.
+        
+        Once created, this class will autoconnect and reconnect to the
+        controller as needed.
+        
+        :Parameters:
+            addr : tuple
+                The (ip, port) of the IMultiEngine adapted controller.
+        """
         self.addr = addr
         self.url = 'http://%s:%s/' % self.addr
         self._server = xmlrpclib.ServerProxy(self.url, transport=Transport(), 
@@ -394,6 +413,31 @@ class XMLRPCMultiEngineClient(object):
     #--------------------------------------------------------------------------- 
      
     def barrier(self):
+        """Synchronize flush all PendingResults.
+        
+        This method is a synchronization primitive that waits for all existing
+        PendingResult that a controller knows about to complete and then 
+        flushes them.  More specifically, three things happen:
+        
+        * Wait for all PendingResults on a controller to complete.
+        * Raise any Exceptions that occured in the PendingResults.
+        * Flush the PendingResults from the controller.
+        
+        If there are multiple Exceptions, only the first is raised.  
+        
+        The flush step is extremely important!  If have a PendingResult object
+        and then call barrier, further calls to PendingResult.getResult will
+        fail as the controller no longer knows about the PendingResult:
+        
+        >>> pr = rc.executeAll('a=5',block=False)
+        >>> rc.barrier()
+        >>> pr.getResult()           # This will fail as pr has been flushed.
+        
+        This method should be used when you need to make sure that all
+        PendingResults have completed and check for errors.  If you actually
+        need to access the results of those PendingResults, you should not
+        call barrier.  Instead, call PendingResult.getResult on each object.
+        """
         self._checkClientID()
         # Optimize to not bring back all results
         result = self._executeRemoteMethod(self._server.getAllPendingResults, self._clientID)
@@ -406,6 +450,24 @@ class XMLRPCMultiEngineClient(object):
     #---------------------------------------------------------------------------
         
     def execute(self, targets, lines, block=None):
+        """Execute lines of code on targets and possibly block.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines. 
+            lines : str
+                A string of Python code to execute.
+            block : boolean
+                Should I block or not.  If block=True, wait for the action to
+                complete and return the result.  If block=False, return a
+                `PendingResult` object that can be used to later get the
+                result.  If block is not specified, the block attribute 
+                will be used instead.
+            
+        :Returns: A list of dictionaries with the stdin/stdout/stderr of the 
+        command on each targets.
+        """
         self._checkClientID()
         localBlock = self._reallyBlock(block)
         result = self._executeRemoteMethod(self._server.execute, self._clientID, localBlock, targets, lines)
@@ -417,9 +479,32 @@ class XMLRPCMultiEngineClient(object):
         return result
     
     def executeAll(self, lines, block=None):
+        """Execute lines of code on all targets.
+        
+        See the docstring for `execute` for full details.
+        """
         return self.execute('all', lines, block)
     
     def push(self, targets, **namespace):
+        """Push Python objects to engines by key.
+        
+        This method takes all key/value pairs passed in as keyword arguments
+        and pushes them to the engines specified in targets.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            namespace : dict
+                The keyword arguments of that contain the key, value pairs
+                that will be pushed.
+                
+        Examples
+        ========
+        
+        >>> rc.push('all', a=5)    # pushes 5 to all engines as 'a'
+        >>> rc.push(0, b=30)       # pushes 30 to 0 as 'b'
+        """
         self._checkClientID()
         binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
         localBlock = self._reallyBlock()
@@ -432,6 +517,13 @@ class XMLRPCMultiEngineClient(object):
         return self.push('all', **ns)
     
     def pull(self, targets, *keys):
+        """
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+        """
         self._checkClientID()
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod(self._server.pull, self._clientID, localBlock, targets, *keys)
@@ -443,6 +535,12 @@ class XMLRPCMultiEngineClient(object):
         return self.pull('all', *keys)
         
     def getResult(self, targets, i=None):
+        """
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+        """
         if i is None: # This is because None cannot be marshalled by xml-rpc
             i = 'None'
         self._checkClientID()
@@ -459,6 +557,13 @@ class XMLRPCMultiEngineClient(object):
         return self.getResult('all', i)
     
     def reset(self, targets):
+        """
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+        """
         self._checkClientID()
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod(self._server.reset, self._clientID, localBlock, targets)
@@ -470,6 +575,16 @@ class XMLRPCMultiEngineClient(object):
         return self.reset('all')
     
     def keys(self, targets):
+        """List all the variable names defined on each engine.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+        
+        :Returns: A list of the variables names on each engine.
+        """
+        
         self._checkClientID()
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod(self._server.keys, self._clientID, localBlock, targets)
@@ -546,9 +661,11 @@ class XMLRPCMultiEngineClient(object):
 
 class XMLRPCInteractiveMultiEngineClient(XMLRPCMultiEngineClient, InteractiveMultiEngineClient):
     
+    __doc__ = XMLRPCMultiEngineClient.__doc__
+    
     def __init__(self, addr):
         XMLRPCMultiEngineClient.__init__(self, addr)
         InteractiveMultiEngineClient.__init__(self)
 
-    
+    __init__.__doc__ = XMLRPCMultiEngineClient.__init__.__doc__
     

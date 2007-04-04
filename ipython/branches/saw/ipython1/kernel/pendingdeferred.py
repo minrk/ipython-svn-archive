@@ -111,6 +111,7 @@ class PendingDeferredManager(object):
             block : boolean
                 Should I block until the deferred has fired.
         """
+        #log.msg("getPendingDeferred: %s %s" % (repr(deferredID), repr(block)))
         pd = self.pendingDeferreds.get(deferredID)
         if pd is not None:
             if not pd.called and block:    # pd has not fired and we should block

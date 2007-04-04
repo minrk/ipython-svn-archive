@@ -35,32 +35,93 @@ from ipython1.kernel.parallelfunction import ParallelFunction
 #-------------------------------------------------------------------------------
 
 class IPendingResult(Interface):
+    """A representation of a result that is pending.
+    
+    This class is similar to Twisted's Deferred object, but is designed to be
+    used in a synchronous context.
+    """
     
     resultID=Attribute("ID of the deferred on the other side")
     client=Attribute("An ISynchronousMultiEngineClient that I came from")
     r=Attribute("An attribute that is a property that calls and returns getResult")
     
     def getResult(default=None, block=True):
-        """Block for the result."""
+        """Get a result that is pending.
+                
+        :Parameters:
+            default
+                The value to return if the result is not ready.
+            block : boolean
+                Should I block for the result.
+                
+        :Returns: The actual result or the default value.
+        """
         
     def addCallback(f, *args, **kwargs):
-        """"""
+        """Add a callback that is called with the result.
+        
+        If the original result is result, adding a callback will cause
+        f(result, *args, **kwargs) to be returned instead.  If multiple
+        callbacks are registered, they are chained together: the result of
+        one is passed to the next and so on.  
+        
+        Unlike Twisted's Deferred object, there is no errback chain.  Thus
+        any exception raised will not be caught and handled.  User must 
+        catch these by hand when calling `getResult`.
+        """
 
 class PendingResult(object):
+    """A representation of a result that is not yet ready.
+    
+    A user should not create a `PendingResult` instance by hand.  They are returned
+    by methods of ISynchronousMultiEngine clients.
+    
+    Methods
+    =======
+    
+    * `getResult`
+    * `addCallback`
+    
+    Properties
+    ==========
+    * `r`
+    """
     
     def __init__(self, client, resultID):
+        """Create a PendingResult with a resultID and a client instance.
+        
+        The client should implement `_getPendingResult(resultID, block)`.
+        """
         self.client = client
         self.resultID = resultID
         self.called = False
         self.callbacks = []
         
     def getResult(self, default=None, block=True):
+        """Get a result that is pending.
+                
+        This method will connect to an IMultiEngine adapted controller
+        and see if the result is ready.
+        
+        :Parameters:
+            default
+                The value to return if the result is not ready.
+            block : boolean
+                Should I block for the result.
+                
+        :Returns: The actual result or the default value.
+        """
+        
         if self.called:
             return self.result
         try:
             result = self.client._getPendingResult(self.resultID, block)
         except error.ResultNotCompleted:
             return default
+        except:
+            self.called = True
+            # Save the real exception here
+            self.result = None
         else:
             for cb in self.callbacks:
                 result = cb[0](result, *cb[1], **cb[2])
@@ -69,13 +130,25 @@ class PendingResult(object):
             return result
         
     def addCallback(self, f, *args, **kwargs):
+        """Add a callback that is called with the result.
+        
+        If the original result is result, adding a callback will cause
+        f(result, *args, **kwargs) to be returned instead.  If multiple
+        callbacks are registered, they are chained together: the result of
+        one is passed to the next and so on.  
+        
+        Unlike Twisted's Deferred object, there is no errback chain.  Thus
+        any exception raised will not be caught and handled.  User must 
+        catch these by hand when calling `getResult`.
+        """
         assert callable(f)
         self.callbacks.append((f, args, kwargs))
         
     def _get_r(self):
-        return self.getResult(True)
+        return self.getResult(block=True)
 
     r = property(_get_r)
+    """This property is a shortcut to a `getResult(block=True)`."""
         
         
 #-------------------------------------------------------------------------------
@@ -83,6 +156,7 @@ class PendingResult(object):
 #-------------------------------------------------------------------------------    
     
 class ResultList(list):
+    """A subclass of list that pretty prints the output of `execute`/`getResult`."""
     
     def __repr__(self):
         output = []
@@ -114,11 +188,13 @@ class ResultList(list):
         return ''.join(output)
         
 def wrapResultList(result):
+    """A function that wraps the output of `execute`/`getResult` -> `ResultList`."""
     if len(result) == 0:
         result = [result]
     return ResultList(result)
     
 class QueueStatusList(list):
+    """A subclass of list that pretty prints the output of `queueStatus`."""
 
     def __repr__(self):
         output = []
@@ -180,7 +256,7 @@ class InteractiveMultiEngineClient(object):
         return result
             
     def zipPullAll(self, *keys):
-        return self.ipull('all', *keys)
+        return self.zipPull('all', *keys)
                     
     def activate(self):
         """Make this `RemoteController` active for parallel magic commands.
