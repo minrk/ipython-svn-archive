@@ -61,7 +61,7 @@ from pprint import pprint, pformat
 
 # IPython's own modules
 import IPython
-from IPython import OInspect,PyColorize,ultraTB
+from IPython import Debugger,OInspect,PyColorize,ultraTB
 from IPython.ColorANSI import ColorScheme,ColorSchemeTable  # too long names
 from IPython.FakeModule import FakeModule
 from IPython.Itpl import Itpl,itpl,printpl,ItplNS,itplns
@@ -1444,14 +1444,10 @@ want to merge them back into the new files.""" % locals()
             error('No traceback has been produced, nothing to debug.')
             return
 
-        have_pydb = False
         # use pydb if available
-        try:
+        if Debugger.has_pydb:
             from pydb import pm
-            have_pydb = True
-        except ImportError:
-            pass
-        if not have_pydb:
+        else:
             # fallback to our internal debugger
             pm = lambda : self.InteractiveTB.debugger(force=True)
         self.history_saving_wrapper(pm)()

@@ -51,7 +51,9 @@ has_pydb = False
 prompt = 'ipdb> '
 try:
     import pydb
-    if hasattr(pydb.pydb, "runl"):
+    if hasattr(pydb.pydb, "runl") and pydb.version>'1.17':
+        # Version 1.17 is broken, and that's what ships with Ubuntu Edgy, so we
+        # better protetct against it.
         has_pydb = True
         from pydb import Pdb as OldPdb
 except ImportError:
