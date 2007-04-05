@@ -386,7 +386,6 @@ class TaskController(cs.ControllerAdapterBase):
         """remove a task from the queue if it has not been run already"""
         try:
             self.scheduler.popTask(taskID)
-            log.msg("Task #%i Aborted"%taskID)
         except IndexError, e:
             if taskID in self.finishedResults.keys():
                 d = defer.fail(IndexError("Task Already Completed"))
@@ -399,28 +398,30 @@ class TaskController(cs.ControllerAdapterBase):
             else:
                 return defer.fail(e)
         else:
-            d = defer.succeed(None)
+            d = defer.execute(self._doAbort, taskID)
         return d
     
     #---------------------------------------------------------------------------
     # Queue methods
     #---------------------------------------------------------------------------
     
-    def _doAbortPending(self, taskID):
+    def _doAbort(self, taskID):
         """helper function for aborting a pending task"""
-        for i in range(len(self.abortPending)):
-            id,d = self.abortPending[i]
-            if taskID == id:
-                d.callback(None)
-                self.abortPending.pop(i)
-                d2 = self.deferredResults.pop(taskID)
-                log.msg("Task #%i Aborted"%taskID)
-                e = error.TaskAborted()
-                result = failure.Failure(e)
-                self.finishedResults[taskID] = result
-                d2.errback(result)
-                return
-        raise IndexError("Failed to Abort task #%i"%taskID)
+        if self.deferredResults.has_key(taskID):
+            for i in range(len(self.abortPending)):
+                id,d = self.abortPending[i]
+                if taskID == id:
+                    self.abortPending.pop(i)
+                    d.callback(None)
+                    break
+            d2 = self.deferredResults.pop(taskID)
+            log.msg("Task #%i Aborted"%taskID)
+            e = error.TaskAborted()
+            result = failure.Failure(e)
+            self.finishedResults[taskID] = result
+            d2.errback(result)
+        else:
+            raise IndexError("Failed to Abort task #%i"%taskID)
     
     def distributeTasks(self):
         """Distribute tasks while self.scheduler has things to do"""
@@ -454,7 +455,7 @@ class TaskController(cs.ControllerAdapterBase):
         aborted = False
         for id, d in self.abortPending:
             if taskID == id:
-                self._doAbortPending(taskID)
+                self._doAbort(taskID)
                 aborted = True
                 break
         

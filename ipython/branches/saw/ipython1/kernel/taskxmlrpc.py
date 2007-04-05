@@ -167,7 +167,7 @@ class IXMLRPCTaskControllerFactory(Interface):
 def XMLRPCServerFactoryFromTaskController(taskController):
     """Adapt a TaskController to a XMLRPCServerFactory."""
     s = server.Site(IXMLRPCTaskController(taskController))
-    return channel.HTTPFactory(s)
+    return channel.HTTPFactory(s, betweenRequestsTimeOut=BETWEEN_REQUESTS_TIMEOUT)
 
 
 components.registerAdapter(XMLRPCServerFactoryFromTaskController,
@@ -193,9 +193,9 @@ class XMLRPCTaskClient(object):
     def __init__(self, addr):
         self.addr = addr
         self.url = 'http://%s:%s/' % self.addr
-        self.server = xmlrpclib.ServerProxy(self.url, transport=Transport(), 
+        self._server = xmlrpclib.ServerProxy(self.url, transport=Transport(), 
             verbose=0)
-        self.clientID = None
+        self._clientID = None
         self.block = True
     
     #---------------------------------------------------------------------------
@@ -232,25 +232,21 @@ class XMLRPCTaskClient(object):
             return result
     
     def _checkClientID(self):
-        if self.clientID is None:
+        if self._clientID is None:
             self._getClientID()
     
     def _getClientID(self):
-        clientID = self.server.registerClient()
-        self.clientID = clientID
+        clientID = self._server.registerClient()
+        self._clientID = clientID
     
-    #---------------------------------------------------------------------------
-    # Pending results related methods
-    #--------------------------------------------------------------------------- 
-    
-    def getPendingResult(self, resultID, block=True):
+    def _getPendingResult(self, resultID, block=True):
         self._checkClientID()
-        return self._executeRemoteMethod(self.server.getPendingResult,
-            self.clientID, resultID, block)
+        return self._executeRemoteMethod(self._server.getPendingResult,
+            self._clientID, resultID, block)
     
-    def getAllPendingResults(self):
+    def _getAllPendingResults(self):
         self._checkClientID()
-        result = self._executeRemoteMethod(self.server.getAllPendingResults, self.clientID)
+        result = self._executeRemoteMethod(self._server.getAllPendingResults, self._clientID)
         for r in result:
             if isinstance(r, failure.Failure):
                 r.raiseException()
@@ -258,9 +254,13 @@ class XMLRPCTaskClient(object):
             result = result[0]
         return result
     
+    #---------------------------------------------------------------------------
+    # Methods to help manage pending results
+    #--------------------------------------------------------------------------- 
+    
     def barrier(self):
         self._checkClientID()
-        result = self._executeRemoteMethod(self.server.getAllPendingResults, self.clientID)
+        result = self._executeRemoteMethod(self._server.getAllPendingResults, self._clientID)
         for r in result:
             if isinstance(r, failure.Failure):
                 r.raiseException() 
@@ -283,14 +283,14 @@ class XMLRPCTaskClient(object):
         self._checkClientID()
         assert isinstance(task, Task.Task), "task must be a Task object!"
         binTask = xmlrpc.Binary(pickle.dumps(task,2))
-        result = self._executeRemoteMethod(self.server.run, binTask)
+        result = self._executeRemoteMethod(self._server.run, binTask)
         return result
     
     def getTaskResult(self, taskID, block=None):
         """"""
         self._checkClientID()
         localBlock = self._reallyBlock(block)
-        result = self._executeRemoteMethod(self.server.getTaskResult, self.clientID, localBlock, taskID)
+        result = self._executeRemoteMethod(self._server.getTaskResult, self._clientID, localBlock, taskID)
         if not localBlock:
             result = PendingResult(self, result)
         return result
@@ -298,7 +298,7 @@ class XMLRPCTaskClient(object):
     def abort(self, taskID, block=None):
         self._checkClientID()
         localBlock = self._reallyBlock(block)
-        result = self._executeRemoteMethod(self.server.abort, self.clientID, localBlock, taskID)
+        result = self._executeRemoteMethod(self._server.abort, self._clientID, localBlock, taskID)
         if not localBlock:
             result = PendingResult(self, result)
         return result
