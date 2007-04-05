@@ -2174,7 +2174,12 @@ want to merge them back into the new files.""" % locals()
         # It also allows users to assign to either alias or magic names true
         # python variables (the magic/alias systems always take second seat to
         # true python code).
-        if theRest and theRest[0] in '!=()':
+        #
+        # We also go to direct execution if there's a binary operator in there,
+        # so users get the regular exception.  Note that '-' is NOT included,
+        # since it is also a unary operator ('+' can also be used as unary, but
+        # in practice it rarely is).
+        if theRest and theRest[0] in '!=()<>+*/%^&|':
             return self.handle_normal(line,continue_prompt)
 
         if oinfo is None:
