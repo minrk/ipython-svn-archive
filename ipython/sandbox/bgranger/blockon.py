@@ -22,10 +22,51 @@ stopReactor() function.  This shuts down the Twisted reactor.
 IMPORTANT:  The startReactor() function is called automatically upon
 importing this module, so you don't have to.
 """
+__docformat__ = "restructuredtext en"
+#-------------------------------------------------------------------------------
+#       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
+#                           Brian E Granger <ellisonbg@gmail.com>
+#                           Benjamin Ragan-Kelley <benjaminrk@gmail.com>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
 
 from twisted.internet import reactor
 from twisted.python import failure
 from twisted.internet import defer
+
+from ipython1.kernel.util import gatherBoth
+
+
+#-------------------------------------------------------------------------------
+# Manage the reactor
+#-------------------------------------------------------------------------------
+
+def startReactor():
+    """Initialize the twisted reactor, but don't start its main loop."""
+    if not reactor.running:
+        reactor.startRunning(installSignalHandlers=0)
+    
+def stopReactor():
+    """Stop the twisted reactor when its main loop isn't running."""
+    if reactor.running:
+        reactor.callLater(0, reactor.stop)
+        while reactor.running:
+            reactor.iterate(TIMEOUT)
+
+# The reactor must be stopped before Python quits or it will hang
+from atexit import register
+register(stopReactor)
+
+
+#-------------------------------------------------------------------------------
+# Implementation of the blocking mechanism
+#-------------------------------------------------------------------------------
 
 TIMEOUT = 0.05                  # Set the timeout for poll/select
 
@@ -47,66 +88,75 @@ class BlockingDeferred(object):
         """
         
         self.d.addBoth(self.gotResult)
+        self.d.addErrback(self.gotFailure)
+        
         while not self.finished:
             reactor.iterate(TIMEOUT)
             self.count += 1
-        if isinstance(self.d.result, failure.Failure):
-            self.d.result.raiseException()
-        else:
-            return self.d.result
+        
+        if isinstance(self.d.result, dict):
+            f = self.d.result.get('failure', None)
+            if isinstance(f, failure.Failure):
+                f.raiseException()
+        return self.d.result
 
     def gotResult(self, result):
         self.finished = True
         return result
         
-def _parseResults(resultList):
-    newResult = [r[1] for r in resultList]
-    if len(newResult) == 1:
-        return newResult[0]
-    else:
-        return newResult
+    def gotFailure(self, f):
+        self.finished = True
+        # Now make it look like a success so the failure isn't unhandled
+        return {'failure':f}
         
-def blockOn(*deferredList):
+        
+def _parseResults(result):
+    if isinstance(result, (list, tuple)):
+        if len(result) == 1:
+            return result[0]
+        else:
+            return result
+    else:
+        return result
+        
+        
+def blockOn(deferrable, fireOnOneCallback=0, fireOnOneErrback=0,
+            consumeErrors=0):
     """Make a Deferred look synchronous.
     
-    Given a Deferred object, this will run the Twisted event look until
+    Given a Deferrable object, this will run the Twisted event look until
     the Deferred's callback and errback chains have run.  It will then 
     return the actual result or raise an exception if an error occured.
     
     >>> blockOn(functionReturningDeferred())
     10
     
-    You can also pass multiple Deferred's to this function and you will
+    You can also pass a list of Deferreds to this function and you will
     get a list of results.
     
-    >>> blockOn(d0, d1, d2)
+    >>> blockOn([d0, d1, d2])
     ['this', 'is', 'heresy']
     """
+    if not isinstance(deferrable, list):
+        deferrable = [deferrable]
     
-    d = defer.DeferredList(deferredList, consumeErrors=True)
-    d.addCallback(_parseResults)
+    # Add a check to simply pass through plain objects.
+    for i in range(len(deferrable)):
+        if hasattr(deferrable[i], '__defer__'):
+            deferrable[i] = deferrable[i].__defer__()
+    
+    d = gatherBoth(deferrable,
+                   fireOnOneCallback, 
+                   fireOnOneErrback,
+                   consumeErrors,
+                   logErrors=0)
+    if not fireOnOneCallback:
+        d.addCallback(_parseResults)
     bd = BlockingDeferred(d)
     return bd.blockOn()
     
-def startReactor():
-    """Initialize the twisted reactor, but don't start its main loop."""
-    if not reactor.running:
-        reactor.startRunning()
-    
-def stopReactor():
-    """Stop the twisted reactor when its main loop isn't running."""
-    if reactor.running:
-        reactor.callLater(0, reactor.stop)
-        while reactor.running:
-            reactor.iterate(TIMEOUT)
-    
+
+# Start the reactor
 startReactor()
 
-# This was running when a %run blockon.py was done from IPython.
-# The problem is that stopReactor() was being called which killed it.
-if __name__ == '__main__':
-    from twisted.web import client
-    startReactor()
-    d = client.getPage('http://www.google.com/')
-    print blockOn(d)
-    stopReactor()
+
