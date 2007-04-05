@@ -1,0 +1,77 @@
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
+
+import numpy
+ra = numpy.random
+la = numpy.linalg
+
+def GOE(N):
+    """Creates an NxN element of the Gaussian Orthogonal Ensemble"""
+    m = ra.standard_normal((N,N))
+    m = m + numpy.transpose(m)
+    return m
+
+def centerEigenvalueDiff(mat):
+    """Compute the eigvals of mat and then find the center eigval difference."""
+    N = len(mat)
+    evals = numpy.sort(la.eigvals(mat))
+    diff = evals[N/2] - evals[N/2-1]
+    return diff.real
+
+def ensembleDiffs(num, N):
+    """Return the a list of num eigenvalue differences for the NxN GOE ensemble."""
+    diffs = numpy.empty(num)
+    for i in xrange(num):
+        mat = GOE(N)
+        diffs[i] = centerEigenvalueDiff(mat)
+    return diffs
+
+def normalizedEnsembleDiffs(num, N):
+    """Return the a list of num eigenvalue differences for the NxN GOE ensemble."""
+    diffs = ensembleDiffs(num, N)
+    return normalizeDiffs(diffs)
+
+def normalizeDiffs(diffs):
+    """Normalize an array of eigenvalue diffs."""
+    meanDiff = numpy.sum(diffs)/len(diffs)
+    diffsNormalized = diffs/meanDiff
+    return diffsNormalized
+
+
+# pylab.hist(diffsNormalized, bins=bins, normed=1)
+
+def wignerDistribution(s):
+    """Returns (s, rho(s)) for the Wigner GOE distribution."""
+    return (numpy.pi*s/2.0) * numpy.exp(-numpy.pi*s**2/4.)
+
+def generateWignerData():
+    s = numpy.linspace(0.0,4.0,400)
+    rhos = wignerDistribution(s)
+    return s, rhos
+    
+    
+def serialDiffs(num, N):
+    diffs = ensembleDiffs(num, N)
+    normalizedDiffs = normalizeDiffs(diffs)
+    return normalizedDiffs
+
+def parallelDiffsMPI(num, N, rc):
+    nengines = len(rc.getIDs())
+    num_per_engine = num/nengines
+    print "Running with", num_per_engine, "per engine."
+    rc.pushAll(num_per_engine=num_per_engine, N=N)
+    rc.executeAll('diffs = normalizedEnsembleDiffs(num_per_engine, N)')
+    diffs = rc.gatherAll('diffs')
+    return diffs
+
+def parallelDiffs(num, N, rc):
+    nengines = len(rc.getIDs())
+    num_per_engine = num/nengines
+    print "Running with", num_per_engine, "per engine."
+    rc.pushAll(num_per_engine=num_per_engine, N=N)
+    rc.executeAll('diffs = ensembleDiffs(num_per_engine, N)')
+    diffs = rc.gatherAll('diffs')
+    normalizedDiffs = normalizeDiffs(diffs)
+    return normalizedDiffs
