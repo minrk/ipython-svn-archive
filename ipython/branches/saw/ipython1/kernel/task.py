@@ -324,7 +324,7 @@ class TaskController(cs.ControllerAdapterBase):
         self.deferredResults = {} # dict of {taskID:deferred}
         self.finishedResults = {} # dict of {taskID:actualResult}
         self.workers = {} # dict of {workerID:worker}
-        self.abortPending = [] # list of [(taskID, abortDeferred)]
+        self.abortPending = {} # dict of {taskID:abortDeferred}
         self.scheduler = self.SchedulerClass()
         for id in self.controller.engines.keys():
                 self.workers[id] = IWorker(self.controller.engines[id])
@@ -353,9 +353,11 @@ class TaskController(cs.ControllerAdapterBase):
     def _pendingTaskIDs(self):
         return [t.taskID for t in self.pendingTasks.values()]
     
-    def _abortedTaskIDs(self):
-        return [t[0] for t in self.abortPending]
     
+    def _wrapResult(self, result, taskID):
+        if isinstance(result, failure.Failure):
+            result.cleanFailure()
+        return (taskID, result)
     #---------------------------------------------------------------------------
     # Interface methods
     #---------------------------------------------------------------------------
@@ -367,8 +369,8 @@ class TaskController(cs.ControllerAdapterBase):
         d = defer.Deferred()
         self.scheduler.addTask(task)
         log.msg('queuing task #%i' %task.taskID)
-        d.addBoth(lambda r: (task.taskID, r))
-        self.deferredResults[task.taskID] = d
+        
+        self.deferredResults[task.taskID] = []
         self.distributeTasks()
         return defer.succeed(task.taskID)
     
@@ -378,7 +380,9 @@ class TaskController(cs.ControllerAdapterBase):
         if self.finishedResults.has_key(taskID):
             return defer.succeed((taskID, self.finishedResults[taskID]))
         elif self.deferredResults.has_key(taskID):
-            return self.deferredResults[taskID]
+            d = defer.Deferred().addBoth(self._wrapResult, taskID)
+            self.deferredResults[taskID].append(d)
+            return d
         else:
             return defer.succeed((taskID, IndexError("task ID not registered")))
     
@@ -389,14 +393,13 @@ class TaskController(cs.ControllerAdapterBase):
         except IndexError, e:
             if taskID in self.finishedResults.keys():
                 d = defer.fail(IndexError("Task Already Completed"))
+            elif self.abortPending.has_key(taskID):
+                d = self.abortPending[taskID]
             elif taskID in self._pendingTaskIDs():# task is pending
-                for id, d in self.abortPending:
-                    if taskID == id:# already aborted
-                        return d
                 d = defer.Deferred()
-                self.abortPending.append((taskID, d))
+                self.abortPending[taskID] = d
             else:
-                return defer.fail(e)
+                d = defer.fail(e)
         else:
             d = defer.execute(self._doAbort, taskID)
         return d
@@ -407,22 +410,19 @@ class TaskController(cs.ControllerAdapterBase):
     
     def _doAbort(self, taskID):
         """helper function for aborting a pending task"""
-        if self.deferredResults.has_key(taskID):
-            for i in range(len(self.abortPending)):
-                id,d = self.abortPending[i]
-                if taskID == id:
-                    self.abortPending.pop(i)
-                    d.callback(None)
-                    break
-            d2 = self.deferredResults.pop(taskID)
-            log.msg("Task #%i Aborted"%taskID)
-            e = error.TaskAborted()
-            result = failure.Failure(e)
-            self.finishedResults[taskID] = result
-            d2.errback(result)
-        else:
-            raise IndexError("Failed to Abort task #%i"%taskID)
+        log.msg("Task #%i Aborted"%taskID)
+        result = failure.Failure(error.TaskAborted())
+        self._finishTask(taskID, result)
+        d = self.abortPending.pop(taskID, None)
+        if d is not None:
+            d.callback(None)
     
+    def _finishTask(self, taskID, result):
+        dlist = self.deferredResults.pop(taskID)
+        self.finishedResults[taskID] = result
+        for d in dlist:
+            d.callback(result)
+
     def distributeTasks(self):
         """Distribute tasks while self.scheduler has things to do"""
         while self.scheduler.ready():
@@ -433,12 +433,9 @@ class TaskController(cs.ControllerAdapterBase):
             # add to pending
             self.pendingTasks[worker.workerID] = task
             # run/link callbacks
-            # d2 = self.deferredResults[taskID]
             d = worker.run(task)
             log.msg("running task #%i on worker %i" %(task.taskID, worker.workerID))
             d.addBoth(self.taskCompleted, task.taskID, worker.workerID)
-            # d.addBoth(self.resubmit, taskID, task)
-            # d.chainDeferred(d2)
             
     def taskCompleted(self, result, taskID, workerID):
         """This is the err/callback for a completed task"""
@@ -469,20 +466,16 @@ class TaskController(cs.ControllerAdapterBase):
                     log.msg(s)
                     self.distributeTasks()
                 else: # done trying
-                    d = self.deferredResults.pop(taskID)
-                    self.finishedResults[taskID] = result
-                    d.callback(result)
+                    self._finishTask(taskID, result)
                 # wait a second before readmitting a worker that failed
                 # it may have died, and not yet been unregistered
                 reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
             else: # we succeeded
                 log.msg("Task #%i completed "% taskID)
-                d = self.deferredResults.pop(taskID)
-                self.finishedResults[taskID] = result
-                d.callback(result)
+                self._finishTask(taskID, result)
                 self.readmitWorker(workerID)
         else:# we aborted the task
-            if isinstance(result, failure.Failure): # it failed
+            if isinstance(result, failure.Failure): # it failed, penalize worker
                 reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
             else:
                 self.readmitWorker(workerID)
