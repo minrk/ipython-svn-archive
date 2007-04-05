@@ -32,7 +32,6 @@ from twisted.internet import defer, reactor
 from twisted.python import log, components, failure
 from zope.interface import Interface, implements, Attribute
 
-from ipython1.kernel.serialized import Serialized
 from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import map as Map
 from ipython1.kernel import error

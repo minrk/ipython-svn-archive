@@ -26,7 +26,7 @@ from twisted.internet import defer
 import zope.interface as zi
 
 from ipython1.kernel import engineservice as es
-from ipython1.kernel import serialized, error
+from ipython1.kernel import error
 from ipython1.test.util import DeferredTestCase
 from ipython1.kernel.controllerservice import \
     IControllerCore

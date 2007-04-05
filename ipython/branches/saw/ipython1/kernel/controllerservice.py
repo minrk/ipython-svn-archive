@@ -44,7 +44,6 @@ from twisted.python import log, components
 from zope.interface import Interface, implements, Attribute
 import zope.interface as zi
 
-from ipython1.kernel.serialized import Serialized
 from ipython1.kernel.engineservice import \
     IEngineCore, \
     IEngineSerialized, \

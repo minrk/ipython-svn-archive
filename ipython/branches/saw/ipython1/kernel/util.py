@@ -18,7 +18,7 @@ import os, types
 
 from twisted.internet import defer
 from twisted.python import log
-from ipython1.kernel import serialized
+
 
 
 #from twisted.internet.defer.gatherresults/_parseDlist
@@ -198,13 +198,6 @@ def printer(r):
     print r
     return r
 
-# Smart unpacker
 
-def unpack(serial):
-    if isinstance(serial, list):
-        return [s.unpack() for s in serial]
-    if isinstance(serial, serialized.Serialized):
-        return serial.unpack()
-    return serial
     
 
