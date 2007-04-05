@@ -16,6 +16,7 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
+import sys
 import cPickle as pickle
 
 from twisted.internet import reactor
@@ -95,13 +96,17 @@ class PendingResult(object):
         self.client = client
         self.resultID = resultID
         self.called = False
+        self.raised = False
         self.callbacks = []
         
     def getResult(self, default=None, block=True):
         """Get a result that is pending.
                 
         This method will connect to an IMultiEngine adapted controller
-        and see if the result is ready.
+        and see if the result is ready.  If the action trigger an exception
+        raise it and record it.  This method records the result/exception once it is 
+        retrieved.  Calling getResult() again will get this cached result or will
+        re-raise the exception.
         
         :Parameters:
             default
@@ -113,15 +118,21 @@ class PendingResult(object):
         """
         
         if self.called:
-            return self.result
+            if self.raised:
+                raise self.result[0], self.result[1], self.result[2]
+            else:
+                return self.result
         try:
             result = self.client._getPendingResult(self.resultID, block)
         except error.ResultNotCompleted:
             return default
         except:
+            # Reraise other error, but first record them so they can be reraised
+            # later if .r or getResult is called again.
+            self.result = sys.exc_info()
             self.called = True
-            # Save the real exception here
-            self.result = None
+            self.raised = True
+            raise
         else:
             for cb in self.callbacks:
                 result = cb[0](result, *cb[1], **cb[2])

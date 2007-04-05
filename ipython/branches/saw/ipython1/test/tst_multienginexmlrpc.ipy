@@ -156,9 +156,15 @@ pd.r
 
 pd = rc.executeAll('1/0')
 try:
-    pd.getResult()
+    pd.r
 except ZeroDivisionError:
     print "Caught ZeroDivisionError OK."
+
+# Make sure we can reraise it!
+try:
+    pd.r
+except ZeroDivisionError:
+    print "Caught ZeroDivisionError OK."  
 
 
 # This is a command to make sure the end of the file is happy.
