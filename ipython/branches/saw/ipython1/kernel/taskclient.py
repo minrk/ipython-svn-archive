@@ -17,9 +17,9 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-from twisted.python import failure
+# from twisted.python import failure
 
-from ipython1.kernel import task, blockon, util
+from ipython1.kernel import task
 
 #-------------------------------------------------------------------------------
 # Connecting Task Client
@@ -27,25 +27,6 @@ from ipython1.kernel import task, blockon, util
 
 class InteractiveTaskClient(object):
     """XML-RPC version of the Connecting TaskControllerClient"""
-    
-    def _catchFailure(self, f):
-        return f
-    
-    def _passThrough(self,r,d):
-        self.pendingDeferreds.discard(d)
-        if isinstance(r, failure.Failure):
-            self.caughtFailures.append(r)
-        return r
-    
-    def __defer__(self):
-        """for blockOn(this)"""
-        return util.DeferredList(list(self.pendingDeferreds))
-    
-    def _blockOrNot(self, d):
-        if self.block:
-            return self.blockOn(d)
-        else:
-            return d
     
     ############
     # ConnectingTaskController
@@ -60,4 +41,4 @@ class InteractiveTaskClient(object):
         taskID = self.run(t)
         print "TaskID = %i"%taskID
         return self.getTaskResult(taskID, block)
-        # return tr    
+        # return tr
