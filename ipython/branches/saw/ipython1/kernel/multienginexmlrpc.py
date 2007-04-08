@@ -30,7 +30,7 @@ from twisted.python import components, failure
 
 from ipython1.external.twisted.web2 import xmlrpc, server, channel
 
-from ipython1.kernel import error, blockon
+from ipython1.kernel import error
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
 from ipython1.kernel.multiengine import ISynchronousMultiEngine
 from ipython1.kernel.multiengineclient import PendingResult
