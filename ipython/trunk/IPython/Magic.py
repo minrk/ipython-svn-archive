@@ -1673,8 +1673,7 @@ Currently the magic system has the following functions:\n"""
             sys.argv = save_argv
             if restore_main:
                 sys.modules['__main__'] = restore_main
-            if self.shell.has_readline:
-                self.shell.readline.read_history_file(self.shell.histfile)
+            self.shell.reloadhist()
                 
         return stats
 
