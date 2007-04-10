@@ -35,26 +35,28 @@ instance, but for now, it is plain Python.  The Engine can also handle incoming
 and outgoing Python objects send over a network connection.  When multiple
 Engines are started, parallel and distributed computing becomes possible.  An
 important feature of the IPython Engines is that they block while user code is
-being executed.  Read on for how the Controller deals with this limitation.
+being executed.  Read on for how the Controller deals with this limitation to 
+expose a nice clean asynchronous API to the user.
 
 IPython Controller
 ------------------
 
 The IPython Controller provides an interface for working with a set of Engines.
+The basic notion of a controller is something to which engines can connect.
 It manages a queue for each Engine and exposes a fully asynchronous interface
 to each Engine.  Because the Controller listens on a network port for Engines
 to connect to it, it must be started before any Engines are started.  The
 Controller also provides a single point of contact for users who wish to
-utilize the Engines connected to the Controller.
+utilize the Engines connected to the Controller.  There are different ways 
+(read interfaces) of working with a controller.  Currently we have two
+default interfaces to the controller:  RemoteController and TaskController.
 
 Controller Clients
 ------------------
 
-Various Controller clients provide a way for users to interact with a
-Controller, and thus, with a set of Engines.  Our default client is a
-RemoteController Python object that is designed to be used from within Python
-or IPython.  It be used both interactively and in scripts, although we provide
-a few nice magic commands for use within IPython.
+For each controller interface, there is a corresponding client.  These clients
+allow users to interact with a set of engines through the interface that
+the controller exposes.
 
 Getting Started
 ===============
@@ -145,42 +147,46 @@ The best source of documentation about how to use the controller and engines
 is the docstrings of kernel modules.  Eventually, we will provide more 
 details in this readme.
 
-Create an RemoteController object
----------------------------------
+The RemoteController client
+---------------------------
 
-Once the controller and one or more engines are running, you connect to the
-controller in IPython be creating a RemoteController object.  In the following
-examples, the usual Python prompt ``>>>`` will be shown, but all the commands
-should be issued within an IPython session.  So fire up IPython and then do::
+Once a controller and engines are running you can connect to it using the 
+`RemoteController` class.  This class provides a client for the MultiEngine
+interface.  Don't worry about what this means for now, it will become
+clear as you use it.
+
+First import the ipython1 client and create a RemoteController instance::
 
 	>>> import ipython1.kernel.api as kernel
-	>>> rc = kernel.RemoteController(('host0',10000))
+	>>> rc = kernel.RemoteController(('127.0.0.1',10105))
 	
-This will create a RemoteController object for talking to a controller with
-hostname ``host0`` on port ``10000``.  It is this easy.  The RemoteController
-object doesn't connect at this point.  To see if it works, do::
+Now you can see what engines are registered with the controller::
 
 	>>> rc.getIDs()
-	[0, 1, 2, 3]
+	[0,1,2,3]
+
+If this works, you are ready to go.  Start next by looking at the docstrings
+for the following commands:
+
+1. execute
+2. push/pull
+3. scatter/gather
+
+The TaskController client
+-------------------------
+
+The TaskController interface to the controller presents the engines as a fault
+tolerant, dynamic load-balancing system.  It is really cool.  You have a
+RemoteController and a TaskController simultaneously connected to the same
+controller.  But, be warned, the tasks will share the namespace on the 
+engines with the RemoteController.  But, this is actually a feature that allows
+you to do some really nice things.
+
+First create a TaskController objects::
+
+	>>> import ipython1.kernel.api as kernel
+	>>> rc = kernel.TaskController(('127.0.0.1',10113))
 	
-and you will see a list of the ids of the engines that are currently connected
-to the controller.
+Now you can start submitting tasks using rc.run and rc.irun.
 
-
-**UNFINISHED**: the rest of this readme is still unfinished, we're working on
-  it. More information can currently be found at the ipython wiki:
-
-  http://ipython.scipy.org/moin/Parallel_Computing/Tutorial
-
-Executing commands on the engines
----------------------------------
-
-Moving Python objects around
-----------------------------
-
-The map and parallelize commands
---------------------------------
-
-Other commands
---------------
 

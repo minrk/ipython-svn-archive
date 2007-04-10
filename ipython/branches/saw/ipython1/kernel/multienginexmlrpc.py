@@ -332,17 +332,18 @@ components.registerAdapter(XMLRPCServerFactoryFromMultiEngine,
 class XMLRPCMultiEngineClient(object):
     """Client that talks to a IMultiEngine adapted controller over XML-RPC.
     
-    This class will usually be alias to RemoteController so create one like 
-    this:
+    This class is usually aliased to RemoteController in ipython1.kernel.api
+    so create one like this:
     
-    >>> rc = RemoteController(('myhost.work.com', 10105))
+    >>> import ipython1.kernel.api as kernel
+    >>> rc = kernel.RemoteController(('myhost.work.com', 10105))
     
     This class has a attribute named block that controls how most methods
     work.  If block=True (default) all methods will actually block until
     their action has been completed.  Then they will return their result
     or raise any Exceptions.  If block=False, the method will simply
-    return a `PendingResult` object whose `getResult` method can then be
-    used to later retrieve the result.
+    return a `PendingResult` object whose `getResult` method or `r` attribute
+    can then be used to later retrieve the result.
     """
     
     def __init__(self, addr):
@@ -413,30 +414,30 @@ class XMLRPCMultiEngineClient(object):
     #--------------------------------------------------------------------------- 
      
     def barrier(self):
-        """Synchronize flush all PendingResults.
+        """Synchronize and flush all `PendingResults`.
         
         This method is a synchronization primitive that waits for all existing
-        PendingResult that a controller knows about to complete and then 
+        `PendingResult` that a controller knows about to complete and then 
         flushes them.  More specifically, three things happen:
         
-        * Wait for all PendingResults on a controller to complete.
-        * Raise any Exceptions that occured in the PendingResults.
-        * Flush the PendingResults from the controller.
+        * Wait for all `PendingResult`s to complete.
+        * Raise any Exceptions that occured in the `PendingResult`s.
+        * Flush the `PendingResult`s from the controller.
         
         If there are multiple Exceptions, only the first is raised.  
         
-        The flush step is extremely important!  If have a PendingResult object
-        and then call barrier, further calls to PendingResult.getResult will
-        fail as the controller no longer knows about the PendingResult:
+        The flush step is extremely important!  If you have a `PendingResult` object
+        and then call `barrier`, further calls to `PendingResult.getResult` will
+        fail as the controller no longer knows about the `PendingResult`:
         
         >>> pr = rc.executeAll('a=5',block=False)
         >>> rc.barrier()
         >>> pr.getResult()           # This will fail as pr has been flushed.
         
-        This method should be used when you need to make sure that all
-        PendingResults have completed and check for errors.  If you actually
-        need to access the results of those PendingResults, you should not
-        call barrier.  Instead, call PendingResult.getResult on each object.
+        Thus the `barrier` method should be used when you need to make sure that all
+        `PendingResult`s have completed and check for errors.  If you actually
+        need to access the results of those `PendingResult`s, you should not
+        call `barrier`.  Instead, call `PendingResult.getResult` on each object.
         """
         self._checkClientID()
         # Optimize to not bring back all results
@@ -486,17 +487,18 @@ class XMLRPCMultiEngineClient(object):
         return self.execute('all', lines, block)
     
     def push(self, targets, **namespace):
-        """Push Python objects to engines by key.
+        """Push Python objects by key to targets.
         
         This method takes all key/value pairs passed in as keyword arguments
-        and pushes them to the engines specified in targets.
+        and pushes (sends) them to the engines specified in targets.  Most Python objects
+        are pickled, but numpy arrays are send using their raw buffers.
         
         :Parameters:
             targets : int, list or 'all'
                 The engine ids the action will apply to.  Call `getIDs` to see
                 a list of currently available engines.
             namespace : dict
-                The keyword arguments of that contain the key, value pairs
+                The keyword arguments of that contain the key/value pairs
                 that will be pushed.
                 
         Examples
@@ -505,6 +507,7 @@ class XMLRPCMultiEngineClient(object):
         >>> rc.push('all', a=5)    # pushes 5 to all engines as 'a'
         >>> rc.push(0, b=30)       # pushes 30 to 0 as 'b'
         """
+        
         self._checkClientID()
         binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
         localBlock = self._reallyBlock()
@@ -514,15 +517,33 @@ class XMLRPCMultiEngineClient(object):
         return result
                 
     def pushAll(self, **ns):
+        """Push Python objects by key to all targets.
+        
+        See the docstring for `push` for full details.
+        """
         return self.push('all', **ns)
     
     def pull(self, targets, *keys):
-        """
+        """Pull Python objects by key from targets.
+        
+        This method gets the Python objects specified in keys from the engines specified
+        in targets.
         
         :Parameters:
             targets : int, list or 'all'
                 The engine ids the action will apply to.  Call `getIDs` to see
                 a list of currently available engines.
+            keys: list or tuple of str
+                A list of variable names as string of the Python objects to be pulled
+                back to the client.
+                
+        :Returns: A list of pulled Python objects for each target.
+        
+        Examples
+        ========
+        
+        >> rc.pullAll('a')
+        [10,10,10,10]
         """
         self._checkClientID()
         localBlock = self._reallyBlock()
@@ -532,14 +553,24 @@ class XMLRPCMultiEngineClient(object):
         return result
     
     def pullAll(self, *keys):
+        """Pull Python objects by key from all targets.
+        
+        See the docstring for `pull` for full details.
+        """
         return self.pull('all', *keys)
         
     def getResult(self, targets, i=None):
-        """
+        """Get the stdin/stdout/stderr of a previously executed command on targets.
+        
         :Parameters:
             targets : int, list or 'all'
                 The engine ids the action will apply to.  Call `getIDs` to see
                 a list of currently available engines.
+            i : None or int
+                The command number to retrieve.  The default will retrieve the most recent
+                command.
+                
+        :Returns: The result dict for the command.
         """
         if i is None: # This is because None cannot be marshalled by xml-rpc
             i = 'None'
@@ -554,10 +585,18 @@ class XMLRPCMultiEngineClient(object):
         return result
          
     def getResultAll(self, i=None):
+        """Get the stdin/stdout/stderr of a previously executed command on all targets.
+        
+       See the docstring for `getResult` for full details.     
+        """
         return self.getResult('all', i)
     
     def reset(self, targets):
-        """
+        """Reset the namespace on targets.
+        
+        This method resets the persistent namespace in which computations are done in the
+        each engine.  This is is sort of like a soft reset.  Use `kill` to actually stop
+        the engines.
         
         :Parameters:
             targets : int, list or 'all'
@@ -572,10 +611,14 @@ class XMLRPCMultiEngineClient(object):
         return result    
         
     def resetAll(self):
+        """Reset the namespace on all targets.
+        
+       See the docstring for `reset` for full details.         
+        """
         return self.reset('all')
     
     def keys(self, targets):
-        """List all the variable names defined on each engine.
+        """List all the variable names defined on each target.
         
         :Parameters:
             targets : int, list or 'all'
@@ -593,9 +636,24 @@ class XMLRPCMultiEngineClient(object):
         return result 
           
     def keysAll(self):
+        """List all the variable names defined on each engine/target.
+        
+        See the docstring for `keys` for full details.         
+        """
         return self.keys('all')
     
     def kill(self, targets, controller=False):
+        """Kill the engines/targets specified.
+        
+        This actually stops the engine processes for good.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            controller : boolean
+                Kill the controller process as well?
+        """
         self._checkClientID()
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod(self._server.kill, self._clientID, localBlock, targets, controller)
@@ -604,22 +662,56 @@ class XMLRPCMultiEngineClient(object):
         return result
     
     def killAll(self, controller=False):
+        """Kill all the engines/targets.
+        
+        See the docstring for `kill` for full details.
+        """
         return self.kill('all', controller)
         
     def clearQueue(self, targets):
+        """Clear the command queue on targets.
+        
+        Each engine has a queue associated with it.  This queue lives in the controller
+        process.  This command is used to kill all commmands that are waiting in the queue.
+        These commands will then errback with `QueueCleared`.  Use `queueStatus` to see the
+        commands in the queues.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.    
+        """
+        
         self._checkClientID()
         result = self._executeRemoteMethod(self._server.clearQueue, self._clientID, targets)
         return result
         
     def clearQueueAll(self):
+        """Clear the command queue on all targets.
+        
+        See the docstring for `clearQueue` for full details.
+        """
         return self.clearQueue('all')
     
     def queueStatus(self, targets):
+        """Get the status of the command queue on targets.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+        
+        :Returns:  A list of dicts that describe each queue.
+        """
         self._checkClientID()
         result = self._executeRemoteMethod(self._server.queueStatus, self._clientID, targets)
         return QueueStatusList(result)
     
     def queueStatusAll(self):
+        """Get the status of the command queue on all targets/engines.
+        
+        See the docstring for `queueStatus` for full details.
+        """
         return self.queueStatus('all')
     
     #---------------------------------------------------------------------------
@@ -627,6 +719,7 @@ class XMLRPCMultiEngineClient(object):
     #---------------------------------------------------------------------------
     
     def getIDs(self):
+        """Get a list of the ids of the engines that are registered."""
         return self._server.getIDs()
     
     #---------------------------------------------------------------------------
@@ -634,6 +727,24 @@ class XMLRPCMultiEngineClient(object):
     #---------------------------------------------------------------------------
     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
+        """Partition and distribute a sequence to a set of targets/engines.
+        
+        This method partitions a Python sequence and then pushes the partitions
+        to a set of engines.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            key : str
+                What to call the partitions on the engines.
+            seq : list, tuple or numpy array
+                The sequence to be partitioned and pushed.
+            style : str
+                The style of partitioning to use.  Only 'basic' is supported
+            flatten : boolean
+                Should length 1 partitions be flattened to scalars upon pushing.
+        """
         self._checkClientID()
         bseq = xmlrpc.Binary(pickle.dumps(seq,2))
         localBlock = self._reallyBlock()
@@ -644,9 +755,30 @@ class XMLRPCMultiEngineClient(object):
         return result
         
     def scatterAll(self, key, seq, style='basic', flatten=False):
+        """Partition and distribute a sequence to all targets/engines.
+        
+        See the docstring for `scatter` for full details.
+        """
         return self.scatter('all', key, seq, style, flatten)
     
     def gather(self, targets, key, style='basic'):
+        """Gather a set of sequence partitions that are distributed on targets.
+        
+        This method is the inverse of `scatter` and gather parts of an overall
+        sequence that are distributed among the engines and reassembles the 
+        partitions into a single sequence which is returned.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            key : str
+                The name of the sequences on the engines.
+            style : str
+                Only 'basic' is supported currently.
+                
+        :Returns:  The reassembled sequence.
+        """
         self._checkClientID()
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod(self._server.gather, self._clientID, 
@@ -656,6 +788,10 @@ class XMLRPCMultiEngineClient(object):
         return result        
         
     def gatherAll(self, key, style='basic'):
+        """Gather a set of sequence partitions that are distributed on all targets.
+        
+        See the docstring for `gather` for full details.
+        """
         return self.gather('all', key, style)
 
 

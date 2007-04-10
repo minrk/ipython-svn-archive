@@ -19,6 +19,21 @@ rc.block = True
 rc.getIDs()
 assert len(rc) >= 4
 
+values = [
+    10,
+    1.0,
+    range(100),
+    ('asdf', 1000),
+    {'a': 10, 'b': 20}
+    ]
+    
+keys = ['a','b','c','d','e']
+
+sequences = [
+    range(100),
+    numpy.arange(100)
+]
+
 #-------------------------------------------------------------------------------
 # Blocking execution
 #-------------------------------------------------------------------------------
@@ -165,6 +180,15 @@ try:
     pd.r
 except ZeroDivisionError:
     print "Caught ZeroDivisionError OK."  
+
+# push/pull
+
+pd1 = rc.pushAll(a=10)
+pd1.getResult()
+pd2 = rc.pullAll('a')
+pd2.r
+
+
 
 
 # This is a command to make sure the end of the file is happy.

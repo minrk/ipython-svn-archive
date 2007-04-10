@@ -8,16 +8,6 @@ IPython Kernel Installation
 
 .. contents::
 
-Warning
-=======
-
-IPython1 depends heavily on the Twisted framework for all its network support,
-and as of Nov. 5 2006, Twisted still does NOT work with Python 2.5 (see [WWW]
-http://glyf.livejournal.com/62308.html for details). So for now, if you want to
-use IPython1, you must unfortunately work with Python 2.4. We'll update this
-information as the situation improves with Twisted.
-
-
 Introduction
 ============
 
@@ -26,8 +16,8 @@ for interactive parallel computing.  For a description of the kernel, see the
 README file in this directory.
 
 Please let us know if you have problems installing ipython1 or any of its
-dependencies.  Currently we have tested ipython1 extensively with Python 2.4.3,
-but it should work with Python 2.3.x and Python 2.5 as well.
+dependencies.  Currently we have tested ipython1 extensively with Python 2.4
+and 2.5.  It will not work on Python 2.3.
 
 The IPython kernel requires four things:
 
@@ -43,13 +33,6 @@ not, read on.
 To get these packages, you will need Subversion (or svn).  Many systems will
 already have Subversion installed; if you need more information about
 Subversion, see http://svnbook.red-bean.com/.
-
-There are also a number of optional dependencies that provide additional
-capabilities.
-
-We also provide a script in this directory called getdependencies.sh that will
-download (but not install) the dependencies into the parent directory using svn
-and wget or curl.
 
 Installation Instructions
 =========================
@@ -69,19 +52,22 @@ flag when you install to select a different directory for your packages:
 
 	python setup.py install --home=some-dir-in-your-PYTHONPATH
 	
-You will then need to set you PYTHONPATH environment variable to point to this
+You will then need to set your PYTHONPATH environment variable to point to this
 directory.  More information about installing Python packages can be found in
 the Python documentation at http://docs.python.org/.
 
 IPython1
 ---------
 
+First, you should remove any old version of ipython1 (like chainsaw) from your
+site-packages directory.
+
 The latest prototype of the IPython kernel can be retrieved from the IPython
 Subversion repository with the command:
 
 ::
 
-    svn co http://ipython.scipy.org/svn/ipython/ipython/branches/chainsaw ipython1
+    svn co http://ipython.scipy.org/svn/ipython/ipython/branches/saw ipython1
 
 In addition to installing the ipython1 python package, this will also install a
 few scripts for starting the controller and engine into an appropriate
@@ -105,39 +91,19 @@ You can also get the latest development version using Subversion:
 
 	svn co http://ipython.scipy.org/svn/ipython/ipython/trunk ipython
 
-Zope Interface
---------------
+Twisted and Zope Interface
+--------------------------
 
-Next, download and install the zope.interface package:
-http://www.zope.org/Products/ZopeInterface.
+You will need Twisted 2.5.0 and the version of Zope interface that comes
+with the Twisted 2.5.0 tarball.  Get these things here::
 
-We recommend the 3.1.0c1 build:
+	http://tmrc.mit.edu/mirror/twisted/Twisted/2.5/Twisted-2.5.0.tar.bz2
 
-http://www.zope.org/Products/ZopeInterface/3.1.0c1/ZopeInterface-3.1.0c1.tgz
+Next remove any old version of Twisted and zope.interface from your
+site-packages directory.  Don't forget this!
 
-Earlier builds won't work, but more recent ones probably will.
-
-Twisted
--------
-
-Get the trunk version of Twisted using Subversion:
-
-::
-
-	svn co svn://svn.twistedmatrix.com/svn/Twisted/trunk Twisted
-	
-Nevow (Optional)
-----------------
-
-Nevow is a web development framework that is based on Twisted.  Nevow is an
-optional dependency that is only needed if you want to have a nice Ajaxy web
-interface to the IPython Controller and Engines.  You should get the trunk
-version of Nevow at the same time you get Twisted as they are developed in
-parallel:
-
-::
-
-	svn co http://divmod.org/svn/Divmod/trunk/Nevow/ Nevow 
+Next install zope.interface (located in a subdirectory of the Twisted
+tarball) and twisted.
 
 Configuration
 =============
@@ -190,7 +156,7 @@ build command::
 
 	python setup.py build --mpicc=your-mpicc-command
 
-Our current recommendation is to use mpi4py for MPI support.
+Our recommendation is to use mpi4py for MPI support.
 
 
   

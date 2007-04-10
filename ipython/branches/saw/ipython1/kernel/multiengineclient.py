@@ -22,7 +22,6 @@ import cPickle as pickle
 from twisted.internet import reactor
 from twisted.python import components
 from twisted.python.failure import Failure
-from twisted.spread import pb
 from zope.interface import Interface, implements, Attribute
 
 from IPython.ColorANSI import TermColors
@@ -61,8 +60,8 @@ class IPendingResult(Interface):
     def addCallback(f, *args, **kwargs):
         """Add a callback that is called with the result.
         
-        If the original result is result, adding a callback will cause
-        f(result, *args, **kwargs) to be returned instead.  If multiple
+        If the original result is foo, adding a callback will cause
+        f(foo, *args, **kwargs) to be returned instead.  If multiple
         callbacks are registered, they are chained together: the result of
         one is passed to the next and so on.  
         
@@ -103,10 +102,11 @@ class PendingResult(object):
         """Get a result that is pending.
                 
         This method will connect to an IMultiEngine adapted controller
-        and see if the result is ready.  If the action trigger an exception
+        and see if the result is ready.  If the action triggers an exception
         raise it and record it.  This method records the result/exception once it is 
-        retrieved.  Calling getResult() again will get this cached result or will
-        re-raise the exception.
+        retrieved.  Calling `getResult` again will get this cached result or will
+        re-raise the exception.  The .r attribute is a property that calls
+        `getResult` with block=True.
         
         :Parameters:
             default
@@ -257,6 +257,22 @@ class InteractiveMultiEngineClient(object):
         return result
         
     def zipPull(self, targets, *keys):
+        """Pull, but return results in a different format from `pull`.
+        
+        This method basically returns zip(pull(targets, *keys)), with a few 
+        edge cases handled differently.  Users of chainsaw will find this format 
+        familiar.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            keys: list or tuple of str
+                A list of variable names as string of the Python objects to be pulled
+                back to the client.
+
+        :Returns: A list of pulled Python objects for each target.
+        """
         result = self.pull(targets, *keys)
         multitargets = not isinstance(targets, int) and len(targets) > 1
         lenKeys = len(keys)
@@ -273,10 +289,10 @@ class InteractiveMultiEngineClient(object):
         """Make this `RemoteController` active for parallel magic commands.
         
         IPython has a magic command syntax to work with `RemoteController` objects.
-        In a given IPython session there is a single active cluster.  While
+        In a given IPython session there is a single active one.  While
         there can be many `RemoteController` created and used by the user, 
         there is only one active one.  The active `RemoteController` is used whenever 
-        the magic commands %px, %pn, and %autopx are used.
+        the magic commands %px and %autopx are used.
         
         The activate() method is called on a given `RemoteController` to make it 
         active.  Once this has been done, the magic commands can be used.
@@ -286,7 +302,6 @@ class InteractiveMultiEngineClient(object):
         >>> rc = RemoteController(('localhost',10000))
         >>> rc.activate()
         >>> %px a = 5       # Same as executeAll('a = 5')        
-        >>> %pn 0 b = 10    # Same as execute(0,'b=10')
         >>> %autopx         # Now every command is sent to execute()
         ...
         >>> %autopx         # The second time it toggles autoparallel mode off
@@ -298,7 +313,22 @@ class InteractiveMultiEngineClient(object):
             print "The IPython Controller magics only work within IPython."
             
     def run(self, targets, fname, block=None):
-        """Run a .py file on targets."""
+        """Run a .py file on targets.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            fname : str
+                The filename of a .py file on the local system to be sent to and run
+                on the engines.
+            block : boolean
+                Should I block or not.  If block=True, wait for the action to
+                complete and return the result.  If block=False, return a
+                `PendingResult` object that can be used to later get the
+                result.  If block is not specified, the block attribute 
+                will be used instead. 
+        """
         fileobj = open(fname,'r')
         source = fileobj.read()
         fileobj.close()
@@ -316,9 +346,9 @@ class InteractiveMultiEngineClient(object):
         return self.run('all', fname, block)
         
     def __setitem__(self, key, value):
-        """Add a dictionary interface to `RemoteController`.
+        """Add a dictionary interface for pushing/pulling.
         
-        This functions as a shorthand for `push`.
+        This functions as a shorthand for `pushAll`.
         
         Examples:
         
@@ -326,47 +356,27 @@ class InteractiveMultiEngineClient(object):
         >>> rc['a'] = 10                      # Same as rc.pushAll(a=10)
         
         :Parameters:
-         - `key`: What to call the remote object.
-         - `value`: The local Python object to push.
+            key : str 
+                What to call the remote object.
+            value : object
+                The local Python object to push.
         """
         return self.push('all', **{key:value})
     
-    def __getitem__(self, id):
-        """Add list and dict interface to `RemoteController`.
+    def __getitem__(self, key):
+        """Add a dictionary interface for pushing/pulling.
         
-        This lets you index a `RemoteController` object as either a list
-        or a dictionary.  
-        
-        The dictionary interface is shorthand for pull:
+        This functions as a shorthand to `pullAll`.
         
         >>> rc = RemoteController(('localhost',10000))
         >>> rc['a']                     # Same as rc.pullAll('a')
         (10, 10, 10, 10)
         
-        When indexed as a list, the rc object returns an `EngineProxy`
-        or RemoteControllerView object.  These objects have the same
-        interface as a RemoteController object, but work only on a single
-        engine:
-        
-        >>> engine0 = rc[0]               # Create an interface to engine 0
-        >>> engine0.execute('a=math.pi')  # Same as rc.execute(0,'a=math.pi')
-        
-        Or a subset of engines:
-        
-        >>> subset = rc[0:4]              # Subset is a RemoteControllerView
-        >>> subset.executeAll('c=30')     # Same as rc.execute(range(0,4),'c=30')
-        
-        You can use this notation in combination with the dictionary notation 
-        to do things like:
-        
-        >>> rc[0]['a'] = 30
-        >>> localresult = rc[5]['result']
-        
         :Parameters:
          - `id`: A string representing the key.
         """
-        if isinstance(id, str):
-            return self.pull('all', *(id,))
+        if isinstance(key, str):
+            return self.pull('all', *(key,))
         else:
             raise TypeError("__getitem__ only takes strs")
             
@@ -378,28 +388,30 @@ class InteractiveMultiEngineClient(object):
         """A parallelized version of Python's builtin map.
         
         This function implements the following pattern:
+        
         1. The sequence seq is scattered to the given targets.
         2. map(functionSource, seq) is called on each engine.
         3. The resulting sequences are gathered back to the local machine.
                 
-        Example:
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            functionSource : str
+                A Python string that names a callable defined on the engines.
+            seq : list, tuple or numpy array
+                The local sequence to be scattered.
+            style : str
+                Only 'basic' is supported for now.
+                
+        :Returns: A list of len(seq) with functionSource called on each element
+        of seq.
+                
+        Example
+        =======
         
         >>> map('lambda x: x*x', range(10000))
         [0,2,4,9,25,36,...]
-
-        :Parameters:
-         - `targets`: The engine id(s) to map on. Targets can be 
-           an int, list of ints, or the string 'all' to indicate all 
-           available engines.  To see the current ids available on a 
-           controller use `getIDs()`.
-         - `functionSource`: A string representation of a callable that is
-           defined on the engines.
-         - `seq`: The local sequence to be scattered.
-         - `style`: The style of `scatter`/`gather` to use.  So far only ``basic``
-           is implemented.
-           
-        :return: A list of len(seq) with functionSource called on each element
-            of ``seq``.
         """
         saveBlock = self.block
         self.block = False
@@ -426,24 +438,25 @@ class InteractiveMultiEngineClient(object):
         
         The returned object will implement a parallel version of functionName
         that takes a local sequence as its only argument and calls (in 
-        paralle) functionName on each element of that sequence.
-        
-        Examples:
-        
-        >>> rc = RemoteController(('localhost',10000))
-        >>> psin = rc.parallelize('all','lambda x:x*x')
-        >>> psin(range(10000))
-        [0,2,4,9,25,36,...]
+        parallel) functionName on each element of that sequence.  The
+        `ParallelFunction` object has a `targets` attribute that controls
+        which engines the function is run on.
         
         :Parameters:
-         - `targets`: The engine id(s) to use. Targets can be 
-           an int, list of ints, or the string 'all' to indicate all 
-           available engines.  To see the current ids available on a 
-           controller use `getIDs()`.
-         - `functionName`: The string representation of a Python callable
-           that is defined on the engines.  This functions will be parallelized.
-           
-        :return:  A `ParallelFunction` object for targets.
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            functionName : str
+                A Python string that names a callable defined on the engines.
+
+        :Returns:  A `ParallelFunction` object.                
+
+        Examples
+        ========
+        
+        >>> psin = rc.parallelize('all','lambda x:sin(x)')
+        >>> psin(range(10000))
+        [0,2,4,9,25,36,...]
         """
         
         return ParallelFunction(targets, functionName, self)
