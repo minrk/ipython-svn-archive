@@ -63,7 +63,7 @@ def magic_result(self,parameter_s=''):
         except:
             index = None
         result = activeController.getResult(targets, index)
-        print result.__repr__()
+        return result
 
 def magic_px(self,parameter_s=''):
     """Executes the given python command on the active IPython Controller.
@@ -84,7 +84,7 @@ def magic_px(self,parameter_s=''):
         targets = activeController.magicTargets
         print "Executing command on Controller"
         result = activeController.execute(targets, parameter_s)
-        print result.__repr__()
+        return result
 
 def pxrunsource(self, source, filename="<input>", symbol="single"):
 
