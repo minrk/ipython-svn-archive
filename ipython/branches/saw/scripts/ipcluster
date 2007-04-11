@@ -192,7 +192,7 @@ def clusterLocal(opt,arg):
     print 'Controller PID:',controller.pid
 
     print 'Starting engines:   ',
-    time.sleep(2)
+    time.sleep(3)
 
     englogfile = '%s%s-' % (logfile,controller.pid)
     engines = [ Popen(['ipengine','--logfile',englogfile])

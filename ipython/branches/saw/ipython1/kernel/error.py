@@ -46,6 +46,9 @@ class ProtocolError(KernelError):
 class InvalidEngineID(KernelError):
     pass
     
+class NoEnginesRegistered(KernelError):
+    pass
+    
 class InvalidClientID(KernelError):
     pass
     

@@ -22,7 +22,7 @@ from ipython1.kernel import newserialized
 from ipython1.kernel.error import NotDefined
 from ipython1.test import util
 from ipython1.kernel import newserialized
-from ipython1.kernel.error import InvalidEngineID
+from ipython1.kernel.error import InvalidEngineID, NoEnginesRegistered
 
 resultKeys = ('id', 'commandIndex', 'stdin', 'stdout', 'stderr')
 
@@ -100,6 +100,28 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
          d.addCallback(lambda _: self.multiengine.queueStatus(badID))
          d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
          return d
+    
+    def testNoEnginesRegistered(self):
+        badID = 'all'
+        d = self.multiengine.execute(badID, 'a=5')
+        d.addErrback(lambda f: self.assertRaises(NoEnginesRegistered, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.push(badID, a=5))
+        d.addErrback(lambda f: self.assertRaises(NoEnginesRegistered, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.pull(badID, 'a'))     
+        d.addErrback(lambda f: self.assertRaises(NoEnginesRegistered, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.getResult(badID))   
+        d.addErrback(lambda f: self.assertRaises(NoEnginesRegistered, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.reset(badID))     
+        d.addErrback(lambda f: self.assertRaises(NoEnginesRegistered, f.raiseException))   
+        d.addCallback(lambda _: self.multiengine.keys(badID))     
+        d.addErrback(lambda f: self.assertRaises(NoEnginesRegistered, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.pushSerialized(badID, a=newserialized.serialize(10)))
+        d.addErrback(lambda f: self.assertRaises(NoEnginesRegistered, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.pullSerialized(badID, 'a'))
+        d.addErrback(lambda f: self.assertRaises(NoEnginesRegistered, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.queueStatus(badID))
+        d.addErrback(lambda f: self.assertRaises(NoEnginesRegistered, f.raiseException))
+        return d        
     
     def testExecute(self):
         self.addEngine(6)

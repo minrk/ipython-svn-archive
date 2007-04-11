@@ -76,6 +76,8 @@ class IEngineMultiplexer(Interface):
     :Exception:
         InvalidEngineID
             If the targets argument is bad or engines aren't registered.
+        NoEnginesRegistered
+            If there are no engines registered and targets='all'
     """
         
     #---------------------------------------------------------------------------
@@ -306,7 +308,13 @@ class MultiEngine(ControllerAdapterBase):
                     raise error.InvalidEngineID("Engine with id %s is not registered" % repr(id))  
             return map(self.engines.get, targets)
         elif targets == 'all':
-            return self.engines.values()
+            eList = self.engines.values()
+            if len(eList) == 0:
+                msg = """There are no engines registered.
+                     Check the logs in ~/.ipython/log if you think there should have been."""
+                raise error.NoEnginesRegistered(msg)
+            else:
+                return eList
         else:
             raise error.InvalidEngineID("targets argument is not an int, list of ints or 'all'")
     
@@ -347,7 +355,7 @@ class MultiEngine(ControllerAdapterBase):
         """Called _performOnEngines and wraps result/exception into deferred."""
         try:
             dList = self._performOnEngines(methodName, targets, *args, **kwargs)
-        except error.InvalidEngineID, AttributeError:
+        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
             return defer.fail(failure.Failure())
         else:
             return gatherBoth(dList, 
@@ -428,7 +436,7 @@ class MultiEngine(ControllerAdapterBase):
     def pullSerialized(self, targets, *keys):
         try:
             dList = self._performOnEngines('pullSerialized', targets, *keys)
-        except error.InvalidEngineID, AttributeError:
+        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
             return defer.fail(failure.Failure())
         else:
             for d in dList:
@@ -459,7 +467,7 @@ class MultiEngine(ControllerAdapterBase):
         log.msg("Getting queue status on %s" % targets)
         try:
             engines = self.engineList(targets)
-        except error.InvalidEngineID, AttributeError:
+        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
             return defer.fail(failure.Failure())            
         else:
             dList = []
@@ -481,7 +489,7 @@ class MultiEngine(ControllerAdapterBase):
         log.msg("Scattering %s to %s" % (key, targets))
         try:
             engines = self.engineList(targets)
-        except error.InvalidEngineID, AttributeError:
+        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
             return defer.fail(failure.Failure())
         else:
             nEngines = len(engines)    
@@ -507,7 +515,7 @@ class MultiEngine(ControllerAdapterBase):
         log.msg("Gathering %s from %s" % (key, targets))
         try:
              engines = self.engineList(targets)
-        except error.InvalidEngineID, AttributeError:
+        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
             return defer.fail(failure.Failure())
         else:
             nEngines = len(engines)    
