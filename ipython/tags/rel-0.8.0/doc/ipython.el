@@ -175,6 +175,9 @@ the second for a 'normal' command, and the third for a multiline command.")
 
       (ansi-color-for-comint-mode-on)
       (define-key py-shell-map [tab] 'ipython-complete)
+      ;; Add this so that tab-completion works both in X11 frames and inside
+      ;; terminals (such as when emacs is called with -nw).
+      (define-key py-shell-map "\t" 'ipython-complete)
       ;;XXX this is really just a cheap hack, it only completes symbols in the
       ;;interactive session -- useful nonetheless.
       (define-key py-mode-map [(meta tab)] 'ipython-complete)
