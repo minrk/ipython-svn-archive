@@ -45,6 +45,7 @@ except ZeroDivisionError:
 rc.activate()
 rc.block=True
 import numpy                                        # local import
+print rc.magicTargets
 %px import numpy                                    
 %px a = numpy.random.rand(2,2)
 %px print numpy.linalg.eigvals(a)
