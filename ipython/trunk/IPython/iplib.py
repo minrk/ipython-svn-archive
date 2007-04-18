@@ -2592,7 +2592,7 @@ want to merge them back into the new files.""" % locals()
                     print >> sys.stderr, badline
         else:  # regular file execution
             try:
-                if sys.platform == 'win32':
+                if sys.platform == 'win32' and sys.version_info < (2,5,1):
                     # Work around a bug in Python for Windows.  The bug was
                     # fixed in in Python 2.5 r54159 and 54158, but that's still
                     # SVN Python as of March/07.  For details, see:
