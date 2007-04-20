@@ -72,7 +72,7 @@ def BdbQuit_excepthook(et,ev,tb):
     if et==bdb.BdbQuit:
         print 'Exiting Debugger.'
     else:
-        ehook.excepthook_ori(et,ev,tb)
+        BdbQuit_excepthook.excepthook_ori(et,ev,tb)
 
 def BdbQuit_IPython_excepthook(self,et,ev,tb):
     print 'Exiting Debugger.'
