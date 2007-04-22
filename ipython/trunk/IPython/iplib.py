@@ -2597,7 +2597,14 @@ want to merge them back into the new files.""" % locals()
                     # fixed in in Python 2.5 r54159 and 54158, but that's still
                     # SVN Python as of March/07.  For details, see:
                     # http://projects.scipy.org/ipython/ipython/ticket/123
-                    exec file(fname) in where[0],where[1]
+                    try:
+                        globs,locs = where[0:2]
+                    except:
+                        try:
+                            globs = locs = where[0]
+                        except:
+                            globs = locs = globals()
+                    exec file(fname) in globs,locs
                 else:
                     execfile(fname,*where)
             except SyntaxError:
