@@ -4,7 +4,7 @@ IPython1 README
 
 :Author:  Brian E. Granger
 :Contact: ellisonbg@gmail.com
-:Date: April 9, 2007
+:Date: April 24, 2007
 
 .. contents::
 
@@ -24,7 +24,7 @@ functional and can be used with current IPython versions.
 
 The IPython kernel is essentially a network enabled Python instance and
 consists of three components: the IPython Engine, the IPython Controller and
-various Controller Client.
+various Controller Clients.
 
 IPython Engine
 --------------

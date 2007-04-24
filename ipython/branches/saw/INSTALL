@@ -4,7 +4,7 @@ IPython Kernel Installation
 
 :Author:  Brian E. Granger
 :Contact: ellisonbg@gmail.com
-:Date: April 9, 2007
+:Date: April 24, 2007
 
 .. contents::
 
@@ -69,14 +69,11 @@ Subversion repository with the command:
 
     svn co http://ipython.scipy.org/svn/ipython/ipython/branches/saw ipython1
 
-In addition to installing the ipython1 python package, this will also install a
-few scripts for starting the controller and engine into an appropriate
-location.  To control where these scripts are installed, you can do the
-following:
+If you want to do development on ipython1 and want to always run the svn version of
+ipython1, you should install using the command::
 
-::
+	python setup.py develop
 
-    python setup.py install_scripts --install-dir=/some/other/bin
 	
 IPython
 -------
@@ -134,8 +131,8 @@ MPI Support
 ===========
 
 The IPython kernel includes MPI support.  With MPI support IPython engines can
-pass data between each other using MPI.  There are many ways to call the actual
-MPI API:
+pass data between each other using MPI.  Our recommendation is to use mpi4py 
+for MPI support.  There are many ways to call the actual MPI API:
 
 1. Call into an MPI shared library directly using ctypes.
 2. Use one of the many Python/MPI bindings such as mpi4py.
@@ -148,6 +145,9 @@ that calls MPI_Init.  To enable mpi support:
 1. Copy the configfiles/mpirc.py into your .ipython directory
 2. Set the mpiImportStatement to an appropriate value.  See examples and the
    docstrings in config.objects for more details.
+
+Older MPI Information that probably doesn't work currently:
+
 3. If you want to use ipython1.mpi for calling MPI_Init, you will need to 
    make sure it is built when you install ipython1. 
 
@@ -155,8 +155,6 @@ By default, the ipython1.kernel.mpi module is not built.  To build it, give the
 build command::
 
 	python setup.py build --mpicc=your-mpicc-command
-
-Our recommendation is to use mpi4py for MPI support.
 
 
   
