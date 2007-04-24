@@ -36,7 +36,11 @@ with_packages = ['ipython1',
                  'ipython1.core',
                  'ipython1.test',
                  'ipython1.config',
-                 'ipython1.tools']
+                 'ipython1.tools',
+                 'ipython1.external',
+                 'ipython1.external.twisted',
+                 'ipython1.external.twisted.web2',
+                 '']
                 
 with_scripts =  ['scripts/ipcontroller',
                  'scripts/ipengine',
