@@ -12,56 +12,28 @@
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
-import os
-# BEFORE importing distutils, remove MANIFEST. distutils doesn't properly
-# update it when the contents of directories change.
-if os.path.exists('MANIFEST'): os.remove('MANIFEST')
+import ez_setup
+ez_setup.use_setuptools()
 
-# This is needed to monkey patch sysconfig.customize_compiler for
-# Python 2.3 so that the default LDSHARED can be overridden by the
-# environmental variable below.
-import ipython1.distutils.sysconfig
+from setuptools import setup, find_packages
 
-from ipython1.distutils.commands import config, build, build_ext
+setup(
+    name = "ipython1",
+    version = "0.9",
+    packages = find_packages(),
+    
+    zip_safe = False,
 
-from distutils import sysconfig
-from distutils.core import setup, Extension
-import sys
+    entry_points = {
+            'console_scripts': ['ipengine = ipython1.scripts.ipengine:start',
+                                'ipcontroller = ipython1.scripts.ipcontroller:start',
+                                'ipcluster = ipython1.scripts.ipcluster:main']
+        },
 
-
-# Packages and libraries to build
-
-with_packages = ['ipython1',
-                 'ipython1.kernel',
-                 'ipython1.core',
-                 'ipython1.test',
-                 'ipython1.config',
-                 'ipython1.tools',
-                 'ipython1.external',
-                 'ipython1.external.twisted',
-                 'ipython1.external.twisted.web2',
-                 '']
-                
-with_scripts =  ['scripts/ipcontroller',
-                 'scripts/ipengine',
-                 'scripts/ipcluster']
-
-with_ext_modules = [Extension('ipython1.mpi',['ipython1/mpi/mpi.c'])]
-
-# Now build IPython
-
-setup(name             = 'ipython1',
-      version          = '0.1',
-      description      = 'Newly Redesigned IPython',
-      long_description = 'Newly Redesigned IPython',
-      author           = 'Fernando Perez / Brian Granger',
-      author_email     = 'Fernando.Perez@colorado.edu / ellisonbg@gmail.com',
-      url              = 'http://ipython.scipy.org',
-      license          = 'BSD',
-      packages         = with_packages,
-      scripts          = with_scripts,
-      ext_modules      = with_ext_modules,
-      cmdclass         = {'config': config,
-                          'build' : build,
-                          'build_ext' : build_ext}
-      )
+    author = "Fernando Perez / Brian Granger",
+    author_email = "Fernando.Perez@colorado.edu / ellisonbg@gmail.com",
+    url = 'http://ipython.scipy.org',
+    description = "Newly Redesigned IPython",
+    license = "BSD",
+    keywords = "ipython parallel distributed",
+)
