@@ -133,7 +133,12 @@ class Parser:
         string."""
         
         string_output = 0
-        if out == 'str' or self.out == 'str':
+        if out == 'str' or self.out == 'str' or \
+           isinstance(self.out,cStringIO.OutputType):
+            # XXX - I don't really like this state handling logic, but at this
+            # point I don't want to make major changes, so adding the
+            # isinstance() check is the simplest I can do to ensure correct
+            # behavior.
             out_old = self.out
             self.out = cStringIO.StringIO()
             string_output = 1
