@@ -2533,7 +2533,17 @@ Defaulting color scheme to 'NoColor'"""
 
         Under Windows, it checks executability as a match agains a
         '|'-separated string of extensions, stored in the IPython config
-        variable win_exec_ext.  This defaults to 'exe|com|bat'. """
+        variable win_exec_ext.  This defaults to 'exe|com|bat'.
+        
+        This function also resets the root module cache of module completer,
+        used on slow filesystems.
+        """
+        
+        
+        ip = self.api
+
+        # for the benefit of module completer in ipy_completers.py
+        del ip.db['rootmodules']
         
         path = [os.path.abspath(os.path.expanduser(p)) for p in 
             os.environ['PATH'].split(os.pathsep)]
@@ -2583,7 +2593,7 @@ Defaulting color scheme to 'NoColor'"""
             # Call again init_auto_alias() so we get 'rm -i' and other
             # modified aliases since %rehashx will probably clobber them
             self.shell.init_auto_alias()
-            db = self.getapi().db
+            db = ip.db
             db['syscmdlist'] = syscmdlist
         finally:
             os.chdir(savedir)
