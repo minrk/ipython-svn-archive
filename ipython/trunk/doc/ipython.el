@@ -215,7 +215,7 @@ the second for a 'normal' command, and the third for a multiline command.")
                    (list "-colors"
                          (cond  
                            ((eq frame-background-mode 'dark)
-                            "DarkBG")
+                            "Linux")
                            ((eq frame-background-mode 'light)
                             "LightBG")
                            (t ; default (backg-mode isn't always set by XEmacs)
