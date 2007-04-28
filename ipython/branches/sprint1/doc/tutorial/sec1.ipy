@@ -36,7 +36,7 @@ pr = rc.executeAll('1/0')                           # a remote exception is rais
 try:
     pr.r
 except ZeroDivisionError:
-    print "I caught the exception!"
+    print "I caught the exception"
 
 # Magic Commands
 
@@ -79,8 +79,8 @@ rc.pull([0,2], 'b')                                 # pull b from [0,2]
 rc.push([1,3], c='speed')                           # push 'speed' to [1,3] as c
 rc.execute([1,3], 'print c', block=True)            
 rc.block = False
-pd = rc.pullAll('c')
-pc.r
+pr = rc.pullAll('c')
+pr.r
 rc.block = True
 
 
