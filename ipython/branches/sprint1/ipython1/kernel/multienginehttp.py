@@ -52,7 +52,19 @@ class HTTPMultiEngineRoot(resource.Resource):
     def __init__(self, multiengine):
         self.smultiengine = ISynchronousMultiEngine(multiengine)
         self.child_execute = HTTPMultiEngineExecute(self.smultiengine)
+        self.child_push = HTTPMultiEnginePush(self.smultiengine)
+        self.child_pull = HTTPMultiEnginePull(self.smultiengine)
+        self.child_getresult = HTTPMultiEngineGetResult(self.smultiengine)
+        self.child_reset = HTTPMultiEngineReset(self.smultiengine)
+        self.child_keys = HTTPMultiEngineKeys(self.smultiengine)
+        self.child_kill = HTTPMultiEngineKill(self.smultiengine)
+        self.child_clearqueue = HTTPMultiEngineClearQueue(self.smultiengine)
+        self.child_queustatus = HTTPMultiEngineQueueStatus(self.smultiengine)
+        self.child_scatter = HTTPMultiEngineScatter(self.smultiengine)
+        self.child_gather = HTTPMultiEngineGather(self.smultiengine)
+        
         self.child_registerclient = HTTPMultiEngineRegisterClient(self.smultiengine)
+        self.child_unregisterclient = HTTPMultiEngineUnregisterClient(self.smultiengine)
         
     #def locateChild(self, request, segments):
     #    log.msg("Segments: " + repr(segments))
@@ -67,17 +79,17 @@ components.registerAdapter(HTTPMultiEngineRoot,
 
 
 class HTTPMultiEngineBaseMethod(resource.Resource):
-
+    
     def __init__(self, smultiengine):
         self.smultiengine = smultiengine
         log.msg("Creating child resource...")
-        
+    
     def locateChild(self, request, segments):
         return self, ()
     
     def renderHTTP(self, request):
         return http.Response(200, stream=stream.MemoryStream(repr(request)))
-        
+    
     def parseTargets(self, targets):
         if targets == 'all':
             return targets
@@ -104,7 +116,7 @@ class HTTPMultiEngineBaseMethod(resource.Resource):
                 else:
                     return False
         return False
-        
+    
     def buildRequestSummary(self, request):
         reply = """host: %r
 port: %r
@@ -117,7 +129,7 @@ headers: %r
 """ % (request.host, request.port, request.path, request.prepath, 
        request.postpath, request.args, request.method, request.headers)
         return reply
-            
+    
     def packageSuccess(self, result):
         headers, data = httputil.serialize(result)
         response = http.Response(200, stream=stream.MemoryStream(data))
@@ -125,7 +137,7 @@ headers: %r
             response.headers.addRawHeader(k, v)
         response.headers.setHeader('content-type', http_headers.MimeType('text', 'plain'))
         return response
-        
+    
     def packageFailure(self, f):
         f.cleanFailure()
         headers, data = httputil.serialize(f)
@@ -134,20 +146,195 @@ headers: %r
             response.headers.addRawHeader(k, v)
         response.headers.setHeader('content-type', http_headers.MimeType('text', 'plain'))
         return response
-        
+    
+
+
 class HTTPMultiEngineExecute(HTTPMultiEngineBaseMethod):
     
     def renderHTTP(self, request):
         targetsString = request.prepath[1]
         targetsArg = self.parseTargets(targetsString)
-        lines = request.args['lines'][0]
-        clientID = self.smultiengine.registerClient()
-        d = self.smultiengine.execute(clientID, True, targetsArg, lines)
-        d.addCallback(lambda r: self.packageSuccess(r))
-        d.addErrback(lambda f: self.packageFailure(f))
-        self.smultiengine.unregisterClient(clientID)
-        return d
+        if targetsArg is not False:
+            lines = request.args['lines'][0]
+            clientID = self.smultiengine.registerClient()
+            d = self.smultiengine.execute(clientID, True, targetsArg, lines)
+            d.addBoth(self.packageSuccess, self.packageFailure)
+            self.smultiengine.unregisterClient(clientID)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
     
+
+class HTTPMultiEnginePush(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        targetsString = request.prepath[1]
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            pns = request.args['pns'][0]
+            try:
+                ns = pickle.loads(pns)
+            except:
+                return self.packageFailure(failure.Failure())
+            
+            clientID = self.smultiengine.registerClient()
+            d = self.smultiengine.push(clientID, False, targetsArg, **ns)
+            d.addBoth(self.packageSuccess, self.packageFailure)
+            self.smultiengine.unregisterClient(clientID)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEnginePull(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        targetsString = request.prepath[1]
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            keys = request.args['keys']
+            clientID = self.smultiengine.registerClient()
+            d = self.smultiengine.pull(clientID, True, targetsArg, keys)
+            d.addBoth(self.packageSuccess, self.packageFailure)
+            self.smultiengine.unregisterClient(clientID)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEngineGetResult(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        targetsString = request.prepath[1]
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            id = request.args['id'][0]
+            clientID = self.smultiengine.registerClient()
+            d = self.smultiengine.getResult(clientID, True, targetsArg, id)
+            d.addBoth(self.packageSuccess, self.packageFailure)
+            self.smultiengine.unregisterClient(clientID)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEngineReset(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        targetsString = request.prepath[1]
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            clientID = self.smultiengine.registerClient()
+            d = self.smultiengine.reset(clientID, True, targetsArg)
+            d.addBoth(self.packageSuccess, self.packageFailure)
+            self.smultiengine.unregisterClient(clientID)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEngineKeys(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        targetsString = request.prepath[1]
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            clientID = self.smultiengine.registerClient()
+            d = self.smultiengine.keys(clientID, True, targetsArg)
+            d.addBoth(self.packageSuccess, self.packageFailure)
+            self.smultiengine.unregisterClient(clientID)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEngineKill(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        targetsString = request.prepath[1]
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            clientID = self.smultiengine.registerClient()
+            d = self.smultiengine.kill(clientID, True, targetsArg)
+            d.addBoth(self.packageSuccess, self.packageFailure)
+            self.smultiengine.unregisterClient(clientID)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEngineClearQueue(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        targetsString = request.prepath[1]
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            clientID = self.smultiengine.registerClient()
+            d = self.smultiengine.clearQueue(clientID, True, targetsArg)
+            d.addBoth(self.packageSuccess, self.packageFailure)
+            self.smultiengine.unregisterClient(clientID)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEngineQueueStatus(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        targetsString = request.prepath[1]
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            lines = request.args['lines'][0]
+            clientID = self.smultiengine.registerClient()
+            d = self.smultiengine.queueStatus(clientID, True, targetsArg)
+            d.addBoth(self.packageSuccess, self.packageFailure)
+            self.smultiengine.unregisterClient(clientID)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEngineScatter(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        targetsString = request.prepath[1]
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            key = request.args['key'][0]
+            try:
+                seq = pickle.loads(request.args['pseq'][0])
+            except:
+                return self.packageFailure(failure.Failure())
+            style = request.args['style'][0]
+            flatten = bool(int(request.args['flatten'][0]))
+            clientID = self.smultiengine.registerClient()
+            d = self.smultiengine.scatter(clientID, False, targetsArg,
+                key, seq, style, flatten)
+            d.addBoth(self.packageSuccess, self.packageFailure)
+            self.smultiengine.unregisterClient(clientID)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEngineGather(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        targetsString = request.prepath[1]
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            key = request.args['key'][0]
+            style = request.args['style'][0]
+            clientID = self.smultiengine.registerClient()
+            d = self.smultiengine.gather(clientID, True, targetsArg, key, style)
+            d.addBoth(self.packageSuccess, self.packageFailure)
+            self.smultiengine.unregisterClient(clientID)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+
 class HTTPMultiEngineRegisterClient(HTTPMultiEngineBaseMethod):
     
     def renderHTTP(self, request):
@@ -180,3 +367,4 @@ components.registerAdapter(HTTPServerFactoryFromMultiEngine,
             IMultiEngine, IHTTPMultiEngineFactory)
         
 
+#################
