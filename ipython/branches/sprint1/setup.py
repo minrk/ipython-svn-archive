@@ -12,9 +12,6 @@
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
-import ez_setup
-ez_setup.use_setuptools()
-
 from setuptools import setup, find_packages
 
 setup(
