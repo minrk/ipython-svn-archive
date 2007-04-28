@@ -136,8 +136,9 @@ class ControllerService(object, service.Service):
     # I also pick up the IService interface by inheritance from service.Service
     implements(IControllerBase)
     
-    def __init__(self, maxEngines=255, saveIDs=False):
+    def __init__(self, checker, maxEngines=255, saveIDs=False):
         self.saveIDs = saveIDs
+        self.checker = checker
         self.engines = {}
         self.availableIDs = range(maxEngines,-1,-1)   # [255,...,0]
         self._onRegister = []

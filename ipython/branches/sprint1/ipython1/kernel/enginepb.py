@@ -2,7 +2,7 @@
 # -*- test-case-name: ipython1.test.test_enginepb -*-
 """Expose the IPython EngineService using Twisted's Perspective Broker.
 
-This modules defines interfaces and adapters to connect an EngineService to
+This module defines interfaces and adapters to connect an EngineService to
 a ControllerService using Perspective Broker.  It defines the following classes:
 
 On the Engine (client) side:
@@ -43,6 +43,7 @@ from twisted.internet import defer, reactor
 from twisted.internet.interfaces import IProtocolFactory
 from zope.interface import Interface, implements, Attribute
 from twisted.spread.util import Pager, StringPager, CallbackPageCollector
+from twisted.cred import portal
 
 from twisted.internet.base import DelayedCall
 DelayedCall.debug = True
@@ -155,19 +156,20 @@ class PBEngineClientFactory(pb.PBClientFactory, object):
         
     implements(IPBEngineClientFactory)
         
-    def __init__(self, service):
+    def __init__(self, service, credentials):
         
         assert IEngineBase.providedBy(service), \
             "IEngineBase is not provided by " + repr(service)
         pb.PBClientFactory.__init__(self)
         self.service = service
         self.engineReference = IPBEngine(service)
-        self.deferred = self.getRootObject()
+        self.deferred = self.login(credentials)
         self.deferred.addCallbacks(self._gotRoot, self._getRootFailure)
     
     def _getRootFailure(self, reason):
         """errback for pb.PBClientFactory.getRootObject"""
         log.err(reason)
+        reactor.stop()
         #return reason
         
     def _gotRoot(self, obj):
@@ -641,11 +643,11 @@ class IPBRemoteEngineRoot(Interface):
     to PB.
     """
     
-    def remote_registerEngine(self, engineReference, id=None, pid=None):
+    def perspective_registerEngine(self, engineReference, id=None, pid=None):
         """Register new engine on controller."""
     
 
-class PBRemoteEngineRootFromService(pb.Root):
+class PBRemoteEngineRootFromService(pb.Avatar):
     """Adapts a IControllerBase to an IPBRemoteEngineRoot.
     
     This is an adapter between the actual ControllerService that
@@ -659,7 +661,7 @@ class PBRemoteEngineRootFromService(pb.Root):
             "IControllerBase is not provided by " + repr(service)
         self.service = service
     
-    def remote_registerEngine(self, engineReference, id=None, pid=None):
+    def perspective_registerEngine(self, engineReference, id=None, pid=None):
         # First adapt the engineReference to a basic non-queued engine
         engine = IEngineBase(engineReference)
         # Make it an IQueuedEngine before registration
@@ -689,6 +691,17 @@ components.registerAdapter(PBRemoteEngineRootFromService,
 # Now the Server Factory for PB connections
 #-------------------------------------------------------------------------------
 
+class PBEngineServerRealm:
+    implements(portal.IRealm)
+
+    def __init__(self, service):
+        self.service = service
+
+    def requestAvatar(self, avatarId, mind, *interfaces):
+        if pb.IPerspective not in interfaces:
+            raise NotImplementedError
+        return pb.IPerspective, IPBRemoteEngineRoot(self.service), lambda:None
+
 class IPBEngineServerFactory(IProtocolFactory):
     """This is the server factory used by PB on the controller."""
     pass
@@ -697,8 +710,7 @@ class IPBEngineServerFactory(IProtocolFactory):
 class PBEngineServerFactory(pb.PBServerFactory):
     
     implements(IPBEngineServerFactory)
-    
-    
+
 def PBEngineServerFactoryFromService(service):
     """Adapt a IControllerBase to a IPBEngineServerFactory.
     
@@ -714,8 +726,9 @@ def PBEngineServerFactoryFromService(service):
     """
     assert IControllerBase.providedBy(service), \
         "IControllerBase is not provided by " + repr(service)
-    root = IPBRemoteEngineRoot(service)
-    return PBEngineServerFactory(root)
+    p = portal.Portal(PBEngineServerRealm(service))
+    p.registerChecker(service.checker)
+    return PBEngineServerFactory(p)
 
 
 components.registerAdapter(PBEngineServerFactoryFromService,

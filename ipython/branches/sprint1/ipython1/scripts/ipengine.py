@@ -73,6 +73,12 @@ def start(n=1):
     parser.set_defaults(ipythondir='')
     parser.set_defaults(logfile='')
 
+    # authentication information
+    parser.add_option("-U", "--user", type="string", dest="user",
+        help="user name")
+    parser.add_option("-P", "--password", type="string", dest="password",
+        help="password")
+
     parser.add_option("--controller-port", type="int", dest="controllerport",
         help="the TCP port the controller is listening on")
     parser.add_option("--controller-ip", type="string", dest="controllerip",
@@ -104,6 +110,10 @@ def start(n=1):
         engineConfig.connectToControllerOn['ip'] = options.controllerip
     if options.controllerport is not None:
         engineConfig.connectToControllerOn['port'] = options.controllerport
+    if options.user is not None:
+        engineConfig.accessCredentials['user'] = options.user
+    if options.password is not None:
+        engineConfig.accessCredentials['password'] = options.password
         
     main(options.n, options.logfile)
     

@@ -16,6 +16,7 @@ from optparse import OptionParser
 
 from twisted.internet import reactor, error
 from twisted.python import log
+from twisted.cred import checkers
 
 from ipython1.kernel import controllerservice
 from ipython1.kernel.multiengine import IMultiEngine
@@ -46,10 +47,14 @@ def main(logfile):
         except:
             log.msg("Error running controllerImportStatement: %s" % controllerConfig.controllerImportStatement)
     
-    # Create and configure the core ControllerService
-    cs = controllerservice.ControllerService()
-    
     # Start listening for engines  
+    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+    checker.addUser(controllerConfig.accessCredentials['user'],\
+                    controllerConfig.accessCredentials['password'])
+    
+    # Create and configure the core ControllerService
+    cs = controllerservice.ControllerService(checker)
+
     efac = controllerConfig.engineServerProtocolInterface(cs)
     reactor.listenTCP(
         port=controllerConfig.listenForEnginesOn['port'],
@@ -75,6 +80,12 @@ def start():
     parser = OptionParser()
     parser.set_defaults(logfile='')
         
+
+    parser.add_option("-U", "--user", type="string", dest="user",
+        help="user name for engine connections")
+    parser.add_option("-P", "--password", type="string", dest="password",
+        help="password name for engine connections")
+
     parser.add_option("--engine-port", type="int", dest="engineport",
         help="the TCP port the controller will listen on for engine connections")
     parser.add_option("--engine-ip", type="string", dest="engineip",
@@ -125,6 +136,10 @@ def start():
         controllerConfig.controllerInterfaces['task']['networkInterfaces'][di]['ip'] = options.taskip
     if options.taskport is not None:
         controllerConfig.controllerInterfaces['task']['networkInterfaces'][di]['port'] = options.taskport
+    if options.user is not None:
+        controllerConfig.accessCredentials['user'] = options.user
+    if options.password is not None:
+        controllerConfig.accessCredentials['password'] = options.password
         
     main(options.logfile)
     

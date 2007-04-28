@@ -31,6 +31,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 from ipython1.config.base import Config
+from twisted.cred import credentials
 
 #-------------------------------------------------------------------------------
 # Default Port Values
@@ -70,9 +71,17 @@ from ipython1.kernel.enginepb import PBEngineClientFactory
 class EngineConfig(Config):
     connectToControllerOn = {'ip': '127.0.0.1', 'port': enginePort}
     """The ip, port the controller is listening for engines on."""
-    
+
+    accessCredentials = {'user': 'guest', 'password': 'open-sesame'}
+    """the user and password combo to enable connection with the controller"""
+
     #engineClientProtocolInterface = IVanillaEngineClientFactory
-    engineClientProtocolInterface = PBEngineClientFactory
+    def engineClientProtocolInterface(self, service):
+        return PBEngineClientFactory(service, 
+            credentials.UsernamePassword(
+                self.accessCredentials['user'], 
+                self.accessCredentials['password']))
+
     """The interface corresponding to the network protocol used to connect
     to the controller with."""
 
@@ -166,7 +175,10 @@ class ControllerConfig(Config):
     
     listenForEnginesOn  = {'ip': '', 'port': enginePort}
     """The ip and port to listen for engine on."""
-   
+
+    accessCredentials = {'user' : 'guest', 'password' : 'open-sesame'}
+    """the user and password combo to allow connections from engines"""
+
     controllerInterfaces = {'multiengine': {'controllerInterface': IMultiEngine, 
                                             'networkInterfaces': networkInterfacesME,
                                             'default': 'xmlrpc'},
