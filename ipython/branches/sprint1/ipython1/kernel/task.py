@@ -324,7 +324,7 @@ class TaskController(cs.ControllerAdapterBase):
         self.deferredResults = {} # dict of {taskID:deferred}
         self.finishedResults = {} # dict of {taskID:actualResult}
         self.workers = {} # dict of {workerID:worker}
-        self.abortPending = {} # dict of {taskID:abortDeferred}
+        self.abortPending = [] # dict of {taskID:abortDeferred}
         self.scheduler = self.SchedulerClass()
         for id in self.controller.engines.keys():
                 self.workers[id] = IWorker(self.controller.engines[id])
@@ -398,15 +398,16 @@ class TaskController(cs.ControllerAdapterBase):
         except IndexError, e:
             if taskID in self.finishedResults.keys():
                 d = defer.fail(IndexError("Task Already Completed"))
-            elif self.abortPending.has_key(taskID):
-                d = self.abortPending[taskID]
+            elif taskID in self.abortPending:
+                d = defer.fail(IndexError("Task Already Aborted"))
             elif taskID in self._pendingTaskIDs():# task is pending
-                d = defer.Deferred()
-                self.abortPending[taskID] = d
+                self.abortPending.append(taskID)
+                d = defer.succeed(None)
             else:
                 d = defer.fail(e)
         else:
             d = defer.execute(self._doAbort, taskID)
+        
         return d
     
     def barrier(self, taskIDs):
@@ -427,9 +428,8 @@ class TaskController(cs.ControllerAdapterBase):
         log.msg("Task #%i Aborted"%taskID)
         result = failure.Failure(error.TaskAborted())
         self._finishTask(taskID, result)
-        d = self.abortPending.pop(taskID, None)
-        if d is not None:
-            d.callback(None)
+        if taskID in self.abortPending:
+            self.abortPending.remove(taskID)
     
     def _finishTask(self, taskID, result):
         dlist = self.deferredResults.pop(taskID)
@@ -465,11 +465,9 @@ class TaskController(cs.ControllerAdapterBase):
         
         # Check if aborted while pending
         aborted = False
-        for id, d in self.abortPending:
-            if taskID == id:
-                self._doAbort(taskID)
-                aborted = True
-                break
+        if taskID in self.abortPending:
+            self._doAbort(taskID)
+            aborted = True
         
         if not aborted:
             if isinstance(result, failure.Failure): # we failed
