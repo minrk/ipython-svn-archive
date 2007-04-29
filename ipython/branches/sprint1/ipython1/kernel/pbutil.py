@@ -39,6 +39,24 @@ def packageFailure(f):
     pString = pickle.dumps(f, 2)
     return 'FAILURE:' + pString
 
+def unpackageFailure(r):
+    """
+    See if a returned value is a pickled Failure object.
+
+    To distinguish between general pickled objects and pickled Failures, the
+    other side should prepend the string FAILURE: to any pickled Failure.
+    """
+    if isinstance(r, str):
+        if r.startswith('FAILURE:'):
+            try:
+                result = pickle.loads(r[8:])
+            except pickle.PickleError:
+                return failure.Failure( \
+                    FailureUnpickleable("Could not unpickle failure."))
+            else:
+                return result
+    return r
+
 def checkMessageSize(m, info):
     """Check string m to see if it violates banana.SIZE_LIMIT.
     

@@ -16,7 +16,6 @@ and corresponding keys can be found at the bottom of this file in the
 `configClasses` dictionary.
 """
 __docformat__ = "restructuredtext en"
-__docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 #       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
 #                           Brian E Granger <ellisonbg@gmail.com>
@@ -32,6 +31,7 @@ __docformat__ = "restructuredtext en"
 
 from ipython1.config.base import Config
 from twisted.cred import credentials
+from twisted.spread import pb
 
 #-------------------------------------------------------------------------------
 # Default Port Values
@@ -41,6 +41,7 @@ enginePort = 10201
 xmlrpcMEPort = 10105
 pbTCPort = 10114
 xmlrpcTCPort = 10113
+pbPort = pb.portno
 httpMEPort = 8080
 
 #-------------------------------------------------------------------------------
@@ -146,6 +147,9 @@ from ipython1.kernel.enginepb import \
 from ipython1.kernel.taskxmlrpc import \
     IXMLRPCTaskControllerFactory
 
+from ipython1.kernel.taskpb import \
+     IPBTaskControllerFactory
+
 # from ipython1.kernel.taskpb import \
 #     IPBTaskControllerFactory
 # 
@@ -165,7 +169,13 @@ xmlrpcTC = {'interface':IXMLRPCTaskControllerFactory,
             'ip':'',
             'port':xmlrpcTCPort}
 
-networkInterfacesTC = {'xmlrpc':xmlrpcTC}
+pbTC = {'interface': IPBTaskControllerFactory,
+        'ip': '',
+        'port': pbPort}
+
+networkInterfacesTC = {
+    'xmlrpc':xmlrpcTC,
+    'pb': pbTC}
 
 
 class ControllerConfig(Config):

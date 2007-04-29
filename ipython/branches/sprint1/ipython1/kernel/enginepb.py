@@ -49,7 +49,7 @@ from twisted.internet.base import DelayedCall
 DelayedCall.debug = True
 
 from ipython1.kernel import pbconfig
-from ipython1.kernel.pbutil import packageFailure, checkMessageSize
+from ipython1.kernel.pbutil import packageFailure, unpackageFailure, checkMessageSize
 from ipython1.kernel.pbconfig import CHUNK_SIZE
 from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import newserialized
@@ -60,7 +60,6 @@ from ipython1.kernel.engineservice import \
     IEngineBase, \
     IEngineQueued, \
     EngineService
-
 
 #-------------------------------------------------------------------------------
 # Classes to enable paging of large objects
@@ -615,16 +614,7 @@ class EngineFromReference(object):
         To distinguish between general pickled objects and pickled Failures, the
         other side should prepend the string FAILURE: to any pickled Failure.
         """
-        if isinstance(r, str):
-            if r.startswith('FAILURE:'):
-                try: 
-                    result = pickle.loads(r[8:])
-                except pickle.PickleError:
-                    return failure.Failure( \
-                        FailureUnpickleable("Could not unpickle failure."))
-                else:
-                    return result
-        return r
+        return unpackageFailure(r)
 
 components.registerAdapter(EngineFromReference,
     pb.RemoteReference,
