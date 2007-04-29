@@ -150,13 +150,6 @@ class HTTPTaskUnregisterClient(HTTPTaskBaseMethod):
     
 
 
-        
-
-
-        
-
-
-
 class IHTTPTaskFactory(Interface):
     pass
 

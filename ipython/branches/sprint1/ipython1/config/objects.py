@@ -42,7 +42,7 @@ xmlrpcMEPort = 10105
 pbTCPort = 10114
 xmlrpcTCPort = 10113
 pbPort = pb.portno
-httpMEPort = 8080
+httpMEPort = 8000
 
 #-------------------------------------------------------------------------------
 # Shell Configuration
@@ -163,7 +163,7 @@ httpME = {'interface': IHTTPMultiEngineFactory,
           'ip': '', 
           'port': httpMEPort}
 
-networkInterfacesME = {'xmlrpc':xmlrpcME}
+networkInterfacesME = {'xmlrpc':xmlrpcME, 'http':httpME}
 
 xmlrpcTC = {'interface':IXMLRPCTaskControllerFactory,
             'ip':'',

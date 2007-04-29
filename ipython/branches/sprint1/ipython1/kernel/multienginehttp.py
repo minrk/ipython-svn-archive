@@ -17,20 +17,19 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import cPickle as pickle
-# try:
-import httplib2
+import httplib2, urllib, codecs
 
-from zope.interface import Interface, implements, Attribute
+from zope.interface import Interface, implements
 from twisted.internet import defer
 from twisted.python import components, failure, log
 
 from ipython1.kernel import httputil
 from ipython1.external.twisted.web2 import server, channel
 from ipython1.external.twisted.web2 import http, resource
-from ipython1.external.twisted.web2 import responsecode, stream
+from ipython1.external.twisted.web2 import stream
 from ipython1.external.twisted.web2 import http_headers
 
-from ipython1.kernel import newserialized
+# from ipython1.kernel import newserialized
 from ipython1.kernel import error
 from ipython1.kernel.multiengineclient import PendingResult
 from ipython1.kernel.multiengineclient import ResultList, QueueStatusList
@@ -40,9 +39,9 @@ from ipython1.kernel.multiengine import \
     IMultiEngine, \
     ISynchronousMultiEngine
 
-def _printer(*args, **kwargs):
-    print args,kwargs
-    return args, kwargs
+def _printer(r):
+    print r
+    return r
 #-------------------------------------------------------------------------------
 # The Controller/MultiEngine side of things
 #-------------------------------------------------------------------------------
@@ -52,7 +51,7 @@ class IHTTPMultiEngineRoot(Interface):
 
 
 class HTTPMultiEngineRoot(resource.Resource):
-    
+    implements(IHTTPMultiEngineRoot)
     addSlash = True
     
     def __init__(self, multiengine):
@@ -60,18 +59,20 @@ class HTTPMultiEngineRoot(resource.Resource):
         self.child_execute = HTTPMultiEngineExecute(self.smultiengine)
         self.child_push = HTTPMultiEnginePush(self.smultiengine)
         self.child_pull = HTTPMultiEnginePull(self.smultiengine)
-        self.child_getresult = HTTPMultiEngineGetResult(self.smultiengine)
+        self.child_getResult = HTTPMultiEngineGetResult(self.smultiengine)
         self.child_reset = HTTPMultiEngineReset(self.smultiengine)
         self.child_keys = HTTPMultiEngineKeys(self.smultiengine)
         self.child_kill = HTTPMultiEngineKill(self.smultiengine)
-        self.child_clearqueue = HTTPMultiEngineClearQueue(self.smultiengine)
-        self.child_queustatus = HTTPMultiEngineQueueStatus(self.smultiengine)
+        self.child_clearQueue = HTTPMultiEngineClearQueue(self.smultiengine)
+        self.child_queueStatus = HTTPMultiEngineQueueStatus(self.smultiengine)
         self.child_scatter = HTTPMultiEngineScatter(self.smultiengine)
         self.child_gather = HTTPMultiEngineGather(self.smultiengine)
-        self.child_getids = HTTPMultiEngineGetIDs(self.smultiengine)
+        self.child_getIDs = HTTPMultiEngineGetIDs(self.smultiengine)
         
-        self.child_registerclient = HTTPMultiEngineRegisterClient(self.smultiengine)
-        self.child_unregisterclient = HTTPMultiEngineUnregisterClient(self.smultiengine)
+        self.child_getPendingResult = HTTPMultiEngineGetPendingResult(self.smultiengine)
+        self.child_getAllPendingResults = HTTPMultiEngineGetAllPendingResults(self.smultiengine)
+        self.child_registerClient = HTTPMultiEngineRegisterClient(self.smultiengine)
+        self.child_unregisterClient = HTTPMultiEngineUnregisterClient(self.smultiengine)
         
     #def locateChild(self, request, segments):
     #    log.msg("Segments: " + repr(segments))
@@ -103,7 +104,6 @@ class HTTPMultiEngineBaseMethod(resource.Resource):
             return targets
         elif isinstance(targets, str):
             engines = self.smultiengine.getIDs()
-            print engines
             try:
                 target = int(targets)
             except ValueError:
@@ -140,6 +140,7 @@ headers: %r
        request.postpath, request.args, request.method, request.headers)
         return reply
     
+
     def packageSuccess(self, result):
         headers, data = httputil.serialize(result)
         response = http.Response(200, stream=stream.MemoryStream(data))
@@ -162,13 +163,14 @@ headers: %r
         return self.packageFailure(failure.Failure(e))
     
 
+
 class HTTPMultiEngineExecute(HTTPMultiEngineBaseMethod):
     
     def renderHTTP(self, request):
         try:
             targetsString = request.prepath[1]
             lines = request.args['lines'][0]
-            clientID = int(request.args['clientid'][0])
+            clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
         except:
             return self._badRequest(request)
@@ -188,7 +190,7 @@ class HTTPMultiEnginePush(HTTPMultiEngineBaseMethod):
     def renderHTTP(self, request):
         try:
             targetsString = request.prepath[1]
-            clientID = int(request.args['clientid'][0])
+            clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
             pns = request.args['namespace'][0]
             ns = pickle.loads(pns)
@@ -208,7 +210,7 @@ class HTTPMultiEnginePull(HTTPMultiEngineBaseMethod):
     def renderHTTP(self, request):
         try:
             targetsString = request.prepath[1]
-            clientID = int(request.args['clientid'][0])
+            clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
             keys = pickle.loads(request.args['keys'][0])
             # print keys
@@ -229,7 +231,7 @@ class HTTPMultiEngineGetResult(HTTPMultiEngineBaseMethod):
     def renderHTTP(self, request):
         try:
             targetsString = request.prepath[1]
-            clientID = int(request.args['clientid'][0])
+            clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
             ids = request.args['id'][0]
             if ids == 'None':
@@ -252,7 +254,7 @@ class HTTPMultiEngineReset(HTTPMultiEngineBaseMethod):
     def renderHTTP(self, request):
         try:
             targetsString = request.prepath[1]
-            clientID = int(request.args['clientid'][0])
+            clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
         except:
             return self._badRequest(request)
@@ -270,7 +272,7 @@ class HTTPMultiEngineKeys(HTTPMultiEngineBaseMethod):
     def renderHTTP(self, request):
         try:
             targetsString = request.prepath[1]
-            clientID = int(request.args['clientid'][0])
+            clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
         except:
             return self._badRequest(request)
@@ -288,7 +290,7 @@ class HTTPMultiEngineKill(HTTPMultiEngineBaseMethod):
     def renderHTTP(self, request):
         try:
             targetsString = request.prepath[1]
-            clientID = int(request.args['clientid'][0])
+            clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
         except:
             return self._badRequest(request)
@@ -306,13 +308,13 @@ class HTTPMultiEngineClearQueue(HTTPMultiEngineBaseMethod):
     def renderHTTP(self, request):
         try:
             targetsString = request.prepath[1]
-            clientID = int(request.args['clientid'][0])
+            clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
         except:
             return self._badRequest(request)
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
-            d = self.smultiengine.clearQueue(clientID, block, targetsArg)
+            d = self.smultiengine.clearQueue(clientID, True, targetsArg)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
         else:
@@ -324,13 +326,14 @@ class HTTPMultiEngineQueueStatus(HTTPMultiEngineBaseMethod):
     def renderHTTP(self, request):
         try:
             targetsString = request.prepath[1]
-            clientID = int(request.args['clientid'][0])
+            clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
         except:
             return self._badRequest(request)
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
-            d = self.smultiengine.queueStatus(clientID, block, targetsArg)
+            d = self.smultiengine.queueStatus(clientID, True, targetsArg)
+            # d.addBoth(_printer)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
         else:
@@ -342,10 +345,10 @@ class HTTPMultiEngineScatter(HTTPMultiEngineBaseMethod):
     def renderHTTP(self, request):
         try:
             targetsString = request.prepath[1]
-            clientID = int(request.args['clientid'][0])
+            clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
             key = request.args['key'][0]
-            seq = pickle.loads(request.args['pseq'][0])
+            seq = pickle.loads(request.args['seq'][0])
             style = request.args['style'][0]
             flatten = bool(int(request.args['flatten'][0]))
         except:
@@ -365,7 +368,7 @@ class HTTPMultiEngineGather(HTTPMultiEngineBaseMethod):
     def renderHTTP(self, request):
         try:
             targetsString = request.prepath[1]
-            clientID = int(request.args['clientid'][0])
+            clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
             key = request.args['key'][0]
             style = request.args['style'][0]
@@ -374,6 +377,7 @@ class HTTPMultiEngineGather(HTTPMultiEngineBaseMethod):
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
             d = self.smultiengine.gather(clientID, block, targetsArg, key, style)
+            d.addBoth(_printer)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
         else:
@@ -384,7 +388,38 @@ class HTTPMultiEngineGather(HTTPMultiEngineBaseMethod):
 class HTTPMultiEngineGetIDs(HTTPMultiEngineBaseMethod):
     
     def renderHTTP(self, request):
-        d = self.smultiengine.getIDs()
+        d = defer.execute(self.smultiengine.getIDs)
+        d.addCallbacks(self.packageSuccess, self.packageFailure)
+        return d
+    
+
+
+class HTTPMultiEngineGetPendingResult(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            clientID = int(request.args['clientID'][0])
+            block = int(request.args['block'][0])
+            ids = request.args['resultid'][0]
+            if ids == 'None':
+                id = None
+            else:
+                id = int(ids)
+        except:
+            return self._badRequest(request)
+        d = self.smultiengine.getPendingDeferred(clientID, id, block)
+        d.addCallbacks(self.packageSuccess, self.packageFailure)
+        return d
+    
+
+class HTTPMultiEngineGetAllPendingResults(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            clientID = int(request.args['clientID'][0])
+        except:
+            return self._badRequest(request)
+        d = self.smultiengine.getAllPendingDeferreds(clientID)
         d.addCallbacks(self.packageSuccess, self.packageFailure)
         return d
     
@@ -399,7 +434,7 @@ class HTTPMultiEngineRegisterClient(HTTPMultiEngineBaseMethod):
 class HTTPMultiEngineUnregisterClient(HTTPMultiEngineBaseMethod):
     
     def http_POST(request):
-        clientID = request.args.get('clientid')
+        clientID = request.args.get('clientID')
     
 
 
@@ -473,7 +508,7 @@ class HTTPMultiEngineClient(object):
         if targets == 'all':
             return targets
         elif isinstance(targets, (tuple, list)):
-            return ','.join(targets)
+            return ','.join(map(str, targets))
         elif isinstance(targets, int):
             return str(targets)
         raise error.InvalidEngineID(str(targets))
@@ -494,27 +529,44 @@ class HTTPMultiEngineClient(object):
                 vs = pickle.dumps(v,2)
             s += k+'='+vs+'&'
         return s[:-1]
-        
-    def fixSpecials(self, s):
-        s = s.replace(' ','%20')
-        return s
     
-    def _executeRemoteMethod(self, method, targets, **kwargs):
-        request = self.url+method+'/'+self.htmlTargetString(targets)+self.htmlArgString(kwargs)
-        request = self.fixSpecials(request)
+    def strDict(self, dikt):
+        d = {}
+        for k,v in dikt.iteritems():
+            if isinstance(v, str):
+                vs = v
+            elif isinstance(v, bool):
+                if v:
+                    vs = '1'
+                else:
+                    vs = '0'
+            elif isinstance(v, (int, float, type(None))):
+                vs = str(v)
+            else:
+                vs = pickle.dumps(v,2)
+            d[k] = vs
+        return d
+    
+    def _executeRemoteMethod(self, method, targets='', **kwargs):
+        args = urllib.urlencode(self.strDict(kwargs))
+        if targets != '':
+            targets = self.htmlTargetString(targets)
+        request = self.url+method+'/'+targets+'?'+args
+        # request = self.fixSpecials(request)
         header, response = self._server.request(request)
         # print request
         # print header
         # print response
         result = self._unpackageResult(header, response)
         return result
-
+    
     def _unpackageResult(self, header, response):
-        if header['status'] == '200':
-            result = pickle.loads(response)
+        status = header['status']
+        if status == '200':
+            result = httputil.unserialize(header, response)
             return self._returnOrRaise(result)
         else:
-            raise error.ProtocolError("request failed: %s"%response)
+            raise error.ProtocolError("Request Failed: %s:%s"%(status, response))
         
     def _returnOrRaise(self, result):
         if isinstance(result, failure.Failure):
@@ -527,13 +579,13 @@ class HTTPMultiEngineClient(object):
             self._getClientID()
             
     def _getClientID(self):
-        header, response = self._server.request(self.url+'registerclient')
+        header, response = self._server.request(self.url+'registerClient')
         self._clientID = self._unpackageResult(header, response)
     
     def _getPendingResult(self, resultID, block=True):
         self._checkClientID()
-        return self._executeRemoteMethod('getpendingresult',
-            clientid=self._clientID, resultid=resultID, block=block)
+        return self._executeRemoteMethod('getPendingResult',
+            clientID=self._clientID, resultid=resultID, block=block)
     
     #---------------------------------------------------------------------------
     # Methods to help manage pending results
@@ -567,7 +619,7 @@ class HTTPMultiEngineClient(object):
         """
         self._checkClientID()
         # Optimize to not bring back all results
-        result = self._executeRemoteMethod('getallpendingresults', clientid=self._clientID)
+        result = self._executeRemoteMethod('getAllPendingResults', clientID=self._clientID)
         for r in result:
             if isinstance(r, failure.Failure):
                 r.raiseException()
@@ -598,7 +650,7 @@ class HTTPMultiEngineClient(object):
         self._checkClientID()
         localBlock = self._reallyBlock(block)
         result = self._executeRemoteMethod('execute', targets, 
-                clientid=self._clientID, block=localBlock, lines=lines)
+                clientID=self._clientID, block=localBlock, lines=lines)
         if not localBlock:
             result = PendingResult(self, result)
             result.addCallback(wrapResultList)
@@ -639,7 +691,7 @@ class HTTPMultiEngineClient(object):
         # binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod('push', targets, 
-            clientid=self._clientID, block=localBlock, namespace=namespace)
+            clientID=self._clientID, block=localBlock, namespace=namespace)
         if not localBlock:
             result = PendingResult(self, result)
         return result
@@ -676,7 +728,7 @@ class HTTPMultiEngineClient(object):
         self._checkClientID()
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod('pull', targets, 
-            clientid=self._clientID, block=localBlock, keys=keys)
+            clientID=self._clientID, block=localBlock, keys=keys)
         if not localBlock:
             result = PendingResult(self, result)
         return result
@@ -703,8 +755,8 @@ class HTTPMultiEngineClient(object):
         """
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod('getresult', targets, 
-                clientid=self._clientID, block=localBlock, id=i)
+        result = self._executeRemoteMethod('getResult', targets, 
+                clientID=self._clientID, block=localBlock, id=i)
         if not localBlock:
             result = PendingResult(self, result)
             result.addCallback(wrapResultList)
@@ -734,7 +786,7 @@ class HTTPMultiEngineClient(object):
         self._checkClientID()
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod('reset', targets, 
-                clientid = self._clientID, block=localBlock)
+                clientID = self._clientID, block=localBlock)
         if not localBlock:
             result = PendingResult(self, result)
         return result    
@@ -760,7 +812,7 @@ class HTTPMultiEngineClient(object):
         self._checkClientID()
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod('keys', targets, 
-                clientid = self._clientID, block=localBlock)
+                clientID = self._clientID, block=localBlock)
         if not localBlock:
             result = PendingResult(self, result)
         return result 
@@ -787,7 +839,7 @@ class HTTPMultiEngineClient(object):
         self._checkClientID()
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod('kill', targets, 
-            clientid=self._clientID, block=localBlock, controller=controller)
+            clientID=self._clientID, block=localBlock, controller=controller)
         if not localBlock:
             result = PendingResult(self, result)
         return result
@@ -815,7 +867,7 @@ class HTTPMultiEngineClient(object):
         
         self._checkClientID()
         result = self._executeRemoteMethod('clearQueue', targets, 
-                clientid = self._clientID, block=False)
+                clientID = self._clientID, block=False)
         return result
         
     def clearQueueAll(self):
@@ -837,7 +889,8 @@ class HTTPMultiEngineClient(object):
         """
         self._checkClientID()
         result = self._executeRemoteMethod('queueStatus', targets, 
-                clientid=self._clientID, block=False)
+                clientID=self._clientID, block=False)
+        # print result
         return QueueStatusList(result)
     
     def queueStatusAll(self):
@@ -854,7 +907,7 @@ class HTTPMultiEngineClient(object):
     def getIDs(self):
         """Get a list of the ids of the engines that are registered."""
         self._checkClientID()
-        return self._executeRemoteMethod('getids', clientid=self._clientID, block=False)
+        return self._executeRemoteMethod('getIDs', clientID=self._clientID, block=False)
     
     #---------------------------------------------------------------------------
     # IEngineCoordinator related methods
@@ -883,7 +936,7 @@ class HTTPMultiEngineClient(object):
         # bseq = xmlrpc.Binary(pickle.dumps(seq,2))
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod('scatter', targets, 
-            clientid=self._clientID, block=localBlock, key=key, seq=seq, 
+            clientID=self._clientID, block=localBlock, key=key, seq=seq, 
             style=style, flatten=flatten)
         if not localBlock:
             result = PendingResult(self, result)
@@ -917,7 +970,7 @@ class HTTPMultiEngineClient(object):
         self._checkClientID()
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod('gather', targets, 
-            clientid=self._clientID, block=localBlock, key=key, style=style)
+            clientID=self._clientID, block=localBlock, key=key, style=style)
         if not localBlock:
             result = PendingResult(self, result)
         return result        
