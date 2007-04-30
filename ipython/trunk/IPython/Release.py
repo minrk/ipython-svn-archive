@@ -25,7 +25,7 @@ name = 'ipython'
 revision = '2280'
 
 #version = '0.8.1.svn.r' + revision.rstrip('M')
-version = '0.8.1.rc2'
+version = '0.8.1.rc3'
 
 description = "An enhanced interactive Python shell."
 
