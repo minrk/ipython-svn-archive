@@ -1,6 +1,14 @@
+"""Input translator.
+
+This module implements a class that translates user input from the various
+forms accepted by IPython into pure valid Python.
+"""
+
+__docformat__ = "restructuredtext en"
+
 # Standard library imports.
-import compiler
 import codeop
+import compiler
 import re
 import __builtin__
 
@@ -9,32 +17,41 @@ from util import Bunch, make_quoted_expr
 
 
 class IPythonTranslator(object):
-    """ A callable object that translates IPython commands into real Python
-    code.
+    """ An object that translates IPython commands into real Python code.
     """
 
-    def __init__(self, interpreter, magic, config=None):
+    def __init__(self, interpreter=None, magic=None, rc=None):
+        """Construct the translator.
+
+        :Parameters:
+
+          interpreter : instance
+            An isntance of 
+
+        """
 
         # The configuration object.
-        if config is None:
-            config = Bunch(
+        if rc is None:
+            rc = Bunch(
                 ESC_SHELL  = '!',
                 ESC_HELP   = '?',
                 ESC_MAGIC  = '%',
                 ESC_QUOTE  = ',',
                 ESC_QUOTE2 = ';',
                 ESC_PAREN  = '/',
+                autocall   = True,
+                automagic  = True,
             )
-        self.config = config
+        self.rc = rc
 
         # The mapping from escape characters to handler methods.
         self.esc_handlers = {
-            self.config.ESC_PAREN  : self.handle_auto,
-            self.config.ESC_QUOTE  : self.handle_auto,
-            self.config.ESC_QUOTE2 : self.handle_auto,
-            self.config.ESC_MAGIC  : self.handle_magic,
-            self.config.ESC_HELP   : self.handle_help,
-            self.config.ESC_SHELL  : self.handle_shell_escape,
+            self.rc.ESC_PAREN  : self.handle_auto,
+            self.rc.ESC_QUOTE  : self.handle_auto,
+            self.rc.ESC_QUOTE2 : self.handle_auto,
+            self.rc.ESC_MAGIC  : self.handle_magic,
+            self.rc.ESC_HELP   : self.handle_help,
+            self.rc.ESC_SHELL  : self.handle_shell_escape,
         }
 
         # RegExp for splitting line contents into pre-char//first
@@ -83,62 +100,12 @@ class IPythonTranslator(object):
         self.re_exclude_auto = re.compile(r'^[<>,&^\|\*/\+-]'
                                           '|^is |^not |^in |^and |^or ')
 
-    def __call__(self, text):
-        """ Actually translate.
 
-        Parameters
-        ----------
-        text : str
-            The raw (I)Python commands that the user entered.
+    #######################################################################
+    # Public interface
+    #######################################################################
 
-        Returns
-        -------
-
-        """
-
-        try:
-            ast = compiler.parse(text)
-
-            # If we get to this point, then the text is pure Python, so we can
-            # pass it along. It does not need translation.
-            return text
-        except SyntaxError, e:
-            # Else, we need to try and break it apart into lines for
-            # line-by-line filtering by the user-installed filters.
-            lines = text.splitlines()
-            return '\n'.join(map(self._prefilter,lines))
-
-    def split_user_input(self,line, pattern = None):
-        """Split user input into pre-char, function part and rest."""
-
-        if pattern is None:
-            pattern = self.line_split
-            
-        lsplit = pattern.match(line)
-        if lsplit is None:  # no regexp match returns None
-            #print "match failed for line '%s'" % line  # dbg
-            try:
-                iFun,theRest = line.split(None,1)
-            except ValueError:
-                #print "split failed for line '%s'" % line  # dbg
-                iFun,theRest = line,''
-            pre = re.match('^(\s*)(.*)',line).groups()[0]
-        else:
-            pre,iFun,theRest = lsplit.groups()
-
-        # iFun has to be a valid python identifier, so it better be only pure
-        #ascii, no unicode:
-        try:
-            iFun = iFun.encode('ascii')
-        except UnicodeEncodeError:
-            theRest = iFun+u' '+theRest
-            iFun = u''
-            
-        #print 'line:<%s>' % line # dbg
-        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest) # dbg
-        return pre,iFun.strip(),theRest
-
-    def _prefilter(self, line):
+    def line_translate(self, line):
         """Calls different preprocessors, depending on the form of line."""
 
         # All handlers *must* return a value, even if it's blank ('').
@@ -204,7 +171,7 @@ class IPythonTranslator(object):
 
         # Let's try to find if the input line is a magic fn
         oinfo = None
-        if self.magic.has_magic(iFun):
+        if interp.magic.has_magic(iFun):
             # WARNING: _ofind uses getattr(), so it can consume generators and
             # cause other side effects.
             oinfo = interp.object_find(iFun)
@@ -250,7 +217,6 @@ class IPythonTranslator(object):
                         return self.handle_normal(line)
                     else:
                         return self.handle_alias(line,pre,iFun,theRest)
-                 
                 else:
                     return self.handle_normal(line)
         
@@ -280,63 +246,88 @@ class IPythonTranslator(object):
         # If we get here, we have a normal Python line. Log and return.
         return self.handle_normal(line)
     
+    def block_translate(self, text):
+        """Translate a block of code.
 
-    def handle_magic(self, line, pre, function, rest):
-        """ Translate magic functions.
+        Parameters
+        ----------
+        text : str
+            The raw (I)Python commands that the user entered.  This can be a
+        multiline block of text.
+
+        Returns
+        -------
+
         """
 
-        cmd = '%s__IP.ipmagic(%s)' % (pre, 
-            make_quoted_expr(function + " " + rest))
-        return cmd
-
-    def handle_help(self, line, pre, function, rest):
-        """ Try to get some help for the object.
-
-        obj? or ?obj   -> basic information.
-        obj?? or ??obj -> more details.
-        """
-
-        # We need to make sure that we don't process lines which would be
-        # otherwise valid python, such as "x=1 # what?"
         try:
-            codeop.compile_command(line)
-        except SyntaxError:
-            # We should only handle as help stuff which is NOT valid syntax
-            if line[0]==self.ESC_HELP:
-                line = line[1:]
-            elif line[-1]==self.ESC_HELP:
-                line = line[:-1]
-            if line:
-                # fixme: find the right function for this.
-                self.magic_pinfo(line)
-            else:
-                # fixme: should give usage information here.
-                pass
+            ast = compiler.parse(text)
 
-            # Empty string is needed here!
-            return ''
-        except:
-            # Pass any other exceptions through to the normal handler.
-            return line
+            # If we get to this point, then the text is pure Python, so we can
+            # pass it along. It does not need translation.
+            return text
+        except SyntaxError, e:
+            # Else, we need to try and break it apart into lines for
+            # line-by-line filtering by the user-installed filters.
+            lines = text.splitlines()
+            return '\n'.join(map(self.line_translate,lines))
+
+    #######################################################################
+    # Private interface
+    #######################################################################
+
+    def split_user_input(self,line, pattern = None):
+        """Split user input into pre-char, function part and rest."""
+
+        if pattern is None:
+            pattern = self.line_split
+            
+        lsplit = pattern.match(line)
+        if lsplit is None:  # no regexp match returns None
+            #print "match failed for line '%s'" % line  # dbg
+            try:
+                iFun,theRest = line.split(None,1)
+            except ValueError:
+                #print "split failed for line '%s'" % line  # dbg
+                iFun,theRest = line,''
+            pre = re.match('^(\s*)(.*)',line).groups()[0]
         else:
-            # If the code compiles ok, we should handle it normally
-            return line
+            pre,iFun,theRest = lsplit.groups()
 
+        # iFun has to be a valid python identifier, so it better be only pure
+        #ascii, no unicode:
+        try:
+            iFun = iFun.encode('ascii')
+        except UnicodeEncodeError:
+            theRest = iFun+u' '+theRest
+            iFun = u''
+            
+        #print 'line:<%s>' % line # dbg
+        #print 'pre <%s> iFun <%s> rest <%s>' % (pre,iFun.strip(),theRest) # dbg
+        return pre,iFun.strip(),theRest
+
+    #----------------------------------------------------------------------
+    # Handlers for various types of special inputs we accept
+    #----------------------------------------------------------------------
+    
     def handle_normal(self,line,pre=None,iFun=None,theRest=None):
         """Handle normal input lines. Use as a template for handlers."""
 
+        # XXX - This method may go away, if we really end up with it being
+        # always a no-op
+        
         # With autoindent on, we need some way to exit the input loop, and I
         # don't want to force the user to have to backspace all the way to
         # clear the line.  The rule will be in this case, that either two
         # lines of pure whitespace in a row, or a line of pure whitespace but
         # of a size different to the indent level, will exit the input loop.
-        
-        if (continue_prompt and self.autoindent and line.isspace() and
-            (0 < abs(len(line) - self.indent_current_nsp) <= 2 or
-             (self.buffer[-1]).isspace() )):
-            line = ''
 
-        self.log(line,line,continue_prompt)
+        # OLD IPython code - logic to be moved into terminal client
+        #if (continue_prompt and self.autoindent and line.isspace() and
+        #    (0 < abs(len(line) - self.indent_current_nsp) <= 2 or
+        #     (self.buffer[-1]).isspace() )):
+        #    line = ''
+
         return line
 
     def handle_alias(self,line,continue_prompt=None,
@@ -347,41 +338,8 @@ class IPythonTranslator(object):
         # aliases won't work in indented sections.
         transformed = self.expand_aliases(iFun, theRest)        
         line_out = '%s_ip.system(%s)' % (pre, make_quoted_expr( transformed ))        
-        self.log(line,line_out,continue_prompt)
         #print 'line out:',line_out # dbg
         return line_out
-
-    def handle_shell_escape(self, line, continue_prompt=None,
-                            pre=None,iFun=None,theRest=None):
-        """Execute the line in a shell, empty return value"""
-
-        #print 'line in :', `line` # dbg
-        # Example of a special handler. Others follow a similar pattern.
-        if line.lstrip().startswith('!!'):
-            # rewrite iFun/theRest to properly hold the call to %sx and
-            # the actual command to be executed, so handle_magic can work
-            # correctly
-            theRest = '%s %s' % (iFun[2:],theRest)
-            iFun = 'sx'
-            return self.handle_magic('%ssx %s' % (self.ESC_MAGIC,
-                                     line.lstrip()[2:]),
-                                     continue_prompt,pre,iFun,theRest)
-        else:
-            cmd=line.lstrip().lstrip('!')
-            line_out = '%s_ip.system(%s)' % (pre,make_quoted_expr(cmd))
-        # update cache/log and return
-        self.log(line,line_out,continue_prompt)
-        return line_out
-
-    def handle_magic(self, line, continue_prompt=None,
-                     pre=None,iFun=None,theRest=None):
-        """Execute magic functions."""
-
-
-        cmd = '%s_ip.magic(%s)' % (pre,make_quoted_expr(iFun + " " + theRest))
-        self.log(line,cmd,continue_prompt)
-        #print 'in handle_magic, cmd=<%s>' % cmd  # dbg
-        return cmd
 
     def handle_auto(self, line, continue_prompt=None,
                     pre=None,iFun=None,theRest=None,obj=None):
@@ -432,11 +390,20 @@ class IPythonTranslator(object):
             print >>Term.cout, self.outputcache.prompt1.auto_rewrite() + newcmd
         # log what is now valid Python, not the actual user input (without the
         # final newline)
-        self.log(line,newcmd,continue_prompt)
         return newcmd
 
-    def handle_help(self, line, continue_prompt=None,
+    def handle_emacs(self,line,continue_prompt=None,
                     pre=None,iFun=None,theRest=None):
+        """Handle input lines marked by python-mode."""
+
+        # Currently, nothing is done.  Later more functionality can be added
+        # here if needed.
+
+        # The input cache shouldn't be updated
+
+        return line
+
+    def handle_help(self, line, pre=None,iFun=None,theRest=None):
         """Try to get some help for the object.
 
         obj? or ?obj   -> basic information.
@@ -453,17 +420,38 @@ class IPythonTranslator(object):
                 line = line[1:]
             elif line[-1]==self.ESC_HELP:
                 line = line[:-1]
-            self.log(line,'#?'+line,continue_prompt)
-            if line:
-                #print 'line:<%r>' % line  # dbg
-                self.magic_pinfo(line)
-            else:
-                page(self.usage,screen_lines=self.rc.screen_length)
-            return '' # Empty string is needed here!
+            return '_ip.ipmagic("pinfo","%s")' % line
         except:
             # Pass any other exceptions through to the normal handler
-            return self.handle_normal(line,continue_prompt)
+            return self.handle_normal(line)
         else:
             # If the code compiles ok, we should handle it normally
-            return self.handle_normal(line,continue_prompt)
+            return self.handle_normal(line)
 
+    def handle_magic(self, line, pre=None,iFun=None,theRest=None):
+        """Execute magic functions."""
+
+        cmd = '%s_ip.magic(%s)' % (pre,make_quoted_expr(iFun + " " + theRest))
+        #print 'in handle_magic, cmd=<%s>' % cmd  # dbg
+        return cmd
+
+    def handle_shell_escape(self, line, continue_prompt=None,
+                            pre=None,iFun=None,theRest=None):
+        """Execute the line in a shell, empty return value"""
+
+        #print 'line in :', `line` # dbg
+        # Example of a special handler. Others follow a similar pattern.
+        if line.lstrip().startswith('!!'):
+            # rewrite iFun/theRest to properly hold the call to %sx and
+            # the actual command to be executed, so handle_magic can work
+            # correctly
+            theRest = '%s %s' % (iFun[2:],theRest)
+            iFun = 'sx'
+            return self.handle_magic('%ssx %s' % (self.ESC_MAGIC,
+                                     line.lstrip()[2:]),
+                                     continue_prompt,pre,iFun,theRest)
+        else:
+            cmd=line.lstrip().lstrip('!')
+            line_out = '%s_ip.system(%s)' % (pre,make_quoted_expr(cmd))
+        # update cache/log and return
+        return line_out
