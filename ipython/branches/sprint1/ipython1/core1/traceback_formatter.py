@@ -42,7 +42,7 @@ class PlainTracebackFormatter(ITracebackFormatter):
         """ Return a string with the regular traceback information.
         """
 
-        lines = traceback.format_tb(exc_traceback)
+        lines = traceback.format_tb(exc_traceback, self.limit)
         lines.append('%s: %s' % (exc_type.__name__, exc_value))
         return '\n'.join(lines)
 

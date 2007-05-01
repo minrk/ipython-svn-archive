@@ -32,7 +32,7 @@ class DisplayTrap(object):
         self.obj = None
 
         # The previous hook before we replace it.
-        old_hook = None
+        self.old_hook = None
         
     def hook(self, obj):
         """ This method actually implements the hook.

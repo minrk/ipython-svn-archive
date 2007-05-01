@@ -73,5 +73,9 @@ class SimpleMessageCache(object):
 
         if i is None:
             i = max(self.cache)
-        return self.cache[i]
+        try:
+            return self.cache[i]
+        except KeyError:
+            # IndexError is more appropriate, here.
+            raise IndexError("index %r out of range" % i)
 
