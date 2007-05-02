@@ -2251,7 +2251,8 @@ Currently the magic system has the following functions:\n"""
             if opts_r:
                 self.shell.runlines(file_read(filename))
             else:
-                self.shell.safe_execfile(filename,self.shell.user_ns)
+                self.shell.safe_execfile(filename,self.shell.user_ns,
+                                         self.shell.user_ns)
         if use_temp:
             try:
                 return open(filename).read()
