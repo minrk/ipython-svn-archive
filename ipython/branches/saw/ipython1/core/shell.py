@@ -40,12 +40,12 @@ class InteractiveShell(InteractiveConsole):
     The current version of this class is meant to be a prototype that guides
     the future design of the IPython core.  This class must not use Twisted
     in any way, but it must be designed in a way that makes it easy to 
-    incorporate into Twisted and hook netowrk protocols up to.  
+    incorporate into Twisted and hook network protocols up to.  
     
     Some of the methods of this class comprise the official IPython core
     interface.  These methods must be tread safe and they must return types
     that can be easily serialized by protocols such as PB, XML-RPC and SOAP.
-    Locks have been provided for making the methods thread safe, but addisional
+    Locks have been provided for making the methods thread safe, but additional
     locks can be added as needed.
       
     Any method that is meant to be a part of the official interface must also

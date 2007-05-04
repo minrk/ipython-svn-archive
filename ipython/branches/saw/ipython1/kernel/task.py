@@ -1,6 +1,6 @@
 # encoding: utf-8
 # -*- test-case-name: ipython1.test.test_task -*-
-"""Task farming representation of the controller.
+"""Task farming representation of the ControllerService.
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -23,32 +23,45 @@ from twisted.python import components, log, failure
 from ipython1.kernel import engineservice as es, error
 from ipython1.kernel import controllerservice as cs
 from ipython1.kernel.pendingdeferred import PendingDeferredAdapter, twoPhase
-from ipython1.kernel.util import gatherBoth
+from ipython1.kernel.util import gatherBoth, DeferredList
 
 def _printer(r):
     print "_print: ",r
     return r
 
 class Task(object):
-    """The task object for the `TaskController`
-    init requires string expression to be executed.
-    * `resultNames`: string or list of strings that are the names of objects to be
-    pulled as results.  If not specified, will return {'result', None}
-    * `setupNS`: a dict of objects to be pushed before execution of the expression
-        if not specified, nothing will be pushed
-    * `clearBefore`: boolean for whether to clear the namespace before running the job
-        default: False
-    * `clearAfter`: boolean for whether to clear the namespace after running the job
-        default: False
-    * `retries`: int number of times to resubmit the task if it fails.
-        default: 0
-    * `options`: any other keyword options for more elaborate uses of tasks
+    """Our representation of a task for the `TaskController` interface.
+
+    The user should create instances of this class to represent a task that 
+    needs to be done.
     
-    Examples:
-        >>> t = Task('dostuff(args)')
-        >>> t = Task('a=5', resultNames='a')
-        >>> t = Task('a=5\nb=4', resultNames=['a','b'])
-        >>> t = Task('os.kill(os.getpid(),9)', retries=100) # this is a bad idea
+    :Parameters:
+        expression : str
+            A str that is valid python code that is the task.
+        resultNames : str or list of str 
+            The names of objects to be pulled as results.  If not specified, 
+            will return {'result', None}
+        setupNS : dict
+            A dict of objects to be pushed into the engines namespace before
+            execution of the expression.
+        clearBefore : boolean
+            Should the engine's namespace be cleared before the task is run.
+            Default=False.
+        clearAfter : boolean 
+            Should the engine's namespace be cleared after the task is run.
+            Default=False.
+        retries : int
+            The number of times to resumbit the task if it fails.  Default=0.
+        options : dict
+            Any other keyword options for more elaborate uses of tasks
+    
+    Examples
+    --------
+    
+    >>> t = Task('dostuff(args)')
+    >>> t = Task('a=5', resultNames='a')
+    >>> t = Task('a=5\nb=4', resultNames=['a','b'])
+    >>> t = Task('os.kill(os.getpid(),9)', retries=100) # this is a bad idea
     """
     def __init__(self, expression, resultNames=None, setupNS={},
             clearBefore=False, clearAfter=False, retries=0, **options):
@@ -66,23 +79,24 @@ class Task(object):
     
 
 class IWorker(zi.Interface):
-    """The Basic Worker Interface. Workers are to `TaskControllers` what
-    `Engines` are to `Controllers`."""
+    """The Basic Worker Interface. 
     
+    A worked is a representation of an Engine that is ready to run tasks.
+    """
     def run(task):
         """Run task in worker's namespace.
+        
         :Parameters:
             task : a `Task` object
         
-        :Returns:
-            `deferred` to the result of the task in the form of a `dict`:
-                {resultName:result}
-            if no `resultNames`, then returns {'result':None} on success
+        :Returns: `Deferred` to the result of the task in the form of a `dict`,
+            {resultName:result}.  If no `resultNames`, then returns {'result':None} on 
+            success.
         """
     
 
 class WorkerFromQueuedEngine(object):
-    """Adapter to `IWorker` from `IQueuedEngine` object"""
+    """Adapt an `IQueuedEngine` to an `IWorker` object"""
     zi.implements(IWorker)
     
     def __init__(self, qe):
@@ -90,14 +104,14 @@ class WorkerFromQueuedEngine(object):
         self.workerID = None
     
     def run(self, task):
-        """Run task in namespace.
+        """Run task in worker's namespace.
+        
         :Parameters:
             task : a `Task` object
         
-        :Returns:
-            `deferred` to the result of the task in the form of a `dict`:
-                {resultName:result}
-            if no `resultNames`, then returns {'result':None} on success
+        :Returns: `Deferred` to the result of the task in the form of a `dict`,
+            {resultName:result}.  If no `resultNames`, then returns {'result':None} on 
+            success.
         """
         
         dl = []
@@ -136,40 +150,48 @@ class WorkerFromQueuedEngine(object):
 components.registerAdapter(WorkerFromQueuedEngine, es.IEngineQueued, IWorker)
 
 class IScheduler(zi.Interface):
-    """The interface for a scheduler"""
+    """The interface for a Scheduler.
+    """
     
     def addTask(task, **flags):
-        """add a task to the task queue
+        """Add a task to the queue of the Scheduler.
+        
         :Parameters:
-            task : an IPython Task object
-            **flags : General keywords for more sophisticated scheduling
+            task : a `Task` object
+                The task to be queued.
+            flags : dict
+                General keywords for more sophisticated scheduling
         """
     
     def popTask(id=None):
-        """pops a Task object, if no taskID is requested, the highest priority
+        """Pops a Task object.
+        
+        This gets the next task to be run.  If no `id` is requested, the highest priority
         task is returned.
         
         :Parameters:
-            id : if specified, will pop task with taskID=id, else pops
-                 highest priority task.  Defaults to None.
-        
-        :Returns:
-            an IPython Task object
+            id
+                The id of the task to be popped.  The default (None) is to return 
+                the highest priority task.
+                
+        :Returns: a `Task` object
         
         :Exceptions:
             IndexError : raised if no taskID in queue
         """
     
     def addWorker(worker, **flags):
-        """add a worker to the worker queue
+        """Add a worker to the worker queue.
+        
         :Parameters:
             worker : an IWorker implementing object
-            **flags : General keywords for more sophisticated scheduling
+            flags : General keywords for more sophisticated scheduling
         """
     
     def popWorker(id=None):
-        """pops an IWorker object, if no workerID is requested, the highest priority
-        worker is returned.
+        """Pops an IWorker object that is ready to do work.
+        
+        This gets the next IWorker that is ready to do work. 
         
         :Parameters:
             id : if specified, will pop worker with workerID=id, else pops
@@ -183,11 +205,14 @@ class IScheduler(zi.Interface):
         """
     
     def ready():
-        """returns True if there is something to do, False otherwise"""
+        """Returns True if there is something to do, False otherwise"""
     
 
 class FIFOScheduler(object):
-    """A basic First-In-First-Out (Queue) Scheduler"""
+    """A basic First-In-First-Out (Queue) Scheduler.
+    
+    See the docstrings for IScheduler for details.
+    """
     
     zi.implements(IScheduler)
     
@@ -195,30 +220,10 @@ class FIFOScheduler(object):
         self.tasks = []
         self.workers = []
     
-    def addTask(self, task, **flags):
-        """add a task to the task queue
-        :Parameters:
-            task : an IPython `Task` object
-            **flags : General keywords for more sophisticated scheduling
-        """
-        
+    def addTask(self, task, **flags):    
         self.tasks.append(task)
     
     def popTask(self, id=None):
-        """pops a `Task` object, if no `taskID` is requested, the highest priority
-        task is returned.
-        
-        :Parameters:
-            id : if specified, will pop task with `taskID=id`, else pops
-                 highest priority task.  Defaults to `None`.
-        
-        :Returns:
-            an IPython `Task` object
-        
-        :Exceptions:
-            `IndexError` : raised if no `taskID` in queue
-        """
-        
         if id is None:
             return self.tasks.pop(0)
         else:
@@ -228,30 +233,10 @@ class FIFOScheduler(object):
                     return self.tasks.pop(i)
             raise IndexError("No task #%i"%id)
     
-    def addWorker(self, worker, **flags):
-        """add a worker to the worker queue
-        :Parameters:
-            worker : an `IWorker` implementing object
-            **flags : General keywords for more sophisticated scheduling
-        """
-        
+    def addWorker(self, worker, **flags):        
         self.workers.append(worker)
     
     def popWorker(self, id=None):
-        """pops an `IWorker` object, if no `workerID` is requested, the highest priority
-        worker is returned.
-        
-        :Parameters:
-            id : if specified, will pop worker with `workerID=id`, else pops
-                 highest priority worker.  Defaults to `None`.
-        
-        :Returns:
-            an `IWorker` object
-        
-        :Exceptions:
-            IndexError : raised if no `workerID` in queue
-        """
-        
         if id is None:
             return self.workers.pop(0)
         else:
@@ -262,53 +247,68 @@ class FIFOScheduler(object):
             raise IndexError("No worker #%i"%id)
     
     def ready(self):
-        """returns True if there is something to do, False otherwise"""
         return bool(self.workers and self.tasks)
     
         
 
 class ITaskController(cs.IControllerBase):
-    """The Task based interface to a `Controller` object"""
+    """The Task based interface to a `ControllerService` object
+    
+    This adapts a `ControllerService` to the ITaskController interface.
+    """
     
     def run(task):
-        """Run a task
+        """Run a task.
         
         :Parameters:
             task : an IPython `Task` object
         
-        :Returns: taskID : the integer ID of the task
+        :Returns: the integer ID of the task
         """
     
     def getTaskResult(taskID):
-        """get the result of a task by its ID
+        """Get the result of a task by its ID.
         
         :Parameters:
-            taskID : the id of the task whose result is requested
+            taskID : int
+                the id of the task whose result is requested
         
-        :Returns: `deferred` to (taskID, actualResult)
+        :Returns: `Deferred` to (taskID, actualResult) if the task is done, and None
+            if not.
         
         :Exceptions:
             actualResult will be an `IndexError` if no such task has been submitted
         """
     
     def abort(taskID):
-        """remove task from queue if task is has not been submitted, else
-        wait for it to finish and discard results and prevent resubmission.
+        """Remove task from queue if task is has not been submitted.
+        
+        If the task has already been submitted, wait for it to finish and discard 
+        results and prevent resubmission.
+
         :Parameters:
             taskID : the id of the task to be aborted
         
         :Returns:
-            `deferred` to abort attempt completion.  Will be None on success
+            `Deferred` to abort attempt completion.  Will be None on success.
         
         :Exceptions:
             deferred will fail with `IndexError` if no such task has been submitted
             or the task has already completed.
         """
+        
+    def barrier(taskIDs):
+        """Block until the list of taskIDs are completed.
+        
+        Returns None on success.
+        """
 
 class TaskController(cs.ControllerAdapterBase):
     """The Task based interface to a Controller object.
+    
     If you want to use a different scheduler, just subclass this and set
-    the `SchedulerClass` member to the *class* of your chosen scheduler."""
+    the `SchedulerClass` member to the *class* of your chosen scheduler.
+    """
     
     zi.implements(ITaskController)
     SchedulerClass = FIFOScheduler
@@ -324,7 +324,7 @@ class TaskController(cs.ControllerAdapterBase):
         self.deferredResults = {} # dict of {taskID:deferred}
         self.finishedResults = {} # dict of {taskID:actualResult}
         self.workers = {} # dict of {workerID:worker}
-        self.abortPending = {} # dict of {taskID:abortDeferred}
+        self.abortPending = [] # dict of {taskID:abortDeferred}
         self.scheduler = self.SchedulerClass()
         for id in self.controller.engines.keys():
                 self.workers[id] = IWorker(self.controller.engines[id])
@@ -332,7 +332,8 @@ class TaskController(cs.ControllerAdapterBase):
                 self.schedule.addWorker(self.workers[id])
     
     def registerWorker(self, id):
-        """called by controller.registerEngine"""
+        """Called by controller.registerEngine."""
+        
         if self.workers.get(id):
             raise "We already have one!  This should not happen."
         self.workers[id] = IWorker(self.controller.engines[id])
@@ -342,7 +343,8 @@ class TaskController(cs.ControllerAdapterBase):
         self.distributeTasks()
     
     def unregisterWorker(self, id):
-        """called by controller.unregisterEngine"""
+        """Called by controller.unregisterEngine"""
+        
         if self.workers.has_key(id):
             try:
                 self.scheduler.popWorker(id)
@@ -363,7 +365,7 @@ class TaskController(cs.ControllerAdapterBase):
     #---------------------------------------------------------------------------
     
     def run(self, task):
-        """returns a task ID and a deferred to its TaskResult"""
+        """Run a task and return `Deferred` to its taskID."""
         task.taskID = self.taskID
         self.taskID += 1
         d = defer.Deferred()
@@ -374,34 +376,47 @@ class TaskController(cs.ControllerAdapterBase):
         self.distributeTasks()
         return defer.succeed(task.taskID)
     
-    def getTaskResult(self, taskID):
-        """returns a deferred to a (taskID, result) tuple"""
+    def getTaskResult(self, taskID, block=False):
+        """Returns a `Deferred` to a (taskID, result) tuple or None."""
         log.msg("getting result %i"%taskID)
         if self.finishedResults.has_key(taskID):
             return defer.succeed((taskID, self.finishedResults[taskID]))
         elif self.deferredResults.has_key(taskID):
-            d = defer.Deferred().addBoth(self._wrapResult, taskID)
-            self.deferredResults[taskID].append(d)
-            return d
+            if block:
+                d = defer.Deferred().addBoth(self._wrapResult, taskID)
+                self.deferredResults[taskID].append(d)
+                return d
+            else:
+                return defer.succeed(None)
         else:
             return defer.succeed((taskID, IndexError("task ID not registered")))
     
     def abort(self, taskID):
-        """remove a task from the queue if it has not been run already"""
+        """Remove a task from the queue if it has not been run already."""
         try:
             self.scheduler.popTask(taskID)
         except IndexError, e:
             if taskID in self.finishedResults.keys():
                 d = defer.fail(IndexError("Task Already Completed"))
-            elif self.abortPending.has_key(taskID):
-                d = self.abortPending[taskID]
+            elif taskID in self.abortPending:
+                d = defer.fail(IndexError("Task Already Aborted"))
             elif taskID in self._pendingTaskIDs():# task is pending
-                d = defer.Deferred()
-                self.abortPending[taskID] = d
+                self.abortPending.append(taskID)
+                d = defer.succeed(None)
             else:
                 d = defer.fail(e)
         else:
             d = defer.execute(self._doAbort, taskID)
+        
+        return d
+    
+    def barrier(self, taskIDs):
+        dList = []
+        for id in taskIDs:
+            d = self.getTaskResult(id, block=True)
+            dList.append(d)
+        d = DeferredList(dList, consumeErrors=1)
+        d.addCallbacks(lambda r: None)
         return d
     
     #---------------------------------------------------------------------------
@@ -409,13 +424,12 @@ class TaskController(cs.ControllerAdapterBase):
     #---------------------------------------------------------------------------
     
     def _doAbort(self, taskID):
-        """helper function for aborting a pending task"""
+        """Helper function for aborting a pending task."""
         log.msg("Task #%i Aborted"%taskID)
         result = failure.Failure(error.TaskAborted())
         self._finishTask(taskID, result)
-        d = self.abortPending.pop(taskID, None)
-        if d is not None:
-            d.callback(None)
+        if taskID in self.abortPending:
+            self.abortPending.remove(taskID)
     
     def _finishTask(self, taskID, result):
         dlist = self.deferredResults.pop(taskID)
@@ -424,7 +438,8 @@ class TaskController(cs.ControllerAdapterBase):
             d.callback(result)
 
     def distributeTasks(self):
-        """Distribute tasks while self.scheduler has things to do"""
+        """Distribute tasks while self.scheduler has things to do."""
+        
         while self.scheduler.ready():
             # get worker
             worker = self.scheduler.popWorker()
@@ -438,7 +453,7 @@ class TaskController(cs.ControllerAdapterBase):
             d.addBoth(self.taskCompleted, task.taskID, worker.workerID)
             
     def taskCompleted(self, result, taskID, workerID):
-        """This is the err/callback for a completed task"""
+        """This is the err/callback for a completed task."""
         try:
             task = self.pendingTasks.pop(workerID)
         except:
@@ -450,11 +465,9 @@ class TaskController(cs.ControllerAdapterBase):
         
         # Check if aborted while pending
         aborted = False
-        for id, d in self.abortPending:
-            if taskID == id:
-                self._doAbort(taskID)
-                aborted = True
-                break
+        if taskID in self.abortPending:
+            self._doAbort(taskID)
+            aborted = True
         
         if not aborted:
             if isinstance(result, failure.Failure): # we failed
@@ -481,42 +494,15 @@ class TaskController(cs.ControllerAdapterBase):
                 self.readmitWorker(workerID)
     
     def readmitWorker(self, workerID):
-        """readmit a worker to the scheduler.  This is outside `taskCompleted`
-        because of the `failurePenalty` being implemented through 
-        `reactor.callLater`"""
+        """Readmit a worker to the scheduler.  
+        
+        This is outside `taskCompleted` because of the `failurePenalty` being 
+        implemented through `reactor.callLater`.
+        """
+        
         if workerID in self.workers.keys() and workerID not in self.pendingTasks.keys():
             self.scheduler.addWorker(self.workers[workerID])
             self.distributeTasks()
         
     
 components.registerAdapter(TaskController, cs.IControllerBase, ITaskController)
-
-class ISynchronousTaskController(zi.Interface):
-    pass
-
-class SynchronousTaskController(PendingDeferredAdapter):
-    
-    zi.implements(ISynchronousTaskController)
-    
-    def __init__(self, taskController):
-        self.taskController = taskController
-        PendingDeferredAdapter.__init__(self)
-    
-    #---------------------------------------------------------------------------
-    # Decorated pending deferred methods
-    #---------------------------------------------------------------------------
-    
-    def run(self, task):
-        return self.taskController.run(task)
-    
-    @twoPhase
-    def abort(self, taskID):
-        return self.taskController.abort(taskID)
-    
-    @twoPhase
-    def getTaskResult(self, taskID):
-        return self.taskController.getTaskResult(taskID)
-    
-
-components.registerAdapter(SynchronousTaskController, ITaskController, 
-                                ISynchronousTaskController)

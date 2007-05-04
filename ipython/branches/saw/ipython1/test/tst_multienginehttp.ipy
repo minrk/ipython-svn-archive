@@ -6,10 +6,10 @@ import time
 import numpy
 
 import ipython1.kernel.magic
-import ipython1.kernel.multienginexmlrpc as mex
+import ipython1.kernel.multienginehttp as meh
 from ipython1.kernel.error import *
 
-rc = mex.XMLRPCInteractiveMultiEngineClient(('127.0.0.1',10105))
+rc = meh.HTTPInteractiveMultiEngineClient(('127.0.0.1',8000))
 
 #-------------------------------------------------------------------------------
 # Setup
