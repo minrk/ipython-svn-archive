@@ -127,8 +127,7 @@ rc.keysAll()
 # Queue management methods
 
 %px import time
-for i in range(5):
-    rc.executeAll('time.sleep(2.0)',block=False)
+prs = [rc.executeAll('time.sleep(2.0)',block=False) for x in range(5)]
 
 
 rc.queueStatusAll()
@@ -138,10 +137,13 @@ rc.queueStatusAll()
 time.sleep(2.0)
 rc.queueStatusAll()
 
-try:
-    rc.barrier()
-except QueueCleared:
-    print "Caught QueueCleared OK."
+rc.barrier(*prs)
+
+for pr in prs:
+    try:
+        pr.r
+    except QueueCleared:
+        print "Caught QueueCleared OK."
 
 
 # scatter/gather
@@ -159,22 +161,19 @@ rc.block = False
 
 # execute
 
-rc.executeAll('a=5')
-rc.executeAll('import sets')
+pr1 = rc.executeAll('a=5')
+pr2 = rc.executeAll('import sets')
 
-try:
-    rc.barrier()
-except QueueCleared:
-    print "Caught QueueCleared OK."
+rc.barrier(pr1, pr2)
 
-rc.executeAll('1/0')
-rc.executeAll('c = sets.Set()')
+pr1 = rc.executeAll('1/0')
+pr2 = rc.executeAll('c = sets.Set()')
+
+rc.barrier()
 try:
-    rc.barrier()
+    pr1.r
 except ZeroDivisionError:
     print "Caught ZeroDivisionError OK."
-except QueueCleared:
-    print "Caught QueueCleared OK."
 
 pd = rc.executeAll("print 'hi'")
 pd.r
@@ -204,4 +203,3 @@ pd2.r
 # This is a command to make sure the end of the file is happy.
 
 print "The tests are done!"
-

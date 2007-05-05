@@ -40,7 +40,6 @@ enginePort = 10201
 xmlrpcMEPort = 10105
 pbTCPort = 10114
 xmlrpcTCPort = 10113
-pbPort = pb.portno
 httpMEPort = 8000
 
 #-------------------------------------------------------------------------------
@@ -141,20 +140,26 @@ from ipython1.kernel.taskxmlrpc import \
 from ipython1.kernel.taskpb import \
      IPBTaskControllerFactory
 
-# from ipython1.kernel.taskpb import \
-#     IPBTaskControllerFactory
-# 
 from ipython1.kernel.multiengine import IMultiEngine
 from ipython1.kernel.task import ITaskController
+
+# Setup network interfaces for the multiengine controller.
 
 xmlrpcME = {'interface': IXMLRPCMultiEngineFactory, 
             'ip': '', 
             'port': xmlrpcMEPort}
+            
 httpME = {'interface': IHTTPMultiEngineFactory, 
           'ip': '', 
           'port': httpMEPort}
 
-networkInterfacesME = {'xmlrpc':xmlrpcME, 'http':httpME}
+# By default only the xmlprc interface is started.
+networkInterfacesME = {
+    'xmlrpc':xmlrpcME, 
+    # 'http':httpME
+    }
+
+# Setup network interfaces for the task controller.
 
 xmlrpcTC = {'interface':IXMLRPCTaskControllerFactory,
             'ip':'',
@@ -162,11 +167,13 @@ xmlrpcTC = {'interface':IXMLRPCTaskControllerFactory,
 
 pbTC = {'interface': IPBTaskControllerFactory,
         'ip': '',
-        'port': pbPort}
+        'port': pbTCPort}
 
+# By default only the xmlprc interface is started.
 networkInterfacesTC = {
     'xmlrpc':xmlrpcTC,
-    'pb': pbTC}
+    # 'pb': pbTC
+    }
 
 
 class ControllerConfig(Config):
@@ -182,7 +189,7 @@ class ControllerConfig(Config):
                                             'default': 'xmlrpc'},
                             'task' : {'controllerInterface': ITaskController, 
                                       'networkInterfaces': networkInterfacesTC,
-                                      'default': 'pb'}}
+                                      'default': 'xmlrpc'}}
     """Specify what how the controller is exposed.
     
     :Parameters:

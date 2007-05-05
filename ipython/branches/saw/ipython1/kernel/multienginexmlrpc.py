@@ -413,38 +413,40 @@ class XMLRPCMultiEngineClient(object):
     # Methods to help manage pending results
     #--------------------------------------------------------------------------- 
      
-    def barrier(self):
-        """Synchronize and flush all `PendingResults`.
+    def barrier(self, *pendingResults):
+        """Synchronize a set of `PendingResults`.
         
-        This method is a synchronization primitive that waits for all existing
-        `PendingResult` that a controller knows about to complete and then 
-        flushes them.  More specifically, three things happen:
+        This method is a synchronization primitive that waits for a set of
+        `PendingResult` objects to complete.  More specifically, barier does
+        the following.
         
-        * Wait for all `PendingResult`s to complete.
-        * Raise any Exceptions that occured in the `PendingResult`s.
-        * Flush the `PendingResult`s from the controller.
-        
-        If there are multiple Exceptions, only the first is raised.  
-        
-        The flush step is extremely important!  If you have a `PendingResult` object
-        and then call `barrier`, further calls to `PendingResult.getResult` will
-        fail as the controller no longer knows about the `PendingResult`:
-        
-        >>> pr = rc.executeAll('a=5',block=False)
-        >>> rc.barrier()
-        >>> pr.getResult()           # This will fail as pr has been flushed.
-        
-        Thus the `barrier` method should be used when you need to make sure that all
-        `PendingResult`s have completed and check for errors.  If you actually
-        need to access the results of those `PendingResult`s, you should not
-        call `barrier`.  Instead, call `PendingResult.getResult` on each object.
+        * The `PendingResult`s are sorted by resultID.
+        * The `getResult` method is called for each `PendingResult` sequentially
+          with block=True.
+        * If a `PendingResult` gets a result that is an exception, it is 
+          trapped and can be re-raised later by calling `getResult` again.
+        * The `PendingResult`s are flushed from the controller.
+                
+        After barrier has been called on a `PendingResult`, its results can 
+        be retrieved by calling `getResult` again or accesing the `r` attribute
+        of the instance.
         """
         self._checkClientID()
-        # Optimize to not bring back all results
-        result = self._executeRemoteMethod(self._server.getAllPendingResults, self._clientID)
-        for r in result:
-            if isinstance(r, failure.Failure):
-                r.raiseException()
+
+        # Convert to list for sorting and check class type 
+        prList = list(pendingResults)
+        for pr in prList:
+            if not isinstance(pr, PendingResult):
+                raise error.NotAPendingResult("Objects passed to barrier must be PendingResult instances")
+                            
+        # Sort the PendingResults so they are in order
+        prList.sort()
+        # Block on each PendingResult object
+        for pr in prList:
+            try:
+                result = pr.getResult(block=True)
+            except Exception:
+                pass
         
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods

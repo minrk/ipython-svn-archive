@@ -232,10 +232,14 @@ class InteractiveShell(InteractiveConsole):
         I have often called this pull().  I still like that better.
         """
         
+        class NotDefined(object):
+            """A class to signify an objects that is not in the users ns."""
+            pass
+        
         if not isinstance(key, str):
             raise TypeError, "Objects must be keyed by strings."
-        result = self.locals.get(key, None)
-        if result is None:
+        result = self.locals.get(key, NotDefined())
+        if isinstance(result, NotDefined):
             raise NameError('name %s is not defined' % key)
         else:
             return result

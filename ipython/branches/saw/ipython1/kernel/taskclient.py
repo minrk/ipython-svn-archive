@@ -70,4 +70,3 @@ class InteractiveTaskClient(object):
         taskID = self.run(t)
         print "TaskID = %i"%taskID
         return self.getTaskResult(taskID, block)
-        # return tr

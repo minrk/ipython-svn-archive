@@ -187,9 +187,12 @@ class IEngineCoreTestCase(object):
         d = self.engine.push(a=10)
         d.addCallback(lambda _: self.engine.pull('a'))
         d.addCallback(lambda r: self.assertEquals(r, 10))
-        d.addCallback(lambda _: self.engine.push(b=10))
-        d.addCallback(lambda _: self.engine.pull('a'))
-        d.addCallback(lambda r: self.assertEquals(r, 10))        
+        d.addCallback(lambda _: self.engine.push(b=20))
+        d.addCallback(lambda _: self.engine.pull('b'))
+        d.addCallback(lambda r: self.assertEquals(r, 20))
+        d.addCallback(lambda _: self.engine.push(c=None))
+        d.addCallback(lambda _: self.engine.pull('c'))
+        d.addCallback(lambda r: self.assertEquals(r, None))        
         return d
         
     def testPushPullArray(self):

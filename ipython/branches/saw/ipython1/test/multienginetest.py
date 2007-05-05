@@ -213,6 +213,9 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda _: self.multiengine.push(0, a=10, b=20))
         d.addCallback(lambda _: self.multiengine.pull(0,'a','b'))  
         d.addCallback(lambda r: self.assert_(r==[[10,20]]))
+        d.addCallback(lambda _: self.multiengine.push(0, a=None, b=None))
+        d.addCallback(lambda _: self.multiengine.pull(0, 'a','b'))  
+        d.addCallback(lambda r: self.assert_(r==[[None,None]]))
         return d
     
     def testPushPullSerialized(self):

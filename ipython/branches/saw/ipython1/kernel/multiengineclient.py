@@ -155,6 +155,9 @@ class PendingResult(object):
         assert callable(f)
         self.callbacks.append((f, args, kwargs))
         
+    def __cmp__(self, other):
+        return self.resultID - other.resultID
+        
     def _get_r(self):
         return self.getResult(block=True)
 

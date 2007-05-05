@@ -189,4 +189,17 @@ First create a TaskController objects::
 	
 Now you can start submitting tasks using rc.run and rc.irun.
 
+Things To Do
+============
 
+Priority 1:
+
+* Finish reviewing task stuff.
+* Organize and update task examples.
+* Write tutorial for task farming stuff.
+* Make sure unregisterClient is called in PendingDeferredAdapter.
+
+Ongoing:
+
+* Code review for taskpb.py.
+* Have Min update multienginehttp so tests pass (barrier stuff)
