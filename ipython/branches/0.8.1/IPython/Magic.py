@@ -1056,7 +1056,12 @@ Currently the magic system has the following functions:\n"""
                     else:
                         print '(%s Mb)' % (vbytes/Mb,)
             else:
-                vstr = str(var).replace('\n','\\n')
+                try:
+                    vstr = str(var)
+                except UnicodeEncodeError:
+                    vstr = unicode(var).encode(sys.getdefaultencoding(),
+                                               'backslashreplace')
+                vstr = vstr.replace('\n','\\n')
                 if len(vstr) < 50:
                     print vstr
                 else:
