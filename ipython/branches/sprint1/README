@@ -188,5 +188,3 @@ First create a TaskController objects::
 	>>> rc = kernel.TaskController(('127.0.0.1',10113))
 	
 Now you can start submitting tasks using rc.run and rc.irun.
-
-
