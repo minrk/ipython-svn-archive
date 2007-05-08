@@ -1,16 +1,16 @@
 """
 An exceptionally lousy site spider
 Ken Kinder <ken@kenkinder.com>
+
+This module gives an example of how the TaskController interface to the 
+IPython controller works.  Before running this script start the IPython controller
+and some engines using something like::
+
+    ipcluster -n 4
 """
 from twisted.python.failure import Failure
 import ipython1.kernel.api as kernel
-import ipython1.kernel.multienginexmlrpc
-import ipython1.kernel.taskxmlrpc
-
-try:
-    import readline
-except ImportError:
-    pass
+import time
 
 fetchParse = """
 from twisted.web import microdom
@@ -18,24 +18,31 @@ import urllib2
 import urlparse
 
 def fetchAndParse(url, data=None):
-    doc = microdom.parseString(urllib2.urlopen(url, data=data).read(), beExtremelyLenient=True)
     links = []
-    for node in doc.getElementsByTagName('a'):
-        if node.getAttribute('href'):
-            links.append(urlparse.urljoin(url, node.getAttribute('href')))
-    return links
+    try:
+        page = urllib2.urlopen(url, data=data)
+    except Exception:
+        return links
+    else:
+        if page.headers.type == 'text/html':
+            doc = microdom.parseString(page.read(), beExtremelyLenient=True)
+            for node in doc.getElementsByTagName('a'):
+                if node.getAttribute('href'):
+                    links.append(urlparse.urljoin(url, node.getAttribute('href')))
+        return links
 """
 
 class DistributedSpider(object):
+    
+    # Time to wait between polling for task results.
+    pollingDelay = 0.5
+    
     def __init__(self, site):
-        self.rc = kernel.TaskController(('127.0.0.1', 10113))
-        self.ipc = kernel.RemoteController(('127.0.0.1', 10105))
-        assert isinstance(self.rc, ipython1.kernel.taskxmlrpc.XMLRPCInteractiveTaskClient)
-        assert isinstance(self.ipc, ipython1.kernel.multienginexmlrpc.XMLRPCInteractiveMultiEngineClient)
-        self.ipc.execute('all', fetchParse)
+        self.tc = kernel.TaskController(('127.0.0.1', 10113))
+        self.rc = kernel.RemoteController(('127.0.0.1', 10105))
+        self.rc.execute('all', fetchParse)
         
         self.allLinks = []
-        
         self.linksWorking = {}
         self.linksDone = {}
         
@@ -46,7 +53,7 @@ class DistributedSpider(object):
             self.allLinks.append(url)
             if url.startswith(self.site):
                 print '    ', url
-                self.linksWorking[url] = self.rc.run(kernel.Task('links = fetchAndParse(url)', resultNames=['links'], setupNS={'url': url}))
+                self.linksWorking[url] = self.tc.run(kernel.Task('links = fetchAndParse(url)', resultNames=['links'], setupNS={'url': url}))
         
     def onVisitDone(self, result, url):
         print url, ':'
@@ -65,10 +72,17 @@ class DistributedSpider(object):
         while self.linksWorking:
             print len(self.linksWorking), 'pending...'
             self.synchronize()
+            time.sleep(self.pollingDelay)
     
     def synchronize(self):
         for url, taskId in self.linksWorking.items():
-            self.onVisitDone(self.rc.getTaskResult(taskId, block=True)[1], url)
+            result = self.tc.getTaskResult(taskId, block=False)
+            if result is not None:
+                self.onVisitDone(result[1], url)
 
-distributedSpider = DistributedSpider(raw_input('Enter site to crawl:'))
-distributedSpider.run()
+def main():
+    distributedSpider = DistributedSpider(raw_input('Enter site to crawl: '))
+    distributedSpider.run()
+
+if __name__ == '__main__':
+    main()
