@@ -127,9 +127,10 @@ class MPIConfig(Config):
 
 from ipython1.kernel.multienginexmlrpc import \
     IXMLRPCMultiEngineFactory
-    
-from ipython1.kernel.multienginehttp import \
-    IHTTPMultiEngineFactory
+
+# We need to make httplib2 a dependency before putting this here!    
+# from ipython1.kernel.multienginehttp import \
+#     IHTTPMultiEngineFactory
     
 from ipython1.kernel.enginepb import \
     IPBEngineServerFactory
@@ -149,9 +150,9 @@ xmlrpcME = {'interface': IXMLRPCMultiEngineFactory,
             'ip': '', 
             'port': xmlrpcMEPort}
             
-httpME = {'interface': IHTTPMultiEngineFactory, 
-          'ip': '', 
-          'port': httpMEPort}
+# httpME = {'interface': IHTTPMultiEngineFactory, 
+#           'ip': '', 
+#           'port': httpMEPort}
 
 # By default only the xmlprc interface is started.
 networkInterfacesME = {
