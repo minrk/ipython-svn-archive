@@ -95,7 +95,7 @@ class PendingDeferredManager(object):
         
     def cleanOutDeferreds(self):
         """Remove all the deferreds I am tracking."""
-        for k in self.pendingDeferreds.iterkeys():
+        for k in self.pendingDeferreds.keys():
             self.removePendingDeferred(k)
         
     def _deleteAndPassThrough(self, r, deferredID):
@@ -210,6 +210,15 @@ class IPendingDeferredAdapter(Interface):
         If there are pending deferreds d1, d2, this will return a deferred
         to [d1.result, d2.result].
         """
+        
+    def flush(clientID):
+        """Flush out all pending deferreds for clientID.
+        
+        :Parameters:
+            clientID : int
+                Flush PD's for this client.  If clientID is 'all' then
+                flush the PD's for all clients.
+        """
 
 class PendingDeferredAdapter(object):
     """Convert a class to using pending deferreds."""
@@ -307,3 +316,21 @@ class PendingDeferredAdapter(object):
             return gatherBoth(dList, consumeErrors=1)
         else:
             return defer.succeed([None])
+    
+    def flush(self, clientID):
+        if clientID == 'all':
+            for pdm in self.pdManagers.values():
+                pdm.cleanOutDeferreds()
+        else:
+            if self._isValidClientID(clientID):
+                self.pdManagers[clientID].cleanOutDeferreds()
+                return defer.succeed(None)
+            else:
+                return defer.fail(failure.Failure(
+                    error.InvalidClientID("Client with ID %i has not been registered." % clientID)))
+                
+                
+            
+            
+                
+        

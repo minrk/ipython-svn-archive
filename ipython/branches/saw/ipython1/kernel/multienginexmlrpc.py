@@ -152,10 +152,13 @@ class IXMLRPCMultiEngine(Interface):
     def xmlrpc_getPendingResult(request, clientID, resultID):
         """"""
         
-    def xmlrpc_getAllPendingResults(self, clientID):
+    def xmlrpc_getAllPendingResults(request, clientID):
         """"""
-        
-        
+    
+    def xmlrpc_flush(self, clientID):
+        """"""
+
+
 def packageResult(wrappedMethod):
     """Decorator for the methods of XMLRPCMultiEngineFromMultiEngine.
     
@@ -298,6 +301,11 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     def xmlrpc_getAllPendingResults(self, request, clientID):
         """"""    
         return self.smultiengine.getAllPendingDeferreds(clientID)
+
+    @packageResult
+    def xmlrpc_flush(self, request, clientID):
+        """"""    
+        return self.smultiengine.flush(clientID)
     
 
 # The __init__ method of `XMLRPCMultiEngineFromMultiEngine` first adapts the
@@ -447,6 +455,42 @@ class XMLRPCMultiEngineClient(object):
                 result = pr.getResult(block=True)
             except Exception:
                 pass
+        
+    def flush(self, clientID=None):
+        """Flush the PendingResults in the controller.
+        
+        :Parameters:
+            clientID : None, int or 'all'
+                Which clients `PendingResult` references shoould be deleted
+                in the controller.  None means the current client.  An
+                int is used to specify a particular clientID.  The string
+                'all' is used to specify all clients. 
+        
+        This method is needed because the controller keeps track of
+        all the `PendingResult` the client has been handed.  There are two
+        ways that these references go away:
+        
+        * If `getResult` is called on a `PendingResult` the controller 
+          deletes the reference to it.
+        * If `flush` is called the controller deletes all refereces to the 
+          `PendingResults` it is tracking.
+        
+        Once the flush method has been called, any existing `PendingResult`
+        object will have become stale and raise an `InvalidDeferredID`
+        exception.  One way to think about `flush` is that is is a way
+        of telling the controller you are not interested in any 
+        the results attached to any existing `PendingResult` object.
+        
+        Another important point is that this method does not block in any
+        way.  The asynchronous results the `PendingResult` is hooked up 
+        to still happens, but the result and any failures are simply 
+        discarded.
+        """
+        self._checkClientID()
+        if clientID is None:
+            cid = self._clientID
+        result = self._executeRemoteMethod(self._server.flush, cid)
+        return result
         
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods

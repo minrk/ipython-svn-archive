@@ -197,6 +197,23 @@ pd1.getResult()
 pd2 = rc.pullAll('a')
 pd2.r
 
+# flush
+
+rc.flush()
+pd1 = rc.executeAll('a=30')
+pd2 = rc.pullAll('a')
+rc.flush()
+
+try:
+    pd1.getResult()
+except InvalidDeferredID:
+    print "PendingResult object was cleared OK."
+
+
+try:
+    pd2.getResult()
+except InvalidDeferredID:
+    print "PendingResult object was cleared OK."
 
 
 

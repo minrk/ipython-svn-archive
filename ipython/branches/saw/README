@@ -176,7 +176,7 @@ The TaskController client
 -------------------------
 
 The TaskController interface to the controller presents the engines as a fault
-tolerant, dynamic load-balancing system.  It is really cool.  You have a
+tolerant, dynamic load-balancing system.  You can even have a
 RemoteController and a TaskController simultaneously connected to the same
 controller.  But, be warned, the tasks will share the namespace on the 
 engines with the RemoteController.  But, this is actually a feature that allows
@@ -197,7 +197,6 @@ Priority 1:
 * Finish reviewing task stuff.
 * Organize and update task examples.
 * Write tutorial for task farming stuff.
-* Make sure unregisterClient is called in PendingDeferredAdapter.
 
 Ongoing:
 

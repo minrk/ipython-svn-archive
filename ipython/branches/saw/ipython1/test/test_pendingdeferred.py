@@ -101,6 +101,12 @@ class PendingDeferredManagerTest(DeferredTestCase):
         self.assert_(clientID==0)
         d = tpf.bar(clientID, True, 'hi there')
         d.addCallback(lambda r: self.assertEquals(r, 'blahblahhi there'))
+        d = tpf.bar(clientID, False, 'foobah')
+        d.addCallback(lambda r: 
+            self.assertEquals(len(tpf.pdManagers[clientID].pendingDeferreds.keys()), 1))
+        d.addCallback(lambda r: tpf.flush(clientID))
+        d.addCallback(lambda r: 
+            self.assertEquals(len(tpf.pdManagers[clientID].pendingDeferreds.keys()), 0))
         tpf.unregisterClient(clientID)
         d = tpf.bar(1000, True, 'boo')
         d.addErrback(lambda f: self.assertRaises(error.InvalidClientID, f.raiseException))
