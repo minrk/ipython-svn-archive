@@ -172,7 +172,8 @@ for the following commands:
 2. push/pull
 3. scatter/gather
 
-The TaskController client
+The TaskController clie
+nt
 -------------------------
 
 The TaskController interface to the controller presents the engines as a fault
