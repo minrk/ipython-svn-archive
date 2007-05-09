@@ -257,7 +257,12 @@ class XMLRPCTaskClient(object):
         return result
         
     def barrier(self, taskIDs):
-        """Block until all tasks are completed."""
+        """Block until all tasks are completed.
+        
+        :Parameters:
+            taskIDs : list, tuple
+                A sequence of taskIDs to block on.
+        """
         result = self._executeRemoteMethod(self._server.barrier, taskIDs)
     
 
