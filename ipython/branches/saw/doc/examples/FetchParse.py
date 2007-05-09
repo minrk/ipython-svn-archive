@@ -76,6 +76,8 @@ class DistributedSpider(object):
     
     def synchronize(self):
         for url, taskId in self.linksWorking.items():
+            # Calling getTaskResult with block=False will return None if the
+            # task is not done yet.  This provides a simple way of polling.
             result = self.tc.getTaskResult(taskId, block=False)
             if result is not None:
                 self.onVisitDone(result[1], url)
