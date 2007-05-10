@@ -16,14 +16,14 @@ def default_display_formatters():
     """ Return a list of default display formatters.
     """
 
-    from display_formatters import PPrintDisplayFormatter, ReprDisplayFormatter
+    from display_formatter import PPrintDisplayFormatter, ReprDisplayFormatter
     return [PPrintDisplayFormatter(), ReprDisplayFormatter()]
 
 def default_traceback_formatters():
     """ Return a list of default traceback formatters.
     """
 
-    from traceback_formatters import PlainTracebackFormatter
+    from traceback_formatter import PlainTracebackFormatter
     return [PlainTracebackFormatter()]
 
 
@@ -44,9 +44,11 @@ class Interpreter(object):
         self.namespace = namespace
 
         # An object that will translate commands into executable Python.
-        if self.translator is None:
-            from ipython1.core1.translator import Translator
-            translator = Translator()
+        # The current translator does not work properly so for now we are going
+        # without!
+        # if translator is None:
+        #             from ipython1.core1.translator import IPythonTranslator
+        #             translator = IPythonTranslator()
         self.translator = translator
 
         # An object that maintains magic commands.
@@ -112,11 +114,11 @@ class Interpreter(object):
         self.input_builtin = input
 
         # The number of the current cell.
-        current_cell_number = 1
+        self.current_cell_number = 1
 
         # This is the message dictionary assigned temporarily when running the
         # code.
-        message = None
+        self.message = None
 
         self.setup_namespace()
 
@@ -242,8 +244,14 @@ class Interpreter(object):
         self.execute_python(python)
 
     def reset(self):
-        # fixme: implement.
-        raise NotImplementedError
+        """Reset the interpreter.
+        
+        Currently this only resets the users variables in the namespace.
+        In the future we might want to also reset the other stateful
+        things like that the Interpreter has, like In, Out, etc.
+        """
+        self.namespace = {}
+        self.setup_namespace()
 
     def complete(self, text):
         # fixme: implement
@@ -276,12 +284,15 @@ class Interpreter(object):
         NameError if the object doesn't exist.
         """
         
+        class NotDefined(object):
+            pass
+        
         if not isinstance(key, str):
             raise TypeError("Objects must be keyed by strings.")
         # Get the value this way in order to check for the presence of the key
         # and obtaining it actomically. No locks!
-        result = self.namespace.get(key, None)
-        if result is None:
+        result = self.namespace.get(key, NotDefined())
+        if isinstance(result, NotDefined):
             raise NameError('name %s is not defined' % key)
         else:
             return result
