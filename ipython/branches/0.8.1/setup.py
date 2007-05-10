@@ -133,7 +133,8 @@ datafiles = [('data', docdirbase, docfiles),
                            manfiles),
                           ('data', manpagebase, manpages),
                           ('lib', 'IPython/UserConfig', cfgfiles),
-                          ('data','IPython/Extensions', igridhelpfiles)]
+                          ('data',os.path.join(docdirbase, 'extensions'),
+                           igridhelpfiles)]
 if 'setuptools' in sys.modules:
     # setuptools config for egg building
     egg_extra_kwds = {
