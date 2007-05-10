@@ -172,8 +172,7 @@ for the following commands:
 2. push/pull
 3. scatter/gather
 
-The TaskController clie
-nt
+The TaskController client
 -------------------------
 
 The TaskController interface to the controller presents the engines as a fault
@@ -190,6 +189,10 @@ First create a TaskController objects::
 	
 Now you can start submitting tasks using rc.run and rc.irun.
 
+It is best to check out the examples of using the task farming stuff in 
+ipython1/doc/examples.
+
+
 Things To Do
 ============
 
@@ -199,5 +202,8 @@ Priority 1:
 
 Ongoing:
 
+* What to do about how execute handles errors.
+* Got to fix multiline exectue.
+* Fix tracebacks from execute.
 * Code review for taskpb.py.
 * Have Min update multienginehttp so tests pass (barrier stuff)
