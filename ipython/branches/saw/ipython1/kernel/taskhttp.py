@@ -131,7 +131,10 @@ class HTTPTaskRun(HTTPTaskBaseMethod):
 class HTTPTaskAbort(HTTPTaskBaseMethod):
     
     def renderHTTP(self, request):
-        
+        # XXX - fperez: I added a plain 'pass' here so the code would compile,
+        # but I'm not sure what's supposed to be in here.
+        pass
+    
 
 class HTTPTaskRegisterClient(HTTPTaskBaseMethod):
     

@@ -3,6 +3,10 @@
 class IInterpreter(object):
     """Declares the basic interface for the interpreter."""
 
+    # XXX - This code is currently under construction
+    pass
+
+"""
     # Client api
     def complete(self,text):
     def execute(self, lines):
@@ -19,3 +23,4 @@ class IInterpreter(object):
     # 'code' api
     def object_find(self,oname)
     
+"""
