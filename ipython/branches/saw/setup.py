@@ -20,7 +20,7 @@ setup(
     packages = find_packages(),
     
     zip_safe = False,
-
+    include_package_data = True,
     entry_points = {
             'console_scripts': ['ipengine = ipython1.scripts.ipengine:start',
                                 'ipcontroller = ipython1.scripts.ipcontroller:start',

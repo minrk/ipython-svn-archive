@@ -203,7 +203,7 @@ Priority 1:
 Ongoing:
 
 * What to do about how execute handles errors.
-* Got to fix multiline exectue.
+* Got to fix multiline execute.
 * Fix tracebacks from execute.
 * Code review for taskpb.py.
-* Have Min update multienginehttp so tests pass (barrier stuff)
+* Have Min update multienginehttp/taskhttp so tests pass (barrier stuff)
