@@ -2592,7 +2592,7 @@ Defaulting color scheme to 'NoColor'"""
                         if isexec(ff) and base not in self.shell.no_alias:
                             if ext.lower() == '.exe':
                                 ff = base
-                            alias_table[base] = (0,ff)
+                            alias_table[base.lower()] = (0,ff)
                             syscmdlist.append(ff)
             # Make sure the alias table doesn't contain keywords or builtins
             self.shell.alias_table_validate()
