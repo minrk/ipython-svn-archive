@@ -2518,7 +2518,7 @@ Defaulting color scheme to 'NoColor'"""
         # typical Linux box involves several thousand entries, so efficiency
         # here is a top concern.
         
-        path = filter(os.path.isdir,os.environ['PATH'].split(os.pathsep))
+        path = filter(os.path.isdir,os.environ.get('PATH','').split(os.pathsep))
         alias_table = self.shell.alias_table
         for pdir in path:
             for ff in os.listdir(pdir):
@@ -2552,7 +2552,7 @@ Defaulting color scheme to 'NoColor'"""
         del ip.db['rootmodules']
         
         path = [os.path.abspath(os.path.expanduser(p)) for p in 
-            os.environ['PATH'].split(os.pathsep)]
+            os.environ.get('PATH','').split(os.pathsep)]
         path = filter(os.path.isdir,path)
         
         alias_table = self.shell.alias_table
