@@ -512,13 +512,6 @@ class CachedOutput:
             if self.do_full_cache:
                 cout_write(outprompt)
 
-            if isinstance(arg,Macro):
-                print 'Executing Macro...'
-                # in case the macro takes a long time to execute
-                Term.cout.flush()
-                self.shell.runlines(arg.value)
-                return None
-
             # and now call a possibly user-defined print mechanism
             manipulated_val = self.display(arg)
             
