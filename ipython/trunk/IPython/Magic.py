@@ -2470,7 +2470,7 @@ Defaulting color scheme to 'NoColor'"""
                 tgt = atab[alias][1]
                 # 'interesting' aliases
                 if (alias in stored or 
-                    alias != os.path.splitext(tgt)[0] or
+                    alias.lower() != os.path.splitext(tgt)[0].lower() or
                     ' ' in tgt):
                     showlast.append((alias, tgt))
                 else:
