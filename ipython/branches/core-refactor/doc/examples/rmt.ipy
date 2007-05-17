@@ -1,0 +1,50 @@
+#-------------------------------------------------------------------------------
+# Driver code that the client runs.
+#-------------------------------------------------------------------------------
+# To run this code start a controller and engines using:
+# ipcluster -n 2
+# Then run the scripts by doing irunner rmt.ipy or by starting ipython and
+# doing run rmt.ipy.
+
+from rmtkernel import *
+import ipython1.kernel.api as kernel
+
+
+def wignerDistribution(s):
+    """Returns (s, rho(s)) for the Wigner GOE distribution."""
+    return (numpy.pi*s/2.0) * numpy.exp(-numpy.pi*s**2/4.)
+
+
+def generateWignerData():
+    s = numpy.linspace(0.0,4.0,400)
+    rhos = wignerDistribution(s)
+    return s, rhos
+    
+
+def serialDiffs(num, N):
+    diffs = ensembleDiffs(num, N)
+    normalizedDiffs = normalizeDiffs(diffs)
+    return normalizedDiffs
+
+
+def parallelDiffs(num, N, rc):
+    nengines = len(rc.getIDs())
+    num_per_engine = num/nengines
+    print "Running with", num_per_engine, "per engine."
+    rc.pushAll(num_per_engine=num_per_engine, N=N)
+    rc.executeAll('diffs = ensembleDiffs(num_per_engine, N)')
+    pd = rc.gatherAll('diffs')
+    return pd.getResult(block=True)
+
+rc = kernel.RemoteController(('127.0.0.1',10105))
+rc.runAll('rmtkernel.py')
+rc.block = False
+%timeit -n1 -r1 serialDiffs(500, 100)
+%timeit -n1 -r1 parallelDiffs(500, 100, rc)
+
+# Uncomment these to plot the histogram
+# import pylab
+# pylab.hist(parallelDiffs(100,100,rc))
+
+
+
