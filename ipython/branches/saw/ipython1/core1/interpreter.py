@@ -1,3 +1,15 @@
+# Standard library imports.
+import sys
+import compiler
+import codeop
+import __builtin__
+
+# Local imports.
+from ipython1.external.Itpl import ItplNS
+from display_trap import DisplayTrap
+from macro import Macro
+from traceback_trap import TracebackTrap
+from util import Bunch, system_shell
 
 def default_display_formatters():
     """ Return a list of default display formatters.
