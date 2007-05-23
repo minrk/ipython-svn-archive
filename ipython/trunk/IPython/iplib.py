@@ -1942,6 +1942,10 @@ want to merge them back into the new files.""" % locals()
             self.resetbuffer()
         return more
 
+    def split_user_input(self, line):
+        # This is really a hold-over to support ipapi and some extensions
+        return prefilter.splitUserInput(line)
+
     def resetbuffer(self):
         """Reset the input buffer."""
         self.buffer[:] = []
