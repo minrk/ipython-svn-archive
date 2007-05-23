@@ -1,3 +1,8 @@
+2007-05-23  Ville Vainio  <vivainio@gmail.com>
+
+	* rlineimpl.py. BACKPORT fix [2337], for readline.clear_history()
+        crash with python 2.3.
+
 2007-05-09  *** Released version 0.8.1
 
 2007-05-08  Ville Vainio  <vivainio@gmail.com>
