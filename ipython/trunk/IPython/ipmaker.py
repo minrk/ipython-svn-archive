@@ -637,7 +637,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
             print "Error importing",profmodname,"- perhaps you should run %upgrade?"
             IP.InteractiveTB()
             import_fail_info(profmodname)
-                      
+    else:
+        import ipy_profile_none
     try:    
         import ipy_user_conf
     except ImportError:
