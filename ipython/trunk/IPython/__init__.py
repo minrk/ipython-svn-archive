@@ -51,7 +51,7 @@ sys.path.append(os.path.dirname(__file__) + "/Extensions")
 __all__ = ['deep_reload','genutils','ipstruct','ultraTB','DPyGetOpt',
            'Itpl','hooks','ConfigLoader','OutputTrap','Release','Shell',
            'platutils','platutils_win32','platutils_posix','platutils_dummy',
-           'ipapi','rlineimpl', 'strdispatch','maghistory']
+           'ipapi','rlineimpl', 'strdispatch']
 
 # Load __all__ in IPython namespace so that a simple 'import IPython' gives
 # access to them via IPython.<name>
