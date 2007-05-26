@@ -913,8 +913,6 @@ class LSString(str):
     
     p = paths = property(get_paths)
 
-
-
 def print_lsstring(arg):
     """ Prettier (non-repr-like) and more informative printer for LSString """
     print "LSString (.p, .n, .l, .s available). Value:"

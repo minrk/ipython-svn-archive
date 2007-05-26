@@ -48,16 +48,18 @@ import os
 sys.path.append(os.path.dirname(__file__) + "/Extensions")
 
 # Define what gets imported with a 'from IPython import *'
-__all__ = ['deep_reload','genutils','ipstruct','ultraTB','DPyGetOpt',
+__all__ = ['ipapi','generics','deep_reload','genutils','ipstruct','ultraTB','DPyGetOpt',
            'Itpl','hooks','ConfigLoader','OutputTrap','Release','Shell',
            'platutils','platutils_win32','platutils_posix','platutils_dummy',
-           'ipapi','rlineimpl', 'strdispatch']
+           'rlineimpl', 'strdispatch']
 
 # Load __all__ in IPython namespace so that a simple 'import IPython' gives
 # access to them via IPython.<name>
 glob,loc = globals(),locals()
 for name in __all__:
     __import__(name,glob,loc,[])
+
+import Shell
 
 # Release data
 from IPython import Release # do it explicitly so pydoc can see it - pydoc bug
