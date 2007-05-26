@@ -30,6 +30,7 @@ from IPython.Itpl import ItplNS
 from IPython.ipstruct import Struct
 from IPython.macro import Macro
 from IPython.genutils import *
+from IPython.ipapi import TryNext
 
 #****************************************************************************
 #Color schemes for Prompts.
@@ -536,8 +537,10 @@ class CachedOutput:
         Do ip.set_hook("result_display", my_displayhook) for custom result
         display, e.g. when your own objects need special formatting.
         """
-
-        return self.shell.hooks.result_display(arg)
+        try:
+            return IPython.generics.result_display(arg)
+        except TryNext:            
+            return self.shell.hooks.result_display(arg)
 
     # Assign the default display method:
     display = _display
