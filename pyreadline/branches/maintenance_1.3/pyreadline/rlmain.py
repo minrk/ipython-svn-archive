@@ -1268,14 +1268,16 @@ class Readline:
             return
         elif not os.path.isfile(inputrcpath) and not pyreadlinedebug:
             configfilename=os.path.join(os.path.split(__file__)[0],"configuration\\pyreadlineconfig.ini")
-            print "Could not find pyreadline configfile at default location:\n  '%s'.\nCreating a default file."%inputrcpath
+            # xxx ville: the user probably won't care enough...
+            # print "Could not find pyreadline configfile at default location:\n  '%s'.\nCreating a default file."%inputrcpath
             try:
                 configfile=open(configfilename)
                 conf=configfile.read()
                 configfile.close()
             except IOError:
-                print "could not find the default configuration template."
-                print "Tried looking at:\n  ",configfilename
+                # xxx ville: the user probably won't care enough...
+                #print "could not find the default configuration template."
+                #print "Tried looking at:\n  ",configfilename
                 return 
             fil=open(inputrcpath,"w")
             fil.write(conf)
