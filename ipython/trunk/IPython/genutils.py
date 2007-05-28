@@ -812,9 +812,11 @@ def get_home_dir():
     
     # first, check py2exe distribution root directory for _ipython.
     # This overrides all. Normally does not exist.
+    
     if '\\library.zip\\' in IPython.__file__.lower():
         root, rest = IPython.__file__.lower().split('library.zip')
-        if os.path.isdir(root + '_ipython'):
+        if isdir(root + '_ipython'):
+            os.environ["IPYKITROOT"] = root.rstrip('\\')
             return root
     
     try:
