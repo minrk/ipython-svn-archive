@@ -1603,8 +1603,10 @@ want to merge them back into the new files.""" % locals()
         # Mark activity in the builtins
         __builtin__.__dict__['__IPYTHON__active'] += 1
 
+        if readline.have_readline:
+            self.readline_startup_hook(self.pre_readline)
         # exit_now is set by a call to %Exit or %Quit
-        self.readline_startup_hook(self.pre_readline)
+        
         while not self.exit_now:
             if more:
                 prompt = self.hooks.generate_prompt(True)
