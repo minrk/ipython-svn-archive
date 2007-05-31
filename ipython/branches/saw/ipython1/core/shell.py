@@ -173,6 +173,7 @@ class InteractiveShell(InteractiveConsole):
         caller should be prepared to deal with it.
 
         """
+        #1/0
         try:
             exec code in self.locals
         except SystemExit:
