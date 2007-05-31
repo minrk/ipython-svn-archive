@@ -178,7 +178,8 @@ class InteractiveShell(InteractiveConsole):
         except SystemExit:
             raise
         except:
-            #raise # This was hanging the tests.  Need to rethink how we do this.
+            #raise # This was hanging the tests. Rethink how we do this.
+            
             self.showtraceback()
             self._tracebackTuple = sys.exc_info()
         else:
