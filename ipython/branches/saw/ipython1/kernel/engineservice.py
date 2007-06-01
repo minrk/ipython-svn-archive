@@ -224,9 +224,21 @@ class EngineService(object, service.Service):
     # The IEngine methods.  See the interface for documentation.
     
     def execute(self, lines):
-        d = defer.execute(self.shell.execute, lines)
-        d.addCallback(self.addIDToResult)
+        """Execute a set of input lines and return a deferred."""
+
+        d = defer.Deferred()
+        try:
+            result = self.shell.execute(lines)
+        except:
+            et,ev,tb = self.shell.exc_info()
+            f = failure.Failure(ev,et,None)
+            d.errback(f)
+        else:
+            d.callback(result)
+            d.addCallback(self.addIDToResult)
+
         return d
+
 
     def addIDToResult(self, result):
         result['id'] = self.id

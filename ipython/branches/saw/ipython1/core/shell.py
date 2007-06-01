@@ -13,15 +13,17 @@ __docformat__ = "restructuredtext en"
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
-import time
+import pprint
+import signal
 import sys
 import threading
-import signal
+import time
 
 from code import InteractiveConsole, softspace
 from StringIO import StringIO
 
 from IPython.OutputTrap import OutputTrap
+from IPython import ultraTB
 
 from ipython1.kernel.error import NotDefined
 
@@ -79,7 +81,7 @@ class InteractiveShell(InteractiveConsole):
         self._stdin = []
         self._stdout = []
         self._stderr = []
-        self._tracebackTuple = None
+        self._last_type = self._last_traceback = self._last_value = None
         #self._namespace_lock = threading.Lock()
         #self._command_lock = threading.Lock()
         self.lastCommandIndex = -1
@@ -88,6 +90,12 @@ class InteractiveShell(InteractiveConsole):
         # it is working!
         # This doesn't work on Windows as it doesn't have this signal.
         #signal.signal(signal.SIGUSR1, self._handleSIGUSR1)
+
+        # An exception handler.  Experimental: later we need to make the
+        # modes/colors available to user configuration, etc.
+        self.tbHandler = ultraTB.FormattedTB(color_scheme='NoColor',
+                                             mode='Context',
+                                             tb_offset=2)
 
     def _handleSIGUSR1(self, signum, frame):
         """Handle the SIGUSR1 signal by printing to stderr."""
@@ -173,16 +181,39 @@ class InteractiveShell(InteractiveConsole):
         caller should be prepared to deal with it.
 
         """
-        #1/0
+
+        self._last_type = self._last_traceback = self._last_value = None
         try:
             exec code in self.locals
-        except SystemExit:
-            raise
         except:
-            #raise # This was hanging the tests. Rethink how we do this.
-            
-            self.showtraceback()
-            self._tracebackTuple = sys.exc_info()
+            # Since the exception info may need to travel across the wire, we
+            # pack it in right away.  Note that we are abusing the exception
+            # value to store a fully formatted traceback, since the stack can
+            # not be serialized for network transmission.
+            et,ev,tb = sys.exc_info()
+            self._last_type = et
+            self._last_traceback = tb
+            tbinfo = self.tbHandler.text(et,ev,tb)
+            # Construct a meaningful traceback message for shipping over the
+            # wire.
+            buf = pprint.pformat(self.buffer)
+            try:
+                ename = et.__name__
+            except:
+                ename = et
+            msg = """\
+%(ev)s            
+***************************************************************************
+An exception occurred in an IPython engine while executing user code.
+
+Current execution buffer (lines being run):
+%(buf)s
+
+A full traceback from the actual engine:
+%(tbinfo)s
+***************************************************************************
+            """ % locals()
+            self._last_value = msg
         else:
             if softspace(sys.stdout, 0):
                 print
@@ -204,13 +235,21 @@ class InteractiveShell(InteractiveConsole):
     ##################################################################
     
     # Methods for running code
+
+    def exc_info(self):
+        """Return exception information much like sys.exc_info().
+
+        This method returns the same (etype,evalue,tb) tuple as sys.exc_info,
+        but from the last time that the engine had an exception fire."""
+
+        return self._last_type,self._last_value,self._last_traceback
     
     def execute(self, lines):
-        self._tracebackTuple = None
         self._trapRunlines(lines)
-        if self._tracebackTuple is not None:
-            raise self._tracebackTuple
-        return self.getCommand()
+        if self._last_type is None:
+            return self.getCommand()
+        else:
+            raise self._last_type(self._last_value)
         
     # Methods for working with the namespace
 

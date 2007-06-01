@@ -55,6 +55,13 @@ class Transport(xmlrpclib.Transport):
     # @param verbose Debugging flag.
     # @return Parsed response.
 
+    def _full_request(self, host, handler, request_body):
+        self.send_request(handler, request_body)
+        self.send_host(host)
+        self.send_user_agent()
+        self.send_content(request_body)
+        
+
     def request(self, host, handler, request_body, verbose=0):
         # issue XML-RPC request
 
@@ -63,20 +70,14 @@ class Transport(xmlrpclib.Transport):
             self.connection.set_debuglevel(1)
 
         try:
-            self.send_request(handler, request_body)
-            self.send_host(host)
-            self.send_user_agent()
-            self.send_content(request_body)
+            self._full_request(host,handler,request_body)
         except:
-            try:
-                self.connection.close()
-                self.send_request(handler, request_body)
-                self.send_host(host)
-                self.send_user_agent()
-                self.send_content(request_body)
-            except:
-                raise Exception("There is a problem connecting to the server, please recreate the client.")
-                
+            # If anything goes wrong, retry by first closing the connection.
+            # Any exceptions at this point are allowed to propagate out for
+            # handling code to deal with them.
+            self.connection.close()
+            self._full_request(host,handler,request_body)
+        
         response = self.connection.getresponse()
         errcode = response.status
         errmsg = response.reason

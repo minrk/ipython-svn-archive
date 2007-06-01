@@ -83,6 +83,7 @@ __docformat__ = "restructuredtext en"
 
 import os
 import signal
+import socket
 import sys
 import time
 
@@ -92,12 +93,19 @@ from subprocess import Popen,call
 #---------------------------------------------------------------------------
 # IPython imports
 #---------------------------------------------------------------------------
-from ipython1.tools import utils
+import ipython1.kernel.api as kernel
+
 from ipython1.config import cutils
+from ipython1.core import error
+from ipython1.tools import utils
 
 #---------------------------------------------------------------------------
 # Normal code begins
 #---------------------------------------------------------------------------
+
+# Utilities to stop/kill a process by PID
+stop = lambda pid: os.kill(pid,signal.SIGINT)
+kill = lambda pid: os.kill(pid,signal.SIGTERM)
 
 def parse_args():
     """Parse command line and return opts,args."""
@@ -136,8 +144,6 @@ def numAlive(controller,engines):
                [e.poll() for e in engines]
     return retcodes.count(None)
 
-stop = lambda pid: os.kill(pid,signal.SIGINT)
-kill = lambda pid: os.kill(pid,signal.SIGTERM)
 
 def cleanup(clean,controller,engines):
     """Stop the controller and engines with the given cleanup method."""
@@ -203,7 +209,16 @@ def stopCluster(controller,engines):
             zombies.append(e.pid)
         print
         print 'Zombie summary:',' '.join(map(str,zombies))
-    
+
+def startController(logfile):
+    """
+    """
+    return Popen(['ipcontroller','--logfile',logfile])
+
+def startEngines(logfile,n=1):
+    """
+    """
+    return [ Popen(['ipengine','--logfile',logfile]) for i in range(n) ]
 
 def startLocalCluster(n=1,logfile=None):
     """
@@ -217,22 +232,52 @@ def startLocalCluster(n=1,logfile=None):
         ensureDir(logdir_base)
         logfile = pjoin(logdir_base,'ipcluster-')
 
-    print 'Starting controller:',
-    controller = Popen(['ipcontroller','--logfile',logfile])
-    print 'Controller PID:',controller.pid
+    #print 'Starting controller:',
+    controller = startController(logfile)
+    #print 'Controller PID:',controller.pid
 
-    print 'Starting engines:   ',
-    time.sleep(3)
+    # We now get a remote controller so we can test that the controller/engines
+    # are really up and active before we return.
+    rc = kernel.RemoteController(('127.0.0.1',10105))
+    for ntry in range(1,5):
+        try:
+            rc.getIDs()
+        except socket.error:
+            time.sleep(ntry)
+        else:
+            break
+    else:
+        # Normal loop exit means something went seriously wrong
+        raise error.ControllerCreationError("Controller could not be created")
+
+    # At this point, the controller is up and running, we start the engines.
+    #print 'Starting engines:   ',
 
     englogfile = '%s%s-' % (logfile,controller.pid)
-    engines = [ Popen(['ipengine','--logfile',englogfile])
-                for i in range(n) ]
-    eids = [e.pid for e in engines]
-    print 'Engines PIDs:  ',eids
-    print 'Log files: %s*' % englogfile
+    engines = startEngines(englogfile,n)
+
+    # Now, we need to ensure that the controller has at least as many engines
+    # connected as we asked for.
+
+    # XXX: this is currently not very foolproof: a controller could have older
+    # engines hooked to it.  We should add to the engines the ability to tell
+    # us their pid as part of their official API, so we actually validate that
+    # the PIDs we want are *really* connected to the controller.
+    for ntry in range(1,5):
+        ids = rc.getIDs()
+        if len(ids)>=n:
+            break
+        time.sleep(ntry)
+    else:
+        # Normal loop exit means something went seriously wrong
+        raise error.EngineCreationError("Not all engines could be created")
     
-    proc_ids = eids + [controller.pid]
-    procs = engines + [controller]
+    #eids = [e.pid for e in engines]
+    #print 'Engines PIDs:  ',eids
+    #print 'Log files: %s*' % englogfile
+    
+    #proc_ids = eids + [controller.pid]
+    #procs = engines + [controller]
 
     return controller,engines
     
