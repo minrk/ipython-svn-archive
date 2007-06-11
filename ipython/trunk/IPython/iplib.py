@@ -351,7 +351,7 @@ class InteractiveShell(object,Magic):
         # list of visited directories
         try:
             self.dir_hist = [os.getcwd()]
-        except IOError, e:
+        except OSError:
             self.dir_hist = []
 
         # dict of output history
