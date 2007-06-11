@@ -1503,7 +1503,8 @@ want to merge them back into the new files.""" % locals()
         This emulates Python's -c option."""
 
         #sys.argv = ['-c']
-        self.push(self.rc.c)
+        self.push(self.prefilter(self.rc.c, False))
+        self.exit_now = True
 
     def embed_mainloop(self,header='',local_ns=None,global_ns=None,stack_depth=0):
         """Embeds IPython into a running python program.
