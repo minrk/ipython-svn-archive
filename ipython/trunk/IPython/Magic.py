@@ -2468,7 +2468,10 @@ Defaulting color scheme to 'NoColor'"""
             os.chdir(self.shell.home_dir)
             if self.shell.rc.term_title:
                 platutils.set_term_title("IPy:~")
-            self.shell.user_ns['_dh'].append(os.getcwd())
+            cwd = os.getcwd()
+            dhist = self.shell.user_ns['_dh']
+            dhist.append(cwd)
+            self.db['dhist'] = dhist[-50:]
         if not 'q' in opts:
             print self.shell.user_ns['_dh'][-1]
 

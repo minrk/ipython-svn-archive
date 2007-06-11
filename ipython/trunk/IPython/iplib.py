@@ -1202,7 +1202,6 @@ want to merge them back into the new files.""" % locals()
             except OSError:
                 pass
 
-        # save the "persistent data" catch-all dictionary
         self.hooks.shutdown_hook()
         
     def savehist(self):
