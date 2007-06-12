@@ -114,37 +114,38 @@ class WorkerFromQueuedEngine(object):
             success.
         """
         
-        dl = []
-        index = 1
         if task.clearBefore:
-            dl.append(self.queuedEngine.reset())
-            index += 1
-        if task.setupNS:
-            dl.append(self.queuedEngine.push(**task.setupNS))
-            index += 1
-        
-        dl.append(self.queuedEngine.execute(task.expression))
-        
-        if task.resultNames:
-            d = self.queuedEngine.pull(*task.resultNames)
+            d = self.queuedEngine.reset()
         else:
             d = defer.succeed(None)
-        dl.append(d)
+            
+        if task.setupNS:
+            d.addCallback(lambda r: self.queuedEngine.push(**task.setupNS))
+        
+        d.addCallback(lambda r: self.queuedEngine.execute(task.expression))
+        
+        if task.resultNames:
+            d.addCallback(lambda r: self.queuedEngine.pull(*task.resultNames))
+        else:
+            d.addCallback(lambda r: None)
+        
+        def reseter(result):
+            self.queuedEngine.reset()
+            return result
+            
         if task.clearAfter:
-            dl.append(self.queuedEngine.reset())
+            d.addCallback(reseter)
         
         names = task.resultNames or ['result']
-        d = gatherBoth(dl, consumeErrors = True)
-        return d.addBoth(self._zipResults, names, index)
+        return d.addBoth(self._zipResults, names)
     
-    def _zipResults(self, rlist, names, index):
+    def _zipResults(self, result, names):
         """callback for constructing the results dict"""
-        for r in rlist:
-            if isinstance(r, failure.Failure):
-                return r
+        if isinstance(result, failure.Failure):
+            return result
         if len(names) == 1:
-            return {names[0]:rlist[index]}
-        return dict(zip(names, rlist[index]))
+            return {names[0]:result}
+        return dict(zip(names, result))
     
 
 components.registerAdapter(WorkerFromQueuedEngine, es.IEngineQueued, IWorker)
