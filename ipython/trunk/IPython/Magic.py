@@ -2384,7 +2384,10 @@ Defaulting color scheme to 'NoColor'"""
             self.shell.alias_table_validate()
             # Call again init_auto_alias() so we get 'rm -i' and other
             # modified aliases since %rehashx will probably clobber them
-            self.shell.init_auto_alias()
+            
+            # no, we don't want them. if %rehashx clobbers them, good,
+            # we'll probably get better versions
+            # self.shell.init_auto_alias()
             db = ip.db
             db['syscmdlist'] = syscmdlist
         finally:
