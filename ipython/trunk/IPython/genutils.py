@@ -35,7 +35,7 @@ import warnings
 # Other IPython utilities
 import IPython
 from IPython.Itpl import Itpl,itpl,printpl
-from IPython import DPyGetOpt
+from IPython import DPyGetOpt, platutils
 from IPython.generics import result_display
 from path import path
 if os.name == "nt":
@@ -324,8 +324,11 @@ def shell(cmd,verbose=0,debug=0,header=''):
     if verbose or debug: print header+cmd
     # flush stdout so we don't mangle python's buffering
     sys.stdout.flush()
+    
     if not debug:
+        platutils.set_term_title("IPy:" + cmd)
         os.system(cmd)
+        platutils.set_term_title("IPy:" + os.path.basename(os.getcwd()))
 
 # override shell() for win32 to deal with network shares
 if os.name in ('nt','dos'):
