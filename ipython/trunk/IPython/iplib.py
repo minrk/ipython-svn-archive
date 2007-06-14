@@ -2212,7 +2212,16 @@ want to merge them back into the new files.""" % locals()
                     newcmd = '%s(%s)' % (iFun.rstrip(), theRest)
 
         if auto_rewrite:
-            print >>Term.cout, self.outputcache.prompt1.auto_rewrite() + newcmd
+            rw = self.outputcache.prompt1.auto_rewrite() + newcmd
+            
+            try:
+                # plain ascii works better w/ pyreadline, on some machines, so
+                # we use it and only print uncolored rewrite if we have unicode
+                rw = str(rw)
+                print >>Term.cout, rw
+            except UnicodeEncodeError:
+                print "-------------->" + newcmd
+            
         # log what is now valid Python, not the actual user input (without the
         # final newline)
         self.log(line,newcmd,continue_prompt)
