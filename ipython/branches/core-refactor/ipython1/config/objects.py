@@ -46,10 +46,10 @@ httpMEPort = 8000
 # Shell Configuration
 #-------------------------------------------------------------------------------
 
-from ipython1.core.shell import InteractiveShell
+from ipython1.core.interpreter import Interpreter
 
 class ShellConfig(Config):
-    shellClass = InteractiveShell
+    shellClass = Interpreter
     """The particular shell class to use.
     
     Right now there is only one: `core.InteractiveShell`, but by creating a 

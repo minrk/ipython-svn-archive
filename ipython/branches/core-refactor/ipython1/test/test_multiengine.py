@@ -56,20 +56,26 @@ class SynchronousMultiEngineTestCase(DeferredTestCase,
             e.stopService()
             
     def testExecuteNoBlock(self):
-        self.addEngine(2)
-        result = [{'commandIndex': 0, 'stdin': 'a=5', 'id': 0, 'stderr': '', 'stdout': ''},
-         {'commandIndex': 0, 'stdin': 'a=5', 'id': 1, 'stderr': '', 'stdout': ''}]
+        nengines = 2
+        self.addEngine(nengines)
+        cmd = 'a=5'
+        results = [self.createShell().execute(cmd) for i in range(nengines)]
+        for i, s in enumerate(results):
+            s['id']=i
         cid = self.smultiengine.registerClient()
-        d = self.smultiengine.execute(cid, False, 'all', 'a=5')
+        d = self.smultiengine.execute(cid, False, 'all', cmd)
         d.addCallback(lambda r: self.smultiengine.getPendingDeferred(cid, r, True))
-        d.addCallback(lambda r: self.assert_(r==result))
+        d.addCallback(lambda r: self.assert_(r==results))
         return d
-        
+
     def testExecuteBlock(self):
-        self.addEngine(2)
-        result = [{'commandIndex': 0, 'stdin': 'a=5', 'id': 0, 'stderr': '', 'stdout': ''},
-         {'commandIndex': 0, 'stdin': 'a=5', 'id': 1, 'stderr': '', 'stdout': ''}]
+        nengines = 2
+        self.addEngine(nengines)
+        cmd = 'a=5'
+        results = [self.createShell().execute(cmd) for i in range(nengines)]
+        for i, s in enumerate(results):
+            s['id']=i
         cid = self.smultiengine.registerClient()
-        d = self.smultiengine.execute(cid, True, 'all', 'a=5')
-        d.addCallback(lambda r: self.assert_(r==result))
+        d = self.smultiengine.execute(cid, True, 'all', cmd)
+        d.addCallback(lambda r: self.assert_(r==results))
         return d

@@ -183,11 +183,11 @@ class ResultList(list):
             if isinstance(cmd, Failure):
                 output.append(cmd)
             else:
-                target = cmd['id']
-                cmd_num = cmd['commandIndex']
-                cmd_stdin = cmd['stdin']
-                cmd_stdout = cmd['stdout']
-                cmd_stderr = cmd['stderr']
+                target = cmd.get('id',None)
+                cmd_num = cmd.get('number',None)
+                cmd_stdin = cmd.get('input',{}).get('translated','No Input')
+                cmd_stdout = cmd.get('stdout', None)
+                cmd_stderr = cmd.get('stderr', None)
                 output.append("%s[%i]%s In [%i]:%s %s\n" % \
                     (green, target,
                     blue, cmd_num, normal, cmd_stdin))

@@ -196,14 +196,23 @@ ipython1/doc/examples.
 Things To Do
 ============
 
-Priority 1:
+In core-refactor:
 
-* Write tutorial for task farming stuff.
+* merge into saw.
+
+Merge core-refactor back to trunk
+
+* Refactor the TaskResult object.
+* Begin to add tests for task controller and client.
+* Convert standalone test scripts to using Fernando's new spawning stuff.
+* Add capability to spawn engines using mpirun.
+* Refactor the exceptions in xmlrpcutil.
 
 Ongoing:
 
-* What to do about how execute handles errors.
-* Got to fix multiline execute.
-* Fix tracebacks from execute.
+* is it a message, result or command in the new core?
+* should the id attribute of engines be called engineID? (there are lots of ids around)
+* Write tutorial for task farming stuff.
 * Code review for taskpb.py.
 * Have Min update multienginehttp/taskhttp so tests pass (barrier stuff)
+* clean up mpi.so

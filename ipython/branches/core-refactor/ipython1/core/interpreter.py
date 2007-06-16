@@ -11,6 +11,10 @@ from macro import Macro
 from traceback_trap import TracebackTrap
 from util import Bunch, system_shell
 
+# Temporarily use this until it is ported to ipython1
+from IPython import ultraTB
+import pprint
+
 def default_display_formatters():
     """ Return a list of default display formatters.
     """
@@ -46,13 +50,13 @@ class Interpreter(object):
         # The current translator does not work properly so for now we are going
         # without!
         # if translator is None:
-        #             from ipython1.core1.translator import IPythonTranslator
+        #             from ipython1.core.translator import IPythonTranslator
         #             translator = IPythonTranslator()
         self.translator = translator
 
         # An object that maintains magic commands.
         if magic is None:
-            from ipython1.core1.magic import Magic
+            from ipython1.core.magic import Magic
             magic = Magic(self)
         self.magic = magic
 
@@ -68,19 +72,19 @@ class Interpreter(object):
 
         # The object trapping stdout/stderr.
         if output_trap is None:
-            from ipython1.core1.output_trap import OutputTrap
+            from ipython1.core.output_trap import OutputTrap
             output_trap = OutputTrap()
         self.output_trap = output_trap
 
         # An object that manages the history.
         if history is None:
-            from ipython1.core1.history import History
+            from ipython1.core.history import History
             history = History()
         self.history = history
 
         # An object that caches all of the return messages.
         if message_cache is None:
-            from ipython1.core1.message_cache import SimpleMessageCache
+            from ipython1.core.message_cache import SimpleMessageCache
             message_cache = SimpleMessageCache()
         self.message_cache = message_cache
 
@@ -103,6 +107,13 @@ class Interpreter(object):
         self.traceback_trap = TracebackTrap(
             formatters=self.traceback_formatters)
 
+        # This is used temporarily for reformating exceptions in certain
+        # cases.  It will go away once the ultraTB stuff is ported
+        # to ipython1
+        self.tbHandler = ultraTB.FormattedTB(color_scheme='NoColor',
+                                                 mode='Context',
+                                                 tb_offset=2)
+
         # An object that can compile commands and remember __future__
         # statements.
         self.command_compiler = codeop.CommandCompiler()
@@ -124,7 +135,36 @@ class Interpreter(object):
 
     #### Public 'Interpreter' interface ########################################
 
-    def execute(self, commands):
+    def formatTraceback(self, et, ev, tb, message=''):
+        """Put a formatted version of the traceback into value and reraise.
+        
+        When exceptions have to be sent over the network, the traceback 
+        needs to be put into the value of the exception in a nicely
+        formatted way.  The method takes the type, value and tb of an 
+        exception and puts a string representation of the tb into the 
+        value of the exception and reraises it.
+        
+        Currently this method uses the ultraTb formatter from IPython trunk.
+        Eventually it should simply use the traceback formatters in core
+        that are loaded into self.tracback_trap.formatters.
+        """
+        
+        tbinfo = self.tbHandler.text(et,ev,tb)
+        newValue = """\
+%(ev)s            
+***************************************************************************
+An exception occurred in the IPython Interpreter due to a user action.
+This usually means that user code has a problem in it somewhere.
+
+%(message)s
+
+A full traceback from the actual interpreter:
+%(tbinfo)s
+***************************************************************************
+        """ % locals()
+        return et, newValue, tb
+        
+    def execute(self, commands, raiseException=True):
         """ Execute some IPython commands.
 
         1. Translate them into Python.
@@ -192,6 +232,9 @@ class Interpreter(object):
         self.display_trap.add_to_message(message)
         self.display_trap.clear()
         self.traceback_trap.add_to_message(message)
+        # Pull out the type, value and tb of the current exception
+        # before clearing it.
+        tracebackTuple = self.traceback_trap.args
         self.traceback_trap.clear()
 
         # Cache the message.
@@ -200,7 +243,13 @@ class Interpreter(object):
         # Bump the number.
         self.current_cell_number += 1
         
-        return message
+        # This conditional lets the execute method either raise any
+        # exception that has occured in user code OR return the message
+        # dict containing the traceback and other useful info.
+        if raiseException and tracebackTuple:
+            raise tracebackTuple
+        else:
+            return message
 
     def execute_python(self, python):
         """ Actually run the Python code in the namespace.
@@ -216,10 +265,13 @@ class Interpreter(object):
         # track of __future__ imports.
         try:
             commands = self.split_commands(python)
-        except SyntaxError, e:
+        except (SyntaxError, IndentationError), e:
             # The code has incorrect syntax. Return the exception object with
             # the message.
             self.message['syntax_error'] = e
+            # Save the exc_info so compilation related exceptions can be
+            # reraised
+            self.traceback_trap.args = sys.exc_info()
             return
 
         for cmd in commands:
@@ -241,6 +293,15 @@ class Interpreter(object):
         if self.translator is not None:
             python = self.translator(python)
         self.execute_python(python)
+
+    def getCommand(self, i=None):
+        """Gets the ith message in the message_cache.
+        
+        This is implemented here for compatibility with the old ipython1 shell
+        I am not sure we need this though.  I even seem to remember that we
+        were going to get rid of it.
+        """
+        return self.message_cache.get_message(i)
 
     def reset(self):
         """Reset the interpreter.
