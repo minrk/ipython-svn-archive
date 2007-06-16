@@ -4,7 +4,7 @@ IPython Kernel Installation
 
 :Author:  Brian E. Granger
 :Contact: ellisonbg@gmail.com
-:Date: April 24, 2007
+:Date: June 16, 2007
 
 .. contents::
 
@@ -146,15 +146,6 @@ that calls MPI_Init.  To enable mpi support:
 2. Set the mpiImportStatement to an appropriate value.  See examples and the
    docstrings in config.objects for more details.
 
-Older MPI Information that probably doesn't work currently:
-
-3. If you want to use ipython1.mpi for calling MPI_Init, you will need to 
-   make sure it is built when you install ipython1. 
-
-By default, the ipython1.kernel.mpi module is not built.  To build it, give the
-build command::
-
-	python setup.py build --mpicc=your-mpicc-command
-
+Note: The ipython1.mpi module is no longer supported.
 
   

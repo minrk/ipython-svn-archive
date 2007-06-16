@@ -196,13 +196,9 @@ ipython1/doc/examples.
 Things To Do
 ============
 
-In core-refactor:
+Current:
 
-* merge into saw.
-
-Merge core-refactor back to trunk
-
-* Refactor the TaskResult object.
+* Refactor the TaskResult object to be based on attributes.
 * Begin to add tests for task controller and client.
 * Convert standalone test scripts to using Fernando's new spawning stuff.
 * Add capability to spawn engines using mpirun.
