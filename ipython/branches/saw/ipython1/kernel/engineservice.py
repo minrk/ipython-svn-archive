@@ -33,7 +33,7 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-import os
+import os, sys
 import cPickle as pickle
 from new import instancemethod
 
@@ -42,7 +42,7 @@ from twisted.internet import defer, reactor
 from twisted.python import log, failure, components
 import zope.interface as zi
 
-from ipython1.core.shell import InteractiveShell
+from ipython1.core.interpreter import Interpreter
 from ipython1.kernel import newserialized, error, util
 from ipython1.kernel.util import gatherBoth, DeferredList
 
@@ -74,7 +74,7 @@ class IEngineCore(zi.Interface):
     def execute(lines):
         """Execute lines of Python code.
         
-        Returns a dictionary with keys (id, commandIndex, stdin, stdout, stderr)
+        Returns a dictionary with keys (id, number, stdin, stdout, stderr)
         upon success.
         
         Returns a failure object if the execution of lines raises an exception.
@@ -98,7 +98,7 @@ class IEngineCore(zi.Interface):
         """Get the stdin/stdout/stderr of command i.
         
         Returns a deferred to a dict with keys
-        (id, commandIndex, stdin, stdout, stderr).
+        (id, number, stdin, stdout, stderr).
         
         Raises IndexError if command i does not exist.
         Raises TypeError if i in not an int.
@@ -190,10 +190,10 @@ class EngineService(object, service.Service):
     
     zi.implements(IEngineBase)
                 
-    def __init__(self, shellClass=InteractiveShell, mpi=None):
+    def __init__(self, shellClass=Interpreter, mpi=None):
         """Create an EngineService.
         
-        shellClass: a subclass of core.InteractiveShell
+        shellClass: something that implements IInterpreter or core1
         mpi:        an mpi module that has rank and size attributes
         """
         self.shellClass = shellClass
@@ -209,65 +209,90 @@ class EngineService(object, service.Service):
         
     def _setID(self, id):
         self._id = id
-        self.shell.update({'id': id})
+        self.shell.push(**{'id': id})
         
     def _getID(self):
         return self._id
         
     id = property(_getID, _setID)
         
-    def startService(self):
-        """Start the service and seed the user's namespace."""
+    def _seedNamespace(self):
+        self.shell.push(**{'mpi': self.mpi, 'id' : self.id})
         
-        self.shell.update({'mpi': self.mpi, 'id' : self.id})
-        
-    # The IEngine methods.  See the interface for documentation.
-    
-    def execute(self, lines):
-        """Execute a set of input lines and return a deferred."""
-
+    def executeAndRaise(self, msg, callable, *args, **kwargs):
+        """Call a method of self.shell and wrap any exception."""
         d = defer.Deferred()
         try:
-            result = self.shell.execute(lines)
+            result = callable(*args, **kwargs)
         except:
-            et,ev,tb = self.shell.exc_info()
+            et,ev,tb = sys.exc_info()
+            et,ev,tb = self.shell.formatTraceback(et,ev,tb,msg)
             f = failure.Failure(ev,et,None)
             d.errback(f)
         else:
             d.callback(result)
-            d.addCallback(self.addIDToResult)
 
         return d
 
+        
+    def startService(self):
+        """Start the service and seed the user's namespace."""
+        
+        self._seedNamespace()
+        
+    # The IEngine methods.  See the interface for documentation.
+    
+    def execute(self, lines):
+        msg = """engine: %r
+method: execute(lines)
+lines = %s""" % (self.id, lines)
+        d = self.executeAndRaise(msg, self.shell.execute, lines)
+        d.addCallback(self.addIDToResult)
+        return d
 
     def addIDToResult(self, result):
         result['id'] = self.id
         return result
 
     def push(self, **namespace):
-        return defer.execute(self.shell.update, namespace)
-
+        msg = """engine %r
+method: push(**namespace)
+namespace.keys() = %r""" % (self.id, namespace.keys())
+        d = self.executeAndRaise(msg, self.shell.push, **namespace)
+        return d
+        
     def pull(self, *keys):
+        msg = """engine %r
+method: pull(*keys)
+keys = %r""" % (self.id, keys)
         if len(keys) > 1:
             pulledDeferreds = []
             for key in keys:
-                pulledDeferreds.append(defer.execute(self.shell.get,key))
+                d = self.executeAndRaise(msg, self.shell.pull, key)
+                pulledDeferreds.append(d)
             # This will fire on the first failure and log the rest.
-            d = gatherBoth(pulledDeferreds, 
+            dTotal = gatherBoth(pulledDeferreds, 
                            fireOnOneErrback=1,
                            logErrors=1, 
                            consumeErrors=1)
-            return d
+            return dTotal
         else:
-            return defer.execute(self.shell.get, keys[0])
+            return self.executeAndRaise(msg, self.shell.pull, keys[0])
     
     def getResult(self, i=None):
-        d = defer.execute(self.shell.getCommand, i)
+        msg = """engine %r
+method: getResult(i=None)
+i = %r""" % (self.id, i)
+        d = self.executeAndRaise(msg, self.shell.getCommand, i)
         d.addCallback(self.addIDToResult)
         return d
     
     def reset(self):
-        return defer.execute(self.shell.reset)
+        msg = """engine %r
+method: reset()""" % self.id
+        d = self.executeAndRaise(msg, self.shell.reset)
+        d.addCallback(lambda r: self._seedNamespace())
+        return d
     
     def kill(self):
         try:
@@ -287,12 +312,16 @@ class EngineService(object, service.Service):
         """
         
         remotes = []
-        for k in self.shell.locals.iterkeys():
-            if k not in ['__name__', '__doc__', '__console__', '__builtins__']:
+        for k in self.shell.namespace.iterkeys():
+            if k not in ['__name__', '_ih', '_oh', '__builtins__',
+                         'In', 'Out', '_', '__', '___', '__IP', 'input', 'raw_input']:
                 remotes.append(k)
         return defer.succeed(remotes)
 
     def pushSerialized(self, **sNamespace):
+        msg = """engine %r
+method: pushSerialized(**sNamespace)
+sNamespace.keys() = %r""" % (self.id, sNamespace.keys())        
         ns = {}
         for k,v in sNamespace.iteritems():
             try:
@@ -300,13 +329,16 @@ class EngineService(object, service.Service):
                 ns[k] = unserialized.getObject()
             except:
                 return defer.fail()
-        return defer.execute(self.shell.update, ns)
+        return self.executeAndRaise(msg, self.shell.push, **ns)
     
     def pullSerialized(self, *keys):
+        msg = """engine %r
+method: pullSerialized(*keys)
+keys = %r""" % (self.id, keys)
         if len(keys) > 1:
             pulledDeferreds = []
             for key in keys:
-                d = defer.execute(self.shell.get,key)
+                d = self.executeAndRaise(msg, self.shell.pull,key)
                 pulledDeferreds.append(d)
             # This will fire on the first failure and log the rest.
             dList = gatherBoth(pulledDeferreds, 
@@ -325,7 +357,7 @@ class EngineService(object, service.Service):
             return packThemUp
         else:
             key = keys[0]
-            d = defer.execute(self.shell.get, key)
+            d = self.executeAndRaise(msg, self.shell.pull, key)
             d.addCallback(newserialized.serialize)
             return d
     
@@ -414,8 +446,7 @@ class QueuedEngine(object):
     
     def saveResult(self, result):
         """Put the result in the history."""
-        
-        self.history[result['commandIndex']] = result
+        self.history[result['number']] = result
         return result
     
     def finishCommand(self, result):

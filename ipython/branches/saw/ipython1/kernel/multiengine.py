@@ -590,7 +590,7 @@ class SynchronousMultiEngine(PendingDeferredAdapter):
         
     @twoPhase
     def getResult(self, targets, i=None):
-        return self.multiengine.getResult(targets, i=None)
+        return self.multiengine.getResult(targets, i)
         
     @twoPhase
     def reset(self, targets):

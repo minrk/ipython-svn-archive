@@ -26,9 +26,11 @@ import zope.interface as zi
 from ipython1.kernel import newserialized
 from ipython1.kernel import error 
 import ipython1.kernel.engineservice as es
-
-resultKeys = ('id', 'commandIndex', 'stdin', 'stdout', 'stderr')
-
+from ipython1.core.interpreter import Interpreter
+from ipython1.test.testgenerator import (EngineExecuteTestGenerator, 
+    EnginePushPullTestGenerator, 
+    EngineFailingExecuteTestGenerator,
+    EngineGetResultTestGenerator)
 
 class FailingEngineError(Exception):
     pass
@@ -81,10 +83,34 @@ class FailingEngineService(object, service.Service):
     
     def pullSerialized(self, *keys):
         return defer.fail(failure.Failure(FailingEngineError("error text")))
-        
-        
+    
+# A sequence of valid commands run through execute
+validCommands = ['a=5',
+                 'b=10',
+                 'c=a+b',
+                 'import math',
+                 '2.0*math.pi',
+                 """def f():
+    result = 0.0
+    for i in range(10):
+        result += i
+"""
+                 ]
+                 
+# A sequence of commands that raise various exceptions
+invalidCommands = [('a=1/0',ZeroDivisionError),
+                   ('print v',NameError),
+                   ('l=[];l[0]',IndexError),
+                   ("d={};d['a']",KeyError),
+                   ("assert 1==0",AssertionError),
+                   ("import abababsdbfsbaljasdlja",ImportError),
+                   ("raise Exception()",Exception)]
+
 class IEngineCoreTestCase(object):
     """Test an IEngineCore implementer."""
+
+    def createShell(self):
+        return Interpreter()
 
     def catchQueueCleared(self, f):
         try:
@@ -116,62 +142,27 @@ class IEngineCoreTestCase(object):
         dList.append(d)
         D = defer.DeferredList(dList)
         return D
-            
-    def testExecute(self):
-        commands = [(self.engine.id, 0,"a = 5","",""),
-            (self.engine.id, 1,"b = 10","",""),
-            (self.engine.id, 2,"c = a + b","",""),
-            (self.engine.id, 3,"print c","15\n",""),
-            (self.engine.id, 4,"import math","",""),
-            (self.engine.id, 5,"2.0*math.pi","6.2831853071795862\n","")]
-        # I tried getting these into a loop but the dependencies of the Deferred's
-        # were extremely buggy and wierd
-        d1 = self.engine.execute(commands[0][2])
-        d2 = self.assertDeferredEquals(d1, dict(zip(resultKeys,commands[0])))
-        d2.addCallback(lambda _: self.engine.execute(commands[1][2]))
-        d3 = self.assertDeferredEquals(d2, dict(zip(resultKeys,commands[1])))
-        d3.addCallback(lambda _: self.engine.execute(commands[2][2]))
-        d4 = self.assertDeferredEquals(d3, dict(zip(resultKeys,commands[2])))
-        d4.addCallback(lambda _: self.engine.execute(commands[3][2]))
-        d5 = self.assertDeferredEquals(d4, dict(zip(resultKeys,commands[3])))
-        d5.addCallback(lambda _: self.engine.execute(commands[4][2]))
-        d6 = self.assertDeferredEquals(d5, dict(zip(resultKeys,commands[4])))        
-        d6.addCallback(lambda _: self.engine.execute(commands[5][2]))
-        d7 = self.assertDeferredEquals(d6, dict(zip(resultKeys,commands[5])))
-        return d7    
         
-    def testExecuteFailures(self):
-        d = self.engine.execute('a=1/0')
-        d.addErrback(lambda f: self.assertRaises(ZeroDivisionError, f.raiseException))
-        d.addCallback(lambda _: self.engine.execute('print v'))
-        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
-        d.addCallback(lambda _: self.engine.execute('a = 2**1000000'))
-        d.addErrback(lambda f: self.assertRaises(OverflowError, f.raiseException))
-        d.addCallback(lambda _: self.engine.execute('l=[];l[0]'))
-        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
-        d.addCallback(lambda _: self.engine.execute("d={};d['a']"))
-        d.addErrback(lambda f: self.assertRaises(KeyError, f.raiseException))
-        d.addCallback(lambda _: self.engine.execute("assert 1==0"))
-        d.addErrback(lambda f: self.assertRaises(AssertionError, f.raiseException))
-        d.addCallback(lambda _: self.engine.execute("import abababsdbfsbaljasdlja"))
-        d.addErrback(lambda f: self.assertRaises(ImportError, f.raiseException))
-        d.addCallback(lambda _: self.engine.execute("raise Exception()"))
-        d.addErrback(lambda f: self.assertRaises(Exception, f.raiseException))
+    def testExecute(self):
+        eTester = EngineExecuteTestGenerator(validCommands, self)
+        d = eTester.performTests()
         return d
-    
+
+    def testExecuteFailures(self):
+        cmds = [x[0] for x in invalidCommands]
+        excpts = [x[1] for x in invalidCommands]
+        eTester = EngineFailingExecuteTestGenerator(cmds, excpts, self)
+        d = eTester.performTests()
+        return d
+            
     def testPushPull(self):
-        objs = [10,"hi there",1.2342354,{"p":(1,2)}]
-        dList = []
-        for o in objs:
-            d1 = self.engine.push(key=o)
-            d1.addCallback(lambda _: self.engine.pull('key'))
-            d1.addCallback(lambda r: self.assertEquals(r, o))
-            dList.append(d1)
-        d = defer.DeferredList(dList, consumeErrors=1)
+        objs = [10,"hi there",1.2342354,{"p":(1,2)},None]
+        eTester = EnginePushPullTestGenerator(objs, self)
+        d = eTester.performTests()
         d.addCallback(lambda _:self.engine.reset())
         d.addCallback(lambda _: self.engine.pull("a"))
         d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
-        return d
+        return d        
 
     def testPushPullFailures(self):
         d = self.engine.pull('a')
@@ -181,18 +172,6 @@ class IEngineCoreTestCase(object):
         d.addErrback(lambda f: self.assertRaises(pickle.PicklingError, f.raiseException))
         d.addCallback(lambda _: self.engine.push(l=lambda x: x))
         d.addErrback(lambda f: self.assertRaises(pickle.PicklingError, f.raiseException))
-        return d
-
-    def testSimplePushPull(self):
-        d = self.engine.push(a=10)
-        d.addCallback(lambda _: self.engine.pull('a'))
-        d.addCallback(lambda r: self.assertEquals(r, 10))
-        d.addCallback(lambda _: self.engine.push(b=20))
-        d.addCallback(lambda _: self.engine.pull('b'))
-        d.addCallback(lambda r: self.assertEquals(r, 20))
-        d.addCallback(lambda _: self.engine.push(c=None))
-        d.addCallback(lambda _: self.engine.pull('c'))
-        d.addCallback(lambda r: self.assertEquals(r, None))        
         return d
         
     def testPushPullArray(self):
@@ -207,20 +186,31 @@ class IEngineCoreTestCase(object):
         d.addCallback(lambda b: b==a)
         d.addCallback(lambda c: c.all())
         return self.assertDeferredEquals(d, True)
+        
+    def testGetResultFailure(self):
+        d = self.engine.getResult(None)
+        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
+        d.addCallback(lambda _: self.engine.getResult(10))
+        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
+        return d
             
     def testGetResult(self):
-        d = self.engine.getResult()
-        @d.addErrback
-        def nextd(f):
-            self.assertRaises(IndexError, f.raiseException)
-            return self.engine.execute('a = 5')
-        nextd.addCallback(lambda _: self.engine.getResult())
-        d = self.assertDeferredEquals(nextd, 
-            dict(zip(resultKeys, (self.engine.id, 0,"a = 5","",""))))
-        d.addCallback(lambda _: self.engine.getResult(0))
-        d = self.assertDeferredEquals(d, dict(zip(resultKeys, (self.engine.id, 0,"a = 5","",""))))
+        eTester = EngineGetResultTestGenerator(validCommands, self)
+        d = eTester.performTests()
         return d
-    
+
+    def testGetResultDefault(self):
+        cmd = 'a=5'
+        shell = self.createShell()
+        shellResult = shell.execute(cmd)
+        def popit(dikt, key):
+            dikt.pop(key)
+            return dikt
+        d = self.engine.execute(cmd)
+        d.addCallback(lambda _: self.engine.getResult())
+        d.addCallback(lambda r: self.assertEquals(shellResult, popit(r,'id')))
+        return d
+
     def testKeys(self):
         d = self.engine.keys()
         d.addCallback(lambda s: isinstance(s, list))

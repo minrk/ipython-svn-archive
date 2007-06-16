@@ -23,8 +23,11 @@ from ipython1.kernel.error import NotDefined
 from ipython1.test import util
 from ipython1.kernel import newserialized
 from ipython1.kernel.error import InvalidEngineID, NoEnginesRegistered
-
-resultKeys = ('id', 'commandIndex', 'stdin', 'stdout', 'stderr')
+from ipython1.test.engineservicetest import validCommands, invalidCommands
+from ipython1.test.testgenerator import (MultiEngineExecuteAllTestGenerator,
+    MultiEngineFailingExecuteTestGenerator,
+    MultiEngineGetResultTestGenerator)
+from ipython1.core.interpreter import Interpreter
 
 class IMultiEngineBaseTestCase(object):
     """Basic utilities for working with multiengine tests.
@@ -33,6 +36,9 @@ class IMultiEngineBaseTestCase(object):
     
     * self.multiengine
     * self.engines to keep track of engines for clean up"""
+
+    def createShell(self):
+        return Interpreter()
 
     def addEngine(self, n=1):
         for i in range(n):
@@ -48,7 +54,7 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
     
     self.multiengine must be defined and implement IEngineMultiplexer.
     """
-    
+            
     def testIEngineMultiplexerInterface(self):
         """Does self.engine claim to implement IEngineCore?"""
         self.assert_(IEngineMultiplexer.providedBy(self.multiengine))
@@ -124,69 +130,33 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         return d        
     
     def testExecute(self):
-        self.addEngine(6)
-        commands = [(0, 0,"a = 5","",""),
-            (0, 1,"b = 10","",""),
-            (0, 2,"c = a + b","",""),
-            (0, 3,"print c","15\n",""),
-            (0, 4,"import math","",""),
-            (0, 5,"2.0*math.pi","6.2831853071795862\n","")]
-        d = defer.succeed(None)
-        for c in commands:
-            result = self.multiengine.execute(0, c[2])
-            d = self.assertDeferredEquals(result, [dict(zip(resultKeys, c))], d)
+        self.addEngine(4)
+        targets = [0,3]
+        eTester = MultiEngineExecuteAllTestGenerator(validCommands, self, targets)
+        d = eTester.performTests()
         return d
-    
+
     def testExecuteFailures(self):
         self.addEngine(4)
-        d = self.multiengine.execute(0,'a=1/0')
-        d.addErrback(lambda f: self.assertRaises(ZeroDivisionError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.execute(0,'print v'))
-        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.execute(0,'a = 2**1000000'))
-        d.addErrback(lambda f: self.assertRaises(OverflowError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.execute(0,'l=[];l[0]'))
-        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.execute(0,"d={};d['a']"))
-        d.addErrback(lambda f: self.assertRaises(KeyError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.execute(0,"assert 1==0"))
-        d.addErrback(lambda f: self.assertRaises(AssertionError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.execute(0,"import abababsdbfsbaljasdlja"))
-        d.addErrback(lambda f: self.assertRaises(ImportError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.execute(0,"raise Exception()"))
-        d.addErrback(lambda f: self.assertRaises(Exception, f.raiseException))
+        targets = [0,2]
+        cmds = [x[0] for x in invalidCommands]
+        excpts = [x[1] for x in invalidCommands]
+        eTester = MultiEngineFailingExecuteTestGenerator(cmds, excpts, self, targets)
+        d = eTester.performTests()
         return d
     
     def testExecuteAll(self):
         self.addEngine(2)
-        result = [{'commandIndex': 0, 'stdin': 'a=5', 'id': 0, 'stderr': '', 'stdout': ''},
-         {'commandIndex': 0, 'stdin': 'a=5', 'id': 1, 'stderr': '', 'stdout': ''}]
-        d = self.multiengine.execute('all', 'a=5')
-        d.addCallback(lambda r: self.assert_(r==result))
-        d.addCallback(lambda _: self.multiengine.execute(0, 'a=10'))
-        d.addCallback(lambda _: self.multiengine.execute(1, 'a=5'))
-        d.addCallback(lambda _: self.multiengine.pull([0,1],'a'))
-        d.addCallback(lambda r: self.assert_(r==[10,5]))        
+        eTester = MultiEngineExecuteAllTestGenerator(validCommands, self)
+        d = eTester.performTests()
         return d
-    
+        
     def testExecuteAllFailures(self):
         self.addEngine(4)
-        d = self.multiengine.executeAll('a=1/0')
-        d.addErrback(lambda f: self.assertRaises(ZeroDivisionError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.executeAll('print v'))
-        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.executeAll('a = 2**1000000'))
-        d.addErrback(lambda f: self.assertRaises(OverflowError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.executeAll('l=[];l[0]'))
-        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.executeAll("d={};d['a']"))
-        d.addErrback(lambda f: self.assertRaises(KeyError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.executeAll("assert 1==0"))
-        d.addErrback(lambda f: self.assertRaises(AssertionError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.executeAll("import abababsdbfsbaljasdlja"))
-        d.addErrback(lambda f: self.assertRaises(ImportError, f.raiseException))
-        d.addCallback(lambda _: self.multiengine.executeAll("raise Exception()"))
-        d.addErrback(lambda f: self.assertRaises(Exception, f.raiseException))
+        cmds = [x[0] for x in invalidCommands]
+        excpts = [x[1] for x in invalidCommands]
+        eTester = MultiEngineFailingExecuteTestGenerator(cmds, excpts, self)
+        d = eTester.performTests()
         return d
     
     def testPushPull(self):
@@ -228,20 +198,35 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
             value.addCallback(lambda serial: newserialized.IUnSerialized(serial[0]).getObject())
             d = self.assertDeferredEquals(value,o,d)
         return d
-    
-    def testResult(self):
-        self.addEngine(1)
-        d = self.multiengine.getResult(0)
-        d.addCallback(lambda r: r[0])
-        d = self.assertDeferredRaises(d, IndexError)
-        d.addCallback(lambda _:self.multiengine.execute(0, "a = 5"))
-        d.addCallback(lambda _:self.multiengine.getResult(0))
-        d = self.assertDeferredEquals(d,[dict(zip(resultKeys, (0, 0,"a = 5","","")))])
-        d.addCallback(lambda _:self.multiengine.getResult(0, 0))
-        d = self.assertDeferredEquals(d,[dict(zip(resultKeys, (0, 0,"a = 5","","")))])
-        d.addCallback(lambda _:self.multiengine.reset(0))
+            
+    def testGetResult(self):
+        self.addEngine(4)
+        targets = [0,1,2]
+        eTester = MultiEngineGetResultTestGenerator(validCommands, self, targets)
+        d = eTester.performTests()
         return d
-    
+
+    def testGetResultDefault(self):
+        self.addEngine(1)
+        target = 0
+        cmd = 'a=5'
+        shell = self.createShell()
+        shellResult = shell.execute(cmd)
+        def popit(dikt, key):
+            dikt.pop(key)
+            return dikt
+        d = self.multiengine.execute(target, cmd)
+        d.addCallback(lambda _: self.multiengine.getResult(target))
+        d.addCallback(lambda r: self.assertEquals(shellResult, popit(r[0],'id')))
+        return d
+
+    def testGetResultFailure(self):
+        self.addEngine(1)
+        d = self.multiengine.getResult(0, None)
+        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.getResult(0, 10))
+        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
+        return d    
     
 class IEngineCoordinatorTestCase(IMultiEngineBaseTestCase):
     """A test for any object that implements IEngineCoordinator.
