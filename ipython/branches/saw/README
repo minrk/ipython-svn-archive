@@ -198,7 +198,6 @@ Things To Do
 
 Current:
 
-* Refactor the TaskResult object to be based on attributes.
 * Begin to add tests for task controller and client.
 * Convert standalone test scripts to using Fernando's new spawning stuff.
 * Add capability to spawn engines using mpirun.

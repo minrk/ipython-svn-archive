@@ -15,4 +15,4 @@ ipc.execute('all', 'import time')
 helloTaskId = rc.run(kernel.Task('time.sleep(3) ; word = "Hello,"', resultNames=['word']))
 worldTaskId = rc.run(kernel.Task('time.sleep(3) ; word = "World!"', resultNames=['word']))
 
-print rc.getTaskResult(helloTaskId)[1]['word'], rc.getTaskResult(worldTaskId)[1]['word']
+print rc.getTaskResult(helloTaskId).word, rc.getTaskResult(worldTaskId).word

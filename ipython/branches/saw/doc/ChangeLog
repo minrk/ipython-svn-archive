@@ -1,3 +1,20 @@
+2007-06-17  Brian Granger <ellisonbg@gmail.com>
+
+	* ipython1.kernel.task.py: Created a new TaskResult object
+	that is returned when getTaskResult is called.  This new 
+	object provide a much simpler and intuitive way of accessing
+	the results of a task.  The variables that are pulled back
+	are available as attributes of the TaskResult object.  There
+	are also engineID, taskID attributes.  Failures are handled 
+	through a failure attribute, but remote exceptions can also
+	be reraised by calling the raiseException method.
+	
+	* ipython1.kernel.taskclient/taskxmlrpc.py:  Minor changes to reflect
+	new TaskResult object that is returned by getTaskResult.
+	
+	* doc/examples: Updated TaskController examples to use new
+	TaskResult object.
+
 2007-06-16  Brian Granger <ellisonbg@gmail.com>
 
 	* Merged in work from core-refactor branch.

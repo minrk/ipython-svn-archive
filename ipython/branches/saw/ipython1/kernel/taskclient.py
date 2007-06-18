@@ -43,8 +43,7 @@ class InteractiveTaskClient(object):
             expression : str
                 A str that is valid python code that is the task.
             resultNames : str or list of str 
-                The names of objects to be pulled as results.  If not specified, 
-                will return {'result', None}
+                The names of objects to be pulled as results.
             setupNS : dict
                 A dict of objects to be pushed into the engines namespace before
                 execution of the expression.
@@ -59,8 +58,8 @@ class InteractiveTaskClient(object):
             options : dict
                 Any other keyword options for more elaborate uses of tasks
             
-        :Returns: The int taskID of the submitted task.        
-        
+        :Returns: The int taskID of the submitted task.  Pass this to 
+            `getTaskResult` to get the `TaskResult` object.      
         """
         block = kwargs.pop('block', self.block)
         if len(args) == 1 and isinstance(args[0], task.Task):

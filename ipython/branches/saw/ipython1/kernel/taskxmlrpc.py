@@ -208,8 +208,7 @@ class XMLRPCTaskClient(object):
             expression : str
                 A str that is valid python code that is the task.
             resultNames : str or list of str 
-                The names of objects to be pulled as results.  If not specified, 
-                will return {'result', None}
+                The names of objects to be pulled as results.
             setupNS : dict
                 A dict of objects to be pushed into the engines namespace before
                 execution of the expression.
@@ -224,7 +223,8 @@ class XMLRPCTaskClient(object):
             options : dict
                 Any other keyword options for more elaborate uses of tasks
             
-        :Returns: The int taskID of the submitted task.
+        :Returns: The int taskID of the submitted task.  Pass this to 
+            `getTaskResult` to get the `TaskResult` object.
         """
         assert isinstance(task, Task.Task), "task must be a Task object!"
         binTask = xmlrpc.Binary(pickle.dumps(task,2))
@@ -239,6 +239,8 @@ class XMLRPCTaskClient(object):
                 The taskID of the task to be retrieved.
             block : boolean
                 Should I block until the task is done?
+        
+        :Returns: A `TaskResult` object that encapsulates the task result.
         """
         localBlock = self._reallyBlock(block)
         result = self._executeRemoteMethod(self._server.getTaskResult, taskID, localBlock)

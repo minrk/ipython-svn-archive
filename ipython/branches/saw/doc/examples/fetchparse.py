@@ -59,12 +59,12 @@ class DistributedSpider(object):
         print url, ':'
         self.linksDone[url] = None
         del self.linksWorking[url]
-        if isinstance(result, Failure):
-            txt = result.getTraceback()
+        if isinstance(result.failure, Failure):
+            txt = result.failure.getTraceback()
             for line in txt.split('\n'):
                 print '    ', line
         else:
-            for link in result['links']:
+            for link in result.links:
                 self.visitLink(link)
                 
     def run(self):
@@ -80,7 +80,7 @@ class DistributedSpider(object):
             # task is not done yet.  This provides a simple way of polling.
             result = self.tc.getTaskResult(taskId, block=False)
             if result is not None:
-                self.onVisitDone(result[1], url)
+                self.onVisitDone(result, url)
 
 def main():
     distributedSpider = DistributedSpider(raw_input('Enter site to crawl: '))
