@@ -198,6 +198,7 @@ Things To Do
 
 Current:
 
+* Planning with Min and Fernando.
 * Begin to add tests for task controller and client.
 * Convert standalone test scripts to using Fernando's new spawning stuff.
 * Add capability to spawn engines using mpirun.

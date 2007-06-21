@@ -94,7 +94,8 @@ validCommands = ['a=5',
     result = 0.0
     for i in range(10):
         result += i
-"""
+""",
+                 'if 1<2: a=5'
                  ]
                  
 # A sequence of commands that raise various exceptions

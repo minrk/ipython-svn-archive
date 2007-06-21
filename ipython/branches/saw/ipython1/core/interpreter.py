@@ -236,7 +236,7 @@ A full traceback from the actual interpreter:
         # before clearing it.
         tracebackTuple = self.traceback_trap.args
         self.traceback_trap.clear()
-
+        
         # Cache the message.
         self.message_cache.add_message(self.current_cell_number, message)
 
@@ -490,9 +490,12 @@ A full traceback from the actual interpreter:
         lines = python.split('\n')
 
         # Hooray for incomprehensible list comprehensions!
-        commands = ['\n'.join(lines[i:j]) for i, j in 
+        # The trailing newline is needed so that lines such as
+        # "if 1<2: a=5" will compile and run without the explicit
+        # newline.
+        commands = ['\n'.join(lines[i:j])+'\n' for i, j in 
             zip(linenos[:-1], linenos[1:])]
-
+        
         return commands
 
     def error(self, text):
