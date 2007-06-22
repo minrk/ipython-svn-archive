@@ -95,7 +95,14 @@ validCommands = ['a=5',
     for i in range(10):
         result += i
 """,
-                 'if 1<2: a=5'
+                 'if 1<2: a=5',
+                 """import time
+time.sleep(0.1)""",
+                """from math import cos;
+x = 1.0*cos(0.5)""", # Semicolons lead to Discard ast nodes that should be discarded
+                """from sets import Set
+s = Set()
+   """ # Trailing whitespace should be allowed.
                  ]
                  
 # A sequence of commands that raise various exceptions
@@ -272,7 +279,7 @@ class IEngineQueuedTestCase(object):
         for m in list(es.IEngineQueued):
             self.assert_(hasattr(self.engine, m))
             
-    def testIEngineQueuedDeferreds(self):
+    def testIEngineQueuedDeferreds(self): 
         dList = []
         d = self.engine.clearQueue()
         self.assert_(isinstance(d, defer.Deferred))

@@ -1,6 +1,7 @@
 # Standard library imports.
 import sys
 import compiler
+from compiler.ast import Discard
 import codeop
 import __builtin__
 
@@ -275,11 +276,16 @@ A full traceback from the actual interpreter:
             return
 
         for cmd in commands:
-            code = self.command_compiler(cmd, self.filename, 'single')
             try:
-                exec code in self.namespace
-            except:
+                code = self.command_compiler(cmd, self.filename, 'single')
+            except (SyntaxError, OverflowError, ValueError), e:
+                self.message['syntax_error'] = e
                 self.traceback_trap.args = sys.exc_info()
+            else:
+                try:
+                    exec code in self.namespace
+                except:
+                    self.traceback_trap.args = sys.exc_info()
 
     def execute_macro(self, macro):
         """ Execute the value of a macro.
@@ -475,13 +481,23 @@ A full traceback from the actual interpreter:
             Separate commands that can be exec'ed independently.
         """
 
+        # compiler.parse treats trailing spaces after a newline as a SyntaxError.
+        # This is different than codeop.CommandCompiler, which will compile
+        # the trailng spaces just fine.  We simply strip any trailing whitespace
+        # off.   Passing a string with trailing whitespace to exec will fail 
+        # however.  Not sure what we really want here, but this seems to prevent
+        # weird things with trailing whitespace.
+        python = python.strip()
+
         # The compiler module will parse the code into an abstract syntax tree.
         ast = compiler.parse(python)
-
+                
         # Each separate command is available by iterating over ast.node. The
         # lineno attribute is the line number (1-indexed) beginning the commands
         # suite.
-        linenos = [x.lineno-1 for x in ast.node]
+        # lines ending with ";" yeild a Discard None that doesn't have a lineno
+        # attribute.  Following their name, they can be discarded.
+        linenos = [x.lineno-1 for x in ast.node if not isinstance(x,Discard)]
 
         # When we finally get the slices, we will need to slice all the way to
         # the end even though we don't have a line number for it. Fortunately,

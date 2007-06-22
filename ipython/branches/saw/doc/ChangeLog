@@ -1,3 +1,13 @@
+2007-06-21  Brian Granger <ellisonbg@gmail.com>
+
+	* ipython1.core.interpreter:  Made sure that funny edge cases
+	are handled properly by the Interpreter's split_command method.
+	The funny cases were: semicolon terminated lines, trailing
+	whitespaces and multiline input with no terminating newline.
+	All these should work fine now.  I have added test cases to
+	engineservicetest.py that test for these things.
+
+
 2007-06-17  Brian Granger <ellisonbg@gmail.com>
 
 	* ipython1.kernel.task.py: Created a new TaskResult object
