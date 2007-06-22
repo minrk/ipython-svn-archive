@@ -102,7 +102,13 @@ time.sleep(0.1)""",
 x = 1.0*cos(0.5)""", # Semicolons lead to Discard ast nodes that should be discarded
                 """from sets import Set
 s = Set()
-   """ # Trailing whitespace should be allowed.
+   """, # Trailing whitespace should be allowed.
+                """import math
+math.cos(1.0)""", # Test a method call with a discarded return value
+                """x=1.0234
+a=5; b=10""", # Test an embedded semicolon
+                """x=1.0234
+a=5; b=10;""" # Test both an embedded and trailing semicolon
                  ]
                  
 # A sequence of commands that raise various exceptions

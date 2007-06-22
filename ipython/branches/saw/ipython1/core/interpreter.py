@@ -485,34 +485,41 @@ A full traceback from the actual interpreter:
         # This is different than codeop.CommandCompiler, which will compile
         # the trailng spaces just fine.  We simply strip any trailing whitespace
         # off.   Passing a string with trailing whitespace to exec will fail 
-        # however.  Not sure what we really want here, but this seems to prevent
-        # weird things with trailing whitespace.
+        # however.  There seems to be some inconsistency in how trailing whitespace
+        # is handled, but this seems to work.
         python = python.strip()
 
         # The compiler module will parse the code into an abstract syntax tree.
         ast = compiler.parse(python)
+
+        # Uncomment to help debug the ast tree
+        # for n in ast.node:
+        #     print n.lineno,'->',n
                 
         # Each separate command is available by iterating over ast.node. The
         # lineno attribute is the line number (1-indexed) beginning the commands
         # suite.
-        # lines ending with ";" yeild a Discard None that doesn't have a lineno
-        # attribute.  Following their name, they can be discarded.
-        linenos = [x.lineno-1 for x in ast.node if not isinstance(x,Discard)]
+        # lines ending with ";" yield a Discard Node that doesn't have a lineno
+        # attribute.  These nodes can and should be discarded.  But there are
+        # other situations that cause Discard nodes that shouldn't be discarded.
+        # We might eventually discover other cases where lineno is None and have
+        # to put in a more sophisticated test.
+        linenos = [x.lineno-1 for x in ast.node if x.lineno is not None]
 
         # When we finally get the slices, we will need to slice all the way to
         # the end even though we don't have a line number for it. Fortunately,
         # None does the job nicely.
         linenos.append(None)
-        lines = python.split('\n')
+        lines = python.splitlines()
 
-        # Hooray for incomprehensible list comprehensions!
-        # The trailing newline is needed so that lines such as
-        # "if 1<2: a=5" will compile and run without the explicit
-        # newline.
-        commands = ['\n'.join(lines[i:j])+'\n' for i, j in 
-            zip(linenos[:-1], linenos[1:])]
-        
-        return commands
+        # Create a list of atomic commands.
+        cmds = []
+        for i, j in zip(linenos[:-1], linenos[1:]):
+            cmd = lines[i:j]
+            if cmd:
+                cmds.append('\n'.join(cmd)+'\n')
+
+        return cmds
 
     def error(self, text):
         """ Pass an error message back to the shell.
