@@ -185,9 +185,10 @@ you to do some really nice things.
 First create a TaskController objects::
 
 	>>> import ipython1.kernel.api as kernel
-	>>> rc = kernel.TaskController(('127.0.0.1',10113))
+	>>> tc = kernel.TaskController(('127.0.0.1',10113))
 	
-Now you can start submitting tasks using rc.run and rc.irun.
+Note that the port is different than the RemoteController.  Now you can 
+start submitting tasks by passing instances of kernel.Task to tc.run.
 
 It is best to check out the examples of using the task farming stuff in 
 ipython1/doc/examples.
