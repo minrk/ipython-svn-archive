@@ -114,6 +114,8 @@ class TaskResult(object):
         self.keys = self.results.keys()
         
     def __getitem__(self, key):
+        if self.failure is not None:
+            self.raiseException()
         return self.results[key]
     
     def raiseException(self):
