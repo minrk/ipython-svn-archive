@@ -81,3 +81,47 @@ def getPrefixedHeaders(dikt, prefix='x-ipy-'):
             newDikt[k[n:]] = dikt[k]
     return newDikt
 
+def htmlTargetString(targets):
+    if targets == 'all':
+        return targets
+    elif isinstance(targets, (tuple, list)):
+        return ','.join(map(str, targets))
+    elif isinstance(targets, int):
+        return str(targets)
+    raise error.InvalidEngineID(str(targets))
+
+def htmlArgString(dikt):
+    s = '?'
+    for k,v in dikt.iteritems():
+        if isinstance(v, str):
+            vs = v
+        elif isinstance(v, bool):
+            if v:
+                vs = '1'
+            else:
+                vs = '0'
+        elif isinstance(v, (int, float, type(None))):
+            vs = str(v)
+        else:
+            vs = pickle.dumps(v,2)
+        s += k+'='+vs+'&'
+    return s[:-1]
+
+def strDict(dikt):
+    d = {}
+    for k,v in dikt.iteritems():
+        if isinstance(v, str):
+            vs = v
+        elif isinstance(v, bool):
+            if v:
+                vs = '1'
+            else:
+                vs = '0'
+        elif isinstance(v, (int, float, type(None))):
+            vs = str(v)
+        else:
+            vs = pickle.dumps(v,2)
+        d[k] = vs
+    return d
+
+

@@ -17,22 +17,19 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import cPickle as pickle
-import xmlrpclib
+import httplib2, urllib
 
-from zope.interface import Interface, implements, Attribute
-from twisted.internet import defer, reactor
+from zope.interface import Interface, implements
 from twisted.python import components, failure, log
 
-from ipython1.kernel import httputil
+from ipython1.kernel import httputil, error
 from ipython1.external.twisted.web2 import server, channel
 from ipython1.external.twisted.web2 import http, resource
-from ipython1.external.twisted.web2 import responsecode, stream
+from ipython1.external.twisted.web2 import stream
 from ipython1.external.twisted.web2 import http_headers
 
-from ipython1.kernel import newserialized
-from ipython1.kernel import error
-from ipython1.kernel.task import ITaskController,\
-                ISynchronousTaskController
+from ipython1.kernel.task import ITaskController
+from ipython1.kernel.taskclient import InteractiveTaskClient
 
 #-------------------------------------------------------------------------------
 # The Controller side of things
@@ -44,20 +41,14 @@ class IHTTPTaskRoot(Interface):
 
 class HTTPTaskRoot(resource.Resource):
     
+    implements(IHTTPTaskRoot)
     addSlash = True
     
-    
     def __init__(self, tc):
-        self.stc = ISynchronousTaskController(tc)
-        self.child_run = HTTPTaskRun(self.stc)
-        self.child_abort = HTTPTaskAbort(self.stc)
-        self.child_getresult = HTTPTaskGetResult(self.stc)
-        self.child_registerclient = HTTPTaskRegisterClient(self.stc)
-        self.child_unregisterclient = HTTPTaskUnregisterClient(self.stc)
-    
-    #def locateChild(self, request, segments):
-    #    log.msg("Segments: " + repr(segments))
-    #    return self, ()
+        self.tc = tc
+        self.child_run = HTTPTaskRun(self.tc)
+        self.child_abort = HTTPTaskAbort(self.tc)
+        self.child_getresult = HTTPTaskGetResult(self.tc)
     
     def renderHTTP(self, request):
         return http.Response(200, stream=stream.MemoryStream(repr(request)))
@@ -70,8 +61,8 @@ components.registerAdapter(HTTPTaskRoot,
 
 class HTTPTaskBaseMethod(resource.Resource):
     
-    def __init__(self, stc):
-        self.stc = stc
+    def __init__(self, tc):
+        self.tc = tc
         log.msg("Creating child resource...")
     
     def locateChild(self, request, segments):
@@ -114,44 +105,42 @@ headers: %r
 class HTTPTaskRun(HTTPTaskBaseMethod):
     
     def renderHTTP(self, request):
-        pTask = request.args['pTask'][0]
         try:
+            pTask = request.args['pTask'][0]
             task = pickle.loads(pTask)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
-            # clientID = self.stc.registerClient()
-            d = self.stc.run(task)
-            d.addCallback(lambda r: self.packageSuccess(r))
-            d.addErrback(lambda f: self.packageFailure(f))
-            # self.stc.unregisterClient(clientID)
+            d = self.tc.run(task)
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
     
 
 class HTTPTaskAbort(HTTPTaskBaseMethod):
     
     def renderHTTP(self, request):
-        # XXX - fperez: I added a plain 'pass' here so the code would compile,
-        # but I'm not sure what's supposed to be in here.
-        pass
+        try:
+            taskID = int(request.args['taskID'][0])
+        except Exception, e:
+            return self.packageFailure(failure.Failure(e))
+        else:
+            d = self.tc.abort(taskID)
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
     
 
-class HTTPTaskRegisterClient(HTTPTaskBaseMethod):
+class HTTPTaskGetResult(HTTPTaskBaseMethod):
     
     def renderHTTP(self, request):
-        clientID = self.stc.registerClient()
-        return self.packageSuccess(clientID)
+        try:
+            taskID = int(request.args['taskID'][0])
+        except Exception, e:
+            return self.packageFailure(failure.Failure(e))
+        else:
+            d = self.tc.getTaskResult(taskID)
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
     
-
-class HTTPTaskUnregisterClient(HTTPTaskBaseMethod):
-    
-    def http_POST(request):
-        clientID = request.args.get('clientid')
-        d = defer.execute(self.stc.unregisterClient)
-        d.addBoth(self.packageSuccess, self.packageFailure)
-        return d
-    
-
 
 class IHTTPTaskFactory(Interface):
     pass
@@ -162,8 +151,69 @@ def HTTPServerFactoryFromTaskController(multiengine):
     s = server.Site(IHTTPTaskRoot(multiengine))
     return channel.HTTPFactory(s)
     
-    
+
 components.registerAdapter(HTTPServerFactoryFromTaskController,
             ITaskController, IHTTPTaskFactory)
-        
 
+        
+#----------------------------------------------------------------------------
+#   Client Side
+#----------------------------------------------------------------------------
+
+class HTTPTaskClient(object):
+    """The Client object for connecting to a TaskController over HTTP"""
+    
+    
+    def __init__(self, addr):
+        """Create a client that will connect to addr.
+        
+        Once created, this class will autoconnect and reconnect to the
+        controller as needed.
+        
+        :Parameters:
+            addr : tuple
+                The (ip, port) of the IMultiEngine adapted controller.
+        """
+        self.addr = addr
+        self.url = 'http://%s:%s/' % self.addr
+        self._server = httplib2.Http()
+    
+    
+    def _executeRemoteMethod(self, method, **kwargs):
+        args = urllib.urlencode(self.strDict(kwargs))
+        request = self.url+method+'/'+'?'+args
+        header, response = self._server.request(request)
+        # print request
+        # print header
+        # print response
+        result = self._unpackageResult(header, response)
+        return result
+    
+    def _unpackageResult(self, header, response):
+        status = header['status']
+        if status == '200':
+            result = httputil.unserialize(header, response)
+            return self._returnOrRaise(result)
+        else:
+            raise error.ProtocolError("Request Failed: %s:%s"%(status, response))
+        
+    def _returnOrRaise(self, result):
+        if isinstance(result, failure.Failure):
+            result.raiseException()
+        else:
+            return result
+    
+    ##########  Interface Methods  ##########
+    
+    def run(self, task):
+        return self._executeRemoteMethod('run', task=task)
+    
+    def abort(self, taskID):
+        return self._executeRemoteMethod('abort', taskID=taskID)
+    
+    def getTaskResult(self, taskID):
+        return self._executeRemoteMethod('getresult', taskID=taskID)
+    
+        
+class HTTPInteractiveTaskClient(HTTPTaskClient, InteractiveTaskClient):
+    pass
