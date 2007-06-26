@@ -149,7 +149,6 @@ class Interpreter(object):
         Eventually it should simply use the traceback formatters in core
         that are loaded into self.tracback_trap.formatters.
         """
-        
         tbinfo = self.tbHandler.text(et,ev,tb)
         newValue = """\
 %(ev)s            
@@ -163,7 +162,7 @@ A full traceback from the actual interpreter:
 %(tbinfo)s
 ***************************************************************************
         """ % locals()
-        return et, newValue, tb
+        return et, et(newValue), tb
         
     def execute(self, commands, raiseException=True):
         """ Execute some IPython commands.
