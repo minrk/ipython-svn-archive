@@ -81,9 +81,6 @@ class TaskResult(object):
     """The result object for a Task"""
     def __init__(self, diktOrFail):
         if isinstance(diktOrFail, dict):# succeed
-            
-            for k,v in diktOrFail.iteritems():
-                setattr(self,k,v)
             self._result = diktOrFail
             self._failure = None
         elif isinstance(diktOrFail, failure.Failure):# failed
