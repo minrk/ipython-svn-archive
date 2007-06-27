@@ -337,7 +337,10 @@ class Inspector:
             ospace = info.namespace
         # Get docstring, special-casing aliases:
         if isalias:
-            ds = "Alias to the system command:\n  %s" % obj[1]
+            if not callable(obj):
+                ds = "Alias to the system command:\n  %s" % obj[1]
+            else:
+                ds = "Alias to " + str(obj)
         else:
             ds = getdoc(obj)
             if ds is None:
