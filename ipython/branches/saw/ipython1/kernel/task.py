@@ -76,16 +76,22 @@ class Task(object):
         self.options = options
         self.taskID = None
 
+class _resultNS:
+    pass
 
 class TaskResult(object):
     """The result object for a Task"""
+    
     def __init__(self, diktOrFail):
+        self.ns = _resultNS()
         if isinstance(diktOrFail, dict):# succeed
-            self._result = diktOrFail
+            self._resultDict = diktOrFail
             self._failure = None
+            for k,v in self._resultDict.iteritems():
+                setattr(self.ns,k,v)
         elif isinstance(diktOrFail, failure.Failure):# failed
             self._failure = diktOrFail
-            self._result = {}
+            self._resultDict = {}
     
     def raiseException(self):
         """This raises the Failure's exception if the Task failed, else passes.
@@ -94,7 +100,7 @@ class TaskResult(object):
             self._failure.raiseException()
     
     def __getitem__(self, k):
-        return self._result[k]
+        return self._resultDict[k]
     
 
 
