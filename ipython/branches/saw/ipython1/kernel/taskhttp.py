@@ -142,7 +142,7 @@ class HTTPTaskGetResult(HTTPTaskBaseMethod):
             return d
     
 
-class IHTTPTaskFactory(Interface):
+class IHTTPTaskControllerFactory(Interface):
     pass
 
     
@@ -153,7 +153,7 @@ def HTTPServerFactoryFromTaskController(multiengine):
     
 
 components.registerAdapter(HTTPServerFactoryFromTaskController,
-            ITaskController, IHTTPTaskFactory)
+            ITaskController, IHTTPTaskControllerFactory)
 
         
 #----------------------------------------------------------------------------
@@ -177,10 +177,11 @@ class HTTPTaskClient(object):
         self.addr = addr
         self.url = 'http://%s:%s/' % self.addr
         self._server = httplib2.Http()
+        self.block = True
     
     
     def _executeRemoteMethod(self, method, **kwargs):
-        args = urllib.urlencode(self.strDict(kwargs))
+        args = urllib.urlencode(httputil.strDict(kwargs))
         request = self.url+method+'/'+'?'+args
         header, response = self._server.request(request)
         # print request
@@ -206,12 +207,13 @@ class HTTPTaskClient(object):
     ##########  Interface Methods  ##########
     
     def run(self, task):
-        return self._executeRemoteMethod('run', task=task)
+        pTask = pickle.dumps(task,2)
+        return self._executeRemoteMethod('run', pTask=pTask)
     
     def abort(self, taskID):
         return self._executeRemoteMethod('abort', taskID=taskID)
     
-    def getTaskResult(self, taskID):
+    def getTaskResult(self, taskID, block=None):
         return self._executeRemoteMethod('getresult', taskID=taskID)
     
         

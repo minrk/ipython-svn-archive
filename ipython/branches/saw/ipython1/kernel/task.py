@@ -22,7 +22,6 @@ from twisted.python import components, log, failure
 
 from ipython1.kernel import engineservice as es, error
 from ipython1.kernel import controllerservice as cs
-from ipython1.kernel.pendingdeferred import PendingDeferredAdapter, twoPhase
 from ipython1.kernel.util import gatherBoth, DeferredList
 
 def _printer(r):
@@ -63,7 +62,7 @@ class Task(object):
     >>> t = Task('a=5\nb=4', resultNames=['a','b'])
     >>> t = Task('os.kill(os.getpid(),9)', retries=100) # this is a bad idea
     """
-    def __init__(self, expression, resultNames=None, setupNS=None,
+    def __init__(self, expression, resultNames=None, setupNS={},
             clearBefore=False, clearAfter=False, retries=0, **options):
         self.expression = expression
         if isinstance(resultNames, str):
@@ -76,54 +75,31 @@ class Task(object):
         self.retries=retries
         self.options = options
         self.taskID = None
-    
+
+
 class TaskResult(object):
-    """An object for returning task results.
-    
-    This object encapsulates the results of a task.  On task
-    success it will have a keys attribute that will have a list
-    of the variables that have been pulled back.  These variables
-    are accessible as attributes of this class as well.  On 
-    success the failure attribute will be None.
-    
-    In task failure, keys will be empty, but failure will contain
-    the failure object that encapsulates the remote exception.
-    One can also simply call the raiseException() method of 
-    this class to re-raise any remote exception in the local
-    session.
-    
-    The engineID attribute should have the engineID of the engine
-    that ran the task.  But, because engines can come and go in
-    the ipython task system, the engineID may not continue to be
-    valid or accurate.
-    
-    The taskId attribute simply gives the taskID that the task
-    is tracked under.
-    """
-    
-    def __init__(self, results, engineID):
-        self.engineID = engineID
-        if isinstance(results, failure.Failure):
-            self.failure = results
-            self.results = {}
-        else:
-            self.results = results
-            self.failure = None
-        for k,v in self.results.iteritems():
-            setattr(self, k, v)
-        self.keys = self.results.keys()
-        
-    def __getitem__(self, key):
-        if self.failure is not None:
-            self.raiseException()
-        return self.results[key]
+    """The result object for a Task"""
+    def __init__(self, diktOrFail):
+        if isinstance(diktOrFail, dict):# succeed
+            
+            for k,v in diktOrFail.iteritems():
+                setattr(self,k,v)
+            self._result = diktOrFail
+            self._failure = None
+        elif isinstance(diktOrFail, failure.Failure):# failed
+            self._failure = diktOrFail
+            self._result = {}
     
     def raiseException(self):
-        """Re-raise any remote exceptions in the local python session."""
-        if self.failure is not None:
-            self.failure.raiseException()
+        """This raises the Failure's exception if the Task failed, else passes.
+        """
+        if self._failure is not None:
+            self._failure.raiseException()
     
+    def __getitem__(self, k):
+        return self._result[k]
     
+
 
 class IWorker(zi.Interface):
     """The Basic Worker Interface. 
@@ -136,7 +112,9 @@ class IWorker(zi.Interface):
         :Parameters:
             task : a `Task` object
         
-        :Returns: `Deferred` to a `TaskResult` object.
+        :Returns: `Deferred` to the result of the task in the form of a `dict`,
+            {resultName:result}.  If no `resultNames`, then returns {'result':None} on 
+            success.
         """
     
 
@@ -154,45 +132,43 @@ class WorkerFromQueuedEngine(object):
         :Parameters:
             task : a `Task` object
         
-        :Returns: `Deferred` to a `TaskResult` object.
+        :Returns: `Deferred` to the result of the task in the form of a `dict`,
+            {resultName:result}.  If no `resultNames`, then returns {'result':None} on 
+            success.
         """
         
+        dl = []
+        index = 1
         if task.clearBefore:
-            d = self.queuedEngine.reset()
+            dl.append(self.queuedEngine.reset())
+            index += 1
+        if task.setupNS:
+            dl.append(self.queuedEngine.push(**task.setupNS))
+            index += 1
+        
+        dl.append(self.queuedEngine.execute(task.expression))
+        
+        if task.resultNames:
+            d = self.queuedEngine.pull(*task.resultNames)
         else:
             d = defer.succeed(None)
-            
-        if task.setupNS is not None:
-            d.addCallback(lambda r: self.queuedEngine.push(**task.setupNS))
-        
-        d.addCallback(lambda r: self.queuedEngine.execute(task.expression))
-        
-        if task.resultNames is not None:
-            d.addCallback(lambda r: self.queuedEngine.pull(*task.resultNames))
-        else:
-            d.addCallback(lambda r: None)
-        
-        def reseter(result):
-            self.queuedEngine.reset()
-            return result
-            
+        dl.append(d)
         if task.clearAfter:
-            d.addCallback(reseter)
+            dl.append(self.queuedEngine.reset())
         
-        return d.addBoth(self._zipResults, task.resultNames)
+        names = task.resultNames or ['result']
+        d = gatherBoth(dl, consumeErrors = True)
+        return d.addBoth(self._buildTaskResult, names, index)
     
-    def _zipResults(self, result, names):
-        """Callback for construting the TaskResult object."""
-        if isinstance(result, failure.Failure):
-            return TaskResult(result, self.queuedEngine.id)
-        else:
-            if names is None:
-                resultDict = {} 
-            elif len(names) == 1:
-                resultDict = {names[0]:result}
-            else:
-                resultDict = dict(zip(names, result))
-        return TaskResult(resultDict, self.queuedEngine.id)
+    def _buildTaskResult(self, rlist, names, index):
+        """callback for constructing the TaskResult object"""
+        for r in rlist:
+            if isinstance(r, failure.Failure):
+                return r
+        if len(names) == 1:
+            return {names[0]:rlist[index]}
+        return dict(zip(names, rlist[index]))
+    
 
 components.registerAdapter(WorkerFromQueuedEngine, es.IEngineQueued, IWorker)
 
@@ -402,6 +378,13 @@ class TaskController(cs.ControllerAdapterBase):
     def _pendingTaskIDs(self):
         return [t.taskID for t in self.pendingTasks.values()]
     
+    def _wrapResult(self, result, taskID):
+        
+        if isinstance(result, failure.Failure):
+            result.cleanFailure()
+        tr = TaskResult(result)
+        tr.taskID = taskID
+        return tr
     #---------------------------------------------------------------------------
     # Interface methods
     #---------------------------------------------------------------------------
@@ -419,20 +402,19 @@ class TaskController(cs.ControllerAdapterBase):
         return defer.succeed(task.taskID)
     
     def getTaskResult(self, taskID, block=False):
-        """Returns a `Deferred` to a TaskResult tuple or None."""
+        """Returns a `Deferred` to a (taskID, result) tuple or None."""
         log.msg("getting result %i"%taskID)
         if self.finishedResults.has_key(taskID):
-            tr = self.finishedResults[taskID]
-            return defer.succeed(tr)
+            return defer.succeed(self.finishedResults[taskID])
         elif self.deferredResults.has_key(taskID):
             if block:
-                d = defer.Deferred()
+                d = defer.Deferred()#.addBoth(self._wrapResult, taskID)
                 self.deferredResults[taskID].append(d)
                 return d
             else:
                 return defer.succeed(None)
         else:
-            return defer.fail(IndexError("task ID not registered: %r" % taskID))
+            return defer.fail(IndexError("task ID not registered"))
     
     def abort(self, taskID):
         """Remove a task from the queue if it has not been run already."""
@@ -476,10 +458,11 @@ class TaskController(cs.ControllerAdapterBase):
     
     def _finishTask(self, taskID, result):
         dlist = self.deferredResults.pop(taskID)
-        result.taskID = taskID   # The TaskResult should save the taskID
-        self.finishedResults[taskID] = result
+        tr = TaskResult(result)
+        tr.taskID = taskID
+        self.finishedResults[taskID] = tr
         for d in dlist:
-            d.callback(result)
+            d.callback(tr)
 
     def distributeTasks(self):
         """Distribute tasks while self.scheduler has things to do."""
@@ -503,7 +486,7 @@ class TaskController(cs.ControllerAdapterBase):
         except:
             # this should not happen
             log.msg("tried to pop bad pending task#%i from worker #%i"%(taskID, workerID))
-            log.msg("result: %r"%result)
+            log.msg("result: %s"%result)
             log.msg("pending tasks:%s"%self.pendingTasks)
             return
         
@@ -514,7 +497,7 @@ class TaskController(cs.ControllerAdapterBase):
             aborted = True
         
         if not aborted:
-            if result.failure is not None and isinstance(result.failure, failure.Failure): # we failed
+            if isinstance(result, failure.Failure): # we failed
                 log.msg("Task #%i failed on worker %i"% (taskID, workerID))
                 if task.retries > 0: # resubmit
                     task.retries -= 1
@@ -532,7 +515,7 @@ class TaskController(cs.ControllerAdapterBase):
                 self._finishTask(taskID, result)
                 self.readmitWorker(workerID)
         else:# we aborted the task
-            if result.failure is not None and isinstance(result.failure, failure.Failure): # it failed, penalize worker
+            if isinstance(result, failure.Failure): # it failed, penalize worker
                 reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
             else:
                 self.readmitWorker(workerID)
