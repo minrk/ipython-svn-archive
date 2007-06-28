@@ -290,8 +290,9 @@ i = %r""" % (self.id, i)
     def reset(self):
         msg = """engine %r
 method: reset()""" % self.id
-        d = self.executeAndRaise(msg, self.shell.reset)
-        d.addCallback(lambda r: self._seedNamespace())
+        del self.shell
+        self.shell = self.shellClass()
+        d = self.executeAndRaise(msg, self._seedNamespace)
         return d
     
     def kill(self):
