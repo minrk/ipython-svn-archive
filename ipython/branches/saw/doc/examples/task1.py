@@ -14,4 +14,4 @@ t1 = kernel.Task(cmd1, clearBefore=False, clearAfter=True, resultNames=['a','b',
 tid1 = tc.run(t1)
 tr1 = tc.getTaskResult(tid1,block=True)
 tr1.raiseException()
-print "a, b: ", tr1.a, tr1.b
+print "a, b: ", tr1.ns.a, tr1.ns.b

@@ -77,9 +77,6 @@ class Task(object):
         self.options = options
         self.taskID = None
 
-class _resultNS:
-    pass
-
 class TaskResult(object):
     """An object for returning task results.
 
@@ -103,6 +100,9 @@ class TaskResult(object):
         The taskID attribute simply gives the taskID that the task
         is tracked under.
         """
+    class _resultNS:
+        pass
+
     taskID = None
     
     def _getNS(self):
@@ -125,7 +125,7 @@ class TaskResult(object):
             self.results = results
             self.failure = None
         
-        self._ns = _resultNS()
+        self._ns = self._resultNS()
         for k,v in self.results.iteritems():
             setattr(self._ns, k, v)
         
