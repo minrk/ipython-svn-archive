@@ -72,10 +72,10 @@ class TaskTest(DeferredTestCase):
     
     def testClears(self):
         d = self.me.execute(0,'b=1')
-        t = task.Task('a=0', clearBefore=True, resultNames='b', clearAfter=True)
+        t = task.Task('a=1', clearBefore=True, resultNames='b', clearAfter=True)
         d.addCallback(lambda _:self.tc.run(t))
         d.addCallback(self.tc.getTaskResult)
-        d.addCallback(lambda tr: tr._failure)
+        d.addCallback(lambda tr: tr.failure)
         d = self.assertDeferredRaises(d, NameError) # check b for clearBefore
         d.addCallback(lambda _:self.me.pull(0,'a'))
         d = self.assertDeferredRaises(d, NameError) # check a for clearAfter
@@ -85,7 +85,7 @@ class TaskTest(DeferredTestCase):
         t = task.Task('a=5', resultNames='a')
         d = self.tc.run(t)
         d.addCallback(self.tc.getTaskResult)
-        d.addCallback(lambda tr: (tr.ns.a,tr['a'],tr._failure, tr.raiseException()))
+        d.addCallback(lambda tr: (tr.ns.a,tr['a'],tr.failure, tr.raiseException()))
         d = self.assertDeferredEquals(d, (5,5,None,None))
         return d
         
