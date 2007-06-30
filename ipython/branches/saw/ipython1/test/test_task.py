@@ -74,20 +74,33 @@ class TaskTest(DeferredTestCase):
         d = self.me.execute(0,'b=1')
         t = task.Task('a=1', clearBefore=True, resultNames='b', clearAfter=True)
         d.addCallback(lambda _:self.tc.run(t))
-        d.addCallback(self.tc.getTaskResult)
+        d.addCallback(self.tc.getTaskResult,block=True)
         d.addCallback(lambda tr: tr.failure)
         d = self.assertDeferredRaises(d, NameError) # check b for clearBefore
         d.addCallback(lambda _:self.me.pull(0,'a'))
         d = self.assertDeferredRaises(d, NameError) # check a for clearAfter
         return d
     
-    def testResults(self):
-        t = task.Task('a=5', resultNames='a')
-        d = self.tc.run(t)
-        d.addCallback(self.tc.getTaskResult)
+    def testTaskResults(self):
+        t1 = task.Task('a=5', resultNames='a')
+        d = self.tc.run(t1)
+        d.addCallback(self.tc.getTaskResult, block=True)
         d.addCallback(lambda tr: (tr.ns.a,tr['a'],tr.failure, tr.raiseException()))
         d = self.assertDeferredEquals(d, (5,5,None,None))
-        return d
         
+        t2 = task.Task('7=5')
+        d.addCallback(lambda r: self.tc.run(t2))
+        d.addCallback(self.tc.getTaskResult, block=True)
+        d.addCallback(lambda tr: tr.ns)
+        d = self.assertDeferredRaises(d, SyntaxError)
+        
+        t3 = task.Task('', resultNames='b')
+        d.addCallback(lambda r: self.tc.run(t3))
+        d.addCallback(self.tc.getTaskResult, block=True)
+        d.addCallback(lambda tr: tr.ns)
+        d = self.assertDeferredRaises(d, NameError)
+        return d
+    
+    
         
 
