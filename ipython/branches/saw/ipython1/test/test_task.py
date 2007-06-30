@@ -97,14 +97,25 @@ class TaskTest(DeferredTestCase):
         d = self.assertDeferredEquals(d, 16)
         return d
     
-    def testRetryTasks(self):
+    def testRecoveryTasks(self):
         t = task.Task("i=16", resultNames='i')
-        t2 = task.Task("raise Exception", retryTask=t, retries = 2)
+        t2 = task.Task("raise Exception", recoveryTask=t, retries = 2)
         
         d = self.tc.run(t2)
         d.addCallback(self.tc.getTaskResult, block=True)
         d.addCallback(lambda tr: tr.ns.i)
         d = self.assertDeferredEquals(d, 16)
+        return d
+    
+    def testInfiniteRecoveryLoop(self):
+        t = task.Task("raise Exception", retries = 5)
+        t2 = task.Task("assert False", retries = 2, recoveryTask = t)
+        t.recoveryTask = t2
+        
+        d = self.tc.run(t)
+        d.addCallback(self.tc.getTaskResult, block=True)
+        d.addCallback(lambda tr: tr.ns.i)
+        d = self.assertDeferredRaises(d, AssertionError)
         return d
     
     def testSetupNS(self):

@@ -52,6 +52,9 @@ class Task(object):
             Default=False.
         retries : int
             The number of times to resumbit the task if it fails.  Default=0.
+        recoveryTask : Task
+            This is the Task to be run when the task has exhausted its retries
+            Default=None.
         options : dict
             Any other keyword options for more elaborate uses of tasks
     
@@ -65,7 +68,7 @@ class Task(object):
     """
     def __init__(self, expression, resultNames=None, setupNS=None,
             clearBefore=False, clearAfter=False, retries=0, 
-            retryTask=None, **options):
+            recoveryTask=None, **options):
         self.expression = expression
         if isinstance(resultNames, str):
             self.resultNames = [resultNames]
@@ -75,11 +78,8 @@ class Task(object):
         self.clearBefore = clearBefore
         self.clearAfter = clearAfter
         self.retries=retries
-        if retryTask is not None and self.retries:
-            self.retryTask = retryTask
-            self.retryTask.retries = self.retries
-        else:
-            self.retryTask = self
+        self.recoveryTask = recoveryTask
+        
         self.options = options
         self.taskID = None
 
@@ -100,6 +100,11 @@ class TaskResult(object):
         One can also simply call the raiseException() method of 
         this class to re-raise any remote exception in the local
         session.
+        
+        The TaskResult has a .ns member, which is a property for access
+        to the results.  If the Task had resultNames=['a', 'b'], then the 
+        Task Result will have attributes tr.ns.a, tr.ns.b for those values.
+        Accessing tr.ns will raise the remote failure if the task failed.
 
         The engineID attribute should have the engineID of the engine
         that ran the task.  But, because engines can come and go in
@@ -355,7 +360,7 @@ class ITaskController(cs.IControllerBase):
         
         If the task has already been submitted, wait for it to finish and discard 
         results and prevent resubmission.
-
+        
         :Parameters:
             taskID : the id of the task to be aborted
         
@@ -366,12 +371,13 @@ class ITaskController(cs.IControllerBase):
             deferred will fail with `IndexError` if no such task has been submitted
             or the task has already completed.
         """
-        
+    
     def barrier(taskIDs):
         """Block until the list of taskIDs are completed.
         
         Returns None on success.
         """
+    
 
 class TaskController(cs.ControllerAdapterBase):
     """The Task based interface to a Controller object.
@@ -503,7 +509,7 @@ class TaskController(cs.ControllerAdapterBase):
         self.finishedResults[taskID] = result
         for d in dlist:
             d.callback(result)
-
+    
     def distributeTasks(self):
         """Distribute tasks while self.scheduler has things to do."""
         
@@ -518,7 +524,7 @@ class TaskController(cs.ControllerAdapterBase):
             d = worker.run(task)
             log.msg("running task #%i on worker %i" %(task.taskID, worker.workerID))
             d.addBoth(self.taskCompleted, task.taskID, worker.workerID)
-            
+    
     def taskCompleted(self, result, taskID, workerID):
         """This is the err/callback for a completed task."""
         try:
@@ -540,10 +546,17 @@ class TaskController(cs.ControllerAdapterBase):
             if result.failure is not None and isinstance(result.failure, failure.Failure): # we failed
                 log.msg("Task #%i failed on worker %i"% (taskID, workerID))
                 if task.retries > 0: # resubmit
-                    task.retries = task.retryTask.retries = task.retries-1
-                    task.retryTask.taskID = task.taskID
-                    self.scheduler.addTask(task.retryTask)
+                    task.retries -= 1
+                    self.scheduler.addTask(task)
                     s = "resubmitting task #%i, %i retries remaining" %(taskID, task.retries)
+                    log.msg(s)
+                    self.distributeTasks()
+                elif task.recoveryTask is not None and task.recoveryTask.retries>=0:
+                    task.retries = -1 # this is to prevent infinite loop
+                    task.recoveryTask.taskID = taskID
+                    task = task.recoveryTask
+                    self.scheduler.addTask(task)
+                    s = "recovering task #%i, %i retries remaining" %(taskID, task.retries)
                     log.msg(s)
                     self.distributeTasks()
                 else: # done trying
