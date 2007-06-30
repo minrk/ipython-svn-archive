@@ -64,7 +64,8 @@ class Task(object):
     >>> t = Task('os.kill(os.getpid(),9)', retries=100) # this is a bad idea
     """
     def __init__(self, expression, resultNames=None, setupNS=None,
-            clearBefore=False, clearAfter=False, retries=0, **options):
+            clearBefore=False, clearAfter=False, retries=0, 
+            retryTask=None, **options):
         self.expression = expression
         if isinstance(resultNames, str):
             self.resultNames = [resultNames]
@@ -74,6 +75,11 @@ class Task(object):
         self.clearBefore = clearBefore
         self.clearAfter = clearAfter
         self.retries=retries
+        if retryTask is not None and self.retries:
+            self.retryTask = retryTask
+            self.retryTask.retries = self.retries
+        else:
+            self.retryTask = self
         self.options = options
         self.taskID = None
 
@@ -534,8 +540,9 @@ class TaskController(cs.ControllerAdapterBase):
             if result.failure is not None and isinstance(result.failure, failure.Failure): # we failed
                 log.msg("Task #%i failed on worker %i"% (taskID, workerID))
                 if task.retries > 0: # resubmit
-                    task.retries -= 1
-                    self.scheduler.addTask(task)
+                    task.retries = task.retryTask.retries = task.retries-1
+                    task.retryTask.taskID = task.taskID
+                    self.scheduler.addTask(task.retryTask)
                     s = "resubmitting task #%i, %i retries remaining" %(taskID, task.retries)
                     log.msg(s)
                     self.distributeTasks()
