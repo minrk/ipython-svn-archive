@@ -88,6 +88,11 @@ class resultNS:
     It builds an object from a dictionary, such that it has attributes
     according to the key,value pairs of the dictionary.
     
+    This works by calling setattr on ALL key,value pairs in the dict.  If a user
+    chooses to overwrite the `__repr__` or `__getattr__` attributes, they can.
+    This can be a bad idea, as it may corrupt standard behavior of the
+    ns object.
+    
     Example
     --------
     
@@ -100,23 +105,16 @@ class resultNS:
         [0,1,2]
     """
     def __init__(self, dikt):
-        protected = ['__doc__','__getitem__','__init__',
-                     '__module__','__repr__', '__str__']
         for k,v in dikt.iteritems():
-            if k in protected:
-                k = string.upper(k)
             setattr(self,k,v)
     
     def __repr__(self):
         l = dir(self)
-        protected = ['__doc__','__getitem__','__init__',
-                     '__module__','__repr__', '__str__']
-        for s in protected:
-            if s in l:
-                l.remove(s)
         d = {}
         for k in l:
-            d[k] = getattr(self, k)
+            # do not print private objects
+            if k[:2] != '__' and k[-2:] != '__':
+                d[k] = getattr(self, k)
         return "NS"+repr(d)
     
     def __getitem__(self, key):
