@@ -143,6 +143,14 @@ class TaskResult(object):
         
         self.keys = self.results.keys()
     
+    
+    def __repr__(self):
+        if self.failure is not None:
+            contents = self.failure
+        else:
+            contents = self.results
+        return "TaskResult[ID:%r]:%r"%(self.taskID, contents)
+    
     def __getitem__(self, key):
         if self.failure is not None:
             self.raiseException()
@@ -551,8 +559,10 @@ class TaskController(cs.ControllerAdapterBase):
                     s = "resubmitting task #%i, %i retries remaining" %(taskID, task.retries)
                     log.msg(s)
                     self.distributeTasks()
-                elif task.recoveryTask is not None and task.recoveryTask.retries>=0:
-                    task.retries = -1 # this is to prevent infinite loop
+                elif isinstance(task.recoveryTask, Task) and \
+                                    task.recoveryTask.retries > -1:
+                    # retries = -1 is to prevent infinite recoveryTask loop
+                    task.retries = -1 
                     task.recoveryTask.taskID = taskID
                     task = task.recoveryTask
                     self.scheduler.addTask(task)

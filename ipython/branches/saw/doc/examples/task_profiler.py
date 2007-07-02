@@ -59,7 +59,7 @@ def main():
     stime = sum(times)
     
     print "executing %i tasks, totalling %.1f secs on %i engines"%(opts.n, stime, nengines)
-
+    print isinstance(tasks[0], kernel.Task)
     time.sleep(1)
     start = time.time()
     taskIDs = [tc.run(t) for t in tasks]

@@ -38,9 +38,9 @@ ap = N.zeros(len(sigmas),dtype='float64')
 vc = N.zeros(len(sigmas),dtype='float64')
 ac = N.zeros(len(sigmas),dtype='float64')
 for i, tid in enumerate(taskIDs):
-    tr = tc.getTaskResult(tid)[1]
-    vp[i] = tr['vp']
-    ap[i] = tr['ap']
-    vc[i] = tr['vc']
-    ac[i] = tr['ac']
+    ns = tc.getTaskResult(tid).ns
+    vp[i] = ns.vp
+    ap[i] = ns.ap
+    vc[i] = ns.vc
+    ac[i] = ns.ac
 
