@@ -323,8 +323,8 @@ class IScheduler(zi.Interface):
 
 class FIFOScheduler(object):
     """A basic First-In-First-Out (Queue) Scheduler.
-    
-    See the docstrings for IScheduler for details.
+    This is the default Scheduler for the TaskController.
+    See the docstrings for IScheduler for interface details.
     """
     
     zi.implements(IScheduler)
@@ -362,7 +362,23 @@ class FIFOScheduler(object):
     def ready(self):
         return bool(self.workers and self.tasks)
     
-        
+
+class LIFOScheduler(FIFOScheduler):
+    """A Last-In-First-Out (Stack) Scheduler.  This scheduler should naively
+    reward fast engines by giving them more jobs.  This risks starvation, but
+    only in cases with low load, where starvation does not really matter.
+    """
+    
+    def addTask(self, task, **flags):
+        self.tasks.reverse()
+        self.tasks.append(task)
+        self.tasks.reverse()
+    
+    def addWorker(self, worker, **flags):
+        self.workers.reverse()
+        self.workers.append(worker)
+        self.workers.reverse()
+    
 
 class ITaskController(cs.IControllerBase):
     """The Task based interface to a `ControllerService` object
