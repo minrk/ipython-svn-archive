@@ -146,21 +146,25 @@ def main():
     newopt = parser.add_option
     newopt('-f','--force',action='store_true',dest='force',default=False,
            help='Force overwriting of the output file.')
+    newopt('-s','--stdout',action='store_true',dest='stdout',default=False,
+           help='Use stdout instead of a file for output.')
 
     opts,args = parser.parse_args()
     if len(args) < 1:
         parser.error("incorrect number of arguments")
 
+    # Input filename
+    fname = args[0]
+
     # We auto-generate the output file based on a trivial template to make it
     # really easy to create simple doctests.
+
     auto_gen_output = False
-    
-    fname = args[0]
     try:
         outfname = args[1]
     except IndexError:
         outfname = None
-        
+
     if fname.endswith('.tpl.txt') and outfname is None:
         outfname = fname.replace('.tpl.txt','.txt')
     else:
@@ -170,12 +174,8 @@ def main():
         if outfname is None:
             outfname = bname+'.txt'
 
-    # Argument processing finished, start main code
-    if os.path.isfile(outfname) and not opts.force:
-        fatal("Output file %r exists, use --force (-f) to overwrite."
-              % outfname)
+    # Open input file
 
-    # open in/out files
     # In auto-gen mode, we actually change the name of the input file to be our
     # auto-generated template
     if auto_gen_output:
@@ -185,9 +185,19 @@ def main():
         infile.seek(0)
     else:
         infile = open(fname)
-        
-    outfile = open(outfname,'w')
-    write = outfile.write
+
+    # Now open the output file.  If opts.stdout was given, this overrides any
+    # explicit choice of output filename and just directs all output to
+    # stdout.
+    if opts.stdout:
+        outfile = sys.stdout
+    else:
+        # Argument processing finished, start main code
+        if os.path.isfile(outfname) and not opts.force:
+            fatal("Output file %r exists, use --force (-f) to overwrite."
+                  % outfname)
+        outfile = open(outfname,'w')
+
 
     # all output from included files will be indented 
     indentOut = IndentOut(outfile,4)
@@ -195,6 +205,9 @@ def main():
 
     # Marker in reST for transition lines
     rst_transition = '\n'+'-'*76+'\n\n'
+
+    # local shorthand for loop
+    write = outfile.write
 
     # Process input, simply writing back out all normal lines and executing the
     # files in lines marked as '%run filename'.
@@ -222,7 +235,10 @@ def main():
             # The rest of the input file is just written out
             write(line)
     infile.close()
-    outfile.close()
+
+    # Don't close sys.stdout!!!
+    if outfile is not sys.stdout:
+        outfile.close()
 
 if __name__ == '__main__':
     main()
