@@ -63,4 +63,3 @@ class IImageCell(ICELL):
     
     image = zi.Attribute("Image: The image object")
 
-
