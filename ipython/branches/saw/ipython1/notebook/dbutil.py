@@ -16,7 +16,7 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-import os, sqlalchemy as sqla
+import os, sqlalchemy as sqla, zope.interface as zi
 from ipython1.config.api import resolveFilePath
 from ipython1.kernel.error import DBError
 from IPython.genutils import get_home_dir
@@ -84,10 +84,7 @@ def checkDB(db):
     return nodeT
 
 
-class IQuery(Interface):
+class IQuery(zi.Interface):
     """A class"""
+    pass
 
-
-def nodeFromDB(db, nodeID):
-    nodeT = sqla.Table("nodes", db)
-    row = nodeT
