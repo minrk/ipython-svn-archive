@@ -79,3 +79,5 @@ class TaskAborted(KernelError):
 class NotAPendingResult(KernelError):
     pass
 
+class DBError(KernelError):
+    pass
