@@ -25,22 +25,20 @@ import ipython1.kernel.api as kernel
 # Get an IPython1 client
 rc = kernel.RemoteController(('127.0.0.1',10105))
 rc.getIDs()
-rc.activate()
 
-# Create random arrays on the engines
-# This is to simulate arrays that you have calculated in parallel
-# on the engines.
-# Anymore that length 10000 arrays, matplotlib starts to be slow
-%px import numpy as N
-%px x = N.random.standard_normal(10000)
-%px y = N.random.standard_normal(10000)
-
-%px print x[0:10]
-%px print y[0:10]
+# Run the simulation on all the engines
+rc.runAll('plotting_backend.py')
 
 # Bring back the data
-x_local = rc.gatherAll('x')
-y_local = rc.gatherAll('y')
+number = rc.pullAll('number')
+d_number = rc.pullAll('d_number')
+downx = rc.gatherAll('downx')
+downy = rc.gatherAll('downy')
+downpx = rc.gatherAll('downpx')
+downpy = rc.gatherAll('downpy')
+
+print "number: ", sum(number)
+print "downsampled number: ", sum(d_number)
 
 # Make a scatter plot of the gathered data
-scatter(x_local, y_local)
+scatter(downx, downy)
