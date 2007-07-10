@@ -1,6 +1,6 @@
 """An example of how to use IPython1 for plotting remote parallel data
 
-The two files plotting_frontend.py and plotting_backend.py go together.
+The two files plotting_frontend.ipy and plotting_backend.py go together.
 
 This file (plotting_backend.py) performs the actual computation.  For this 
 example, the computation just generates a set of random numbers that
@@ -13,6 +13,9 @@ One important feature is that this script can also be run standalone without
 IPython.  This is nice as it allows it to be run in more traditional 
 settings where IPython isn't being used.
 
+When used with IPython1, this code is run on the engines.  Because this
+code doesn't make any plots, the engines don't have to have any plotting
+packages installed.
 """
 
 # Imports
