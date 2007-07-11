@@ -67,24 +67,52 @@ def connectDB(fname='ipnotebook.db', ipythondir=None):
         return DB
 
 def initDB(db):
-    """initialize the database"""
-    nodeT = sqla.Table("nodes", db,
-        sqla.Column("nodeID", sqla.Integer, primary_key=True, unique=True),
-        sqla.Column("type", sqla.String(16)),
+    """initialize the database, dropping any existing data"""
+    db.drop_all()
+    bigstr = sqla.String(128)
+    smallstr = sqla.String(32)
+    sqla.Table("registry", db, 
+        sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
+        sqla.Column("klass", sqla.Integer))
+    sqla.Table("Node", db, 
+        sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
         sqla.Column("parent", sqla.Integer),
-        sqla.Column("dateCreated", sqla.String(32)),
-        sqla.Column("dateModified", sqla.String(32)),
-        sqla.Column("data", sqla.String(128))
-    )
+        sqla.Column("flags", bigstr),
+        sqla.Column("dateCreated", smallstr),
+        sqla.Column("dateModified", smallstr),
+        sqla.Column("children", bigstr))
+    sqla.Table("TextCell", db, 
+        sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
+        sqla.Column("parent", sqla.Integer),
+        sqla.Column("flags", bigstr),
+        sqla.Column("dateCreated", smallstr),
+        sqla.Column("dateModified", smallstr),
+        sqla.Column("text", bigstr),
+        sqla.Column("format", smallstr))
+    sqla.Table("IOCell", db, 
+        sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
+        sqla.Column("parent", sqla.Integer),
+        sqla.Column("flags", bigstr),
+        sqla.Column("dateCreated", smallstr),
+        sqla.Column("dateModified", smallstr),
+        sqla.Column("input", bigstr),
+        sqla.Column("output", bigstr))
+    sqla.Table("ImageCell", db, 
+        sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
+        sqla.Column("parent", sqla.Integer),
+        sqla.Column("flags", bigstr),
+        sqla.Column("dateCreated", smallstr),
+        sqla.Column("dateModified", smallstr)
+        , sqla.Column("image", bigstr))
     db.create_all()
 
 def checkDB(db):
     """check if the database is appropriate"""
-    nodeT = sqla.Table("nodes", db, autoload=True)
-    return nodeT
-
-
-class IQuery(zi.Interface):
-    """A class"""
     pass
 
+
+class RegistryEntry(object):
+    """A registry object for use in mapping"""
+    def __repr__(self):
+        return "(%i, %s)"%(self.id, self.klass)
+    

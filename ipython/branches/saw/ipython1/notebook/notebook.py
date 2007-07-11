@@ -17,181 +17,58 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import zope.interface as zi
-from IPython.genutils import time
+import sqlalchemy as sqla
+
+from ipython1.notebook import nodes, dbutil
 
 
 #-------------------------------------------------------------------------------
-# Notebook Interfaces
+# Notebook Interface
 #-------------------------------------------------------------------------------
 
-class ICell(zi.Interface):
-    """The Basic Cell Interface, implemented by all Nodes and Cells"""
-    
-    parent = zi.Attribute("Node: The parent object of the cell")
-    dateCreated = zi.Attribute("String: The date the cell was created")
-    dateModified = zi.Attribute("String: The date the cell was most recently modified")
-    tags = zi.Attribute("Dict: Tags used for searching")
+class INotebook(zi.Interface):
+    """The IPython Notebook Interface"""
 
 
-class INode(ICell):
-    """The Basic Node Interface"""
+class Notebook(object):
+    """The basic IPython Notebook object"""
     
-    children = zi.Attribute("Dict: the children of the node")
-    
-    def addChild(child, index=None):
-        """adds `child` to the node after `index`, defaulting to the end"""
-    
-    def popChild(index):
-        """removes the child at `index`"""
-    
-
-
-class ITextCell(ICell):
-    """A Basic text cell"""
-    
-    text = zi.Attribute("String: the text of the cell")
-    format = zi.Attribute("String: the formatting for the text")
-    
-
-class IIOCell(ICell):
-    """A Basic I/O Cell"""
-    
-    input = zi.Attribute("String: input python code")
-    output = zi.Attribute("String: The output of input")
-
-class IImageCell(ICell):
-    """A Basic Cell for images"""
-    
-    image = zi.Attribute("Image: The image object")
-
-class Cell(object):
-    """The base Cell class"""
-    
-    zi.implements(ICell)
-    
-    def _modify(self):
-        self.dateModified = ":".join(map(str, time.localtime()[:6]))
-        if self.parent is not None:
-            self.parent._modify()
-    
-    def _setCreated(self, c):
-        raise IOError("dateCreated cannot be changed")
-    
-    def _getCreated(self): return self._dateCreated
-    
-    def _setTags(self, tags):
-        self._tags = tags
-        self._modify()
-    
-    def _getTags(self, tags):  return self._tags
-    
-    tags = property(_getTags, _setTags)
-    dateCreated = property(_getCreated, _setCreated)
-    
-    def __init__(self, parent=None, tags={}):
-        self.parent = parent
-        self._dateCreated = ":".join(map(str, time.localtime()[:6]))
-        self.dateModified = self.dateCreated
-        self._tags = tags
-    
-    def addTags(self, **tags):
-        self._tags.update(tags)
-        self._modify()
-    
-
-class Node(Cell):
-    """The basic Node class"""
-    
-    zi.implements(INode)
-    
-    def __init__(self, parent=None, flags={}):
-        self.children = []
-        super(Node, self).__init__(parent, flags)
-    
-    def addChild(self, child, index=None):
-        """add child at index, defaulting to the end"""
-        if index is None:
-            # add to end
-            self.children.append(child)
-            self._modify()
-            return len(self.children) - 1
-        elif index < len(self.children):
-            self.children = self.children[:index]+[child]+self.children[index:]
-            self._modify()
-            return index
+    def __init__(self, db, baseNodeID=None):
+        self._db = db
+        
+        self.classes = nodes.classes
+        
+        self._connect()
+        if baseNodeID is None:
+            ids = self.getNodeIDs()
+            id = max(ids)+1
+            self._db.tables['registry'].insert(values=(id, 'Node')).execute()
+            n = nodes.Node(id)
+            cstr = ','.join(map(str, [str(c.id) for c in n.children]))
+            self._db.tables['Node'].insert(values=(n.id, 0, 
+                ';'.join(n.tags), n.dateCreated, n.dateModified, ''
+                )).execute()
+            self.baseNode = self.queries['Node'].selectone_by(id=id)
         else:
-            raise IndexError
+            self.baseNode = self.queries['Node'].selectfirst_by(id=baseNodeID)
     
-    def popChild(self, index):
-        """remove and return child at index"""
-        if index < len(self.children):
-            self._modify()
-            return self.children.pop(index)
-        else:
-            raise IndexError
+    def getNodeIDs(self):
+        l = [r.id for r in self.queries['registry']]
+        if not l:
+            l = [0]
+        return l
+    
+    def _connect(self):
+        self.session = sqla.create_session()
+        self.queries = {}
+        sqla.orm.clear_mappers()
+        for c in self.classes:
+            klass = getattr(nodes, c)
+            sqla.mapper(klass, self._db.tables[c])
+            self.queries[c] = self.session.query(klass)
+        sqla.mapper(dbutil.RegistryEntry, self._db.tables['registry'])
+        self.queries['registry'] = self.session.query(dbutil.RegistryEntry)
         
-        
-        
-
-
-class TextCell(Cell):
-    """A Cell for text"""
-    
-    zi.implements(ITextCell)
-    
-    def _setText(self, text):
-        self._text = text
-        self._modify()
-    
-    def _getText(self):  return self._text
-    
-    text = property(_getText, _setText)
-    
-    def __init__(self, text="", parent=None, tags={}):
-        super(TextCell, self).__init__(parent, tags)
-        self._text = text
-    
-
-class IOCell(Cell):
-    """A Cell for handling """
-    zi.implements(ITextCell)
-    
-    def _setInput(self, inp):
-        self._input = inp
-        self._modify()
-    
-    def _getInput(self): return self._input
-    
-    def _setOutput(self, out):
-        self._output = out
-        self._modify()
-    
-    def _getOutput(self):  return self._output
-    
-    input = property(_getInput, _setInput)
-    output = property(_getOutput, _setOutput)
-    
-    def __init__(self, input="", parent=None, tags={}):
-        self._input = input
-        self._output = ""
-        super(IOCell, self).__init__(parent, tags)
-    
-
-
-class ImageCell(Cell):
-    """A Cell for holding images"""
-    
-    def _setImage(self, im):
-        self._image = im
-        self._modify()
-    
-    def _getImage(self): return self._image
-    
-    def __init__(self, im=None, parent=None, tags={}):
-        self._image = im
-        super(ImageCell, self).__init__(parent, tags)
-    
-
 
 
 
