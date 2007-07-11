@@ -120,7 +120,10 @@ class Node(Cell):
     
     zi.implements(INode)
     
+    className="Node"
+    
     def __init__(self, id, parent=None, flags={}):
+        
         self.children = []
         super(Node, self).__init__(parent, flags)
     
@@ -152,6 +155,8 @@ class TextCell(Cell):
     
     zi.implements(ITextCell)
     
+    className="TextCell"
+    
     def _setText(self, text):
         self._text = text
         self._modify()
@@ -169,6 +174,8 @@ class IOCell(Cell):
     """A Cell for handling execution"""
     
     zi.implements(ITextCell)
+    
+    className="IOCell"
     
     def _setInput(self, inp):
         self._input = inp
@@ -194,6 +201,8 @@ class IOCell(Cell):
 
 class ImageCell(Cell):
     """A Cell for holding images"""
+    
+    className="ImageCell"
     
     def _setImage(self, im):
         self._image = im

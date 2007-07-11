@@ -73,7 +73,7 @@ def initDB(db):
     smallstr = sqla.String(32)
     sqla.Table("registry", db, 
         sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
-        sqla.Column("klass", sqla.Integer))
+        sqla.Column("className", smallstr))
     sqla.Table("Node", db, 
         sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
         sqla.Column("parent", sqla.Integer),
