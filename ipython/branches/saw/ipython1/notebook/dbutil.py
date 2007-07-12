@@ -17,9 +17,14 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import os, sqlalchemy as sqla, zope.interface as zi
+
+from twisted.python import components
+
+from IPython.genutils import get_home_dir
+
 from ipython1.config.api import resolveFilePath
 from ipython1.kernel.error import DBError
-from IPython.genutils import get_home_dir
+from ipython1.notebook import nodes
 
 
 #-------------------------------------------------------------------------------
@@ -76,31 +81,31 @@ def initDB(db):
         sqla.Column("className", smallstr))
     sqla.Table("Node", db, 
         sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
-        sqla.Column("parent", sqla.Integer),
-        sqla.Column("flags", bigstr),
+        # sqla.Column("parent", sqla.Integer),
+        sqla.Column("tags", bigstr),
         sqla.Column("dateCreated", smallstr),
         sqla.Column("dateModified", smallstr),
         sqla.Column("children", bigstr))
     sqla.Table("TextCell", db, 
         sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
-        sqla.Column("parent", sqla.Integer),
-        sqla.Column("flags", bigstr),
+        # sqla.Column("parent", sqla.Integer),
+        sqla.Column("tags", bigstr),
         sqla.Column("dateCreated", smallstr),
         sqla.Column("dateModified", smallstr),
         sqla.Column("text", bigstr),
         sqla.Column("format", smallstr))
     sqla.Table("IOCell", db, 
         sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
-        sqla.Column("parent", sqla.Integer),
-        sqla.Column("flags", bigstr),
+        # sqla.Column("parent", sqla.Integer),
+        sqla.Column("tags", bigstr),
         sqla.Column("dateCreated", smallstr),
         sqla.Column("dateModified", smallstr),
         sqla.Column("input", bigstr),
         sqla.Column("output", bigstr))
     sqla.Table("ImageCell", db, 
         sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
-        sqla.Column("parent", sqla.Integer),
-        sqla.Column("flags", bigstr),
+        # sqla.Column("parent", sqla.Integer),
+        sqla.Column("tags", bigstr),
         sqla.Column("dateCreated", smallstr),
         sqla.Column("dateModified", smallstr)
         , sqla.Column("image", bigstr))
@@ -116,3 +121,35 @@ class RegistryEntry(object):
     def __repr__(self):
         return "(%i, %s)"%(self.id, self.klass)
     
+
+
+#-------------------------------------------------------------------------------
+# Adapters for Cells/Nodes to values for DB query
+#-------------------------------------------------------------------------------
+
+class IDBValues(zi.Interface):
+    """An Interface for use in adapting cells and nodes to the values argument
+    of a SQLAlchemy DB query."""
+    pass
+
+def dbvFromCell(cell):
+    tags = ','.join(cell.tags)
+    return (cell.id, tags, cell.dateCreated, cell.dateModified)
+
+def dbvFromNode(node):
+    kids = ','.join([str(c.id) for c in node.children])
+    return dbvFromCell(node)+(node.kids,)
+
+def dbvFromTextCell(cell):
+    return dbvFromCell(cell)+(cell.text, cell.format)
+
+def dbvFromIOCell(cell):
+    return dbvFromCell(cell)+(cell.input, cell.output)
+
+def dbvFromImageCell(cell):
+    return dbvFromCell(cell)+(cell.image.tostring(),)
+
+components.registerAdapter(dbvFromNode, nodes.INode, IDBValues)
+components.registerAdapter(dbvFromTextCell, nodes.ITextCell, IDBValues)
+components.registerAdapter(dbvFromIOCell, nodes.IIOCell, IDBValues)
+components.registerAdapter(dbvFromImageCell, nodes.IImageCell, IDBValues)

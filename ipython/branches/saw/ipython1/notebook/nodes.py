@@ -173,7 +173,7 @@ class TextCell(Cell):
 class IOCell(Cell):
     """A Cell for handling execution"""
     
-    zi.implements(ITextCell)
+    zi.implements(IIOCell)
     
     className="IOCell"
     
@@ -201,6 +201,8 @@ class IOCell(Cell):
 
 class ImageCell(Cell):
     """A Cell for holding images"""
+    
+    zi.implements(IImageCell)
     
     className="ImageCell"
     
