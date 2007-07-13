@@ -107,16 +107,41 @@ class Notebook(Timestamper):
 
 def createMappers():
     nodeMapper = mapper(Node, nodesTable,
-        properties=dict(inputCells=relation(InputCell, 
-                            cascade="all, delete-orphan"),
-                        textCells=relation(TextCell, 
-                            cascade="all, delete-orphan"),
-                        children=relation(Node,
-                            cascade="all", backref='parent', 
-                                primaryjoin=nodesTable.c.nodeID==nodesTable.c.parentID)))
+        properties={
+            'inputCells': relation(
+                            InputCell, 
+                            cascade="all, delete-orphan"
+                         ),
+            'textCells': relation(
+                            TextCell, 
+                            cascade="all, delete-orphan"
+                         ),
+            'children': relation(
+                            Node,
+                            primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
+                            cascade="all",
+                            backref=backref("parent",
+                                        primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
+                                        remote_side=[nodesTable.c.nodeID],
+                                        uselist=False
+                                    )
+                         ),
+            'next': relation(
+                        Node,
+                        primaryjoin=nodesTable.c.nextID==nodesTable.c.nodeID,
+                        uselist=False,
+                        backref=backref('previous',
+                                    primaryjoin=nodesTable.c.previousID==nodesTable.c.nodeID,
+                                    remote_side=[nodesTable.c.nodeID],
+                                    uselist=False)
+            
+            )
+        })
+        
     cellMapper = mapper(Cell, cellsTable)
     inputCellMapper = mapper(InputCell, inputCellsTable, inherits=cellMapper)
     textCellMapper = mapper(TextCell, textCellsTable, inherits=cellMapper)
+    
     userMapper = mapper(User, usersTable,
         properties=dict(notebooks=relation(Notebook, 
             cascade="all, delete-orphan", backref='user')))
