@@ -1,11 +1,9 @@
 import datetime
 from sqlalchemy import *
 
-db = create_engine('sqlite:///notebook.db')
+# Setup the global unbound metadata.
 
-metadata = BoundMetaData(db)
-
-metadata.engine.echo = True
+metadata = MetaData()
 
 # Tables
 
@@ -24,7 +22,8 @@ cellsTable = Table('cells', metadata,
     Column('comment',String()),
     Column('nodeID', Integer, ForeignKey('nodes.nodeID')),
     Column('previousID', Integer, ForeignKey('cells.cellID')),
-    Column('nextID', Integer, ForeignKey('cells.cellID'))
+    Column('nextID', Integer, ForeignKey('cells.cellID')),
+    Column('cellType', String(32))
     )
 
 inputCellsTable = Table('inputCells', metadata,
@@ -48,24 +47,19 @@ notebooksTable = Table('notebooks', metadata,
     
 usersTable = Table('users', metadata,
     Column('userID', Integer, primary_key=True),
-    Column('username', String(40)),
-    Column('email', String(40)),
+    Column('username', String(64)),
+    Column('email', String(64)),
     Column('dateCreated', DateTime),
     Column('dateModified', DateTime)
 )
 
-def createTables():
-    nodesTable.create()
-    cellsTable.create()
-    inputCellsTable.create()
-    textCellsTable.create()
-    notebooksTable.create()
-    usersTable.create()
-
 # Mappers
 
 class Node(object):
-    pass
+    
+    def __init__(self, title, parent=None):
+        self.title = title
+        self.parent = None
 
 class Created(object):
     def __init__(self):
@@ -82,117 +76,104 @@ class Timestamper(Created, Modified):
 
 class Cell(Timestamper):
     
-    def __init__(self):
+    def __init__(self, comment='', parent=None):
         super(Cell, self).__init__()
+        self.comment = comment
+        self.parent = parent
+
+    def insertBefore(self, c):
+        """Insert a cell before this one."""
+        c.parent = self.parent
+        c.previous = self.previous
+        c.next = self
+        
+    def insertAfter(self, c):
+        """Insert a cell after this one."""
+        c.parent = self.parent
+        c.next = self.next
+        c.previous = self
 
 class InputCell(Cell):
     
-    def __init__(self):
-        super(InputCell, self).__init__()
+    def __init__(self, input='', output='', comment='', parent=None):
+        super(InputCell, self).__init__(comment, parent)
+        self.input = input
+        self.output = output
 
 class TextCell(Cell):
 
-    def __init__(self):
-        super(TextCell, self).__init__()
+    def __init__(self, textData='', comment='', parent=None):
+        super(TextCell, self).__init__(comment, parent)
+        self.textData = textData
 
 class User(Timestamper):
     
-    def __init__(self):
+    def __init__(self, username='', email=''):
         super(User, self).__init__()
+        self.username = username
+        self.email = email
 
 class Notebook(Timestamper):
     
     def __init__(self):
         super(Notebook, self).__init__()
 
-def createMappers():
-    nodeMapper = mapper(Node, nodesTable,
-        properties={
-            'inputCells': relation(
-                            InputCell, 
-                            cascade="all, delete-orphan"
-                         ),
-            'textCells': relation(
-                            TextCell, 
-                            cascade="all, delete-orphan"
-                         ),
-            'children': relation(
-                            Node,
-                            primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
-                            cascade="all",
-                            backref=backref("parent",
-                                        primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
-                                        remote_side=[nodesTable.c.nodeID],
-                                        uselist=False
-                                    )
-                         ),
-            'next': relation(
-                        Node,
-                        primaryjoin=nodesTable.c.nextID==nodesTable.c.nodeID,
-                        uselist=False,
-                        backref=backref('previous',
-                                    primaryjoin=nodesTable.c.previousID==nodesTable.c.nodeID,
-                                    remote_side=[nodesTable.c.nodeID],
-                                    uselist=False)
-            
-            )
-        })
-        
-    cellMapper = mapper(Cell, cellsTable)
-    inputCellMapper = mapper(InputCell, inputCellsTable, inherits=cellMapper)
-    textCellMapper = mapper(TextCell, textCellsTable, inherits=cellMapper)
+
+nodeMapper = mapper(Node, nodesTable,
+    properties={
+        'childrenCells': relation(
+            Cell,
+            cascade='all, delete-orphan',
+            backref=backref('parent')),
+        'childrenNodes': relation(
+            Node,
+            primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
+            cascade="all",
+            backref=backref("parent",
+                    primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
+                    remote_side=[nodesTable.c.nodeID],
+                    uselist=False)),
+        'next': relation(
+            Node,
+            primaryjoin=nodesTable.c.nextID==nodesTable.c.nodeID,
+            uselist=False,
+            backref=backref('previous',
+                    primaryjoin=nodesTable.c.previousID==nodesTable.c.nodeID,
+                    remote_side=[nodesTable.c.nodeID],
+                    uselist=False))
+    }
+)
     
-    userMapper = mapper(User, usersTable,
-        properties=dict(notebooks=relation(Notebook, 
-            cascade="all, delete-orphan", backref='user')))
-    notebookMapper = mapper(Notebook, notebooksTable,
-        properties=dict(root=relation(Node, uselist=False)))
+cellJoin = polymorphic_union(
+    {
+        'inputCell':cellsTable.join(inputCellsTable),
+        'textCell':cellsTable.join(textCellsTable),
+        'cell':cellsTable.select(cellsTable.c.cellType=='cell')
+    }, None, 'pjoin')
+cellMapper = mapper(Cell, cellsTable, 
+    select_table=cellJoin, 
+    polymorphic_on=cellJoin.c.cellType, 
+    polymorphic_identity='cell',
+    properties = {
+        'next': relation(
+            Cell,
+            primaryjoin=cellsTable.c.nextID==cellsTable.c.cellID,
+            uselist=False,
+            backref=backref('previous',
+                primaryjoin=cellsTable.c.previousID==cellsTable.c.cellID,
+                remote_side=[cellsTable.c.cellID],
+                uselist=False)
+        )
+    }
+)
+inputCellMapper = mapper(InputCell, inputCellsTable, inherits=cellMapper, polymorphic_identity='inputCell')
+textCellMapper = mapper(TextCell, textCellsTable, inherits=cellMapper, polymorphic_identity='textCell')
 
-    
-# Initialization
-
-createTables()
-createMappers()
-
-# Actually do some transactions
-
-session = create_session()
-
-def createUser(session):
-    # Create user
-    u = User()
-    u.username = 'bgranger'
-    u.email = 'ellisonbg@gmail.com'
-    session.save(u)
-    session.flush()
-    return u
-    
-def createNotebook(session, user):
-    nb = Notebook()
-    nb.user = user
-    session.save(nb)
-    session.flush()
-    return nb
-
-u = createUser(session)
-nb = createNotebook(session, u)
-
-# node = Node()
-# nb.root = node
-# ic = InputCell()
-# ic.input = 'import time'
-# node.inputCells.append(ic)
-# session.save(node, ic)
-# session.flush()
-
-# c0 = InputCell()
-# c0.notebook = nb
-# c0.input = 'import time'
-# c0.output = ''
-# nb.root = c0
-# session.save(c0)
-# session.flush()
+userMapper = mapper(User, usersTable,
+    properties=dict(notebooks=relation(Notebook, 
+        cascade="all, delete-orphan", backref='user')))
+notebookMapper = mapper(Notebook, notebooksTable,
+    properties=dict(root=relation(Node, uselist=False)))
 
 
-    
-    
+
