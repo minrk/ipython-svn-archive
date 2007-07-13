@@ -12,14 +12,19 @@ metadata.engine.echo = True
 nodesTable = Table('nodes', metadata,
     Column('nodeID', Integer, primary_key=True),
     Column('parentID', Integer, ForeignKey('nodes.nodeID')),
+    Column('previousID', Integer, ForeignKey('nodes.nodeID')),
+    Column('nextID', Integer, ForeignKey('nodes.nodeID')),
+    Column('title',String())
 )
 
 cellsTable = Table('cells', metadata,
     Column('cellID', Integer, primary_key=True),
     Column('dateCreated', DateTime),
     Column('dateModified', DateTime),
+    Column('comment',String()),
     Column('nodeID', Integer, ForeignKey('nodes.nodeID')),
-    Column('sequenceNumber', Integer)    
+    Column('previousID', Integer, ForeignKey('cells.cellID')),
+    Column('nextID', Integer, ForeignKey('cells.cellID'))
     )
 
 inputCellsTable = Table('inputCells', metadata,
@@ -106,15 +111,16 @@ def createMappers():
                             cascade="all, delete-orphan"),
                         textCells=relation(TextCell, 
                             cascade="all, delete-orphan"),
-                        children=relation(Node, 
-                            cascade="all", backref='parent')))
+                        children=relation(Node,
+                            cascade="all", backref='parent', 
+                                primaryjoin=nodesTable.c.nodeID==nodesTable.c.parentID)))
     cellMapper = mapper(Cell, cellsTable)
-    inputcellMapper = mapper(InputCell, inputCellsTable, inherits=cellMapper)
-    textcellMapper = mapper(TextCell, textCellsTable, inherits=cellMapper)
+    inputCellMapper = mapper(InputCell, inputCellsTable, inherits=cellMapper)
+    textCellMapper = mapper(TextCell, textCellsTable, inherits=cellMapper)
     userMapper = mapper(User, usersTable,
         properties=dict(notebooks=relation(Notebook, 
             cascade="all, delete-orphan", backref='user')))
-    notebookMapper = mapper(Notebook, notebooksTable, 
+    notebookMapper = mapper(Notebook, notebooksTable,
         properties=dict(root=relation(Node, uselist=False)))
 
     
@@ -145,6 +151,14 @@ def createNotebook(session, user):
 
 u = createUser(session)
 nb = createNotebook(session, u)
+
+# node = Node()
+# nb.root = node
+# ic = InputCell()
+# ic.input = 'import time'
+# node.inputCells.append(ic)
+# session.save(node, ic)
+# session.flush()
 
 # c0 = InputCell()
 # c0.notebook = nb

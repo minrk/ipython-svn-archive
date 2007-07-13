@@ -23,7 +23,7 @@ from twisted.internet import reactor, defer
 import threading, sys
 
 from ipython1.kernel import pbconfig
-from ipython1.kernel.error import PBMessageSizeError
+from ipython1.kernel.error import PBMessageSizeError, UnpickleableException
 
 
 #-------------------------------------------------------------------------------
@@ -36,7 +36,14 @@ def packageFailure(f):
     f.cleanFailure()
     # This is sometimes helpful in debugging
     #f.raiseException()
-    pString = pickle.dumps(f, 2)
+    try:
+        pString = pickle.dumps(f, 2)
+    except pickle.PicklingError:
+        # Certain types of exceptions are not pickleable, for instance ones
+        # from Boost.Python.  We try to wrap them in something that is
+        f.type = UnpickleableException
+        f.value = UnpickleableException(str(f.type) + ": " + str(f.value))
+        pString = pickle.dumps(f, 2)
     return 'FAILURE:' + pString
 
 def unpackageFailure(r):

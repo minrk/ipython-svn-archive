@@ -81,3 +81,6 @@ class NotAPendingResult(KernelError):
 
 class DBError(KernelError):
     pass
+
+class UnpickleableException(KernelError):
+    pass
