@@ -60,6 +60,19 @@ class Node(object):
     def __init__(self, title, parent=None):
         self.title = title
         self.parent = None
+    
+    def insertBefore(self, n):
+        """Insert a node before this one."""
+        n.parent = self.parent
+        n.previous = self.previous
+        n.next = self
+    
+    def insertAfter(self, n):
+        """Insert a node after this one."""
+        n.parent = self.parent
+        n.next = self.next
+        n.previous = self
+    
 
 class Created(object):
     def __init__(self):
