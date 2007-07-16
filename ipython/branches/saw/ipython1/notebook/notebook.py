@@ -19,11 +19,12 @@ __docformat__ = "restructuredtext en"
 import zope.interface as zi
 import sqlalchemy as sqla
 
+from twisted.python import components
 from ipython1.notebook import models, dbutil
 
 
 #-------------------------------------------------------------------------------
-# Notebook Interface
+# Notebook Server
 #-------------------------------------------------------------------------------
 
 class INotebookServer(zi.Interface):
@@ -42,26 +43,40 @@ class NotebookServer(object):
         self.notebooks = session.query(models.Notebook)
         self.nodes = session.query(models.Node)
     
-    def getUser(self, uname):
-        return self.users.selectone_by(username=uname)
+    def getUser(self, user):
+        if isinstance(user, models.User):
+            return user
+        else:
+            return self.users.selectone_by(username=user)
     
     def addUser(self, uname, email):
         existlist = self.users.select_by(username=uname)
         assert not existlist, "Username '%s' already in use"%uname
-        u = dbutil.addUser(self.session, uname, email)
+        u = dbutil.createUser(self.session, uname, email)
         return u
         
-    def dropUser(self, uname):
-        u = self.getUser(uname)
+    def dropUser(self, user):
+        u = self.getUser(user)
         dbutil.dropObject(self.session, u)
     
-    def addNotebook(self, uname, title):
-        user = self.getUser(uname)
-        nb = dbutil.createNotebook(self.session, user, title)
+    def getNotebook(self, user, title):
+        uname = self.getUser(user).username
+        return self.notebooks.selectone_by(username=uname, title=title)
+    
+    def addNotebook(self, user, title):
+        u = self.getUser(user)
+        existlist = self.users.select_by(username=u.username, title=title)
+        assert not existlist, "User '%s' already hase notebook ''%s"%(
+            u.username, title)
+        
+        nb = dbutil.createNotebook(self.session, u, title)
         return nb
     
-    def dropNotebook(self, uname, title):
-        user = self.getUser(uname)
-        nb = self.notebooks.select_by(userID=user.userID, title=title)
-        dbutil.dropObject(nb)
+    def dropNotebook(self, user, title):
+        nb = self.getNotebook(user, title)
+        dbutil.dropObject(self.session, nb)
     
+
+
+
+

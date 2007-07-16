@@ -1,4 +1,4 @@
-import datetime
+import datetime, zope.interface as zi
 from sqlalchemy import *
 
 # Setup the global unbound metadata.
@@ -53,9 +53,30 @@ usersTable = Table('users', metadata,
     Column('dateModified', DateTime)
 )
 
-# Mappers
+# interface classes for adaptation
+class INode(zi.Interface):
+    """The interface for a node"""
+    pass
 
+class INotebook(zi.Interface):
+    """the interface for a notebook"""
+    pass
+
+class ICell(zi.Interface):
+    """the interface for a cell"""
+    pass
+
+class ITextCell(ICell):
+    """the interface for a text cell"""
+    pass
+
+class IInputCell(ICell):
+    """the interface for a text cell"""
+    pass
+
+# Mappers
 class Node(object):
+    zi.implements(INode)
     
     def __init__(self, title, parent=None):
         self.title = title
@@ -63,12 +84,14 @@ class Node(object):
     
     def insertBefore(self, n):
         """Insert a node before this one."""
+        assert not self.parent is None, "Cannot insert before root"
         n.parent = self.parent
         n.previous = self.previous
         n.next = self
     
     def insertAfter(self, n):
         """Insert a node after this one."""
+        assert not self.parent is None, "Cannot insert after root"
         n.parent = self.parent
         n.next = self.next
         n.previous = self
@@ -88,6 +111,7 @@ class Timestamper(Created, Modified):
         self.touchModified()
 
 class Cell(Timestamper):
+    zi.implements(ICell)
     
     def __init__(self, comment='', parent=None):
         super(Cell, self).__init__()
@@ -107,6 +131,7 @@ class Cell(Timestamper):
         c.previous = self
 
 class InputCell(Cell):
+    zi.implements(IInputCell)
     
     def __init__(self, input='', output='', comment='', parent=None):
         super(InputCell, self).__init__(comment, parent)
@@ -114,7 +139,8 @@ class InputCell(Cell):
         self.output = output
 
 class TextCell(Cell):
-
+    zi.implements(ITextCell)
+    
     def __init__(self, textData='', comment='', parent=None):
         super(TextCell, self).__init__(comment, parent)
         self.textData = textData
@@ -127,7 +153,7 @@ class User(Timestamper):
         self.email = email
 
 class Notebook(Timestamper):
-    
+    zi.implements(INotebook)
     def __init__(self):
         super(Notebook, self).__init__()
 

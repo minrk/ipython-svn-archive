@@ -103,3 +103,24 @@ def createNotebook(session, user, title):
     session.flush()
     return nb
 
+def addChild(session, child, node, index=None):
+    """Add `child` to `node` at position `index`, defaulting to the end.
+    If child is a cell, it is added to the childrenCells, if it is a node,
+    it is added to childrenNodes"""
+    if isinstance(child, models.Cell):
+        children = node.childrenCells
+    elif isinstance(child, models.Node):
+        children = node.childrenNodes
+    else:
+        raise TypeError("`child` must be a node or cell")
+    
+    if children: # already have some cells
+        if index is None:
+            children[-1].insertAfter(child)
+        else:
+            children[index].insertBefore(child)
+    else:
+        child.parent = node
+    session.flush()
+
+
