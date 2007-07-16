@@ -24,19 +24,24 @@ from IPython.genutils import get_home_dir
 
 from ipython1.config.api import resolveFilePath
 from ipython1.kernel.error import DBError
-from ipython1.notebook import nodes
+from ipython1.notebook import models
 
+metadata = models.metadata
 
 #-------------------------------------------------------------------------------
 # DB Utils
 #-------------------------------------------------------------------------------
 
 def connectDB(fname='ipnotebook.db', ipythondir=None):
-    """Connect to aa notebook database, or attempt to create a new one
+    """
+    BROKEN
+    TO BE MOVED TO CONFIG SYSTEM
+    
+    Connect to aa notebook database, or attempt to create a new one
     if none is found.
     """
     f = resolveFilePath(fname, ipythondir)
-    global DB
+    print f
     if f is None:
         print "Could not find DB, attempting to create new DB"
         err = DBError("Could not create DB")
@@ -52,104 +57,49 @@ def connectDB(fname='ipnotebook.db', ipythondir=None):
                     ipdir = home
             except:
                 raise err
-        q = 'sqlite://%s'%(ipdir+'/'+fname)
-        print q
-        engine = sqla.create_engine('sqlite:///%s'%(ipdir+'/'+fname))
+        q = 'sqlite:///%s'%(ipdir+'/'+fname)
+        # print q
+        engine = sqla.create_engine(q)
         try:
             engine.connect()
         except sqla.exceptions.DBAPIError:
             raise err
-        DB = sqla.MetaData()
-        DB.connect(engine)
-        initDB(DB)
-        return DB
+        ipdb.connect(engine)
+        ipdb.create_all()
+        return ipdb
     else:
         engine = sqla.create_engine('sqlite:///%s'%(f))
-        engine.connect()
-        DB = sqla.MetaData()
-        DB.connect(engine)
-        checkDB(DB)
-        return DB
+        ipdb.connect(engine)
+        # checkDB(DB)
+        return ipdb
 
-def initDB(db):
-    """initialize the database, dropping any existing data"""
-    db.drop_all()
-    bigstr = sqla.String(128)
-    smallstr = sqla.String(32)
-    sqla.Table("registry", db, 
-        sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
-        sqla.Column("className", smallstr))
-    sqla.Table("Node", db, 
-        sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
-        # sqla.Column("parent", sqla.Integer),
-        sqla.Column("tags", bigstr),
-        sqla.Column("dateCreated", smallstr),
-        sqla.Column("dateModified", smallstr),
-        sqla.Column("children", bigstr))
-    sqla.Table("TextCell", db, 
-        sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
-        # sqla.Column("parent", sqla.Integer),
-        sqla.Column("tags", bigstr),
-        sqla.Column("dateCreated", smallstr),
-        sqla.Column("dateModified", smallstr),
-        sqla.Column("text", bigstr),
-        sqla.Column("format", smallstr))
-    sqla.Table("IOCell", db, 
-        sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
-        # sqla.Column("parent", sqla.Integer),
-        sqla.Column("tags", bigstr),
-        sqla.Column("dateCreated", smallstr),
-        sqla.Column("dateModified", smallstr),
-        sqla.Column("input", bigstr),
-        sqla.Column("output", bigstr))
-    sqla.Table("ImageCell", db, 
-        sqla.Column("id", sqla.Integer, primary_key=True, unique=True),
-        # sqla.Column("parent", sqla.Integer),
-        sqla.Column("tags", bigstr),
-        sqla.Column("dateCreated", smallstr),
-        sqla.Column("dateModified", smallstr)
-        , sqla.Column("image", bigstr))
-    db.create_all()
+def initDB(dburi='sqlite://'):
+    """create an engine, and connect our metadata object to it.  Then, 
+    create our tables in the engine.  
+    Defaults to an in-memory sqlite engine."""
+    engine = sqla.create_engine(dburi)
+    metadata.connect(engine)
+    metadata.create_all()
+    return metadata
 
-def checkDB(db):
-    """check if the database is appropriate"""
-    pass
+def createUser(session, username, email):
+    """create a user with username and email"""
+    u = models.User(username, email)
+    session.save(u)
+    session.flush()
+    return u
 
-
-class RegistryEntry(object):
-    """A registry object for use in mapping"""
-    def __repr__(self):
-        return "(%i, %s)"%(self.id, self.klass)
+def dropObject(session, obj):
+    """remove any object, and their dependents"""
+    session.delete(obj)
+    session.flush()
     
+def createNotebook(session, user, title):
+    """create a notebook for `user` with root node using `title`"""
+    nb = models.Notebook()
+    nb.user = user
+    nb.root = models.Node(title)
+    session.save(nb)
+    session.flush()
+    return nb
 
-
-#-------------------------------------------------------------------------------
-# Adapters for Cells/Nodes to values for DB query
-#-------------------------------------------------------------------------------
-
-class IDBValues(zi.Interface):
-    """An Interface for use in adapting cells and nodes to the values argument
-    of a SQLAlchemy DB query."""
-    pass
-
-def dbvFromCell(cell):
-    tags = ','.join(cell.tags)
-    return (cell.id, tags, cell.dateCreated, cell.dateModified)
-
-def dbvFromNode(node):
-    kids = ','.join([str(c.id) for c in node.children])
-    return dbvFromCell(node)+(node.kids,)
-
-def dbvFromTextCell(cell):
-    return dbvFromCell(cell)+(cell.text, cell.format)
-
-def dbvFromIOCell(cell):
-    return dbvFromCell(cell)+(cell.input, cell.output)
-
-def dbvFromImageCell(cell):
-    return dbvFromCell(cell)+(cell.image.tostring(),)
-
-components.registerAdapter(dbvFromNode, nodes.INode, IDBValues)
-components.registerAdapter(dbvFromTextCell, nodes.ITextCell, IDBValues)
-components.registerAdapter(dbvFromIOCell, nodes.IIOCell, IDBValues)
-components.registerAdapter(dbvFromImageCell, nodes.IImageCell, IDBValues)

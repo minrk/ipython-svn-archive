@@ -1,6 +1,6 @@
 # encoding: utf-8
 # -*- test-case-name: ipython1.test.test_notebook -*-
-"""The main notebook system
+"""The main notebook server system
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -19,57 +19,49 @@ __docformat__ = "restructuredtext en"
 import zope.interface as zi
 import sqlalchemy as sqla
 
-from ipython1.notebook import nodes, dbutil
+from ipython1.notebook import models, dbutil
 
 
 #-------------------------------------------------------------------------------
 # Notebook Interface
 #-------------------------------------------------------------------------------
 
-class INotebook(zi.Interface):
-    """The IPython Notebook Interface"""
+class INotebookServer(zi.Interface):
+    """The IPython Notebook Server Interface"""
 
 
-class Notebook(object):
-    """The basic IPython Notebook object"""
+class NotebookServer(object):
+    """The basic IPython Notebook Server object"""
     
-    def __init__(self, db, baseNodeID=None):
-        self._db = db
-        
-        self.classes = nodes.classes
-        
-        self._connect()
-        if baseNodeID is None:
-            ids = self.getNodeIDs()
-            id = max(ids)+1
-            self._db.tables['registry'].insert(values=(id, 'Node')).execute()
-            n = nodes.Node(id)
-            cstr = ','.join(map(str, [str(c.id) for c in n.children]))
-            self._db.tables['Node'].insert(values=(n.id, 0, 
-                ';'.join(n.tags), n.dateCreated, n.dateModified, ''
-                )).execute()
-            self.baseNode = self.queries['Node'].selectone_by(id=id)
-        else:
-            self.baseNode = self.queries['Node'].selectfirst_by(id=baseNodeID)
+    def __init__(self, metadata, session=None):
+        self.db = metadata
+        if session is None:
+            session = sqla.create_session()
+        self.session = session
+        self.users = session.query(models.User)
+        self.notebooks = session.query(models.Notebook)
+        self.nodes = session.query(models.Node)
     
-    def getNodeIDs(self):
-        l = [r.id for r in self.queries['registry']]
-        if not l:
-            l = [0]
-        return l
+    def getUser(self, uname):
+        return self.users.selectone_by(username=uname)
     
-    def _connect(self):
-        self.session = sqla.create_session()
-        self.queries = {}
-        sqla.orm.clear_mappers()
-        for c in self.classes:
-            klass = getattr(nodes, c)
-            sqla.mapper(klass, self._db.tables[c])
-            self.queries[c] = self.session.query(klass)
-        sqla.mapper(dbutil.RegistryEntry, self._db.tables['registry'])
-        self.queries['registry'] = self.session.query(dbutil.RegistryEntry)
+    def addUser(self, uname, email):
+        existlist = self.users.select_by(username=uname)
+        assert not existlist, "Username '%s' already in use"%uname
+        u = dbutil.addUser(self.session, uname, email)
+        return u
         
-
-
-
-
+    def dropUser(self, uname):
+        u = self.getUser(uname)
+        dbutil.dropObject(self.session, u)
+    
+    def addNotebook(self, uname, title):
+        user = self.getUser(uname)
+        nb = dbutil.createNotebook(self.session, user, title)
+        return nb
+    
+    def dropNotebook(self, uname, title):
+        user = self.getUser(uname)
+        nb = self.notebooks.select_by(userID=user.userID, title=title)
+        dbutil.dropObject(nb)
+    
