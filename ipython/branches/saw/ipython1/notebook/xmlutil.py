@@ -20,7 +20,7 @@ import zope.interface as zi
 
 from twisted.python import components
 
-from ipython1.notebook import models
+from ipython1.notebook import multicellmodels as models
 
 
 #-------------------------------------------------------------------------------
@@ -28,7 +28,12 @@ from ipython1.notebook import models
 #-------------------------------------------------------------------------------
 def indent(s, n):
     """indent a multi-line string `s`, `n` spaces"""
-    return " "*n+s.replace("\n", "\n"+" "*n)
+    addline = 0
+    if s[-1] == '\n':
+        s = s[:-1]
+        addline=1
+    s = " "*n+s.replace("\n", "\n"+" "*n)
+    return s +'\n'*addline
 
 class IXML(zi.Interface):
     """The class for adapting object to an XML string"""
@@ -44,26 +49,28 @@ def XMLNotebook(nb):
     return "<Notebook>\n"+indent(s,2)+"</Notebook>\n"
     s
 
-def XMLNode(node):
-    """Return an XML representation of a node"""
-    s = "<title>%s</title>\n"%(node.title)
-    for n in node.childrenNodes:
-        s += indent(IXML(n), 2)
-    for c in node.childrenCells:
-        s += indent(IXML(c), 2)
-    return "<Node>\n"+indent(s,2)+"</Node>\n"
-
-def XMLTextCell(cell):
+def XMLCellBase(cell):
+    """The base of an XML representation of a cell"""
     s  = "<comment>%s</comment>\n"%(cell.comment)
     s += "<dateCreated>%s</dateCreated>\n"%(cell.dateCreated)
     s += "<dateModified>%s</dateModified>\n"%(cell.dateModified)
+    return s
+
+def XMLMultiCell(mc):
+    """Return an XML representation of a MultiCell"""
+    s = "<title>%s</title>\n"%(mc.title)
+    s += XMLCellBase(mc)
+    for c in mc.children:
+        s += indent(IXML(c), 2)
+    return "<MultiCell>\n"+indent(s,2)+"</MultiCell>\n"
+
+def XMLTextCell(cell):
+    s  = XMLCellBase(cell)
     s += "<textData>%s</textData>\n"%(cell.textData)
     return "<TextCell>\n"+indent(s,2)+"</TextCell>\n"
 
 def XMLInputCell(cell):
-    s  = "<comment>%s</comment>\n"%(cell.comment)
-    s += "<dateCreated>%s</dateCreated>\n"%(cell.dateCreated)
-    s += "<dateModified>%s</dateModified>\n"%(cell.dateModified)
+    s  = XMLCellBase(cell)
     s += "<input>%s</input>\n"%(cell.input)
     s += "<output>%s</output>\n"%(cell.output)
     return "<InputCell>\n"+indent(s,2)+"</InputCell>\n"
@@ -71,7 +78,7 @@ def XMLInputCell(cell):
 
 
 components.registerAdapter(XMLNotebook, models.INotebook, IXML)
-components.registerAdapter(XMLNode, models.INode, IXML)
+components.registerAdapter(XMLMultiCell, models.IMultiCell, IXML)
 components.registerAdapter(XMLTextCell, models.ITextCell, IXML)
 components.registerAdapter(XMLInputCell, models.IInputCell, IXML)
 

@@ -24,7 +24,7 @@ from IPython.genutils import get_home_dir
 
 from ipython1.config.api import resolveFilePath
 from ipython1.kernel.error import DBError
-from ipython1.notebook import models
+from ipython1.notebook import multicellmodels as models
 
 metadata = models.metadata
 
@@ -98,7 +98,7 @@ def createNotebook(session, user, title):
     """create a notebook for `user` with root node using `title`"""
     nb = models.Notebook()
     nb.user = user
-    nb.root = models.Node(title)
+    nb.root = models.MultiCell(title)
     session.save(nb)
     session.flush()
     return nb
@@ -107,13 +107,13 @@ def addChild(session, child, node, index=None):
     """Add `child` to `node` at position `index`, defaulting to the end.
     If child is a cell, it is added to the childrenCells, if it is a node,
     it is added to childrenNodes"""
-    if isinstance(child, models.Cell):
-        children = node.childrenCells
-    elif isinstance(child, models.Node):
-        children = node.childrenNodes
-    else:
-        raise TypeError("`child` must be a node or cell")
-    
+    # if isinstance(child, models.Cell):
+    #     children = node.childrenCells
+    # elif isinstance(child, models.Node):
+    #     children = node.childrenNodes
+    # else:
+    #     raise TypeError("`child` must be a node or cell")
+    children = node.children
     if children: # already have some cells
         if index is None:
             children[-1].insertAfter(child)

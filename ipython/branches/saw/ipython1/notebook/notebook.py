@@ -20,7 +20,7 @@ import zope.interface as zi
 import sqlalchemy as sqla
 
 from twisted.python import components
-from ipython1.notebook import models, dbutil
+from ipython1.notebook import multicellmodels as models, dbutil
 
 
 #-------------------------------------------------------------------------------
@@ -41,7 +41,6 @@ class NotebookServer(object):
         self.session = session
         self.users = session.query(models.User)
         self.notebooks = session.query(models.Notebook)
-        self.nodes = session.query(models.Node)
     
     def getUser(self, user):
         if isinstance(user, models.User):
@@ -65,7 +64,7 @@ class NotebookServer(object):
     
     def addNotebook(self, user, title):
         u = self.getUser(user)
-        existlist = self.users.select_by(username=u.username, title=title)
+        existlist = self.notebooks.select_by(username=u.username, title=title)
         assert not existlist, "User '%s' already hase notebook ''%s"%(
             u.username, title)
         
