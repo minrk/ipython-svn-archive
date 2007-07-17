@@ -111,6 +111,31 @@ class MultiCell(Cell):
     def __init__(self, title='', comment='', parent=None):
         super(MultiCell, self).__init__(comment, parent)
         self.title = title
+    
+    def _getFirst(self):
+        c = self.children[0]
+        while c.previous is not None:
+            c = c.previous
+        return c
+    
+    def _getLast(self):
+        c = self.children[-1]
+        while c.next is not None:
+            c = c.next
+        return c
+    
+    def __getitem__(self, index):
+        if index >= 0:
+            c = self._getFirst()
+            for i in range(index):
+                c = c.next
+            return c
+        else:
+            c = self._getLast()
+            for i in range(-1-index):
+                c = c.previous
+            return c
+    
 
 class InputCell(Cell):
     zi.implements(IInputCell)

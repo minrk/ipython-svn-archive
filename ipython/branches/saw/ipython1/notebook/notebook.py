@@ -20,6 +20,8 @@ import zope.interface as zi
 import sqlalchemy as sqla
 
 from twisted.python import components
+
+from ipython1.kernel.error import DBError, NotFoundError
 from ipython1.notebook import multicellmodels as models, dbutil
 
 
@@ -46,7 +48,10 @@ class NotebookServer(object):
         if isinstance(user, models.User):
             return user
         else:
-            return self.users.selectone_by(username=user)
+            try:
+                return self.users.selectone_by(username=user)
+            except:
+                raise NotFoundError("No Such User: %s"%user)
     
     def addUser(self, uname, email):
         existlist = self.users.select_by(username=uname)
@@ -60,20 +65,41 @@ class NotebookServer(object):
     
     def getNotebook(self, user, title):
         uname = self.getUser(user).username
-        return self.notebooks.selectone_by(username=uname, title=title)
+        try:
+            return self.notebooks.selectone_by(username=uname, title=title)
+        except:
+            raise NotFoundError("No Such Notebook: %s"%title)
     
     def addNotebook(self, user, title):
         u = self.getUser(user)
         existlist = self.notebooks.select_by(username=u.username, title=title)
-        assert not existlist, "User '%s' already hase notebook ''%s"%(
+        assert not existlist, "User '%s' already hase notebook '%s'"%(
             u.username, title)
-        
         nb = dbutil.createNotebook(self.session, u, title)
         return nb
     
     def dropNotebook(self, user, title):
         nb = self.getNotebook(user, title)
         dbutil.dropObject(self.session, nb)
+    
+    def addCell(self, cell, user, nbtitle, indices=None):
+        """add a cell to user's notebook with title `nbtitle`.  Indices
+        can be None, int, list of ints.  
+        If None or int: add to nb.root at end or index.
+        If list of ints: cascading add - add to nb.root[l[0]][l[1]]...
+            at index indices[-1].
+            each cell on the walk must be a MultiCell.
+        """
+        nb = self.getNotebook(user, nbtitle)
+        
+        if indices is None or isinstance(indices,int):
+            return dbutil.addChild(self.session, cell, nb.root)
+        else:
+            mc = nb.root
+            # walk down to correct MultiCell
+            for i in indices[:-1]:
+                mc = mc[i]
+            return dbutil.addChild(self.session, cell, mc, indices[-1])
     
 
 

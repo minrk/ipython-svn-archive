@@ -73,12 +73,14 @@ def connectDB(fname='ipnotebook.db', ipythondir=None):
         # checkDB(DB)
         return ipdb
 
-def initDB(dburi='sqlite://'):
+def initDB(dburi='sqlite://', echo=False):
     """create an engine, and connect our metadata object to it.  Then, 
     create our tables in the engine.  
     Defaults to an in-memory sqlite engine."""
     engine = sqla.create_engine(dburi)
+    engine.echo=echo
     metadata.connect(engine)
+    metadata.drop_all()
     metadata.create_all()
     return metadata
 
@@ -103,24 +105,24 @@ def createNotebook(session, user, title):
     session.flush()
     return nb
 
-def addChild(session, child, node, index=None):
-    """Add `child` to `node` at position `index`, defaulting to the end.
-    If child is a cell, it is added to the childrenCells, if it is a node,
-    it is added to childrenNodes"""
+def addChild(session, child, mc, index=None):
+    """Add `child` to MultiCell `mc` at position `index`, 
+    defaulting to the end."""
     # if isinstance(child, models.Cell):
     #     children = node.childrenCells
     # elif isinstance(child, models.Node):
     #     children = node.childrenNodes
     # else:
     #     raise TypeError("`child` must be a node or cell")
-    children = node.children
-    if children: # already have some cells
-        if index is None:
+    children = mc.children
+    if children: # already have some children
+        if index is None or index == len(children):
             children[-1].insertAfter(child)
         else:
             children[index].insertBefore(child)
     else:
-        child.parent = node
+        child.parent = mc
+    session.save(child)
     session.flush()
 
 

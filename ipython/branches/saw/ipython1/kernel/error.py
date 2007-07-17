@@ -79,8 +79,14 @@ class TaskAborted(KernelError):
 class NotAPendingResult(KernelError):
     pass
 
+class UnpickleableException(KernelError):
+    pass
+
+
+# DB Error for database related errors in notebook
 class DBError(KernelError):
     pass
 
-class UnpickleableException(KernelError):
+class NotFoundError(KernelError):
     pass
+
