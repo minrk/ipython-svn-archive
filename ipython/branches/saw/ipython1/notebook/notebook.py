@@ -35,6 +35,7 @@ class INotebookServer(zi.Interface):
 
 class NotebookServer(object):
     """The basic IPython Notebook Server object"""
+    zi.implements(INotebookServer)
     
     def __init__(self, metadata, session=None):
         self.db = metadata
