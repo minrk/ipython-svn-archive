@@ -22,7 +22,7 @@ import sqlalchemy as sqla
 from twisted.python import components
 
 from ipython1.kernel.error import DBError, NotFoundError
-from ipython1.notebook import multicellmodels as models, dbutil
+from ipython1.notebook import models, dbutil
 
 
 #-------------------------------------------------------------------------------
@@ -41,23 +41,23 @@ class INotebookServer(zi.Interface):
     def dropUser(user):
         """drop a user by username"""
     
-    def getNotebook(user, title):
-        """get a notebook owned by `user` with `title`"""
+    def getSection(user, title):
+        """get a section owned by `user` with `title`"""
     
-    def addNotebook(user, title):
-        """add a notebook owned by `user` with `title`"""
+    def addSection(user, title):
+        """add a section owned by `user` with `title`"""
     
-    def dropNotebook(user, title):
-        """drop a notebook owned by `user` with `title`"""
+    def dropSection(user, title):
+        """drop a section owned by `user` with `title`"""
     
-    def loadNotebookFromXML(xmlstr):
-        """load a notebook into the db from an xml file"""
+    def loadSectionFromXML(xmlstr):
+        """load a section into the db from an xml file"""
     
     def getCell(**selectflags):
         """Get a Cell by flags.  This is a wrapper for selectone_by."""
     
     def addCell(cell, user, nbtitle, index=None):
-        """add a cell to user's notebook with title `nbtitle`.  Indices
+        """add a cell to user's section with title `nbtitle`.  Indices
         can be None, int, list of ints.
         If None or int: add to nb.root at end or index.
         If list of ints: cascading add - add to nb.root[l[0]][l[1]]...
@@ -80,7 +80,7 @@ class NotebookServer(object):
             session = sqla.create_session()
         self.session = session
         self.users = session.query(models.User)
-        self.notebooks = session.query(models.Notebook)
+        self.sections = session.query(models.Section)
         self.cells = session.query(models.Cell)
     
     def getUser(self, user):
@@ -102,27 +102,27 @@ class NotebookServer(object):
         u = self.getUser(user)
         dbutil.dropObject(self.session, u)
     
-    def getNotebook(self, user, title):
-        uname = self.getUser(user).username
-        try:
-            return self.notebooks.selectone_by(username=uname, title=title)
-        except:
-            raise NotFoundError("No Such Notebook: %s"%title)
-    
-    def addNotebook(self, user, title):
+    def getSection(self, user, title):
         u = self.getUser(user)
-        existlist = self.notebooks.select_by(username=u.username, title=title)
-        assert not existlist, "User '%s' already hase notebook '%s'"%(
+        try:
+            return self.sections.selectone_by(userID=u.userID, title=title)
+        except:
+            raise NotFoundError("No Such Section: %s"%title)
+    
+    def addSection(self, user, title):
+        u = self.getUser(user)
+        existlist = self.sections.select_by(username=u.username, title=title)
+        assert not existlist, "User '%s' already hase section '%s'"%(
             u.username, title)
-        nb = dbutil.createNotebook(self.session, u, title)
+        nb = dbutil.createSection(self.session, u, title)
         return nb
     
-    def dropNotebook(self, user, title):
-        nb = self.getNotebook(user, title)
+    def dropSection(self, user, title):
+        nb = self.getSection(user, title)
         dbutil.dropObject(self.session, nb)
     
-    def loadNotebookFromXML(self, xmlstr):
-        nb = xmlutil.NotebookFromXML(self.session, xmlstr)
+    def loadSectionFromXML(self, xmlstr):
+        nb = xmlutil.SectionFromXML(self.session, xmlstr)
         return nb
     
     def getCell(self, **selectflags):
@@ -137,14 +137,14 @@ class NotebookServer(object):
         return dbutil.addChild(self.session, child, parent, index)
     
     def addCell(self, cell, user, nbtitle, indices=None):
-        """add a cell to user's notebook with title `nbtitle`.  Indices
+        """add a cell to user's section with title `nbtitle`.  Indices
         can be None, int, list of ints.
         If None or int: add to nb.root at end or index.
         If list of ints: cascading add - add to nb.root[l[0]][l[1]]...
             at index indices[-1].
             each cell on the walk must be a MultiCell.
         """
-        nb = self.getNotebook(user, nbtitle)
+        nb = self.getSection(user, nbtitle)
         
         if indices is None or isinstance(indices,int):
             return self.addChild(cell, nb.root)

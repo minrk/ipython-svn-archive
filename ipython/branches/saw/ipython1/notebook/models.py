@@ -1,6 +1,5 @@
-import datetime, zope.interface as zi
 from sqlalchemy import *
-
+import datetime
 # Setup the global unbound metadata.
 
 metadata = MetaData()
@@ -9,42 +8,34 @@ metadata = MetaData()
 
 nodesTable = Table('nodes', metadata,
     Column('nodeID', Integer, primary_key=True),
-    Column('parentID', Integer, ForeignKey('nodes.nodeID')),
-    Column('previousID', Integer, ForeignKey('nodes.nodeID')),
-    Column('nextID', Integer, ForeignKey('nodes.nodeID')),
-    Column('title',String())
-)
-
-cellsTable = Table('cells', metadata,
-    Column('cellID', Integer, primary_key=True),
     Column('dateCreated', DateTime),
     Column('dateModified', DateTime),
     Column('comment',String()),
-    Column('nodeID', Integer, ForeignKey('nodes.nodeID')),
-    Column('previousID', Integer, ForeignKey('cells.cellID')),
-    Column('nextID', Integer, ForeignKey('cells.cellID')),
-    Column('cellType', String(32))
+    Column('userID', Integer, ForeignKey('users.userID')),
+    Column('parentID', Integer, ForeignKey('nodes.nodeID')),
+    Column('previousID', Integer, ForeignKey('nodes.nodeID')),
+    Column('nextID', Integer, ForeignKey('nodes.nodeID')),
+    Column('nodeType', String(32))
     )
 
+sectionsTable = Table('sections', metadata,
+    Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
+    # Column('headID', Integer, ForeignKey('nodes.nodeID')),
+    # Column('tailID', Integer, ForeignKey('nodes.nodeID')),
+    Column('title',String())
+)
+
 inputCellsTable = Table('inputCells', metadata,
-    Column('cellID', Integer, ForeignKey('cells.cellID'), primary_key=True),
+    Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
     Column('input', String()),
     Column('output', String()) 
 )
 
 textCellsTable = Table('textCells', metadata,
-    Column('cellID', Integer, ForeignKey('cells.cellID'), primary_key=True),
+    Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
     Column('textData', String()),
 )
 
-notebooksTable = Table('notebooks', metadata,
-    Column('notebookID', Integer, primary_key=True),
-    Column('userID', Integer, ForeignKey('users.userID')),
-    Column('dateCreated', DateTime),
-    Column('dateModified', DateTime),
-    Column('rootID', Integer, ForeignKey('nodes.nodeID')),    
-)
-    
 usersTable = Table('users', metadata,
     Column('userID', Integer, primary_key=True),
     Column('username', String(64)),
@@ -53,50 +44,7 @@ usersTable = Table('users', metadata,
     Column('dateModified', DateTime)
 )
 
-# interface classes for adaptation
-class INode(zi.Interface):
-    """The interface for a node"""
-    pass
-
-class INotebook(zi.Interface):
-    """the interface for a notebook"""
-    pass
-
-class ICell(zi.Interface):
-    """the interface for a cell"""
-    pass
-
-class ITextCell(ICell):
-    """the interface for a text cell"""
-    pass
-
-class IInputCell(ICell):
-    """the interface for a text cell"""
-    pass
-
 # Mappers
-class Node(object):
-    zi.implements(INode)
-    
-    def __init__(self, title, parent=None):
-        self.title = title
-        self.parent = None
-    
-    def insertBefore(self, n):
-        """Insert a node before this one."""
-        assert not self.parent is None, "Cannot insert before root"
-        n.parent = self.parent
-        n.previous = self.previous
-        n.next = self
-    
-    def insertAfter(self, n):
-        """Insert a node after this one."""
-        assert not self.parent is None, "Cannot insert after root"
-        n.parent = self.parent
-        n.next = self.next
-        n.previous = self
-    
-
 class Created(object):
     def __init__(self):
         self.dateCreated = datetime.datetime.now()
@@ -110,28 +58,49 @@ class Timestamper(Created, Modified):
         super(Timestamper, self).__init__()
         self.touchModified()
 
-class Cell(Timestamper):
-    zi.implements(ICell)
+class Node(Timestamper):
     
     def __init__(self, comment='', parent=None):
-        super(Cell, self).__init__()
+        super(Node, self).__init__()
         self.comment = comment
         self.parent = parent
 
     def insertBefore(self, c):
         """Insert a cell before this one."""
         c.parent = self.parent
+        c.user = self.user
         c.previous = self.previous
         c.next = self
         
     def insertAfter(self, c):
         """Insert a cell after this one."""
         c.parent = self.parent
+        c.user = self.user
         c.next = self.next
         c.previous = self
 
+class Section(Node):
+    
+    def __init__(self, title='', comment='', parent=None):
+        super(Section, self).__init__(comment, parent)
+        self.title = title
+    
+    def __getitem__(self, index):
+        if index >= 0:
+            c = self.head
+            for i in range(index):
+                c = c.next
+            return c
+        else:
+            c = self.tail
+            for i in range(-1-index):
+                c = c.previous
+            return c
+    
+class Cell(Node):
+    pass
+
 class InputCell(Cell):
-    zi.implements(IInputCell)
     
     def __init__(self, input='', output='', comment='', parent=None):
         super(InputCell, self).__init__(comment, parent)
@@ -139,80 +108,84 @@ class InputCell(Cell):
         self.output = output
 
 class TextCell(Cell):
-    zi.implements(ITextCell)
     
     def __init__(self, textData='', comment='', parent=None):
         super(TextCell, self).__init__(comment, parent)
         self.textData = textData
 
 class User(Timestamper):
-    
     def __init__(self, username='', email=''):
         super(User, self).__init__()
         self.username = username
         self.email = email
 
-class Notebook(Timestamper):
-    zi.implements(INotebook)
-    def __init__(self):
-        super(Notebook, self).__init__()
+nodeJoin = polymorphic_union(
+    {
+        'inputCell':nodesTable.join(inputCellsTable),
+        'textCell':nodesTable.join(textCellsTable),
+        'section':nodesTable.join(sectionsTable, sectionsTable.c.nodeID==nodesTable.c.nodeID),
+        'node':nodesTable.select(nodesTable.c.nodeType=='node')
+    }, None, 'pjoin'
+)
 
-
-nodeMapper = mapper(Node, nodesTable,
-    properties={
-        'childrenCells': relation(
-            Cell,
-            cascade='all, delete-orphan',
-            backref=backref('parent')),
-        'childrenNodes': relation(
-            Node,
-            primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
-            cascade="all",
-            backref=backref("parent",
-                    primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
-                    remote_side=[nodesTable.c.nodeID],
-                    uselist=False)),
-        'next': relation(
-            Node,
+nodeMapper = mapper(Node, nodesTable, 
+    select_table=nodeJoin, 
+    polymorphic_on=nodeJoin.c.nodeType, 
+    polymorphic_identity='node',
+    properties = {
+        'next': relation(Node,
             primaryjoin=nodesTable.c.nextID==nodesTable.c.nodeID,
             uselist=False,
             backref=backref('previous',
-                    primaryjoin=nodesTable.c.previousID==nodesTable.c.nodeID,
-                    remote_side=[nodesTable.c.nodeID],
-                    uselist=False))
+                primaryjoin=nodesTable.c.previousID==nodesTable.c.nodeID,
+                remote_side=[nodesTable.c.nodeID],
+                uselist=False)),
     }
 )
-    
+
 cellJoin = polymorphic_union(
     {
-        'inputCell':cellsTable.join(inputCellsTable),
-        'textCell':cellsTable.join(textCellsTable),
-        'cell':cellsTable.select(cellsTable.c.cellType=='cell')
-    }, None, 'pjoin')
-cellMapper = mapper(Cell, cellsTable, 
+        'inputCell':nodesTable.join(inputCellsTable),
+        'textCell':nodesTable.join(textCellsTable),
+        'cell':nodesTable.select(nodesTable.c.nodeType=='cell')
+    }, None, 'pjoin'
+)
+
+cellMapper = mapper(Cell, nodesTable, 
     select_table=cellJoin, 
-    polymorphic_on=cellJoin.c.cellType, 
+    polymorphic_on=cellJoin.c.nodeType, 
     polymorphic_identity='cell',
-    properties = {
-        'next': relation(
-            Cell,
-            primaryjoin=cellsTable.c.nextID==cellsTable.c.cellID,
-            uselist=False,
-            backref=backref('previous',
-                primaryjoin=cellsTable.c.previousID==cellsTable.c.cellID,
-                remote_side=[cellsTable.c.cellID],
-                uselist=False)
-        )
-    }
+    inherits=nodeMapper
 )
 inputCellMapper = mapper(InputCell, inputCellsTable, inherits=cellMapper, polymorphic_identity='inputCell')
 textCellMapper = mapper(TextCell, textCellsTable, inherits=cellMapper, polymorphic_identity='textCell')
-
+sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphic_identity='section',
+    properties={
+        'children': relation(
+            Node,
+            primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
+            cascade='all, delete-orphan',
+            backref=backref("parent",
+                primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
+                remote_side=[nodesTable.c.nodeID],
+                uselist=False
+                )
+            ),
+        # 'head': relation(Node,
+        #     primaryjoin=nodesTable.c.nodeID==sectionsTable.c.headID,
+        #     foreign_keys=[sectionsTable.c.headID],
+        #     uselist=False),
+        # 'tail': relation(Node,
+        #     primaryjoin=nodesTable.c.nodeID==sectionsTable.c.tailID,
+        #     foreign_keys=[sectionsTable.c.tailID],
+        #     uselist=False),
+    }
+)
 userMapper = mapper(User, usersTable,
-    properties=dict(notebooks=relation(Notebook, 
-        cascade="all, delete-orphan", backref='user')))
-notebookMapper = mapper(Notebook, notebooksTable,
-    properties=dict(root=relation(Node, uselist=False)))
-
-
-
+    properties={
+        'nodes':relation(Node, 
+        primaryjoin=usersTable.c.userID==nodesTable.c.userID,
+        cascade="all, delete-orphan", backref='user')
+        
+    }
+)

@@ -24,7 +24,7 @@ from IPython.genutils import get_home_dir
 
 from ipython1.config.api import resolveFilePath
 from ipython1.kernel.error import DBError
-from ipython1.notebook import multicellmodels as models
+from ipython1.notebook import models
 
 metadata = models.metadata
 
@@ -96,11 +96,10 @@ def dropObject(session, obj):
     session.delete(obj)
     session.flush()
     
-def createNotebook(session, user, title):
+def createSection(session, user, title):
     """create a notebook for `user` with root node using `title`"""
-    nb = models.Notebook()
+    nb = models.Section()
     nb.user = user
-    nb.root = models.MultiCell(title)
     session.save(nb)
     session.flush()
     return nb

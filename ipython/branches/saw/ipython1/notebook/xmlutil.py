@@ -21,7 +21,7 @@ import StringIO, datetime, xml.etree.ElementTree as ET
 
 from twisted.python import components
 
-from ipython1.notebook import multicellmodels as models, dbutil
+from ipython1.notebook import models, dbutil
 
 #-------------------------------------------------------------------------------
 # XML representations of notebooks
@@ -78,10 +78,10 @@ def XMLInputCell(cell):
     
 
 
-components.registerAdapter(XMLNotebook, models.INotebook, IXML)
-components.registerAdapter(XMLMultiCell, models.IMultiCell, IXML)
-components.registerAdapter(XMLTextCell, models.ITextCell, IXML)
-components.registerAdapter(XMLInputCell, models.IInputCell, IXML)
+# components.registerAdapter(XMLNotebook, models.INotebook, IXML)
+# components.registerAdapter(XMLMultiCell, models.IMultiCell, IXML)
+# components.registerAdapter(XMLTextCell, models.ITextCell, IXML)
+# components.registerAdapter(XMLInputCell, models.IInputCell, IXML)
 
 #-------------------------------------------------------------------------------
 # Notebook object from XML strings
