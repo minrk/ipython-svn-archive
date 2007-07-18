@@ -17,19 +17,19 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import cPickle as pickle
-import httplib2, urllib
+import httplib2, urllib, simplejson, os.path
 
 from zope.interface import Interface, implements
 from twisted.python import components, failure, log
 
-from ipython1.kernel import httputil, error
+from ipython1.kernel import error
 from ipython1.external.twisted.web2 import server, channel
-from ipython1.external.twisted.web2 import http, resource
+from ipython1.external.twisted.web2 import http, resource, static
 from ipython1.external.twisted.web2 import stream
 from ipython1.external.twisted.web2 import http_headers
 
-from ipython1.kernel.task import INotebookController
-from ipython1.kernel.taskclient import InteractiveNotebookClient
+from ipython1.notebook.notebook import INotebookController
+from ipython1.notebook.xmlutil import tformat
 
 #-------------------------------------------------------------------------------
 # The Controller side of things
@@ -38,20 +38,26 @@ from ipython1.kernel.taskclient import InteractiveNotebookClient
 class IHTTPNotebookServer(Interface):
     pass
 
-
-class HTTPNotebookServer(resource.Resource):
+class HTTPNotebookServer(static.File):
     
     implements(IHTTPNotebookRoot)
     addSlash = True
     
     def __init__(self, nbs):
         self.nbs = nbs
-        self.child_user = HTTPNotebookUser(self.nbs)
-        self.child_book = HTTPNotebookBook(self.nbs)
-        self.child_cell = HTTPNotebookCell(self.nbs)
-    
-    def renderHTTP(self, request):
-        return http.Response(200, stream=stream.MemoryStream(repr(request)))
+        static.File.__init__(self, os.path.dirname(__file__)+'notebook.html', defaultType="text/html")
+        
+        self.child_adduser = HTTPNotebookAddUser(self.nbs)
+        self.child_getuser = HTTPNotebookGetUser(self.nbs)
+        self.child_edituser = HTTPNotebookEditUser(self.nbs)
+        self.child_addbook = HTTPNotebookAddBook(self.nbs)
+        self.child_getbook = HTTPNotebookGetBook(self.nbs)
+        self.child_editbook = HTTPNotebookEditBook(self.nbs)
+        self.child_addcell = HTTPNotebookAddCell(self.nbs)
+        self.child_getcell = HTTPNotebookGetCell(self.nbs)
+        self.child_editcell = HTTPNotebookEditCell(self.nbs)
+        
+        self.putChild('notebook.js', static.File(os.path.dirname(__file__)+'notebook.js', defaultType="text/javascript"))
     
 
 components.registerAdapter(HTTPNotebookServer,
@@ -83,38 +89,30 @@ headers: %r
         return reply
     
     def packageSuccess(self, result):
-        headers, data = httputil.serialize(result)
+        data = simplejson.dumps(IJSonDict(result))
         response = http.Response(200, stream=stream.MemoryStream(data))
-        for k, v in headers.iteritems():
-            response.headers.addRawHeader(k, v)
         response.headers.setHeader('content-type', http_headers.MimeType('text', 'plain'))
         return response
     
     def packageFailure(self, f):
         f.cleanFailure()
-        headers, data = httputil.serialize(f)
+        data = simpleson.dumps(jsonifyFailure(f))
         response = http.Response(200, stream=stream.MemoryStream(data))
-        for k, v in headers.iteritems():
-            response.headers.addRawHeader(k, v)
         response.headers.setHeader('content-type', http_headers.MimeType('text', 'plain'))
         return response
     
 
 # User classes
-class HTTPNotebookUser(HTTPNotebookBaseMethod):
-    
-    def __init__(self, nbs):
-        super(HTTPNotebookUser, self).__init__(nbs)
-        self.child_add = HTTPNotebookUserAdd(self.nbs)
-        self.child_drop = HTTPNotebookUserDrop(self.nbs)
+class HTTPNotebookGetUser(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
         try:
-            pNotebook = request.args['pNotebook'][0]
-            task = pickle.loads(pNotebook)
+            uname = request.args['username'][0]
+            user = self.nbs.getUser(uname)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
+            
             d = self.nbs.run(task)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
@@ -124,8 +122,8 @@ class HTTPNotebookBook(HTTPNotebookBaseMethod):
     
     def __init__(self, nbs):
         super(HTTPNotebookBook, self).__init__(nbs)
-        self.child_add = HTTPNotebookBookAdd(self.nbs)
-        self.child_drop = HTTPNotebookBookDrop(self.nbs)
+        self.child_get = HTTPNotebookBookGet(self.nbs)
+        self.child_put = HTTPNotebookBookPut(self.nbs)
     
     def renderHTTP(self, request):
         try:
@@ -142,8 +140,8 @@ class HTTPNotebookCell(HTTPNotebookBaseMethod):
     
     def __init__(self, nbs):
         super(HTTPNoteCellCell, self).__init__(nbs)
-        self.child_add = HTTPNoteCellCellAdd(self.nbs)
-        self.child_drop = HTTPNoteCellCellDrop(self.nbs)
+        self.child_add = HTTPNoteBookCellAdd(self.nbs)
+        self.child_drop = HTTPNoteBookCellDrop(self.nbs)
     
     def renderHTTP(self, request):
         try:
@@ -169,67 +167,68 @@ def HTTPServerFactoryFromNotebookServer(nbserver):
 components.registerAdapter(HTTPServerFactoryFromNotebookController,
             INotebookServer, IHTTPNotebookServerFactory)
 
-        
-#----------------------------------------------------------------------------
-#   Client Side  NOT DONE YET
-#----------------------------------------------------------------------------
 
-class HTTPNotebookClient(object):
-    """The Client object for connecting to a NotebookController over HTTP"""
-    
-    
-    def __init__(self, addr):
-        """Create a client that will connect to addr.
-        
-        Once created, this class will autoconnect and reconnect to the
-        controller as needed.
-        
-        :Parameters:
-            addr : tuple
-                The (ip, port) of the IMultiEngine adapted controller.
-        """
-        self.addr = addr
-        self.url = 'http://%s:%s/' % self.addr
-        self._server = httplib2.Http()
-        self.block = True
-    
-    
-    def _executeRemoteMethod(self, method, **kwargs):
-        args = urllib.urlencode(httputil.strDict(kwargs))
-        request = self.url+method+'/'+'?'+args
-        header, response = self._server.request(request)
-        # print request
-        # print header
-        # print response
-        result = self._unpackageResult(header, response)
-        return result
-    
-    def _unpackageResult(self, header, response):
-        status = header['status']
-        if status == '200':
-            result = httputil.unserialize(header, response)
-            return self._returnOrRaise(result)
-        else:
-            raise error.ProtocolError("Request Failed: %s:%s"%(status, response))
-        
-    def _returnOrRaise(self, result):
-        if isinstance(result, failure.Failure):
-            result.raiseException()
-        else:
-            return result
-    
-    ##########  Interface Methods  ##########
-    
-    def run(self, task):
-        pNotebook = pickle.dumps(task,2)
-        return self._executeRemoteMethod('run', pNotebook=pNotebook)
-    
-    def abort(self, taskID):
-        return self._executeRemoteMethod('abort', taskID=taskID)
-    
-    def getNotebookResult(self, taskID, block=None):
-        return self._executeRemoteMethod('getresult', taskID=taskID)
-    
-        
-class HTTPInteractiveNotebookClient(HTTPNotebookClient, InteractiveNotebookClient):
+
+#-------------------------------------------------------------------------------
+# JSON utilities
+#-------------------------------------------------------------------------------
+
+class IJSONDict(zi.Interface):
     pass
+
+def jsonStarter(obj):
+    d = {}
+    d['dateCreated'] = obj.dateCreated.strftime(tformat)
+    d['dateModified'] = obj.dateModified.strftime(tformat)
+    return d
+
+def jsonifyUser(u):
+    d = jsonStarter(u)
+    d['userID'] = u.userID
+    d['username'] = u.username
+    d['email'] = u.email
+    d['notebooks'] = [nb.title for nb in u.notebooks]
+    return d
+
+def jsonifyNotebook(nb):
+    d = jsonStarter(nb)
+    d['username'] = nb.user.username
+    d['email'] = nb.user.email
+    d['root'] = IJSONDict(nb.root)
+    return d
+
+def jsonCell(c):
+    d = jsonStarter(c)
+    for key in ['cellID', 'parentID', 'nextID', 'previousID', 'comment']:
+        d[key] = getattr(c, key)
+    return d
+
+def jsonifyMultiCell(mc):
+    d = jsonCell(mc)
+    d['title'] = mc.title
+    d['children'] = [mc[i].cellID for i in range(len(mc.children))]
+    return d
+
+def jsonifyTextCell(tc):
+    d = jsonCell(tc)
+    d['textData'] = tc.textData
+    return d
+
+def jsonifyInputCell(ic):
+    d = jsonCell(ic)
+    d['input'] = ic.input
+    d['output'] = ic.output
+    return d
+
+def jsonifyFailure(f):
+    d = {}
+    d['message'] = f.value.message
+    d['traceback'] = f.getTraceback()
+    return d
+    
+components.registerAdapter(jsonifyUser, models.IUser, IJSONDict)
+components.registerAdapter(jsonifyMultiCell, models.IMultiCell, IJSONDict)
+components.registerAdapter(jsonifyTextCell, models.ITextCell, IJSONDict)
+components.registerAdapter(jsonifyInputCell, models.IInputCell, IJSONDict)
+
+

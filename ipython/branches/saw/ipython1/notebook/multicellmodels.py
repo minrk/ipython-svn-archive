@@ -51,6 +51,10 @@ usersTable = Table('users', metadata,
 )
 
 # interface classes for adaptation
+class IUser(zi.Interface):
+    """the interface for a user"""
+    pass
+
 class INotebook(zi.Interface):
     """the interface for a notebook"""
     pass
@@ -153,7 +157,7 @@ class TextCell(Cell):
         self.textData = textData
 
 class User(Timestamper):
-    
+    zi.implements(IUser)
     def __init__(self, username='', email=''):
         super(User, self).__init__()
         self.username = username
