@@ -1,36 +1,52 @@
 """Mix of Traits and ConfigObj.
 """
 
+############################################################################
 # Stdlib imports
+############################################################################
 from inspect import isclass
 #from pprint import pprint  # dbg
 
+
+############################################################################
 # External imports
+############################################################################
 from enthought.traits.api import HasTraits, HasStrictTraits, MetaHasTraits, \
      Trait, TraitError, Bool, Int, Float, Str, ReadOnly, ListFloat
 
 import configobj
 
-# Code begins
 
+############################################################################
 # Utility functions
+############################################################################
+
 def get_scalars(obj):
+    """Return scalars for a TConf class object"""
+    
     skip = set(['trait_added','trait_modified'])
     return [k for k in obj.__class_traits__ if k not in skip]
 
 def get_sections(obj,sectionClass):
+    """Return sections for a TConf class object"""
     return [(n,v) for (n,v) in obj.__dict__.iteritems()
             if isclass(v) and issubclass(v,sectionClass)]
 
-def get_instance_scalars(obj):
-    return [k for k,v in obj.__dict__.iteritems()
-            if not isinstance(v,TConfigSection)]
+def partition_instance(obj):
+    """Return scalars,sections for a given TConf instance.
+    """
+    scalars = []
+    sections = []
+    for k,v in obj.__dict__.iteritems():
+        if isinstance(v,TConfigSection):
+            sections.append(v)
+        else:
+            scalars.append(k)
 
-def get_instance_sections(obj):
-    return [v for k,v in obj.__dict__.iteritems()
-            if isinstance(v,TConfigSection)]
+    return scalars, sections
 
-def tsecDump(tconf,depth):
+def tsecDump(tconf,depth=0):
+    """Dump a tconf section to a string."""
     
     indent = '    '*max(depth-1,0)
 
@@ -46,11 +62,13 @@ def tsecDump(tconf,depth):
 
     out = [label]
 
-    for s in get_instance_scalars(tconf):
+    scalars, sections = partition_instance(tconf)
+
+    for s in scalars:
         v = getattr(tconf,s)
         out.append(indent+('%s = %r' % (s,v)))
 
-    for sec in get_instance_sections(tconf):
+    for sec in sections:
         out.extend(tsecDump(sec,depth+1))
 
     return out
@@ -64,19 +82,25 @@ def tconfDump(tconf):
     return '\n'.join(tstr)
 
 def tconfPrint(tconf):
+    """Print a tconf object."""
     print tconfDump(tconf)
     
 
-# Use a simple factory that wraps our option choices for using ConfigObj.  I'm
-# hard-wiring certain choices here, so we'll always use instances with THESE
-# choices.
 def mkConfigObj(filename):
+    """Return a ConfigObj instance with our hardcoded conventions.
+
+    Use a simple factory that wraps our option choices for using ConfigObj.
+    I'm hard-wiring certain choices here, so we'll always use instances with
+    THESE choices.
+    """
     return configobj.ConfigObj(filename,
                                file_error=True,
                                interpolation='Template',
                                unrepr=True)
 
+############################################################################
 # Main TConfig class and supporting exceptions
+############################################################################
 class TConfigSection(HasTraits): pass
 
 class TConfigError(Exception): pass
@@ -136,13 +160,17 @@ class TConfig(TConfigSection):
             setattr(self,s,section)
 
 class ReadOnlyTConfig(TConfigSection):
+    """Make a TConfigSection object with ALL ReadOnly traits.
+    """
     def __init__(self,tconf):
         tctraits = get_scalars(tconf)
         for t in tctraits:
             self.add_trait(t,ReadOnly)
             setattr(self,t,getattr(tconf,t))
 
+############################################################################
 # Testing/example
+############################################################################
 if __name__ == '__main__':
 
     class App(object):
