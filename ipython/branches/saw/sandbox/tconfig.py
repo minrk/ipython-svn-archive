@@ -16,10 +16,21 @@ from enthought.traits.api import HasTraits, HasStrictTraits, MetaHasTraits, \
 
 import configobj
 
-
 ############################################################################
 # Utility functions
 ############################################################################
+
+def mkConfigObj(filename):
+    """Return a ConfigObj instance with our hardcoded conventions.
+
+    Use a simple factory that wraps our option choices for using ConfigObj.
+    I'm hard-wiring certain choices here, so we'll always use instances with
+    THESE choices.
+    """
+    return configobj.ConfigObj(filename,
+                               file_error=True,
+                               interpolation='Template',
+                               unrepr=True)
 
 def get_scalars(obj):
     """Return scalars for a TConf class object"""
@@ -45,67 +56,42 @@ def partition_instance(obj):
 
     return scalars, sections
 
-def tsecDump(tconf,depth=0):
-    """Dump a tconf section to a string."""
-    
-    indent = '    '*max(depth-1,0)
-
-    try:
-        top_name = tconf.__class__.__original_name__
-    except AttributeError:
-        top_name = tconf.__class__.__name__
-
-    if depth == 0:
-        label = '# Dump of %s\n' % top_name
-    else:
-        label = '\n'+indent+('[' * depth) + top_name + (']'*depth)
-
-    out = [label]
-
-    scalars, sections = partition_instance(tconf)
-
-    for s in scalars:
-        v = getattr(tconf,s)
-        out.append(indent+('%s = %r' % (s,v)))
-
-    for sec in sections:
-        out.extend(tsecDump(sec,depth+1))
-
-    return out
-    
-
-def tconfDump(tconf):
-    """Dump a tconf object to a string"""
-
-    tstr = []
-    tstr.extend(tsecDump(tconf,depth=0))
-    return '\n'.join(tstr)
-
-def tconfPrint(tconf):
-    """Print a tconf object."""
-    print tconfDump(tconf)
-    
-
-def mkConfigObj(filename):
-    """Return a ConfigObj instance with our hardcoded conventions.
-
-    Use a simple factory that wraps our option choices for using ConfigObj.
-    I'm hard-wiring certain choices here, so we'll always use instances with
-    THESE choices.
-    """
-    return configobj.ConfigObj(filename,
-                               file_error=True,
-                               interpolation='Template',
-                               unrepr=True)
-
 ############################################################################
 # Main TConfig class and supporting exceptions
 ############################################################################
-class TConfigSection(HasTraits): pass
-
 class TConfigError(Exception): pass
 
 class TConfigInvalidKeyError(TConfigError): pass
+
+class TConfigSection(HasTraits):
+    def __repr__(self,depth=0):
+        """Dump a self section to a string."""
+
+        indent = '    '*max(depth-1,0)
+
+        try:
+            top_name = self.__class__.__original_name__
+        except AttributeError:
+            top_name = self.__class__.__name__
+
+        if depth == 0:
+            label = '# Dump of %s\n' % top_name
+        else:
+            label = '\n'+indent+('[' * depth) + top_name + (']'*depth)
+
+        out = [label]
+
+        scalars, sections = partition_instance(self)
+
+        for s in scalars:
+            v = getattr(self,s)
+            out.append(indent+('%s = %r' % (s,v)))
+
+        for sec in sections:
+            out.append(sec.__repr__(depth+1))
+
+        return '\n'.join(out)
+    
 
 class TConfig(TConfigSection):
     """A class representing configuration objects.
@@ -158,6 +144,7 @@ class TConfig(TConfigSection):
                 section.__class__.__original_name__ = s
 
             setattr(self,s,section)
+
 
 class ReadOnlyTConfig(TConfigSection):
     """Make a TConfigSection object with ALL ReadOnly traits.
@@ -254,7 +241,7 @@ if __name__ == '__main__':
     print "The following is an auto-generated dump of the rc object."
     print "Note that this remains valid input for an rc file:"
     print
-    tconfPrint(mpl.rc)
+    print mpl.rc
 
     # A few exception-raising tests, turn this later into a doctest that
     # actually runs them, once we settle the exception hirerarchy and format
