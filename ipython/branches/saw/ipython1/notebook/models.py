@@ -43,8 +43,7 @@ def XMLUser(u, justme=False):
 def XMLNodeBase(node):
     """The base of an XML representation of a Node"""
     s  = "<comment>%s</comment>\n"%(node.comment)
-    s += "<userID>%i</userID>\n"%node.user.userID
-    for idname in ['nodeID', 'parentID', 'nextID', 'previousID']:
+    for idname in ['nodeID', 'parentID', 'nextID', 'previousID', 'userID']:
         s += "<%s>%i</%s>"%(idname, getattr(node, idname), idname)
     s += "<dateCreated>%s</dateCreated>\n"%(node.dateCreated.strftime(tformat))
     s += "<dateModified>%s</dateModified>\n"%(node.dateModified.strftime(tformat))
@@ -327,12 +326,12 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
                 )
             ),
         'head': relation(Node,
-            primaryjoin=nodesTable.c.nodeID==sectionsTable.c.headID,
-            foreign_keys=[sectionsTable.c.headID],
+            primaryjoin=sectionsTable.c.headID==nodesTable.c.nodeID,
+            # remote_side=[nodesTable.c.nodeID],
             uselist=False),
         'tail': relation(Node,
             primaryjoin=nodesTable.c.nodeID==sectionsTable.c.tailID,
-            foreign_keys=[sectionsTable.c.tailID],
+            # remote_side=[nodesTable.c.nodeID],
             uselist=False),
     }
 )

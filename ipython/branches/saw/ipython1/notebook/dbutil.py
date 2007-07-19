@@ -103,6 +103,7 @@ def createRootSection(session, user, title):
     root = models.Section()
     root.user = user
     root.title = title
+    user.touchModified()
     session.save(root)
     session.flush()
     return root
@@ -114,11 +115,16 @@ def addChild(session, child, parent, index=None):
     if parent.children: # already have some children
         if index is None or index == len(parent.children):
             parent.tail.insertAfter(child)
+            parent.tail = child
         else:
             parent[index].insertBefore(child)
+            if index == 0:
+                parent.head = child
     else: # this is parent's first child
         child.parent = parent
         child.user = parent.user
+        parent.head = parent.tail = child
+    parent.touchModified()
     session.save(child)
     session.flush()
 
