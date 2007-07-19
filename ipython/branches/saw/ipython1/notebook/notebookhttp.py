@@ -169,66 +169,8 @@ components.registerAdapter(HTTPServerFactoryFromNotebookController,
 
 
 
-#-------------------------------------------------------------------------------
-# JSON utilities
-#-------------------------------------------------------------------------------
-
-class IJSONDict(zi.Interface):
-    pass
-
-def jsonStarter(obj):
-    d = {}
-    d['dateCreated'] = obj.dateCreated.strftime(tformat)
-    d['dateModified'] = obj.dateModified.strftime(tformat)
-    return d
-
-def jsonifyUser(u):
-    d = jsonStarter(u)
-    d['userID'] = u.userID
-    d['username'] = u.username
-    d['email'] = u.email
-    d['notebooks'] = [nb.title for nb in u.notebooks]
-    return d
-
-def jsonifyNotebook(nb):
-    d = jsonStarter(nb)
-    d['username'] = nb.user.username
-    d['email'] = nb.user.email
-    d['root'] = IJSONDict(nb.root)
-    return d
-
-def jsonCell(c):
-    d = jsonStarter(c)
-    for key in ['cellID', 'parentID', 'nextID', 'previousID', 'comment']:
-        d[key] = getattr(c, key)
-    return d
-
-def jsonifyMultiCell(mc):
-    d = jsonCell(mc)
-    d['title'] = mc.title
-    d['children'] = [mc[i].cellID for i in range(len(mc.children))]
-    return d
-
-def jsonifyTextCell(tc):
-    d = jsonCell(tc)
-    d['textData'] = tc.textData
-    return d
-
-def jsonifyInputCell(ic):
-    d = jsonCell(ic)
-    d['input'] = ic.input
-    d['output'] = ic.output
-    return d
-
 def jsonifyFailure(f):
     d = {}
     d['message'] = f.value.message
     d['traceback'] = f.getTraceback()
     return d
-    
-components.registerAdapter(jsonifyUser, models.IUser, IJSONDict)
-components.registerAdapter(jsonifyMultiCell, models.IMultiCell, IJSONDict)
-components.registerAdapter(jsonifyTextCell, models.ITextCell, IJSONDict)
-components.registerAdapter(jsonifyInputCell, models.IInputCell, IJSONDict)
-
-

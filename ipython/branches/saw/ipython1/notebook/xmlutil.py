@@ -17,71 +17,15 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import zope.interface as zi
-import StringIO, datetime, xml.etree.ElementTree as ET
+import StringIO, datetime
+try:
+    import xml.etree.ElementTree as ET
+except ImportError:
+    import elementree.ElementTree as ET
 
 from twisted.python import components
 
 from ipython1.notebook import models, dbutil
-
-#-------------------------------------------------------------------------------
-# XML representations of notebooks
-#-------------------------------------------------------------------------------
-def indent(s, n):
-    """indent a multi-line string `s`, `n` spaces"""
-    addline = 0
-    if s[-1] == '\n':
-        s = s[:-1]
-        addline=1
-    s = " "*n+s.replace("\n", "\n"+" "*n)
-    return s +'\n'*addline
-
-tformat = "%Y-%m-%d %H:%M:%S"
-class IXML(zi.Interface):
-    """The class for adapting object to an XML string"""
-    pass
-
-def XMLNotebook(nb):
-    """Return an XML representation of a notebook"""
-    s  = "<dateCreated>%s</dateCreated>\n"%(nb.dateCreated.strftime(tformat))
-    s += "<dateModified>%s</dateModified>\n"%(nb.dateModified.strftime(tformat))
-    s += "<username>%s</username>\n"%(nb.user.username)
-    s += "<email>%s</email>\n"%(nb.user.email)
-    s += indent(IXML(nb.root), 2)
-    return "<Notebook>\n"+indent(s,2)+"</Notebook>\n"
-    s
-
-def XMLCellBase(cell):
-    """The base of an XML representation of a cell"""
-    s  = "<comment>%s</comment>\n"%(cell.comment)
-    s += "<dateCreated>%s</dateCreated>\n"%(cell.dateCreated.strftime(tformat))
-    s += "<dateModified>%s</dateModified>\n"%(cell.dateModified.strftime(tformat))
-    return s
-
-def XMLMultiCell(mc):
-    """Return an XML representation of a MultiCell"""
-    s = "<title>%s</title>\n"%(mc.title)
-    s += XMLCellBase(mc)
-    for i in range(len(mc.children)):
-        s += indent(IXML(mc[i]), 2)
-    return "<MultiCell>\n"+indent(s,2)+"</MultiCell>\n"
-
-def XMLTextCell(cell):
-    s  = XMLCellBase(cell)
-    s += "<textData>%s</textData>\n"%(cell.textData)
-    return "<TextCell>\n"+indent(s,2)+"</TextCell>\n"
-
-def XMLInputCell(cell):
-    s  = XMLCellBase(cell)
-    s += "<input>%s</input>\n"%(cell.input)
-    s += "<output>%s</output>\n"%(cell.output)
-    return "<InputCell>\n"+indent(s,2)+"</InputCell>\n"
-    
-
-
-# components.registerAdapter(XMLNotebook, models.INotebook, IXML)
-# components.registerAdapter(XMLMultiCell, models.IMultiCell, IXML)
-# components.registerAdapter(XMLTextCell, models.ITextCell, IXML)
-# components.registerAdapter(XMLInputCell, models.IInputCell, IXML)
 
 #-------------------------------------------------------------------------------
 # Notebook object from XML strings
@@ -110,13 +54,13 @@ def NotebookFromElement(session, nbe):
     nb.user = user
     nb.dateCreated = dc
     nb.dateModified = dm
-    nb.root = anyCellFromElement(session, nbe.find('MultiCell'))
+    nb.root = anyNodeFromElement(session, nbe.find('Section'))
     session.save(nb)
     session.flush()
     return nb
 
-def anyCellFromElement(session, element):
-    if element.tag == 'MultiCell':
+def anyNodeFromElement(session, element):
+    if element.tag == 'Section':
         cell = multiCellFromElement(session, element)
     elif element.tag == 'TextCell':
         cell = textCellFromElement(element)
@@ -126,38 +70,33 @@ def anyCellFromElement(session, element):
     session.flush()
     return cell
 
-def initCfromE(element):
-    dc = datetime.datetime.strptime(element.find('dateCreated').text, tformat)
-    dm = datetime.datetime.strptime(element.find('dateModified').text, tformat)
-    comment = element.find('comment').text
-    return (dc,dm,comment)
+def initFromE(Klass, element):
+    node = Klass()
+    node.dateCreated = datetime.datetime.strptime(element.find('dateCreated').text, tformat)
+    node.dateModified = datetime.datetime.strptime(element.find('dateModified').text, tformat)
+    node.comment = element.find('comment').text
+    return node
 
 def textCellFromElement(element):
-    cell = models.TextCell()
-    cell.dateCreated, cell.dateModified, cell.comment = initCfromE(element)
+    cell = initFromE(models.TextCell, element)
     cell.textData = element.find('textData').text
     return cell
 
 def inputCellFromElement(element):
-    cell = models.InputCell()
-    cell.dateCreated, cell.dateModified, cell.comment = initCfromE(element)
+    cell = initFromE(models.InputCell, element)
     cell.input = element.find('input').text
     cell.output = element.find('output').text
     return cell
 
-def multiCellFromElement(session, element):
-    cell = models.MultiCell()
-    cell.dateCreated, cell.dateModified, cell.comment = initCfromE(element)
-    cell.title = element.find('title').text
-    kids = element.findall('MultiCell')+element.findall('InputCell')+\
+def SectionFromElement(session, element):
+    sec = initFromE(models.Section, element)
+    sec.title = element.find('title').text
+    kids = element.findall('Section')+element.findall('InputCell')+\
                     element.findall('TextCell')
     for e in kids:
-        c = anyCellFromElement(session, e)
-        dbutil.addChild(session, c, cell)
-    return cell
-    
-
-
+        c = anyNodeFromElement(session, e)
+        dbutil.addChild(session, c, sec)
+    return sec
 
 
 

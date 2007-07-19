@@ -2,6 +2,105 @@ from sqlalchemy import *
 import datetime
 # Setup the global unbound metadata.
 
+#-------------------------------------------------------------------------------
+# XML representations of notebook objects
+#-------------------------------------------------------------------------------
+
+def indent(s, n):
+    """indent a multi-line string `s`, `n` spaces"""
+    addline = 0
+    if s[-1] == '\n':
+        s = s[:-1]
+        addline=1
+    s = " "*n+s.replace("\n", "\n"+" "*n)
+    return s +'\n'*addline
+
+tformat = "%Y-%m-%d %H:%M:%S"
+
+def XMLUser(u):
+    s  = "<userID>%i</userID>\n"%u.userID
+    s += "<username>%s</username>\n"%u.username
+    s += "<email>%s</email>\n"%u.email
+    return "<User>\n%s</user>\n"%indent(s,2)
+    
+def XMLNodeBase(node):
+    """The base of an XML representation of a Node"""
+    s  = "<nodeID>%i</nodeID>\n"%node.nodeID
+    s += "<userID>%i</userID>\n"%node.user.userID
+    s += "<parentID>%i</parentID>\n"%node.parentID
+    s += "<previousID>%i</previousID>\n"%node.previousID
+    s += "<nextID>%i</nextID>\n"%node.nextID
+    s += "<comment>%s</comment>\n"%(node.comment)
+    s += "<dateCreated>%s</dateCreated>\n"%(node.dateCreated.strftime(tformat))
+    s += "<dateModified>%s</dateModified>\n"%(node.dateModified.strftime(tformat))
+    return s
+
+def XMLSection(sec):
+    """Return an XML representation of a Section"""
+    s  = XMLNodeBase(sec)
+    s += "<title>%s</title>\n"%(sec.title)
+    for i in range(len(sec.children)):
+        s += indent(sec[i].toxml(), 2)
+    return "<Section>\n%s</Section>\n"%indent(s,2)
+
+def XMLTextCell(cell):
+    s  = XMLNodeBase(cell)
+    s += "<textData>%s</textData>\n"%(cell.textData)
+    return "<TextCell>\n%s</TextCell>\n"%indent(s,2)
+
+def XMLInputCell(cell):
+    s  = XMLNodeBase(cell)
+    s += "<input>%s</input>\n"%(cell.input)
+    s += "<output>%s</output>\n"%(cell.output)
+    return "<InputCell>\n%s</InputCell>\n"%indent(s,2)
+    
+
+#-------------------------------------------------------------------------------
+# JSON Representations of Notebook Objects
+#-------------------------------------------------------------------------------
+
+def jsonStarter(obj):
+    d = {}
+    d['dateCreated'] = obj.dateCreated.strftime(tformat)
+    d['dateModified'] = obj.dateModified.strftime(tformat)
+    return d
+
+def jsonifyUser(u):
+    d = jsonStarter(u)
+    d['userID'] = u.userID
+    d['username'] = u.username
+    d['email'] = u.email
+    d['notebooks'] = [nb.title for nb in u.notebooks]
+    return simplejson.dumps(d)
+
+def jsonNode(n):
+    d = jsonStarter(n)
+    for key in ['cellID', 'parentID', 'nextID', 'previousID', 'comment']:
+        d[key] = getattr(n, key)
+    return d
+
+def jsonifySection(sec):
+    d = jsonNode(sec)
+    d['title'] = sec.title
+    d['children'] = [sec[i].cellID for i in range(len(sec.children))]
+    return simplejson.dumps(d)
+
+def jsonifyTextCell(tc):
+    d = jsonNode(tc)
+    d['textData'] = tc.textData
+    return simplejson.dumps(d)
+
+def jsonifyInputCell(ic):
+    d = jsonNode(ic)
+    d['input'] = ic.input
+    d['output'] = ic.output
+    return simplejson.dumps(d)
+
+
+#-------------------------------------------------------------------------------
+# SQLAlchemy code
+#-------------------------------------------------------------------------------
+
 metadata = MetaData()
 
 # Tables
@@ -20,11 +119,14 @@ nodesTable = Table('nodes', metadata,
 
 sectionsTable = Table('sections', metadata,
     Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
-    # Column('headID', Integer, ForeignKey('nodes.nodeID')),
-    # Column('tailID', Integer, ForeignKey('nodes.nodeID')),
+    Column('headID', Integer, ForeignKey('nodes.nodeID')),
+    Column('tailID', Integer, ForeignKey('nodes.nodeID')),
     Column('title',String())
 )
 
+# cellsTable = Table('cells', metadata, 
+#     Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
+# )
 inputCellsTable = Table('inputCells', metadata,
     Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
     Column('input', String()),
@@ -85,18 +187,34 @@ class Section(Node):
         super(Section, self).__init__(comment, parent)
         self.title = title
     
+    def _getFirst(self):
+        c = self.children[0]
+        while c.previous is not None:
+            c = c.previous
+        return c
+    
+    def _getLast(self):
+        c = self.children[-1]
+        while c.next is not None:
+            c = c.next
+        return c
+    
     def __getitem__(self, index):
         if index >= 0:
-            c = self.head
+            c = self._getFirst()
             for i in range(index):
                 c = c.next
             return c
         else:
-            c = self.tail
+            c = self._getLast()
             for i in range(-1-index):
                 c = c.previous
             return c
     
+    toxml = XMLSection
+    
+    jsonify = jsonifySection
+
 class Cell(Node):
     pass
 
@@ -106,18 +224,30 @@ class InputCell(Cell):
         super(InputCell, self).__init__(comment, parent)
         self.input = input
         self.output = output
+    
+    toxml = XMLInputCell
+    
+    jsonify = jsonifyInputCell
 
 class TextCell(Cell):
     
     def __init__(self, textData='', comment='', parent=None):
         super(TextCell, self).__init__(comment, parent)
         self.textData = textData
+    
+    toxml = XMLTextCell
+    
+    jsonify = jsonifyTextCell
 
 class User(Timestamper):
     def __init__(self, username='', email=''):
         super(User, self).__init__()
         self.username = username
         self.email = email
+    
+    toxml = XMLUser
+    
+    jsonify = jsonifyUser
 
 nodeJoin = polymorphic_union(
     {
@@ -157,9 +287,11 @@ cellMapper = mapper(Cell, nodesTable,
     polymorphic_identity='cell',
     inherits=nodeMapper
 )
+
 inputCellMapper = mapper(InputCell, inputCellsTable, inherits=cellMapper, polymorphic_identity='inputCell')
 textCellMapper = mapper(TextCell, textCellsTable, inherits=cellMapper, polymorphic_identity='textCell')
 sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphic_identity='section',
+    inherit_condition=sectionsTable.c.nodeID==nodesTable.c.nodeID,
     properties={
         'children': relation(
             Node,
@@ -171,21 +303,29 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
                 uselist=False
                 )
             ),
-        # 'head': relation(Node,
-        #     primaryjoin=nodesTable.c.nodeID==sectionsTable.c.headID,
-        #     foreign_keys=[sectionsTable.c.headID],
-        #     uselist=False),
-        # 'tail': relation(Node,
-        #     primaryjoin=nodesTable.c.nodeID==sectionsTable.c.tailID,
-        #     foreign_keys=[sectionsTable.c.tailID],
-        #     uselist=False),
+        'head': relation(Node,
+            primaryjoin=nodesTable.c.nodeID==sectionsTable.c.headID,
+            foreign_keys=[sectionsTable.c.headID],
+            uselist=False),
+        'tail': relation(Node,
+            primaryjoin=nodesTable.c.nodeID==sectionsTable.c.tailID,
+            foreign_keys=[sectionsTable.c.tailID],
+            uselist=False),
     }
 )
 userMapper = mapper(User, usersTable,
     properties={
         'nodes':relation(Node, 
         primaryjoin=usersTable.c.userID==nodesTable.c.userID,
-        cascade="all, delete-orphan", backref='user')
-        
+        cascade="all, delete-orphan", backref='user'),
+        'cells':relation(Cell,
+        primaryjoin=usersTable.c.userID==nodesTable.c.userID,
+        ),
+        'notebooks':relation(Node,
+        primaryjoin=and_(usersTable.c.userID==nodesTable.c.userID,
+            nodesTable.c.parentID==None),
+        )
     }
 )
+
+

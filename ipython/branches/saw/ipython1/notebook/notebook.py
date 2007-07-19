@@ -32,7 +32,7 @@ from ipython1.notebook import models, dbutil
 class INotebookServer(zi.Interface):
     """The IPython Notebook Server Interface"""
     
-    def getUser(user):
+    def getUser(**selectflags):
         """get a user by username or passthrough if already a user"""
     
     def addUser(uname, email):
@@ -41,7 +41,7 @@ class INotebookServer(zi.Interface):
     def dropUser(user):
         """drop a user by username"""
     
-    def getSection(user, title):
+    def getSection(**selectflags):
         """get a section owned by `user` with `title`"""
     
     def addSection(user, title):
@@ -80,6 +80,7 @@ class NotebookServer(object):
             session = sqla.create_session()
         self.session = session
         self.users = session.query(models.User)
+        self.nodes = session.query(models.Node)
         self.sections = session.query(models.Section)
         self.cells = session.query(models.Cell)
     
@@ -136,7 +137,7 @@ class NotebookServer(object):
         """add a child cell to a parent multicell at index, defaulting to end"""
         return dbutil.addChild(self.session, child, parent, index)
     
-    def addCell(self, cell, user, nbtitle, indices=None):
+    def addNode(self, cell, user, nbtitle, indices=None):
         """add a cell to user's section with title `nbtitle`.  Indices
         can be None, int, list of ints.
         If None or int: add to nb.root at end or index.
