@@ -1,3 +1,20 @@
+# encoding: utf-8
+# -*- test-case-name: ipython1.test.test_notebook_models -*-
+"""The main notebook Classes, serialization, and database system
+"""
+__docformat__ = "restructuredtext en"
+#-------------------------------------------------------------------------------
+#       Copyright (C) 2005  Fernando Perez <fperez@colorado.edu>
+#                           Brian E Granger <ellisonbg@gmail.com>
+#                           Benjamin Ragan-Kelley <benjaminrk@gmail.com>
+#
+#  Distributed under the terms of the BSD License.  The full license is in
+#  the file COPYING, distributed as part of this software.
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# Imports
+#-------------------------------------------------------------------------------
 from sqlalchemy import *
 import datetime
 # Setup the global unbound metadata.
@@ -17,7 +34,7 @@ def indent(s, n):
 
 tformat = "%Y-%m-%d %H:%M:%S"
 
-def XMLUser(u):
+def XMLUser(u, justme=False):
     s  = "<userID>%i</userID>\n"%u.userID
     s += "<username>%s</username>\n"%u.username
     s += "<email>%s</email>\n"%u.email
@@ -25,30 +42,34 @@ def XMLUser(u):
     
 def XMLNodeBase(node):
     """The base of an XML representation of a Node"""
-    s  = "<nodeID>%i</nodeID>\n"%node.nodeID
+    s  = "<comment>%s</comment>\n"%(node.comment)
     s += "<userID>%i</userID>\n"%node.user.userID
-    s += "<parentID>%i</parentID>\n"%node.parentID
-    s += "<previousID>%i</previousID>\n"%node.previousID
-    s += "<nextID>%i</nextID>\n"%node.nextID
-    s += "<comment>%s</comment>\n"%(node.comment)
+    for idname in ['nodeID', 'parentID', 'nextID', 'previousID']:
+        s += "<%s>%i</%s>"%(idname, getattr(node, idname), idname)
     s += "<dateCreated>%s</dateCreated>\n"%(node.dateCreated.strftime(tformat))
     s += "<dateModified>%s</dateModified>\n"%(node.dateModified.strftime(tformat))
     return s
 
-def XMLSection(sec):
+def XMLSection(sec, justme=False):
     """Return an XML representation of a Section"""
     s  = XMLNodeBase(sec)
     s += "<title>%s</title>\n"%(sec.title)
-    for i in range(len(sec.children)):
-        s += indent(sec[i].xmlize(), 2)
+    s += "<children>\n"
+    if justme:
+        childstr = ','.join([str(c.nodeID) for c in sec.children])
+        s += indent(childstr,2)
+    else:
+        for i in range(len(sec.children)):
+            s += indent(sec[i].xmlize(justme), 2)
+    s += "</children>\n"
     return "<Section>\n%s</Section>\n"%indent(s,2)
 
-def XMLTextCell(cell):
+def XMLTextCell(cell, justme=False):
     s  = XMLNodeBase(cell)
     s += "<textData>%s</textData>\n"%(cell.textData)
     return "<TextCell>\n%s</TextCell>\n"%indent(s,2)
 
-def XMLInputCell(cell):
+def XMLInputCell(cell, justme=False):
     s  = XMLNodeBase(cell)
     s += "<input>%s</input>\n"%(cell.input)
     s += "<output>%s</output>\n"%(cell.output)
@@ -65,35 +86,48 @@ def jsonStarter(obj):
     d['dateModified'] = obj.dateModified.strftime(tformat)
     return d
 
-def jsonifyUser(u):
+def jsonifyUser(u, keepdict=False, justme=False):
     d = jsonStarter(u)
     d['userID'] = u.userID
     d['username'] = u.username
     d['email'] = u.email
     d['notebooks'] = [nb.title for nb in u.notebooks]
+    if keepdict:
+        return d
     return simplejson.dumps(d)
 
-def jsonNode(n):
+def jsonNode(n, keepdict=False, justme=False):
     d = jsonStarter(n)
     for key in ['cellID', 'parentID', 'nextID', 'previousID', 'comment']:
         d[key] = getattr(n, key)
-    return d
+    if keepdict:
+        return d
+    return simplejson.dumps(d)
 
-def jsonifySection(sec):
-    d = jsonNode(sec)
+def jsonifySection(sec, keepdict=False, justme=False):
+    d = jsonNode(sec,True)
     d['title'] = sec.title
-    d['children'] = [sec[i].cellID for i in range(len(sec.children))]
+    if justme:
+        d['children'] = [sec[i].cellID for i in range(len(sec.children))]
+    else:
+        d['children'] = [sec[i].jsonify(True,True)]
+    if keepdict:
+        return d
     return simplejson.dumps(d)
 
-def jsonifyTextCell(tc):
-    d = jsonNode(tc)
+def jsonifyTextCell(tc, keepdict=False, justme=False):
+    d = jsonNode(tc,True)
     d['textData'] = tc.textData
+    if keepdict:
+        return d
     return simplejson.dumps(d)
 
-def jsonifyInputCell(ic):
-    d = jsonNode(ic)
+def jsonifyInputCell(ic, keepdict=False, justme=False):
+    d = jsonNode(ic,True)
     d['input'] = ic.input
     d['output'] = ic.output
+    if keepdict:
+        return d
     return simplejson.dumps(d)
 
 

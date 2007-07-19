@@ -122,8 +122,8 @@ def addChild(session, child, parent, index=None):
     session.save(child)
     session.flush()
 
-def getDescendentCells(section):
-    """get all descendent Cells of a Section into a flat list."""
+def getDescendents(section):
+    """get all descendents of a Section into a flat list of Nodes."""
     kids = []
     secs = [section]
     while secs:
@@ -131,8 +131,7 @@ def getDescendentCells(section):
         for kid in sec.children:
             if isinstance(kid, Section):
                 secs.append(kid)
-            else:
-                kids.append(kid)
+            kids.append(kid)
     return kids
 
 
