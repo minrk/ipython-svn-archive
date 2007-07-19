@@ -40,7 +40,7 @@ def XMLSection(sec):
     s  = XMLNodeBase(sec)
     s += "<title>%s</title>\n"%(sec.title)
     for i in range(len(sec.children)):
-        s += indent(sec[i].toxml(), 2)
+        s += indent(sec[i].xmlize(), 2)
     return "<Section>\n%s</Section>\n"%indent(s,2)
 
 def XMLTextCell(cell):
@@ -98,7 +98,7 @@ def jsonifyInputCell(ic):
 
 
 #-------------------------------------------------------------------------------
-# SQLAlchemy code
+# SQLAlchemy Tables
 #-------------------------------------------------------------------------------
 
 metadata = MetaData()
@@ -124,9 +124,6 @@ sectionsTable = Table('sections', metadata,
     Column('title',String())
 )
 
-# cellsTable = Table('cells', metadata, 
-#     Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
-# )
 inputCellsTable = Table('inputCells', metadata,
     Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
     Column('input', String()),
@@ -140,13 +137,16 @@ textCellsTable = Table('textCells', metadata,
 
 usersTable = Table('users', metadata,
     Column('userID', Integer, primary_key=True),
-    Column('username', String(64)),
+    Column('username', String(64), unique=True),
     Column('email', String(64)),
     Column('dateCreated', DateTime),
     Column('dateModified', DateTime)
 )
 
-# Mappers
+#-------------------------------------------------------------------------------
+# SQLAlchemy Mappers
+#-------------------------------------------------------------------------------
+
 class Created(object):
     def __init__(self):
         self.dateCreated = datetime.datetime.now()
@@ -187,31 +187,19 @@ class Section(Node):
         super(Section, self).__init__(comment, parent)
         self.title = title
     
-    def _getFirst(self):
-        c = self.children[0]
-        while c.previous is not None:
-            c = c.previous
-        return c
-    
-    def _getLast(self):
-        c = self.children[-1]
-        while c.next is not None:
-            c = c.next
-        return c
-    
     def __getitem__(self, index):
         if index >= 0:
-            c = self._getFirst()
+            c = self.head
             for i in range(index):
                 c = c.next
             return c
         else:
-            c = self._getLast()
+            c = self.tail
             for i in range(-1-index):
                 c = c.previous
             return c
     
-    toxml = XMLSection
+    xmlize = XMLSection
     
     jsonify = jsonifySection
 
@@ -225,7 +213,7 @@ class InputCell(Cell):
         self.input = input
         self.output = output
     
-    toxml = XMLInputCell
+    xmlize = XMLInputCell
     
     jsonify = jsonifyInputCell
 
@@ -235,7 +223,7 @@ class TextCell(Cell):
         super(TextCell, self).__init__(comment, parent)
         self.textData = textData
     
-    toxml = XMLTextCell
+    xmlize = XMLTextCell
     
     jsonify = jsonifyTextCell
 
@@ -245,7 +233,7 @@ class User(Timestamper):
         self.username = username
         self.email = email
     
-    toxml = XMLUser
+    xmlize = XMLUser
     
     jsonify = jsonifyUser
 
@@ -290,6 +278,7 @@ cellMapper = mapper(Cell, nodesTable,
 
 inputCellMapper = mapper(InputCell, inputCellsTable, inherits=cellMapper, polymorphic_identity='inputCell')
 textCellMapper = mapper(TextCell, textCellsTable, inherits=cellMapper, polymorphic_identity='textCell')
+
 sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphic_identity='section',
     inherit_condition=sectionsTable.c.nodeID==nodesTable.c.nodeID,
     properties={
@@ -313,6 +302,7 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
             uselist=False),
     }
 )
+
 userMapper = mapper(User, usersTable,
     properties={
         'nodes':relation(Node, 
@@ -327,5 +317,3 @@ userMapper = mapper(User, usersTable,
         )
     }
 )
-
-

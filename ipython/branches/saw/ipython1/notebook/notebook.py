@@ -19,10 +19,8 @@ __docformat__ = "restructuredtext en"
 import zope.interface as zi
 import sqlalchemy as sqla
 
-from twisted.python import components
-
-from ipython1.kernel.error import DBError, NotFoundError
-from ipython1.notebook import models, dbutil
+from ipython1.kernel.error import NotFoundError
+from ipython1.notebook import models, dbutil, xmlutil
 
 
 #-------------------------------------------------------------------------------
@@ -32,43 +30,30 @@ from ipython1.notebook import models, dbutil
 class INotebookServer(zi.Interface):
     """The IPython Notebook Server Interface"""
     
-    def getUser(**selectflags):
-        """get a user by username or passthrough if already a user"""
-    
     def addUser(uname, email):
         """add a user with `uname` and `email`"""
     
-    def dropUser(user):
-        """drop a user by username"""
+    def getUser(**selectflags):
+        """get a User by flags passed to selectone_by"""
     
-    def getSection(**selectflags):
-        """get a section owned by `user` with `title`"""
+    def dropUser(**selectflags):
+        """Drop a User by flags passed to selectone_by"""
     
-    def addSection(user, title):
-        """add a section owned by `user` with `title`"""
+    def addNode(node, parent, indices=None):
+        """add a Node to """
     
-    def dropSection(user, title):
-        """drop a section owned by `user` with `title`"""
+    def getNode(**selectflags):
+        """get a Node by flags passed to selectone_by"""
+    
+    def dropNode(**selectflags):
+        """Drop a Node by flags passed to selectone_by"""
+    
+    def addRootSection(user, title):
+        """create a root(parentless) Section for `user` with `title`"""
     
     def loadSectionFromXML(xmlstr):
         """load a section into the db from an xml file"""
     
-    def getCell(**selectflags):
-        """Get a Cell by flags.  This is a wrapper for selectone_by."""
-    
-    def addCell(cell, user, nbtitle, index=None):
-        """add a cell to user's section with title `nbtitle`.  Indices
-        can be None, int, list of ints.
-        If None or int: add to nb.root at end or index.
-        If list of ints: cascading add - add to nb.root[l[0]][l[1]]...
-            at index indices[-1].
-            each cell on the walk must be a MultiCell.
-        """
-    
-    def dropCell(**selectflags):
-        """Drop a Cell found by flags."""
-
-
 
 class NotebookServer(object):
     """The basic IPython Notebook Server object"""
@@ -84,60 +69,33 @@ class NotebookServer(object):
         self.sections = session.query(models.Section)
         self.cells = session.query(models.Cell)
     
-    def getUser(self, user):
-        if isinstance(user, models.User):
-            return user
-        else:
-            try:
-                return self.users.selectone_by(username=user)
-            except:
-                raise NotFoundError("No Such User: %s"%user)
+    def getUser(self, **selectflags):
+        try:
+            return self.users.selectone_by(**selectflags)
+        except:
+            raise NotFoundError("No Such User: %s"%selectflags)
     
     def addUser(self, uname, email):
-        existlist = self.users.select_by(username=uname)
-        assert not existlist, "Username '%s' already in use"%uname
-        u = dbutil.createUser(self.session, uname, email)
-        return u
+        try:
+            return dbutil.createUser(self.session, uname, email)
+        except:
+            raise AssertionError("Username %s is taken!"%uname)
         
-    def dropUser(self, user):
-        u = self.getUser(user)
+    def dropUser(self, **selectflags):
+        u = self.getUser(**selectflags)
         dbutil.dropObject(self.session, u)
     
-    def getSection(self, user, title):
-        u = self.getUser(user)
+    def getNode(self, **selectflags):
         try:
-            return self.sections.selectone_by(userID=u.userID, title=title)
+            return self.nodes.selectone_by(**selectflags)
         except:
-            raise NotFoundError("No Such Section: %s"%title)
+            raise NotFoundError("No Such Node: %s"%selectflags)
     
-    def addSection(self, user, title):
-        u = self.getUser(user)
-        existlist = self.sections.select_by(username=u.username, title=title)
-        assert not existlist, "User '%s' already hase section '%s'"%(
-            u.username, title)
-        nb = dbutil.createSection(self.session, u, title)
-        return nb
+    def dropNode(self, **selectflags):
+        n = self.getNode(**selectflags)
+        dbutil.dropObject(self.session, n)
     
-    def dropSection(self, user, title):
-        nb = self.getSection(user, title)
-        dbutil.dropObject(self.session, nb)
-    
-    def loadSectionFromXML(self, xmlstr):
-        nb = xmlutil.SectionFromXML(self.session, xmlstr)
-        return nb
-    
-    def getCell(self, **selectflags):
-        """Get a Cell by flags.  This is a wrapper for selectone_by."""
-        try:
-            return self.cells.selectone_by(**selectflags)
-        except:
-            raise NotFoundError("No Cell Found")
-    
-    def addChild(self, child, parent, index=None):
-        """add a child cell to a parent multicell at index, defaulting to end"""
-        return dbutil.addChild(self.session, child, parent, index)
-    
-    def addNode(self, cell, user, nbtitle, indices=None):
+    def addNode(self, node, parent, indices=None):
         """add a cell to user's section with title `nbtitle`.  Indices
         can be None, int, list of ints.
         If None or int: add to nb.root at end or index.
@@ -145,21 +103,20 @@ class NotebookServer(object):
             at index indices[-1].
             each cell on the walk must be a MultiCell.
         """
-        nb = self.getSection(user, nbtitle)
-        
         if indices is None or isinstance(indices,int):
-            return self.addChild(cell, nb.root)
+            return dbutil.addChild(self.session, node, parent, indices)
         else:
-            mc = nb.root
-            # walk down to correct MultiCell
             for i in indices[:-1]:
-                mc = mc[i]
-            return self.addChild(cell, mc, indices[-1])
+                parent = parent[i]
+            return dbutil.addChild(self.session, node, parent, indices[-1])
     
-    def dropCell(self, **selectflags):
-        """Get a Cell by flags.  This is a wrapper for selectone_by."""
-        c = self.getCell(**selectflags)
-        dbutil.dropObject(self.session, c)
+    def addRootSection(self, user, title):
+        root = dbutil.createRootSection(self.session, user, title)
+        return root
+    
+    def loadSectionFromXML(self, xmlstr):
+        sec = xmlutil.SectionFromXML(self.session, xmlstr)
+        return sec
     
     
 

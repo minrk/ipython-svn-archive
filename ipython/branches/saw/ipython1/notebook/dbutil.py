@@ -96,32 +96,43 @@ def dropObject(session, obj):
     session.delete(obj)
     session.flush()
     
-def createSection(session, user, title):
-    """create a notebook for `user` with root node using `title`"""
-    nb = models.Section()
-    nb.user = user
-    session.save(nb)
+def createRootSection(session, user, title):
+    """create a root (parentless) Section for `user` with `title
+    These objects are the basis for Notebooks.
+    """
+    root = models.Section()
+    root.user = user
+    root.title = title
+    session.save(root)
     session.flush()
-    return nb
+    return root
 
-def addChild(session, child, mc, index=None):
-    """Add `child` to MultiCell `mc` at position `index`, 
+def addChild(session, child, parent, index=None):
+    """Add `child` to Section `parent` at position `index`, 
     defaulting to the end."""
-    # if isinstance(child, models.Cell):
-    #     children = node.childrenCells
-    # elif isinstance(child, models.Node):
-    #     children = node.childrenNodes
-    # else:
-    #     raise TypeError("`child` must be a node or cell")
-    children = mc.children
-    if children: # already have some children
-        if index is None or index == len(children):
-            children[-1].insertAfter(child)
+    
+    if parent.children: # already have some children
+        if index is None or index == len(parent.children):
+            parent.tail.insertAfter(child)
         else:
-            children[index].insertBefore(child)
-    else:
-        child.parent = mc
+            parent[index].insertBefore(child)
+    else: # this is parent's first child
+        child.parent = parent
+        child.user = parent.user
     session.save(child)
     session.flush()
+
+def getDescendentCells(section):
+    """get all descendent Cells of a Section into a flat list."""
+    kids = []
+    secs = [section]
+    while secs:
+        sec = secs.pop()
+        for kid in sec.children:
+            if isinstance(kid, Section):
+                secs.append(kid)
+            else:
+                kids.append(kid)
+    return kids
 
 

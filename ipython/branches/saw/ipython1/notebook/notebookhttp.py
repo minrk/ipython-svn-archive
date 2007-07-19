@@ -29,7 +29,7 @@ from ipython1.external.twisted.web2 import stream
 from ipython1.external.twisted.web2 import http_headers
 
 from ipython1.notebook.notebook import INotebookController
-from ipython1.notebook.xmlutil import tformat
+from ipython1.notebook.models import tformat
 
 #-------------------------------------------------------------------------------
 # The Controller side of things
@@ -50,18 +50,21 @@ class HTTPNotebookServer(static.File):
         self.child_adduser = HTTPNotebookAddUser(self.nbs)
         self.child_getuser = HTTPNotebookGetUser(self.nbs)
         self.child_edituser = HTTPNotebookEditUser(self.nbs)
-        self.child_addbook = HTTPNotebookAddBook(self.nbs)
-        self.child_getbook = HTTPNotebookGetBook(self.nbs)
-        self.child_editbook = HTTPNotebookEditBook(self.nbs)
-        self.child_addcell = HTTPNotebookAddCell(self.nbs)
-        self.child_getcell = HTTPNotebookGetCell(self.nbs)
-        self.child_editcell = HTTPNotebookEditCell(self.nbs)
+        self.child_addnode = HTTPNotebookAddBook(self.nbs)
+        self.child_getnode = HTTPNotebookGetBook(self.nbs)
+        self.child_editnode = HTTPNotebookEditBook(self.nbs)
         
         self.putChild('notebook.js', static.File(os.path.dirname(__file__)+'notebook.js', defaultType="text/javascript"))
     
 
 components.registerAdapter(HTTPNotebookServer,
         INotebookServer, IHTTPNotebookServer)
+
+def jsonifyFailure(f):
+    d = {}
+    d['message'] = f.value.message
+    d['traceback'] = f.getTraceback()
+    return d
 
 class HTTPNotebookBaseMethod(resource.Resource):
     
@@ -89,7 +92,10 @@ headers: %r
         return reply
     
     def packageSuccess(self, result):
-        data = simplejson.dumps(IJSonDict(result))
+        try:
+            data = result.jsonify()
+        except AttributeError:
+            data = simplejson.dumps(result)
         response = http.Response(200, stream=stream.MemoryStream(data))
         response.headers.setHeader('content-type', http_headers.MimeType('text', 'plain'))
         return response
@@ -107,49 +113,108 @@ class HTTPNotebookGetUser(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
         try:
+            flags = {}
+            for k,v in request.args.iteritems():
+                if k in ['userID', 'username', 'email']:
+                    flags[k] = v[0]
+            d = defer.execute(self.nbs.getUser, **flags)
+            d = defer.execute(self.nbs.getUser, username=uname)
+        except Exception, e:
+            return self.packageFailure(failure.Failure(e))
+        else:
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
+    
+
+class HTTPNotebookAddUser(HTTPNotebookBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
             uname = request.args['username'][0]
-            user = self.nbs.getUser(uname)
+            email = request.args['email'][0]
+            d = defer.execute(self.nbs.addUser, uname, email)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
+    
+
+class HTTPNotebookEditUser(HTTPNotebookBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            uid = request.args['userID'][0]
+            if request.args.get('drop'):
+                self.nbs.dropUser(userID=uid)
+            else:
+                uname = request.args['username'][0]
+                email = request.args['email'][0]
+                user = self.nbs.getUser(userID=uid)
+                user.username = uname
+                user.email = email
+                self.nbs.session.save(user)
+                self.nbs.session.flush()
+        except Exception, e:
+            return self.packageFailure(failure.Failure(e))
+        else:
+            d = defer.succeed(None)
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
+
+class HTTPNotebookGetNode(HTTPNotebookBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            flags = {}
+            for k,v in request.args.iteritems():
+                if k in ['nodeID','parentID','userID','textData', 'input',
+                        'output',]
+                    flags[k] = v[0]
+            d = defer.execute(self.nbs.getNode, **flags)
+        except Exception, e:
+            return self.packageFailure(failure.Failure(e))
+        else:
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
+    
+
+class HTTPNotebookAddNode(HTTPNotebookBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            # resolve parent
             
-            d = self.nbs.run(task)
+            # create node
+            
+            # d = defer.execute( nbs.addChild, node, parent, indices)
+            
+        except Exception, e:
+            return self.packageFailure(failure.Failure(e))
+        else:
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
     
 
-class HTTPNotebookBook(HTTPNotebookBaseMethod):
-    
-    def __init__(self, nbs):
-        super(HTTPNotebookBook, self).__init__(nbs)
-        self.child_get = HTTPNotebookBookGet(self.nbs)
-        self.child_put = HTTPNotebookBookPut(self.nbs)
+class HTTPNotebookEditNode(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
         try:
-            taskID = int(request.args['taskID'][0])
+            uid = request.args['userID'][0]
+            if request.args.get('drop'):
+                self.nbs.dropUser(userID=uid)
+            else:
+                uname = request.args['username'][0]
+                email = request.args['email'][0]
+                user = self.nbs.getUser(userID=uid)
+                user.username = uname
+                user.email = email
+                self.nbs.session.save(user)
+                self.nbs.session.flush()
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
-            d = self.nbs.abort(taskID)
-            d.addCallbacks(self.packageSuccess, self.packageFailure)
-            return d
-    
-
-class HTTPNotebookCell(HTTPNotebookBaseMethod):
-    
-    def __init__(self, nbs):
-        super(HTTPNoteCellCell, self).__init__(nbs)
-        self.child_add = HTTPNoteBookCellAdd(self.nbs)
-        self.child_drop = HTTPNoteBookCellDrop(self.nbs)
-    
-    def renderHTTP(self, request):
-        try:
-            taskID = int(request.args['taskID'][0])
-        except Exception, e:
-            return self.packageFailure(failure.Failure(e))
-        else:
-            d = self.nbs.getNotebookResult(taskID)
+            d = defer.succeed(None)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
     
@@ -168,9 +233,3 @@ components.registerAdapter(HTTPServerFactoryFromNotebookController,
             INotebookServer, IHTTPNotebookServerFactory)
 
 
-
-def jsonifyFailure(f):
-    d = {}
-    d['message'] = f.value.message
-    d['traceback'] = f.getTraceback()
-    return d
