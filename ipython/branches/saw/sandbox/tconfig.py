@@ -33,8 +33,12 @@ def get_instance_sections(obj):
 def tsecDump(tconf,depth):
     
     indent = '    '*max(depth-1,0)
-    
-    top_name = tconf.__class__.__name__
+
+    try:
+        top_name = tconf.__class__.__original_name__
+    except AttributeError:
+        top_name = tconf.__class__.__name__
+
     if depth == 0:
         label = '# Dump of %s\n' % top_name
     else:
@@ -118,17 +122,18 @@ class TConfig(TConfigSection):
         for s,v in section_items:
             section = v(config[s])
             if issubclass(v,ReadOnlyTConfig):
-                ro = ReadOnlyTConfig(section)
+                section = ReadOnlyTConfig(section)
                 # XXX - Hack the name back in place.  This should be fixed and
                 # done more cleanly via a proper inheritance hierarchy, but I
                 # kept having problems with that approach due to the fact that
                 # the ReadOnly class needs to create a bunch of ReadOnly traits
                 # out of traits that have already been validated.  So it
-                # fundamentally needs to be a different class
-                ro.__class__.__name__ = s
-                setattr(self,s,ro)
-            else:
-                setattr(self,s,section)
+                # fundamentally needs to be a different class.  The purely
+                # declarartive nature of how I'm using Traits here makes this
+                # type of situation particularly difficult.
+                section.__class__.__original_name__ = s
+
+            setattr(self,s,section)
 
 class ReadOnlyTConfig(TConfigSection):
     def __init__(self,tconf):
