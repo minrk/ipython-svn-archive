@@ -1,25 +1,24 @@
-import enthought.traits.api as traits
+import enthought.traits.api as T
 
 # For interactive testing
 import tconfig; reload(tconfig)
+from tconfig import TConfig, ReadOnlyTConfig
 
-from tconfig import TConfig, ConfigManager, ReadOnlyTConfig
 
+class IPythonconfig(TConfig):
 
-class IpythonConfig(TConfig):
-
-    m = traits.Int
+    m = T.Int
 
     class InitOnly(TConfig, ReadOnlyTConfig):
-        n = traits.Int
-        x = traits.Float
+        n = T.Int
+        x = T.Float
 
     class Protocol(TConfig):
-        ptype = traits.Str
+        ptype = T.Str
 
         class Handler(TConfig):
-            key = traits.Str
+            key = T.Str
 
     class Machine(TConfig):
-        ip = traits.Str
-        port = traits.Int
+        ip = T.Str
+        port = T.Int

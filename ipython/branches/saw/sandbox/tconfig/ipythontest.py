@@ -1,35 +1,12 @@
 # import/reload base modules for interactive testing/development
-import tconfig, mplconfig
-reload(tconfig)
-reload(mplconfig)
+import tctst; reload(tctst)
+from tctst import *
 
-from tconfig import ConfigManager, mkConfigObj
-from ipythonconfig import IpythonConfig
+import ipythonconfig; reload(ipythonconfig)
+from ipythonconfig import IPythonconfig
 
-class App(object):
-    """A trivial 'application' class to be initialized.
-    """
-    def __init__(self,configClass,configFilename):
-        self.rcman = ConfigManager(configClass,configFilename)
-        self.rc = self.rcman.tconf
+# Main
+app = App(IPythonconfig,'tconfig2.conf')
+sconf = ConfigManager(IPythonconfig,'tconfig2.conf')
 
-if __name__ == '__main__':
-
-    import os,sys
-    from sys import exit
-    from pprint import pprint  # dbg
-    
-    app = App(IpythonConfig,'tconfig2.conf')
-    sconf = ConfigManager(AppConfig,'tconfig2.conf')
-    
-    print app.rc
-
-    # A few exception-raising tests, turn this later into a doctest that
-    # actually runs them, once we settle the exception hirerarchy and format
-    if 0:
-        bad_config = dict(n='3',bad=10)
-        tb1 = MyConfig(bad_config)
-
-        bad_config2 = dict(n='3',x='Not a number',s='Python')
-        tb2 = MyConfig(bad_config2)
-
+print app.rc
