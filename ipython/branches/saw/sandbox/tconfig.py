@@ -1,12 +1,25 @@
 """Mix of Traits and ConfigObj.
+
+TODO:
+
+  - Finish the ConfigManager class that holds a reference to BOTH the ConfigObj
+  and the TConfig, and that automatically hooks traits listeners, so that all
+  traits actions on the TConfig get propagated back to the ConfigObj.  This
+  will let us write the config file back to disk from within the app.
+
+  This code already works: the files *do* get written correctly always, but at
+  the price of a full object update at write time.  Hooking up traits listeners
+  would be a bit more elegant, though at this point it isn't too high priority.
+
+  - Automatically construct a view for the TConfig hierarchies, so that we get
+  proper editing with Traits beyond the first level (try mpl.rc.edit_traits()
+  to see the problem).
 """
 
 ############################################################################
 # Stdlib imports
 ############################################################################
 from inspect import isclass
-#from pprint import pprint  # dbg
-
 
 ############################################################################
 # External imports
@@ -28,15 +41,28 @@ def mkConfigObj(filename):
     THESE choices.
     """
     return configobj.ConfigObj(filename,
-                               file_error=True,
+                               create_empty=True,
+                               indent_type='    ',
                                interpolation='Template',
                                unrepr=True)
 
+nullConf = mkConfigObj(None)
+
 def get_scalars(obj):
     """Return scalars for a TConf class object"""
-    
+
     skip = set(['trait_added','trait_modified'])
-    return [k for k in obj.__class_traits__ if k not in skip]
+    sc = [k for k in obj.trait_names() if k not in skip]
+    sc.sort()
+
+    out = []
+    maxi = len(sc)-1
+    for i,t in enumerate(sc):
+        if i<maxi and t+'_' == sc[i+1]:
+            continue
+        else:
+            out.append(t)
+    return out
 
 def get_sections(obj,sectionClass):
     """Return sections for a TConf class object"""
@@ -50,9 +76,9 @@ def partition_instance(obj):
     sections = []
     for k,v in obj.__dict__.iteritems():
         if isinstance(v,TConfigSection):
-            sections.append(v)
+            sections.append((k,v))
         else:
-            scalars.append(k)
+            scalars.append((k,v))
 
     return scalars, sections
 
@@ -83,11 +109,11 @@ class TConfigSection(HasTraits):
 
         scalars, sections = partition_instance(self)
 
-        for s in scalars:
-            v = getattr(self,s)
+        for s,v in scalars:
+            #v = getattr(self,s)
             out.append(indent+('%s = %r' % (s,v)))
 
-        for sec in sections:
+        for sname,sec in sections:
             out.append(sec.__repr__(depth+1))
 
         return '\n'.join(out)
@@ -100,15 +126,17 @@ class TConfig(TConfigSection):
     will be declared by subclasses.  This class is meant to ONLY declare the
     necessary initialization/validation methods.  """
     
-    def __init__(self,config):
+    def __init__(self,config=nullConf):
         """Makes a Traited config object out of a ConfigObj instance
         """
+
         # Validate the set of scalars ...
         my_scalars = set(get_scalars(self))
         cf_scalars = set(config.scalars)
         invalid_scalars = cf_scalars - my_scalars
         if invalid_scalars:
             raise TConfigInvalidKeyError("Invalid keys: %s" % invalid_scalars)
+
         # ... and sections
         section_items = get_sections(self.__class__,TConfig)
         my_sections = set([n for n,v in section_items])
@@ -120,8 +148,15 @@ class TConfig(TConfigSection):
 
         # Now set the traits based on the config
         try:
-            for k in cf_scalars:
-                setattr(self,k,config[k])
+            for k in my_scalars:
+                try:
+                    setattr(self,k,config[k])
+                except KeyError:
+                    # This seems silly, but it forces some of Trait's magic to
+                    # fire and actually set the value on the instance in such a
+                    # way that it will later be properly read by introspection
+                    # tools. 
+                    getattr(self,k)
         except TraitError,e:
             t = self.__class_traits__[k]
             msg = "Bad key,value pair given: %s -> %s\n" % (k,config[k])
@@ -130,7 +165,10 @@ class TConfig(TConfigSection):
 
         # And build subsections
         for s,v in section_items:
-            section = v(config[s])
+            try:
+                section = v(config[s])
+            except KeyError:
+                section = v()
             if issubclass(v,ReadOnlyTConfig):
                 section = ReadOnlyTConfig(section)
                 # XXX - Hack the name back in place.  This should be fixed and
@@ -155,10 +193,36 @@ class ReadOnlyTConfig(TConfigSection):
             self.add_trait(t,ReadOnly)
             setattr(self,t,getattr(tconf,t))
 
+class ConfigManager(object):
+    def __init__(self,configClass,configFilename):
+        self.fconf = mkConfigObj(configFilename)
+        self.tconf = configClass(self.fconf)
+
+    def fconfUpdate(self,fconf,tconf):
+        """Update the fconf object with the data from tconf"""
+
+        scalars, sections = partition_instance(tconf)
+
+        for s,v in scalars:
+            #v = getattr(tconf,s)
+            fconf[s] = v
+
+        for secname,sec in sections:
+            self.fconfUpdate(fconf.setdefault(secname,{}),sec)
+
+
+    def write(self):
+        self.fconfUpdate(self.fconf,self.tconf)
+        self.fconf.write()
+
 ############################################################################
 # Testing/example
 ############################################################################
 if __name__ == '__main__':
+
+    import os
+    from pprint import pprint  # dbg
+    
 
     class App(object):
         """A trivial 'application' class to be initialized.
@@ -187,7 +251,6 @@ if __name__ == '__main__':
             port = Int
 
     simpleapp = App(AppConfig,'tconfig2.conf')
-
 
     # A matplotlib-like example
 
@@ -233,15 +296,38 @@ if __name__ == '__main__':
                 bottom = Float(0.1)
                 top = Float(0.9)
 
-    mpl = App(MPLConfig,'mpl.conf')
-    print "Play with the 'mpl' object a little, esp its .rc attribute..."
-    print "You can even do mpl.rc.edit_traits() if you are running in "
-    print "ipython -wthread.  It only works with the top-level for now."
-    print
-    print "The following is an auto-generated dump of the rc object."
-    print "Note that this remains valid input for an rc file:"
-    print
-    print mpl.rc
+    print '-'*80
+    print "Here is a default mpl config generated purely from the code:"
+    mplrc = MPLConfig()
+    print mplrc
+
+    print '-'*80
+    print "And here is a modified one, using a config file that only changes"
+    print "a few parameters and otherwise uses the defaults:"
+    mpl2conf = mkConfigObj('mpl2.conf')
+    mplrc2 = MPLConfig(mpl2conf)
+    print mplrc2
+
+    # An example of the ConfigManager usage.
+    m3conf = 'mpl3.conf'
+    if os.path.isfile(m3conf):
+        os.unlink(m3conf)
+    mplconf = ConfigManager(MPLConfig,m3conf)
+    mplconf.write()
+    print '-'*80
+    print "The file %r was written to disk..." % m3conf
+
+    if 0:
+        print '-'*80
+        print "Play with the 'mpl' object a little, esp its .rc attribute..."
+        print "You can even do mpl.rc.edit_traits() if you are running in "
+        print "ipython -wthread.  It only works with the top-level for now."
+        print
+        print "The following is an auto-generated dump of the rc object."
+        print "Note that this remains valid input for an rc file:"
+        print
+        mpl = App(MPLConfig,'mpl.conf')
+        print mpl.rc
 
     # A few exception-raising tests, turn this later into a doctest that
     # actually runs them, once we settle the exception hirerarchy and format
