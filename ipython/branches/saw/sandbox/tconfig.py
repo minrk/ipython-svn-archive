@@ -227,9 +227,9 @@ if __name__ == '__main__':
     class App(object):
         """A trivial 'application' class to be initialized.
         """
-        def __init__(self,configClass,conf_filename):
-            conf = mkConfigObj(conf_filename)
-            self.rc = configClass(conf)
+        def __init__(self,configClass,configFilename):
+            self.rcman = ConfigManager(configClass,configFilename)
+            self.rc = self.rcman.tconf
 
     # Example of an application configuration and the app using it
     class AppConfig(TConfig):
