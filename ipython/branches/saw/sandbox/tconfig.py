@@ -110,7 +110,6 @@ class TConfigSection(HasTraits):
         scalars, sections = partition_instance(self)
 
         for s,v in scalars:
-            #v = getattr(self,s)
             out.append(indent+('%s = %r' % (s,v)))
 
         for sname,sec in sections:
@@ -194,6 +193,9 @@ class ReadOnlyTConfig(TConfigSection):
             setattr(self,t,getattr(tconf,t))
 
 class ConfigManager(object):
+    """A simple object to manage and sync a TConfig and a ConfigObj pair.
+    """
+    
     def __init__(self,configClass,configFilename):
         self.fconf = mkConfigObj(configFilename)
         self.tconf = configClass(self.fconf)
@@ -204,12 +206,10 @@ class ConfigManager(object):
         scalars, sections = partition_instance(tconf)
 
         for s,v in scalars:
-            #v = getattr(tconf,s)
             fconf[s] = v
 
         for secname,sec in sections:
             self.fconfUpdate(fconf.setdefault(secname,{}),sec)
-
 
     def write(self):
         self.fconfUpdate(self.fconf,self.tconf)
