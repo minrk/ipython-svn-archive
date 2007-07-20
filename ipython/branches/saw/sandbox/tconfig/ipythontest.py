@@ -1,4 +1,10 @@
-from ipythonconfig import IpythonConfig, ConfigManager
+# import/reload base modules for interactive testing/development
+import tconfig, mplconfig
+reload(tconfig)
+reload(mplconfig)
+
+from tconfig import ConfigManager, mkConfigObj
+from ipythonconfig import IpythonConfig
 
 class App(object):
     """A trivial 'application' class to be initialized.

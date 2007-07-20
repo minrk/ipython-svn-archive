@@ -1,5 +1,10 @@
-from tconfig import TConfig, ConfigManager, ReadOnlyTConfig, mkConfigObj
 import enthought.traits.api as traits
+
+# import/reload base modules for interactive testing/development
+import tconfig; reload(tconfig)
+
+from tconfig import TConfig, ConfigManager, ReadOnlyTConfig, mkConfigObj
+
 
 standard_color = traits.Trait ('black',
                         {'black': (0.0, 0.0, 0.0, 1.0),
@@ -33,7 +38,7 @@ class MPLConfig(TConfig):
         figsize = traits.ListFloat([6.4,4.8])  # figure size in inches
         dpi = traits.Int(100)            # figure dots per inch
         facecolor = traits.Float(0.75)    # figure facecolor; 0.75 is scalar gray
-        edgecolor = traits.Trait('violet',standard_color)
+        edgecolor = traits.Trait('white',standard_color)
 
         class subplot(TConfig):
             """The figure subplot parameters.  All dimensions are fraction

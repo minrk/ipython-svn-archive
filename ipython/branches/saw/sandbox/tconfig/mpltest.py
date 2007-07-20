@@ -1,4 +1,10 @@
-from mplconfig import MPLConfig, ConfigManager, mkConfigObj
+# import/reload base modules for interactive testing/development
+import tconfig, mplconfig
+reload(tconfig)
+reload(mplconfig)
+
+from tconfig import ConfigManager, mkConfigObj
+from mplconfig import MPLConfig
 
 class App(object):
     """A trivial 'application' class to be initialized.

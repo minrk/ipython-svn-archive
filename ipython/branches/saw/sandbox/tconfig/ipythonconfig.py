@@ -1,5 +1,10 @@
-from tconfig import TConfig, ConfigManager, ReadOnlyTConfig
 import enthought.traits.api as traits
+
+# For interactive testing
+import tconfig; reload(tconfig)
+
+from tconfig import TConfig, ConfigManager, ReadOnlyTConfig
+
 
 class IpythonConfig(TConfig):
 
