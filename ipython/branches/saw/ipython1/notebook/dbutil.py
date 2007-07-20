@@ -112,20 +112,26 @@ def addChild(session, child, parent, index=None):
     """Add `child` to Section `parent` at position `index`, 
     defaulting to the end."""
     
+    session.save(child)
+    session.flush()
     if parent.children: # already have some children
         if index is None or index == len(parent.children):
+            # n = parent.tail
             parent.tail.insertAfter(child)
             parent.tail = child
         else:
             parent[index].insertBefore(child)
             if index == 0:
+                session.flush()
                 parent.head = child
     else: # this is parent's first child
-        child.parent = parent
+        parent.children.append(child)
+        # child.parentID = parent
+        # print parent
         child.user = parent.user
-        parent.head = parent.tail = child
+        parent.headID = parent.tailID = child.nodeID
+    child.touchModified()
     parent.touchModified()
-    session.save(child)
     session.flush()
 
 def getDescendents(section):

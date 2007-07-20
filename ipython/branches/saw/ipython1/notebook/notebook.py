@@ -36,6 +36,7 @@ class INotebookServer(zi.Interface):
     def getUser(**selectflags):
         """get a User by flags passed to selectone_by"""
     
+    # def updateUser():
     def dropUser(**selectflags):
         """Drop a User by flags passed to selectone_by"""
     

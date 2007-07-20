@@ -44,7 +44,11 @@ def XMLNodeBase(node):
     """The base of an XML representation of a Node"""
     s  = "<comment>%s</comment>\n"%(node.comment)
     for idname in ['nodeID', 'parentID', 'nextID', 'previousID', 'userID']:
-        s += "<%s>%i</%s>"%(idname, getattr(node, idname), idname)
+        value = getattr(node, idname)
+        if value is None:
+            s += "<%s></%s>\n"%(idname, idname)
+        else:
+            s += "<%s>%i</%s>\n"%(idname, value, idname)
     s += "<dateCreated>%s</dateCreated>\n"%(node.dateCreated.strftime(tformat))
     s += "<dateModified>%s</dateModified>\n"%(node.dateModified.strftime(tformat))
     return s
@@ -202,6 +206,8 @@ class Node(Timestamper):
 
     def insertBefore(self, c):
         """Insert a cell before this one."""
+        assert not c is self, "Cannot insert Before/After self"
+        assert self.parent is not None, "Cannot insert Before/After root"
         c.parent = self.parent
         c.user = self.user
         c.previous = self.previous
@@ -209,10 +215,15 @@ class Node(Timestamper):
         
     def insertAfter(self, c):
         """Insert a cell after this one."""
+        assert not c is self, "Cannot insert Before/After self"
+        assert self.parent is not None, "Cannot insert Before/After root"
         c.parent = self.parent
         c.user = self.user
         c.next = self.next
         c.previous = self
+    
+    # def __str__(self):
+    #     return self.xmlize()
 
 class Section(Node):
     
@@ -318,6 +329,7 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
         'children': relation(
             Node,
             primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
+            remote_side=[nodesTable.c.parentID],
             cascade='all, delete-orphan',
             backref=backref("parent",
                 primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
@@ -327,11 +339,13 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
             ),
         'head': relation(Node,
             primaryjoin=sectionsTable.c.headID==nodesTable.c.nodeID,
-            # remote_side=[nodesTable.c.nodeID],
+            remote_side=[nodesTable.c.nodeID],
+            viewonly=True,
             uselist=False),
         'tail': relation(Node,
             primaryjoin=nodesTable.c.nodeID==sectionsTable.c.tailID,
-            # remote_side=[nodesTable.c.nodeID],
+            remote_side=[nodesTable.c.nodeID],
+            viewonly=True,
             uselist=False),
     }
 )
