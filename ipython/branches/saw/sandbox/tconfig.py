@@ -19,6 +19,7 @@ TODO:
 ############################################################################
 # Stdlib imports
 ############################################################################
+from cStringIO import StringIO
 from inspect import isclass
 
 ############################################################################
@@ -48,21 +49,28 @@ def mkConfigObj(filename):
 
 nullConf = mkConfigObj(None)
 
+def mk_scalars(sc):
+    """ input sc MUST be sorted!!!"""
+    scalars = []
+    maxi = len(sc)-1
+    i = 0
+    while i<len(sc):
+        t = sc[i]
+        if i<maxi and t+'_' == sc[i+1]:
+            # skip one ahead in the loop, to skip over the names of shadow
+            # traits, which we don't want to expose in the config files.
+            i += 1
+        scalars.append(t)
+        i += 1
+    return scalars
+
 def get_scalars(obj):
     """Return scalars for a TConf class object"""
 
     skip = set(['trait_added','trait_modified'])
     sc = [k for k in obj.trait_names() if k not in skip]
     sc.sort()
-
-    out = []
-    maxi = len(sc)-1
-    for i,t in enumerate(sc):
-        if i<maxi and t+'_' == sc[i+1]:
-            continue
-        else:
-            out.append(t)
-    return out
+    return mk_scalars(sc)
 
 def get_sections(obj,sectionClass):
     """Return sections for a TConf class object"""
@@ -72,13 +80,17 @@ def get_sections(obj,sectionClass):
 def partition_instance(obj):
     """Return scalars,sections for a given TConf instance.
     """
-    scalars = []
+    scnames = []
     sections = []
     for k,v in obj.__dict__.iteritems():
         if isinstance(v,TConfigSection):
             sections.append((k,v))
         else:
-            scalars.append((k,v))
+            scnames.append(k)
+
+    scnames.sort()
+    scnames = mk_scalars(scnames)
+    scalars = [(s,obj.__dict__[s]) for s in scnames]
 
     return scalars, sections
 
@@ -196,9 +208,29 @@ class ConfigManager(object):
     """A simple object to manage and sync a TConfig and a ConfigObj pair.
     """
     
-    def __init__(self,configClass,configFilename):
+    def __init__(self,configClass,configFilename,filePriority=True):
+        """Make a new ConfigManager.
+
+        :Paramters:
+          configClass : class
+
+          configFilename : string
+
+        :Keywords:
+          filePriority : bool (True)
+
+            If true, at construction time the file object takes priority and
+            overwrites the contents of the config object.  Else, the data flow
+            is reversed and the file object will be overwritten with the
+            configClass defaults at write() time.
+        """
+        
         self.fconf = mkConfigObj(configFilename)
-        self.tconf = configClass(self.fconf)
+        if filePriority:
+            self.tconf = configClass(self.fconf)
+        else:
+            self.tconf = configClass(nullConf)
+            self.fconfUpdate(self.fconf,self.tconf)
 
     def fconfUpdate(self,fconf,tconf):
         """Update the fconf object with the data from tconf"""
@@ -214,6 +246,17 @@ class ConfigManager(object):
     def write(self):
         self.fconfUpdate(self.fconf,self.tconf)
         self.fconf.write()
+
+    def tconfStr(self):
+        return str(self.tconf)
+
+    def fconfStr(self):
+        outstr = StringIO()
+        self.fconfUpdate(self.fconf,self.tconf)
+        self.fconf.write(outstr)
+        return outstr.getvalue()
+
+    __repr__ = __str__ = fconfStr
 
 ############################################################################
 # Testing/example
@@ -272,7 +315,7 @@ if __name__ == '__main__':
 
         # Valid backends, first is default
         backend = Trait('TkAgg','WXAgg','GTKAgg','QtAgg','Qt4Agg')
-        interactive = Bool(False)
+        interactive = Bool(True)
         
         class InitOnly(TConfig,ReadOnlyTConfig):
             """Things that can only be set at init time"""
@@ -286,7 +329,7 @@ if __name__ == '__main__':
             figsize = ListFloat([6.4,4.8])  # figure size in inches
             dpi = Int(100)            # figure dots per inch
             facecolor = Float(0.75)    # figure facecolor; 0.75 is scalar gray
-            edgecolor = Trait('white',standard_color)
+            edgecolor = Trait('violet',standard_color)
 
             class subplot(TConfig):
                 """The figure subplot parameters.  All dimensions are fraction
@@ -295,6 +338,7 @@ if __name__ == '__main__':
                 right = Float(0.9)
                 bottom = Float(0.1)
                 top = Float(0.9)
+
 
     print '-'*80
     print "Here is a default mpl config generated purely from the code:"
@@ -316,6 +360,7 @@ if __name__ == '__main__':
     mplconf.write()
     print '-'*80
     print "The file %r was written to disk..." % m3conf
+    os.system('more %s' % m3conf)
 
     if 0:
         print '-'*80
