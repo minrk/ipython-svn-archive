@@ -14,6 +14,7 @@ class IPythonconfig(TConfig):
         x = T.Float
 
     class Protocol(TConfig):
+        include = T.Str
         ptype = T.Str
 
         class Handler(TConfig):

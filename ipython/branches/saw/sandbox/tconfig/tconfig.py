@@ -34,20 +34,61 @@ import configobj
 # Utility functions
 ############################################################################
 
-def mkConfigObj(filename):
+def mkConfigObj(filename,allowInclude=True):
     """Return a ConfigObj instance with our hardcoded conventions.
 
     Use a simple factory that wraps our option choices for using ConfigObj.
     I'm hard-wiring certain choices here, so we'll always use instances with
     THESE choices.
+
+    :Parameters:
+
+      filename : string
+        File to read from.
+
+    :Keywords:
+    
+      allowInclude : bool (True)
+        Allow recursive loading of files.  If allowed, a file can specify (at
+        the top-level only) another one to load first, via an
+
+        inculde = 'base_filename'
+
+        directive.  The requested file is loaded as a base configuration and
+        then updated with the information from the 'top' file.
     """
-    return configobj.ConfigObj(filename,
+    conf = configobj.ConfigObj(filename,
                                create_empty=True,
                                indent_type='    ',
                                interpolation='Template',
                                unrepr=True)
+    
+    # Do recursive loading. We only allow (or at least honor) the include tag
+    # at the top-level.  For now, we drop the inclusion information so that
+    # there are no restrictions on which levels of the TConfig hierarchy can
+    # use include statements.  But this means that
+    incfname = conf.pop('include',None)
+    if incfname is not None:
+        # Do recursive load
+        confinc = mkConfigObj(incfname)
+        # Update with self to get proper ordering (included files provide base
+        # data, current one overwrites)
+        confinc.update(conf)
+        # And do swap to return the updated structure
+        conf = confinc
+        # Set the filename to be the original file instead of the included one
+        conf.filename = filename
+
+    return conf
 
 nullConf = mkConfigObj(None)
+
+
+def configObj2Str(cobj):
+    """Dump a Configobj instance to a string."""
+    outstr = StringIO()
+    cobj.write(outstr)
+    return outstr.getvalue()
 
 def mk_scalars(sc):
     """ input sc MUST be sorted!!!"""
@@ -97,6 +138,7 @@ def partition_instance(obj):
 ############################################################################
 # Main TConfig class and supporting exceptions
 ############################################################################
+
 class TConfigError(Exception): pass
 
 class TConfigInvalidKeyError(TConfigError): pass
@@ -172,7 +214,8 @@ class TConfig(TConfigSection):
             t = self.__class_traits__[k]
             msg = "Bad key,value pair given: %s -> %s\n" % (k,config[k])
             msg += "Expected type: %s" % t.handler.info()
-            raise TConfigError(msg)
+            raise TConfigError(msg)            
+
 
         # And build subsections
         for s,v in section_items:
@@ -257,9 +300,6 @@ class ConfigManager(object):
         return str(self.tconf)
 
     def fconfStr(self):
-        outstr = StringIO()
-        self.fconfUpdate(self.fconf,self.tconf)
-        self.fconf.write(outstr)
-        return outstr.getvalue()
+        return configObj2Str(self.fconf)
 
     __repr__ = __str__ = fconfStr
