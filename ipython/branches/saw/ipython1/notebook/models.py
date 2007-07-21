@@ -203,7 +203,8 @@ class Node(Timestamper):
         super(Node, self).__init__()
         self.comment = comment
         self.parent = parent
-
+    
+    # def _getNext(self, o):
     def insertBefore(self, c):
         """Insert a cell before this one."""
         assert not c is self, "Cannot insert Before/After self"
@@ -215,7 +216,8 @@ class Node(Timestamper):
             self.previous.nextID = c.nodeID
         self.previousID = c.nodeID
         c.nextID = self.nodeID
-        # self.previous = c
+        # if self.previous is not None:
+        #     self.previous.next = c
         # c.next = self
         
     def insertAfter(self, c):
@@ -224,14 +226,15 @@ class Node(Timestamper):
         assert self.parent is not None, "Cannot insert Before/After root"
         c.parent = self.parent
         c.user = self.user
+        ## by ID:
         c.nextID = self.nextID
         if self.next is not None:
             self.next.previousID = c.nodeID
         self.nextID = c.nodeID
         c.previousID = self.nodeID
+        
         # c.next = self.next
         # self.next = c
-        # c.previous = self
     
     # def __str__(self):
     #     return self.xmlize()
@@ -244,12 +247,12 @@ class Section(Node):
     
     def __getitem__(self, index):
         if index >= 0:
-            c = self.head
+            c = self.children[0]
             for i in range(index):
                 c = c.next
             return c
         else:
-            c = self.tail
+            c = self.children[-1]
             for i in range(-1-index):
                 c = c.previous
             return c
@@ -310,7 +313,7 @@ nodeMapper = mapper(Node, nodesTable,
             primaryjoin=nodesTable.c.nextID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.nodeID],
             uselist=False,
-            viewonly = True,
+            # viewonly = True,
             backref=backref('previous',
                 primaryjoin=nodesTable.c.previousID==nodesTable.c.nodeID,
                 remote_side=[nodesTable.c.nodeID],
@@ -345,6 +348,7 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
             primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.parentID],
             cascade='all, delete-orphan',
+            order_by = [nodeJoin.c.previousID!=None, nodeJoin.c.nextID==None],
             # viewonly = True,
             backref=backref("parent",
                 primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
@@ -352,16 +356,16 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
                 uselist=False
                 )
             ),
-        'head': relation(Node,
-            primaryjoin=sectionsTable.c.headID==nodesTable.c.nodeID,
-            remote_side=[nodesTable.c.nodeID],
-            # viewonly=True,
-            uselist=False),
-        'tail': relation(Node,
-            primaryjoin=nodesTable.c.nodeID==sectionsTable.c.tailID,
-            remote_side=[nodesTable.c.nodeID],
-            # viewonly=True,
-            uselist=False),
+        # 'head': relation(Node,
+        #     primaryjoin=sectionsTable.c.headID==nodesTable.c.nodeID,
+        #     remote_side=[nodesTable.c.nodeID],
+        #     # viewonly=True,
+        #     uselist=False),
+        # 'tail': relation(Node,
+        #     primaryjoin=nodesTable.c.nodeID==sectionsTable.c.tailID,
+        #     remote_side=[nodesTable.c.nodeID],
+        #     # viewonly=True,
+        #     uselist=False),
     }
 )
 

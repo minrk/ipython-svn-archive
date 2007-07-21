@@ -117,13 +117,14 @@ def addChild(session, child, parent, index=None):
     if parent.children: # already have some children
         if index is None or index == len(parent.children):
             # n = parent.tail
-            parent.tail.insertAfter(child)
-            parent.tailID = child.nodeID
+            parent[-1].insertAfter(child)
+            # parent.tailID = child.nodeID
             # parent.tail = child
         else:
             parent[index].insertBefore(child)
-            if index == 0:
-                parent.headID = child.nodeID
+            # if index == 0:
+                # parent.headID = child.nodeID
+                # parent-
                 # parent.head = child
     else: # this is parent's first child
         child.parent = parent
@@ -131,7 +132,7 @@ def addChild(session, child, parent, index=None):
         # child.parentID = parent
         # print parent
         child.user = parent.user
-        parent.headID = parent.tailID = child.nodeID
+        # parent.headID = parent.tailID = child.nodeID
         # parent.head = parent.tail = child
     child.touchModified()
     parent.touchModified()
