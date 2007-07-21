@@ -210,8 +210,13 @@ class Node(Timestamper):
         assert self.parent is not None, "Cannot insert Before/After root"
         c.parent = self.parent
         c.user = self.user
-        c.previous = self.previous
-        c.next = self
+        c.previousID = self.previousID
+        if self.previous is not None:
+            self.previous.nextID = c.nodeID
+        self.previousID = c.nodeID
+        c.nextID = self.nodeID
+        # self.previous = c
+        # c.next = self
         
     def insertAfter(self, c):
         """Insert a cell after this one."""
@@ -219,8 +224,14 @@ class Node(Timestamper):
         assert self.parent is not None, "Cannot insert Before/After root"
         c.parent = self.parent
         c.user = self.user
-        c.next = self.next
-        c.previous = self
+        c.nextID = self.nextID
+        if self.next is not None:
+            self.next.previousID = c.nodeID
+        self.nextID = c.nodeID
+        c.previousID = self.nodeID
+        # c.next = self.next
+        # self.next = c
+        # c.previous = self
     
     # def __str__(self):
     #     return self.xmlize()
@@ -297,10 +308,13 @@ nodeMapper = mapper(Node, nodesTable,
     properties = {
         'next': relation(Node,
             primaryjoin=nodesTable.c.nextID==nodesTable.c.nodeID,
+            remote_side=[nodesTable.c.nodeID],
             uselist=False,
+            viewonly = True,
             backref=backref('previous',
                 primaryjoin=nodesTable.c.previousID==nodesTable.c.nodeID,
                 remote_side=[nodesTable.c.nodeID],
+                viewonly = True,
                 uselist=False)),
     }
 )
@@ -331,6 +345,7 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
             primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.parentID],
             cascade='all, delete-orphan',
+            # viewonly = True,
             backref=backref("parent",
                 primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
                 remote_side=[nodesTable.c.nodeID],
@@ -340,12 +355,12 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
         'head': relation(Node,
             primaryjoin=sectionsTable.c.headID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.nodeID],
-            viewonly=True,
+            # viewonly=True,
             uselist=False),
         'tail': relation(Node,
             primaryjoin=nodesTable.c.nodeID==sectionsTable.c.tailID,
             remote_side=[nodesTable.c.nodeID],
-            viewonly=True,
+            # viewonly=True,
             uselist=False),
     }
 )
