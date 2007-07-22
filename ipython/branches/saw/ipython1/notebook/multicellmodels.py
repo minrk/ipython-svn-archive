@@ -184,6 +184,7 @@ cellMapper = mapper(Cell, cellsTable,
         'next': relation(
             Cell,
             primaryjoin=cellsTable.c.nextID==cellsTable.c.cellID,
+            remote_side=[cellsTable.c.cellID],
             uselist=False,
             backref=backref('previous',
                 primaryjoin=cellsTable.c.previousID==cellsTable.c.cellID,

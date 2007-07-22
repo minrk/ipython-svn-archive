@@ -116,21 +116,16 @@ def addChild(session, child, parent, index=None):
     session.flush()
     if parent.children: # already have some children
         if index is None or index == len(parent.children):
-            # n = parent.tail
-            parent[-1].insertAfter(child)
+            n = parent[-1]
+            n.insertAfter(child)
             # parent.tailID = child.nodeID
-            # parent.tail = child
         else:
             parent[index].insertBefore(child)
             # if index == 0:
-                # parent.headID = child.nodeID
-                # parent-
+            #     parent.headID = child.nodeID
                 # parent.head = child
     else: # this is parent's first child
         child.parent = parent
-        # parent.children.append(child)
-        # child.parentID = parent
-        # print parent
         child.user = parent.user
         # parent.headID = parent.tailID = child.nodeID
         # parent.head = parent.tail = child

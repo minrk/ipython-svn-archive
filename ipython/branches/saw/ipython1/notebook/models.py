@@ -43,7 +43,7 @@ def XMLUser(u, justme=False):
 def XMLNodeBase(node):
     """The base of an XML representation of a Node"""
     s  = "<comment>%s</comment>\n"%(node.comment)
-    for idname in ['nodeID', 'parentID', 'nextID', 'previousID', 'userID']:
+    for idname in ['nodeID', 'parentID', 'nextID', 'userID']:
         value = getattr(node, idname)
         if value is None:
             s += "<%s></%s>\n"%(idname, idname)
@@ -101,7 +101,7 @@ def jsonifyUser(u, keepdict=False, justme=False):
 
 def jsonNode(n, keepdict=False, justme=False):
     d = jsonStarter(n)
-    for key in ['cellID', 'parentID', 'nextID', 'previousID', 'comment']:
+    for key in ['cellID', 'parentID', 'nextID', 'comment']:
         d[key] = getattr(n, key)
     if keepdict:
         return d
@@ -156,8 +156,8 @@ nodesTable = Table('nodes', metadata,
 
 sectionsTable = Table('sections', metadata,
     Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
-    Column('headID', Integer, ForeignKey('nodes.nodeID')),
-    Column('tailID', Integer, ForeignKey('nodes.nodeID')),
+    # Column('headID', Integer, ForeignKey('nodes.nodeID')),
+    # Column('tailID', Integer, ForeignKey('nodes.nodeID')),
     Column('title',String())
 )
 
@@ -204,37 +204,43 @@ class Node(Timestamper):
         self.comment = comment
         self.parent = parent
     
-    # def _getNext(self, o):
+    def _getNext(self): return self._next
+    
+    def _setNext(self, n):
+        if n is not None:
+            n.previousID = self.nodeID
+        self._next = n
+    
+    next = property(_getNext, _setNext)
+    
+    def _getPrevious(self): return self._previous
+    
+    def _setPrevious(self, n):
+        if n is not None:
+            n.next = self
+        # self._next = n
+    
+    previous = property(_getPrevious, _setPrevious)
+    
     def insertBefore(self, c):
         """Insert a cell before this one."""
-        assert not c is self, "Cannot insert Before/After self"
         assert self.parent is not None, "Cannot insert Before/After root"
+        assert c not in self.parent.children, "Already in Children"
         c.parent = self.parent
         c.user = self.user
-        c.previousID = self.previousID
-        if self.previous is not None:
-            self.previous.nextID = c.nodeID
-        self.previousID = c.nodeID
-        c.nextID = self.nodeID
         # if self.previous is not None:
         #     self.previous.next = c
-        # c.next = self
+        c.previous = self.previous
+        c.next = self
         
     def insertAfter(self, c):
         """Insert a cell after this one."""
         assert not c is self, "Cannot insert Before/After self"
-        assert self.parent is not None, "Cannot insert Before/After root"
+        assert c not in self.parent.children, "Already in Children"
         c.parent = self.parent
         c.user = self.user
-        ## by ID:
-        c.nextID = self.nextID
-        if self.next is not None:
-            self.next.previousID = c.nodeID
-        self.nextID = c.nodeID
-        c.previousID = self.nodeID
-        
-        # c.next = self.next
-        # self.next = c
+        c.next = self.next
+        self.next = c
     
     # def __str__(self):
     #     return self.xmlize()
@@ -247,12 +253,14 @@ class Section(Node):
     
     def __getitem__(self, index):
         if index >= 0:
-            c = self.children[0]
+            # c = self.children[0]
+            c = self.head
             for i in range(index):
                 c = c.next
             return c
         else:
-            c = self.children[-1]
+            # c = self.children[-1]
+            c = self.tail
             for i in range(-1-index):
                 c = c.previous
             return c
@@ -309,15 +317,13 @@ nodeMapper = mapper(Node, nodesTable,
     polymorphic_on=nodeJoin.c.nodeType, 
     polymorphic_identity='node',
     properties = {
-        'next': relation(Node,
+        '_next': relation(Node,
             primaryjoin=nodesTable.c.nextID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.nodeID],
             uselist=False,
-            # viewonly = True,
-            backref=backref('previous',
-                primaryjoin=nodesTable.c.previousID==nodesTable.c.nodeID,
-                remote_side=[nodesTable.c.nodeID],
-                viewonly = True,
+            backref=backref('_previous',
+                primaryjoin=nodesTable.c.nextID==nodesTable.c.nodeID,
+                remote_side=[nodesTable.c.nextID],
                 uselist=False)),
     }
 )
@@ -348,24 +354,20 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
             primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.parentID],
             cascade='all, delete-orphan',
-            order_by = [nodeJoin.c.previousID!=None, nodeJoin.c.nextID==None],
-            # viewonly = True,
             backref=backref("parent",
                 primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
                 remote_side=[nodesTable.c.nodeID],
                 uselist=False
                 )
             ),
-        # 'head': relation(Node,
-        #     primaryjoin=sectionsTable.c.headID==nodesTable.c.nodeID,
-        #     remote_side=[nodesTable.c.nodeID],
-        #     # viewonly=True,
-        #     uselist=False),
-        # 'tail': relation(Node,
-        #     primaryjoin=nodesTable.c.nodeID==sectionsTable.c.tailID,
-        #     remote_side=[nodesTable.c.nodeID],
-        #     # viewonly=True,
-        #     uselist=False),
+        'head': relation(Node,
+            primaryjoin=and_(sectionsTable.c.nodeID==nodesTable.c.parentID,nodesTable.c.previousID == None),
+            remote_side=[nodesTable.c.parentID, nodesTable.c.previousID],
+            uselist=False),
+        'tail': relation(Node,
+            primaryjoin=and_(sectionsTable.c.nodeID==nodesTable.c.parentID,nodesTable.c.nextID == None),
+            remote_side=[nodesTable.c.parentID, nodesTable.c.previousID],
+            uselist=False),
     }
 )
 
