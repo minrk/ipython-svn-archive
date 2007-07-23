@@ -3,7 +3,7 @@ import tctst; reload(tctst)
 from tctst import *
 
 import ipythonconfig; reload(ipythonconfig)
-from ipythonconfig import IPythonconfig
+from ipythonconfig import IPythonConfig
 
 # Main
 c2str = tconfig.configObj2Str
@@ -26,8 +26,8 @@ print c2str(c2)
 
 #sys.exit()
 
-#app1 = App(IPythonconfig,'tconfig1.conf')
-#app2 = App(IPythonconfig,'tconfig2.conf')
+#app1 = App(IPythonConfig,'tconfig1.conf')
+#app2 = App(IPythonConfig,'tconfig2.conf')
 
 cr1 = RecursiveConfigObj('tconfig1.conf')
 cr2 = RecursiveConfigObj('tconfig2.conf')
@@ -36,3 +36,5 @@ print '^'*80
 print c2str(cr1.conf)
 print '-'*80
 print c2str(cr2.conf)
+
+cc = IPythonConfig(mkConfigObjRec('tconfig2.conf'))

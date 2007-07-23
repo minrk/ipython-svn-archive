@@ -102,7 +102,7 @@ def mkConfigObjRec(filename,components=None):
     if incfname is not None:
         # Do recursive load
 
-        confinc = mkConfigObj(incfname,components)
+        confinc = mkConfigObjRec(incfname,components)
         
         # Update with self to get proper ordering (included files provide base
         # data, current one overwrites)

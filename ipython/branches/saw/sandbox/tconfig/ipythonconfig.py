@@ -5,10 +5,15 @@ import tconfig; reload(tconfig)
 from tconfig import TConfig, ReadOnlyTConfig
 
 
-class IPythonconfig(TConfig):
+class IPythonConfig(TConfig):
+    """Class Docstring
+
+    More"""
 
     m = T.Int
 
+    select = T.Trait('only','one','of','these')
+    
     class InitOnly(TConfig, ReadOnlyTConfig):
         n = T.Int
         x = T.Float
