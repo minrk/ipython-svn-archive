@@ -226,7 +226,8 @@ class TConfigError(Exception): pass
 
 class TConfigInvalidKeyError(TConfigError): pass
 
-class TConfigSection(HasTraits):
+#class TConfigSection(HasTraits):
+class TConfigSection(HasStrictTraits):
     def __repr__(self,depth=0):
         """Dump a self section to a string."""
 
@@ -318,7 +319,7 @@ class TConfig(TConfigSection):
                 # type of situation particularly difficult.
                 section.__class__.__original_name__ = s
 
-            setattr(self,s,section)
+            self.add_trait(s,section)
 
 
 class ReadOnlyTConfig(TConfigSection):
