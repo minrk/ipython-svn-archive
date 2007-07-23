@@ -34,7 +34,7 @@ import configobj
 # Utility functions
 ############################################################################
 
-def mkConfigObj(filename,allowInclude=True):
+def mkConfigObj(filename):
     """Return a ConfigObj instance with our hardcoded conventions.
 
     Use a simple factory that wraps our option choices for using ConfigObj.
@@ -45,32 +45,65 @@ def mkConfigObj(filename,allowInclude=True):
 
       filename : string
         File to read from.
-
-    :Keywords:
-    
-      allowInclude : bool (True)
-        Allow recursive loading of files.  If allowed, a file can specify (at
-        the top-level only) another one to load first, via an
-
-        inculde = 'base_filename'
-
-        directive.  The requested file is loaded as a base configuration and
-        then updated with the information from the 'top' file.
     """
-    conf = configobj.ConfigObj(filename,
+    return configobj.ConfigObj(filename,
                                create_empty=True,
                                indent_type='    ',
                                interpolation='Template',
                                unrepr=True)
     
+
+def mkConfigObjRec(filename,components=None):
+    """Return a ConfigObj using our conventions. Supports recursive inclusion.
+
+    This version supports the special key include="path/to/file" in the config
+    files (only at the top level of each), and will recursively load the
+    requested files.
+
+    :Return:
+      A ConfigObj instance, built with the conventions of mkConfigObj, and
+      computed recursively.  The recursion process loads the included files
+      first, and then applies the outermost configuration on top of them.  The
+      derived files therefore override any flags in the included ones.
+
+    :Parameters:
+
+      filename : string
+        File to read from.
+
+    :Keywords:
+
+      components : list (None)
+
+        If given, this list is filled with the individual ConfigObj instances
+        corresponding to each file loaded, without any inter-file overwrites.
+        The return value of the whole function contains the result of doing a
+        'telescoping update' with this list, starting with the last entry (the
+        'deepest' one) and updating it with each successive entry.  Having this
+        list of unmodified instances can be used by code which wants to map
+        changes made at runtime to their original files or objects.
+    """
+
+    conf = mkConfigObj(filename)
+    
     # Do recursive loading. We only allow (or at least honor) the include tag
     # at the top-level.  For now, we drop the inclusion information so that
     # there are no restrictions on which levels of the TConfig hierarchy can
     # use include statements.  But this means that
+
+    if components is not None:
+        # if bookkeeping of each separate component of the recursive
+        # construction was requested, make a separate object for storage
+        # there, since we don't want that to be modified by the inclusion
+        # process.
+        components.append(mkConfigObj(filename))
+
     incfname = conf.pop('include',None)
     if incfname is not None:
         # Do recursive load
-        confinc = mkConfigObj(incfname)
+
+        confinc = mkConfigObj(incfname,components)
+        
         # Update with self to get proper ordering (included files provide base
         # data, current one overwrites)
         confinc.update(conf)
@@ -80,6 +113,56 @@ def mkConfigObj(filename,allowInclude=True):
         conf.filename = filename
 
     return conf
+
+class RecursiveConfigObj(object):
+    """Object-oriented interface for recursive ConfigObj constructions."""
+
+    def _load(self,filename):
+        conf = mkConfigObj(filename)
+
+        # Do recursive loading. We only allow (or at least honor) the include
+        # tag at the top-level.  For now, we drop the inclusion information so
+        # that there are no restrictions on which levels of the TConfig
+        # hierarchy can use include statements.  But this means that
+
+        # if bookkeeping of each separate component of the recursive
+        # construction was requested, make a separate object for storage
+        # there, since we don't want that to be modified by the inclusion
+        # process.
+        self.comp.append(mkConfigObj(filename))
+
+        incfname = conf.pop('include',None)
+        if incfname is not None:
+            # Do recursive load
+
+            confinc = self._load(incfname)
+
+            # Update with self to get proper ordering (included files provide
+            # base data, current one overwrites)
+            confinc.update(conf)
+            # And do swap to return the updated structure
+            conf = confinc
+            # Set the filename to be the original file instead of the included
+            # one
+            conf.filename = filename
+        return conf
+        
+    
+    def __init__(self,filename):
+        """Return a ConfigObj instance with our hardcoded conventions.
+
+        Use a simple factory that wraps our option choices for using ConfigObj.
+        I'm hard-wiring certain choices here, so we'll always use instances with
+        THESE choices.
+
+        :Parameters:
+
+          filename : string
+            File to read from.
+        """
+
+        self.comp = []
+        self.conf = self._load(filename)
 
 nullConf = mkConfigObj(None)
 

@@ -6,6 +6,7 @@ import ipythonconfig; reload(ipythonconfig)
 from ipythonconfig import IPythonconfig
 
 # Main
+c2str = tconfig.configObj2Str
 
 def cat(fname):
     print '### FILENAME:',fname
@@ -21,16 +22,17 @@ c2 = mkConfigObj(f2)
 cat(f1)
 cat(f2)
 print '><'*40
-print tconfig.configObj2Str(c2)
-
-
+print c2str(c2)
 
 #sys.exit()
 
-app1 = App(IPythonconfig,'tconfig1.conf')
-app2 = App(IPythonconfig,'tconfig2.conf')
+#app1 = App(IPythonconfig,'tconfig1.conf')
+#app2 = App(IPythonconfig,'tconfig2.conf')
+
+cr1 = RecursiveConfigObj('tconfig1.conf')
+cr2 = RecursiveConfigObj('tconfig2.conf')
 
 print '^'*80
-print app1.rc
+print c2str(cr1.conf)
 print '-'*80
-print app2.rc
+print c2str(cr2.conf)
