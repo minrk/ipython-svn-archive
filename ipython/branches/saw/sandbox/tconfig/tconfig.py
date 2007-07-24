@@ -138,7 +138,7 @@ def tconf2File(tconf,fname,force=False):
         raise IOError("File %s already exists, use force=True to overwrite" %
                       fname)
 
-    txt = str(tconf)
+    txt = repr(tconf)
 
     fobj = open(fname,'w')
     fobj.write(txt)

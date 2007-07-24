@@ -22,7 +22,7 @@ if 0:
 
 # Make and print to screen the default config
 mpc = MPLConfig()
-print mpc
+print repr(mpc)
 
 # write it out to disk
 tconf2File(mpc,'mplrc_default.conf',force=True)
