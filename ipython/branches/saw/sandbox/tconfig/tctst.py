@@ -19,7 +19,7 @@ from pprint import pprint
 import tconfig
 reload(tconfig)
 
-from tconfig import mkConfigObj, RecursiveConfigObj, RecursiveConfigManager, \
+from tconfig import mkConfigObj, RecursiveConfigObj, TConfigManager, \
      tconf2File
 
 # Simple utilities/classes for testing
@@ -33,5 +33,5 @@ class App(object):
     """A trivial 'application' class to be initialized.
     """
     def __init__(self,configClass,configFilename):
-        self.rcman = RecursiveConfigManager(configClass,configFilename)
+        self.rcman = TConfigManager(configClass,configFilename)
         self.rc = self.rcman.tconf

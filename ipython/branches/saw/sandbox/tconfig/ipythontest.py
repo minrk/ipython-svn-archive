@@ -42,7 +42,7 @@ print ic2
 # Test use of the hierarchical, coupled manager
 print '^-'*40
 cr2_fname = 'tconfig2_copy.conf'
-cr2 = RecursiveConfigManager(IPythonConfig,cr2_fname)
+cr2 = TConfigManager(IPythonConfig,cr2_fname)
 print '^'*80
 print 'Changing m'
 print 'm=',cr2.tconf.m

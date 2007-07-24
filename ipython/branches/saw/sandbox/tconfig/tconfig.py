@@ -19,7 +19,18 @@ Provides:
 
 TODO:
 
-  - turn the currently interactive tests into proper doc/unit tests.
+  - Turn the currently interactive tests into proper doc/unit tests.  Complete
+    docstrings. 
+
+  - Write the real ipython1 config system using this.  That one is more
+  complicated than either the MPL one or the fake 'ipythontest' that I wrote
+  here, and it requires solving the issue of declaring references to other
+  objects inside the config files.
+
+  - [Low priority] Write a custom TraitsUI view so that hierarchical
+  configurations provide nicer interactive editing.  The automatic system is
+  remarkably good, but for very complex configurations having a nicely
+  organized view would be nice.
 """
 
 __license__ = 'BSD'
@@ -157,6 +168,8 @@ def filter_scalars(sc):
     while i<len(sc):
         t = sc[i]
         if t.startswith('_tconf_'):
+            # Skip altogether private _tconf_ attributes, so we actually issue
+            # a 'continue' call to avoid the append(t) below
             i += 1
             continue
         if i<maxi and t+'_' == sc[i+1]:
@@ -187,7 +200,7 @@ def get_sections(obj,sectionClass):
 def get_instance_sections(inst):
     """Return sections for a TConf instance"""
     sections = [(k,v) for k,v in inst.__dict__.iteritems()
-                if isinstance(v,TConfigSection) and not k=='_tconf_parent']
+                if isinstance(v,TConfig) and not k=='_tconf_parent']
     # Sort the sections by name
     sections.sort(key=lambda x:x[0])
     return sections
@@ -199,7 +212,7 @@ def partition_instance(obj):
     scnames = []
     sections = []
     for k,v in obj.__dict__.iteritems():
-        if isinstance(v,TConfigSection):
+        if isinstance(v,TConfig):
             if not k=='_tconf_parent':
                 sections.append((k,v))
         else:
@@ -294,61 +307,20 @@ class TConfigError(Exception): pass
 
 class TConfigInvalidKeyError(TConfigError): pass
 
-class TConfigSection(T.HasStrictTraits):
-
-    # Once created, the tree's hierarchy can NOT be modified
-    _tconf_parent = T.ReadOnly
-    
-    def __repr__(self,depth=0):
-        """Dump a section to a string."""
-
-        indent = '    '*(depth)
-
-        top_name = self.__class__.__name__
-
-        if depth == 0:
-            label = '# %s - plaintext (in .conf format)\n' % top_name
-        else:
-            # Section titles are indented one level less than their contents in
-            # the ConfigObj write methods.
-            sec_indent = '    '*(depth-1)
-            label = '\n'+sec_indent+('[' * depth) + top_name + (']'*depth)
-
-        out = [label]
-
-        doc = self.__class__.__doc__
-        if doc is not None:
-            out.append(comment(dedent(doc),indent))
-
-        scalars, sections = partition_instance(self)
-
-        for s,v in scalars:
-            try:
-                info = self.__base_traits__[s].handler.info()
-                # Get a short version of info with lines of max. 78 chars, so
-                # that after commenting them out (with '# ') they are at most
-                # 80-chars long.
-                out.append(comment(short_str(info,78-len(indent)),indent))
-            except (KeyError,AttributeError):
-                pass
-            out.append(indent+('%s = %r' % (s,v)))
-
-        for sname,sec in sections:
-            out.append(sec.__repr__(depth+1))
-
-        return '\n'.join(out)
-
-    def __str__(self):
-        return self.__class__.__name__
-
-
-class TConfig(TConfigSection):
+class TConfig(T.HasStrictTraits):
     """A class representing configuration objects.
 
     Note: this class should NOT have any traits itself, since the actual traits
     will be declared by subclasses.  This class is meant to ONLY declare the
     necessary initialization/validation methods.  """
+
+    # Any traits declared here are prefixed with _tconf_ so that our special
+    # formatting/analysis utilities can distinguish them from user traits and
+    # can avoid them.
     
+    # Once created, the tree's hierarchy can NOT be modified
+    _tconf_parent = T.ReadOnly
+
     def __init__(self,config=nullConf,parent=None,monitor=None):
         """Makes a Traited config object out of a ConfigObj instance
         """
@@ -403,6 +375,49 @@ class TConfig(TConfigSection):
             getattr(self,s)
 
         if monitor: self.on_trait_change(monitor)
+    
+    def __repr__(self,depth=0):
+        """Dump a section to a string."""
+
+        indent = '    '*(depth)
+
+        top_name = self.__class__.__name__
+
+        if depth == 0:
+            label = '# %s - plaintext (in .conf format)\n' % top_name
+        else:
+            # Section titles are indented one level less than their contents in
+            # the ConfigObj write methods.
+            sec_indent = '    '*(depth-1)
+            label = '\n'+sec_indent+('[' * depth) + top_name + (']'*depth)
+
+        out = [label]
+
+        doc = self.__class__.__doc__
+        if doc is not None:
+            out.append(comment(dedent(doc),indent))
+
+        scalars, sections = partition_instance(self)
+
+        for s,v in scalars:
+            try:
+                info = self.__base_traits__[s].handler.info()
+                # Get a short version of info with lines of max. 78 chars, so
+                # that after commenting them out (with '# ') they are at most
+                # 80-chars long.
+                out.append(comment(short_str(info,78-len(indent)),indent))
+            except (KeyError,AttributeError):
+                pass
+            out.append(indent+('%s = %r' % (s,v)))
+
+        for sname,sec in sections:
+            out.append(sec.__repr__(depth+1))
+
+        return '\n'.join(out)
+
+    def __str__(self):
+        return self.__class__.__name__
+
 
 ##############################################################################
 # High-level class(es) and utilities for handling a coupled pair of TConfig and
@@ -441,12 +456,12 @@ def fmonitor(fconf):
     return mon
 
 
-class RecursiveConfigManager(object):
+class TConfigManager(object):
     """A simple object to manage and sync a TConfig and a ConfigObj pair.
     """
     
     def __init__(self,configClass,configFilename,filePriority=True):
-        """Make a new ConfigManager.
+        """Make a new TConfigManager.
 
         :Parameters:
         

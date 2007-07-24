@@ -9,7 +9,7 @@ from mplconfig import MPLConfig
 
 
 mconf = 'mplrc.conf'
-mplconf = RecursiveConfigManager(MPLConfig, mconf, filePriority=True)
+mplconf = TConfigManager(MPLConfig, mconf, filePriority=True)
 mplconf.tconf.backend.use = 'Qt4Agg'
 mplconf.write()
 
@@ -32,7 +32,7 @@ tconf2File(mpc,'mplrc_default.conf',force=True)
 os.system('cp mplrc2.conf mplrc2_copy.conf')
 
 mconf2 = 'mplrc2_copy.conf'
-mplconf2 = RecursiveConfigManager(MPLConfig,mconf2)
+mplconf2 = TConfigManager(MPLConfig,mconf2)
 
 print '-'*80
 print 'You can modify the object mplconf2.tconf interactively either'
