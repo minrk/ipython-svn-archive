@@ -7,7 +7,7 @@ is_string_like = cbook.is_string_like
 
 # import/reload base modules for interactive testing/development
 import tconfig; reload(tconfig)
-from tconfig import TConfig, ReadOnlyTConfig
+from tconfig import TConfig
 
 # Code begins
 
@@ -208,20 +208,60 @@ colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn',
              'spring_r', 'summer', 'summer_r', 'winter', 'winter_r']
 
 class MPLConfig(TConfig):
+    """
+    This is a sample matplotlib configuration file.  It should be placed
+    in HOME/.matplotlib/matplotlibrc (unix/linux like systems) and
+    C:\Documents and Settings\yourname\.matplotlib (win32 systems)
+
+    By default, the installer will overwrite the existing file in the
+    install path, so if you want to preserve your's, please move it to
+    your HOME dir and set the environment variable if necessary.
+
+    This file is best viewed in a editor which supports ini or conf mode
+    syntax highlighting
+
+    Blank lines, or lines starting with a comment symbol, are ignored,
+    as are trailing comments.  Other lines must have the format
+
+      key = val   optional comment
+
+    val should be valid python syntax, just as you would use when setting
+    properties using rcParams. This should become more obvious by inspecting 
+    the default values listed herein.
+
+    Colors: for the color values below, you can either use
+     - a matplotlib color string, such as r, k, or b
+     - an rgb tuple, such as (1.0, 0.5, 0.0)
+     - a hex string, such as #ff00ff or ff00ff
+     - a scalar grayscale intensity such as 0.75
+     - a legal html color name, eg red, blue, darkslategray
+
+    ###CONFIGURATION BEGINS HERE
+    see http://matplotlib.sourceforge.net/interactive.html
+    """
 
     # Valid backends, first is default
     interactive = T.Trait(False, BoolHandler())
     toolbar = T.Trait('toolbar2', None)
     timezone = T.Trait('UTC', pytz.all_timezones)
     datapath = T.Trait(get_configdir(), IsWritableDir())
+    numerix = T.Trait('numpy', 'numeric', 'numarray')
+    maskedarray = T.false
     
     class backend(TConfig):
+        """'GTKAgg', 'GTKCairo', 'QtAgg', 'Qt4Agg', 'TkAgg', 'Agg', 
+        'Cairo', 'PS', 'PDF', 'SVG'"""
         use = T.Trait('TkAgg', BackendHandler())
         
         class cairo(TConfig):
             format = T.Trait('png', 'png', 'ps', 'pdf', 'svg')
         
         class tk(TConfig):
+            """
+            window_focus : Maintain shell focus for TkAgg
+            pythoninspect: tk sets PYTHONINSPECT
+            """
+
             window_focus = T.false
             pythoninspect = T.false
         
@@ -247,11 +287,6 @@ class MPLConfig(TConfig):
             image_noscale = T.false
             embed_chars = T.false
     
-    class InitOnly(TConfig, ReadOnlyTConfig):
-        """Things that can only be set at init time"""
-        numerix = T.Trait('numpy', 'numeric', 'numarray')
-        maskedarray = T.false
-
     class lines(TConfig):
         linewidth = T.Float(1.0)
         linestyle = T.Trait('-','--','-.', ':', 'steps', '', ' ', None)

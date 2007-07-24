@@ -28,6 +28,14 @@
 #  - a legal html color name, eg red, blue, darkslategray
 
 #### CONFIGURATION BEGINS HERE
+
+# numpy, Numeric or numarray
+numerix = 'numpy'
+    
+# True to use external maskedarray module instead of numpy.ma; this is a 
+# temporary setting for testing maskedarray.
+maskedarray = False
+
 # see http://matplotlib.sourceforge.net/interactive.html
 interactive = False
 
@@ -93,14 +101,6 @@ datapath = '/home/darren/.matplotlib'
         
         # embed character outlines in the SVG file
         embed_chars = False
-
-[InitOnly]
-    # numpy, Numeric or numarray
-    numerix = 'numpy'
-    
-    # True to use external maskedarray module instead of numpy.ma; this is a 
-    # temporary setting for testing maskedarray.
-    maskedarray = False
 
 [lines]
     # See http://matplotlib.sourceforge.net/matplotlib.lines.html for more

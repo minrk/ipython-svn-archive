@@ -37,4 +37,7 @@ print c2str(cr1.conf)
 print '-'*80
 print c2str(cr2.conf)
 
-cc = IPythonConfig(mkConfigObjRec('tconfig2.conf'))
+ic1 = IPythonConfig(cr1.conf)
+ic2 = IPythonConfig(cr2.conf)
+print '^'*80
+print ic2
