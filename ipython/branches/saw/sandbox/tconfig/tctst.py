@@ -19,7 +19,8 @@ from pprint import pprint
 import tconfig
 reload(tconfig)
 
-from tconfig import mkConfigObj, RecursiveConfigObj, RecursiveConfigManager
+from tconfig import mkConfigObj, RecursiveConfigObj, RecursiveConfigManager, \
+     tconf2File
 
 # Simple utilities/classes for testing
 

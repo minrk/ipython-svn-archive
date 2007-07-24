@@ -29,6 +29,7 @@ __license__ = 'BSD'
 ############################################################################
 from cStringIO import StringIO
 from inspect import isclass
+import os
 import textwrap
 
 ############################################################################
@@ -123,6 +124,25 @@ def configObj2Str(cobj):
     outstr = StringIO()
     cobj.write(outstr)
     return outstr.getvalue()
+
+def tconf2File(tconf,fname,force=False):
+    """Write a TConfig instance to a given filename.
+
+    :Keywords:
+
+      force : bool (False)
+        If true, force writing even if the file exists.
+      """
+    
+    if os.path.isfile(fname) and not force:
+        raise IOError("File %s already exists, use force=True to overwrite" %
+                      fname)
+
+    txt = str(tconf)
+
+    fobj = open(fname,'w')
+    fobj.write(txt)
+    fobj.close()
 
 def filter_scalars(sc):
     """ input sc MUST be sorted!!!"""

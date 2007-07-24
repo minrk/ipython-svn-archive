@@ -24,6 +24,9 @@ if 0:
 mpc = MPLConfig()
 print mpc
 
+# write it out to disk
+tconf2File(mpc,'mplrc_default.conf',force=True)
+
 # Create a copy of a hierarchical file, make a simple change, allow interactive
 # editing and then write to disk.
 os.system('cp mplrc2.conf mplrc2_copy.conf')
