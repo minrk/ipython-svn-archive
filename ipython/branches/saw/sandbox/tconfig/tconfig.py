@@ -229,7 +229,7 @@ def partition_instance(obj):
     return scalars, sections
 
 
-def mkConfigObj(filename):
+def mkConfigObj(filename,makeMissingFile=True):
     """Return a ConfigObj instance with our hardcoded conventions.
 
     Use a simple factory that wraps our option choices for using ConfigObj.
@@ -240,9 +240,24 @@ def mkConfigObj(filename):
 
       filename : string
         File to read from.
+
+    :Keywords:
+      makeMissingFile : bool (True)
+        If true, the file named by `filename` may not yet exist and it will be
+        automatically created (empty).  Else, if `filename` doesn't exist, an
+        IOError will be raised.
     """
+
+    if makeMissingFile:
+        create_empty = True
+        file_error = False
+    else:
+        create_empty = False
+        file_error = True
+        
     return configobj.ConfigObj(filename,
-                               create_empty=True,
+                               create_empty=create_empty,
+                               file_error=file_error,
                                indent_type='    ',
                                interpolation='Template',
                                unrepr=True)
@@ -269,8 +284,8 @@ class RecursiveConfigObj(object):
         self.comp = []
         self.conf = self._load(filename)
 
-    def _load(self,filename):
-        conf = mkConfigObj(filename)
+    def _load(self,filename,makeMissingFile=True):
+        conf = mkConfigObj(filename,makeMissingFile)
 
         # Do recursive loading. We only allow (or at least honor) the include
         # tag at the top-level.  For now, we drop the inclusion information so
@@ -281,13 +296,14 @@ class RecursiveConfigObj(object):
         # construction was requested, make a separate object for storage
         # there, since we don't want that to be modified by the inclusion
         # process.
-        self.comp.append(mkConfigObj(filename))
+        self.comp.append(mkConfigObj(filename,makeMissingFile))
 
         incfname = conf.pop('include',None)
         if incfname is not None:
-            # Do recursive load
-
-            confinc = self._load(incfname)
+            # Do recursive load.  We don't want user includes that point to
+            # missing files to fail silently, so in the recursion we disable
+            # auto-creation of missing files.
+            confinc = self._load(incfname,makeMissingFile=False)
 
             # Update with self to get proper ordering (included files provide
             # base data, current one overwrites)
@@ -321,9 +337,12 @@ class TConfig(T.HasStrictTraits):
     # Once created, the tree's hierarchy can NOT be modified
     _tconf_parent = T.ReadOnly
 
-    def __init__(self,config=nullConf,parent=None,monitor=None):
+    def __init__(self,config=None,parent=None,monitor=None):
         """Makes a Traited config object out of a ConfigObj instance
         """
+
+        if config is None:
+            config = mkConfigObj(None)
 
         # Validate the set of scalars ...
         my_scalars = set(get_scalars(self))
@@ -363,10 +382,8 @@ class TConfig(T.HasStrictTraits):
 
         # And build subsections
         for s,v in section_items:
-            try:
-                section = v(config[s],self,monitor=monitor)
-            except KeyError:
-                section = v()
+            sec_config = config.get(s,mkConfigObj({}))
+            section = v(sec_config,self,monitor=monitor)
 
             # We must use add_trait instead of setattr because we inherit from
             # HasStrictTraits, but we need to then do a 'dummy' getattr call on
@@ -374,7 +391,9 @@ class TConfig(T.HasStrictTraits):
             self.add_trait(s,section)
             getattr(self,s)
 
-        if monitor: self.on_trait_change(monitor)
+        if monitor:
+            #print 'Adding monitor to:',self.__class__.__name__  # dbg
+            self.on_trait_change(monitor)
     
     def __repr__(self,depth=0):
         """Dump a section to a string."""
@@ -451,6 +470,9 @@ def fmonitor(fconf):
     """
     
     def mon(obj,name,new):
+        #print 'OBJ:',obj  # dbg
+        #print 'NAM:',name # dbg
+        #print 'NEW:',new  # dbg
         set_value(fconf,path_to_root(obj),name,new)
         
     return mon
@@ -500,7 +522,7 @@ class TConfigManager(object):
             self.tconf = configClass(self.fconfCombined,monitor=monitor)
         else:
             # Push defaults onto file object
-            self.tconf = configClass(nullConf,monitor=monitor)
+            self.tconf = configClass(mkConfigObj(None),monitor=monitor)
             self.fconfUpdate(self.fconf,self.tconf)
 
     def fconfUpdate(self,fconf,tconf):
