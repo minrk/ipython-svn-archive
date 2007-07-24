@@ -401,7 +401,7 @@ class TConfig(T.HasStrictTraits):
 
         # And build subsections
         for s,v in section_items:
-            sec_config = config.get(s,mkConfigObj({}))
+            sec_config = config.setdefault(s,{})
             section = v(sec_config,self,monitor=monitor)
 
             # We must use add_trait instead of setattr because we inherit from
