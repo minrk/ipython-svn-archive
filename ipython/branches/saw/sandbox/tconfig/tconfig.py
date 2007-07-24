@@ -344,7 +344,7 @@ class TConfig(TConfigSection):
                     # tools. 
                     getattr(self,k)
                 scal = getattr(self,k)
-        except TraitError,e:
+        except T.TraitError,e:
             t = self.__class_traits__[k]
             msg = "Bad key,value pair given: %s -> %s\n" % (k,config[k])
             msg += "Expected type: %s" % t.handler.info()

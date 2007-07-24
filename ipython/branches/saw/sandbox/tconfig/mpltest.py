@@ -35,7 +35,7 @@ print '-'*80
 print 'You can modify the object mplconf2.tconf interactively either'
 print 'at the command line, or if you started ipython with -wthread support,'
 print 'by typing:'
-print 'mplconf2.edit_traits()'
+print 'mplconf2.tconf.edit_traits()'
 print 'When finshed, you can save the object to disk via'
 print 'mplconf2.write()'
 print 'The file it writes is:',mconf2
