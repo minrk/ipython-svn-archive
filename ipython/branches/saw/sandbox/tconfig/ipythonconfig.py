@@ -1,3 +1,6 @@
+"""Toy example of a TConfig-based configuration description.
+"""
+
 import enthought.traits.api as T
 
 # For interactive testing

@@ -1,5 +1,13 @@
-import enthought.traits.api as T
+"""Traits-based declaration for Matplotlib configuration.
+"""
+
+# Stdlib imports
 import os, pytz, tempfile
+
+# External imports
+import enthought.traits.api as T
+
+# Matplotlib-specific imports
 from matplotlib import colors as mcolors
 from matplotlib import cbook
 
@@ -10,6 +18,10 @@ import tconfig; reload(tconfig)
 from tconfig import TConfig
 
 # Code begins
+
+##############################################################################
+# Handlers and other support functions and data structures
+##############################################################################
 
 def _is_writable_dir(p):
     """
@@ -207,18 +219,21 @@ colormaps = ['Accent', 'Accent_r', 'Blues', 'Blues_r', 'BrBG', 'BrBG_r', 'BuGn',
              'prism', 'prism_r', 'revcmap', 'spectral', 'spectral_r', 'spring', 
              'spring_r', 'summer', 'summer_r', 'winter', 'winter_r']
 
+##############################################################################
+# Main Config class follows
+##############################################################################
 class MPLConfig(TConfig):
     """
     This is a sample matplotlib configuration file.  It should be placed
     in HOME/.matplotlib/matplotlibrc (unix/linux like systems) and
     C:\Documents and Settings\yourname\.matplotlib (win32 systems)
 
-    By default, the installer will overwrite the existing file in the
-    install path, so if you want to preserve your's, please move it to
-    your HOME dir and set the environment variable if necessary.
+    By default, the installer will overwrite the existing file in the install
+    path, so if you want to preserve yours, please move it to your HOME dir and
+    set the environment variable if necessary.
 
-    This file is best viewed in a editor which supports ini or conf mode
-    syntax highlighting
+    This file is best viewed in a editor which supports ini or conf mode syntax
+    highlighting.
 
     Blank lines, or lines starting with a comment symbol, are ignored,
     as are trailing comments.  Other lines must have the format
@@ -236,11 +251,11 @@ class MPLConfig(TConfig):
      - a scalar grayscale intensity such as 0.75
      - a legal html color name, eg red, blue, darkslategray
 
-    ###CONFIGURATION BEGINS HERE
-    see http://matplotlib.sourceforge.net/interactive.html
+    Interactivity: see http://matplotlib.sourceforge.net/interactive.html.
+    
+    ### CONFIGURATION BEGINS HERE ###
     """
 
-    # Valid backends, first is default
     interactive = T.Trait(False, BoolHandler())
     toolbar = T.Trait('toolbar2', None)
     timezone = T.Trait('UTC', pytz.all_timezones)
@@ -249,8 +264,8 @@ class MPLConfig(TConfig):
     maskedarray = T.false
     
     class backend(TConfig):
-        """'GTKAgg', 'GTKCairo', 'QtAgg', 'Qt4Agg', 'TkAgg', 'Agg', 
-        'Cairo', 'PS', 'PDF', 'SVG'"""
+        """Valid backends are: 'GTKAgg', 'GTKCairo', 'QtAgg', 'Qt4Agg',
+        'TkAgg', 'Agg', 'Cairo', 'PS', 'PDF', 'SVG'"""
         use = T.Trait('TkAgg', BackendHandler())
         
         class cairo(TConfig):
@@ -444,6 +459,9 @@ class MPLConfig(TConfig):
         level = T.Trait('silent', 'helpful', 'debug', 'debug-annoying')
         fileo = T.Trait('sys.stdout', T.File)
 
+##############################################################################
+# Simple testing
+##############################################################################
 if __name__ == "__main__":
     mplrc = MPLConfig()
     mplrc.backend.pdf.compression = 1.1
