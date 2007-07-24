@@ -29,6 +29,7 @@ __license__ = 'BSD'
 ############################################################################
 from cStringIO import StringIO
 from inspect import isclass
+
 import os
 import textwrap
 
@@ -76,11 +77,13 @@ def dedent(txt):
            if t and not t.isspace()]
     return '\n'.join(out)
 
+
 def comment(strng,indent=''):
     """return an input string, commented out"""
     template = indent + '# %s'
     lines = [template % s for s in strng.splitlines(True)]
     return ''.join(lines)
+
 
 def short_str(txt,line_length=80,max_lines=6):
     """Shorten a text input if necessary.
@@ -119,11 +122,13 @@ def short_str(txt,line_length=80,max_lines=6):
                 txt = '\n'.join(out)
     return txt
 
+
 def configObj2Str(cobj):
     """Dump a Configobj instance to a string."""
     outstr = StringIO()
     cobj.write(outstr)
     return outstr.getvalue()
+
 
 def tconf2File(tconf,fname,force=False):
     """Write a TConfig instance to a given filename.
@@ -163,6 +168,7 @@ def filter_scalars(sc):
 
     return scalars
 
+
 def get_scalars(obj):
     """Return scalars for a TConf class object"""
 
@@ -171,10 +177,12 @@ def get_scalars(obj):
     sc.sort()
     return filter_scalars(sc)
 
+
 def get_sections(obj,sectionClass):
     """Return sections for a TConf class object"""
     return [(n,v) for (n,v) in obj.__dict__.iteritems()
             if isclass(v) and issubclass(v,sectionClass)]
+
 
 def get_instance_sections(inst):
     """Return sections for a TConf instance"""
@@ -183,6 +191,7 @@ def get_instance_sections(inst):
     # Sort the sections by name
     sections.sort(key=lambda x:x[0])
     return sections
+
 
 def partition_instance(obj):
     """Return scalars,sections for a given TConf instance.
@@ -206,6 +215,7 @@ def partition_instance(obj):
     
     return scalars, sections
 
+
 def mkConfigObj(filename):
     """Return a ConfigObj instance with our hardcoded conventions.
 
@@ -225,6 +235,7 @@ def mkConfigObj(filename):
                                unrepr=True)
 
 nullConf = mkConfigObj(None)
+
 
 class RecursiveConfigObj(object):
     """Object-oriented interface for recursive ConfigObj constructions."""
@@ -285,7 +296,8 @@ class TConfigInvalidKeyError(TConfigError): pass
 
 class TConfigSection(T.HasStrictTraits):
 
-    _tconf_parent = T.Any
+    # Once created, the tree's hierarchy can NOT be modified
+    _tconf_parent = T.ReadOnly
     
     def __repr__(self,depth=0):
         """Dump a section to a string."""
@@ -328,6 +340,7 @@ class TConfigSection(T.HasStrictTraits):
 
     def __str__(self):
         return self.__class__.__name__
+
 
 class TConfig(TConfigSection):
     """A class representing configuration objects.
@@ -406,6 +419,7 @@ def path_to_root(obj):
     path.reverse()
     return path
 
+
 def set_value(fconf,path,key,value):
     """Set a value on a ConfigObj instance, arbitrarily deep."""
     section = fconf
@@ -425,6 +439,7 @@ def fmonitor(fconf):
         set_value(fconf,path_to_root(obj),name,new)
         
     return mon
+
 
 class RecursiveConfigManager(object):
     """A simple object to manage and sync a TConfig and a ConfigObj pair.
@@ -504,7 +519,6 @@ class RecursiveConfigManager(object):
             return out
         else:
             return self.fconf.write()
-
 
     def writeAll(self,filename=None):
         """Write out the entire configuration to disk.
