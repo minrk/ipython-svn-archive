@@ -368,7 +368,11 @@ class TConfig(T.HasStrictTraits):
         cf_scalars = set(config.scalars)
         invalid_scalars = cf_scalars - my_scalars
         if invalid_scalars:
-            raise TConfigInvalidKeyError("Invalid keys: %s" % invalid_scalars)
+            m=("ConfigObj with filename: %r\n"
+               "Contains the following invalid keys: %s\n"
+               "The valid keys for this section are: %s\n"
+               % (config.filename,list(invalid_scalars),list(my_scalars)))
+            raise TConfigInvalidKeyError(m)
 
         # ... and sections
         section_items = get_sections(self.__class__,TConfig)
@@ -376,8 +380,11 @@ class TConfig(T.HasStrictTraits):
         cf_sections = set(config.sections)
         invalid_sections = cf_sections - my_sections
         if invalid_sections:
-            raise TConfigInvalidKeyError("Invalid sections: %s" %
-                                         invalid_sections)
+            m=("ConfigObj with filename: %r\n"
+               "Contains the following invalid sections: %s\n"
+               "Valid subsections for this section are : %s\n"
+               % (config.filename,list(invalid_sections),list(my_sections)))
+            raise TConfigInvalidKeyError(m)
 
         self._tconf_parent = parent
 
