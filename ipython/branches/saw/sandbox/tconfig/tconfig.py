@@ -159,6 +159,13 @@ def configObj2Str(cobj):
     cobj.write(outstr)
     return outstr.getvalue()
 
+def getConfigFilename(conf):
+    """Find the filename attribute of a ConfigObj given a sub-section object.
+    """
+    depth = conf.depth
+    for d in range(depth):
+        conf = conf.parent
+    return conf.filename
 
 def tconf2File(tconf,fname,force=False):
     """Write a TConfig instance to a given filename.
@@ -363,15 +370,20 @@ class TConfig(T.HasStrictTraits):
         if config is None:
             config = mkConfigObj(None)
 
+        
+
         # Validate the set of scalars ...
         my_scalars = set(get_scalars(self))
         cf_scalars = set(config.scalars)
         invalid_scalars = cf_scalars - my_scalars
         if invalid_scalars:
-            m=("ConfigObj with filename: %r\n"
-               "Contains the following invalid keys: %s\n"
-               "The valid keys for this section are: %s\n"
-               % (config.filename,list(invalid_scalars),list(my_scalars)))
+            config_fname = getConfigFilename(config)
+            m=("In config defined in file: %r\n"
+               "Error processing section: %s\n"
+               "These keys are invalid : %s\n"
+               "Valid key names        : %s\n"
+               % (config_fname,self.__class__.__name__,
+                  list(invalid_scalars),list(my_scalars)))
             raise TConfigInvalidKeyError(m)
 
         # ... and sections
@@ -380,10 +392,13 @@ class TConfig(T.HasStrictTraits):
         cf_sections = set(config.sections)
         invalid_sections = cf_sections - my_sections
         if invalid_sections:
-            m=("ConfigObj with filename: %r\n"
-               "Contains the following invalid sections: %s\n"
-               "Valid subsections for this section are : %s\n"
-               % (config.filename,list(invalid_sections),list(my_sections)))
+            config_fname = getConfigFilename(config)
+            m=("In config defined in file: %r\n"
+               "Error processing section: %s\n"
+               "These subsections are invalid : %s\n"
+               "Valid subsection names        : %s\n"
+               % (config_fname,self.__class__.__name__,
+                  list(invalid_sections),list(my_sections)))
             raise TConfigInvalidKeyError(m)
 
         self._tconf_parent = parent
