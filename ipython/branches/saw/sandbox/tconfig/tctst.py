@@ -19,13 +19,18 @@ from pprint import pprint
 import tconfig
 reload(tconfig)
 
-from tconfig import ConfigManager, mkConfigObj, mkConfigObjRec, \
-     RecursiveConfigObj
+from tconfig import mkConfigObj, RecursiveConfigObj, RecursiveConfigManager
 
-# Useful classes for testing.
+# Simple utilities/classes for testing
+
+def cat(fname):
+    print '### FILENAME:',fname
+    print open(fname).read()
+
+
 class App(object):
     """A trivial 'application' class to be initialized.
     """
     def __init__(self,configClass,configFilename):
-        self.rcman = ConfigManager(configClass,configFilename)
+        self.rcman = RecursiveConfigManager(configClass,configFilename)
         self.rc = self.rcman.tconf

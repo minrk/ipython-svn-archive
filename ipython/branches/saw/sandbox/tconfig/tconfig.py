@@ -1,20 +1,28 @@
 """Mix of Traits and ConfigObj.
 
+Provides:
+
+- Coupling a Traits object to a ConfigObj one, so that changes to the Traited
+  instance propagate back into the ConfigObj.
+
+- A declarative interface for describing configurations that automatically maps
+  to valid ConfigObj representations.
+
+- From these descriptions, valid .conf files can be auto-generated, with class
+  docstrings and traits information used for initial auto-documentation.
+
+- Hierarchical inclusion of files, so that a base config can be overridden only
+  in specific spots.
+
+- Automatic GUI editing of configuration objects.
+
+
 TODO:
 
-  - Finish the ConfigManager class that holds a reference to BOTH the ConfigObj
-  and the TConfig, and that automatically hooks traits listeners, so that all
-  traits actions on the TConfig get propagated back to the ConfigObj.  This
-  will let us write the config file back to disk from within the app.
-
-  This code already works: the files *do* get written correctly always, but at
-  the price of a full object update at write time.  Hooking up traits listeners
-  would be a bit more elegant, though at this point it isn't too high priority.
-
-  - Automatically construct a view for the TConfig hierarchies, so that we get
-  proper editing with Traits beyond the first level (try mpl.rc.edit_traits()
-  to see the problem).
+  - turn the currently interactive tests into proper doc/unit tests.
 """
+
+__license__ = 'BSD'
 
 ############################################################################
 # Stdlib imports
@@ -28,6 +36,8 @@ import textwrap
 ############################################################################
 from enthought.traits import api as T
 
+# For now we ship this internally so users don't have to download it, since
+# it's just a single-file dependency.
 import configobj
 
 ############################################################################
@@ -121,12 +131,16 @@ def filter_scalars(sc):
     i = 0
     while i<len(sc):
         t = sc[i]
+        if t.startswith('_tconf_'):
+            i += 1
+            continue
         if i<maxi and t+'_' == sc[i+1]:
             # skip one ahead in the loop, to skip over the names of shadow
             # traits, which we don't want to expose in the config files.
             i += 1
         scalars.append(t)
         i += 1
+
     return scalars
 
 def get_scalars(obj):
@@ -142,6 +156,14 @@ def get_sections(obj,sectionClass):
     return [(n,v) for (n,v) in obj.__dict__.iteritems()
             if isclass(v) and issubclass(v,sectionClass)]
 
+def get_instance_sections(inst):
+    """Return sections for a TConf instance"""
+    sections = [(k,v) for k,v in inst.__dict__.iteritems()
+                if isinstance(v,TConfigSection) and not k=='_tconf_parent']
+    # Sort the sections by name
+    sections.sort(key=lambda x:x[0])
+    return sections
+
 def partition_instance(obj):
     """Return scalars,sections for a given TConf instance.
     """
@@ -149,7 +171,8 @@ def partition_instance(obj):
     sections = []
     for k,v in obj.__dict__.iteritems():
         if isinstance(v,TConfigSection):
-            sections.append((k,v))
+            if not k=='_tconf_parent':
+                sections.append((k,v))
         else:
             scnames.append(k)
 
@@ -183,69 +206,24 @@ def mkConfigObj(filename):
 
 nullConf = mkConfigObj(None)
 
-def mkConfigObjRec(filename,components=None):
-    """Return a ConfigObj using our conventions. Supports recursive inclusion.
-
-    This version supports the special key include="path/to/file" in the config
-    files (only at the top level of each), and will recursively load the
-    requested files.
-
-    :Return:
-      A ConfigObj instance, built with the conventions of mkConfigObj, and
-      computed recursively.  The recursion process loads the included files
-      first, and then applies the outermost configuration on top of them.  The
-      derived files therefore override any flags in the included ones.
-
-    :Parameters:
-
-      filename : string
-        File to read from.
-
-    :Keywords:
-
-      components : list (None)
-
-        If given, this list is filled with the individual ConfigObj instances
-        corresponding to each file loaded, without any inter-file overwrites.
-        The return value of the whole function contains the result of doing a
-        'telescoping update' with this list, starting with the last entry (the
-        'deepest' one) and updating it with each successive entry.  Having this
-        list of unmodified instances can be used by code which wants to map
-        changes made at runtime to their original files or objects.
-    """
-
-    conf = mkConfigObj(filename)
-    
-    # Do recursive loading. We only allow (or at least honor) the include tag
-    # at the top-level.  For now, we drop the inclusion information so that
-    # there are no restrictions on which levels of the TConfig hierarchy can
-    # use include statements.  But this means that
-
-    if components is not None:
-        # if bookkeeping of each separate component of the recursive
-        # construction was requested, make a separate object for storage
-        # there, since we don't want that to be modified by the inclusion
-        # process.
-        components.append(mkConfigObj(filename))
-
-    incfname = conf.pop('include',None)
-    if incfname is not None:
-        # Do recursive load
-
-        confinc = mkConfigObjRec(incfname,components)
-        
-        # Update with self to get proper ordering (included files provide base
-        # data, current one overwrites)
-        confinc.update(conf)
-        # And do swap to return the updated structure
-        conf = confinc
-        # Set the filename to be the original file instead of the included one
-        conf.filename = filename
-
-    return conf
-
 class RecursiveConfigObj(object):
     """Object-oriented interface for recursive ConfigObj constructions."""
+
+    def __init__(self,filename):
+        """Return a ConfigObj instance with our hardcoded conventions.
+
+        Use a simple factory that wraps our option choices for using ConfigObj.
+        I'm hard-wiring certain choices here, so we'll always use instances with
+        THESE choices.
+
+        :Parameters:
+
+          filename : string
+            File to read from.
+        """
+
+        self.comp = []
+        self.conf = self._load(filename)
 
     def _load(self,filename):
         conf = mkConfigObj(filename)
@@ -277,23 +255,6 @@ class RecursiveConfigObj(object):
             conf.filename = filename
         return conf
         
-    
-    def __init__(self,filename):
-        """Return a ConfigObj instance with our hardcoded conventions.
-
-        Use a simple factory that wraps our option choices for using ConfigObj.
-        I'm hard-wiring certain choices here, so we'll always use instances with
-        THESE choices.
-
-        :Parameters:
-
-          filename : string
-            File to read from.
-        """
-
-        self.comp = []
-        self.conf = self._load(filename)
-
 ############################################################################
 # Main TConfig class and supporting exceptions
 ############################################################################
@@ -303,15 +264,15 @@ class TConfigError(Exception): pass
 class TConfigInvalidKeyError(TConfigError): pass
 
 class TConfigSection(T.HasStrictTraits):
+
+    _tconf_parent = T.Any
+    
     def __repr__(self,depth=0):
-        """Dump a self section to a string."""
+        """Dump a section to a string."""
 
         indent = '    '*max(depth-1,0)
 
-        try:
-            top_name = self.__class__.__original_name__
-        except AttributeError:
-            top_name = self.__class__.__name__
+        top_name = self.__class__.__name__
 
         if depth == 0:
             label = '# %s - plaintext (in .conf format)\n' % top_name
@@ -333,7 +294,7 @@ class TConfigSection(T.HasStrictTraits):
                 # that after commenting them out (with '# ') they are at most
                 # 80-chars long.
                 out.append(comment(short_str(info,78-len(indent)),indent))
-            except KeyError:
+            except (KeyError,AttributeError):
                 pass
             out.append(indent+('%s = %r' % (s,v)))
 
@@ -341,7 +302,6 @@ class TConfigSection(T.HasStrictTraits):
             out.append(sec.__repr__(depth+1))
 
         return '\n'.join(out)
-    
 
 class TConfig(TConfigSection):
     """A class representing configuration objects.
@@ -350,7 +310,7 @@ class TConfig(TConfigSection):
     will be declared by subclasses.  This class is meant to ONLY declare the
     necessary initialization/validation methods.  """
     
-    def __init__(self,config=nullConf):
+    def __init__(self,config=nullConf,parent=None,monitor=None):
         """Makes a Traited config object out of a ConfigObj instance
         """
 
@@ -370,6 +330,8 @@ class TConfig(TConfigSection):
             raise TConfigInvalidKeyError("Invalid sections: %s" %
                                          invalid_sections)
 
+        self._tconf_parent = parent
+
         # Now set the traits based on the config
         try:
             for k in my_scalars:
@@ -381,6 +343,7 @@ class TConfig(TConfigSection):
                     # way that it will later be properly read by introspection
                     # tools. 
                     getattr(self,k)
+                scal = getattr(self,k)
         except TraitError,e:
             t = self.__class_traits__[k]
             msg = "Bad key,value pair given: %s -> %s\n" % (k,config[k])
@@ -390,7 +353,7 @@ class TConfig(TConfigSection):
         # And build subsections
         for s,v in section_items:
             try:
-                section = v(config[s])
+                section = v(config[s],self,monitor=monitor)
             except KeyError:
                 section = v()
 
@@ -400,14 +363,51 @@ class TConfig(TConfigSection):
             self.add_trait(s,section)
             getattr(self,s)
 
-class ConfigManager(object):
+        if monitor: self.on_trait_change(monitor)
+
+##############################################################################
+# High-level class(es) and utilities for handling a coupled pair of TConfig and
+# ConfigObj instances.
+##############################################################################
+
+def path_to_root(obj):
+    """Find the path to the root of a nested TConfig instance."""
+    ob = obj
+    path = []
+    while ob._tconf_parent is not None:
+        path.append(ob.__class__.__name__)
+        ob = ob._tconf_parent
+    path.reverse()
+    return path
+
+def set_value(fconf,path,key,value):
+    """Set a value on a ConfigObj instance, arbitrarily deep."""
+    section = fconf
+    for sname in path:
+        section = section.setdefault(sname,{})
+    section[key] = value
+
+
+def fmonitor(fconf):
+    """Make a monitor for coupling TConfig instances to ConfigObj ones.
+
+    We must use a closure because Traits makes assumptions about the functions
+    used with on_trait_change() that prevent the use of a callable instance.
+    """
+    
+    def mon(obj,name,new):
+        set_value(fconf,path_to_root(obj),name,new)
+        
+    return mon
+
+class RecursiveConfigManager(object):
     """A simple object to manage and sync a TConfig and a ConfigObj pair.
     """
     
     def __init__(self,configClass,configFilename,filePriority=True):
         """Make a new ConfigManager.
 
-        :Paramters:
+        :Parameters:
         
           configClass : class
 
@@ -426,12 +426,25 @@ class ConfigManager(object):
             is reversed and the file object will be overwritten with the
             configClass defaults at write() time.
         """
+
+        rconf = RecursiveConfigObj(configFilename)
+        # In a hierarchical object, the two following fconfs are *very*
+        # different.  In self.fconf, we'll keep the outer-most fconf associated
+        # directly to the original filename.  self.fconfCombined, instead,
+        # contains an object which has the combined effect of having merged all
+        # the called files in the recursive chain.
+        self.fconf = rconf.comp[0]
+        self.fconfCombined = rconf.conf
+
+        # Create a monitor to track and apply trait changes to the tconf
+        # instance over into the fconf one
+        monitor = fmonitor(self.fconf)
         
-        self.fconf = mkConfigObj(configFilename)
         if filePriority:
-            self.tconf = configClass(self.fconf)
+            self.tconf = configClass(self.fconfCombined,monitor=monitor)
         else:
-            self.tconf = configClass(nullConf)
+            # Push defaults onto file object
+            self.tconf = configClass(nullConf,monitor=monitor)
             self.fconfUpdate(self.fconf,self.tconf)
 
     def fconfUpdate(self,fconf,tconf):
@@ -445,9 +458,51 @@ class ConfigManager(object):
         for secname,sec in sections:
             self.fconfUpdate(fconf.setdefault(secname,{}),sec)
 
-    def write(self):
-        self.fconfUpdate(self.fconf,self.tconf)
-        self.fconf.write()
+    def write(self,filename=None):
+        """Write out to disk.
+
+        This method writes out only to the top file in a hierarchical
+        configuration, which means that the class defaults and other values not
+        explicitly set in the top level file are NOT written out.
+
+        :Keywords:
+        
+          filename : string (None)
+            If given, the output is written to this file, otherwise the
+            .filename attribute of the top-level configuration object is used.
+        """
+        if filename is not None:
+            fileObj = open(filename,'w')
+            out = self.fconf.write(fileObj)
+            fileObj.close()
+            return out
+        else:
+            return self.fconf.write()
+
+
+    def writeAll(self,filename=None):
+        """Write out the entire configuration to disk.
+
+        This method, in contrast with write(), updates the .fconfCombined
+        object with the *entire* .tconf instance, and then writes it out to
+        disk.  This method is thus useful for generating files that contain an
+        self-contained, non-hierarchical file.
+
+        :Keywords:
+        
+          filename : string (None)
+            If given, the output is written to this file, otherwise the
+            .filename attribute of the top-level configuration object is used.
+        """
+        if filename is not None:
+            fileObj = open(filename,'w')
+            self.fconfUpdate(self.fconfCombined,self.tconf)
+            out = self.fconf.write(fileObj)
+            fileObj.close()
+            return out
+        else:
+            self.fconfUpdate(self.fconfCombined,self.tconf)
+            return self.fconf.write()
 
     def tconfStr(self):
         return str(self.tconf)

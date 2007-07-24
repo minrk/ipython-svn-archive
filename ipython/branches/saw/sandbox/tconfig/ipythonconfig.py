@@ -39,6 +39,7 @@ class IPythonConfig(TConfig):
 
             More..."""
             key = T.Str
+            key2 = T.Str
 
     class Machine(TConfig):
         """Set the machine by ip address and port number."""
