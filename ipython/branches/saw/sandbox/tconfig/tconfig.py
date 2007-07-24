@@ -290,14 +290,17 @@ class TConfigSection(T.HasStrictTraits):
     def __repr__(self,depth=0):
         """Dump a section to a string."""
 
-        indent = '    '*max(depth-1,0)
+        indent = '    '*(depth)
 
         top_name = self.__class__.__name__
 
         if depth == 0:
             label = '# %s - plaintext (in .conf format)\n' % top_name
         else:
-            label = '\n'+indent+('[' * depth) + top_name + (']'*depth)
+            # Section titles are indented one level less than their contents in
+            # the ConfigObj write methods.
+            sec_indent = '    '*(depth-1)
+            label = '\n'+sec_indent+('[' * depth) + top_name + (']'*depth)
 
         out = [label]
 
@@ -322,6 +325,9 @@ class TConfigSection(T.HasStrictTraits):
             out.append(sec.__repr__(depth+1))
 
         return '\n'.join(out)
+
+    def __str__(self):
+        return self.__class__.__name__
 
 class TConfig(TConfigSection):
     """A class representing configuration objects.

@@ -66,3 +66,7 @@ cat(cr2_fname)
 print '++++++++++++++++ AFTER +++++++++++++++++++'
 cr2.write()
 cat(cr2_fname)
+
+
+print '^'*80
+print ic2

@@ -42,3 +42,5 @@ print 'mplconf2.tconf.edit_traits()'
 print 'When finshed, you can save the object to disk via'
 print 'mplconf2.write()'
 print 'The file it writes is:',mconf2
+
+#mplconf2.tconf.edit_traits()
