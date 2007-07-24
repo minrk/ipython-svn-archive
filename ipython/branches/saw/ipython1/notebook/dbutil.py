@@ -123,7 +123,7 @@ def addChild(session, child, parent, index=None):
             parent[index].insertBefore(child)
             # if index == 0:
             #     parent.headID = child.nodeID
-                # parent.head = child
+            #     parent.head = child
     else: # this is parent's first child
         child.parent = parent
         child.user = parent.user

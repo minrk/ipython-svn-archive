@@ -38,6 +38,9 @@ def XMLUser(u, justme=False):
     s  = "<userID>%i</userID>\n"%u.userID
     s += "<username>%s</username>\n"%u.username
     s += "<email>%s</email>\n"%u.email
+    if not justme:
+        for nb in u.notebooks:
+            s += indent(nb.xmlize(justme=False), 2)
     return "<User>\n%s</user>\n"%indent(s,2)
     
 def XMLNodeBase(node):
@@ -209,6 +212,7 @@ class Node(Timestamper):
     def _setNext(self, n):
         if n is not None:
             n.previousID = self.nodeID
+            pass
         self._next = n
     
     next = property(_getNext, _setNext)
@@ -218,7 +222,6 @@ class Node(Timestamper):
     def _setPrevious(self, n):
         if n is not None:
             n.next = self
-        # self._next = n
     
     previous = property(_getPrevious, _setPrevious)
     
@@ -254,13 +257,15 @@ class Section(Node):
     def __getitem__(self, index):
         if index >= 0:
             # c = self.children[0]
-            c = self.head
+            del self._head
+            c = self._head
             for i in range(index):
                 c = c.next
             return c
         else:
             # c = self.children[-1]
-            c = self.tail
+            del self._tail
+            c = self._tail
             for i in range(-1-index):
                 c = c.previous
             return c
@@ -354,19 +359,23 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
             primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.parentID],
             cascade='all, delete-orphan',
+            # viewonly=True,
+            # order_by=nodeJoin.c.nextID,
             backref=backref("parent",
                 primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
                 remote_side=[nodesTable.c.nodeID],
                 uselist=False
                 )
             ),
-        'head': relation(Node,
+        '_head': relation(Node,
             primaryjoin=and_(sectionsTable.c.nodeID==nodesTable.c.parentID,nodesTable.c.previousID == None),
             remote_side=[nodesTable.c.parentID, nodesTable.c.previousID],
+            viewonly = True,
             uselist=False),
-        'tail': relation(Node,
+        '_tail': relation(Node,
             primaryjoin=and_(sectionsTable.c.nodeID==nodesTable.c.parentID,nodesTable.c.nextID == None),
             remote_side=[nodesTable.c.parentID, nodesTable.c.previousID],
+            viewonly = True,
             uselist=False),
     }
 )
