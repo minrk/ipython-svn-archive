@@ -118,20 +118,21 @@ def addChild(session, child, parent, index=None):
         if index is None or index == len(parent.children):
             n = parent[-1]
             n.insertAfter(child)
-            # parent.tailID = child.nodeID
+            parent.tailID = child.nodeID
         else:
             parent[index].insertBefore(child)
-            # if index == 0:
-            #     parent.headID = child.nodeID
+            if index == 0:
+                parent.headID = child.nodeID
             #     parent.head = child
     else: # this is parent's first child
         child.parent = parent
         child.user = parent.user
-        # parent.headID = parent.tailID = child.nodeID
+        parent.headID = parent.tailID = child.nodeID
         # parent.head = parent.tail = child
     child.touchModified()
     parent.touchModified()
     session.flush()
+    session.refresh(parent)
 
 def getDescendents(section):
     """get all descendents of a Section into a flat list of Nodes."""

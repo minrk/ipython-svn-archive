@@ -37,13 +37,10 @@ def dumpDBtoXML(session, fname=None, flatten=False):
     users = session.query(models.User).select()
     s = "<XMLBackup>\n"
     for u in users:
-        s += models.indent(u.xmlize(),2)
+        s += models.indent(u.xmlize(justme=flatten),2)
         if flatten:
             for node in session.query(models.Node).select():
                 s += models.indent(node.xmlize(justme=True),2)
-        else:
-            for nb in u.notebooks:
-                s += models.indent(nb.xmlize(justme=False),4)
     s += "</XMLBackup>\n"
     
     if fname is not None:

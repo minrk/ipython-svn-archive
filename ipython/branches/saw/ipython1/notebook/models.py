@@ -38,15 +38,25 @@ def XMLUser(u, justme=False):
     s  = "<userID>%i</userID>\n"%u.userID
     s += "<username>%s</username>\n"%u.username
     s += "<email>%s</email>\n"%u.email
-    if not justme:
+    s += "<Notebooks>"
+    if justme:
+        nbstr = ','.join([str(c.nodeID) for c in u.notebooks])
+        s += indent(nb,2)
+    else:
+        s += '\n'
         for nb in u.notebooks:
             s += indent(nb.xmlize(justme=False), 2)
+    s += "</Notebooks>\n"
+    s += "<Nodes>"
+    nstr = ','.join([str(c.nodeID) for c in u.nodes])
+    s += nstr
+    s += "</Nodes>\n"
     return "<User>\n%s</user>\n"%indent(s,2)
     
 def XMLNodeBase(node):
     """The base of an XML representation of a Node"""
     s  = "<comment>%s</comment>\n"%(node.comment)
-    for idname in ['nodeID', 'parentID', 'nextID', 'userID']:
+    for idname in ['nodeID', 'nextID','previousID', 'parentID', 'userID']:
         value = getattr(node, idname)
         if value is None:
             s += "<%s></%s>\n"%(idname, idname)
@@ -60,11 +70,18 @@ def XMLSection(sec, justme=False):
     """Return an XML representation of a Section"""
     s  = XMLNodeBase(sec)
     s += "<title>%s</title>\n"%(sec.title)
-    s += "<children>\n"
+    for idname in ['headID','tailID']:
+        value = getattr(sec, idname)
+        if value is None:
+            s += "<%s></%s>\n"%(idname, idname)
+        else:
+            s += "<%s>%i</%s>\n"%(idname, value, idname)
+    s += "<children>"
     if justme:
-        childstr = ','.join([str(c.nodeID) for c in sec.children])
-        s += indent(childstr,2)
+        kids = ','.join([str(sec[i].nodeID) for i in range(len(sec.children))])
+        s += kids
     else:
+        s += '\n'
         for i in range(len(sec.children)):
             s += indent(sec[i].xmlize(justme), 2)
     s += "</children>\n"
@@ -159,8 +176,8 @@ nodesTable = Table('nodes', metadata,
 
 sectionsTable = Table('sections', metadata,
     Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
-    # Column('headID', Integer, ForeignKey('nodes.nodeID')),
-    # Column('tailID', Integer, ForeignKey('nodes.nodeID')),
+    Column('headID', Integer, ForeignKey('nodes.nodeID')),
+    Column('tailID', Integer, ForeignKey('nodes.nodeID')),
     Column('title',String())
 )
 
@@ -212,7 +229,6 @@ class Node(Timestamper):
     def _setNext(self, n):
         if n is not None:
             n.previousID = self.nodeID
-            pass
         self._next = n
     
     next = property(_getNext, _setNext)
@@ -231,10 +247,10 @@ class Node(Timestamper):
         assert c not in self.parent.children, "Already in Children"
         c.parent = self.parent
         c.user = self.user
-        # if self.previous is not None:
-        #     self.previous.next = c
         c.previous = self.previous
         c.next = self
+        self.touchModified()
+        c.touchModified()
         
     def insertAfter(self, c):
         """Insert a cell after this one."""
@@ -244,6 +260,8 @@ class Node(Timestamper):
         c.user = self.user
         c.next = self.next
         self.next = c
+        self.touchModified()
+        c.touchModified()
     
     # def __str__(self):
     #     return self.xmlize()
@@ -256,16 +274,12 @@ class Section(Node):
     
     def __getitem__(self, index):
         if index >= 0:
-            # c = self.children[0]
-            del self._head
-            c = self._head
+            c = self.head
             for i in range(index):
                 c = c.next
             return c
         else:
-            # c = self.children[-1]
-            del self._tail
-            c = self._tail
+            c = self.tail
             for i in range(-1-index):
                 c = c.previous
             return c
@@ -359,22 +373,20 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
             primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.parentID],
             cascade='all, delete-orphan',
-            # viewonly=True,
-            # order_by=nodeJoin.c.nextID,
             backref=backref("parent",
                 primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
                 remote_side=[nodesTable.c.nodeID],
                 uselist=False
                 )
             ),
-        '_head': relation(Node,
-            primaryjoin=and_(sectionsTable.c.nodeID==nodesTable.c.parentID,nodesTable.c.previousID == None),
-            remote_side=[nodesTable.c.parentID, nodesTable.c.previousID],
+        'head': relation(Node,
+            primaryjoin=and_(sectionsTable.c.headID==nodesTable.c.nodeID),
+            remote_side=[nodesTable.c.nodeID],
             viewonly = True,
             uselist=False),
-        '_tail': relation(Node,
-            primaryjoin=and_(sectionsTable.c.nodeID==nodesTable.c.parentID,nodesTable.c.nextID == None),
-            remote_side=[nodesTable.c.parentID, nodesTable.c.previousID],
+        'tail': relation(Node,
+            primaryjoin=and_(sectionsTable.c.tailID==nodesTable.c.nodeID),
+            remote_side=[nodesTable.c.nodeID],
             viewonly = True,
             uselist=False),
     }
