@@ -17,6 +17,25 @@ Provides:
 - Automatic GUI editing of configuration objects.
 
 
+Notes:
+
+The file creation policy is:
+
+1. Creating a TConfigManager(FooConfig,'missingfile.conf')  will work
+fine, and 'missingfile.conf' will be created empty.
+
+2. Creating TConfigManager(FooConfig,'OKfile.conf') where OKfile.conf has
+
+include = 'missingfile.conf'
+
+conks out with IOError.
+
+My rationale is that creating top-level empty files is a common and
+reasonable need, but that having invalid include statements should
+raise an error right away, so people know immediately that their files
+have gone stale.
+
+
 TODO:
 
   - Turn the currently interactive tests into proper doc/unit tests.  Complete
