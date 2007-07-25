@@ -54,62 +54,97 @@ def dumpDBtoXML(session, fname=None, flatten=False):
 # Notebook object from XML strings
 #-------------------------------------------------------------------------------
 
-def initFromE(Klass,element):
+def initFromE(Klass, element):
     c = Klass()
     c.dateCreated = datetime.datetime.strptime(element.find('dateCreated').text, tformat)
     c.dateModified = datetime.datetime.strptime(element.find('dateModified').text, tformat)
-    c.userID = int(element.find('userID').text)
+    # c.userID = int(element.find('userID').text)
     return c
     
 def userFromElement(session, ue):
-    user = initFromE(models.User, ue)
-    user.username = ue.find('username').text
-    user.email = ue.find('email').text
+    username = ue.find('username').text
+    email = ue.find('email').text
+    try: # get from db
+        user = session.query(models.User).selectone_by(username=username, email=email)
+    except: # user does not exist, so add to db
+        user = initFromE(models.User, ue)
+        user.username = username
+        user.email = email
+        session.save(user)
+        session.flush()
+    justme = bool(ue.find('justme').text)
+    nodes = {}
+    if not justme:
+        for nbe in ue.find('Notebooks').findall('Section'):
+            s = sectionFromElement(session, nbe, user, None, nodes)
+    # session.flush()
+    nodes[None] = models.Node()
+    print nodes
+    for node in nodes.values(): # correct node ID values
+        node.nextID = nodes[node.nextID].nodeID
+        node.previousID = nodes[node.previousID].nodeID
+        if isinstance(node, models.Section):
+            node.headID = nodes[node.headID].nodeID
+            node.tailID = nodes[node.headID].nodeID
+    session.flush()
+    return user
+        
     
-def anyNodeFromElement(element, flatten):
+def anyNodeFromElement(session, element, user, parent, nodes):
     """switcher function"""
     if element.tag == 'Section':
-        cell = sectionFromElement(element, flatten)
+        cell = sectionFromElement(session, element, user, parent, nodes)
     elif element.tag == 'TextCell':
-        cell = textCellFromElement(element)
+        cell = textCellFromElement(session, element, user, parent, nodes)
     elif element.tag == 'InputCell':
-        cell = inputCellFromElement(element)
+        cell = inputCellFromElement(session, element, user, parent, nodes)
+    else:
+        raise Exception("We have no way to handle: %s"%element.tag)
     return cell
 
-def initNodeFromE(Klass, element):
+def initNodeFromE(Klass, session, element, user, parent, nodes):
     node = initFromE(Klass, element)
     node.comment = element.find('comment').text
-    for idname in ['nodeID', 'parentID', 'nextID', 'previousID', 'userID']:
+    session.save(node)
+    session.flush()
+    for idname in ['nextID', 'previousID']:
         s = element.find(idname).text
         if s:
             value = int(s)
         else:
             value = None
         setattr(node, idname, value)
+    node.user = user
+    node.parent = parent
+    nodeID = int(element.find('nodeID').text)
+    nodes[nodeID] = node
+    print nodeID, nodes
     return node
 
-def textCellFromElement(element):
-    cell = initNodeFromE(models.TextCell, element)
+def textCellFromElement(session, element, user, parent, nodes):
+    cell = initNodeFromE(models.TextCell, session, element, user, parent, nodes)
     cell.textData = element.find('textData').text
     return cell
 
-def inputCellFromElement(element):
-    cell = initNodeFromE(models.InputCell, element)
+def inputCellFromElement(session, element, user, parent, nodes):
+    cell = initNodeFromE(models.InputCell, session, element, user, parent, nodes)
     cell.input = element.find('input').text
     cell.output = element.find('output').text
     return cell
 
-def sectionFromElement(element, flatten):
-    sec = initNodeFromE(models.Section, element)
+def sectionFromElement(session, element, user, parent, nodes):
+    sec = initNodeFromE(models.Section, session, element, user, parent, nodes)
     sec.title = element.find('title').text
     kide = element.find('children')
-    if not flatten:
-        for e in kide.findall('Section')+element.findall('InputCell')+\
-                        element.findall('TextCell'):
-            anyNodeFromElement(e, flatten)
+    justme = bool(element.find('justme').text)
+    if not justme:
+        for e in kide.findall('Section')+kide.findall('InputCell')+\
+                        kide.findall('TextCell'):
+            print e.tag
+            anyNodeFromElement(session, e, user, sec, nodes)
     return sec
 
-def loadDBFromXML(session, s=None, isfilename=False, flatten=False):
+def loadDBFromXML(session, s, isfilename=False, flatten=False):
     """Return a notebook from an XML string or file"""
     if isfilename:
         f = open(s)
@@ -129,6 +164,7 @@ def loadDBFromXML(session, s=None, isfilename=False, flatten=False):
     
     f.close()
     for obj in users+sections+cells:
+        print obj
         session.save(obj)
     session.flush()
 

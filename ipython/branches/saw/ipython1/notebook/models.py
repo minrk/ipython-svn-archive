@@ -38,6 +38,9 @@ def XMLUser(u, justme=False):
     s  = "<userID>%i</userID>\n"%u.userID
     s += "<username>%s</username>\n"%u.username
     s += "<email>%s</email>\n"%u.email
+    s += "<dateCreated>%s</dateCreated>\n"%(u.dateCreated.strftime(tformat))
+    s += "<dateModified>%s</dateModified>\n"%(u.dateModified.strftime(tformat))
+    s += "<justme>"+ '1'*justme + "</justme>\n"
     s += "<Notebooks>"
     if justme:
         nbstr = ','.join([str(c.nodeID) for c in u.notebooks])
@@ -51,9 +54,9 @@ def XMLUser(u, justme=False):
     nstr = ','.join([str(c.nodeID) for c in u.nodes])
     s += nstr
     s += "</Nodes>\n"
-    return "<User>\n%s</user>\n"%indent(s,2)
+    return "<User>\n%s</User>\n"%indent(s,2)
     
-def XMLNodeBase(node):
+def XMLNodeBase(node, justme):
     """The base of an XML representation of a Node"""
     s  = "<comment>%s</comment>\n"%(node.comment)
     for idname in ['nodeID', 'nextID','previousID', 'parentID', 'userID']:
@@ -68,7 +71,8 @@ def XMLNodeBase(node):
 
 def XMLSection(sec, justme=False):
     """Return an XML representation of a Section"""
-    s  = XMLNodeBase(sec)
+    s  = XMLNodeBase(sec, justme)
+    s += "<justme>"+ '1'*justme + "</justme>\n"
     s += "<title>%s</title>\n"%(sec.title)
     for idname in ['headID','tailID']:
         value = getattr(sec, idname)
@@ -88,12 +92,12 @@ def XMLSection(sec, justme=False):
     return "<Section>\n%s</Section>\n"%indent(s,2)
 
 def XMLTextCell(cell, justme=False):
-    s  = XMLNodeBase(cell)
+    s  = XMLNodeBase(cell, justme)
     s += "<textData>%s</textData>\n"%(cell.textData)
     return "<TextCell>\n%s</TextCell>\n"%indent(s,2)
 
 def XMLInputCell(cell, justme=False):
-    s  = XMLNodeBase(cell)
+    s  = XMLNodeBase(cell, justme)
     s += "<input>%s</input>\n"%(cell.input)
     s += "<output>%s</output>\n"%(cell.output)
     return "<InputCell>\n%s</InputCell>\n"%indent(s,2)
