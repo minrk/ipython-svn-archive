@@ -276,6 +276,14 @@ class Section(Node):
         super(Section, self).__init__(comment, parent)
         self.title = title
     
+    def _getChildren(self):
+        return [self[i] for i in range(len(self._children))]
+    
+    def _setChildren(self, children):
+        self._children = children
+    
+    children = property(_getChildren, _setChildren)
+    
     def __getitem__(self, index):
         if index >= 0:
             c = self.head
@@ -372,7 +380,7 @@ textCellMapper = mapper(TextCell, textCellsTable, inherits=cellMapper, polymorph
 sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphic_identity='section',
     inherit_condition=sectionsTable.c.nodeID==nodesTable.c.nodeID,
     properties={
-        'children': relation(
+        '_children': relation(
             Node,
             primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.parentID],

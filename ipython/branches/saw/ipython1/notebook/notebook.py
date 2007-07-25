@@ -171,7 +171,16 @@ class NotebookUser(object):
     def __init__(self, nbcontroller, username, email=None):
         self.nbc = nbcontroller
         self.user = self.nbc.connectUser(username, email)
-        
+    
+    def __del__(self):
+        try:
+            self.disconnect()
+        except:
+            pass
+    
+    def disconnect(self):
+        self.nbc.disconnectUser(self.user.userID)
+    
     def getNode(self, **selectflags):
         return self.nbc.getNode(self.user.userID, **selectflags)
     
