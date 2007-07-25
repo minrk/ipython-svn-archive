@@ -20,7 +20,7 @@ from twisted.trial import unittest
 from ipython1.notebook import notebook, dbutil, xmlutil
 from ipython1.notebook.models import TextCell, InputCell, Section
     
-class NotebookTestCalse(unittest.TestCase):
+class NotebookTestCase(unittest.TestCase):
             
     def setUp(self):
         dbutil.initDB("sqlite:///")
