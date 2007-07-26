@@ -93,8 +93,16 @@ def createUser(session, username, email):
 
 def dropObject(session, obj):
     """remove any object, and their dependents"""
+    if obj.next is not None and obj.previous is not None:
+        obj.previous.next = obj.next
     session.delete(obj)
     session.flush()
+    if isinstance(obj, models.Node):
+        for o in map(obj.__getattribute__,['parent','next','previous','user']):
+            if o is not None:
+                session.refresh(o)
+    
+            
     
 def createRootSection(session, user, title):
     """create a root (parentless) Section for `user` with `title

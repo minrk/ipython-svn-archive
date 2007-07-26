@@ -70,15 +70,18 @@ class NotebookController(object):
         self.nodeQuery = session.query(models.Node)
         self.users = []
     
-    def connectUser(self, uname, email=None):
+    def connectUser(self, usernameOrID, email=None):
         try:
             if email is None:
-                user = self.userQuery.selectone_by(username=uname)
+                if isinstance(usernameOrID, str):
+                    user = self.userQuery.selectone_by(username=usernameOrID)
+                elif isinstance(usernameOrID, int):
+                    user = self.userQuery.selectone_by(userID=usernameOrID)
             else:
-                user = self.userQuery.selectone_by(username=uname, email=email)
-        except:
+                user = self.userQuery.selectone_by(username=usernameOrID, email=email)
+        except sqla.exceptions.InvalidRequestError:
             assert email is not None, "need to specify email to create new user"
-            user = dbutil.createUser(self.session, uname, email)
+            user = dbutil.createUser(self.session, usernameOrID, email)
         assert user.userID not in self.users, "User already connected"
         self.users.append(user.userID)
         return user
@@ -105,8 +108,10 @@ class NotebookController(object):
         """
         assert userID in self.users, "You are not an active user!"
         # assert node.userID == userID, "You do not own this!"
-        
-        parent = self.nodeQuery.selectone_by(userID=userID, nodeID=parentID)
+        try:
+            parent = self.nodeQuery.selectone_by(userID=userID, nodeID=parentID)
+        except sqla.exceptions.InvalidRequestError:
+            raise NotFoundError("No such Node, user:%i, node:%i"%(userID, parentID))
         assert isinstance(parent, models.Section), "parent must be a Section"
         
         if indices is None or isinstance(indices,int):
@@ -123,7 +128,7 @@ class NotebookController(object):
         for k,v in options.iteritems():
             assert hasattr(node, k), "no such attr to edit"
             setattr(node,k,v)
-        
+        node.touchModified()
         self.session.flush()
         return node
     
@@ -168,9 +173,9 @@ class INotebookUser(zi.Interface):
 class NotebookUser(object):
     """A User connected to the Notebook System"""
     
-    def __init__(self, nbcontroller, username, email=None):
+    def __init__(self, nbcontroller, usernameOrID, email=None):
         self.nbc = nbcontroller
-        self.user = self.nbc.connectUser(username, email)
+        self.user = self.nbc.connectUser(usernameOrID, email)
     
     def __del__(self):
         try:
