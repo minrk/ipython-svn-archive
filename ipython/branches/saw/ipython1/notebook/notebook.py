@@ -127,6 +127,10 @@ class NotebookController(object):
         
         for k,v in options.iteritems():
             assert hasattr(node, k), "no such attr to edit"
+            if k in ['parentID', 'nextID', 'previousID']:
+                assert v is None or self.nodeQuery.select_by(nodeID=v)
+            elif k == 'userID':
+                assert v is None or self.userQuery.select_by(userID=v)
             setattr(node,k,v)
         node.touchModified()
         self.session.flush()

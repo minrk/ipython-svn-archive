@@ -215,6 +215,8 @@ class Created(object):
 class Modified(object):
     def touchModified(self):
         self.dateModified = datetime.datetime.now()
+        if getattr(self, 'parent', None) is not None:
+            self.parent.touchModified()
 
 class Timestamper(Created, Modified):
     def __init__(self):
@@ -267,8 +269,6 @@ class Node(Timestamper):
         self.touchModified()
         c.touchModified()
     
-    # def __str__(self):
-    #     return self.xmlize()
 
 class Section(Node):
     
