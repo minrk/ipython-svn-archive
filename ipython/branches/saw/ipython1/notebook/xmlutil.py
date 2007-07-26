@@ -31,6 +31,10 @@ tformat = models.tformat
 #-------------------------------------------------------------------------------
 # Export a Notebook to XML
 #-------------------------------------------------------------------------------
+def unxmlsafe(s):
+    if s is None:
+        return None
+    return s.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&amp;", "&")
 
 def dumpDBtoXML(session, fname=None, flatten=False):
     """Build an XML String"""
@@ -61,9 +65,9 @@ def initFromE(Klass, element):
     # c.userID = int(element.find('userID').text)
     return c
     
-def userFromElement(session, ue):
-    username = ue.find('username').text
-    email = ue.find('email').text
+def userFromElement(session, ue, nodes={}):
+    username = unxmlsafe(ue.find('username').text)
+    email = unxmlsafe(ue.find('email').text)
     try: # get from db
         user = session.query(models.User).selectone_by(username=username, email=email)
     except: # user does not exist, so add to db
@@ -73,41 +77,30 @@ def userFromElement(session, ue):
         session.save(user)
         session.flush()
     justme = bool(ue.find('justme').text)
-    nodes = {}
     if not justme:
         for nbe in ue.find('Notebooks').findall('Section'):
-            s = sectionFromElement(session, nbe, user, None, nodes)
-    # session.flush()
-    nodes[None] = models.Node()
-    print nodes
-    for node in nodes.values(): # correct node ID values
-        node.nextID = nodes[node.nextID].nodeID
-        node.previousID = nodes[node.previousID].nodeID
-        if isinstance(node, models.Section):
-            node.headID = nodes[node.headID].nodeID
-            node.tailID = nodes[node.headID].nodeID
-    session.flush()
+            s = sectionFromElement(nbe, user, None, nodes)
     return user
         
     
-def anyNodeFromElement(session, element, user, parent, nodes):
+def anyNodeFromElement(element, user, parent, nodes={}):
     """switcher function"""
     if element.tag == 'Section':
-        cell = sectionFromElement(session, element, user, parent, nodes)
+        cell = sectionFromElement(element, user, parent, nodes)
     elif element.tag == 'TextCell':
-        cell = textCellFromElement(session, element, user, parent, nodes)
+        cell = textCellFromElement(element, user, parent, nodes)
     elif element.tag == 'InputCell':
-        cell = inputCellFromElement(session, element, user, parent, nodes)
+        cell = inputCellFromElement(element, user, parent, nodes)
     else:
         raise Exception("We have no way to handle: %s"%element.tag)
     return cell
 
-def initNodeFromE(Klass, session, element, user, parent, nodes):
+def initNodeFromE(Klass, element, user, parent, nodes):
     node = initFromE(Klass, element)
-    node.comment = element.find('comment').text
-    session.save(node)
-    session.flush()
-    for idname in ['nextID', 'previousID']:
+    node.comment = unxmlsafe(element.find('comment').text)
+    # session.save(node)
+    # session.flush()
+    for idname in ['nextID', 'previousID', 'parentID']:
         s = element.find(idname).text
         if s:
             value = int(s)
@@ -118,34 +111,71 @@ def initNodeFromE(Klass, session, element, user, parent, nodes):
     node.parent = parent
     nodeID = int(element.find('nodeID').text)
     nodes[nodeID] = node
-    print nodeID, nodes
+    # check for existing node, if updating
+    # print nodeID, nodes
     return node
 
-def textCellFromElement(session, element, user, parent, nodes):
-    cell = initNodeFromE(models.TextCell, session, element, user, parent, nodes)
-    cell.textData = element.find('textData').text
+def textCellFromElement(element, user, parent, nodes):
+    cell = initNodeFromE(models.TextCell, element, user, parent, nodes)
+    cell.textData = unxmlsafe(element.find('textData').text)
     return cell
 
-def inputCellFromElement(session, element, user, parent, nodes):
-    cell = initNodeFromE(models.InputCell, session, element, user, parent, nodes)
-    cell.input = element.find('input').text
-    cell.output = element.find('output').text
+def inputCellFromElement(element, user, parent, nodes):
+    cell = initNodeFromE(models.InputCell, element, user, parent, nodes)
+    cell.input = unxmlsafe(element.find('input').text)
+    cell.output = unxmlsafe(element.find('output').text)
     return cell
 
-def sectionFromElement(session, element, user, parent, nodes):
-    sec = initNodeFromE(models.Section, session, element, user, parent, nodes)
-    sec.title = element.find('title').text
+def sectionFromElement(element, user, parent, nodes):
+    sec = initNodeFromE(models.Section, element, user, parent, nodes)
+    sec.title = unxmlsafe(element.find('title').text)
+    for idname in ['headID', 'tailID']:
+        s = element.find(idname).text
+        if s:
+            value = int(s)
+        else:
+            value = None
+        setattr(sec, idname, value)
     kide = element.find('children')
     justme = bool(element.find('justme').text)
     if not justme:
         for e in kide.findall('Section')+kide.findall('InputCell')+\
                         kide.findall('TextCell'):
-            print e.tag
-            anyNodeFromElement(session, e, user, sec, nodes)
+            # print e.tag
+            anyNodeFromElement(e, user, sec, nodes)
     return sec
 
+def saveAndRelink(session, nodes):
+    for node in nodes.values():
+        session.save(node)
+    session.flush()
+    # nodes[None] = models.Node()
+    for node in nodes.values(): # correct node ID values
+        for key in ['next', 'previous', 'parent']:
+            try:
+                id = nodes.get(getattr(node, key+"ID")).nodeID
+            except AttributeError:
+                id = None
+            setattr(node, key+"ID", id)
+        # node.nextID = nodes[node.nextID].nodeID
+        # node.previousID = nodes[node.previousID].nodeID
+        if isinstance(node, models.Section):
+            # print "SECTION"
+            for key in ['head', 'tail']:
+                try:
+                    id = nodes.get(getattr(node, key+"ID")).nodeID
+                except AttributeError:
+                    id = None
+                setattr(node, key+"ID", id)
+            # node.headID = nodes[node.headID].nodeID
+            # node.tailID = nodes[node.headID].nodeID
+    session.flush()
+    for node in nodes.values():
+        session.refresh(node)
+    return nodes
+
 def loadDBFromXML(session, s, isfilename=False, flatten=False):
-    """Return a notebook from an XML string or file"""
+    """loads a whole DB Backup from an XML string or file"""
     if isfilename:
         f = open(s)
     else:
@@ -153,18 +183,32 @@ def loadDBFromXML(session, s, isfilename=False, flatten=False):
     tree = ET.ElementTree(file=f)
     root = tree.getroot()
     userElements = root.findall('User')
-    sectionElements = root.findall('Section')
-    cellElements = root.findall('InputCell')+root.findall('TextCell')
-    if cellElements:
+    nodeElements = root.findall('Section')+root.findall('InputCell')+root.findall('TextCell')
+    if nodeElements:
         # override the flatten setting if non-Sections are in the base
         flatten = True
-    users = [userFromElement(session, ue) for ue in userElements]
-    sections = [sectionFromElement(session, se, flatten) for se in sectionElements]
-    cells = [anyNodeFromElement(session, cell, flatten) for cell in cellElements]
+    if flatten:
+        raise NotImplementedError
+    
+    nodes = {}
+    users = [userFromElement(session, ue, nodes) for ue in userElements]
+    # nodelist = [anyNodeFromElement(e, user, parent, nodes) for e in nodeElements]
     
     f.close()
-    for obj in users+sections+cells:
-        print obj
-        session.save(obj)
-    session.flush()
+    
+    saveAndRelink(session, nodes)
+
+def loadNotebookFromXML(session, s, user, isfilename=False, flatten=False):
+    if isfilename:
+        f = open(s)
+    else:
+        f = StringIO.StringIO(s)
+    tree = ET.ElementTree(file=f)
+    root = tree.getroot()
+    nodes = {}
+    sec = sectionFromElement(root, user, None, nodes)
+    f.close()
+    saveAndRelink(session, nodes)
+    session.refresh(user)
+    return sec
 

@@ -151,10 +151,14 @@ class NotebookController(object):
         u = self.userQuery.selectone_by(userID=userID)
         return dbutil.createRootSection(self.session, u, title)
     
-    def loadDBFromXML(self, xmlstr):
-        #
-        raise NotImplementedError
-        sec = xmlutil.SectionFromXML(self.session, xmlstr)
+    def loadNotebookFromXML(self, userID, xmlstr, parentID=None):
+        assert userID in self.users, "You are not an active user!"
+        user = self.userQuery.selectone_by(userID=userID)
+        if parentID is not None:
+            parent = self.nodeQuery.selectone_by(userID=userID, nodeID=parentID)
+        else:
+            parent = None
+        sec = xmlutil.loadNotebookFromXML(self.session, xmlstr, user, parent)
         return sec
     
     

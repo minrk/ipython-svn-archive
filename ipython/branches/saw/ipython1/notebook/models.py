@@ -17,11 +17,13 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 from sqlalchemy import *
 import datetime
-# Setup the global unbound metadata.
-
 #-------------------------------------------------------------------------------
 # XML representations of notebook objects
 #-------------------------------------------------------------------------------
+def xmlsafe(s):
+    if s is None:
+        return None
+    return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
 def indent(s, n):
     """indent a multi-line string `s`, `n` spaces"""
@@ -36,8 +38,8 @@ tformat = "%Y-%m-%d %H:%M:%S"
 
 def XMLUser(u, justme=False):
     s  = "<userID>%i</userID>\n"%u.userID
-    s += "<username>%s</username>\n"%u.username
-    s += "<email>%s</email>\n"%u.email
+    s += "<username>%s</username>\n"%xmlsafe(u.username)
+    s += "<email>%s</email>\n"%xmlsafe(u.email)
     s += "<dateCreated>%s</dateCreated>\n"%(u.dateCreated.strftime(tformat))
     s += "<dateModified>%s</dateModified>\n"%(u.dateModified.strftime(tformat))
     s += "<justme>"+ '1'*justme + "</justme>\n"
@@ -58,7 +60,7 @@ def XMLUser(u, justme=False):
     
 def XMLNodeBase(node, justme):
     """The base of an XML representation of a Node"""
-    s  = "<comment>%s</comment>\n"%(node.comment)
+    s  = "<comment>%s</comment>\n"%xmlsafe(node.comment)
     for idname in ['nodeID', 'nextID','previousID', 'parentID', 'userID']:
         value = getattr(node, idname)
         if value is None:
@@ -73,7 +75,7 @@ def XMLSection(sec, justme=False):
     """Return an XML representation of a Section"""
     s  = XMLNodeBase(sec, justme)
     s += "<justme>"+ '1'*justme + "</justme>\n"
-    s += "<title>%s</title>\n"%(sec.title)
+    s += "<title>%s</title>\n"%xmlsafe(sec.title)
     for idname in ['headID','tailID']:
         value = getattr(sec, idname)
         if value is None:
@@ -93,13 +95,13 @@ def XMLSection(sec, justme=False):
 
 def XMLTextCell(cell, justme=False):
     s  = XMLNodeBase(cell, justme)
-    s += "<textData>%s</textData>\n"%(cell.textData)
+    s += "<textData>%s</textData>\n"%xmlsafe(cell.textData)
     return "<TextCell>\n%s</TextCell>\n"%indent(s,2)
 
 def XMLInputCell(cell, justme=False):
     s  = XMLNodeBase(cell, justme)
-    s += "<input>%s</input>\n"%(cell.input)
-    s += "<output>%s</output>\n"%(cell.output)
+    s += "<input>%s</input>\n"%xmlsafe(cell.input)
+    s += "<output>%s</output>\n"%xmlsafe(cell.output)
     return "<InputCell>\n%s</InputCell>\n"%indent(s,2)
     
 
@@ -214,9 +216,16 @@ class Created(object):
 
 class Modified(object):
     def touchModified(self):
+        """This will touch our dateModified, and also our parent's.  If we do
+        not have a parent (i.e., we are a Root), then we touch our User.
+        That way, a root's dateModified is as late as the latest in its 
+        descendents, and a user's is as late as the latest of its nodes.
+        """
         self.dateModified = datetime.datetime.now()
         if getattr(self, 'parent', None) is not None:
             self.parent.touchModified()
+        elif getattr(self, 'user', None) is not None:
+            self.user.touchModified()
 
 class Timestamper(Created, Modified):
     def __init__(self):
@@ -266,7 +275,7 @@ class Node(Timestamper):
         
     def insertAfter(self, c):
         """Insert a cell after this one."""
-        assert not c is self, "Cannot insert Before/After self"
+        assert self.parent is not None, "Cannot insert Before/After root"
         assert c not in self.parent.children, "Already in Children"
         c.parent = self.parent
         c.user = self.user
