@@ -39,7 +39,7 @@ class INotebookController(zi.Interface):
     def dropUser(**selectflags):
         """Drop a User by flags passed to selectone_by"""
     
-    def addNode(userID, parentID, node, indices=None):
+    def addNode(userID, parentID, node, index=None):
         """add a Node to a parent Section, owned by userID"""
     
     def getNode(userID, **selectflags):
@@ -47,6 +47,9 @@ class INotebookController(zi.Interface):
     
     def editNode(userID, nodeID, **options):
         """update attributes of node nodeID with keyword options"""
+    
+    def moveNode(userID, nodeID, newParentID, index=None):
+        """move a node to new parent at index"""
     
     def dropNode(userID, nodeID):
         """Drop a Node by nodeID, owned by userID"""
@@ -98,29 +101,20 @@ class NotebookController(object):
         assert userID in self.users, "You are not an active user!"
         return self.nodeQuery.select_by(userID=userID, **selectflags)
     
-    def addNode(self, userID, parentID, node, indices=None):
-        """add a cell to user's section with title `nbtitle`.  Indices
-        can be None, int, list of ints.
-        If None or int: add to nb.root at end or index.
-        If list of ints: cascading add - add to nb.root[l[0]][l[1]]...
-            at index indices[-1].
-            each cell on the walk must be a MultiCell.
+    def addNode(self, userID, parentID, node, index=None):
+        """add a node to user's Section with nodeID `parentID`.  Index
+        can be None or int.
         """
         assert userID in self.users, "You are not an active user!"
-        # assert node.userID == userID, "You do not own this!"
         try:
             parent = self.nodeQuery.selectone_by(userID=userID, nodeID=parentID)
         except sqla.exceptions.InvalidRequestError:
             raise NotFoundError("No such Node, user:%i, node:%i"%(userID, parentID))
+        
         assert isinstance(parent, models.Section), "parent must be a Section"
         
-        if indices is None or isinstance(indices,int):
-            return dbutil.addChild(self.session, node, parent, indices)
-        else:
-            for i in indices[:-1]:
-                parent = parent[i]
-            return dbutil.addChild(self.session, node, parent, indices[-1])
-    
+        return dbutil.addChild(self.session, node, parent, index)
+        
     def editNode(self, userID, nodeID, **options):
         assert userID in self.users, "You are not an active user!"
         node = self.nodeQuery.selectone_by(userID=userID, nodeID=nodeID)
@@ -135,6 +129,16 @@ class NotebookController(object):
         node.touchModified()
         self.session.flush()
         return node
+    
+    def moveNode(self, userID, nodeID, newParentID, newIndex=None):
+        """move a node to newParent, at newIndex"""
+        assert userID in self.users, "You are not an active user!"
+        node = self.nodeQuery.selectone_by(userID=userID, nodeID=nodeID)
+        if node.previous is not None:
+            node.previous.next = node.next
+        elif node.next is not None:
+            node.next.previous = node.previous
+        return self.addNode(userID, newParentID, node, newIndex)
     
     def dropNode(self, userID, nodeID):
         assert userID in self.users, "You are not an active user!"
@@ -169,6 +173,9 @@ class INotebookUser(zi.Interface):
     def editNode(nodeID, **options):
         """"""
     
+    def moveNode(userID, nodeID, newParentID, index=None):
+        """move a node to new parent at index"""
+    
     def addRootSection(title):
         """"""
     
@@ -196,15 +203,14 @@ class NotebookUser(object):
     def dropNode(self, nodeID):
         return self.nbc.dropNode(self.user.userID, nodeID)
     
-    def addNode(self, parentID, node, indices=None):
-        """add a node to user's Section with nodeID `parentID`.  Indices
-        can be None, int, list of ints.
-        If None or int: add to nb.root at end or index.
-        If list of ints: cascading add - add to nb.root[l[0]][l[1]]...
-            at index indices[-1].
-            each cell on the walk must be a MultiCell.
+    def addNode(self, parentID, node, index=None):
+        """add a node to user's Section with nodeID `parentID`.  Index
+        can be None or int.
         """
-        return self.nbc.addNode(self.user.userID, parentID, node, indices)
+        return self.nbc.addNode(self.user.userID, parentID, node, index)
+    
+    def moveNode(self, nodeID, newParentID, index=None):
+        return self.nbc.moveNode(self.user.userID, nodeID, newParentID, index)
     
     def editNode(self, nodeID, **options):
         return self.nbc.editNode(self.user.userID, nodeID, **options)

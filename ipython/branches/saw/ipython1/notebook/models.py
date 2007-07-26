@@ -230,6 +230,12 @@ class Node(Timestamper):
         self.comment = comment
         self.parent = parent
     
+    def __str__(self):
+        d = {}
+        for k in ['userID','nodeID','previousID','nextID']:
+            d[k] = getattr(self, k)
+        return "<%s: %s>"%(self.nodeType, d)
+    
     def _getNext(self): return self._next
     
     def _setNext(self, n):
@@ -275,6 +281,13 @@ class Section(Node):
     def __init__(self, title='', comment='', parent=None):
         super(Section, self).__init__(comment, parent)
         self.title = title
+    
+    def __str__(self):
+        d = {}
+        for k in ['userID','nodeID','previousID','nextID']:
+            d[k] = getattr(self, k)
+        d['children'] = [c.nodeID for c in self.children]
+        return "<%s: %s>"%(self.nodeType, d)
     
     def _getChildren(self):
         return [self[i] for i in range(len(self._children))]
