@@ -36,8 +36,8 @@ class INotebookController(zi.Interface):
     def disconnectUser(userID):
         """disconnect a user by userID"""
     
-    def dropUser(**selectflags):
-        """Drop a User by flags passed to selectone_by"""
+    def dropUser(userID):
+        """Drop a User by userID"""
     
     def addNode(userID, parentID, node, index=None):
         """add a Node to a parent Section, owned by userID"""
@@ -93,9 +93,18 @@ class NotebookController(object):
         self.users.remove(userID)
     
     def dropUser(self, userID):
-        assert userID in self.users, "You are not an active user!"
+        assert userID not in self.users, "You cannot drop an active user!"
         u = self.userQuery.selectone_by(userID=userID)
         dbutil.dropObject(self.session, u)
+    
+    def mergeUsers(self, userIDa, userIDb):
+        assert userIDb not in self.users, "You cannot drop an active user!"
+        userA = self.userQuery.selectone_by(userID=userIDa)
+        userB = self.userQuery.selectone_by(userID=userIDb)
+        for node in userB.nodes:
+            node.user = userA
+        self.dropUser(userIDb)
+        return userA
     
     def getNode(self, userID, **selectflags):
         assert userID in self.users, "You are not an active user!"
@@ -114,7 +123,7 @@ class NotebookController(object):
         assert isinstance(parent, models.Section), "parent must be a Section"
         
         return dbutil.addChild(self.session, node, parent, index)
-        
+    
     def editNode(self, userID, nodeID, **options):
         assert userID in self.users, "You are not an active user!"
         node = self.nodeQuery.selectone_by(userID=userID, nodeID=nodeID)
@@ -161,7 +170,6 @@ class NotebookController(object):
         sec = xmlutil.loadNotebookFromXML(self.session, xmlstr, user, parent)
         return sec
     
-    
 
 class INotebookUser(zi.Interface):
     
@@ -181,6 +189,9 @@ class INotebookUser(zi.Interface):
         """move a node to new parent at index"""
     
     def addRootSection(title):
+        """"""
+    
+    def loadNotebookFromXML(xmlstr, parentID=None):
         """"""
     
 
@@ -208,9 +219,6 @@ class NotebookUser(object):
         return self.nbc.dropNode(self.user.userID, nodeID)
     
     def addNode(self, parentID, node, index=None):
-        """add a node to user's Section with nodeID `parentID`.  Index
-        can be None or int.
-        """
         return self.nbc.addNode(self.user.userID, parentID, node, index)
     
     def moveNode(self, nodeID, newParentID, index=None):
@@ -222,6 +230,8 @@ class NotebookUser(object):
     def addRootSection(self, title):
         return self.nbc.addRootSection(self.user.userID, title)
     
+    def loadNotebookFromXML(xmlstr, parentID=None):
+        return self.nbc.loadNotebookFromXML(self.user.userID, xmlstr, parentID)
 
 
 

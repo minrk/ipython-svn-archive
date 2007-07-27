@@ -241,7 +241,7 @@ class Node(Timestamper):
     
     def __str__(self):
         d = {}
-        for k in ['userID','nodeID','previousID','nextID']:
+        for k in ['userID','nodeID','previousID','nextID', 'parentID']:
             d[k] = getattr(self, k)
         return "<%s: %s>"%(self.nodeType, d)
     
@@ -293,7 +293,7 @@ class Section(Node):
     
     def __str__(self):
         d = {}
-        for k in ['userID','nodeID','previousID','nextID']:
+        for k in ['userID','nodeID','previousID','nextID', 'parentID']:
             d[k] = getattr(self, k)
         d['children'] = [c.nodeID for c in self.children]
         return "<%s: %s>"%(self.nodeType, d)

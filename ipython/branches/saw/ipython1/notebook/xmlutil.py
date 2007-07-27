@@ -33,7 +33,7 @@ tformat = models.tformat
 #-------------------------------------------------------------------------------
 def unxmlsafe(s):
     if s is None:
-        return None
+        return ""
     return s.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&amp;", "&")
 
 def dumpDBtoXML(session, fname=None, flatten=False):
@@ -51,8 +51,8 @@ def dumpDBtoXML(session, fname=None, flatten=False):
         f = open(fname, 'w')
         f.write(s)
         f.close()
-    else:
-        return s
+    # else:
+    return s
 
 #-------------------------------------------------------------------------------
 # Notebook object from XML strings
@@ -98,9 +98,7 @@ def anyNodeFromElement(element, user, parent, nodes={}):
 def initNodeFromE(Klass, element, user, parent, nodes):
     node = initFromE(Klass, element)
     node.comment = unxmlsafe(element.find('comment').text)
-    # session.save(node)
-    # session.flush()
-    for idname in ['nextID', 'previousID', 'parentID']:
+    for idname in ['nextID', 'previousID']:
         s = element.find(idname).text
         if s:
             value = int(s)
@@ -150,31 +148,28 @@ def saveAndRelink(session, nodes):
         session.save(node)
     session.flush()
     # nodes[None] = models.Node()
+    # print nodes
     for node in nodes.values(): # correct node ID values
-        for key in ['next', 'previous', 'parent']:
+        for key in ['next', 'previous']:
             try:
                 id = nodes.get(getattr(node, key+"ID")).nodeID
             except AttributeError:
                 id = None
             setattr(node, key+"ID", id)
-        # node.nextID = nodes[node.nextID].nodeID
-        # node.previousID = nodes[node.previousID].nodeID
         if isinstance(node, models.Section):
-            # print "SECTION"
             for key in ['head', 'tail']:
                 try:
                     id = nodes.get(getattr(node, key+"ID")).nodeID
                 except AttributeError:
                     id = None
                 setattr(node, key+"ID", id)
-            # node.headID = nodes[node.headID].nodeID
-            # node.tailID = nodes[node.headID].nodeID
     session.flush()
     for node in nodes.values():
         session.refresh(node)
+    # print nodes
     return nodes
 
-def loadDBFromXML(session, s, isfilename=False, flatten=False):
+def loadDBfromXML(session, s, isfilename=False, flatten=False):
     """loads a whole DB Backup from an XML string or file"""
     if isfilename:
         f = open(s)
@@ -188,15 +183,19 @@ def loadDBFromXML(session, s, isfilename=False, flatten=False):
         # override the flatten setting if non-Sections are in the base
         flatten = True
     if flatten:
+        # we can't do flatten yet
         raise NotImplementedError
     
     nodes = {}
     users = [userFromElement(session, ue, nodes) for ue in userElements]
+    # for flatten:
     # nodelist = [anyNodeFromElement(e, user, parent, nodes) for e in nodeElements]
     
     f.close()
     
     saveAndRelink(session, nodes)
+    for user in users:
+        session.refresh(user)
 
 def loadNotebookFromXML(session, s, user, isfilename=False, flatten=False):
     if isfilename:

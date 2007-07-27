@@ -15,13 +15,13 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-# import os.path
+
+from random import randint
 from twisted.trial import unittest
-from sqlalchemy.exceptions import InvalidRequestError
 
 from ipython1.notebook import notebook, dbutil, xmlutil
 from ipython1.kernel.error import NotFoundError
-from ipython1.notebook.models import TextCell, InputCell, Section
+from ipython1.notebook.models import TextCell, InputCell, Section, Node
 
 # get warning out of the way of test output
 engine = dbutil.sqla.create_engine("sqlite:///")
@@ -32,6 +32,28 @@ class NotebookTestCase(unittest.TestCase):
         self.nbc = notebook.NotebookController()
         self.u = notebook.NotebookUser(self.nbc, 'userA', 'userA@email')
         self.nb = self.u.addRootSection('title')
+    
+    def loadNodes(self, n):
+        l = []
+        for _ in range(n):
+            sections = self.nbc.nodeQuery.select_by(userID=self.u.user.userID, nodeType='section')
+            # print sections
+            parent = (sections + [None])[randint(0, len(sections))]
+            if parent is None:
+                l.append(self.u.addRootSection("title"))
+            else:
+                i = randint(1,3)
+                if i == 1:
+                    c = TextCell()
+                elif i == 2:
+                    c = InputCell()
+                else:
+                    c = Section()
+                index = None
+                if parent.children:
+                    index = randint(0,len(parent.children)-1)
+                l.append(self.u.addNode(parent.nodeID, c, index))
+        return l
     
     def testappendNode(self):
         clist = [TextCell(),InputCell(),Section(),TextCell(),InputCell()]
@@ -69,7 +91,7 @@ class NotebookTestCase(unittest.TestCase):
         mod1 = c.dateModified
         self.u.editNode(c.nodeID, comment="some comment")
         self.assertEquals(c.comment,"some comment")
-        self.assertNotEquals(c.dateModified,mod1)
+        self.assertNotEquals(c.dateModified, mod1)
     
     def testmultiUser(self):
         self.assertRaises(AssertionError, notebook.NotebookUser, self.nbc, 'userA')
@@ -86,6 +108,61 @@ class NotebookTestCase(unittest.TestCase):
         ub.addNode(nb.nodeID, c)
         c2 = InputCell()
         self.assertRaises(AssertionError, ub.addNode, c.nodeID, c2)
+    
+    def testmergeUser(self):
+        pass
+    
+    def testmoveNode(self):
+        pass
+    
+    def testXML(self):
+        session = self.nbc.session
+        self.loadNodes(16)
+        s = xmlutil.dumpDBtoXML(self.nbc.session, '/Users/minrk/s1.xml')
+        u = self.u
+        nodes = session.query(Node).select()
+        kidl = map(getattr, u.user.notebooks, ['children']*len(u.user.notebooks))
+        kidl = map(len, kidl)
+        kidl.sort()
+        before = [
+        len(session.query(Section).select()),
+        len(session.query(InputCell).select()),
+        len(session.query(TextCell).select()),
+        len([n for n in nodes if n.parentID]),
+        len([n for n in nodes if n.parent]),
+        len(nodes),
+        kidl,
+        s.count("Section"), s.count("InputCell"), s.count("TextCell"),
+        s.count("<"), s.count(">"), s.count("comment"),
+        ]
+        dbutil.initDB("sqlite:///")
+        nbc = notebook.NotebookController()
+        session = nbc.session
+        xmlutil.loadDBfromXML(session, s)
+        u = notebook.NotebookUser(nbc, "userA")
+        kidl = map(getattr, u.user.notebooks, ['children']*len(u.user.notebooks))
+        kidl = map(len, kidl)
+        kidl.sort()
+        s2 = xmlutil.dumpDBtoXML(session)
+        after = [
+        len(session.query(Section).select()),
+        len(session.query(InputCell).select()),
+        len(session.query(TextCell).select()),
+        len([n for n in nodes if n.parentID]),
+        len([n for n in nodes if n.parent]),
+        len(nodes),
+        kidl,
+        s2.count("Section"), s2.count("InputCell"), s2.count("TextCell"),
+        s2.count("<"), s2.count(">"), s2.count("comment"),
+        ]
+        for b,a in zip(before, after):
+            self.assertEquals(b,a)
+        # print before, after
+        err = (len(s)-len(s2))/(1.0*len(s))
+        # print err
+        self.assertAlmostEquals(err, 0, 2)
+        # print len(s), len(s2)
+    
     
         
         

@@ -93,7 +93,7 @@ def createUser(session, username, email):
 
 def dropObject(session, obj):
     """remove any object, and their dependents"""
-    if obj.next is not None and obj.previous is not None:
+    if getattr(obj, 'next', None) and getattr(obj, 'previous', None):
         obj.previous.next = obj.next
     session.delete(obj)
     session.flush()
@@ -114,6 +114,7 @@ def createRootSection(session, user, title):
     user.touchModified()
     session.save(root)
     session.flush()
+    session.refresh(user)
     return root
 
 def addChild(session, child, parent, index=None):
@@ -141,6 +142,8 @@ def addChild(session, child, parent, index=None):
     parent.touchModified()
     session.flush()
     session.refresh(parent)
+    # session.
+    return child
 
 def getDescendents(section):
     """get all descendents of a Section into a flat list of Nodes."""
