@@ -63,7 +63,6 @@ class NotebookTestCase(unittest.TestCase):
     
     def testprependNode(self):
         clist = [TextCell(),InputCell(),Section(),TextCell(),InputCell()]
-        nb = self.u.addRootSection('title')
         for c in clist:
             self.u.addNode(self.nb.nodeID, c, 0)
         clist.reverse()
@@ -71,7 +70,6 @@ class NotebookTestCase(unittest.TestCase):
     
     def testinsertNode(self):
         clist = [TextCell(),InputCell(),Section(),TextCell(),InputCell()]
-        nb = self.u.addRootSection('title')
         for c in clist:
             self.u.addNode(self.nb.nodeID, c, 1)
         clist = clist[:1]+clist[-1:-5:-1]
@@ -109,20 +107,58 @@ class NotebookTestCase(unittest.TestCase):
         c2 = InputCell()
         self.assertRaises(AssertionError, ub.addNode, c.nodeID, c2)
     
-    def testmergeUser(self):
-        pass
+    def testmergeUsers(self):
+        ub = notebook.NotebookUser(self.nbc, 'userB', 'b@email')
+        self.loadNodes(4)
+        nodes = self.u.user.nodes
+        uid = self.u.user.userID
+        self.assertRaises(AssertionError, self.nbc.mergeUsers, ub.user.userID, uid)
+        del self.u
+        self.nbc.mergeUsers(ub.user.userID, uid)
+        for node in nodes:
+            self.assertIdentical(node.user, ub.user)
     
     def testmoveNode(self):
-        pass
+        # self.loadNodes(6)
+        clist = [TextCell(),InputCell(),Section(),TextCell(),InputCell()]
+        for c in clist:
+            self.u.addNode(self.nb.nodeID, c)
+        nb = self.u.addRootSection('title')
+        self.u.moveNode(self.nb.nodeID, nb.nodeID)
+        self.assertEquals(self.u.user.notebooks, [nb])
+        self.assertEquals(nb.children, [self.nb])
+        kids = self.nb.children
+        c1 = self.nb[1]
+        c = c1.previous
+        self.u.moveNode(c1.nodeID, nb.nodeID,0)
+        self.assertEquals(nb.children, [c1,self.nb])
+        self.assertEquals(self.nb.children, kids[:1]+kids[2:])
+        
+        c0 = self.nb[0]
+        if c0.nextID is None:
+            print 'anomalous next/nextID disagreement',
+            n = c0.next
+            c0.next = None
+            c0.next = n
+            self.nbc.session.flush()
+        self.u.moveNode(c0.nodeID, nb.nodeID,1)
+        self.assertEquals(nb.children, [c1, c0, self.nb])
+        self.assertEquals(self.nb.children, kids[2:])
+        
+        c2 = self.nb[-1]
+        self.u.moveNode(c2.nodeID, nb.nodeID,1)
+        self.assertEquals(nb.children, [c1, c2, c0, self.nb])
+        self.assertEquals(self.nb.children, kids[2:-1])
+        self.assertIdentical(self.nb.head, kids[2])
+        self.assertIdentical(self.nb.tail, kids[-2])
     
-    def testXML(self):
+    def testxmlBackup(self):
         session = self.nbc.session
-        self.loadNodes(16)
+        self.loadNodes(8)
         s = xmlutil.dumpDBtoXML(self.nbc.session, '/Users/minrk/s1.xml')
         u = self.u
         nodes = session.query(Node).select()
-        kidl = map(getattr, u.user.notebooks, ['children']*len(u.user.notebooks))
-        kidl = map(len, kidl)
+        kidl = [len(nb.children) for nb in u.user.notebooks]
         kidl.sort()
         before = [
         len(session.query(Section).select()),
@@ -130,6 +166,10 @@ class NotebookTestCase(unittest.TestCase):
         len(session.query(TextCell).select()),
         len([n for n in nodes if n.parentID]),
         len([n for n in nodes if n.parent]),
+        len([n for n in nodes if n.nextID]),
+        len([n for n in nodes if n.next]),
+        len([n for n in nodes if n.previousID]),
+        len([n for n in nodes if n.previous]),
         len(nodes),
         kidl,
         s.count("Section"), s.count("InputCell"), s.count("TextCell"),
@@ -140,8 +180,7 @@ class NotebookTestCase(unittest.TestCase):
         session = nbc.session
         xmlutil.loadDBfromXML(session, s)
         u = notebook.NotebookUser(nbc, "userA")
-        kidl = map(getattr, u.user.notebooks, ['children']*len(u.user.notebooks))
-        kidl = map(len, kidl)
+        kidl = [len(nb.children) for nb in u.user.notebooks]
         kidl.sort()
         s2 = xmlutil.dumpDBtoXML(session)
         after = [
@@ -150,6 +189,10 @@ class NotebookTestCase(unittest.TestCase):
         len(session.query(TextCell).select()),
         len([n for n in nodes if n.parentID]),
         len([n for n in nodes if n.parent]),
+        len([n for n in nodes if n.nextID]),
+        len([n for n in nodes if n.next]),
+        len([n for n in nodes if n.previousID]),
+        len([n for n in nodes if n.previous]),
         len(nodes),
         kidl,
         s2.count("Section"), s2.count("InputCell"), s2.count("TextCell"),
@@ -162,6 +205,23 @@ class NotebookTestCase(unittest.TestCase):
         # print err
         self.assertAlmostEquals(err, 0, 2)
         # print len(s), len(s2)
+    
+    def testnidAgreement(self):
+        self.loadNodes(16)
+        for n in self.u.user.nodes:
+            if n.next is None:
+                self.assertIdentical(n.nextID,None)
+            else:
+                self.assertEquals(n.next.nodeID,n.nextID)
+            if n.previous is None:
+                self.assertIdentical(n.previousID,None)
+            else:
+                self.assertEquals(n.previous.nodeID,n.previousID)
+            if n.parent is None:
+                self.assertIdentical(n.parentID,None)
+            else:
+                self.assertEquals(n.parent.nodeID,n.parentID)
+                
     
     
         

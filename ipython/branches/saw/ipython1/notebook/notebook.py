@@ -101,8 +101,10 @@ class NotebookController(object):
         assert userIDb not in self.users, "You cannot drop an active user!"
         userA = self.userQuery.selectone_by(userID=userIDa)
         userB = self.userQuery.selectone_by(userID=userIDb)
-        for node in userB.nodes:
+        while userB.nodes:
+            node = userB.nodes.pop()
             node.user = userA
+            node.touchModified()
         self.dropUser(userIDb)
         return userA
     
@@ -143,10 +145,24 @@ class NotebookController(object):
         """move a node to newParent, at newIndex"""
         assert userID in self.users, "You are not an active user!"
         node = self.nodeQuery.selectone_by(userID=userID, nodeID=nodeID)
-        if node.previous is not None:
-            node.previous.next = node.next
-        elif node.next is not None:
-            node.next.previous = node.previous
+        if node.parent is not None:
+            if node.parent.head is node:
+                node.parent.headID = node.nextID
+            if node.parent.tail is node:
+                node.parent.tailID = node.previousID
+            self.session.flush()
+            self.session.refresh(node.parent)
+        p = node.previous
+        n = node.next
+        if p is not None:
+            p.next = None
+            self.session.flush()
+            p.next = n
+        elif n is not None:
+            n.previous = None
+        node.next = node.previous = None
+        self.session.flush()
+        
         return self.addNode(userID, newParentID, node, newIndex)
     
     def dropNode(self, userID, nodeID):
