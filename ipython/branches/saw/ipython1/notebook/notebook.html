@@ -1,0 +1,19 @@
+<html>
+    <head>
+        <title>IPython Notebook</title>
+        <a href="/notebook.csss" rel="stylesheet" type="text/css"/>
+        <!-- <script type="text/javascript" src="/Mochikit/base.js"/>
+        <script type="text/javascript" src="/Mochikit/async.js"/> -->
+        <script type="text/javascript" src="/notebook.js"/>
+    </head>
+    <body onload="getIDs()">
+        <div class='pageHeader'>IPythonNotebook</div>
+        <div class='controlCol'>
+            <div class="controlLink" onclick="addIOCell();">Add IO Cell</div>
+            <div class='controlLink' onclick="addTextCell();">Add Text Cell</div>
+            <div class="controlLink" onclick="createGroup();">Create Group </div>
+            <hr size=1>Move<br>Delete
+        </div>
+        <div id="nb" class="notebook"></div>
+    </body>
+</html>

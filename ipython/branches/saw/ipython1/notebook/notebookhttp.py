@@ -17,7 +17,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import cPickle as pickle
-import httplib2, urllib, simplejson, os.path
+import urllib, simplejson, os.path
 
 from zope.interface import Interface, implements
 from twisted.python import components, failure, log
@@ -46,17 +46,20 @@ class HTTPNotebookServer(static.File):
     
     def __init__(self, nbc):
         self.nbc = nbc
-        static.File.__init__(self, os.path.dirname(__file__)+'notebook.html', defaultType="text/html")
+        thisdir = os.path.dirname(__file__)
+        static.File.__init__(self, thisdir+'/notebook.html', defaultType="text/html")
         
-        self.child_connectuser = HTTPNotebookConnectUser(self.nbc)
-        self.child_disconnectuser = HTTPNotebookDisconnectUser(self.nbc)
-        # self.child_edituser = HTTPNotebookEditUser(self.nbc)
-        self.child_addnode = HTTPNotebookAddNode(self.nbc)
-        self.child_getnode = HTTPNotebookGetNode(self.nbc)
-        self.child_editnode = HTTPNotebookEditNode(self.nbc)
-        self.child_addroot = HTTPNotebookAddRoot(self.nbc)
+        self.putChild('connectuser', HTTPNotebookConnectUser(self.nbc))
+        self.putChild('disconnectuser', HTTPNotebookDisconnectUser(self.nbc))
         
-        self.putChild('notebook.js', static.File(os.path.dirname(__file__)+'notebook.js', defaultType="text/javascript"))
+        self.putChild('addnode', HTTPNotebookAddNode(self.nbc))
+        self.putChild('getnode', HTTPNotebookGetNode(self.nbc))
+        self.putChild('editnode', HTTPNotebookEditNode(self.nbc))
+        self.putChild('movenode', HTTPNotebookMoveNode(self.nbc))
+        self.putChild('addroot', HTTPNotebookAddRoot(self.nbc))
+        
+        self.putChild('notebook.js', static.File(thisdir+'/notebook.js', defaultType="text/javascript"))
+        self.putChild('notebook.css', static.File(thisdir+'/notebook.css', defaultType="text/css"))
     
 
 components.registerAdapter(HTTPNotebookServer,
@@ -132,7 +135,6 @@ class HTTPNotebookDisconnectUser(HTTPNotebookBaseMethod):
     def renderHTTP(self, request):
         try:
             userID = request.args['userID'][0]
-            # email = request.args['email'][0]
             d = defer.execute(self.nbc.disconnectUser, userID)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
@@ -141,27 +143,27 @@ class HTTPNotebookDisconnectUser(HTTPNotebookBaseMethod):
             return d
     
 
-class HTTPNotebookEditUser(HTTPNotebookBaseMethod):
-    
-    def renderHTTP(self, request):
-        try:
-            uid = request.args['userID'][0]
-            if request.args.get('drop'):
-                self.nbc.dropUser(userID=uid)
-            else:
-                uname = request.args['username'][0]
-                email = request.args['email'][0]
-                user = self.nbc.getUser(userID=uid)
-                user.username = uname
-                user.email = email
-                self.nbc.session.save(user)
-                self.nbc.session.flush()
-        except Exception, e:
-            return self.packageFailure(failure.Failure(e))
-        else:
-            d = defer.succeed(None)
-            d.addCallbacks(self.packageSuccess, self.packageFailure)
-            return d
+# class HTTPNotebookEditUser(HTTPNotebookBaseMethod):
+#     
+#     def renderHTTP(self, request):
+#         try:
+#             uid = request.args['userID'][0]
+#             if request.args.get('drop'):
+#                 self.nbc.dropUser(userID=uid)
+#             else:
+#                 uname = request.args['username'][0]
+#                 email = request.args['email'][0]
+#                 user = self.nbc.getUser(userID=uid)
+#                 user.username = uname
+#                 user.email = email
+#                 self.nbc.session.save(user)
+#                 self.nbc.session.flush()
+#         except Exception, e:
+#             return self.packageFailure(failure.Failure(e))
+#         else:
+#             d = defer.succeed(None)
+#             d.addCallbacks(self.packageSuccess, self.packageFailure)
+#             return d
 
 class HTTPNotebookGetNode(HTTPNotebookBaseMethod):
     
@@ -169,7 +171,7 @@ class HTTPNotebookGetNode(HTTPNotebookBaseMethod):
         try:
             flags = {}
             for k,v in request.args.iteritems():
-                if k in ['nodeID','parentID','textData', 'input',
+                if k in ['nodeID','parentID','textData', 'input', 'nodeType'
                         'output','comment', 'nextID', 'previousID']:
                     flags[k] = v[0]
             userID = request.args['userID'][0]
@@ -188,7 +190,7 @@ class HTTPNotebookAddNode(HTTPNotebookBaseMethod):
             userID = request.args['userID'][0]
             parentID = request.args['parentID'][0]
             nodeType = request.args['nodeType'][0]
-            indices = request.args['indices']
+            index = request.args['index']
             
             flags = {}
             for k,v in request.args.iteritems():
@@ -198,8 +200,7 @@ class HTTPNotebookAddNode(HTTPNotebookBaseMethod):
             node = getattr(models, nodeType)()
             for k,v in flags.iteritmes():
                 setattr(node,k,v)
-            d = defer.execute(self.nbc.addNode, userID, parentID, node, indices)
-            
+            d = defer.execute(self.nbc.addNode, userID, parentID, node, index)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
@@ -213,10 +214,9 @@ class HTTPNotebookEditNode(HTTPNotebookBaseMethod):
         try:
             userID = request.args['userID'][0]
             nodeID = request.args['nodeID'][0]
-            
             flags = {}
             for k,v in request.args.iteritems():
-                if k in ['textData', 'input',
+                if k in ['textData', 'input', 'parentID',
                         'output','comment', 'nextID', 'previousID']:
                     flags[k] = v[0]
             d = defer.execute(self.nbc.editNode, userID, nodeID, **flags)
@@ -227,6 +227,7 @@ class HTTPNotebookEditNode(HTTPNotebookBaseMethod):
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
     
+
 class HTTPNotebookDropNode(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
@@ -234,6 +235,21 @@ class HTTPNotebookDropNode(HTTPNotebookBaseMethod):
             userID = request.args['userID'][0]
             nodeID = request.args['nodeID'][0]
             d = defer.execute(self.nbc.dropNode, userID, nodeID)
+        except Exception, e:
+            return self.packageFailure(failure.Failure(e))
+        else:
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
+    
+class HTTPNotebookMoveNode(HTTPNotebookBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            userID = request.args['userID'][0]
+            nodeID = request.args['nodeID'][0]
+            parentID = request.args['parentID'][0]
+            index = request.args['index'][0]
+            d = defer.execute(self.nbc.moveNode, userID, nodeID, parentID, index)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
