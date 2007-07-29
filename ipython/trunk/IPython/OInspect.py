@@ -468,8 +468,9 @@ class Inspector:
             if ds:
                 class_ds = getdoc(obj.__class__)
                 # Skip Python's auto-generated docstrings
-                if class_ds.startswith('function(code, globals[, name[,') or \
-                   class_ds.startswith('instancemethod(function, instance,'):
+                if class_ds and \
+                       (class_ds.startswith('function(code, globals[,') or \
+                   class_ds.startswith('instancemethod(function, instance,')):
                     class_ds = None
                 if class_ds and ds != class_ds:
                     out.writeln(header('Class Docstring:\n') +
@@ -530,6 +531,8 @@ class Inspector:
           - show_all(False): show all names, including those starting with
           underscores.
         """
+        #print 'ps pattern:<%r>' % pattern # dbg
+        
         # defaults
         type_pattern = 'all'
         filter = ''
