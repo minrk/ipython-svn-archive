@@ -2134,7 +2134,7 @@ Currently the magic system has the following functions:\n"""
             print 'You must specify a color scheme.'
             return
         import IPython.rlineimpl as readline
-        if not readline.have_readline:
+        if not readline.have_readline and sys.platform == "win32":
             msg = """\
 Proper color support under MS Windows requires the pyreadline library.
 You can find it at:
