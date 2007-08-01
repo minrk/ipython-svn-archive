@@ -499,7 +499,7 @@ class Inspector:
                     out.writeln(header('Call def:\t')+self.format(call_def))
                 call_ds = getdoc(obj.__call__)
                 # Skip Python's auto-generated docstrings
-                if call_ds.startswith('x.__call__(...) <==> x(...)'):
+                if call_ds and call_ds.startswith('x.__call__(...) <==> x(...)'):
                     call_ds = None
                 if call_ds:
                     out.writeln(header('Call docstring:\n') + indent(call_ds))
