@@ -159,4 +159,21 @@ def getDescendents(section):
             kids.append(kid)
     return kids
 
+def addTag(session, node, tagName):
+    taglist = session.query(Tag).select_by(name=tagName)
+    if not taglist:
+        tag = Tag(tagName)
+    else:
+        tag = taglist[0]
+    node.tags.append(tag)
+    return tag
+
+def dropTag(session, node, tagName):
+    tag = session.query(Tag).selectone_by(name=tagName)
+    node.tags.remove(tag)
+    session.refresh(tag)
+    if not tag.providers:
+        session.delete(tag)
+        session.flush()
+    
 

@@ -103,7 +103,16 @@ def XMLInputCell(cell, justme=False):
     s += "<input>%s</input>\n"%xmlsafe(cell.input)
     s += "<output>%s</output>\n"%xmlsafe(cell.output)
     return "<InputCell>\n%s</InputCell>\n"%indent(s,2)
-    
+
+def XMLNotebook(nb, justme=False):
+    s  = "<notebookID>%i</notebookID>\n"%nb.notebookID
+    s += "<dateCreated>%s</dateCreated>\n"%(nb.dateCreated.strftime(tformat))
+    s += "<dateModified>%s</dateModified>\n"%(nb.dateModified.strftime(tformat))
+    if justme:
+        s += "<rootID>%i</rootID>\n"%nb.rootID
+    else:
+        s += indent(nb.root.xmlize(justme=False),2)
+    return "<Notebook>\n%s</Notebook>\n"%indent(s,2)
 
 #-------------------------------------------------------------------------------
 # JSON Representations of Notebook Objects
@@ -169,8 +178,13 @@ metadata = MetaData()
 # Tables
 
 tagsTable = Table('tags', metadata,
-    Column('tag', String(32), primary_key=True),
-    Column('providers', String(64))
+    Column('tagID', Integer, primary_key=True),
+    Column('name', String(64))
+)
+
+tagLinksTable = Table('taglinks', metadata,
+    Column('tagID', Integer, ForeignKey('tags.tagID'), primary_key=True),
+    Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
 )
 
 nodesTable = Table('nodes', metadata,
@@ -221,6 +235,10 @@ notebooksTable = Table('notebooks', metadata,
 #-------------------------------------------------------------------------------
 # SQLAlchemy Mapper Classes
 #-------------------------------------------------------------------------------
+
+class Tag(object):
+    def __init__(self, name):
+        self.name = name
 
 class Created(object):
     def __init__(self):
@@ -363,11 +381,21 @@ class Notebook(Timestamper):
         super(Notebook, self).__init__()
         self.user = user
         self.root = root
+    
+    xmlize = XMLNotebook
+    
+    jsonify = None
         
 
 #-------------------------------------------------------------------------------
 # SQLAlchemy Mappers and Joins
 #-------------------------------------------------------------------------------
+
+tagMapper = mapper(Tag, tagsTable,
+    properties = {
+        'providers': relation(Node, secondary=tagLinksTable)
+    }
+)
 
 nodeJoin = polymorphic_union(
     {
@@ -388,12 +416,12 @@ nodeMapper = mapper(Node, nodesTable,
             remote_side=[nodesTable.c.nodeID],
             post_update = True,
             uselist=False),
-            # backref=backref('next',
         'next': relation(Node,
                 primaryjoin=nodesTable.c.nextID==nodesTable.c.nodeID,
                 remote_side=[nodesTable.c.nodeID],
                 post_update = True,
                 uselist=False),
+        'tags': relation(Tag, secondary=tagLinksTable)
     }
 )
 

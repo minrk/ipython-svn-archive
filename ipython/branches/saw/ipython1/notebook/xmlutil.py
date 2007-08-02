@@ -60,9 +60,14 @@ def dumpDBtoXML(session, fname=None, flatten=False):
 
 def initFromE(Klass, element):
     c = Klass()
-    c.dateCreated = datetime.datetime.strptime(element.find('dateCreated').text, tformat)
-    c.dateModified = datetime.datetime.strptime(element.find('dateModified').text, tformat)
-    # c.userID = int(element.find('userID').text)
+    try:
+        c.dateCreated = datetime.datetime.strptime(element.find('dateCreated').text, tformat)
+    except AttributeError:
+        c.dateCreated = datetime.datetime.now()
+    try:
+        c.dateModified = datetime.datetime.strptime(element.find('dateModified').text, tformat)
+    except AttributeError:
+        c.dateCreated = datetime.datetime.now()
     return c
     
 def userFromElement(session, ue, nodes={}):
@@ -78,8 +83,8 @@ def userFromElement(session, ue, nodes={}):
         session.flush()
     justme = bool(ue.find('justme').text)
     if not justme:
-        for nbe in ue.find('Notebooks').findall('Section'):
-            s = sectionFromElement(nbe, user, None, nodes)
+        for nbe in ue.find('Notebooks').findall('Notebook'):
+            nb = notebookFromElement(nbe, user, nodes)
     return user
         
     
@@ -142,6 +147,13 @@ def sectionFromElement(element, user, parent, nodes):
             # print e.tag
             anyNodeFromElement(e, user, sec, nodes)
     return sec
+
+def notebookFromElement(element, user, nodes):
+    nb = initFromE(models.Notebook, element)
+    nb.user = user
+    rootE = element.find("root").find("Section")
+    nb.root = sectionFromElement(rootE, user, None, nodes)
+    return nb
 
 def saveAndRelink(session, nodes):
     # for node in nodes.values():
