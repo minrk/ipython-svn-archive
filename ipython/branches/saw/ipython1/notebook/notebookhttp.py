@@ -58,8 +58,10 @@ class HTTPNotebookServer(static.File):
         self.putChild('movenode', HTTPNotebookMoveNode(self.nbc))
         self.putChild('addroot', HTTPNotebookAddRoot(self.nbc))
         
-        self.putChild('notebook.js', static.File(thisdir+'/notebook.js', defaultType="text/javascript"))
         self.putChild('notebook.css', static.File(thisdir+'/notebook.css', defaultType="text/css"))
+        self.putChild('Base.js', static.File(thisdir+'/Base.js', defaultType="text/javascript"))
+        self.putChild('Async.js', static.File(thisdir+'/Async.js', defaultType="text/javascript"))
+        self.putChild('notebook.js', static.File(thisdir+'/notebook.js', defaultType="text/javascript"))
     
 
 components.registerAdapter(HTTPNotebookServer,
@@ -117,6 +119,8 @@ headers: %r
 class HTTPNotebookConnectUser(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
+        print request
+        print request.args
         try:
             uname = request.args['username'][0]
             email = request.args['email'][0]

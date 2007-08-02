@@ -54,8 +54,8 @@ class INotebookController(zi.Interface):
     def dropNode(userID, nodeID):
         """Drop a Node by nodeID, owned by userID"""
     
-    def addRootSection(user, title):
-        """create a root (parentless) Section for `user` with `title`"""
+    def addNotebook(user, title):
+        """create a notebook and root Section for `user` with `title`"""
     
     def loadDBFromXML(xmlstr):
         """load the db from an xml file"""
@@ -171,10 +171,10 @@ class NotebookController(object):
         for node in nodes:
             dbutil.dropObject(self.session, node)
     
-    def addRootSection(self, userID, title):
+    def addNotebook(self, userID, title):
         assert userID in self.users, "You are not an active user!"
         u = self.userQuery.selectone_by(userID=userID)
-        return dbutil.createRootSection(self.session, u, title)
+        return dbutil.createNotebook(self.session, u, title)
     
     def loadNotebookFromXML(self, userID, xmlstr, parentID=None):
         assert userID in self.users, "You are not an active user!"
@@ -204,7 +204,7 @@ class INotebookUser(zi.Interface):
     def moveNode(userID, nodeID, newParentID, index=None):
         """move a node to new parent at index"""
     
-    def addRootSection(title):
+    def addNotebook(title):
         """"""
     
     def loadNotebookFromXML(xmlstr, parentID=None):
@@ -243,8 +243,8 @@ class NotebookUser(object):
     def editNode(self, nodeID, **options):
         return self.nbc.editNode(self.user.userID, nodeID, **options)
     
-    def addRootSection(self, title):
-        return self.nbc.addRootSection(self.user.userID, title)
+    def addNotebook(self, title):
+        return self.nbc.addNotebook(self.user.userID, title)
     
     def loadNotebookFromXML(xmlstr, parentID=None):
         return self.nbc.loadNotebookFromXML(self.user.userID, xmlstr, parentID)

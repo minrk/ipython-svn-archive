@@ -16,7 +16,7 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 from sqlalchemy import *
-import datetime
+import datetime, simplejson
 #-------------------------------------------------------------------------------
 # XML representations of notebook objects
 #-------------------------------------------------------------------------------
@@ -168,6 +168,11 @@ metadata = MetaData()
 
 # Tables
 
+tagsTable = Table('tags', metadata,
+    Column('tag', String(32), primary_key=True),
+    Column('providers', String(64))
+)
+
 nodesTable = Table('nodes', metadata,
     Column('nodeID', Integer, primary_key=True),
     Column('dateCreated', DateTime),
@@ -205,9 +210,16 @@ usersTable = Table('users', metadata,
     Column('dateCreated', DateTime),
     Column('dateModified', DateTime)
 )
+notebooksTable = Table('notebooks', metadata,
+    Column('notebookID', Integer, primary_key=True),
+    Column('userID', Integer, ForeignKey('users.userID')),
+    Column('dateCreated', DateTime),
+    Column('dateModified', DateTime),
+    Column('rootID', Integer, ForeignKey('nodes.nodeID')),
+)
 
 #-------------------------------------------------------------------------------
-# SQLAlchemy Mappers
+# SQLAlchemy Mapper Classes
 #-------------------------------------------------------------------------------
 
 class Created(object):
@@ -245,23 +257,6 @@ class Node(Timestamper):
             d[k] = getattr(self, k)
         return "<%s: %s>"%(self.nodeType, d)
     
-    def _getNext(self): return self._next
-    
-    def _setNext(self, n):
-        if n is not None:
-            n.previousID = self.nodeID
-        self._next = n
-    
-    next = property(_getNext, _setNext)
-    
-    def _getPrevious(self): return self._previous
-    
-    def _setPrevious(self, n):
-        if n is not None:
-            n.next = self
-    
-    previous = property(_getPrevious, _setPrevious)
-    
     def insertBefore(self, c):
         """Insert a cell before this one."""
         assert self.parent is not None, "Cannot insert Before/After root"
@@ -269,6 +264,10 @@ class Node(Timestamper):
         c.parent = self.parent
         c.user = self.user
         c.previous = self.previous
+        if c.previous is not None:
+            c.previous.next = c
+        # c.next = self
+        self.previous = c
         c.next = self
         self.touchModified()
         c.touchModified()
@@ -280,7 +279,10 @@ class Node(Timestamper):
         c.parent = self.parent
         c.user = self.user
         c.next = self.next
+        if c.next is not None:
+            c.next.previous = c
         self.next = c
+        c.previous = self
         self.touchModified()
         c.touchModified()
     
@@ -356,6 +358,17 @@ class User(Timestamper):
     
     jsonify = jsonifyUser
 
+class Notebook(Timestamper):
+    def __init__(self, user=None, root=None):
+        super(Notebook, self).__init__()
+        self.user = user
+        self.root = root
+        
+
+#-------------------------------------------------------------------------------
+# SQLAlchemy Mappers and Joins
+#-------------------------------------------------------------------------------
+
 nodeJoin = polymorphic_union(
     {
         'inputCell':nodesTable.join(inputCellsTable),
@@ -370,14 +383,17 @@ nodeMapper = mapper(Node, nodesTable,
     polymorphic_on=nodeJoin.c.nodeType, 
     polymorphic_identity='node',
     properties = {
-        '_next': relation(Node,
-            primaryjoin=nodesTable.c.nextID==nodesTable.c.nodeID,
+        'previous': relation(Node,
+            primaryjoin=nodesTable.c.previousID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.nodeID],
-            uselist=False,
-            backref=backref('_previous',
+            post_update = True,
+            uselist=False),
+            # backref=backref('next',
+        'next': relation(Node,
                 primaryjoin=nodesTable.c.nextID==nodesTable.c.nodeID,
-                remote_side=[nodesTable.c.nextID],
-                uselist=False)),
+                remote_side=[nodesTable.c.nodeID],
+                post_update = True,
+                uselist=False),
     }
 )
 
@@ -416,12 +432,12 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
         'head': relation(Node,
             primaryjoin=and_(sectionsTable.c.headID==nodesTable.c.nodeID),
             remote_side=[nodesTable.c.nodeID],
-            viewonly = True,
+            post_update = True,
             uselist=False),
         'tail': relation(Node,
             primaryjoin=and_(sectionsTable.c.tailID==nodesTable.c.nodeID),
             remote_side=[nodesTable.c.nodeID],
-            viewonly = True,
+            post_update = True,
             uselist=False),
     }
 )
@@ -434,9 +450,14 @@ userMapper = mapper(User, usersTable,
         'cells':relation(Cell,
         primaryjoin=usersTable.c.userID==nodesTable.c.userID,
         ),
-        'notebooks':relation(Node,
-        primaryjoin=and_(usersTable.c.userID==nodesTable.c.userID,
-            nodesTable.c.parentID==None),
+        'notebooks':relation(Notebook,
+        primaryjoin=usersTable.c.userID==notebooksTable.c.userID,
+        cascade="all, delete-orphan", backref='user',
         )
+    }
+)
+notebookMapper = mapper(Notebook, notebooksTable,
+    properties={
+        'root':relation(Section, uselist=False)
     }
 )

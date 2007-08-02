@@ -104,44 +104,46 @@ def dropObject(session, obj):
     
             
     
-def createRootSection(session, user, title):
+def createNotebook(session, user, title):
     """create a root (parentless) Section for `user` with `title
     These objects are the basis for Notebooks.
     """
     root = models.Section()
     root.user = user
     root.title = title
+    nb = models.Notebook(user, root)
     user.touchModified()
-    session.save(root)
+    session.save(nb)
     session.flush()
     session.refresh(user)
-    return root
+    return nb
 
 def addChild(session, child, parent, index=None):
     """Add `child` to Section `parent` at position `index`, 
     defaulting to the end."""
     
     session.save(child)
-    session.flush()
+    # session.flush()
     if parent.children: # already have some children
         if index is None or index == len(parent.children):
             n = parent[-1]
             n.insertAfter(child)
-            parent.tailID = child.nodeID
+            # parent.tailID = child.nodeID
+            parent.tail = child
         else:
             parent[index].insertBefore(child)
             if index == 0:
-                parent.headID = child.nodeID
-            #     parent.head = child
+                # parent.headID = child.nodeID
+                parent.head = child
     else: # this is parent's first child
         child.parent = parent
         child.user = parent.user
-        parent.headID = parent.tailID = child.nodeID
-        # parent.head = parent.tail = child
+        # parent.headID = parent.tailID = child.nodeID
+        parent.head = parent.tail = child
     child.touchModified()
     parent.touchModified()
     session.flush()
-    session.refresh(parent)
+    # session.refresh(parent)
     # session.
     return child
 

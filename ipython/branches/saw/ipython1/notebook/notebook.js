@@ -1,15 +1,14 @@
 /*getParam from cryer.co.uk script8*/
 /*var url = Location.href;*/
 getParam = function(name){
-    var globalIDs = document.getElementById("globalIDs");
-    if (globalIDs != null){
-        return globalIDs.value;
+    var v = document.getElementById(name);
+    if (v != null){
+        return v.value;
     }else{
-        globalIDs = document.createElement("input");
-/*        globalIDs.id = "globalIDs";*/
-        globalIDs.setAttribute("id", "globalIDs")
-        globalIDs.type = "hidden";
-        document.body.appendChild(globalIDs);
+        v = document.createElement("input");
+        v.setAttribute("id", name)
+        v.type = "hidden";
+        document.body.appendChild(v);
     }
     var start=location.search.indexOf("?"+name+"=");
     if (start<0) start=location.search.indexOf("&"+name+"=");
@@ -23,18 +22,28 @@ getParam = function(name){
         var c=location.search.charAt(i);
         result=result+(c=="+"?" ":c);
     }
-    globalIDs.value = unescape(result);
+    v.value = unescape(result);
     return unescape(result);
 }
-
+// globals
 var currentID = 0;
 var selectedCell = "";
-getIDs = function(){
-    var ids = getParam("ids");
-    if (ids == null){
-    	ids = prompt("Which IDs?", "all");
-        var globalIDs = document.getElementById("globalIDs");
-        globalIDs.value = ids;
+var userID = -1;
+var email = "";
+var username = "";
+
+connect = function(){
+    username = getParam("username");
+    if (username == null){
+    	username = prompt("username?", "");
+        var u = document.getElementById("username");
+        u.value = username;
+    }
+    email = getParam("email")
+    if (email == null){
+    	email = prompt("email?", "");
+        var e = document.getElementById("email");
+        e.value = email;
     }
     if (!selectedCell){
         selectedCell = "";
@@ -42,9 +51,25 @@ getIDs = function(){
     if (!currentID){
         currentID = 0;
     }
-    var d = doXHR("setIDs",{queryString:queryString({ids:ids})});
-    return ids;
+    var head = document.getElementById("header");
+/*    alert(head);*/
+/*    alert(head.value);*/
+/*    alert(head.text);*/
+    head.innerHTML = "IPythonNotebook  " + username + ":" + email;
+/*    alert(queryString({email:email}));*/
+/*    var s = queryString();*/
+/*    var reqs = "/connectuser?"+s;*/
+/*    alert(reqs);*/
+    var d = doSimpleXMLHttpRequest("/connectuser", {email:email, username:username});
+    d.addCallback(setUserID)
 };
+
+setUserID = function(result){
+    alert(result.responseText);
+    var username = document.getElementById("username");
+    username.value = username;
+/*    alert(result[1]);*/
+}
 
 handleOutput = function(cmd_id, id, out){
     var cell = document.getElementById(cmd_id);

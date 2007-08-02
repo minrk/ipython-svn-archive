@@ -144,28 +144,30 @@ def sectionFromElement(element, user, parent, nodes):
     return sec
 
 def saveAndRelink(session, nodes):
-    for node in nodes.values():
-        session.save(node)
-    session.flush()
+    # for node in nodes.values():
+    #     session.save(node)
+    # session.flush()
     # nodes[None] = models.Node()
     # print nodes
     for node in nodes.values(): # correct node ID values
         for key in ['next', 'previous']:
-            try:
-                id = nodes.get(getattr(node, key+"ID")).nodeID
-            except AttributeError:
-                id = None
-            setattr(node, key+"ID", id)
+            # try:
+            #     id = nodes.get(getattr(node, key+"ID")).nodeID
+            # except AttributeError:
+            #     id = None
+            # setattr(node, key+"ID", id)
+            setattr(node, key, nodes.get(getattr(node, key+"ID")))
         if isinstance(node, models.Section):
-            for key in ['head', 'tail']:
-                try:
-                    id = nodes.get(getattr(node, key+"ID")).nodeID
-                except AttributeError:
-                    id = None
-                setattr(node, key+"ID", id)
-    session.flush()
-    for node in nodes.values():
-        session.refresh(node)
+            # for key in ['head', 'tail']:
+            #     try:
+            #         id = nodes.get(getattr(node, key+"ID")).nodeID
+            #     except AttributeError:
+            #         id = None
+            #     setattr(node, key+"ID", id)
+            setattr(node, key, nodes.get(getattr(node, key+"ID")))
+    # session.flush()
+    # for node in nodes.values():
+    #     session.refresh(node)
     # print nodes
     return nodes
 
@@ -194,6 +196,9 @@ def loadDBfromXML(session, s, isfilename=False, flatten=False):
     f.close()
     
     saveAndRelink(session, nodes)
+    # for node in nodes:
+    #     session.save(node)
+    session.flush()
     for user in users:
         session.refresh(user)
 
