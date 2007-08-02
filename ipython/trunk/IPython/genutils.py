@@ -1055,7 +1055,7 @@ def raw_input_ext(prompt='',  ps2='... '):
 
 #----------------------------------------------------------------------------
 def ask_yes_no(prompt,default=None):
-    """Asks a question and returns an integer 1/0 (y/n) answer.
+    """Asks a question and returns a boolean (y/n) answer.
 
     If default is given (one of 'y','n'), it is used if the user input is
     empty. Otherwise the question is repeated until an answer is given.

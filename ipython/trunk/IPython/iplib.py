@@ -228,6 +228,10 @@ class InteractiveShell(object,Magic):
         # We need to know whether the instance is meant for embedding, since
         # global/local namespaces need to be handled differently in that case
         self.embedded = embedded
+        if embedded:
+            # Control variable so users can, from within the embedded instance,
+            # permanently deactivate it.
+            self.embedded_active = True
 
         # command compiler
         self.compile = codeop.CommandCompiler()
@@ -1566,7 +1570,7 @@ want to merge them back into the new files.""" % locals()
         # all names in the builtin namespace needed by ipython point to
         # ourselves, and not to other instances.
         self.add_builtins()
-        
+
         self.interact(header)
         
         # now, purge out the user namespace from anything we might have added
