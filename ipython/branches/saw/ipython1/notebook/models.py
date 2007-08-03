@@ -17,10 +17,55 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 from sqlalchemy import *
 import datetime, simplejson
+
+
 #-------------------------------------------------------------------------------
 # XML representations of notebook objects
 #-------------------------------------------------------------------------------
-def xmlsafe(s):
+
+def sparseTextCell(cell):
+    if '"""\n' in cell.textData and "'''\n" in cell.textData:
+        # make a trivial alteration, to prevent misparsing
+        s = "'''%s'''\n"%cell.textData.replace("'''\n", "'''\n ")
+    elif '"""' in cell.textData:
+        s = "'''%s'''\n"%cell.textData
+    else:
+        s = '"""%s"""\n'%cell.textData
+    if cell.comment:
+        s += '#' + cell.comment.replace('\n', '\n#') + '\n'
+    return s
+
+def sparseInputCell(cell):
+    inlines = cell.input.splitlines()
+    if inlines:
+        s = '>>> '+inlines.pop(0)+'\n'
+        while inlines:
+            s += '... '+inlines.pop(0)+'\n'
+    else:
+        s = '>>> \n'
+    s += cell.output + '\n'
+    if cell.comment:
+        s += '#' + cell.comment.replace('\n', '\n#') + '\n'
+    return s
+
+def sparseSection(sec):
+    s = "# py-section %s\n"%sec.title
+    if sec.comment:
+        s += '#' + sec.comment.replace('\n', '\n#') + '\n'
+    for c in sec.children:
+        s += c.sparse()
+    return s + "# py-section-end\n"
+        
+    
+def sparseNotebook(nb):
+    return nb.root.sparse()
+
+
+
+#-------------------------------------------------------------------------------
+# XML representations of notebook objects
+#-------------------------------------------------------------------------------
+def escape(s):
     if s is None:
         return None
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
@@ -38,8 +83,8 @@ tformat = "%Y-%m-%d %H:%M:%S"
 
 def XMLUser(u, justme=False):
     s  = "<userID>%i</userID>\n"%u.userID
-    s += "<username>%s</username>\n"%xmlsafe(u.username)
-    s += "<email>%s</email>\n"%xmlsafe(u.email)
+    s += "<username>%s</username>\n"%escape(u.username)
+    s += "<email>%s</email>\n"%escape(u.email)
     s += "<dateCreated>%s</dateCreated>\n"%(u.dateCreated.strftime(tformat))
     s += "<dateModified>%s</dateModified>\n"%(u.dateModified.strftime(tformat))
     s += "<justme>"+ '1'*justme + "</justme>\n"
@@ -60,7 +105,7 @@ def XMLUser(u, justme=False):
     
 def XMLNodeBase(node, justme):
     """The base of an XML representation of a Node"""
-    s  = "<comment>%s</comment>\n"%xmlsafe(node.comment)
+    s  = "<comment>%s</comment>\n"%escape(node.comment)
     for idname in ['nodeID', 'nextID','previousID', 'parentID', 'userID']:
         value = getattr(node, idname)
         if value is None:
@@ -75,7 +120,7 @@ def XMLSection(sec, justme=False):
     """Return an XML representation of a Section"""
     s  = XMLNodeBase(sec, justme)
     s += "<justme>"+ '1'*justme + "</justme>\n"
-    s += "<title>%s</title>\n"%xmlsafe(sec.title)
+    s += "<title>%s</title>\n"%escape(sec.title)
     for idname in ['headID','tailID']:
         value = getattr(sec, idname)
         if value is None:
@@ -95,23 +140,29 @@ def XMLSection(sec, justme=False):
 
 def XMLTextCell(cell, justme=False):
     s  = XMLNodeBase(cell, justme)
-    s += "<textData>%s</textData>\n"%xmlsafe(cell.textData)
+    s += "<textData>%s</textData>\n"%escape(cell.textData)
     return "<TextCell>\n%s</TextCell>\n"%indent(s,2)
 
 def XMLInputCell(cell, justme=False):
     s  = XMLNodeBase(cell, justme)
-    s += "<input>%s</input>\n"%xmlsafe(cell.input)
-    s += "<output>%s</output>\n"%xmlsafe(cell.output)
+    s += "<input>%s</input>\n"%escape(cell.input)
+    s += "<output>%s</output>\n"%escape(cell.output)
     return "<InputCell>\n%s</InputCell>\n"%indent(s,2)
 
 def XMLNotebook(nb, justme=False):
-    s  = "<notebookID>%i</notebookID>\n"%nb.notebookID
+    s = ""
+    for idname in ['notebookID', 'userID']:
+        value = getattr(nb, idname)
+        if value is None:
+            s += "<%s></%s>\n"%(idname, idname)
+        else:
+            s += "<%s>%i</%s>\n"%(idname, value, idname)
     s += "<dateCreated>%s</dateCreated>\n"%(nb.dateCreated.strftime(tformat))
     s += "<dateModified>%s</dateModified>\n"%(nb.dateModified.strftime(tformat))
     if justme:
         s += "<rootID>%i</rootID>\n"%nb.rootID
     else:
-        s += indent(nb.root.xmlize(justme=False),2)
+        s += "<root>\n%s</root>\n"%indent(nb.root.xmlize(justme=False),2)
     return "<Notebook>\n%s</Notebook>\n"%indent(s,2)
 
 #-------------------------------------------------------------------------------
@@ -338,8 +389,8 @@ class Section(Node):
                 c = c.previous
             return c
     
-    xmlize = XMLSection
-    
+    sparse  = sparseSection
+    xmlize  = XMLSection
     jsonify = jsonifySection
 
 class Cell(Node):
@@ -352,8 +403,8 @@ class InputCell(Cell):
         self.input = input
         self.output = output
     
-    xmlize = XMLInputCell
-    
+    sparse  = sparseInputCell
+    xmlize  = XMLInputCell
     jsonify = jsonifyInputCell
 
 class TextCell(Cell):
@@ -362,8 +413,8 @@ class TextCell(Cell):
         super(TextCell, self).__init__(comment, parent)
         self.textData = textData
     
-    xmlize = XMLTextCell
-    
+    sparse  = sparseTextCell
+    xmlize  = XMLTextCell
     jsonify = jsonifyTextCell
 
 class User(Timestamper):
@@ -382,8 +433,8 @@ class Notebook(Timestamper):
         self.user = user
         self.root = root
     
-    xmlize = XMLNotebook
-    
+    sparse  = sparseNotebook
+    xmlize  = XMLNotebook
     jsonify = None
         
 

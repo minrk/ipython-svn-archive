@@ -31,20 +31,20 @@ tformat = models.tformat
 #-------------------------------------------------------------------------------
 # Export a Notebook to XML
 #-------------------------------------------------------------------------------
-def unxmlsafe(s):
+def unescape(s):
     if s is None:
         return ""
     return s.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"').replace("&amp;", "&")
 
-def dumpDBtoXML(session, fname=None, flatten=False):
+def unindent(s, n):
+    return s.replace('\n'+' '*n,'\n')
+
+def dumpDBtoXML(session, fname=None):
     """Build an XML String"""
     users = session.query(models.User).select()
     s = "<XMLBackup>\n"
     for u in users:
-        s += models.indent(u.xmlize(justme=flatten),2)
-        if flatten:
-            for node in session.query(models.Node).select():
-                s += models.indent(node.xmlize(justme=True),2)
+        s += models.indent(u.xmlize(justme=False),2)
     s += "</XMLBackup>\n"
     
     if fname is not None:
@@ -71,8 +71,8 @@ def initFromE(Klass, element):
     return c
     
 def userFromElement(session, ue, nodes={}):
-    username = unxmlsafe(ue.find('username').text)
-    email = unxmlsafe(ue.find('email').text)
+    username = unescape(ue.find('username').text)
+    email = unescape(ue.find('email').text)
     try: # get from db
         user = session.query(models.User).selectone_by(username=username, email=email)
     except: # user does not exist, so add to db
@@ -102,7 +102,8 @@ def anyNodeFromElement(element, user, parent, nodes={}):
 
 def initNodeFromE(Klass, element, user, parent, nodes):
     node = initFromE(Klass, element)
-    node.comment = unxmlsafe(element.find('comment').text)
+    s = unescape(element.find('comment').text)
+    node.comment = unindent(s, element.text.count(' '))
     for idname in ['nextID', 'previousID']:
         s = element.find(idname).text
         if s:
@@ -120,18 +121,22 @@ def initNodeFromE(Klass, element, user, parent, nodes):
 
 def textCellFromElement(element, user, parent, nodes):
     cell = initNodeFromE(models.TextCell, element, user, parent, nodes)
-    cell.textData = unxmlsafe(element.find('textData').text)
+    s = unescape(element.find('textData').text)
+    cell.textData = unindent(s, element.text.count(' '))
     return cell
 
 def inputCellFromElement(element, user, parent, nodes):
     cell = initNodeFromE(models.InputCell, element, user, parent, nodes)
-    cell.input = unxmlsafe(element.find('input').text)
-    cell.output = unxmlsafe(element.find('output').text)
+    s = unescape(element.find('input').text)
+    cell.input = unindent(s, element.text.count(' '))
+    s = unescape(element.find('output').text)
+    cell.output = unindent(s, element.text.count(' '))
     return cell
 
 def sectionFromElement(element, user, parent, nodes):
     sec = initNodeFromE(models.Section, element, user, parent, nodes)
-    sec.title = unxmlsafe(element.find('title').text)
+    s = unescape(element.find('title').text)
+    sec.title = unindent(s, element.text.count(' '))
     for idname in ['headID', 'tailID']:
         s = element.find(idname).text
         if s:
@@ -142,8 +147,14 @@ def sectionFromElement(element, user, parent, nodes):
     kide = element.find('children')
     justme = bool(element.find('justme').text)
     if not justme:
-        for e in kide.findall('Section')+kide.findall('InputCell')+\
-                        kide.findall('TextCell'):
+        kids = kide.findall('Section')+kide.findall('InputCell')+\
+                        kide.findall('TextCell')
+        # if kids:
+        #     e = anyNodeFromElement(kids[0], user, sec, nodes)
+        #     sec.head = e
+        #     
+        #     
+        for e in kids:
             # print e.tag
             anyNodeFromElement(e, user, sec, nodes)
     return sec
@@ -155,35 +166,16 @@ def notebookFromElement(element, user, nodes):
     nb.root = sectionFromElement(rootE, user, None, nodes)
     return nb
 
-def saveAndRelink(session, nodes):
-    # for node in nodes.values():
-    #     session.save(node)
-    # session.flush()
-    # nodes[None] = models.Node()
-    # print nodes
+def relinkNodes(nodes):
     for node in nodes.values(): # correct node ID values
         for key in ['next', 'previous']:
-            # try:
-            #     id = nodes.get(getattr(node, key+"ID")).nodeID
-            # except AttributeError:
-            #     id = None
-            # setattr(node, key+"ID", id)
             setattr(node, key, nodes.get(getattr(node, key+"ID")))
         if isinstance(node, models.Section):
-            # for key in ['head', 'tail']:
-            #     try:
-            #         id = nodes.get(getattr(node, key+"ID")).nodeID
-            #     except AttributeError:
-            #         id = None
-            #     setattr(node, key+"ID", id)
-            setattr(node, key, nodes.get(getattr(node, key+"ID")))
-    # session.flush()
-    # for node in nodes.values():
-    #     session.refresh(node)
-    # print nodes
+            for key in ['head', 'tail']:
+                setattr(node, key, nodes.get(getattr(node, key+"ID")))
     return nodes
 
-def loadDBfromXML(session, s, isfilename=False, flatten=False):
+def loadDBfromXML(session, s, isfilename=False):
     """loads a whole DB Backup from an XML string or file"""
     if isfilename:
         f = open(s)
@@ -193,28 +185,18 @@ def loadDBfromXML(session, s, isfilename=False, flatten=False):
     root = tree.getroot()
     userElements = root.findall('User')
     nodeElements = root.findall('Section')+root.findall('InputCell')+root.findall('TextCell')
-    if nodeElements:
-        # override the flatten setting if non-Sections are in the base
-        flatten = True
-    if flatten:
-        # we can't do flatten yet
-        raise NotImplementedError
-    
     nodes = {}
     users = [userFromElement(session, ue, nodes) for ue in userElements]
-    # for flatten:
-    # nodelist = [anyNodeFromElement(e, user, parent, nodes) for e in nodeElements]
     
     f.close()
     
-    saveAndRelink(session, nodes)
-    # for node in nodes:
-    #     session.save(node)
+    relinkNodes(nodes)
     session.flush()
     for user in users:
         session.refresh(user)
+    return users
 
-def loadNotebookFromXML(session, s, user, isfilename=False, flatten=False):
+def loadNotebookFromXML(session, user, s, isfilename=False):
     if isfilename:
         f = open(s)
     else:
@@ -222,9 +204,10 @@ def loadNotebookFromXML(session, s, user, isfilename=False, flatten=False):
     tree = ET.ElementTree(file=f)
     root = tree.getroot()
     nodes = {}
-    sec = sectionFromElement(root, user, None, nodes)
+    nb = notebookFromElement(root, user, nodes)
     f.close()
-    saveAndRelink(session, nodes)
+    relinkNodes(nodes)
+    session.flush()
     session.refresh(user)
-    return sec
+    return nb
 

@@ -183,7 +183,7 @@ class NotebookController(object):
             parent = self.nodeQuery.selectone_by(userID=userID, nodeID=parentID)
         else:
             parent = None
-        sec = xmlutil.loadNotebookFromXML(self.session, xmlstr, user, parent)
+        sec = xmlutil.loadNotebookFromXML(self.session, user, xmlstr)
         return sec
     
 

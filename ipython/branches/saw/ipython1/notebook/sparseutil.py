@@ -21,8 +21,9 @@ from ipython1.notebook import models, dbutil
 
 
 # class parseLoader(object):
-INPUTS = [">>>", "..."]
-TEXT = '"""'
+INPUTS = [">>>"]
+CONTINUES = ["..."]
+TEXTS = ['"""', "'''"]
 CONTROLS = ["py-section", "py-section-end"]
     
 # def __init__(self, user):
@@ -42,8 +43,10 @@ def control(line):
         return 'py-comment', line[1:]
     elif line[:3] in INPUTS:
         return 'py-input', line[4:]
-    elif line[:3] == TEXT:
-        return 'py-text', line[3:]
+    elif line[:3] in CONTINUES:
+        return 'py-continue', line[4:]
+    elif line[:3] in TEXTS:
+        return line[:3], line[3:]
     return None, line
 
 def readComments(inlines, comments=[]):
@@ -51,7 +54,7 @@ def readComments(inlines, comments=[]):
     ctrl, line = control(inlines.pop(0))
     if ctrl == 'py-comment':
         comments.append(line)
-    while inlines and ctrl in [None, 'py-comment']: # anything above the first control is ignored
+    while inlines and ctrl in [None, 'py-comment']:
         ctrl, line = control(inlines.pop(0))
         if ctrl == 'py-comment':
             comments.append(line)
@@ -60,7 +63,7 @@ def readComments(inlines, comments=[]):
 def readInput(inlines, inputs=[]):
     # lines = []
     ctrl, line = control(inlines.pop(0))
-    while inlines and ctrl == 'py-input': # anything above the first control is ignored
+    while inlines and ctrl == 'py-continue':
         inputs.append(line)
         ctrl, line = control(inlines.pop(0))
     return ctrl, line, inputs
@@ -68,14 +71,14 @@ def readInput(inlines, inputs=[]):
 def readOutput(inlines, outputs=[]):
     # lines = []
     ctrl, line = control(inlines.pop(0))
-    while inlines and ctrl is None: # anything above the first control is ignored
+    while inlines and ctrl is None:
         outputs.append(line)
         ctrl, line = control(inlines.pop(0))
     return ctrl, line, outputs
 
-def readText(inlines, textLines=[]):
+def readText(inlines, end, textLines=[]):
     line = inlines.pop(0)
-    while line[-3:] != TEXT:
+    while line[-3:] != end:
         textLines.append(line)
         line = inlines.pop(0)
     textLines.append(line[:-3])
@@ -89,18 +92,18 @@ def loadNotebookFromSparse(session, user, s, fname=False):
         f = open(s)
         s = f.read()
         f.close()
-    inlines = s.split('\n')
+    inlines = s.splitlines()
+    filelen = len(inlines)
     sectionStack = []
     ctrl, line, comments = readComments(inlines)
-    # while inlines and ctrl in [None, 'py-comment']: # anything above the first control is ignored
-    #     ctrl, line = control(inlines.pop(0))
     if ctrl != "py-section":
         nb = dbutil.createNotebook(session, user, "")
-        nb.root.comment = '\n'.join(comments)
     else:
         nb = dbutil.createNotebook(session, user, line)
+    nb.root.comment = '\n'.join(comments)
     sectionStack.append(nb.root)
     active = nb.root
+    ctrl, line = control(inlines.pop(0))
     while inlines: # main parsing loop
         if ctrl is None:
             ctrl, line = control(inlines.pop(0))
@@ -116,15 +119,17 @@ def loadNotebookFromSparse(session, user, s, fname=False):
             ctrl, line = control(inlines.pop(0))
         elif ctrl == 'py-section-end':
             sectionStack.pop()
-            active = None
+            if sectionStack:
+                active = sectionStack[-1]
             ctrl, line = control(inlines.pop(0))
-        elif ctrl == 'py-text':
+        elif ctrl in TEXTS:
+            end = ctrl
             active = models.TextCell()
             dbutil.addChild(session, active, sectionStack[-1])
-            if line[-3:] == TEXT:
+            if line[-3:] == end:
                 active.textData = line[:-3]
             else:
-                textLines = readText(inlines, [line])
+                textLines = readText(inlines, end, [line])
                 active.textData = '\n'.join(textLines)
             ctrl, line = control(inlines.pop(0))
         elif ctrl == 'py-input':
@@ -136,7 +141,10 @@ def loadNotebookFromSparse(session, user, s, fname=False):
                 ctrl, line, outputs = readOutput(inlines, [line])
                 active.output = '\n'.join(outputs)
         else:
-            raise "WTF"
+            # I do not think this can happen
+            raise SyntaxError("Parse Error, line %i: %s"%(filelen-len(inlines), line))
+    
+    return nb
 
 
 
