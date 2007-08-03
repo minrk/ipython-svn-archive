@@ -114,7 +114,8 @@ def loadNotebookFromSparse(session, user, s, fname=False):
             active.comment = '\n'.join(comments)
         elif ctrl == 'py-section':
             active = models.Section(line)
-            dbutil.addChild(session, active, sectionStack[-1])
+            sectionStack[-1].addChild(active)
+            session.flush()
             sectionStack.append(active)
             ctrl, line = control(inlines.pop(0))
         elif ctrl == 'py-section-end':
@@ -125,7 +126,8 @@ def loadNotebookFromSparse(session, user, s, fname=False):
         elif ctrl in TEXTS:
             end = ctrl
             active = models.TextCell()
-            dbutil.addChild(session, active, sectionStack[-1])
+            sectionStack[-1].addChild(active)
+            session.flush()
             if line[-3:] == end:
                 active.textData = line[:-3]
             else:
@@ -134,7 +136,8 @@ def loadNotebookFromSparse(session, user, s, fname=False):
             ctrl, line = control(inlines.pop(0))
         elif ctrl == 'py-input':
             active = models.InputCell()
-            dbutil.addChild(session, active, sectionStack[-1])
+            sectionStack[-1].addChild(active)
+            session.flush()
             ctrl, line, inputs = readInput(inlines, [line])
             active.input = '\n'.join(inputs)
             if ctrl == None:

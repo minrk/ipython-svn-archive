@@ -85,7 +85,7 @@ class NotebookController(object):
         except sqla.exceptions.InvalidRequestError:
             assert email is not None, "need to specify email to create new user"
             user = dbutil.createUser(self.session, usernameOrID, email)
-        assert user.userID not in self.users, "User already connected"
+        # assert user.userID not in self.users, "User already connected"
         self.users.append(user.userID)
         return user
     
@@ -101,37 +101,49 @@ class NotebookController(object):
         assert userIDb not in self.users, "You cannot drop an active user!"
         userA = self.userQuery.selectone_by(userID=userIDa)
         userB = self.userQuery.selectone_by(userID=userIDb)
-        while userB.nodes:
-            node = userB.nodes.pop()
-            node.user = userA
-            node.touchModified()
+        while userB.notebooks:
+            nb = userB.notebooks.pop()
+            nb.user = userA
+            nb.touchModified()
         self.dropUser(userIDb)
         return userA
     
     def getNode(self, userID, **selectflags):
         assert userID in self.users, "You are not an active user!"
-        return self.nodeQuery.select_by(userID=userID, **selectflags)
+        user = self.userQuery.selectone_by(userID=userID)
+        nodes = []
+        for node in self.nodeQuery.select_by(**selectflags):
+            if user in node.notebook.writers or user in node.notebook.readers\
+                or user is node.notebook.user:
+                nodes.append(node)
+        return nodes
     
     def addNode(self, userID, parentID, node, index=None):
         """add a node to user's Section with nodeID `parentID`.  Index
         can be None or int.
         """
         assert userID in self.users, "You are not an active user!"
+        user = self.userQuery.selectone_by(userID=userID)
         try:
-            parent = self.nodeQuery.selectone_by(userID=userID, nodeID=parentID)
+            parent = self.nodeQuery.selectone_by(nodeID=parentID, nodeType='section')
         except sqla.exceptions.InvalidRequestError:
-            raise NotFoundError("No such Node, user:%i, node:%i"%(userID, parentID))
-        
-        assert isinstance(parent, models.Section), "parent must be a Section"
-        
-        return dbutil.addChild(self.session, node, parent, index)
+            raise NotFoundError("No such Section, nodeID:%i"%(parentID))
+        assert user in parent.notebook.writers or user is parent.notebook.user,\
+            "you do not have write permissions on this Notebook"
+        n = parent.addChild(node, index)
+        self.session.flush()
+        return n
     
     def editNode(self, userID, nodeID, **options):
         assert userID in self.users, "You are not an active user!"
-        node = self.nodeQuery.selectone_by(userID=userID, nodeID=nodeID)
+        user = self.userQuery.selectone_by(userID=userID)
+        
+        node = self.nodeQuery.selectone_by(nodeID=nodeID)
+        assert user in node.notebook.writers or user is node.notebook.user,\
+            "you do not have write permissions on this Notebook"
         
         for k,v in options.iteritems():
-            assert hasattr(node, k), "no such attr to edit"
+            assert hasattr(node, k), "no such attr '%s' to edit"%k
             if k in ['parentID', 'nextID', 'previousID']:
                 assert v is None or self.nodeQuery.select_by(nodeID=v)
             elif k == 'userID':
@@ -144,8 +156,20 @@ class NotebookController(object):
     def moveNode(self, userID, nodeID, newParentID, newIndex=None):
         """move a node to newParent, at newIndex"""
         assert userID in self.users, "You are not an active user!"
-        node = self.nodeQuery.selectone_by(userID=userID, nodeID=nodeID)
-        if node.parent is not None:
+        user = self.userQuery.selectone_by(userID=userID)
+        
+        node = self.getNode(userID, nodeID=nodeID)[0]
+        assert user in node.notebook.writers or user is node.notebook.user,\
+            "you do not have write permissions on this Notebook"
+        try:
+            parent = self.nodeQuery.selectone_by(nodeID=newParentID, nodeType='section')
+        except sqla.exceptions.InvalidRequestError:
+            raise NotFoundError("No such Section, nodeID:%i"%(newParentID))
+        assert user in parent.notebook.writers or user is parent.notebook.user,\
+            "you do not have write permissions on this Notebook"
+        nb = node.notebook
+        isroot = nb.root is node
+        if not isroot:# have parent, fix next/prev,head/tail links
             if node.parent.head is node:
                 node.parent.headID = node.nextID
             if node.parent.tail is node:
@@ -162,8 +186,13 @@ class NotebookController(object):
             n.previous = None
         node.next = node.previous = None
         self.session.flush()
+        n = self.addNode(userID, newParentID, node, newIndex)
+        self.session.refresh(nb)
+        if isroot:
+            
+            dbutil.dropObject(self.session, nb)
+        return n
         
-        return self.addNode(userID, newParentID, node, newIndex)
     
     def dropNode(self, userID, nodeID):
         assert userID in self.users, "You are not an active user!"
@@ -246,7 +275,7 @@ class NotebookUser(object):
     def addNotebook(self, title):
         return self.nbc.addNotebook(self.user.userID, title)
     
-    def loadNotebookFromXML(xmlstr, parentID=None):
+    def loadNotebookFromXML(self, xmlstr, parentID=None):
         return self.nbc.loadNotebookFromXML(self.user.userID, xmlstr, parentID)
 
 

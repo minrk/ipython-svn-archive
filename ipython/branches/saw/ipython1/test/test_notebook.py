@@ -31,16 +31,17 @@ class NotebookTestCase(unittest.TestCase):
         dbutil.initDB("sqlite:///")
         self.nbc = notebook.NotebookController()
         self.u = notebook.NotebookUser(self.nbc, 'userA', 'userA@email')
-        self.nb = self.u.addRootSection('title')
+        self.nb = self.u.addNotebook('title')
     
     def loadNodes(self, n):
         l = []
         for _ in range(n):
-            sections = self.nbc.nodeQuery.select_by(userID=self.u.user.userID, nodeType='section')
+            sections = self.nbc.nodeQuery.select_by(nodeType='section')
             # print sections
             parent = (sections + [None])[randint(0, len(sections))]
+            # print parent
             if parent is None:
-                l.append(self.u.addRootSection("title"))
+                l.append(self.u.addNotebook("title"))
             else:
                 i = randint(1,3)
                 if i == 1:
@@ -58,41 +59,41 @@ class NotebookTestCase(unittest.TestCase):
     def testappendNode(self):
         clist = [TextCell(),InputCell(),Section(),TextCell(),InputCell()]
         for c in clist:
-            self.u.addNode(self.nb.nodeID, c)
-        self.assertEquals(clist, self.nb.children)
+            self.u.addNode(self.nb.root.nodeID, c)
+        self.assertEquals(clist, self.nb.root.children)
     
     def testprependNode(self):
         clist = [TextCell(),InputCell(),Section(),TextCell(),InputCell()]
         for c in clist:
-            self.u.addNode(self.nb.nodeID, c, 0)
+            self.u.addNode(self.nb.root.nodeID, c, 0)
         clist.reverse()
-        self.assertEquals(clist, self.nb.children)
+        self.assertEquals(clist, self.nb.root.children)
     
     def testinsertNode(self):
         clist = [TextCell(),InputCell(),Section(),TextCell(),InputCell()]
         for c in clist:
-            self.u.addNode(self.nb.nodeID, c, 1)
+            self.u.addNode(self.nb.root.nodeID, c, 1)
         clist = clist[:1]+clist[-1:-5:-1]
-        self.assertEquals(clist, self.nb.children)
+        self.assertEquals(clist, self.nb.root.children)
     
     def testdropNode(self):
         c = TextCell()
-        self.u.addNode(self.nb.nodeID, c)
-        self.assertEquals(self.u.user.nodes,[self.nb, c])
+        self.u.addNode(self.nb.root.nodeID, c)
+        self.assertEquals(self.u.user.nodes,[self.nb.root, c])
         self.u.dropNode(c.nodeID)
-        self.assertEquals(self.u.user.nodes,[self.nb])
-        self.assertEquals(self.nb.children,[])
+        self.assertEquals(self.u.user.nodes,[self.nb.root])
+        self.assertEquals(self.nb.root.children,[])
     
     def testeditNode(self):
         c = TextCell()
-        self.u.addNode(self.nb.nodeID, c)
+        self.u.addNode(self.nb.root.nodeID, c)
         mod1 = c.dateModified
         self.u.editNode(c.nodeID, comment="some comment")
         self.assertEquals(c.comment,"some comment")
         self.assertNotEquals(c.dateModified, mod1)
     
     def testmultiUser(self):
-        self.assertRaises(AssertionError, notebook.NotebookUser, self.nbc, 'userA')
+        # self.assertRaises(AssertionError, notebook.NotebookUser, self.nbc, 'userA')
         self.assertRaises(AssertionError, notebook.NotebookUser, self.nbc, 'userB')
         del self.u
         self.assertEquals(self.nbc.users, [])
@@ -100,57 +101,58 @@ class NotebookTestCase(unittest.TestCase):
         ub = notebook.NotebookUser(self.nbc, 'userB', 'b@email')
         self.assertEquals(self.nbc.users, [ua.user.userID, ub.user.userID])
         c = TextCell()
-        self.assertRaises(NotFoundError, ub.addNode, self.nb.nodeID, c)
+        self.assertRaises(AssertionError, ub.addNode, self.nb.root.nodeID, c)
         self.assertRaises(NotFoundError, ub.addNode, 73, c)
-        nb = ub.addRootSection('title')
-        ub.addNode(nb.nodeID, c)
+        nb = ub.addNotebook('title')
+        ub.addNode(nb.root.nodeID, c)
         c2 = InputCell()
-        self.assertRaises(AssertionError, ub.addNode, c.nodeID, c2)
+        self.assertRaises(NotFoundError, ub.addNode, c.nodeID, c2)
     
     def testmergeUsers(self):
         ub = notebook.NotebookUser(self.nbc, 'userB', 'b@email')
         self.loadNodes(4)
-        nodes = self.u.user.nodes
+        books = self.u.user.notebooks
         uid = self.u.user.userID
         self.assertRaises(AssertionError, self.nbc.mergeUsers, ub.user.userID, uid)
         del self.u
         self.nbc.mergeUsers(ub.user.userID, uid)
-        for node in nodes:
-            self.assertIdentical(node.user, ub.user)
+        for nb in books:
+            self.assertIdentical(nb.user, ub.user)
     
     def testmoveNode(self):
         # self.loadNodes(6)
         clist = [TextCell(),InputCell(),Section(),TextCell(),InputCell()]
         for c in clist:
-            self.u.addNode(self.nb.nodeID, c)
-        nb = self.u.addRootSection('title')
-        self.u.moveNode(self.nb.nodeID, nb.nodeID)
+            self.u.addNode(self.nb.root.nodeID, c)
+        nb = self.u.addNotebook('title')
+        root = self.nb.root
+        self.u.moveNode(root.nodeID, nb.root.nodeID)
         self.assertEquals(self.u.user.notebooks, [nb])
-        self.assertEquals(nb.children, [self.nb])
-        kids = self.nb.children
-        c1 = self.nb[1]
+        self.assertEquals(nb.root.children, [root])
+        kids = root.children
+        c1 = root[1]
         c = c1.previous
-        self.u.moveNode(c1.nodeID, nb.nodeID,0)
-        self.assertEquals(nb.children, [c1,self.nb])
-        self.assertEquals(self.nb.children, kids[:1]+kids[2:])
+        self.u.moveNode(c1.nodeID, nb.root.nodeID,0)
+        self.assertEquals(nb.root.children, [c1,root])
+        self.assertEquals(root.children, kids[:1]+kids[2:])
         
-        c0 = self.nb[0]
+        c0 = root[0]
         if c0.nextID is None:
             print 'anomalous next/nextID disagreement',
             n = c0.next
             c0.next = None
             c0.next = n
             self.nbc.session.flush()
-        self.u.moveNode(c0.nodeID, nb.nodeID,1)
-        self.assertEquals(nb.children, [c1, c0, self.nb])
-        self.assertEquals(self.nb.children, kids[2:])
+        self.u.moveNode(c0.nodeID, nb.root.nodeID,1)
+        self.assertEquals(nb.root.children, [c1, c0, root])
+        self.assertEquals(root.children, kids[2:])
         
-        c2 = self.nb[-1]
-        self.u.moveNode(c2.nodeID, nb.nodeID,1)
-        self.assertEquals(nb.children, [c1, c2, c0, self.nb])
-        self.assertEquals(self.nb.children, kids[2:-1])
-        self.assertIdentical(self.nb.head, kids[2])
-        self.assertIdentical(self.nb.tail, kids[-2])
+        c2 = root[-1]
+        self.u.moveNode(c2.nodeID, nb.root.nodeID,1)
+        self.assertEquals(nb.root.children, [c1, c2, c0, root])
+        self.assertEquals(root.children, kids[2:-1])
+        self.assertIdentical(root.head, kids[2])
+        self.assertIdentical(root.tail, kids[-2])
     
     def testxmlBackup(self):
         session = self.nbc.session
@@ -158,7 +160,7 @@ class NotebookTestCase(unittest.TestCase):
         s = xmlutil.dumpDBtoXML(self.nbc.session, '/Users/minrk/s1.xml')
         u = self.u
         nodes = session.query(Node).select()
-        kidl = [len(nb.children) for nb in u.user.notebooks]
+        kidl = [len(nb.root.children) for nb in u.user.notebooks]
         kidl.sort()
         before = [
         len(session.query(Section).select()),
@@ -180,7 +182,7 @@ class NotebookTestCase(unittest.TestCase):
         session = nbc.session
         xmlutil.loadDBfromXML(session, s)
         u = notebook.NotebookUser(nbc, "userA")
-        kidl = [len(nb.children) for nb in u.user.notebooks]
+        kidl = [len(nb.root.children) for nb in u.user.notebooks]
         kidl.sort()
         s2 = xmlutil.dumpDBtoXML(session)
         after = [

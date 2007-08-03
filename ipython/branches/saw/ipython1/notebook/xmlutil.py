@@ -25,7 +25,7 @@ except ImportError:
 
 from twisted.python import components
 
-from ipython1.notebook import models, dbutil
+from ipython1.notebook import models
 
 tformat = models.tformat
 #-------------------------------------------------------------------------------

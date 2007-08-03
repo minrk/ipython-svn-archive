@@ -98,9 +98,12 @@ def dropObject(session, obj):
     session.delete(obj)
     session.flush()
     if isinstance(obj, models.Node):
-        for o in map(obj.__getattribute__,['parent','next','previous','user']):
+        for o in map(obj.__getattribute__,['parent','next','previous','notebook']):
             if o is not None:
                 session.refresh(o)
+    elif isinstance(obj, models.Notebook):
+        session.refresh(obj.user)
+        
     
             
     
@@ -112,52 +115,13 @@ def createNotebook(session, user, title):
     root.user = user
     root.title = title
     nb = models.Notebook(user, root)
+    root.notebook = nb
     user.touchModified()
     session.save(nb)
     session.flush()
     session.refresh(user)
     return nb
 
-def addChild(session, child, parent, index=None):
-    """Add `child` to Section `parent` at position `index`, 
-    defaulting to the end."""
-    
-    session.save(child)
-    # session.flush()
-    if parent.children: # already have some children
-        if index is None or index == len(parent.children):
-            n = parent[-1]
-            n.insertAfter(child)
-            # parent.tailID = child.nodeID
-            parent.tail = child
-        else:
-            parent[index].insertBefore(child)
-            if index == 0:
-                # parent.headID = child.nodeID
-                parent.head = child
-    else: # this is parent's first child
-        child.parent = parent
-        child.user = parent.user
-        # parent.headID = parent.tailID = child.nodeID
-        parent.head = parent.tail = child
-    child.touchModified()
-    parent.touchModified()
-    session.flush()
-    # session.refresh(parent)
-    # session.
-    return child
-
-def getDescendents(section):
-    """get all descendents of a Section into a flat list of Nodes."""
-    kids = []
-    secs = [section]
-    while secs:
-        sec = secs.pop()
-        for kid in sec.children:
-            if isinstance(kid, Section):
-                secs.append(kid)
-            kids.append(kid)
-    return kids
 
 def addTag(session, node, tagName):
     taglist = session.query(Tag).select_by(name=tagName)

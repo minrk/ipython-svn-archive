@@ -61,7 +61,6 @@ def sparseNotebook(nb):
     return nb.root.sparse()
 
 
-
 #-------------------------------------------------------------------------------
 # XML representations of notebook objects
 #-------------------------------------------------------------------------------
@@ -106,7 +105,7 @@ def XMLUser(u, justme=False):
 def XMLNodeBase(node, justme):
     """The base of an XML representation of a Node"""
     s  = "<comment>%s</comment>\n"%escape(node.comment)
-    for idname in ['nodeID', 'nextID','previousID', 'parentID', 'userID']:
+    for idname in ['nodeID', 'nextID','previousID', 'parentID', 'notebookID']:
         value = getattr(node, idname)
         if value is None:
             s += "<%s></%s>\n"%(idname, idname)
@@ -243,7 +242,8 @@ nodesTable = Table('nodes', metadata,
     Column('dateCreated', DateTime),
     Column('dateModified', DateTime),
     Column('comment',String()),
-    Column('userID', Integer, ForeignKey('users.userID')),
+    # Column('userID', Integer, ForeignKey('users.userID')),
+    Column('notebookID', Integer, ForeignKey('notebooks.notebookID')),
     Column('parentID', Integer, ForeignKey('nodes.nodeID')),
     Column('previousID', Integer, ForeignKey('nodes.nodeID')),
     Column('nextID', Integer, ForeignKey('nodes.nodeID')),
@@ -275,12 +275,23 @@ usersTable = Table('users', metadata,
     Column('dateCreated', DateTime),
     Column('dateModified', DateTime)
 )
+
 notebooksTable = Table('notebooks', metadata,
     Column('notebookID', Integer, primary_key=True),
     Column('userID', Integer, ForeignKey('users.userID')),
     Column('dateCreated', DateTime),
     Column('dateModified', DateTime),
-    Column('rootID', Integer, ForeignKey('nodes.nodeID')),
+    # Column('rootID', Integer, ForeignKey('nodes.nodeID')),
+)
+
+writersTable = Table('writers', metadata,
+    Column('userID', Integer, ForeignKey('users.userID'), primary_key=True),
+    Column('notebookID', Integer, ForeignKey('notebooks.notebookID'), primary_key=True),
+)
+
+readersTable = Table('readers', metadata,
+    Column('userID', Integer, ForeignKey('users.userID'), primary_key=True),
+    Column('notebookID', Integer, ForeignKey('notebooks.notebookID'), primary_key=True),
 )
 
 #-------------------------------------------------------------------------------
@@ -297,6 +308,7 @@ class Created(object):
 
 class Modified(object):
     def touchModified(self):
+        # return
         """This will touch our dateModified, and also our parent's.  If we do
         not have a parent (i.e., we are a Root), then we touch our User.
         That way, a root's dateModified is as late as the latest in its 
@@ -305,6 +317,8 @@ class Modified(object):
         self.dateModified = datetime.datetime.now()
         if getattr(self, 'parent', None) is not None:
             self.parent.touchModified()
+        elif getattr(self, 'notebook', None) is not None:
+            self.notebook.touchModified()
         elif getattr(self, 'user', None) is not None:
             self.user.touchModified()
 
@@ -322,7 +336,7 @@ class Node(Timestamper):
     
     def __str__(self):
         d = {}
-        for k in ['userID','nodeID','previousID','nextID', 'parentID']:
+        for k in ['notebookID','nodeID','previousID','nextID', 'parentID']:
             d[k] = getattr(self, k)
         return "<%s: %s>"%(self.nodeType, d)
     
@@ -331,13 +345,17 @@ class Node(Timestamper):
         assert self.parent is not None, "Cannot insert Before/After root"
         assert c not in self.parent.children, "Already in Children"
         c.parent = self.parent
-        c.user = self.user
+        c.notebook = self.notebook
+        if isinstance(c, Section):# cascade
+            for node in c.nodes:
+                node.notebook = parent.notebook
+        
         c.previous = self.previous
         if c.previous is not None:
             c.previous.next = c
-        # c.next = self
         self.previous = c
         c.next = self
+
         self.touchModified()
         c.touchModified()
         
@@ -346,17 +364,36 @@ class Node(Timestamper):
         assert self.parent is not None, "Cannot insert Before/After root"
         assert c not in self.parent.children, "Already in Children"
         c.parent = self.parent
-        c.user = self.user
+        c.notebook = self.notebook
+        if isinstance(c, Section):# cascade
+            for node in c.nodes:
+                node.notebook = parent.notebook
+        
         c.next = self.next
         if c.next is not None:
             c.next.previous = c
         self.next = c
         c.previous = self
+        
         self.touchModified()
         c.touchModified()
     
 
 class Section(Node):
+    
+    def _getNodes(self):
+        """get all descendents of a Section into a flat list of Nodes."""
+        kids = []
+        secs = [self]
+        while secs:
+            sec = secs.pop()
+            for kid in sec._children:
+                if isinstance(kid, Section):
+                    secs.append(kid)
+                kids.append(kid)
+        return kids
+    
+    nodes = property(_getNodes)
     
     def __init__(self, title='', comment='', parent=None):
         super(Section, self).__init__(comment, parent)
@@ -364,7 +401,7 @@ class Section(Node):
     
     def __str__(self):
         d = {}
-        for k in ['userID','nodeID','previousID','nextID', 'parentID']:
+        for k in ['notebookID','nodeID','previousID','nextID', 'parentID']:
             d[k] = getattr(self, k)
         d['children'] = [c.nodeID for c in self.children]
         return "<%s: %s>"%(self.nodeType, d)
@@ -388,6 +425,31 @@ class Section(Node):
             for i in range(-1-index):
                 c = c.previous
             return c
+
+    def addChild(self, child, index=None):
+        """Add `child` to Section `parent` at position `index`, 
+        defaulting to the end."""
+
+        if self._children: # already have some children
+            if index is None or index == len(self._children):
+                n = self[-1]
+                n.insertAfter(child)
+                self.tail = child
+            else:
+                self[index].insertBefore(child)
+                if index == 0:
+                    self.head = child
+        else: # this is self's first child
+            child.parent = self
+            # child.user = self.user
+            child.notebook = self.notebook
+            self.head = self.tail = child
+            if isinstance(child, Section):
+                for node in child.nodes:
+                    node.notebook = self.notebook
+        child.touchModified()
+        self.touchModified()
+        return child
     
     sparse  = sparseSection
     xmlize  = XMLSection
@@ -418,6 +480,15 @@ class TextCell(Cell):
     jsonify = jsonifyTextCell
 
 class User(Timestamper):
+    
+    def _getNodes(self):
+        nodes = []
+        for nb in self.notebooks:
+            nodes.extend(nb.nodes)
+        return nodes
+    
+    nodes = property(_getNodes)
+    
     def __init__(self, username='', email=''):
         super(User, self).__init__()
         self.username = username
@@ -497,7 +568,7 @@ textCellMapper = mapper(TextCell, textCellsTable, inherits=cellMapper, polymorph
 sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphic_identity='section',
     inherit_condition=sectionsTable.c.nodeID==nodesTable.c.nodeID,
     properties={
-        '_children': relation(
+        '_children': relation(# an unsorted list, children is sorted
             Node,
             primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.parentID],
@@ -523,12 +594,12 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
 
 userMapper = mapper(User, usersTable,
     properties={
-        'nodes':relation(Node, 
-        primaryjoin=usersTable.c.userID==nodesTable.c.userID,
-        cascade="all, delete-orphan", backref='user'),
-        'cells':relation(Cell,
-        primaryjoin=usersTable.c.userID==nodesTable.c.userID,
-        ),
+        # 'nodes':relation(Node, 
+        # primaryjoin=usersTable.c.userID==nodesTable.c.userID,
+        # cascade="all, delete-orphan", backref='user'),
+        # 'cells':relation(Cell,
+        # primaryjoin=usersTable.c.userID==nodesTable.c.userID,
+        # ),
         'notebooks':relation(Notebook,
         primaryjoin=usersTable.c.userID==notebooksTable.c.userID,
         cascade="all, delete-orphan", backref='user',
@@ -537,6 +608,14 @@ userMapper = mapper(User, usersTable,
 )
 notebookMapper = mapper(Notebook, notebooksTable,
     properties={
-        'root':relation(Section, uselist=False)
+        'root': relation(Section,
+                primaryjoin=and_(nodesTable.c.parentID==None,
+                    nodesTable.c.notebookID==notebooksTable.c.notebookID),
+                uselist=False), 
+        'writers': relation(User, secondary=writersTable),
+        'readers': relation(User, secondary=readersTable),
+        'nodes':relation(Node, 
+        primaryjoin=notebooksTable.c.notebookID==nodesTable.c.notebookID,
+        cascade="all, delete-orphan", backref='notebook'),
     }
 )
