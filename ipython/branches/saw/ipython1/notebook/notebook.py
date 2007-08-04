@@ -104,8 +104,7 @@ class NotebookController(object):
     
     def checkNotebook(self, user, notebookID):
         nb = self.nbQuery.selectone_by(notebookID=notebookID)
-        assert user in nb.writers or user is nb.user,\
-            "you do not have write permissions on this Notebook"
+        assert user is nb.user, "this is not your Notebook"
         return nb
     
     def connectUser(self, usernameOrID, email=None):
@@ -128,7 +127,8 @@ class NotebookController(object):
         self.users.remove(userID)
     
     def dropUser(self, userID):
-        user = self.checkUser(userID)
+        assert userID not in self.users, "You cannot drop an active user!"
+        user = self.userQuery.selectone_by(userID=userID)
         dbutil.dropObject(self.session, user)
     
     def mergeUsers(self, userIDa, userIDb):
@@ -185,7 +185,7 @@ class NotebookController(object):
         """move a node to newParent, at newIndex"""
         user = self.checkUser(userID)
         node = self.checkNode(user, nodeID)
-        parent = self.checkNode(newParentID)
+        parent = self.checkNode(user, newParentID)
         assert isinstance(parent, models.Section), "parent must be Section"
         
         nb = node.notebook
@@ -296,6 +296,24 @@ class INotebookUser(zi.Interface):
     def addNotebook(title):
         """"""
     
+    def addWriter(nbID, writerID):
+        """adds write permissions on a notebook for a user"""
+    
+    def dropWriter(nbID, writerID):
+        """removes write permissions on a notebook for a user"""
+    
+    def addReader(nbID, readerID):
+        """adds read permissions on a notebook for a user"""
+    
+    def dropReader(nbID, readerID):
+        """removes read permissions on a notebook for a user"""
+    
+    def addTag(nodeID, tag):
+        """add a tag to a node by ID"""
+    
+    def dropTag(nodeID, tag):
+        """drop a tag from a node by ID"""
+    
     def loadNotebookFromXML(xmlstr, parentID=None):
         """"""
     
@@ -335,8 +353,25 @@ class NotebookUser(object):
     def addNotebook(self, title):
         return self.nbc.addNotebook(self.user.userID, title)
     
+    def addWriter(self, nbID, writerID):
+        return self.nbc.addWriter(self.user.userID, nbID, writerID)
+    
+    def dropWriter(self, nbID, writerID):
+        return self.nbc.dropWriter(self.user.userID, nbID, writerID)
+    
+    def addReader(self, nbID, readerID):
+        return self.nbc.addReader(self.user.userID, nbID, readerID)
+    
+    def dropReader(self, nbID, readerID):
+        return self.nbc.dropReader(self.user.userID, nbID, readerID)
+    
+    def addTag(self, nodeID, tag):
+        return self.nbc.addTag(self.user.userID, nodeID, tag)
+    
+    def dropTag(self, nodeID, tag):
+        return self.nbc.dropTag(self.user.userID, nodeID, tag)
+    
     def loadNotebookFromXML(self, xmlstr, parentID=None):
         return self.nbc.loadNotebookFromXML(self.user.userID, xmlstr, parentID)
-
-
+    
 

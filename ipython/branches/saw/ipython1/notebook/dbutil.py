@@ -16,16 +16,14 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-import os, sqlalchemy as sqla, zope.interface as zi
-
-from twisted.python import components
+import os, sqlalchemy as sqla#, zope.interface as zi
 
 from IPython.genutils import get_home_dir
 
 from ipython1.config.api import resolveFilePath
 from ipython1.kernel.error import DBError
 from ipython1.notebook import models
-
+from ipython1.notebook.xmlutil import loadDBfromXML, dumpDBtoXML
 metadata = models.metadata
 
 #-------------------------------------------------------------------------------
@@ -64,14 +62,14 @@ def connectDB(fname='ipnotebook.db', ipythondir=None):
             engine.connect()
         except sqla.exceptions.DBAPIError:
             raise err
-        ipdb.connect(engine)
-        ipdb.create_all()
-        return ipdb
+        metadata.connect(engine)
+        metadata.create_all()
+        return metadata
     else:
         engine = sqla.create_engine('sqlite:///%s'%(f))
-        ipdb.connect(engine)
+        metadata.connect(engine)
         # checkDB(DB)
-        return ipdb
+        return metadata
 
 def initDB(dburi='sqlite://', echo=False):
     """create an engine, and connect our metadata object to it.  Then, 
@@ -83,6 +81,21 @@ def initDB(dburi='sqlite://', echo=False):
     metadata.drop_all()
     metadata.create_all()
     return metadata
+
+def mergeDB(*dburis):
+    dblist = []
+    for name in dblist:
+        if '://' not in name:# guess it is just a filename, use sqlite
+            name = 'sqlite://'+name
+        dblist.append(name)
+    targetURI = dblist.pop(0)
+    while dblist:
+        engine = sqla.create_engine(dblist.pop(0))
+        metadata.connect(engine)
+        s = dumpDBtoXML()
+        engine = sqla.create_engine(targetURI)
+        metadata.connect(engine)
+        loadDBfromXML(s)
 
 def createUser(session, username, email):
     """create a user with username and email"""
@@ -123,16 +136,18 @@ def createNotebook(session, user, title):
 
 def addTag(session, node, tagName):
     try:
-        tag = session.query(Tag).selectone_by(name=tagName)
+        tag = session.query(models.Tag).selectone_by(name=tagName)
     except:
-        tag = Tag(tagName)
+        tag = models.Tag(tagName)
     if tag not in node.tags:
         node.tags.append(tag)
+    session.flush()
     return tag
 
 def dropTag(session, node, tagName):
-    tag = session.query(Tag).selectone_by(name=tagName)
+    tag = session.query(models.Tag).selectone_by(name=tagName)
     node.tags.remove(tag)
+    session.flush()
     session.refresh(tag)
     if not tag.providers:
         session.delete(tag)

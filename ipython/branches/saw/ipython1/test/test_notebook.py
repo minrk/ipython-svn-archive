@@ -21,7 +21,7 @@ from twisted.trial import unittest
 
 from ipython1.notebook import notebook, dbutil, xmlutil
 from ipython1.kernel.error import NotFoundError
-from ipython1.notebook.models import TextCell, InputCell, Section, Node
+from ipython1.notebook.models import TextCell, InputCell, Section, Node, Tag
 
 # get warning out of the way of test output
 engine = dbutil.sqla.create_engine("sqlite:///")
@@ -120,7 +120,6 @@ class NotebookTestCase(unittest.TestCase):
             self.assertIdentical(nb.user, ub.user)
     
     def testmoveNode(self):
-        # self.loadNodes(6)
         clist = [TextCell(),InputCell(),Section(),TextCell(),InputCell()]
         for c in clist:
             self.u.addNode(self.nb.root.nodeID, c)
@@ -223,9 +222,20 @@ class NotebookTestCase(unittest.TestCase):
                 self.assertIdentical(n.parentID,None)
             else:
                 self.assertEquals(n.parent.nodeID,n.parentID)
-                
     
-    
+    def testTags(self):
+        self.loadNodes(5)
+        tags = ["tag%i"%i for i in range(6)]
+        for n in self.u.user.nodes:
+            self.u.addTag(n.nodeID, tags[5])
+        for i in range(5):
+            self.u.addTag(self.u.user.nodes[i].nodeID, tags[i])
+        taglist = self.nbc.session.query(Tag).select()
+        # print taglist
+        self.assertEquals(len(taglist), 6, "incorrect number of tags exist")
+        
+        
+            
         
         
         
