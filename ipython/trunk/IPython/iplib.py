@@ -2059,6 +2059,17 @@ want to merge them back into the new files.""" % locals()
 
         #print '***line: <%s>' % line # dbg
 
+        if not line:
+            # Return immediately on purely empty lines, so that if the user
+            # previously typed some whitespace that started a continuation
+            # prompt, he can break out of that loop with just an empty line.
+            # This is how the default python prompt works.
+
+            # Only return if the accumulated input buffer was just whitespace!
+            if ''.join(self.buffer).isspace():
+                self.buffer[:] = []
+            return ''
+        
         line_info = prefilter.LineInfo(line, continue_prompt)
         
         # the input history needs to track even empty lines
