@@ -103,9 +103,7 @@ def dropObject(session, obj):
                 session.refresh(o)
     elif isinstance(obj, models.Notebook):
         session.refresh(obj.user)
-        
     
-            
     
 def createNotebook(session, user, title):
     """create a root (parentless) Section for `user` with `title
@@ -124,12 +122,12 @@ def createNotebook(session, user, title):
 
 
 def addTag(session, node, tagName):
-    taglist = session.query(Tag).select_by(name=tagName)
-    if not taglist:
+    try:
+        tag = session.query(Tag).selectone_by(name=tagName)
+    except:
         tag = Tag(tagName)
-    else:
-        tag = taglist[0]
-    node.tags.append(tag)
+    if tag not in node.tags:
+        node.tags.append(tag)
     return tag
 
 def dropTag(session, node, tagName):

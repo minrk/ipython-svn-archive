@@ -54,8 +54,26 @@ class INotebookController(zi.Interface):
     def dropNode(userID, nodeID):
         """Drop a Node by nodeID, owned by userID"""
     
-    def addNotebook(user, title):
+    def addNotebook(userID, title):
         """create a notebook and root Section for `user` with `title`"""
+    
+    def addWriter(userID, nbID, writerID):
+        """adds write permissions on a notebook for a user"""
+    
+    def dropWriter(userID, nbID, writerID):
+        """removes write permissions on a notebook for a user"""
+    
+    def addReader(userID, nbID, readerID):
+        """adds read permissions on a notebook for a user"""
+    
+    def dropReader(userID, nbID, readerID):
+        """removes read permissions on a notebook for a user"""
+    
+    def addTag(userID, nodeID, tag):
+        """add a tag to a node by ID"""
+    
+    def dropTag(userID, nodeID, tag):
+        """drop a tag from a node by ID"""
     
     def loadDBFromXML(xmlstr):
         """load the db from an xml file"""
@@ -71,7 +89,24 @@ class NotebookController(object):
         self.session = session
         self.userQuery = session.query(models.User)
         self.nodeQuery = session.query(models.Node)
+        self.nbQuery = session.query(models.Notebook)
         self.users = []
+    
+    def checkUser(self, userID):
+        assert userID in self.users, "You are not an active user!"
+        return self.userQuery.selectone_by(userID=userID)
+    
+    def checkNode(self, user, nodeID):
+        node = self.nodeQuery.selectone_by(nodeID=nodeID)
+        assert user in node.notebook.writers or user is node.notebook.user,\
+            "you do not have write permissions on this Notebook"
+        return node
+    
+    def checkNotebook(self, user, notebookID):
+        nb = self.nbQuery.selectone_by(notebookID=notebookID)
+        assert user in nb.writers or user is nb.user,\
+            "you do not have write permissions on this Notebook"
+        return nb
     
     def connectUser(self, usernameOrID, email=None):
         try:
@@ -93,14 +128,13 @@ class NotebookController(object):
         self.users.remove(userID)
     
     def dropUser(self, userID):
-        assert userID not in self.users, "You cannot drop an active user!"
-        u = self.userQuery.selectone_by(userID=userID)
-        dbutil.dropObject(self.session, u)
+        user = self.checkUser(userID)
+        dbutil.dropObject(self.session, user)
     
     def mergeUsers(self, userIDa, userIDb):
         assert userIDb not in self.users, "You cannot drop an active user!"
-        userA = self.userQuery.selectone_by(userID=userIDa)
         userB = self.userQuery.selectone_by(userID=userIDb)
+        userA = self.userQuery.selectone_by(userID=userIDa)
         while userB.notebooks:
             nb = userB.notebooks.pop()
             nb.user = userA
@@ -109,8 +143,7 @@ class NotebookController(object):
         return userA
     
     def getNode(self, userID, **selectflags):
-        assert userID in self.users, "You are not an active user!"
-        user = self.userQuery.selectone_by(userID=userID)
+        user = self.checkUser(userID)
         nodes = []
         for node in self.nodeQuery.select_by(**selectflags):
             if user in node.notebook.writers or user in node.notebook.readers\
@@ -122,8 +155,7 @@ class NotebookController(object):
         """add a node to user's Section with nodeID `parentID`.  Index
         can be None or int.
         """
-        assert userID in self.users, "You are not an active user!"
-        user = self.userQuery.selectone_by(userID=userID)
+        user = self.checkUser(userID)
         try:
             parent = self.nodeQuery.selectone_by(nodeID=parentID, nodeType='section')
         except sqla.exceptions.InvalidRequestError:
@@ -135,12 +167,8 @@ class NotebookController(object):
         return n
     
     def editNode(self, userID, nodeID, **options):
-        assert userID in self.users, "You are not an active user!"
-        user = self.userQuery.selectone_by(userID=userID)
-        
-        node = self.nodeQuery.selectone_by(nodeID=nodeID)
-        assert user in node.notebook.writers or user is node.notebook.user,\
-            "you do not have write permissions on this Notebook"
+        user = self.checkUser(userID)
+        node = self.checkNode(user, nodeID)
         
         for k,v in options.iteritems():
             assert hasattr(node, k), "no such attr '%s' to edit"%k
@@ -155,18 +183,11 @@ class NotebookController(object):
     
     def moveNode(self, userID, nodeID, newParentID, newIndex=None):
         """move a node to newParent, at newIndex"""
-        assert userID in self.users, "You are not an active user!"
-        user = self.userQuery.selectone_by(userID=userID)
+        user = self.checkUser(userID)
+        node = self.checkNode(user, nodeID)
+        parent = self.checkNode(newParentID)
+        assert isinstance(parent, models.Section), "parent must be Section"
         
-        node = self.getNode(userID, nodeID=nodeID)[0]
-        assert user in node.notebook.writers or user is node.notebook.user,\
-            "you do not have write permissions on this Notebook"
-        try:
-            parent = self.nodeQuery.selectone_by(nodeID=newParentID, nodeType='section')
-        except sqla.exceptions.InvalidRequestError:
-            raise NotFoundError("No such Section, nodeID:%i"%(newParentID))
-        assert user in parent.notebook.writers or user is parent.notebook.user,\
-            "you do not have write permissions on this Notebook"
         nb = node.notebook
         isroot = nb.root is node
         if not isroot:# have parent, fix next/prev,head/tail links
@@ -188,26 +209,65 @@ class NotebookController(object):
         self.session.flush()
         n = self.addNode(userID, newParentID, node, newIndex)
         self.session.refresh(nb)
-        if isroot:
-            
+        if isroot:# check this
             dbutil.dropObject(self.session, nb)
         return n
-        
     
     def dropNode(self, userID, nodeID):
-        assert userID in self.users, "You are not an active user!"
-        nodes = self.getNode(userID, nodeID=nodeID)
-        for node in nodes:
-            dbutil.dropObject(self.session, node)
+        user =self.checkUser(userID)
+        node = self.checkNode(user, nodeID)
+        dbutil.dropObject(self.session, node)
     
     def addNotebook(self, userID, title):
-        assert userID in self.users, "You are not an active user!"
-        u = self.userQuery.selectone_by(userID=userID)
-        return dbutil.createNotebook(self.session, u, title)
+        user = self.checkUser(userID)
+        return dbutil.createNotebook(self.session, user, title)
+    
+    def addWriter(self, userID, nbID, writerID):
+        """adds write permissions on a notebook for a user"""
+        user = self.checkUser(userID)
+        nb = self.checkNotebook(user, nbID)
+        if user not in nb.writers:
+            nb.writers.append(user)
+        if user in nb.readers:
+            nb.readers.remove(user)
+    
+    def dropWriter(self, userID, nbID, writerID):
+        """removes write permissions on a notebook for a user"""
+        user = self.checkUser(userID)
+        nb = self.checkNotebook(user, nbID)
+        if user in nb.writers:
+            nb.writers.remove(user)
+    
+    def addReader(self, userID, nbID, readerID):
+        """adds read permissions on a notebook for a user"""
+        user = self.checkUser(userID)
+        nb = self.checkNotebook(user, nbID)
+        if user not in nb.writers:
+            nb.writers.append(user)
+        if user in nb.writers:
+            nb.writers.remove(user)
+    
+    def dropReader(self, userID, nbID, readerID):
+        """removes read permissions on a notebook for a user"""
+        user = self.checkUser(userID)
+        nb = self.checkNotebook(user, nbID)
+        if user in nb.readers:
+            nb.readers.remove(user)
+    
+    def addTag(self, userID, nodeID, tag):
+        """add a tag to a node by ID"""
+        user = self.checkUser(userID)
+        node = self.checkNode(user, nodeID)
+        return dbutil.addTag(self.session, node, tag)
+    
+    def dropTag(self, userID, nodeID, tag):
+        """drop a tag from a node by ID"""
+        user = self.checkUser(userID)
+        node = self.checkNode(user, nodeID)
+        dbutil.dropTag(self.session, node, tag)
     
     def loadNotebookFromXML(self, userID, xmlstr, parentID=None):
-        assert userID in self.users, "You are not an active user!"
-        user = self.userQuery.selectone_by(userID=userID)
+        user = self.checkUser(userID)
         if parentID is not None:
             parent = self.nodeQuery.selectone_by(userID=userID, nodeID=parentID)
         else:

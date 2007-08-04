@@ -568,7 +568,7 @@ textCellMapper = mapper(TextCell, textCellsTable, inherits=cellMapper, polymorph
 sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphic_identity='section',
     inherit_condition=sectionsTable.c.nodeID==nodesTable.c.nodeID,
     properties={
-        '_children': relation(# an unsorted list, children is sorted
+        '_children': relation(# an unsorted list, self.children is sorted
             Node,
             primaryjoin=nodesTable.c.parentID==nodesTable.c.nodeID,
             remote_side=[nodesTable.c.parentID],
