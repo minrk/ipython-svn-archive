@@ -470,7 +470,8 @@ class Inspector:
                 # Skip Python's auto-generated docstrings
                 if class_ds and \
                        (class_ds.startswith('function(code, globals[,') or \
-                   class_ds.startswith('instancemethod(function, instance,')):
+                   class_ds.startswith('instancemethod(function, instance,') or \
+                   class_ds.startswith('module(name[,') ):
                     class_ds = None
                 if class_ds and ds != class_ds:
                     out.writeln(header('Class Docstring:\n') +
