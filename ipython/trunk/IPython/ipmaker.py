@@ -96,6 +96,7 @@ def make_IPython(argv=None,user_ns=None,user_global_ns=None,debug=1,
 
     # Put 'help' in the user namespace
     from site import _Helper
+    IP.user_config_ns = {}
     IP.user_ns['help'] = _Helper()
 
 
@@ -665,7 +666,7 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
     # Take a snapshot of the user namespace before opening the shell. That way
     # we'll be able to identify which things were interactively defined and
     # which were defined through config files.
-    IP.user_config_ns = IP.user_ns.copy()
+    IP.user_config_ns.update(IP.user_ns)
 
     # Force reading a file as if it were a session log. Slower but safer.
     if load_logplay:
