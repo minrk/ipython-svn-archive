@@ -75,8 +75,8 @@ class INotebookController(zi.Interface):
     def dropTag(userID, nodeID, tag):
         """drop a tag from a node by ID"""
     
-    def loadDBFromXML(xmlstr):
-        """load the db from an xml file"""
+    def loadNotebookFromXML(xmlstr):
+        """load a notebook from an xmlstring"""
     
 
 class NotebookController(object):

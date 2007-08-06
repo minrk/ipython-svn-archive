@@ -23,7 +23,7 @@ from IPython.genutils import get_home_dir
 from ipython1.config.api import resolveFilePath
 from ipython1.kernel.error import DBError
 from ipython1.notebook import models
-from ipython1.notebook.xmlutil import loadDBfromXML, dumpDBtoXML
+# from ipython1.notebook.xmlutil import loadDBfromXML, dumpDBtoXML
 metadata = models.metadata
 
 #-------------------------------------------------------------------------------
@@ -81,21 +81,6 @@ def initDB(dburi='sqlite://', echo=False):
     metadata.drop_all()
     metadata.create_all()
     return metadata
-
-def mergeDB(*dburis):
-    dblist = []
-    for name in dblist:
-        if '://' not in name:# guess it is just a filename, use sqlite
-            name = 'sqlite://'+name
-        dblist.append(name)
-    targetURI = dblist.pop(0)
-    while dblist:
-        engine = sqla.create_engine(dblist.pop(0))
-        metadata.connect(engine)
-        s = dumpDBtoXML()
-        engine = sqla.create_engine(targetURI)
-        metadata.connect(engine)
-        loadDBfromXML(s)
 
 def createUser(session, username, email):
     """create a user with username and email"""

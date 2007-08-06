@@ -26,6 +26,7 @@ except ImportError:
 from twisted.python import components
 
 from ipython1.notebook import models
+from ipython1.notebook.dbutil import addTag
 
 tformat = models.tformat
 #-------------------------------------------------------------------------------
@@ -39,8 +40,10 @@ def unescape(s):
 def unindent(s, n):
     return s.replace('\n'+' '*n,'\n')
 
-def dumpDBtoXML(session, fname=None):
+def dumpDBtoXML(session=None, fname=None):
     """Build an XML String"""
+    if session is None:
+        session = sqla.create_session()
     users = session.query(models.User).select()
     s = "<XMLBackup>\n"
     for u in users:
@@ -88,19 +91,19 @@ def userFromElement(session, ue, nodes={}):
     return user
         
     
-def anyNodeFromElement(element, user, parent, nodes={}):
+def anyNodeFromElement(element, user, notebook, parent, nodes={}):
     """switcher function"""
     if element.tag == 'Section':
-        cell = sectionFromElement(element, user, parent, nodes)
+        cell = sectionFromElement(element, user, notebook, parent, nodes)
     elif element.tag == 'TextCell':
-        cell = textCellFromElement(element, user, parent, nodes)
+        cell = textCellFromElement(element, user, notebook, parent, nodes)
     elif element.tag == 'InputCell':
-        cell = inputCellFromElement(element, user, parent, nodes)
+        cell = inputCellFromElement(element, user, notebook, parent, nodes)
     else:
         raise Exception("We have no way to handle: %s"%element.tag)
     return cell
 
-def initNodeFromE(Klass, element, user, parent, nodes):
+def initNodeFromE(Klass, element, user, notebook, parent, nodes):
     node = initFromE(Klass, element)
     s = unescape(element.find('comment').text)
     node.comment = unindent(s, element.text.count(' '))
@@ -113,28 +116,33 @@ def initNodeFromE(Klass, element, user, parent, nodes):
         setattr(node, idname, value)
     node.user = user
     node.parent = parent
+    node.notebook = notebook
     nodeID = int(element.find('nodeID').text)
     nodes[nodeID] = node
+    tage = element.find('tags')
+    if tage.text:
+        nodes[nodeID].temptags = element.find('tags').text.split(',')
+    else:
+        nodes[nodeID].temptags = []
     # check for existing node, if updating
-    # print nodeID, nodes
     return node
 
-def textCellFromElement(element, user, parent, nodes):
-    cell = initNodeFromE(models.TextCell, element, user, parent, nodes)
+def textCellFromElement(element, user, notebook, parent, nodes):
+    cell = initNodeFromE(models.TextCell, element, user, notebook, parent, nodes)
     s = unescape(element.find('textData').text)
     cell.textData = unindent(s, element.text.count(' '))
     return cell
 
-def inputCellFromElement(element, user, parent, nodes):
-    cell = initNodeFromE(models.InputCell, element, user, parent, nodes)
+def inputCellFromElement(element, user, notebook, parent, nodes):
+    cell = initNodeFromE(models.InputCell, element, user, notebook, parent, nodes)
     s = unescape(element.find('input').text)
     cell.input = unindent(s, element.text.count(' '))
     s = unescape(element.find('output').text)
     cell.output = unindent(s, element.text.count(' '))
     return cell
 
-def sectionFromElement(element, user, parent, nodes):
-    sec = initNodeFromE(models.Section, element, user, parent, nodes)
+def sectionFromElement(element, user, notebook, parent, nodes):
+    sec = initNodeFromE(models.Section, element, user, notebook, parent, nodes)
     s = unescape(element.find('title').text)
     sec.title = unindent(s, element.text.count(' '))
     for idname in ['headID', 'tailID']:
@@ -149,30 +157,27 @@ def sectionFromElement(element, user, parent, nodes):
     if not justme:
         kids = kide.findall('Section')+kide.findall('InputCell')+\
                         kide.findall('TextCell')
-        # if kids:
-        #     e = anyNodeFromElement(kids[0], user, sec, nodes)
-        #     sec.head = e
-        #     
-        #     
         for e in kids:
-            # print e.tag
-            anyNodeFromElement(e, user, sec, nodes)
+            anyNodeFromElement(e, user, notebook, sec, nodes)
     return sec
 
 def notebookFromElement(element, user, nodes):
     nb = initFromE(models.Notebook, element)
     nb.user = user
     rootE = element.find("root").find("Section")
-    nb.root = sectionFromElement(rootE, user, None, nodes)
+    nb.root = sectionFromElement(rootE, user, nb, None, nodes)
     return nb
 
-def relinkNodes(nodes):
+def relinkNodes(session, nodes):
     for node in nodes.values(): # correct node ID values
         for key in ['next', 'previous']:
             setattr(node, key, nodes.get(getattr(node, key+"ID")))
         if isinstance(node, models.Section):
             for key in ['head', 'tail']:
                 setattr(node, key, nodes.get(getattr(node, key+"ID")))
+        for tag in node.temptags:
+            addTag(session, node, tag)
+        del node.temptags
     return nodes
 
 def loadDBfromXML(session, s, isfilename=False):
@@ -190,9 +195,10 @@ def loadDBfromXML(session, s, isfilename=False):
     
     f.close()
     
-    relinkNodes(nodes)
+    relinkNodes(session, nodes)
     session.flush()
     for user in users:
+        # for nb in user.
         session.refresh(user)
     return users
 
@@ -206,8 +212,28 @@ def loadNotebookFromXML(session, user, s, isfilename=False):
     nodes = {}
     nb = notebookFromElement(root, user, nodes)
     f.close()
-    relinkNodes(nodes)
+    relinkNodes(session, nodes)
+    # session.save(nb)
     session.flush()
     session.refresh(user)
     return nb
+
+def mergeDB(*dburis):
+    """merge databases through XML
+    *this should go in dbutil, but cannot until it can be done without xml*
+    """
+    dblist = []
+    for name in dblist:
+        if '://' not in name:# guess it is just a filename, use sqlite
+            name = 'sqlite:///'+name
+        dblist.append(name)
+    targetURI = dblist.pop(0)
+    while dblist:
+        session = sqla.create_session()
+        engine = sqla.create_engine(dblist.pop(0))
+        metadata.connect(engine)
+        s = dumpDBtoXML(session)
+        engine = sqla.create_engine(targetURI)
+        metadata.connect(engine)
+        loadDBfromXML(s)
 

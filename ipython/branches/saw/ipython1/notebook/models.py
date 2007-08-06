@@ -111,6 +111,9 @@ def XMLNodeBase(node, justme):
             s += "<%s></%s>\n"%(idname, idname)
         else:
             s += "<%s>%i</%s>\n"%(idname, value, idname)
+    s += "<tags>"
+    s += ','.join([tag.name for tag in node.tags])
+    s += "</tags>\n"
     s += "<dateCreated>%s</dateCreated>\n"%(node.dateCreated.strftime(tformat))
     s += "<dateModified>%s</dateModified>\n"%(node.dateModified.strftime(tformat))
     return s
