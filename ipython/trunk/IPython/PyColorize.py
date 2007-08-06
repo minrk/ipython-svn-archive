@@ -11,7 +11,7 @@
     
     MoinMoin - Python Source Parser
 
-    Title:olorize Python source using the built-in tokenizer
+    Title: Colorize Python source using the built-in tokenizer
            
     Submitter: Jurgen Hermann
     Last Updated:2001/04/06
