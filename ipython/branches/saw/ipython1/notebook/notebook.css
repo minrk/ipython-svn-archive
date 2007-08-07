@@ -10,28 +10,36 @@ div.pageHeader
   border-bottom: thin solid gray;
   padding: 5px;
 }
-div.controlCol
+div.sidebar
 {
   float: left;
   font-family: Tahoma, sans-serif;
   font-size: 10pt;
   padding: 5px;
 }
-div.notebook
-{
-  height: 500px;
-  overflow: auto;
-  border-left: thin solid gray;
-  padding: 5px;
-}
 
 div.controlLink
 {
+    float: center;
   text-decoration: none;
   cursor: pointer;
   color: blue;
 }
-
+div.controlRow
+{
+    float: right;
+/*    width: 90%;*/
+    font-family: Tahoma, sans-serif;
+    font-size: 10pt;
+    padding: 5px;
+}
+div.notebook
+{
+  height: 600px;
+  overflow: auto;
+  border-left: thin solid gray;
+  padding: 5px;
+}
 /*
   An ioCell consists of two columns: inOut and collapse
   inOut consists of an inRow and outRow, each of which has its Label and Content

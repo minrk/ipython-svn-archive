@@ -42,8 +42,12 @@ class INotebookController(zi.Interface):
     def addNode(userID, parentID, node, index=None):
         """add a Node to a parent Section, owned by userID"""
     
+    def dropNode(userID, nodeID):
+        """Drop a Node by nodeID, owned by userID"""
+    
     def getNode(userID, **selectflags):
-        """get a Node by flags passed to selectone_by, owned by userID"""
+        """get Node(s) by flags passed to selectone_by, 
+        with at least read permissions for userID"""
     
     def editNode(userID, nodeID, **options):
         """update attributes of node nodeID with keyword options"""
@@ -51,14 +55,14 @@ class INotebookController(zi.Interface):
     def moveNode(userID, nodeID, newParentID, index=None):
         """move a node to new parent at index"""
     
-    def dropNode(userID, nodeID):
-        """Drop a Node by nodeID, owned by userID"""
-    
     def addNotebook(userID, title):
         """create a notebook and root Section for `user` with `title`"""
     
     def dropNotebook(userID, nbID):
         """drop a notebook by ID"""
+    
+    def getNotebook(userID, **selectflags):
+        """get Notebook(s) by flags, owned"""
     
     def addWriter(userID, nbID, writerID):
         """adds write permissions on a notebook for a user"""
