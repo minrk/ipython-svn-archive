@@ -1754,6 +1754,8 @@ Currently the magic system has the following functions:\n"""
           In [60]: exec In[44:48]+In[49]"""
 
         opts,args = self.parse_options(parameter_s,'r',mode='list')
+        if not args:
+            return [k for k,v in self.shell.user_ns.items() if isinstance(v, Macro)]
         name,ranges = args[0], args[1:]
         #print 'rng',ranges  # dbg
         lines = self.extract_input_slices(ranges,opts.has_key('r'))
