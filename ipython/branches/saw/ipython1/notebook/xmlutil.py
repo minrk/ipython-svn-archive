@@ -16,8 +16,8 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-import zope.interface as zi
-import StringIO, datetime, os.path
+import sqlalchemy as sqla
+import StringIO, datetime
 try:
     import xml.etree.ElementTree as ET
 except ImportError:
@@ -223,17 +223,21 @@ def mergeDB(*dburis):
     *this should go in dbutil, but cannot until it can be done without xml*
     """
     dblist = []
-    for name in dblist:
+    for name in dburis:
         if '://' not in name:# guess it is just a filename, use sqlite
             name = 'sqlite:///'+name
         dblist.append(name)
     targetURI = dblist.pop(0)
+    if targetURI == 'sqlite://':
+        dbutil.initDB(targetURI)
     while dblist:
-        session = sqla.create_session()
         engine = sqla.create_engine(dblist.pop(0))
-        metadata.connect(engine)
-        s = dumpDBtoXML(session)
+        models.metadata.connect(engine)
+        s = dumpDBtoXML()
+        
+        session = sqla.create_session()
         engine = sqla.create_engine(targetURI)
-        metadata.connect(engine)
-        loadDBfromXML(s)
+        models.metadata.connect(engine)
+
+        loadDBfromXML(session, s)
 

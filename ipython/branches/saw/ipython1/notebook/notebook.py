@@ -57,6 +57,9 @@ class INotebookController(zi.Interface):
     def addNotebook(userID, title):
         """create a notebook and root Section for `user` with `title`"""
     
+    def dropNotebook(userID, nbID):
+        """drop a notebook by ID"""
+    
     def addWriter(userID, nbID, writerID):
         """adds write permissions on a notebook for a user"""
     
@@ -190,13 +193,14 @@ class NotebookController(object):
         
         nb = node.notebook
         isroot = nb.root is node
-        if not isroot:# have parent, fix next/prev,head/tail links
+        if not isroot:# have parent, update head/tail links
             if node.parent.head is node:
-                node.parent.headID = node.nextID
+                node.parent.head = node.next
             if node.parent.tail is node:
-                node.parent.tailID = node.previousID
+                node.parent.tail = node.previous
             self.session.flush()
-            self.session.refresh(node.parent)
+            # self.session.refresh(node.parent)
+        # update next/previous links
         p = node.previous
         n = node.next
         if p is not None:
@@ -221,6 +225,11 @@ class NotebookController(object):
     def addNotebook(self, userID, title):
         user = self.checkUser(userID)
         return dbutil.createNotebook(self.session, user, title)
+    
+    def dropNotebook(self, userID, nbID):
+        user = self.checkUser(userID)
+        nb = self.checkNotebook(user, nbID)
+        
     
     def addWriter(self, userID, nbID, writerID):
         """adds write permissions on a notebook for a user"""
@@ -352,6 +361,9 @@ class NotebookUser(object):
     
     def addNotebook(self, title):
         return self.nbc.addNotebook(self.user.userID, title)
+    
+    def dropNotebook(self, nbID):
+        return self.nbc.dropNotebook(self.user.userID, nbID)
     
     def addWriter(self, nbID, writerID):
         return self.nbc.addWriter(self.user.userID, nbID, writerID)

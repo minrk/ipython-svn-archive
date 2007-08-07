@@ -37,9 +37,7 @@ class NotebookTestCase(unittest.TestCase):
         l = []
         for _ in range(n):
             sections = self.nbc.nodeQuery.select_by(nodeType='section')
-            # print sections
             parent = (sections + [None])[randint(0, len(sections))]
-            # print parent
             if parent is None:
                 l.append(self.u.addNotebook("title"))
             else:
@@ -93,7 +91,6 @@ class NotebookTestCase(unittest.TestCase):
         self.assertNotEquals(c.dateModified, mod1)
     
     def testmultiUser(self):
-        # self.assertRaises(AssertionError, notebook.NotebookUser, self.nbc, 'userA')
         self.assertRaises(AssertionError, notebook.NotebookUser, self.nbc, 'userB')
         del self.u
         self.assertEquals(self.nbc.users, [])
@@ -201,11 +198,8 @@ class NotebookTestCase(unittest.TestCase):
         ]
         for b,a in zip(before, after):
             self.assertEquals(b,a)
-        # print before, after
         err = (len(s)-len(s2))/(1.0*len(s))
-        # print err
         self.assertAlmostEquals(err, 0, 2)
-        # print len(s), len(s2)
     
     def testnidAgreement(self):
         self.loadNodes(16)
@@ -231,7 +225,6 @@ class NotebookTestCase(unittest.TestCase):
         for i in range(5):
             self.u.addTag(self.u.user.nodes[i].nodeID, tags[i])
         taglist = self.nbc.session.query(Tag).select()
-        # print taglist
         self.assertEquals(len(taglist), 6, "incorrect number of tags exist")
         
         
