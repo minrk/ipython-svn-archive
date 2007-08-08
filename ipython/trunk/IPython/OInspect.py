@@ -450,6 +450,10 @@ class Inspector:
             else:
                 init_def = self.__getdef(obj_init,oname)
                 init_ds  = getdoc(obj_init)
+                # Skip Python's auto-generated docstrings
+                if init_ds and \
+                       init_ds.startswith('x.__init__(...) initializes'):
+                    init_ds = None
 
             if init_def or init_ds:
                 out.writeln(header('\nConstructor information:'))
@@ -481,7 +485,8 @@ class Inspector:
             try:
                 init_ds = getdoc(obj.__init__)
                 # Skip Python's auto-generated docstrings
-                if init_ds.startswith('x.__init__(...) initializes x'):
+                if init_ds and \
+                       init_ds.startswith('x.__init__(...) initializes'):
                     init_ds = None
             except AttributeError:
                 init_ds = None
