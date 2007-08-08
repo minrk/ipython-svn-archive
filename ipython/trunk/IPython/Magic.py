@@ -1755,7 +1755,9 @@ Currently the magic system has the following functions:\n"""
 
         opts,args = self.parse_options(parameter_s,'r',mode='list')
         if not args:
-            return [k for k,v in self.shell.user_ns.items() if isinstance(v, Macro)]
+            macs = [k for k,v in self.shell.user_ns.items() if isinstance(v, Macro)]
+            macs.sort()
+            return macs
         name,ranges = args[0], args[1:]
         #print 'rng',ranges  # dbg
         lines = self.extract_input_slices(ranges,opts.has_key('r'))
