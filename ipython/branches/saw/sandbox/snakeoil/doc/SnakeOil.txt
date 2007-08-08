@@ -1,0 +1,109 @@
+===============================================
+ SnakeOil - Python Testing That Doesn't Squeak
+===============================================
+
+
+.. contents::
+..
+    1  Introduction
+    2  Requirements
+    3  Ideas
+    4  Fixed/done
+    5  Attic
+
+
+Introduction
+============
+
+We want a smooth workflow based on testing as part of the development process,
+but that relies only on what the stdlib provides.  We will thus restrict our
+effort to supporting and improving a workflow based on the `unittest` and
+`doctest` modules.
+
+There are basically three types of testing that we want to be able to easily
+work with:
+
+* Normal unittests: but with the improvement of easy-to-write parametrized
+  tests.
+
+* Doctests: but we want to make it easier/more convenient to develop and modify
+  doctests.
+
+* Standalone scripts: it is often easiest when developing something to hack out
+  a litle script that does a few things, and to either visually inspect or
+  programatically test its outputs for validity.  Once done and satisfied with
+  such a script, it should take *NO* additional effort to 
+
+
+Requirements
+============
+
+* Easy workflow.  The time invested in trying out an idea and pounding on a
+  small test script should contribute to the final test suite results without
+  having to redo all that in some other format later (doctest, unittest,
+  whatever).
+
+* Natural typing.  Typing out code in docetst format, putting '>>>' by hand,
+  simulating output, etc., is a pain and is idiotic.  You should type code in a
+  valid .py file that any good editor will help you with (highlight, indent,
+  complete, etc).  *DONE in py2doctest*
+
+
+Usage
+=====
+
+The examples/ directory contains a set of examples that can be used as a
+starting point.
+
+Note that ``snakeoil`` is deliberately designed to be usable without
+installation.  While you can install it like a normal python package, you can
+also simply copy the ``oil*.py`` files inside your testing subdirectory and use
+them privately from there.  This was done so that SnakeOil didn't have to
+become an external dependency; think of it rather as a set of small utilities
+you can carry around for easily adding test support to your own projects with
+minimal fuss.
+
+For the same reason, the standalone scripts shipped with SnakeOil are all
+minimal codes that simply call the real program ``main`` routines, which live
+inside the various ``oil*`` modules.  It is thus trivial to use the entire
+system without never actually installing anything in your path.
+
+
+
+Fixed/done
+==========
+
+* For unitscript, implement a test object that has .fail* and .assert*
+  methods.  These allow a test script to signal failures, and they will
+  actually record success if the failure condition isn't met.  test will also
+  provide a .succeed() method for users to explicitly mark success in things
+  like loops, if they want to.
+
+* For doctest, add a mode to mkdoctests that turns a *normal python* script
+  into a unit test with reST.  The reST markers will be '###' comments and the
+  normal comments will go into the code unmodified. *DONE in py2doctest*
+  
+* Turning standalone scripts into tests is just not convenient.  *FIXED by
+  unitscript* 
+
+* unittest granularity and state: sharing state across tests is hard, since UT
+  assumes that it will call setUp() and tearDown() for each test method.  If
+  you have multiple tests that you want to have sharing some expensive state,
+  you end up shoving them inside a single test method, and then you don't get
+  information about each one of them separately.  *FIXED by paramtest*
+
+* Parametric tests (also often called data-driven tests).  To this day, I don't
+  get how someone could write a testing library without natural, out of the box
+  support for this.  The kind of hacks one has to do to accomplish this in UT
+  are gross and ridiculous. *FIXED by paramtest*
+
+
+Attic
+=====
+  
+  * Use custom TestLoader and TestCase classes that can recognize generative
+  tests which use yield.  This might allow us to get real parametric testing
+  within the unittest framework.  *Doesn't work*: an unhandled exception (needed
+  by the unittest workflow to signal failures and inherently what happens on
+  errors) kills a generator.  I solved this in paramtest differently.
+

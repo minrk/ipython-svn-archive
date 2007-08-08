@@ -370,8 +370,6 @@ class TConfig(T.HasStrictTraits):
         if config is None:
             config = mkConfigObj(None)
 
-        
-
         # Validate the set of scalars ...
         my_scalars = set(get_scalars(self))
         cf_scalars = set(config.scalars)
