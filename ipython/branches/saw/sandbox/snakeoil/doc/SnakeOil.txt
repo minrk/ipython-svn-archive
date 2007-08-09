@@ -17,8 +17,8 @@ Introduction
 
 We want a smooth workflow based on testing as part of the development process,
 but that relies only on what the stdlib provides.  We will thus restrict our
-effort to supporting and improving a workflow based on the `unittest` and
-`doctest` modules.
+effort to supporting and improving a workflow based on the ``unittest`` and
+``doctest`` modules.
 
 There are basically three types of testing that we want to be able to easily
 work with:
@@ -30,9 +30,11 @@ work with:
   doctests.
 
 * Standalone scripts: it is often easiest when developing something to hack out
-  a litle script that does a few things, and to either visually inspect or
-  programatically test its outputs for validity.  Once done and satisfied with
-  such a script, it should take *NO* additional effort to 
+  a little script that does a few things, and to either visually inspect or
+  programmatically test its outputs for validity.  Once done and satisfied with
+  such a script, it should take *NO* additional effort to turn it into a proper
+  unittest.  We also want a single script to be able to easily record multiple
+  test conditions (and successes) and to provide summary information.
 
 
 Requirements
@@ -43,7 +45,7 @@ Requirements
   having to redo all that in some other format later (doctest, unittest,
   whatever).
 
-* Natural typing.  Typing out code in docetst format, putting '>>>' by hand,
+* Natural typing.  Typing out code in doctest format, putting '>>>' by hand,
   simulating output, etc., is a pain and is idiotic.  You should type code in a
   valid .py file that any good editor will help you with (highlight, indent,
   complete, etc).  *DONE in py2doctest*

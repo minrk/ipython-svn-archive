@@ -9,7 +9,7 @@
 
 ### All lines that start with '### ' (note the space) are considered to be
 ### textual input, and are fed to the output after stripping them of that
-### initial marker (including the initial space).  They can thust contain
+### initial marker (including the initial space).  They can thus contain
 ### arbitrary reST.  Any other line is fed to a real interactive Python
 ### instance.  For example:
 

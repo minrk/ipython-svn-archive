@@ -9,11 +9,11 @@
 #-#
 
 #-# If you want to leave blank lines of input text, the parser allows any
-#-# trailing whitespace to be ommitted from the text mark, as above.  You can
+#-# trailing whitespace to be omitted from the text mark, as above.  You can
 #-# also leave the line blank, without any text marks:
 
 #-# will give you a blank line above.  Pure blank lines are needed in cases such
-#-# as above, where verbatim input preceeded Python code (reST parsers require a
+#-# as above, where verbatim input preceded Python code (reST parsers require a
 #-# blank lines enclosing verbatim input).
 
 #-# Some regular Python code, defining a class.  Remember no blank lines inside!
