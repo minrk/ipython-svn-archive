@@ -142,6 +142,7 @@ def XMLSection(sec, justme=False):
 
 def XMLTextCell(cell, justme=False):
     s  = XMLNodeBase(cell, justme)
+    s += "<format>%s</format>\n"%escape(cell.format)
     s += "<textData>%s</textData>\n"%escape(cell.textData)
     return "<TextCell>\n%s</TextCell>\n"%indent(s,2)
 
@@ -182,7 +183,8 @@ def jsonifyUser(u, keepdict=False, justme=False):
     d['userID'] = u.userID
     d['username'] = u.username
     d['email'] = u.email
-    d['notebooks'] = [nb.title for nb in u.notebooks]
+    if not justme:
+        d['notebooks'] = [nb.jsonify(keepdict=True) for nb in u.notebooks]
     if keepdict:
         return d
     return simplejson.dumps(d)
@@ -191,6 +193,7 @@ def jsonNode(n, keepdict=False, justme=False):
     d = jsonStarter(n)
     for key in ['cellID', 'parentID', 'nextID', 'comment']:
         d[key] = getattr(n, key)
+    d['tags'] = n.tags
     if keepdict:
         return d
     return simplejson.dumps(d)
@@ -208,6 +211,7 @@ def jsonifySection(sec, keepdict=False, justme=False):
 
 def jsonifyTextCell(tc, keepdict=False, justme=False):
     d = jsonNode(tc,True)
+    d['format'] = tc.format
     d['textData'] = tc.textData
     if keepdict:
         return d
@@ -268,6 +272,7 @@ inputCellsTable = Table('inputCells', metadata,
 
 textCellsTable = Table('textCells', metadata,
     Column('nodeID', Integer, ForeignKey('nodes.nodeID'), primary_key=True),
+    Column('format', String()),
     Column('textData', String()),
 )
 

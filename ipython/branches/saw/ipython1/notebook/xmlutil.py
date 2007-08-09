@@ -131,6 +131,8 @@ def textCellFromElement(element, user, notebook, parent, nodes):
     cell = initNodeFromE(models.TextCell, element, user, notebook, parent, nodes)
     s = unescape(element.find('textData').text)
     cell.textData = unindent(s, element.text.count(' '))
+    s = unescape(element.find('format').text)
+    cell.format = unindent(s, element.text.count(' '))
     return cell
 
 def inputCellFromElement(element, user, notebook, parent, nodes):

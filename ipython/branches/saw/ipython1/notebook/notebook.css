@@ -2,6 +2,11 @@ body
 {
   border: thin solid gray;
 }
+/*div
+{
+    border: thin solid red;
+}
+*/
 div.pageHeader
 {
   font-family: Tahoma, sans-serif;
@@ -10,35 +15,48 @@ div.pageHeader
   border-bottom: thin solid gray;
   padding: 5px;
 }
-div.sidebar
+table.mainTable
 {
-  float: left;
+    border: thin dashed blue;
+    width: 100%;
+    padding: 0;
+}
+td.sidebar
+{
+/*  float: left;*/
   font-family: Tahoma, sans-serif;
   font-size: 10pt;
   padding: 5px;
+/*  height: 80%;*/
+  
 }
 
-div.controlLink
+span.controlLink
 {
-    float: center;
+/*  float: center;*/
   text-decoration: none;
   cursor: pointer;
   color: blue;
 }
-div.controlRow
+td.controlRow
 {
-    float: right;
+/*    float: right;*/
+/*    font-align: center;*/
 /*    width: 90%;*/
     font-family: Tahoma, sans-serif;
     font-size: 10pt;
     padding: 5px;
+    border-left: thin solid gray;
+    border-right: this solid gray;
+    border-bottom: this solid gray;
+/*    border: thin solid green;*/
 }
-div.notebook
+td.notebook
 {
-  height: 600px;
+  min-height: 400px;
   overflow: auto;
-  border-left: thin solid gray;
   padding: 5px;
+  border-left: thin solid gray;
 }
 /*
   An ioCell consists of two columns: inOut and collapse

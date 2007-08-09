@@ -1,5 +1,29 @@
+class Node() {
+    public int nodeID;
+    public String dateCreated;
+    public String dateModified;
+    public Array  tags;
+}
+
+class TextCell(){
+    public String textData;
+    public String format;
+}
+class InputCell(){
+    public String input;
+    public String output;
+}
+class Section(){
+    public String title;
+}
+
+TextCell.inherits(Node)
+InputCell.inherits(Node)
+Section.inherits(Node)
+
+
+
 /*getParam from cryer.co.uk script8*/
-/*var url = Location.href;*/
 getParam = function(name){
     var v = document.getElementById(name);
     if (v != null){
@@ -52,6 +76,7 @@ connect = function(){
         currentID = 0;
     }
     var head = document.getElementById("header");
+/*    alert(document.getElementById("sidebar").width)*/
 /*    alert(head);*/
 /*    alert(head.value);*/
 /*    alert(head.text);*/
@@ -63,6 +88,10 @@ connect = function(){
     var d = doSimpleXMLHttpRequest("/connectuser", {email:email, username:username});
     d.addCallback(setUserID)
 };
+
+disconnect = function(){
+    doSimpleXMLHttpRequest("/disconnectuser", {userID:userID});
+}
 
 setUserID = function(result){
     alert(result.responseText);
