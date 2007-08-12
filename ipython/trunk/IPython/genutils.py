@@ -799,6 +799,30 @@ def flag_calls(func):
     return wrapper
 
 #----------------------------------------------------------------------------
+def dhook_wrap(func,*a,**k):
+    """Wrap a function call in a sys.displayhook controller.
+
+    Returns a wrapper around func which calls func, with all its arguments and
+    keywords unmodified, using the default sys.displayhook.  Since IPython
+    modifies sys.displayhook, it breaks the behavior of certain systems that
+    rely on the default behavior, notably doctest.
+    """
+
+    def f(*a,**k):
+    
+        dhook_s = sys.displayhook
+        sys.displayhook = sys.__displayhook__
+        try:
+            out = func(*a,**k)
+        finally:
+            sys.displayhook = dhook_s
+
+        return out
+
+    f.__doc__ = func.__doc__
+    return f
+
+#----------------------------------------------------------------------------
 class HomeDirError(Error):
     pass
 
