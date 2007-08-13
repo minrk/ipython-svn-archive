@@ -2,17 +2,19 @@
     <head>
         <title>IPython Notebook</title>
         <link href="/notebook.css" rel="stylesheet" type="text/css"></link>
-        <script type="text/javascript" src="/MochiKit/Base.js"></script>
-        <script type="text/javascript" src="/MochiKit/Async.js"></script>
+<!-- /*        <script type="text/javascript" src="/MochiKit/Base.js"></script>*/ -->
+        <script type="text/javascript" src="/MochiKit/MochiKit.js"></script>
+<!-- /*        <script type="text/javascript" src="/MochiKit/Async.js"></script>*/ -->
+        <script type="text/javascript" src="/MochiKit/ajax_tables.js"></script>
         <script type="text/javascript" src="/notebook.js"></script>
     </head>
-    <body onload="connect();" onunload="disconnect();">
+    <body onunload="disconnect();">
         <div class="pageHeader" id="header">IPythonNotebook</div>
         <table class="mainTable">
             <!-- <div class="controlRow" align="center"> -->
             <tr>
             <td class="controlRow" align="center">
-            <span class="controlLink" onclick="addNotebook();">Add Notebook</span>  |  <span class="controlLink" onclick="refreshNBlist();">refresh list</span>
+            <span class="controlLink" onclick="addNotebook();">Add Notebook</span>  |  <span class="controlLink" onclick="refreshNBTable();">refresh list</span>
             <!-- <hr size=1/> -->
             <!-- </div> -->
             </td>
@@ -24,8 +26,25 @@
         </tr>
         <tr>
             <td class="sidebar" id="sidebar">
-            <table id>
-                    <tr><td></td></tr>
+            <table class="nblist" id="sortable_table">
+                <thead>
+                    <tr>
+                        <th mochi:sortcolumn="title istr">title</th>
+                        <th mochi:sortcolumn="created str">created</th>
+                        <th mochi:sortcolumn="modified str">modified</th>
+                        <th mochi:sortcolumn="permission str">perm</th>
+                        <th mochi:sortcolumn="notebookID str" class="invisible">id</th>
+                    </tr>
+                </thead>
+                <tbody class="mochi-template">
+                    <tr mochi:repeat="item notebooks" onclick="alert(this.cells[4].innerHTML);">
+                         <td mochi:content="item.title" class="sideTitle">title</td>
+                         <td mochi:content="item.created" class="sideDate">2005-02-10</td>
+                         <td mochi:content="item.modified" class="sideDate">2007-02-11</td>
+                         <td mochi:content="item.permission" class="sidePerm">o</td>
+                         <td mochi:content="item.notebookID" class="invisible">1</td>
+                     </tr>
+                </tbody>
             </table>
             </td>
             <td id="nb" class="notebook">&nbsp;

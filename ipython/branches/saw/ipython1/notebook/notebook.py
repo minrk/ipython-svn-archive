@@ -233,7 +233,12 @@ class NotebookController(object):
     def dropNotebook(self, userID, nbID):
         user = self.checkUser(userID)
         nb = self.checkNotebook(user, nbID)
-        
+    
+    def getNotebook(self, userID, **selectFlags):
+        user = self.checkUser(userID)
+        nbs = self.nbQuery.select_by(**selectFlags)
+        return [nb for nb in nbs if user is nb.user or user in nb.writers\
+                or user in nb.readers]
     
     def addWriter(self, userID, nbID, writerID):
         """adds write permissions on a notebook for a user"""
@@ -294,7 +299,7 @@ class INotebookUser(zi.Interface):
     def getNode(**selectflags):
         """"""
     
-    def dropNode(**selectflags):
+    def dropNode(nodeID):
         """"""
     
     def addNode(parentID, node, indices=None):
@@ -307,6 +312,12 @@ class INotebookUser(zi.Interface):
         """move a node to new parent at index"""
     
     def addNotebook(title):
+        """"""
+    
+    def dropNotebook(nbID):
+        """"""
+    
+    def getNotebook(**selectFlags):
         """"""
     
     def addWriter(nbID, writerID):
@@ -368,6 +379,9 @@ class NotebookUser(object):
     
     def dropNotebook(self, nbID):
         return self.nbc.dropNotebook(self.user.userID, nbID)
+    
+    def getNotebook(self, **selectflags):
+        return self.nbc.getNotebook(self.user.userID, **selectflags)
     
     def addWriter(self, nbID, writerID):
         return self.nbc.addWriter(self.user.userID, nbID, writerID)

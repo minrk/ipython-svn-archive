@@ -1,39 +1,35 @@
-class Node() {
-    public int nodeID;
-    public String dateCreated;
-    public String dateModified;
-    public Array  tags;
-}
+/*addLoadEvent(function () { alert(0);});*/
 
-class TextCell(){
-    public String textData;
-    public String format;
-}
-class InputCell(){
-    public String input;
-    public String output;
-}
-class Section(){
-    public String title;
-}
+function Node(nodeID, dateCreated, dateModified, comment, tags){
+    this.nodeID = nodeID;
+    this.dateCreated = dateCreated;
+    this.dateModified = dateModified;
+    this.comment = comment;
+    this.tags = tags;
+};
 
-TextCell.inherits(Node)
-InputCell.inherits(Node)
-Section.inherits(Node)
+function TextCell(nodeID, dateC, dateM, comment, tags, format, textData){
+    node = new Node(nodeID, dateC, dateM, comment, tags);
+    node.textData = textData;
+    node.format = format;
+    return node;
+};
 
+function TextCell(nodeID, dateC, dateM, comment, tags, input, output){
+    node = new Node(nodeID, dateC, dateM, comment, tags);
+    node.input = input;
+    node.output = output;
+    return node;
+};
 
+function Section(nodeID, dateC, dateM, comment, tags, title){
+    node = new Node(nodeID, dateC, dateM, comment, tags);
+    node.title = title;
+    return node;
+};
 
 /*getParam from cryer.co.uk script8*/
 getParam = function(name){
-    var v = document.getElementById(name);
-    if (v != null){
-        return v.value;
-    }else{
-        v = document.createElement("input");
-        v.setAttribute("id", name)
-        v.type = "hidden";
-        document.body.appendChild(v);
-    }
     var start=location.search.indexOf("?"+name+"=");
     if (start<0) start=location.search.indexOf("&"+name+"=");
     if (start<0) return null;
@@ -46,28 +42,24 @@ getParam = function(name){
         var c=location.search.charAt(i);
         result=result+(c=="+"?" ":c);
     }
-    v.value = unescape(result);
     return unescape(result);
-}
+};
 // globals
 var currentID = 0;
 var selectedCell = "";
-var userID = -1;
+var user = Object();
+/*var userID = -1;
 var email = "";
 var username = "";
-
+*/
 connect = function(){
-    username = getParam("username");
+    var username = getParam("username");
     if (username == null){
     	username = prompt("username?", "");
-        var u = document.getElementById("username");
-        u.value = username;
     }
-    email = getParam("email")
+    var email = getParam("email")
     if (email == null){
     	email = prompt("email?", "");
-        var e = document.getElementById("email");
-        e.value = email;
     }
     if (!selectedCell){
         selectedCell = "";
@@ -75,29 +67,81 @@ connect = function(){
     if (!currentID){
         currentID = 0;
     }
-    var head = document.getElementById("header");
-/*    alert(document.getElementById("sidebar").width)*/
-/*    alert(head);*/
-/*    alert(head.value);*/
-/*    alert(head.text);*/
-    head.innerHTML = "IPythonNotebook  " + username + ":" + email;
-/*    alert(queryString({email:email}));*/
-/*    var s = queryString();*/
-/*    var reqs = "/connectuser?"+s;*/
-/*    alert(reqs);*/
-    var d = doSimpleXMLHttpRequest("/connectuser", {email:email, username:username});
-    d.addCallback(setUserID)
+    var d = doSimpleXMLHttpRequest("/connectUser", {email:email, username:username});
+    d.addCallback(setUser);
 };
 
 disconnect = function(){
-    doSimpleXMLHttpRequest("/disconnectuser", {userID:userID});
-}
+    alert("disconnecting");
+    return doSimpleXMLHttpRequest("/disconnectUser", {userID:user.userID}); 
+};
+addLoadEvent(connect);
 
-setUserID = function(result){
-    alert(result.responseText);
-    var username = document.getElementById("username");
-    username.value = username;
-/*    alert(result[1]);*/
+setUser = function(req){
+/*    alert(req.responseText);*/
+    user = evalJSONRequest(req);
+    if (!user.username){//try again
+        alert("Connect User Failed");
+    	var username = prompt("username?", "");
+    	var email = prompt("email?", "");
+        var d = doSimpleXMLHttpRequest("/connectUser", {email:email, username:username});
+        d.addCallback(setUser);
+        return d
+    }else{
+        var head = document.getElementById("header");
+        head.innerHTML = "IPythonNotebook  " + user.username + ":" + user.email;
+        return refreshNBTable();
+    }
+};
+
+refreshNBTable = function(){
+    var d = doSimpleXMLHttpRequest("/getNotebooks", {userID:user.userID});
+    d.addCallback(setupNBTable);
+    return d;
+}
+setupNBTable = function(req){
+/*    alert(req.responseText);*/
+    var books = evalJSONRequest(req).notebooks;
+/*    alert(books[0]);*/
+    var data = Object();
+    data.columns = ["title", "created", "modified", "permission", "notebookID"];
+    data.rows = new Array;
+    for (var i=0; i<books.length; i++) {
+        var book = books[i];
+        var row = Array();
+        row.push(book.title);
+        row.push(book.dateCreated);
+        row.push(book.dateModified);
+        if (book.userID == user.userID){
+            row.push("o");
+        }else{
+            for (var i=0; i<books.writers.length; i++){
+                if (books.writers[i] == user.userID){
+                    row.push("w");
+                }
+            }
+            if (row.length < 4){
+                for (var i=0; i<books.readers.length; i++){
+                    if (books.readers[i] == user.userID){
+                        row.push("r");
+                    }
+                }
+            }
+            if (row.length < 4){
+                alert(book.userID);
+            }
+        }
+        row.push(book.notebookID);
+        data.rows.push(row);
+    }
+    sortableManager.initWithData(data);
+};
+
+addNotebook = function(){
+    var title = prompt("Title", "title");
+    var d = doSimpleXMLHttpRequest("/addNotebook", {userID:user.userID,title:title});
+    d.addCallback(refreshNBTable);
+    return d;
 }
 
 handleOutput = function(cmd_id, id, out){

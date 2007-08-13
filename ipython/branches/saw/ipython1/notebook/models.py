@@ -185,15 +185,19 @@ def jsonifyUser(u, keepdict=False, justme=False):
     d['email'] = u.email
     if not justme:
         d['notebooks'] = [nb.jsonify(keepdict=True) for nb in u.notebooks]
+    else:
+        d['notebooks'] = [nb.notebookID for nb in u.notebooks]
+    # print d
     if keepdict:
         return d
     return simplejson.dumps(d)
 
 def jsonNode(n, keepdict=False, justme=False):
     d = jsonStarter(n)
-    for key in ['cellID', 'parentID', 'nextID', 'comment']:
+    for key in ['notebookID','nodeID', 'parentID', 'nextID', 'comment']:
         d[key] = getattr(n, key)
-    d['tags'] = n.tags
+    d['tags'] = [t.name for t in n.tags]
+    # print d
     if keepdict:
         return d
     return simplejson.dumps(d)
@@ -202,9 +206,10 @@ def jsonifySection(sec, keepdict=False, justme=False):
     d = jsonNode(sec,True)
     d['title'] = sec.title
     if justme:
-        d['children'] = [sec[i].cellID for i in range(len(sec.children))]
+        d['children'] = [sec[i].cellID for i in range(len(sec._children))]
     else:
-        d['children'] = [sec[i].jsonify(True,True)]
+        d['children'] = [sec[i].jsonify(True,True) for i in range(len(sec._children))]
+    # print d
     if keepdict:
         return d
     return simplejson.dumps(d)
@@ -213,6 +218,7 @@ def jsonifyTextCell(tc, keepdict=False, justme=False):
     d = jsonNode(tc,True)
     d['format'] = tc.format
     d['textData'] = tc.textData
+    # print d
     if keepdict:
         return d
     return simplejson.dumps(d)
@@ -221,10 +227,27 @@ def jsonifyInputCell(ic, keepdict=False, justme=False):
     d = jsonNode(ic,True)
     d['input'] = ic.input
     d['output'] = ic.output
+    # print d
     if keepdict:
         return d
     return simplejson.dumps(d)
 
+def jsonifyNotebook(nb, keepdict=False, justme=False):
+    d = jsonStarter(nb)
+    d['notebookID'] = nb.notebookID
+    d['userID'] = nb.userID
+    # d['rootID'] = nb.root.nodeID
+    d['writers'] = [u.userID for u in nb.writers]
+    d['readers'] = [u.userID for u in nb.readers]
+    d['title'] = nb.root.title
+    if not justme:
+        d['root'] = nb.root.jsonify(keepdict=True)
+    else:
+        d['rootID'] = nb.root.nodeID
+    # print d
+    if keepdict:
+        return d
+    return simplejson.dumps(d)
 
 #-------------------------------------------------------------------------------
 # SQLAlchemy Tables
@@ -514,7 +537,7 @@ class Notebook(Timestamper):
     
     sparse  = sparseNotebook
     xmlize  = XMLNotebook
-    jsonify = None
+    jsonify = jsonifyNotebook
         
 
 #-------------------------------------------------------------------------------
