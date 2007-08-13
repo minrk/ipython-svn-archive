@@ -201,7 +201,7 @@ def all_tests_summary(result,ut_info,dt_info):
                (ut_run+dt_run,ut_failed+dt_failed,ut_errored))
     out.append('')
     out.append('Final status: ')
-    if result.wasSuccessful():
+    if result.wasSuccessful() and dt_failed == 0:
         out[-1] += 'OK'
     else:
         out[-1] += '* FAILED *'
