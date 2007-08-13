@@ -2964,16 +2964,16 @@ Defaulting color scheme to 'NoColor'"""
             oc.prompt2.p_template = '... '
             oc.prompt_out.p_template = ''
 
-            oc.prompt1.sep = ''
-            oc.prompt_out.output_sep = ''
-            oc.prompt_out.output_sep2 = '\n'
+            oc.prompt1.sep = '\n'
+            oc.output_sep = ''
+            oc.output_sep2 = ''
 
             oc.prompt1.pad_left = oc.prompt2.pad_left = \
                                   oc.prompt_out.pad_left = False
 
-            shell.magic_xmode('Plain')
-
             rc.pprint = False
+
+            shell.magic_xmode('Plain')
 
         else:
             # turn off
@@ -2984,14 +2984,15 @@ Defaulting color scheme to 'NoColor'"""
             oc.prompt_out.p_template = rc.prompt_out
 
             oc.prompt1.sep = dstore.rc_separate_in
-            oc.prompt_out.output_sep = dstore.rc_separate_out
-            oc.prompt_out.output_sep2 = dstore.rc_separate_out2
+            oc.output_sep = dstore.rc_separate_out
+            oc.output_sep2 = dstore.rc_separate_out2
 
             oc.prompt1.pad_left = oc.prompt2.pad_left = \
                          oc.prompt_out.pad_left = dstore.rc_prompts_pad_left
-            shell.magic_xmode(dstore.xmode)
 
             rc.pprint = dstore.rc_pprint
+
+            shell.magic_xmode(dstore.xmode)
 
         # Store new mode and inform
         dstore.mode = bool(1-int(mode))
