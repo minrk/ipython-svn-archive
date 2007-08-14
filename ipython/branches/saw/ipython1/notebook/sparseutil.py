@@ -71,17 +71,20 @@ def readInput(inlines, inputs=[]):
 def readOutput(inlines, outputs=[]):
     # lines = []
     ctrl, line = control(inlines.pop(0))
-    while inlines and ctrl is None:
-        outputs.append(line)
+    while inlines and ctrl is None and line[:4] == "    ":
+        outputs.append(line[4:])
         ctrl, line = control(inlines.pop(0))
     return ctrl, line, outputs
 
 def readText(inlines, end, textLines=[]):
     line = inlines.pop(0)
-    while line[-3:] != end:
+    while end not in line:
+        print end, line
         textLines.append(line)
         line = inlines.pop(0)
-    textLines.append(line[:-3])
+    textLines.append(line[:line.find(end)])
+    if line[line.find(end)+3:].strip():
+        raise SyntaxError(line)
     return textLines
 
 
@@ -107,29 +110,31 @@ def loadNotebookFromSparse(session, user, s, fname=False):
     while inlines: # main parsing loop
         if ctrl is None:
             ctrl, line = control(inlines.pop(0))
-        elif ctrl == 'py-comment':
+        elif ctrl == 'py-comment': # read comments
             ctrl, line, comments = readComments(inlines, [line])
             if active.comment:
                 comments = [active.comment]+comments
             active.comment = '\n'.join(comments)
-        elif ctrl == 'py-section':
+        elif ctrl == 'py-section': # create a section
             active = models.Section(line)
             sectionStack[-1].addChild(active)
             session.flush()
             sectionStack.append(active)
             ctrl, line = control(inlines.pop(0))
-        elif ctrl == 'py-section-end':
+        elif ctrl == 'py-section-end': # close a section
             sectionStack.pop()
             if sectionStack:
                 active = sectionStack[-1]
             ctrl, line = control(inlines.pop(0))
-        elif ctrl in TEXTS:
+        elif ctrl in TEXTS: # read a text block
             end = ctrl
             active = models.TextCell()
             sectionStack[-1].addChild(active)
             session.flush()
-            if line[-3:] == end:
-                active.textData = line[:-3]
+            if end in line:
+                active.textData = line[:line.find(end)]
+                if line[line.find(end)+3:].strip():
+                    raise SyntaxError(line)
             else:
                 textLines = readText(inlines, end, [line])
                 active.textData = '\n'.join(textLines)
@@ -140,8 +145,8 @@ def loadNotebookFromSparse(session, user, s, fname=False):
             session.flush()
             ctrl, line, inputs = readInput(inlines, [line])
             active.input = '\n'.join(inputs)
-            if ctrl == None:
-                ctrl, line, outputs = readOutput(inlines, [line])
+            if ctrl == None and line[:4] == "    ":
+                ctrl, line, outputs = readOutput(inlines, [line[4:]])
                 active.output = '\n'.join(outputs)
         else:
             # I do not think this can happen

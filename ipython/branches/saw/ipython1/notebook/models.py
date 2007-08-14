@@ -18,9 +18,17 @@ __docformat__ = "restructuredtext en"
 from sqlalchemy import *
 import datetime, simplejson
 
+def indent(s, n):
+    """indent a multi-line string `s`, `n` spaces"""
+    addline = 0
+    if s and s[-1] == '\n':
+        s = s[:-1]
+        addline=1
+    s = " "*n+s.replace("\n", "\n"+" "*n)
+    return s +'\n'*addline
 
 #-------------------------------------------------------------------------------
-# XML representations of notebook objects
+# Sparse representations of notebook objects
 #-------------------------------------------------------------------------------
 
 def sparseTextCell(cell):
@@ -43,7 +51,7 @@ def sparseInputCell(cell):
             s += '... '+inlines.pop(0)+'\n'
     else:
         s = '>>> \n'
-    s += cell.output + '\n'
+    s += indent(cell.output,4) + '\n'
     if cell.comment:
         s += '#' + cell.comment.replace('\n', '\n#') + '\n'
     return s
@@ -68,15 +76,6 @@ def escape(s):
     if s is None:
         return None
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-
-def indent(s, n):
-    """indent a multi-line string `s`, `n` spaces"""
-    addline = 0
-    if s[-1] == '\n':
-        s = s[:-1]
-        addline=1
-    s = " "*n+s.replace("\n", "\n"+" "*n)
-    return s +'\n'*addline
 
 tformat = "%Y-%m-%d %H:%M:%S"
 
@@ -192,8 +191,9 @@ def jsonifyUser(u, keepdict=False, justme=False):
         return d
     return simplejson.dumps(d)
 
-def jsonNode(n, keepdict=False, justme=False):
+def jsonifyNode(n, nodeType="node", keepdict=False, justme=False):
     d = jsonStarter(n)
+    d['nodeType'] = nodeType
     for key in ['notebookID','nodeID', 'parentID', 'nextID', 'comment']:
         d[key] = getattr(n, key)
     d['tags'] = [t.name for t in n.tags]
@@ -203,7 +203,7 @@ def jsonNode(n, keepdict=False, justme=False):
     return simplejson.dumps(d)
 
 def jsonifySection(sec, keepdict=False, justme=False):
-    d = jsonNode(sec,True)
+    d = jsonifyNode(sec,"section",True)
     d['title'] = sec.title
     if justme:
         d['children'] = [sec[i].cellID for i in range(len(sec._children))]
@@ -215,7 +215,7 @@ def jsonifySection(sec, keepdict=False, justme=False):
     return simplejson.dumps(d)
 
 def jsonifyTextCell(tc, keepdict=False, justme=False):
-    d = jsonNode(tc,True)
+    d = jsonifyNode(tc,"textCell",True)
     d['format'] = tc.format
     d['textData'] = tc.textData
     # print d
@@ -224,7 +224,7 @@ def jsonifyTextCell(tc, keepdict=False, justme=False):
     return simplejson.dumps(d)
 
 def jsonifyInputCell(ic, keepdict=False, justme=False):
-    d = jsonNode(ic,True)
+    d = jsonifyNode(ic,"inputCell",True)
     d['input'] = ic.input
     d['output'] = ic.output
     # print d
