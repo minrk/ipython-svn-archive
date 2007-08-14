@@ -11,17 +11,7 @@ def pwordfreq(rc, text):
     rc - An IPython RemoteController
     text - The name of a string on the engines to do the freq count on.
     """
-    
-    rc.executeAll('freqs = wordfreq(%s)' %text)
-    freqs_list = rc.pullAll('freqs')
-    word_set = set()
-    for f in freqs_list:
-        word_set.update(f.keys())
-    freqs = dict(zip(word_set, repeat(0)))
-    for f in freqs_list:
-        for word, count in f.iteritems():
-            freqs[word] += count
-    return freqs
+
 
 if __name__ == '__main__':
     # Create a RemoteController
