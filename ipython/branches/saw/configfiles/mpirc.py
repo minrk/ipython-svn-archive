@@ -1,4 +1,3 @@
-
 # encoding: utf-8
 """
 Sample configuration file for MPI.
@@ -12,13 +11,18 @@ For more information see the `ipython1.config.objects.MPIConfig` docstrings.
 from ipython1.config.api import getConfigObject
 
 mpiConfig = getConfigObject('mpi')
-# I
-# For IPython's basic mpi module.  This only calls MPI_Init
-# and then defines mpi.rank and mpi.size.  This is useful
-# for the many cases where you just need to know those two things.
-# You could also probably use this approach to make MPI calls from 
-# C/C++ code.
-#mpiConfig.mpiImportStatement = 'from ipython1 import mpi'
+# Uncomment for Mpi4Py
+# mpiConfig.mpiImportStatement = """from mpi4py import MPI as mpi
+# mpi.rank = mpi.COMM_WORLD.Get_size()
+# mpi.size = mpi.COMM_WORLD.Get_rank()
+# """
 
-# For using mpi4py
-#mpiConfig.mpiImportStatement = 'from mpi4py import MPI as mpi'
+# Uncomment For PyTrlinos
+# mpiConfig.mpiImportStatement = """
+# from PyTrilinos import Epetra
+# class SimpleStruct:
+#     pass
+# mpi = SimpleStruct()
+# mpi.rank = 0
+# mpi.size = 0
+# """
