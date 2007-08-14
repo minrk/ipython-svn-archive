@@ -24,6 +24,12 @@ for i in range(10):
 ### single blank line as the indicator that you're done entering input and it
 ### can run the whole accumulated block.
 
+### A bulleted list:
+###
+### * one
+### * two
+### * three
+
 ### For the same reason, you *can not* leave blank lines inside multiline
 ### blocks, such as function or class definitions.  That would cause the
 ### interpreter to stop parsing the input at that point!  So a function must be

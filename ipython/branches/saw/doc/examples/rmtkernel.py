@@ -9,7 +9,7 @@ la = numpy.linalg
 def GOE(N):
     """Creates an NxN element of the Gaussian Orthogonal Ensemble"""
     m = ra.standard_normal((N,N))
-    m = m + numpy.transpose(m)
+    m += m.T
     return m
 
 
@@ -22,7 +22,8 @@ def centerEigenvalueDiff(mat):
 
 
 def ensembleDiffs(num, N):
-    """Return the a list of num eigenvalue differences for the NxN GOE ensemble."""
+    """Return an array of num eigenvalue differences for the NxN GOE
+    ensemble."""
     diffs = numpy.empty(num)
     for i in xrange(num):
         mat = GOE(N)
@@ -32,13 +33,12 @@ def ensembleDiffs(num, N):
 
 def normalizeDiffs(diffs):
     """Normalize an array of eigenvalue diffs."""
-    meanDiff = numpy.sum(diffs)/len(diffs)
-    diffsNormalized = diffs/meanDiff
-    return diffsNormalized
+    return diffs/diffs.mean()
 
 
 def normalizedEnsembleDiffs(num, N):
-    """Return the a list of num eigenvalue differences for the NxN GOE ensemble."""
+    """Return an array of num *normalized eigenvalue differences for the NxN
+    GOE ensemble."""
     diffs = ensembleDiffs(num, N)
     return normalizeDiffs(diffs)
 

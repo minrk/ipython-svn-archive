@@ -36,15 +36,20 @@ def parallelDiffs(rc, num, N):
     pd = rc.gatherAll('diffs')
     return pd.getResult(block=True)
 
-rc = kernel.RemoteController(('127.0.0.1',10105))
-rc.runAll('rmtkernel.py')
-rc.block = False
-%timeit -n1 -r1 serialDiffs(500, 100)
-%timeit -n1 -r1 parallelDiffs(rc, 500, 100)
 
-# Uncomment these to plot the histogram
-# import pylab
-# pylab.hist(parallelDiffs(100,100,rc))
+# Main code
+if __name__ == '__main__':
+    rc = kernel.RemoteController(('127.0.0.1',10105))
+    rc.runAll('rmtkernel.py')
+    rc.block = False
 
+    # Simulation parameters
+    nmats = 100
+    matsize = 30
+    
+    %timeit -n1 -r1 serialDiffs(nmats,matsize)
+    %timeit -n1 -r1 parallelDiffs(rc, nmats, matsize)
 
-
+    # Uncomment these to plot the histogram
+    import pylab
+    pylab.hist(parallelDiffs(rc,matsize,matsize))
