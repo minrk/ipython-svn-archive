@@ -1,17 +1,17 @@
-/*addLoadEvent(function () { alert(0);});*/
+// Some class functions for data structures
 
-function Node(nodeID, dateCreated, dateModified, comment, tags){
-    this.nodeID = nodeID;
-    this.dateCreated = dateCreated;
-    this.dateModified = dateModified;
-    this.comment = comment;
-    this.tags = tags;
+function Node(obj){
+    this.nodeID = obj.nodeID;
+    this.dateCreated = obj.dateCreated;
+    this.dateModified = obj.dateModified;
+    this.comment = obj.comment;
+    this.tags = obj.tags;
 };
 
-function TextCell(nodeID, dateC, dateM, comment, tags, format, textData){
-    node = new Node(nodeID, dateC, dateM, comment, tags);
-    node.textData = textData;
-    node.format = format;
+function TextCell(obj){
+    node = new Node(obj);
+    node.textData = obj.textData;
+    node.format = obj.format;
     return node;
 };
 
@@ -48,6 +48,7 @@ getParam = function(name){
 var currentID = 0;
 var selectedCell = "";
 var user = Object();
+var activeNotebook = null;
 /*var userID = -1;
 var email = "";
 var username = "";
@@ -99,10 +100,9 @@ refreshNBTable = function(){
     d.addCallback(setupNBTable);
     return d;
 }
+
 setupNBTable = function(req){
-/*    alert(req.responseText);*/
     var books = evalJSONRequest(req).notebooks;
-/*    alert(books[0]);*/
     var data = Object();
     data.columns = ["title", "created", "modified", "permission", "notebookID"];
     data.rows = new Array;
@@ -142,7 +142,178 @@ addNotebook = function(){
     var d = doSimpleXMLHttpRequest("/addNotebook", {userID:user.userID,title:title});
     d.addCallback(refreshNBTable);
     return d;
-}
+};
+
+getNodeTable = function(element){
+    var nodeTables = getElementsByTagAndClassname("table", "section");
+    nodeTables += getElementsByTagAndClassname("table", "inputCell");
+    nodeTables += getElementsByTagAndClassname("table", "textCell");
+    alert(nodeTables.length);
+    for (var i=0;i<nodeTables.length;i++){
+        var nt = nodeTables[i];
+        if (isParent(nt, element)){
+            return nt;
+        }
+    }
+};
+
+setActiveNotebook = function(nbID){
+    var d = doSimpleXMLHttpRequest("/getNotebooks", {userID:user.userID, notebookID:nbID});
+    d.addCallback(_setActiveNotebook);
+    return d;
+};
+
+_setActiveNotebook = function(req){
+    if (activeNotebook){
+        var s = prompt("save before switching?").toLowerCase();
+        if (s == "yes" || s == "y"){
+            saveActiveNotebook();
+        }
+    }
+    alert(req.responseText);
+    activeNotebook = evalJSONRequest(req).notebooks[0];
+/*    alert(activeNotebook);*/
+    alert(activeNotebook.root);
+    if (!activeNotebook){
+        alert(req.responseText);
+    }else{
+        var nbtd = getElementsByTagAndClassName("td", "notebook")[0];
+        nbtd.innerHTML = "";
+        nbtd.appendChild(nodeTableFromJSON(activeNotebook.root));
+        alert(nbtd);
+    }
+};
+
+alertNode = function(node){
+    var s = "id:"+node.nodeID+"\n";
+    s += "nodeType:"+node.nodeType+"\n";
+    alert(s);
+};
+
+nodeTableFromJSON = function(node){
+/*    var klass = node.nodeType;*/
+    alertNode(node);//for debug
+    var t = document.createElement("table");
+    t.className = node.nodeType;
+    t.obj = node;
+    t.setAttribute("id", node.nodeID);
+    //header
+    var tr = document.createElement("tr");
+    var td = document.createElement("td");
+    td.className = "nodeHead";
+    var span = document.createElement("span");
+    span.innerHTML = "nodeID:";
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.className = "nodeID";
+    span.innerHTML = node.nodeID.toString();
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.innerHTML = "  |  Modified:";
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.className = "date";
+    span.innerHTML = node.dateModified;
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.innerHTML = "  |  Created:";
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.className = "date";
+    span.innerHTML = node.dateCreated;
+    td.appendChild(span);
+    tr.appendChild(td);
+    t.appendChild(tr);
+    
+    //control
+    tr = document.createElement("tr");
+    td = document.createElement("td");
+    td.className = "nodeActions";
+    span = document.createElement("span");
+    span.className = "controlLink";
+    span.onClick = function(){moveNode(node.nodeID);};
+    span.innerHTML = "move";
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.innerHTML = "  |  ";
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.className = "controlLink";
+    span.innerHTML = "drop";
+    span.onClick = function(){dropNode(node.nodeID);};
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.innerHTML = "  |  ";
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.className = "controlLink";
+    span.innerHTML = "save";
+    span.onClick = function(){saveNode(node.nodeID);};
+    td.appendChild(span);
+    tr.appendChild(td);
+    t.appendChild(tr);
+    
+    tr = document.createElement("tr");
+    td = document.createElement("td");
+    for (var i=0;i<node.tags.length;i++){
+        span = document.createElement("span");
+        span.className = "tag";
+        span.innerHTML = node.tags[i];
+        td.appendChild(span);
+    }
+    tr.appendChild(td);
+    t.appendChild(tr);
+
+    tr = document.createElement("tr");
+    td = document.createElement("td");
+    td.className = "comment";
+    td.innerHTML = node.comment;
+    tr.appendChild(td);
+    t.appendChild(tr);
+    
+    if (t.className == "section"){
+        tr = document.createElement("tr");
+        td = document.createElement("td");
+        td.className = "children";
+        for (var i=0; i<node.children.length; i++){
+            td.appendChild(nodeTableFromJSON(node.children[i]));
+        };
+        tr.appendChild(td);
+        t.appendChild(tr);
+        
+    }else if (t.className == "inputCell"){
+        tr = document.createElement("tr");
+        td = document.createElement("td");
+        td.className = "input";
+        td.innerHTML = node.input;
+        tr.appendChild(td);
+        t.appendChild(tr);
+        
+        tr = document.createElement("tr");
+        td = document.createElement("td");
+        td.className = "output";
+        td.innerHTML = node.output;
+        tr.appendChild(td);
+        t.appendChild(tr);
+        
+    }else if (t.className == "textCell"){
+        tr = document.createElement("tr");
+        td = document.createElement("td");
+        td.className = "format";
+        td.innerHTML = node.format;
+        tr.appendChild(td);
+        t.appendChild(tr);
+        
+        tr = document.createElement("tr");
+        td = document.createElement("td");
+        td.className = "textData";
+        td.innerHTML = node.textData;
+        tr.appendChild(td);
+        t.appendChild(tr);
+    }
+    return t;
+};
+
 
 handleOutput = function(cmd_id, id, out){
     var cell = document.getElementById(cmd_id);
@@ -152,6 +323,9 @@ handleOutput = function(cmd_id, id, out){
     var output = cell.lastChild.lastChild.lastChild;
     output.innerHTML = out+"&nbsp";
 };
+
+
+
 
 addIOCell = function(){
     var id = currentID;

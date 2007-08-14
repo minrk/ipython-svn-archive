@@ -45,6 +45,7 @@ td.controlRow
 }
 td.notebook
 {
+  vertical-align: top;
   min-height: 400px;
   width: 100%;
   overflow: auto;
@@ -156,6 +157,7 @@ h1 {
 table.nblist {
 /*    width: 100;*/
     border-collapse: collapse;
+    font-weight: bold;
 }
 
 table.nblist thead th { 
@@ -176,8 +178,8 @@ table.nblist thead th {
 table.nblist thead th a {
     text-decoration: none;
 /*    font-size: 1.0em;*/
-    background-repeat: no-repeat;
-    background-position: center right;
+/*    background-repeat: no-repeat;*/
+/*    background-position: center right;*/
 /*    padding-right: 5px;*/
 }
 
@@ -187,6 +189,7 @@ table.nblist thead th.over {
 }
 table.nblist td {
     font-size: 9pt;
+    font-weight: bold;
     padding-right: 4px;
 }
 table.nblist td.sideDate {
@@ -198,27 +201,74 @@ table.nblist tbody th {
 
 table.nblist tbody td, table.nblist tbody th {
     text-align: left;
-/*    padding: .3em .7em;*/
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid #EEEEFF;
 }
 
 table.nblist tbody tr.alternate td, table.nblist tbody tr.alternate th {
-    background-color: #f1f1f1;
+/*    background-color: #f1f1f1;*/
 }
 
 table.nblist tfoot td, table.nblist tfoot th { 
-    background-color: #FFFEE3;
-    color: #4B4545;
+/*    background-color: #FFFEE3;*/
+/*    color: #4B4545;*/
 /*    padding: .5em;*/
-    font-weight: bold;
-    border-top: 2px solid #4B4545;
+/*    font-weight: bold;*/
+/*    border-top: 2px solid #4B4545;*/
 }
 
-table.nblist tfoot th { text-align: left; }
+/*table.nblist tfoot th { text-align: left; }*/
 
-table.nblist tfoot td {  }
+/*table.nblist tfoot td {  }*/
 
 .invisible { display: none; }
 
 .mochi-template { display: none; }
 .mochi-example { display: none; }
+
+
+/*Notebook Segment*/
+table{
+    font-size: 12px;
+    padding: 0px;
+    border: 2px solid #CCCCFF;
+    width: 100%;
+}
+td{
+    padding: 2px;
+    border-bottom: thin solid #CCCCFF;
+}
+
+td.nodeHead{
+    font-weight: bold;
+/*    font-size:12px;*/
+    background: #CCCCFF;
+    padding: 6px;
+    color: #111100;
+}
+
+span.date{
+/*    font-size: 10px;*/
+    font-color: #444400;
+}
+
+td.nodeActions{
+}
+
+span.tag{
+    font-weight: underline;
+    color: blue;
+}
+
+td.comments{
+    font-style: italic;
+    font-color: light green;
+}
+table.section td.sectionTitle{
+    font-weight: bold;
+    font-size: 14px;
+    background: #CCCCFF;
+    padding: 4px;
+    
+}
+
+
