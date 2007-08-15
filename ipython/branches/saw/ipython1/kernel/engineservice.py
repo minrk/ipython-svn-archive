@@ -255,7 +255,7 @@ lines = %s""" % (self.id, lines)
         return result
 
     def push(self, **namespace):
-        msg = """engine %r
+        msg = """engine: %r
 method: push(**namespace)
 namespace.keys() = %r""" % (self.id, namespace.keys())
         d = self.executeAndRaise(msg, self.shell.push, **namespace)

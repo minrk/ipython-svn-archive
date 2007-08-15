@@ -31,6 +31,16 @@ def default_traceback_formatters():
     return [PlainTracebackFormatter()]
 
 
+# XXX - experimental code to try to send exceptions over the wire with better
+# information... Doesn't really work yet. - fperez
+## import new
+## def ewrap(evalue,msg):
+##     evalue.message = msg
+##     def __str__(self):
+##         return self.__ipython_message
+    
+##     evalue.__str__ = new.instancemethod(__str__,evalue,evalue.__class__)
+
 
 class Interpreter(object):
     """ An interpreter object.
@@ -150,19 +160,26 @@ class Interpreter(object):
         that are loaded into self.tracback_trap.formatters.
         """
         tbinfo = self.tbHandler.text(et,ev,tb)
-        newValue = """\
-%(ev)s            
-***************************************************************************
-An exception occurred in the IPython Interpreter due to a user action.
-This usually means that user code has a problem in it somewhere.
 
-%(message)s
-
-A full traceback from the actual interpreter:
-%(tbinfo)s
+        nv = ["""\
+%s
 ***************************************************************************
-        """ % locals()
-        return et, et(newValue), tb
+Exception in the IPython Engine.""" % ev]
+
+        if message:
+            nv.append("""
+
+Engine action that caused the error:
+
+%s
+
+""" % message )
+        nv.append("""Full traceback:
+%s
+***************************************************************************
+        """ % tbinfo)
+
+        return et, ''.join(nv), tb
         
     def execute(self, commands, raiseException=True):
         """ Execute some IPython commands.
@@ -234,7 +251,7 @@ A full traceback from the actual interpreter:
         self.traceback_trap.add_to_message(message)
         # Pull out the type, value and tb of the current exception
         # before clearing it.
-        tracebackTuple = self.traceback_trap.args
+        einfo = self.traceback_trap.args
         self.traceback_trap.clear()
         
         # Cache the message.
@@ -246,8 +263,8 @@ A full traceback from the actual interpreter:
         # This conditional lets the execute method either raise any
         # exception that has occured in user code OR return the message
         # dict containing the traceback and other useful info.
-        if raiseException and tracebackTuple:
-            raise tracebackTuple
+        if raiseException and einfo:
+            raise einfo[0],einfo[1],einfo[2]
         else:
             return message
 
