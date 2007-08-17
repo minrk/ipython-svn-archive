@@ -1742,7 +1742,10 @@ want to merge them back into the new files.""" % locals()
     def transform_alias(self, alias,rest=''):
         """ Transform alias to system command string.
         """
-        nargs,cmd = self.alias_table[alias]
+        trg = self.alias_table[alias]
+
+        nargs,cmd = trg
+        # print trg #dbg
         if ' ' in cmd and os.path.isfile(cmd):
             cmd = '"%s"' % cmd
 
