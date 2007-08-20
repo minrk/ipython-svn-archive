@@ -25,7 +25,7 @@ test = mkScriptTestManager()
 
 # Once you have your test object, you can declare individual test successes:
 
-for i in range(6):
+for i in range(13):
     test.succeed()
 
 # or make checks

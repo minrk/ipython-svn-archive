@@ -47,6 +47,7 @@ def f(x):
 ### reST for compilation to HTML or other formats):
 x = 1
 y = 2
+x+y
 print f(x)+f(y)
 print f(x+y)
 ### And it's OK to put text here, also without any preceding blank lines.

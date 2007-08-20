@@ -67,7 +67,7 @@ class ExampleTestCase(ParametricTestCase):
     # load them via the factories below.
     def tstX(self,i):
         "Test feature X with parameters."
-        if i==10:
+        if i==3:
             # Test fails
             self.fail('i is bad, bad: %s' % i)
 
