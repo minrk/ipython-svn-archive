@@ -2,6 +2,7 @@ from tconfig import TConfigManager,tconf2File
 
 from simpleconf import SimpleConfig
 
+
 # Make and print to screen the default config
 conf = SimpleConfig()
 print repr(conf)
@@ -42,3 +43,10 @@ conf2.writeAll()
 !cat $fname
 
 
+# <demo> stop
+
+# Finally, the actual entire Matplotlib configuration:
+
+from mplconfig import MPLConfig
+mpc = MPLConfig()
+mpc.edit_traits()
