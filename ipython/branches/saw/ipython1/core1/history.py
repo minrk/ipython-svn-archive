@@ -63,9 +63,5 @@ class History(object):
             self.namespace_additions['_'] = new_obj
             self.output_cache[number] = new_obj
 
-        interpreter.namespace.update(self.namespace_additions)
+        interpreter.user_ns.update(self.namespace_additions)
         self.input_cache.add(number, python)
-
-
-
-

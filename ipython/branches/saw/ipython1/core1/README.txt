@@ -1,6 +1,7 @@
 This contains the implementation of a Python interpreter that provides IPython
 functionality (magics, aliases, history, and all that jazz).
 
+
 Message dictionaries
 --------------------
 The interpreter responds to a command with a dictionary of simple Python types,
