@@ -323,7 +323,7 @@ def mkparser():
     return parser
 
 
-def main(argv=None,tests=None):
+def main0(argv=None,tests=None):
     """If run as a standalone script, provide minimally usable
     functionality
 
@@ -343,6 +343,23 @@ def main(argv=None,tests=None):
     else:
         suites,dt_files = tests
     run_all_tests(suites,dt_files,opts.verbosity,opts.debug)
+        
+def main(argv=None,tests=None):
+    """If run as a standalone script, provide minimally usable
+    functionality
+
+    :Keywords:
+      argv : list (None)
+        List of arguments for option parsing, defaults to sys.argv[1:]
+
+      tests : tuple (None)
+        If given, a pair of (suites,doctest_filenames).  suites must be a
+        TestSuite object, while doctest_filenames must be a list of filenames
+        to load as doctests."""
+
+    parser = mkparser()
+    opts,args = parser.parse_args(argv)
+    run_doctests(args,opts.verbosity,opts.debug)
         
 
 if __name__ == '__main__':
