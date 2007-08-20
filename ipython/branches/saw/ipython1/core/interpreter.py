@@ -497,12 +497,12 @@ Engine action that caused the error:
             Separate commands that can be exec'ed independently.
         """
 
-        # compiler.parse treats trailing spaces after a newline as a SyntaxError.
-        # This is different than codeop.CommandCompiler, which will compile
-        # the trailng spaces just fine.  We simply strip any trailing whitespace
-        # off.   Passing a string with trailing whitespace to exec will fail 
-        # however.  There seems to be some inconsistency in how trailing whitespace
-        # is handled, but this seems to work.
+        # compiler.parse treats trailing spaces after a newline as a
+        # SyntaxError.  This is different than codeop.CommandCompiler, which
+        # will compile the trailng spaces just fine.  We simply strip any
+        # trailing whitespace off.  Passing a string with trailing whitespace
+        # to exec will fail however.  There seems to be some inconsistency in
+        # how trailing whitespace is handled, but this seems to work.
         python = python.strip()
 
         # The compiler module will parse the code into an abstract syntax tree.
