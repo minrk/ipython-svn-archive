@@ -1,9 +1,5 @@
 #!/usr/bin/env python
-"""The IPython Kernel Engine using perspective broker.
-
-To connect the engine to a controller at 127.0.0.1:9999:
-
-ipenginepb -p 9999 -c '127.0.0.1'
+"""Start the IPython Engine.
 """
 
 #-------------------------------------------------------------------------------
@@ -14,6 +10,13 @@ ipenginepb -p 9999 -c '127.0.0.1'
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
+
+# This wierd hack is needed so that engines can import python modules
+# in the cwd.  This only occurs on some platforms and we are not
+# sure what the problem is.
+import os, site
+p = os.getcwd()
+site.addsitedir(p)
 
 import sys, os
 from optparse import OptionParser

@@ -11,6 +11,14 @@
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
+# This wierd hack is needed so that the controller can import python modules
+# in the cwd.  This only occurs on some platforms and we are not
+# sure what the problem is.  In the controller module importing occurs when
+# things are unpickled.
+import os, site
+p = os.getcwd()
+site.addsitedir(p)
+
 import sys, time, os
 from optparse import OptionParser
 
