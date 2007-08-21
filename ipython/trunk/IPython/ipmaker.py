@@ -424,12 +424,14 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
              % (opts_all.rcfile) )
 
     # 'profiles' are a shorthand notation for config filenames
+    profile_handled_by_legacy = False
     if opts_all.profile:
             
         try:
             opts_all.rcfile = filefind('ipythonrc-' + opts_all.profile
                                        + rc_suffix,
                                        opts_all.ipythondir)
+            profile_handled_by_legacy = True
         except IOError:
            if opts_all.debug:  IP.InteractiveTB()
            opts.profile = ''  # remove profile from options if invalid
@@ -624,7 +626,8 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         IP.InteractiveTB()
         import_fail_info('ipy_system_conf')
         
-    if opts_all.profile:
+    # only import prof module if ipythonrc-PROF was not found
+    if opts_all.profile and not profile_handled_by_legacy:
         profmodname = 'ipy_profile_' + opts_all.profile
         try:
             __import__(profmodname)
