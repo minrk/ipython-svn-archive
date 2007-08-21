@@ -11,12 +11,10 @@
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
-# This wierd hack is needed so that engines can import python modules
-# in the cwd.  This only occurs on some platforms and we are not
-# sure what the problem is.
-import os, site
-p = os.getcwd()
-site.addsitedir(p)
+# Python looks for an empty string at the beginning of sys.path to enable
+# importing from the cwd.
+import sys
+sys.path.insert(0, '')
 
 import sys, os
 from optparse import OptionParser
