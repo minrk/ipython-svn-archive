@@ -160,13 +160,18 @@ class ParametricTestCase(unittest.TestCase):
 
         if result is None: result = self.defaultTestResult()
 
+        try:
+            _testMethodName = getattr(self,"_testMethodName")
+        except:
+            _testMethodName = getattr(self,"_TestCase__testMethodName")
+
         # Independent tests: each gets its own setup/teardown
-        if self._testMethodName.startswith(self._indepParTestPrefix):
-            for t in getattr(self, self._testMethodName)():
+        if _testMethodName.startswith(self._indepParTestPrefix):
+            for t in getattr(self,_testMethodName)():
                 self.run_test(t,result)
         # Shared-state test: single setup/teardown for all
-        elif self._testMethodName.startswith(self._shareParTestPrefix):
-            tests = getattr(self, self._testMethodName)()
+        elif _testMethodName.startswith(self._shareParTestPrefix):
+            tests = getattr(self,_testMethodName,'runTest')()
             self.run_tests(tests,result)
         # Normal unittest Test methods
         else:
