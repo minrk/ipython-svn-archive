@@ -2046,7 +2046,7 @@ want to merge them back into the new files.""" % locals()
             # only entries starting at first column go to shadow history
             if line.lstrip() == line:
                 self.shadowhist.add(line.strip())
-        else:
+        elif not continue_prompt:
             self.input_hist_raw.append('\n')
         try:
             lineout = self.prefilter(line,continue_prompt)
