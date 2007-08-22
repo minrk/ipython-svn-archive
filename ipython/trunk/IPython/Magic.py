@@ -2496,9 +2496,7 @@ Defaulting color scheme to 'NoColor'"""
                 os.chdir(os.path.expanduser(ps))
                 if self.shell.rc.term_title:
                     #print 'set term title:',self.shell.rc.term_title  # dbg
-                    ttitle = ("IPy:" + (
-                        os.getcwd() == '/' and '/' or \
-                        os.path.basename(os.getcwd())))
+                    ttitle = 'IPy ' + abbrev_cwd()
                     platutils.set_term_title(ttitle)
             except OSError:
                 print sys.exc_info()[1]
@@ -2511,7 +2509,7 @@ Defaulting color scheme to 'NoColor'"""
         else:
             os.chdir(self.shell.home_dir)
             if self.shell.rc.term_title:
-                platutils.set_term_title("IPy:~")
+                platutils.set_term_title("IPy ~")
             cwd = os.getcwd()
             dhist = self.shell.user_ns['_dh']
             dhist.append(cwd)
