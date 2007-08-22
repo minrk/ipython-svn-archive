@@ -1008,6 +1008,15 @@ class SList(list):
     
     p = paths = property(get_paths)
 
+def print_slist(arg):
+    """ Prettier (non-repr-like) and more informative printer for SList """
+    print "SList (.p, .n, .l, .s available). Value:"
+    nlprint(arg)
+    
+print_slist = result_display.when_type(SList)(print_slist)
+
+
+
 #----------------------------------------------------------------------------
 def esc_quotes(strng):
     """Return the input string with single and double quotes escaped out"""
