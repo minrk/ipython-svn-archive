@@ -2295,13 +2295,16 @@ Defaulting color scheme to 'NoColor'"""
             res = []
             showlast = []
             for alias in aliases:
+                special = False
                 try:
                     tgt = atab[alias][1]
                 except TypeError:
                     # unsubscriptable? probably a callable
                     tgt = atab[alias]
+                    special = True
                 # 'interesting' aliases
-                if (alias in stored or 
+                if (alias in stored or
+                    special or 
                     alias.lower() != os.path.splitext(tgt)[0].lower() or
                     ' ' in tgt):
                     showlast.append((alias, tgt))
