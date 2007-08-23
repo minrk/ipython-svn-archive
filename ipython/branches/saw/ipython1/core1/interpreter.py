@@ -4,6 +4,7 @@ import codeop
 import compiler
 import pprint
 import sys
+import traceback
 
 # Local imports.
 from ipython1.external.Itpl import ItplNS
@@ -13,24 +14,6 @@ from macro import Macro
 from traceback_trap import TracebackTrap
 from util import Bunch, system_shell
 from ipython1.core1.prompts import CachedOutput
-
-# Temporarily use this until it is ported to ipython1
-from IPython import ultraTB
-
-def default_display_formatters():
-    """ Return a list of default display formatters.
-    """
-
-    from display_formatter import PPrintDisplayFormatter, ReprDisplayFormatter
-    return [PPrintDisplayFormatter(), ReprDisplayFormatter()]
-
-def default_traceback_formatters():
-    """ Return a list of default traceback formatters.
-    """
-
-    from traceback_formatter import PlainTracebackFormatter
-    return [PlainTracebackFormatter()]
-
 
 # Global constants
 
@@ -53,11 +36,24 @@ rc.prompt_in2 = r'   .\\D.: '
 rc.prompt_out = ''
 rc.prompts_pad_left = False
 
-
 ##############################################################################
 
-class NotDefined(object):
-    pass
+def default_display_formatters():
+    """ Return a list of default display formatters.
+    """
+
+    from display_formatter import PPrintDisplayFormatter, ReprDisplayFormatter
+    return [PPrintDisplayFormatter(), ReprDisplayFormatter()]
+
+def default_traceback_formatters():
+    """ Return a list of default traceback formatters.
+    """
+
+    from traceback_formatter import PlainTracebackFormatter
+    return [PlainTracebackFormatter()]
+
+
+class NotDefined(object):    pass
 
 class Interpreter(object):
     """ An interpreter object.
@@ -165,6 +161,11 @@ class Interpreter(object):
                                         ps_out = rc.prompt_out,
                                         pad_left = rc.prompts_pad_left)
 
+        # Need to decide later if this is the right approach, but clients
+        # commonly use sys.ps1/2, so it may be best to just set them here
+        sys.ps1 = self.outputcache.prompt1.p_str
+        sys.ps2 = self.outputcache.prompt2.p_str
+
         # This is the message dictionary assigned temporarily when running the
         # code.
         self.message = None
@@ -266,20 +267,18 @@ class Interpreter(object):
         try:
             commands = self.split_commands(python)
         except (SyntaxError, IndentationError), e:
-            # The code has incorrect syntax. Return the exception object with
-            # the message.
-            self.message['syntax_error'] = e
             # Save the exc_info so compilation related exceptions can be
             # reraised
             self.traceback_trap.args = sys.exc_info()
+            self.pack_exception(self.message,e)
             return None
 
         for cmd in commands:
             try:
                 code = self.command_compiler(cmd, self.filename, 'single')
             except (SyntaxError, OverflowError, ValueError), e:
-                self.message['syntax_error'] = e
                 self.traceback_trap.args = sys.exc_info()
+                self.pack_exception(self.message,e)
                 # No point in continuing if one block raised
                 return None
             else:
@@ -351,6 +350,11 @@ class Interpreter(object):
 
         self.user_ns.update(kwds)
 
+    def pack_exception(self,message,exc):
+        message['exception'] = exc.__class__
+        message['exception_value'] = \
+        traceback.format_exception_only(exc.__class__, exc)
+
     def feed_block(self, source, filename='<input>', symbol='single'):
         """Compile some source in the interpreter.
 
@@ -383,20 +387,25 @@ class Interpreter(object):
             code = self.command_compiler(source,filename,symbol)
         except (OverflowError, SyntaxError, IndentationError, ValueError ), e:
             # Case 1
-            # The code has incorrect syntax. Return the exception object with
-            # the message.
-            self.message['syntax_error'] = e
-            # Save the exc_info so compilation related exceptions can be
-            # reraised
             self.traceback_trap.args = sys.exc_info()
-            return COMPILER_ERROR
+            self.pack_exception(self.message,e)
+            return COMPILER_ERROR,False
 
         if code is None:
-            # Case 2
-            return INCOMPLETE_INPUT
+            # Case 2: incomplete input.  This means that the input can span
+            # multiple lines.  But we still need to decide when to actually
+            # stop taking user input.  Later we'll add auto-indentation support
+            # somehow.  In the meantime, we'll just stop if there are two lines
+            # of pure whitespace at the end.
+            last_two = source.rsplit('\n',2)[-2:]
+            print 'last two:',last_two  # dbg
+            if len(last_two)==2 and all(s.isspace() for s in last_two):
+                return COMPLETE_INPUT,False
+            else:
+                return INCOMPLETE_INPUT, True
         else:
             # Case 3
-            return COMPLETE_INPUT
+            return COMPLETE_INPUT, False
         
     def pull(self, key):
         """ Get an item out of the namespace by key.
