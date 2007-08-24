@@ -2298,7 +2298,7 @@ Defaulting color scheme to 'NoColor'"""
                 special = False
                 try:
                     tgt = atab[alias][1]
-                except TypeError:
+                except (TypeError, AttributeError):
                     # unsubscriptable? probably a callable
                     tgt = atab[alias]
                     special = True
