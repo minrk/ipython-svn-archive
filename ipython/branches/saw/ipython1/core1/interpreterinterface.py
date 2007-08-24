@@ -42,15 +42,20 @@ class IInterpreter(object):
         """
 
     def ipmagic(self,magic,arg_s):
+        """"""
 
     def ipsystem(self,arg_s):
-
+        """"""
+        
     def pull(self, *keys):
+        """"""
         
     def push(self, **kwargs):
-
-    def reset(self):
+        """"""
         
+    def reset(self):
+        """"""
+
     def safe_execfile(self,fname,*where,**kw):
         """ """
         
