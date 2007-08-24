@@ -80,21 +80,30 @@ class IPReadline(object):
 
     def push_text(self, text):
         """ Ask the engine if the buffer is complete. If so, sends the 
-            given text to the engine."""
+            given text to the engine.
+
+            The return values are
+
+            X,more
+
+            X can be several things (FIXME!), more is a boolean indicating
+            whether more input is expected. """
+        
         is_complete = self.interpreter.feed_block(text)
         print "Is complete ?", is_complete  # dbg
         if is_complete == INCOMPLETE_INPUT:
-            return "\n"
+            return "\n",True
         elif is_complete == COMPILER_ERROR:
             # FIXME: Hack, there should really be user feedback for an
             # error.
-            return None
+            print 'ERROR:',self.interpreter.message
+            return self.interpreter.message,False
         elif is_complete == COMPLETE_INPUT:
             result_dict = self.interpreter.execute(text)
             # FIXME: This is blocking. It should be easy to switch from a
             # non-block (threaded) behavior) to a blocking behavior.
             # return PendingResult()
-            return InterpreterResult(result_dict)
+            return InterpreterResult(result_dict),False
 
     def fetch_docstring(self, position):
         pass

@@ -598,6 +598,7 @@ Platform: %s""" % \
         thepos = self.GetCurrentPos()
         startpos = self.promptPosEnd
         endpos = self.GetTextLength()
+        # Fixme: the ps2 prompt must be requested from the engine
         ps2 = str(sys.ps2)
         # If they hit RETURN inside the current command, execute the
         # command.
@@ -607,7 +608,8 @@ Platform: %s""" % \
             #self.interp.more = False
             command = self.GetTextRange(startpos, endpos)
             lines = command.split(os.linesep + ps2)
-            lines = [line.rstrip() for line in lines]
+            # Don't strip of whitespace, so we know when to stop reading input
+            # (the user types in blank input lines)
             command = '\n'.join(lines)
 
             # fixme: commented out to get rid of reader...
@@ -643,6 +645,7 @@ Platform: %s""" % \
         The command may not necessarily be valid Python syntax."""
         # XXX Need to extract real prompts here. Need to keep track of
         # the prompt every time a command is issued.
+        # fixme: these will come from the ipython engine.
         ps1 = str(sys.ps1)
         ps1size = len(ps1)
         ps2 = str(sys.ps2)
@@ -728,13 +731,19 @@ Platform: %s""" % \
         # Execute the code.
         # fixme: Need to handle the case when a line doesn't represent a full
         #        line of code (like the more part of the old interpreter)
-        ip_output = self.ip_readline.push_text(command)
+        ip_output,self.more = self.ip_readline.push_text(command)
+
+        if isinstance(ip_output,dict):
+            self.write(''.join(ip_output['exception_value']))
+            self.waiting = False
+            return
 
         if not hasattr(ip_output, 'result_dict'):
             # No command was executed
+            self.waiting = False
             return
-        # DEBUG output
-        print ip_output.result_dict
+
+        print ip_output.result_dict  # dbg
 
         # If there was any output from the ipython, write out an output prompt
         # and the output results pretty printed to the window.
@@ -790,6 +799,7 @@ Platform: %s""" % \
         if 0:
             prompt = str(sys.ps3)
         elif self.more:
+            1/0
             prompt = str(sys.ps2)
         else:
             # We've stuck in the IPython prompt here using the number returned
@@ -797,7 +807,7 @@ Platform: %s""" % \
             if number is None:
                 number = "1"
 
-            prompt = "In[%s]: " % number
+            prompt = "In [%s]: " % number
             prompt = prompt
 
         pos = self.GetCurLine()[1]

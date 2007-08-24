@@ -8,7 +8,7 @@ import sys
 
 vstr = '.'.join(map(str,sys.version_info[:2]))
 
-stat = os.system('python /usr/lib/python%s/compileall.py .' % vstr)
+stat = os.system('python %s/lib/python%s/compileall.py .' % (sys.prefix,vstr))
 
 print
 if stat:
@@ -16,3 +16,5 @@ if stat:
     print 'See messages above for the actual file that produced it.'
 else:
     print 'OK'
+
+sys.exit(stat)
