@@ -654,6 +654,9 @@ object? -> Details about 'object'. ?object also works, ?? prints more.
         print "Error importing ipy_user_conf - perhaps you should run %upgrade?"
         IP.InteractiveTB()
         import_fail_info("ipy_user_conf")
+
+    # finally, push the argv to options again to ensure highest priority
+    IP_rc.update(opts)
     
     # release stdout and stderr and save config log into a global summary
     msg.config.release_all()
