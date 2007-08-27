@@ -83,7 +83,7 @@ class HTTPNotebookServer(static.File):
         self.putChild('dropReader', HTTPNotebookDropReader(self.nbc))
         
         self.putChild('bookFromXML', HTTPNotebookFromXML(self.nbc))
-        self.putChild('bookToXML', HTTPNotebookToXML(self.nbc))
+        self.putChild('notebook.xml', HTTPNotebookToXML(self.nbc))
         
         # self.putChild('getNBTable', HTTPNotebookGetNBTable(self.nbc))
         
@@ -119,8 +119,7 @@ class HTTPNotebookBaseMethod(resource.Resource):
         return self, ()
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         return http.Response(200, stream=stream.MemoryStream(repr(request)))
     
     def buildRequestSummary(self, request):
@@ -139,13 +138,16 @@ headers: %r
     def packageSuccess(self, result, justme=False):
         print result
         try:
-            if isinstance(result, list):
+            if isinstance(result, type(None)):
+                data = ""
+            elif isinstance(result, list):
                 data = simplejson.dumps({'notebooks':
                     [r.jsonify(keepdict=True, justme=justme) for r in result]})
             else:
                 data = result.jsonify(justme=justme)
-        except AttributeError:
-            data = simplejson.dumps(result)
+        except AttributeError, e:
+            raise e
+            # data = simplejson.dumps(result)
         response = http.Response(200, stream=stream.MemoryStream(data))
         response.headers.setHeader('content-type', http_headers.MimeType('text', 'plain'))
         return response
@@ -163,8 +165,7 @@ headers: %r
 class HTTPNotebookConnectUser(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             uname = request.args['username'][0]
             email = request.args['email'][0]
@@ -182,8 +183,7 @@ class HTTPNotebookConnectUser(HTTPNotebookBaseMethod):
 class HTTPNotebookDisconnectUser(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             d = defer.execute(self.nbc.disconnectUser, userID)
@@ -200,23 +200,21 @@ class HTTPNotebookDisconnectUser(HTTPNotebookBaseMethod):
 class HTTPNotebookAddNode(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             parentID = int(request.args['parentID'][0])
+            index = int(request.args['index'][0])
             nodeType = request.args['nodeType'][0]
-            index = int(request.args['index'])
             
             flags = {}
             for k,v in request.args.iteritems():
-                if k in ['textData', 'input',
-                        'output','comment']:
+                if k in ['textData', 'input','title','format','output','comment']:
                     flags[k] = v[0]
                 elif k in ['nextID', 'previousID']:
                     flags[k] = int(v[0])
             node = getattr(models, nodeType)()
-            for k,v in flags.iteritmes():
+            for k,v in flags.iteritems():
                 setattr(node,k,v)
             d = defer.execute(self.nbc.addNode, userID, parentID, node, index)
         except Exception, e:
@@ -230,8 +228,7 @@ class HTTPNotebookAddNode(HTTPNotebookBaseMethod):
 class HTTPNotebookDropNode(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             nodeID = int(request.args['nodeID'][0])
@@ -247,8 +244,7 @@ class HTTPNotebookDropNode(HTTPNotebookBaseMethod):
 class HTTPNotebookGetNode(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             flags = {}
             for k,v in request.args.iteritems():
@@ -270,22 +266,24 @@ class HTTPNotebookGetNode(HTTPNotebookBaseMethod):
 class HTTPNotebookEditNode(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
-            userID = int(request.args['userID'][0])
-            nodeID = int(request.args['nodeID'][0])
+            userID = int(request.args.pop('userID')[0])
+            nodeID = int(request.args.pop('nodeID')[0])
             flags = {}
             for k,v in request.args.iteritems():
-                if k in ['textData', 'input', 'output','comment', ]:
+                if k in ['textData', 'input', 'output','comment', 'format']:
                     flags[k] = v[0]
                 elif k in ['parentID','nextID', 'previousID']:
                     flags[k] = int(v[0])
+                elif k == 'tags':
+                    flags[k] = [models.Tag(t) for t in v]
+                else:
+                    raise KeyError("No Such Property:%s"%k)
             d = defer.execute(self.nbc.editNode, userID, nodeID, **flags)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
-            d = defer.succeed(None)
             d.addCallback(self.packageSuccess, justme=False)
             d.addErrback(self.packageFailure)
             return d
@@ -294,8 +292,7 @@ class HTTPNotebookEditNode(HTTPNotebookBaseMethod):
 class HTTPNotebookMoveNode(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             nodeID = int(request.args['nodeID'][0])
@@ -314,8 +311,7 @@ class HTTPNotebookMoveNode(HTTPNotebookBaseMethod):
 class HTTPNotebookAddTag(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             nodeID = int(request.args['nodeID'][0])
@@ -332,8 +328,7 @@ class HTTPNotebookAddTag(HTTPNotebookBaseMethod):
 class HTTPNotebookDropTag(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             nodeID = int(request.args['nodeID'][0])
@@ -353,8 +348,7 @@ class HTTPNotebookDropTag(HTTPNotebookBaseMethod):
 class HTTPNotebookAddBook(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             title = request.args['title'][0]
@@ -370,8 +364,7 @@ class HTTPNotebookAddBook(HTTPNotebookBaseMethod):
 class HTTPNotebookDropBook(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
@@ -387,8 +380,7 @@ class HTTPNotebookDropBook(HTTPNotebookBaseMethod):
 class HTTPNotebookGetBook(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             flags = {}
             for k,v in request.args.iteritems():
@@ -407,8 +399,7 @@ class HTTPNotebookGetBook(HTTPNotebookBaseMethod):
 class HTTPNotebookAddWriter(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
@@ -425,8 +416,7 @@ class HTTPNotebookAddWriter(HTTPNotebookBaseMethod):
 class HTTPNotebookDropWriter(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
@@ -443,8 +433,7 @@ class HTTPNotebookDropWriter(HTTPNotebookBaseMethod):
 class HTTPNotebookAddReader(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
@@ -461,8 +450,7 @@ class HTTPNotebookAddReader(HTTPNotebookBaseMethod):
 class HTTPNotebookDropReader(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
@@ -479,8 +467,7 @@ class HTTPNotebookDropReader(HTTPNotebookBaseMethod):
 class HTTPNotebookFromXML(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             xmlstr = request.args['xmlstr'][0]
@@ -497,22 +484,24 @@ class HTTPNotebookFromXML(HTTPNotebookBaseMethod):
     
 
 def _xmlize(nb):
-    return nb.xmlize()
+    data = str(nb[0].xmlize())
+    response = http.Response(200, stream=stream.MemoryStream(data))
+    response.headers.setHeader('content-type', http_headers.MimeType('text', 'xml'))
+    return response
 
 class HTTPNotebookToXML(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
-        print request,
-        print request.args
+        print request, request.args
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
-            d = defer.execute(self.nbc.getNode, userID, notebookID=nbID)
+            d = defer.execute(self.nbc.getNotebook, userID, notebookID=nbID)
             d.addCallback(_xmlize)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
-            d.addCallback(self.packageSuccess, justme=False)
+            # d.addCallback(self.packageSuccess, justme=False)
             d.addErrback(self.packageFailure)
             return d
     

@@ -186,6 +186,7 @@ class NotebookController(object):
             setattr(node,k,v)
         node.touchModified()
         self.session.flush()
+        # print node
         return node
     
     def moveNode(self, userID, nodeID, newParentID, newIndex=None):
@@ -233,6 +234,7 @@ class NotebookController(object):
     def dropNotebook(self, userID, nbID):
         user = self.checkUser(userID)
         nb = self.checkNotebook(user, nbID)
+        dbutil.dropObject(self.session, nb)
     
     def getNotebook(self, userID, **selectFlags):
         user = self.checkUser(userID)

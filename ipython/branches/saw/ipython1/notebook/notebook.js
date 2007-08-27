@@ -1,32 +1,7 @@
-// Some class functions for data structures
+/********    mouseover menus    ********/
 
-function Node(obj){
-    this.nodeID = obj.nodeID;
-    this.dateCreated = obj.dateCreated;
-    this.dateModified = obj.dateModified;
-    this.comment = obj.comment;
-    this.tags = obj.tags;
-};
 
-function TextCell(obj){
-    node = new Node(obj);
-    node.textData = obj.textData;
-    node.format = obj.format;
-    return node;
-};
 
-function TextCell(nodeID, dateC, dateM, comment, tags, input, output){
-    node = new Node(nodeID, dateC, dateM, comment, tags);
-    node.input = input;
-    node.output = output;
-    return node;
-};
-
-function Section(nodeID, dateC, dateM, comment, tags, title){
-    node = new Node(nodeID, dateC, dateM, comment, tags);
-    node.title = title;
-    return node;
-};
 
 /*getParam from cryer.co.uk script8*/
 getParam = function(name){
@@ -44,15 +19,14 @@ getParam = function(name){
     }
     return unescape(result);
 };
+
 // globals
-var currentID = 0;
+var gapID = 0;
 var selectedCell = "";
 var user = Object();
 var activeNotebook = null;
-/*var userID = -1;
-var email = "";
-var username = "";
-*/
+
+/*********************** load/unload functions ********************/
 connect = function(){
     var username = getParam("username");
     if (username == null){
@@ -65,8 +39,11 @@ connect = function(){
     if (!selectedCell){
         selectedCell = "";
     }
-    if (!currentID){
-        currentID = 0;
+    if (!gapID){
+        gapID = 0;
+    }
+    if (!activeNotebook){
+        activeNotebook = null;
     }
     var d = doSimpleXMLHttpRequest("/connectUser", {email:email, username:username});
     d.addCallback(setUser);
@@ -95,6 +72,7 @@ setUser = function(req){
     }
 };
 
+/*********************** sidebar functions ********************/
 refreshNBTable = function(){
     var d = doSimpleXMLHttpRequest("/getNotebooks", {userID:user.userID});
     d.addCallback(setupNBTable);
@@ -148,7 +126,7 @@ getNodeTable = function(element){
     var nodeTables = getElementsByTagAndClassname("table", "section");
     nodeTables += getElementsByTagAndClassname("table", "inputCell");
     nodeTables += getElementsByTagAndClassname("table", "textCell");
-    alert(nodeTables.length);
+/*    alert(nodeTables.length);*/
     for (var i=0;i<nodeTables.length;i++){
         var nt = nodeTables[i];
         if (isParent(nt, element)){
@@ -158,31 +136,39 @@ getNodeTable = function(element){
 };
 
 setActiveNotebook = function(nbID){
-    var d = doSimpleXMLHttpRequest("/getNotebooks", {userID:user.userID, notebookID:nbID});
-    d.addCallback(_setActiveNotebook);
-    return d;
-};
-
-_setActiveNotebook = function(req){
     if (activeNotebook){
         var s = prompt("save before switching?").toLowerCase();
         if (s == "yes" || s == "y"){
             saveActiveNotebook();
         }
     }
-    alert(req.responseText);
+    var d = doSimpleXMLHttpRequest("/getNotebooks", {userID:user.userID, notebookID:nbID});
+    d.addCallback(_setActiveNotebook);
+    return d;
+};
+
+_setActiveNotebook = function(req){
     activeNotebook = evalJSONRequest(req).notebooks[0];
-/*    alert(activeNotebook);*/
-    alert(activeNotebook.root);
     if (!activeNotebook){
         alert(req.responseText);
     }else{
         var nbtd = getElementsByTagAndClassName("td", "notebook")[0];
         nbtd.innerHTML = "";
         nbtd.appendChild(nodeTableFromJSON(activeNotebook.root));
-        alert(nbtd);
     }
 };
+
+refreshNotebook = function(){
+    if (!activeNotebook){
+        alert("No Active Notebook!");
+        return;
+    }
+    var d = doSimpleXMLHttpRequest("/getNotebooks", {userID:user.userID, notebookID:activeNotebook.notebookID});
+    d.addCallback(_setActiveNotebook);
+    return d;
+};
+
+/**** utility functions ******/
 
 alertNode = function(node){
     var s = "id:"+node.nodeID+"\n";
@@ -190,131 +176,462 @@ alertNode = function(node){
     alert(s);
 };
 
-nodeTableFromJSON = function(node){
-/*    var klass = node.nodeType;*/
-    alertNode(node);//for debug
+getMyTable = function(element){
+    while ((element.tagName != "TABLE") && element.tagName != "BODY"){
+        element = element.parentNode;
+/*        alert(element.className);*/
+    }
+    return element;
+};
+
+getMySection = function(element){
+    element = element.parentNode; // ensure that I don't get me back
+    while ((element.tagName != "TABLE" || element.className != "section") && element.tagName != "BODY"){
+        element = element.parentNode;
+    }
+    return element;
+};
+
+getMyChildren = function(section){
+    return section.childNodes[section.childNodes.length-1].cells[0];
+};
+
+previousNode = function(node){
+    var childrenTD = getMyChildren(getMySection(node));
+    
+}
+
+/*********************** main notebook functions ********************/
+
+gapTable = function(index){
     var t = document.createElement("table");
-    t.className = node.nodeType;
-    t.obj = node;
-    t.setAttribute("id", node.nodeID);
-    //header
+    t.className = "gap";
+    t.id = index;
+    //control
     var tr = document.createElement("tr");
     var td = document.createElement("td");
+    td.className = "gap";
+    td.innerHTML = "Insert:&nbsp;";
+    span = document.createElement("span");
+    span.className = "controlLink";
+    span.onclick = function(){addSection(t);};
+/*    span.sett*/
+    span.innerHTML = "Section";
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.innerHTML = "&nbsp;&nbsp;|&nbsp;&nbsp;";
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.className = "controlLink";
+    span.innerHTML = "IOCell";
+    span.onclick = function(){addCell(t, "InputCell");};
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.innerHTML = "&nbsp;&nbsp;|&nbsp;&nbsp;";
+    td.appendChild(span);
+    span = document.createElement("span");
+    span.className = "controlLink";
+    span.innerHTML = "TextCell";
+    span.onclick = function(){addCell(t, "TextCell");};
+    td.appendChild(span);
+    tr.appendChild(td);
+    t.appendChild(tr);
+    
+    return t;
+};
+
+nodeTableFromJSON = function(node){
+    var t = document.createElement("table");
+    t.className = node.nodeType;
+    t.node = node;
+    t.setAttribute("id", node.nodeID);
+    
+    //header
+    var tr = document.createElement("tr");
+    tr.className = "nodeHead";
+    var td = document.createElement("td");
+    if (node.nodeType == "section"){
+        td.className = "sectionTitle";
+        td.innerHTML = node.title;
+    }else{
+        td.className = "cellTitle";
+        td.innerHTML = node.nodeType;
+    }
+    tr.appendChild(td);
+    td = document.createElement("td");
     td.className = "nodeHead";
+    td.innerHTML = " Modified:";
     var span = document.createElement("span");
-    span.innerHTML = "nodeID:";
-    td.appendChild(span);
-    span = document.createElement("span");
-    span.className = "nodeID";
-    span.innerHTML = node.nodeID.toString();
-    td.appendChild(span);
-    span = document.createElement("span");
-    span.innerHTML = "  |  Modified:";
-    td.appendChild(span);
-    span = document.createElement("span");
     span.className = "date";
     span.innerHTML = node.dateModified;
     td.appendChild(span);
-    span = document.createElement("span");
-    span.innerHTML = "  |  Created:";
-    td.appendChild(span);
+    td.innerHTML += " Created:";
     span = document.createElement("span");
     span.className = "date";
     span.innerHTML = node.dateCreated;
     td.appendChild(span);
+    td.innerHTML += " nodeID:";
+    span = document.createElement("span");
+    span.className = "nodeID";
+    span.innerHTML = node.nodeID.toString();
+    td.appendChild(span);
+    tr.appendChild(td);
+    td = document.createElement("td");
+    td.rowSpan = 6;
+    td.className = "collapse";
+    td.setAttribute("onclick", "toggleCollapse(this);");
     tr.appendChild(td);
     t.appendChild(tr);
-    
     //control
     tr = document.createElement("tr");
     td = document.createElement("td");
+    td.setAttribute("colspan", 2);
     td.className = "nodeActions";
     span = document.createElement("span");
     span.className = "controlLink";
-    span.onClick = function(){moveNode(node.nodeID);};
+    span.onclick = function(){moveNode(node.nodeID);};
     span.innerHTML = "move";
     td.appendChild(span);
     span = document.createElement("span");
-    span.innerHTML = "  |  ";
+    span.innerHTML = "&nbsp;&nbsp;|&nbsp;&nbsp;";
     td.appendChild(span);
     span = document.createElement("span");
     span.className = "controlLink";
     span.innerHTML = "drop";
-    span.onClick = function(){dropNode(node.nodeID);};
+    span.onclick = function(){dropNode(node.nodeID);};
     td.appendChild(span);
     span = document.createElement("span");
-    span.innerHTML = "  |  ";
+    span.innerHTML = "&nbsp;&nbsp;|&nbsp;&nbsp;";
     td.appendChild(span);
     span = document.createElement("span");
     span.className = "controlLink";
     span.innerHTML = "save";
-    span.onClick = function(){saveNode(node.nodeID);};
+    span.onclick = function(){saveNode(node.nodeID);};
     td.appendChild(span);
     tr.appendChild(td);
     t.appendChild(tr);
     
     tr = document.createElement("tr");
     td = document.createElement("td");
+    td.setAttribute("colspan", 2);
     for (var i=0;i<node.tags.length;i++){
         span = document.createElement("span");
         span.className = "tag";
+        span.setAttribute("onclick", "removeTag(this);");
         span.innerHTML = node.tags[i];
         td.appendChild(span);
+        td.innerHTML += ", ";
     }
+    ta = document.createElement("textarea");
+    ta.className = "tag";
+    ta.value = "add tag";
+    ta.onfocus = function(){this.value = "";};
+    ta.setAttribute("onblur", "updateTags(this, event);");
+    ta.setAttribute("onkeypress", "maybeUpdateTags(this, event);");
+/*    ta.setAttribute("onkeypress", "resizeTagArea(this, event);");*/
+    td.appendChild(ta);
     tr.appendChild(td);
     t.appendChild(tr);
 
     tr = document.createElement("tr");
     td = document.createElement("td");
+/*    td.colspan = 2;*/
+    td.setAttribute("colspan", 2);
     td.className = "comment";
-    td.innerHTML = node.comment;
+    var ta = document.createElement("textarea");
+    ta.className = "comment";
+    ta.setAttribute("onblur","updateTextArea(this,event);");
+    ta.setAttribute("onkeypress", "resizeTextArea(this, event);");
+    td.appendChild(ta);
+    if (node.comment.length < 1){
+        ta.value = "comments";
+        ta.onfocus = function(){
+            this.value = "";
+            this.onfocus = null;
+            };
+    }else{
+        ta.value = node.comment;
+    }
     tr.appendChild(td);
     t.appendChild(tr);
+    resizeTextArea(ta,null);
+/*    alertNode(node);*/
     
     if (t.className == "section"){
         tr = document.createElement("tr");
         td = document.createElement("td");
+        td.setAttribute("colspan", 2);
         td.className = "children";
+        td.appendChild(gapTable(0));
         for (var i=0; i<node.children.length; i++){
             td.appendChild(nodeTableFromJSON(node.children[i]));
+            td.appendChild(gapTable(node.notebookID, i+1));
         };
         tr.appendChild(td);
         t.appendChild(tr);
+/*        alert(td.abbr);*/
         
     }else if (t.className == "inputCell"){
         tr = document.createElement("tr");
         td = document.createElement("td");
-        td.className = "input";
-        td.innerHTML = node.input;
+        td.setAttribute("colspan", 2);
+        var div = document.createElement("div");
+        div.className = "inLabel";
+        div.innerHTML = "In&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;&nbsp;]:";
+        td.appendChild(div);
+        div = document.createElement("div");
+        div.className = "inContent";
+        ta = document.createElement("textarea");
+        ta.setAttribute("onblur","updateTextArea(this,event);");
+        ta.setAttribute("onkeypress", "resizeTextArea(this, event);");
+        ta.className = "input";
+        ta.value = node.input;
+        div.appendChild(ta);
+        td.appendChild(div);
         tr.appendChild(td);
         t.appendChild(tr);
+        resizeTextArea(ta,null);
         
         tr = document.createElement("tr");
         td = document.createElement("td");
-        td.className = "output";
-        td.innerHTML = node.output;
+        td.setAttribute("colspan", 2);
+        div = document.createElement("div");
+        div.className = "outLabel";
+        div.innerHTML = "Out&nbsp;[&nbsp;&nbsp;]:";
+        td.appendChild(div);
+        div = document.createElement("div");
+        div.className = "outContent";
+        if (node.output.length < 1){
+            div.innerHTML = "&nbsp;";
+        }else{
+            div.innerHTML = node.output;
+        }
+        td.appendChild(div);
         tr.appendChild(td);
         t.appendChild(tr);
         
     }else if (t.className == "textCell"){
         tr = document.createElement("tr");
         td = document.createElement("td");
-        td.className = "format";
-        td.innerHTML = node.format;
+        td.setAttribute("colspan", 2);
+        ta = document.createElement("textarea");
+        ta.className = "format";
+        ta.setAttribute("onblur","updateTextArea(this,event);");
+        ta.setAttribute("onkeypress", "resizeTextArea(this, event);");
+        if (!node.format || node.format.length < 1){
+            ta.value = "format";
+            ta.onfocus = function(){
+                this.value = "";
+                this.onfocus = null;
+                };
+        }else{
+            ta.value = node.format;
+        }
+        td.appendChild(ta);
         tr.appendChild(td);
         t.appendChild(tr);
+        resizeTextArea(ta,null);
         
         tr = document.createElement("tr");
         td = document.createElement("td");
-        td.className = "textData";
-        td.innerHTML = node.textData;
+        td.setAttribute("colspan", 2);
+        ta = document.createElement("textarea");
+        ta.className = "textData";
+        ta.setAttribute("onblur","updateTextArea(this,event);");
+        ta.setAttribute("onkeypress", "resizeTextArea(this, event);");
+        if (node.textData.length < 1){
+            ta.value = "Text Data";
+            ta.onfocus = function(){
+                this.value = "";
+                this.onfocus = null;
+                };
+        }else{
+            ta.value = node.textData;
+        }
+        td.appendChild(ta);
         tr.appendChild(td);
         t.appendChild(tr);
+        resizeTextArea(ta,null);
     }
+/*    alertNode(node);//for debug*/
+    
     return t;
 };
 
+updateTextArea = function(textarea){
+    var t = getMyTable(textarea);
+/*    var nodeID = t.node.nodeID;*/
+    if (t.node[textarea.className] == textarea.value){
+        //no change
+        return;
+    }
+    args = {};
+    args.userID = user.userID;
+    args.nodeID = t.node.nodeID;
+    args[textarea.className]= textarea.value;
+/*    alert(textarea.className);*/
+    var d = doSimpleXMLHttpRequest("/editNode", args);
+    d.addCallback(_updateNode, t);
+};
+_updateNode = function(t,req){
+    var node = evalJSONRequest(req);
+    var newt = nodeTableFromJSON(node);
+    swapDOM(t, newt);
+};
+stripTag = function(tag){
+    while (tag.length > 0 && tag[0] == " "){
+        tag = tag.substring(1);
+    }
+    while (tag.length > 0 && tag[tag.length-1] == " "){
+        tag = tag.substring(0,tag.length-2);
+    }
+    return tag;
+};
+getTags = function(table){
+    var spanlist = getElementsByTagAndClassName("SPAN", "tag");
+    var taglist = new Array;
+    for (i=0; i < spanlist.length; i++){
+        if (isParent(spanlist[i], table)){
+            taglist.push(spanlist[i].innerHTML);
+/*            alert(spanlist[i].innerHTML);*/
+        }
+    }
+    return taglist;
+};
+isin = function(element, array){
+    for (var i=0;i<array.length;i++){
+        if (element == array[i]){
+            return true;
+        }
+    }
+    return false;
+};
+maybeUpdateTags = function(textarea, event){
+    if (event.keyCode == 13){
+        updateTags(textarea);
+    }
+};
+updateTags = function(textarea){
+    var t = getMyTable(textarea);
+/*    var nodeID = t.node.nodeID;*/
+    var args = {};
+    args.userID = user.userID;
+    args.nodeID = t.node.nodeID;
+    var l = textarea.value.split(",");
+    textarea.value = "";
+    if (l.length == 0){
+        return;
+    }
+    args.tags = getTags(t);
+    var len = args.tags.length;
+    for (var i=0; i < l.length; i++){
+        var tag = stripTag(l[i]);
+        if (tag != "" && !isin(tag, args.tags)){
+            args.tags.push(tag);
+        }
+    }
+    if (args.tags.length <= len){
+        return;
+    }
+/*    alert(nodeID);*/
+    var d = doSimpleXMLHttpRequest("/editNode", args);
+    d.addCallback(_updateNode, t);
+};
+removeTag = function(span){
+    alert(span);
+    var t = getMyTable(span);
+    var args = {};
+    args.userID = user.userID;
+    args.nodeID = t.node.nodeID;
+    span.parentNode.removeChild(span);
+    args.tags = getTags(t);
+    var d = doSimpleXMLHttpRequest("/editNode", args);
+    d.addCallback(_updateNode, t);
+}
+addSection = function(gapt){
+    var args = {};
+    args.userID = user.userID;
+    var t = getMyTable(gapt);
+    var parentT = getMySection(t);
+    var childrenTD = getMyChildren(parentT);
+    args.parentID = parentT.node.nodeID;
+    for (var i=0;i<childrenTD.childNodes.length;i++){
+        if (childrenTD.childNodes[i] == t){
+            args.index = i/2;
+            break;
+        }
+    }
+    args.title = prompt("Title");
+    args.nodeType = "Section";
+    var d = doSimpleXMLHttpRequest("/addNode",args);
+    d.addCallback(refreshNotebook);
+};
+addCell = function(gapt, nodeType){
+    var args = {};
+    args.userID = user.userID;
+    var t = getMyTable(gapt);
+    var parentT = getMySection(t);
+    var childrenTD = getMyChildren(parentT);
+    args.parentID = parentT.node.nodeID;
+    for (var i=0;i<childrenTD.childNodes.length;i++){
+        if (childrenTD.childNodes[i] == t){
+            args.index = i/2;
+            break;
+        }
+    }
+    args.nodeType = nodeType;
+    var d = doSimpleXMLHttpRequest("/addNode",args);
+    d.addCallback(refreshNotebook);
+};
 
+dropNode = function(nodeID){
+    var args = {};
+    args.userID = user.userID;
+    args.nodeID = nodeID;
+    var d = doSimpleXMLHttpRequest("/dropNode",args);
+    d.addCallback(refreshNotebook);
+};
+
+moveNode = function(nodeID){
+    var args = {};
+    args.userID = user.userID;
+    args.nodeID = nodeID;
+    args.parentID = prompt("new parent?");
+    args.index = prompt("new Location?");
+    var d = doSimpleXMLHttpRequest("/moveNode",args);
+    d.addCallback(refreshNotebook);
+};
+dumpNotebook = function(){
+    if (!activeNotebook){
+        alert("No Active Notebook");
+    }else{
+/*        alert(document.location);*/
+        var loc = document.location;
+        if (loc.search.indexOf("?") > -1){
+            loc = loc.href.substring(0,loc.search.indexOf("?"));
+        }
+        var qs = queryString({userID:user.userID, notebookID:activeNotebook.notebookID});
+        alert(qs);
+        window.open(loc+"notebook.xml?"+qs);
+    }
+};
+
+dropNotebook = function(){
+    if (!activeNotebook){
+        alert("No Active Notebook");
+    }else{
+        var d = doSimpleXMLHttpRequest("/dropNotebook",{userID:user.userID, notebookID:activeNotebook.notebookID});
+        d.addCallback(refreshNBTable)
+        activeNotebook = null;
+        var nbtd = getElementsByTagAndClassName("td", "notebook")[0];
+        nbtd.innerHTML = "";
+    }
+}
+
+
+
+
+/******* old functions, to be adapted, or dropped ******/
 handleOutput = function(cmd_id, id, out){
     var cell = document.getElementById(cmd_id);
     cell.lastChild.firstChild.firstChild.innerHTML = "In&nbsp;["+id+"]:";
@@ -348,10 +665,9 @@ addIOCell = function(){
     inRow.appendChild(inLabel);
     var inContent = document.createElement("div");
     inContent.className = "inContent";
-    var textArea = document.createElement("textarea");
-    textArea.rows = 1;
-    textArea.setAttribute("onkeypress","resizeTextArea(this,event);");
-    inContent.appendChild(textArea);
+    var ta = document.createElement("textarea");
+    ta.setAttribute("onkeypress","resizeTextArea(this,event);");
+    inContent.appendChild(ta);
     inRow.appendChild(inContent);
 
     // Create the output row within the inOut column
@@ -386,7 +702,6 @@ addIOCell = function(){
     else{
         selectedCell.parentNode.appendChild(ioCell);
     }
-    setCollapseHeight(ioCell);
 };
 
 
@@ -398,11 +713,11 @@ addTextCell = function(){
         // Create the text column
         var textCol = document.createElement("div");
         textCol.className = "textCol";
-        var textArea = document.createElement("textarea");
-        textArea.className = "textCell";
-        textArea.rows = 1;
-        textArea.setAttribute("onkeypress","resizeTextArea(this,event);");
-        textCol.appendChild(textArea);
+        var ta = document.createElement("textarea");
+        ta.className = "textCell";
+        ta.rows = 1;
+        ta.setAttribute("onkeypress","resizeTextArea(this,event);");
+        textCol.appendChild(ta);
 
         // Create the collapse columns
         var Collapse = document.createElement("div");
@@ -421,81 +736,53 @@ addTextCell = function(){
             selectedCell.parentNode.appendChild(textCell);
         }
 
-        setCollapseHeight(textCell);
-};
-
-setCollapseHeight = function(cellObj){
-        //Cell.style.backgroundColor = "blue";
-        //window.alert(Cell.clientHeight - 2);
-        //window.alert(Cell.className);
-        //Cell.style.backgroundColor = "";
-
-        // Iteratively fix the parents
-        while (cellObj.id != "nb"){
-        var Collapse = cellObj.firstChild; // for some reason, the Cell sees the Collapse as the firstChild and inOut as the lastChild
-        Collapse.style.height = cellObj.clientHeight - 2;
-
-        cellObj = cellObj.parentNode;
-        }
 };
 
 resizeTextArea = function(textareaObj,e){
         // this also captures Shift+Enter to execute
-        var numRows = textareaObj.value.split("\n").length; 
-        textareaObj.rows = numRows;
-
-        // textCells and I/O cells have different ways of getting the cell from the textArea
-        if (textareaObj.className == "textCell"){
-            var Cell = textareaObj.parentNode.parentNode; // div.textCell->div.textCol->textarea.textCell
+        var numRows = textareaObj.value.split("\n").length;
+        var td = textareaObj.parentNode; // td
+/*        alert(numRows);*/
+        if (e && e.keyCode == 13 && !(e.shifKey && td.className == "input")){
+            textareaObj.style.height = (numRows+1 || 1).toString()+".2em";
+        }else{
+            textareaObj.style.height = (numRows || 1).toString()+".2em";
         }
-        else{
-            var Cell = textareaObj.parentNode.parentNode.parentNode.parentNode; // div.ioCell->div.inOut->div.inRow->div.Content->textarea(obj)
-        }
-
+        // textCells and I/O cells have different ways of getting the cell from the ta
+/*        alert(td.parentNode);*/
+/*        td.height = textareaObj.rows*12;*/
+/*        alert(td.height);*/
+/*        td.*/
+/*        textareaObj.rows = textareaObj.rows*12;*/
+/*        td.height = */
+/*        alert(td.clientHeight);*/
+/*        alert(textareaObj.rows);*/
         // textCells automatically break out of collapse when typed into
         // make I/O cells break out by showing the output
-        if (Cell.className == "ioCell"){
-            Cell.lastChild.firstChild.firstChild.innerHTML = "In&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:"
-            if (e.shiftKey && e.keyCode == 13){
-                var line = textareaObj.value;
+        
+        if (td.className == "input"){
+/*            Cell.lastChild.firstChild.firstChild.innerHTML = "In&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:"*/
+            if (e && e.shiftKey && e.keyCode == 13){//shift-enter
+                var lines = textareaObj.value;
+                alert(lines);
                 textareaObj.disabled = true;
-                self.callRemote("execute", Cell.id, line);
+                d = doSimpleXMLHttpRequest("/execute", {userID:user.userID, lines:lines})
+                d.addCallback(function(req){alert(req.responseText)});
             }else{
-                Cell.lastChild.lastChild.style.display = "";
+                var ioTable = Cell.parentNode.parentNode;
+                ioTable.rows[ioTable.rows.length-1][0].display = "";
             }
         }
-
-        // Make sure the height of collapse follows with the expanding or shrinking textarea
-        setCollapseHeight(Cell);
 };
 
 toggleCollapse = function(collapseObj){
-        var Cell = collapseObj.parentNode; // div.cell->div.collapse
-
-        if (Cell.className == "ioCell"){
-            var inRow = Cell.lastChild.firstChild;
-            var textArea = inRow.lastChild.firstChild;
-            var outRow = Cell.lastChild.lastChild; // for some reason, the Cell sees the Collapse as the firstChild and inOut as the lastChild
-            if (outRow.style.display == "none"){
-                resizeTextArea(textArea,"");
-                outRow.style.display = "";
-            }
-            else{
-                textArea.rows = 1;
-                outRow.style.display = "none";
-            }
-        }else if (Cell.className == "textCell"){
-            var textArea = Cell.childNodes[1].firstChild; // div.textCell->div.textCol->textarea.textCell
-            if (textArea.rows == 1){
-                resizeTextArea(textArea,"");
-            }
-            else{
-                textArea.rows = 1;
-            }
+    var t = getMyTable(collapseObj);
+    for (var i=1; i<t.childNodes.length; i++){
+        var row = t.childNodes[i];
+        if (row.style.display == "none"){
+            row.style.display = "";
+        }else{
+            row.style.display = "none";
         }
-        setCollapseHeight(Cell);
+    }
 };
-
-selectCell = function(obj){
-};
-

@@ -71,14 +71,15 @@ def connectDB(fname='ipnotebook.db', ipythondir=None):
         # checkDB(DB)
         return metadata
 
-def initDB(dburi='sqlite://', echo=False):
+def initDB(dburi='sqlite://', echo=False, clear=False):
     """create an engine, and connect our metadata object to it.  Then, 
     create our tables in the engine.  
     Defaults to an in-memory sqlite engine."""
     engine = sqla.create_engine(dburi)
     engine.echo=echo
     metadata.connect(engine)
-    metadata.drop_all()
+    if clear:
+        metadata.drop_all()
     metadata.create_all()
     return metadata
 

@@ -7,6 +7,86 @@ body
     border: thin solid red;
 }
 */
+/*Notebook Segment*/
+table{
+    font-size: 12px;
+    padding: 2px;
+    border-collapse: collapse;
+    border: 2px solid;
+    width: 100%;
+}
+table.section, table.section td,table.gap{
+    border-color: #CCCCFF;
+}
+table.inputCell, table.inputCell td{
+    border-color: #FFAAAA;
+}
+table.textCell, table.textCell td{
+    border-color: #AAFFAA;
+}
+td.sectionTitle{
+    font-weight: bold;
+    font-size: 18px;
+/*    background: #CCCCFF;*/
+    padding: 4px;
+}
+table.section tr.nodeHead{
+    background: #CCCCFF;
+}
+table.inputCell tr.nodeHead{
+    background: #FFAAAA;
+}
+table.textCell tr.nodeHead{
+    background: #AAFFAA;
+}
+td.cellTitle{
+    font-weight: bold;
+    font-size: 12px;
+/*    background: #CCFFCC;*/
+    padding: 2px;
+}
+
+td{
+    border-bottom: thin solid;
+}
+td.children{
+    padding: 1px;
+    vertical-align: top;
+}
+
+td.nodeHead{
+    font-weight: bold;
+    text-align: right;
+    font-size:10px;
+    padding: 6px;
+    color: #111100;
+}
+
+span.date{
+/*    font-size: 10px;*/
+    color: #2222FF;
+}
+
+td.nodeActions{
+}
+
+span.tag{
+    text-decoration: underline;
+    color: blue;
+}
+
+textarea.comment{
+    font-style: italic;
+    color: green;
+}
+textarea.format{
+    font-style: italic;
+    color: red;
+}
+td.gap {
+    font-size: 11px;
+    padding: 2px;
+}
 div.pageHeader
 {
   font-family: Tahoma, sans-serif;
@@ -68,16 +148,15 @@ div.inOut
   margin-right: 10px; /* should be same as div.collapse width plus some spacing (5px)*/
 }
 
-div.inRow
-{
-}
 div.inLabel
 {
   float: left;
+  padding: 2px;
   color: blue;
 }
 div.inContent
 {
+/*  padding: 2px;*/
   overflow: hidden;
 }
 textarea.ioCell
@@ -86,28 +165,17 @@ textarea.ioCell
   font-size: 10pt;
 }
 
-div.outRow
-{
-}
 div.outLabel
 {
+  padding: 2px;
   float: left;
   color: red;
 }
 div.outContent
 {
-  overflow: hidden;
+  padding: 2px;
 }
 
-div.collapse
-{
-  float: right;
-  width: 5px; /* width should be same as div.inOut margin-right */
-  border-width: 1px 1px 1px 0px;
-  border-style: solid;
-  border-color: black;
-  cursor: pointer;
-}
 
 /*
   A Text Cell consists of two columns: text and collapse
@@ -139,14 +207,18 @@ div.content
 }
 
 /* -------------- */
-textarea,div.bottom
+textarea
 {
-  margin-top: 0px;
   width: 100%;
-  border: thin dashed green;
-  overflow-x: auto;
-  overflow-y: hidden;
+  border: thin dashed #DDDDFF;
+/*  height: 1em;*/
 }
+
+textarea.tag {
+    width: 200px;
+    height: 1.2em;
+}
+
 /* From MochiKit AJAX Tables example: */
 h1 {
 /*    font-size: 2em;*/
@@ -157,6 +229,7 @@ h1 {
 table.nblist {
 /*    width: 100;*/
     border-collapse: collapse;
+    border-color: #CCCCFF;
     font-weight: bold;
 }
 
@@ -226,49 +299,9 @@ table.nblist tfoot td, table.nblist tfoot th {
 .mochi-example { display: none; }
 
 
-/*Notebook Segment*/
-table{
-    font-size: 12px;
-    padding: 0px;
-    border: 2px solid #CCCCFF;
-    width: 100%;
-}
-td{
-    padding: 2px;
-    border-bottom: thin solid #CCCCFF;
-}
 
-td.nodeHead{
-    font-weight: bold;
-/*    font-size:12px;*/
-    background: #CCCCFF;
-    padding: 6px;
-    color: #111100;
+td.collapse{
+  width: 5px; /* width should be same as div.inOut margin-right */
+/*  background-color: white;*/
+  cursor: pointer;
 }
-
-span.date{
-/*    font-size: 10px;*/
-    font-color: #444400;
-}
-
-td.nodeActions{
-}
-
-span.tag{
-    font-weight: underline;
-    color: blue;
-}
-
-td.comments{
-    font-style: italic;
-    font-color: light green;
-}
-table.section td.sectionTitle{
-    font-weight: bold;
-    font-size: 14px;
-    background: #CCCCFF;
-    padding: 4px;
-    
-}
-
-

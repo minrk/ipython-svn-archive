@@ -77,7 +77,7 @@ def escape(s):
         return None
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
-tformat = "%Y-%m-%d %H:%M:%S"
+tformat = "%Y-%m-%d-%H:%M:%S"
 
 def XMLUser(u, justme=False):
     s  = "<userID>%i</userID>\n"%u.userID
@@ -208,7 +208,7 @@ def jsonifySection(sec, keepdict=False, justme=False):
     if justme:
         d['children'] = [sec[i].cellID for i in range(len(sec._children))]
     else:
-        d['children'] = [sec[i].jsonify(True,True) for i in range(len(sec._children))]
+        d['children'] = [sec[i].jsonify(True,False) for i in range(len(sec._children))]
     # print d
     if keepdict:
         return d
