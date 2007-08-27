@@ -2517,7 +2517,7 @@ Defaulting color scheme to 'NoColor'"""
             dhist = self.shell.user_ns['_dh']
             dhist.append(cwd)
             self.db['dhist'] = compress_dhist(dhist)[-100:]
-        if not 'q' in opts:
+        if not 'q' in opts and self.shell.user_ns['_dh']:
             print self.shell.user_ns['_dh'][-1]
 
 
