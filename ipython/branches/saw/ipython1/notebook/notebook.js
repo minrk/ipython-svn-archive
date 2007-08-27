@@ -252,6 +252,7 @@ nodeTableFromJSON = function(node){
     var td = document.createElement("td");
     if (node.nodeType == "section"){
         td.className = "sectionTitle";
+        td.setAttribute("onclick","updateTitle(this);");
         td.innerHTML = node.title;
     }else{
         td.className = "cellTitle";
@@ -457,7 +458,19 @@ nodeTableFromJSON = function(node){
     
     return t;
 };
-
+updateTitle = function(titleTD){
+    var t = getMyTable(titleTD);
+    newtitle = prompt("New Title", t.node.title)
+    if (t.node.title == newtitle){
+        return;
+    }
+    args = {};
+    args.userID = user.userID;
+    args.nodeID = t.node.nodeID;
+    args["title"]= newtitle;
+    var d = doSimpleXMLHttpRequest("/editNode", args);
+    d.addCallback(_updateNode, t);
+};
 updateTextArea = function(textarea){
     var t = getMyTable(textarea);
 /*    var nodeID = t.node.nodeID;*/
@@ -611,7 +624,6 @@ dumpNotebook = function(){
             loc = loc.href.substring(0,loc.search.indexOf("?"));
         }
         var qs = queryString({userID:user.userID, notebookID:activeNotebook.notebookID});
-        alert(qs);
         window.open(loc+"notebook.xml?"+qs);
     }
 };

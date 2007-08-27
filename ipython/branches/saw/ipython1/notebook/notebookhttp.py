@@ -272,7 +272,7 @@ class HTTPNotebookEditNode(HTTPNotebookBaseMethod):
             nodeID = int(request.args.pop('nodeID')[0])
             flags = {}
             for k,v in request.args.iteritems():
-                if k in ['textData', 'input', 'output','comment', 'format']:
+                if k in ['textData', 'input', 'output','comment', 'format', 'title']:
                     flags[k] = v[0]
                 elif k in ['parentID','nextID', 'previousID']:
                     flags[k] = int(v[0])

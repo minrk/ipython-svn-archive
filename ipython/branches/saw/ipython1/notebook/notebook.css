@@ -1,6 +1,6 @@
 body
 {
-  border: thin solid gray;
+/*  border: thin solid gray;*/
 }
 /*div
 {
@@ -15,6 +15,14 @@ table{
     border: 2px solid;
     width: 100%;
 }
+table.mainTable
+{
+    border: 0;
+    width: 100%;
+    padding: 0;
+}
+table.mainTable td{border: thin solid gray;}
+
 table.section, table.section td,table.gap{
     border-color: #CCCCFF;
 }
@@ -29,6 +37,7 @@ td.sectionTitle{
     font-size: 18px;
 /*    background: #CCCCFF;*/
     padding: 4px;
+/*    height: 1.1em;*/
 }
 table.section tr.nodeHead{
     background: #CCCCFF;
@@ -92,14 +101,10 @@ div.pageHeader
   font-family: Tahoma, sans-serif;
   font-size: 20pt;
   background-color: #DDDDFF;
-  border-bottom: thin solid gray;
+  border-left: thin solid gray;
+  border-right: thin solid gray;
+  border-top: thin solid gray;
   padding: 5px;
-}
-table.mainTable
-{
-    border: thin dashed blue;
-    width: 100%;
-    padding: 0;
 }
 td.sidebar
 {
