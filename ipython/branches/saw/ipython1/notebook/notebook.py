@@ -18,7 +18,7 @@ __docformat__ = "restructuredtext en"
 
 import zope.interface as zi
 import sqlalchemy as sqla
-
+from twisted.python.failure import Failure
 from ipython1.kernel.error import NotFoundError
 from ipython1.notebook import models, dbutil, xmlutil
 
@@ -55,6 +55,9 @@ class INotebookController(zi.Interface):
     def moveNode(userID, nodeID, newParentID, index=None):
         """move a node to new parent at index"""
     
+    def execute(userID, nodeID):
+        """executes the input of an IO cell, updating the output on completion"""
+        
     def addNotebook(userID, title):
         """create a notebook and root Section for `user` with `title`"""
     
@@ -85,19 +88,23 @@ class INotebookController(zi.Interface):
     def loadNotebookFromXML(xmlstr):
         """load a notebook from an xmlstring"""
     
+    
 
 class NotebookController(object):
     """The basic IPython Notebook Server object"""
     zi.implements(INotebookController)
     
-    def __init__(self, session=None):
+    def __init__(self, engine=None, session=None):
         if session is None:
             session = sqla.create_session()
         self.session = session
+        self.engine = engine
         self.userQuery = session.query(models.User)
         self.nodeQuery = session.query(models.Node)
         self.nbQuery = session.query(models.Notebook)
         self.users = []
+    
+    # utility functions
     
     def checkUser(self, userID):
         assert userID in self.users, "You are not an active user!"
@@ -113,6 +120,8 @@ class NotebookController(object):
         nb = self.nbQuery.selectone_by(notebookID=notebookID)
         assert user is nb.user, "this is not your Notebook"
         return nb
+    
+    # user functions
     
     def connectUser(self, usernameOrID, email=None):
         try:
@@ -148,6 +157,8 @@ class NotebookController(object):
             nb.touchModified()
         self.dropUser(userIDb)
         return userA
+    
+    # Node functions
     
     def getNode(self, userID, **selectflags):
         user = self.checkUser(userID)
@@ -223,9 +234,29 @@ class NotebookController(object):
         return n
     
     def dropNode(self, userID, nodeID):
-        user =self.checkUser(userID)
+        user = self.checkUser(userID)
         node = self.checkNode(user, nodeID)
         dbutil.dropObject(self.session, node)
+    
+    def _updateOutput(self, result, node):
+        if isinstance(result, Failure):
+            result = result.getTraceback()
+        else:
+            result = result.get("stdout","")
+        node.output = result
+        print result
+        return result
+        
+    def execute(self, userID, nodeID):
+        user = self.checkUser(userID)
+        assert self.engine is not None, "No engine to execute"
+        node = self.checkNode(user, nodeID)
+        assert isinstance(node, models.InputCell), "Only Execute IO Cells"
+        d = self.engine.execute(node.input)
+        d.addBoth(self._updateOutput, node)
+        return d
+        
+    # notebook functions
     
     def addNotebook(self, userID, title):
         user = self.checkUser(userID)
@@ -310,8 +341,11 @@ class INotebookUser(zi.Interface):
     def editNode(nodeID, **options):
         """"""
     
-    def moveNode(userID, nodeID, newParentID, index=None):
+    def moveNode(nodeID, newParentID, index=None):
         """move a node to new parent at index"""
+    
+    def execute(nodeID):
+        """"""
     
     def addNotebook(title):
         """"""
@@ -375,6 +409,9 @@ class NotebookUser(object):
     
     def editNode(self, nodeID, **options):
         return self.nbc.editNode(self.user.userID, nodeID, **options)
+    
+    def execute(self, nodeID):
+        return self.nbc.execute(self.user.userID, nodeID)
     
     def addNotebook(self, title):
         return self.nbc.addNotebook(self.user.userID, title)

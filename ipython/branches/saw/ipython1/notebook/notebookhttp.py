@@ -69,6 +69,7 @@ class HTTPNotebookServer(static.File):
         self.putChild('getNodes', HTTPNotebookGetNode(self.nbc))
         self.putChild('editNode', HTTPNotebookEditNode(self.nbc))
         self.putChild('moveNode', HTTPNotebookMoveNode(self.nbc))
+        self.putChild('execute', HTTPNotebookExecute(self.nbc))
         
         self.putChild('addTag', HTTPNotebookAddTag(self.nbc))
         self.putChild('dropTag', HTTPNotebookDropTag(self.nbc))
@@ -299,6 +300,22 @@ class HTTPNotebookMoveNode(HTTPNotebookBaseMethod):
             parentID = int(request.args['parentID'][0])
             index = int(request.args['index'][0])
             d = defer.execute(self.nbc.moveNode, userID, nodeID, parentID, index)
+        except Exception, e:
+            return self.packageFailure(failure.Failure(e))
+        else:
+            d.addCallback(self.packageSuccess, justme=False)
+            d.addErrback(self.packageFailure)
+            return d
+    
+
+class HTTPNotebookExecute(HTTPNotebookBaseMethod):
+    
+    def renderHTTP(self, request):
+        print request, request.args
+        try:
+            userID = int(request.args['userID'][0])
+            nodeID = int(request.args['nodeID'][0])
+            d = self.nbc.execute(userID, nodeID).addCallback(lambda _:None)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:

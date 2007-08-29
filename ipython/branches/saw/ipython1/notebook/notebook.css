@@ -179,6 +179,7 @@ div.outLabel
 div.outContent
 {
   padding: 2px;
+  float: left;
 }
 
 

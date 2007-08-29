@@ -25,6 +25,7 @@ var gapID = 0;
 var selectedCell = "";
 var user = Object();
 var activeNotebook = null;
+var pending = [];
 
 /*********************** load/unload functions ********************/
 connect = function(){
@@ -44,6 +45,9 @@ connect = function(){
     }
     if (!activeNotebook){
         activeNotebook = null;
+    }
+    if (!pending){
+        pending = [];
     }
     var d = doSimpleXMLHttpRequest("/connectUser", {email:email, username:username});
     d.addCallback(setUser);
@@ -179,7 +183,6 @@ alertNode = function(node){
 getMyTable = function(element){
     while ((element.tagName != "TABLE") && element.tagName != "BODY"){
         element = element.parentNode;
-/*        alert(element.className);*/
     }
     return element;
 };
@@ -198,7 +201,16 @@ getMyChildren = function(section){
 
 previousNode = function(node){
     var childrenTD = getMyChildren(getMySection(node));
-    
+    alert("TBimp")
+};
+
+isPending = function(nodeID){
+    for (var i=0; i<pending.length; i++){
+        if (nodeID == pending[i]){
+            return true;
+        }
+    }
+    return false;
 }
 
 /*********************** main notebook functions ********************/
@@ -387,6 +399,9 @@ nodeTableFromJSON = function(node){
         ta.setAttribute("onkeypress", "resizeTextArea(this, event);");
         ta.className = "input";
         ta.value = node.input;
+        if (isPending(node.nodeID)){
+            ta.disabled = true;
+        }
         div.appendChild(ta);
         td.appendChild(div);
         tr.appendChild(td);
@@ -402,10 +417,10 @@ nodeTableFromJSON = function(node){
         td.appendChild(div);
         div = document.createElement("div");
         div.className = "outContent";
-        if (node.output.length < 1){
+        if (node.output.length < 1 || isPending(node.nodeID)){
             div.innerHTML = "&nbsp;";
         }else{
-            div.innerHTML = node.output;
+            div.innerHTML = node.output.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/\n/g,"<br>\n");
         }
         td.appendChild(div);
         tr.appendChild(td);
@@ -485,12 +500,14 @@ updateTextArea = function(textarea){
 /*    alert(textarea.className);*/
     var d = doSimpleXMLHttpRequest("/editNode", args);
     d.addCallback(_updateNode, t);
+    return d;
 };
 _updateNode = function(t,req){
     var node = evalJSONRequest(req);
     var newt = nodeTableFromJSON(node);
     swapDOM(t, newt);
 };
+/********** tag functions    ***********/
 stripTag = function(tag){
     while (tag.length > 0 && tag[0] == " "){
         tag = tag.substring(1);
@@ -614,6 +631,25 @@ moveNode = function(nodeID){
     var d = doSimpleXMLHttpRequest("/moveNode",args);
     d.addCallback(refreshNotebook);
 };
+
+execute = function(nodeID){
+    var args = {};
+    args.userID = user.userID;
+    args.nodeID = nodeID;
+    var d = doSimpleXMLHttpRequest("/execute",args);
+    d.addCallback(_execute, nodeID);
+    d.addCallback(refreshNotebook);
+    return d;
+};
+_execute = function(nodeID, result){
+    for(var i=0; i<pending.length;i++){
+        if(nodeID == pending[i]){
+            pending = pending.slice(0,i).concat(pending.slice(i+1));
+        }
+    }
+    return result;
+};
+
 dumpNotebook = function(){
     if (!activeNotebook){
         alert("No Active Notebook");
@@ -641,9 +677,6 @@ dropNotebook = function(){
 }
 
 
-
-
-/******* old functions, to be adapted, or dropped ******/
 handleOutput = function(cmd_id, id, out){
     var cell = document.getElementById(cmd_id);
     cell.lastChild.firstChild.firstChild.innerHTML = "In&nbsp;["+id+"]:";
@@ -654,135 +687,31 @@ handleOutput = function(cmd_id, id, out){
 };
 
 
-
-
-addIOCell = function(){
-    var id = currentID;
-    currentID++;
-    // Create an empty I/O cell
-    var ioCell = document.createElement("div");
-    ioCell.className = "ioCell";
-    ioCell.setAttribute("id", "ioCell"+id);
-
-    // Create an empty inOut column
-    var inOut = document.createElement("div");
-    inOut.className = "inOut";
-
-    // Create the input row within the inOut column
-    var inRow = document.createElement("div");
-    inRow.className = "inRow";
-    var inLabel = document.createElement("div");
-    inLabel.className = "inLabel";
-    inLabel.innerHTML = "In&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:";
-    inRow.appendChild(inLabel);
-    var inContent = document.createElement("div");
-    inContent.className = "inContent";
-    var ta = document.createElement("textarea");
-    ta.setAttribute("onkeypress","resizeTextArea(this,event);");
-    inContent.appendChild(ta);
-    inRow.appendChild(inContent);
-
-    // Create the output row within the inOut column
-    var outRow = document.createElement("div");
-    outRow.className = "outRow";
-    var outLabel = document.createElement("div");
-    outLabel.className = "outLabel";
-    outLabel.innerHTML = "Out&nbsp;&nbsp;&nbsp;&nbsp;:";
-    outRow.appendChild(outLabel);
-    var outContent = document.createElement("div");
-    outContent.className = "outContent";
-    outContent.innerHTML = "&nbsp;";
-    outRow.appendChild(outContent);
-
-    // Add the input and output rows to the inOut columns
-    inOut.appendChild(inRow);
-    inOut.appendChild(outRow);
-
-    // Create the collapse columns
-    var Collapse = document.createElement("div");
-    Collapse.className = "collapse";
-    Collapse.setAttribute("onclick","toggleCollapse(this);");
-
-    // Add the collapse and inOut columns to the I/O cell
-    ioCell.appendChild(Collapse);
-    ioCell.appendChild(inOut);
-
-    // Insert the I/O cell in the correct location
-    if (selectedCell == ""){
-        document.getElementById("nb").appendChild(ioCell);
-    }
-    else{
-        selectedCell.parentNode.appendChild(ioCell);
-    }
-};
-
-
-addTextCell = function(){
-        // Create an empty text cell
-        var textCell = document.createElement("div");
-        textCell.className = "textCell";
-
-        // Create the text column
-        var textCol = document.createElement("div");
-        textCol.className = "textCol";
-        var ta = document.createElement("textarea");
-        ta.className = "textCell";
-        ta.rows = 1;
-        ta.setAttribute("onkeypress","resizeTextArea(this,event);");
-        textCol.appendChild(ta);
-
-        // Create the collapse columns
-        var Collapse = document.createElement("div");
-        Collapse.className = "collapse";
-        Collapse.setAttribute("onclick","toggleCollapse(this);");
-
-        // Add the collapse and inOut columns to the I/O cell
-        textCell.appendChild(Collapse);
-        textCell.appendChild(textCol);
-
-        // Insert the I/O cell in the correct location
-        if (selectedCell == ""){
-            document.getElementById("nb").appendChild(textCell);
-        }
-        else{
-            selectedCell.parentNode.appendChild(textCell);
-        }
-
-};
-
-resizeTextArea = function(textareaObj,e){
+resizeTextArea = function(textarea,e){
         // this also captures Shift+Enter to execute
-        var numRows = textareaObj.value.split("\n").length;
-        var td = textareaObj.parentNode; // td
-/*        alert(numRows);*/
-        if (e && e.keyCode == 13 && !(e.shifKey && td.className == "input")){
-            textareaObj.style.height = (numRows+1 || 1).toString()+".2em";
+        var numRows = textarea.value.split("\n").length;
+        var td = textarea.parentNode; // td
+        if (e && e.keyCode == 13 && !(e.shifKey && td.className == "inContent")){
+            textarea.style.height = (numRows+1 || 1).toString()+".2em";
         }else{
-            textareaObj.style.height = (numRows || 1).toString()+".2em";
+            textarea.style.height = (numRows || 1).toString()+".2em";
         }
-        // textCells and I/O cells have different ways of getting the cell from the ta
-/*        alert(td.parentNode);*/
-/*        td.height = textareaObj.rows*12;*/
-/*        alert(td.height);*/
-/*        td.*/
-/*        textareaObj.rows = textareaObj.rows*12;*/
-/*        td.height = */
-/*        alert(td.clientHeight);*/
-/*        alert(textareaObj.rows);*/
-        // textCells automatically break out of collapse when typed into
-        // make I/O cells break out by showing the output
-        
-        if (td.className == "input"){
+        if (td.className == "inContent"){
 /*            Cell.lastChild.firstChild.firstChild.innerHTML = "In&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:"*/
             if (e && e.shiftKey && e.keyCode == 13){//shift-enter
-                var lines = textareaObj.value;
-                alert(lines);
-                textareaObj.disabled = true;
-                d = doSimpleXMLHttpRequest("/execute", {userID:user.userID, lines:lines})
-                d.addCallback(function(req){alert(req.responseText)});
+                var d = updateTextArea(textarea, true);
+                var t = getMyTable(textarea);
+                pending.push(t.node.nodeID);
+                textarea.disabled = true;
+                if (!d){
+                    execute(t.node.nodeID).addCallback(refreshNotebook);
+                }else{
+                    d.addCallback(function(){
+                        execute(t.node.nodeID).addCallback(refreshNotebook);
+                    });
+                }
             }else{
-                var ioTable = Cell.parentNode.parentNode;
-                ioTable.rows[ioTable.rows.length-1][0].display = "";
+                //proper action tbd
             }
         }
 };

@@ -79,7 +79,6 @@ def readOutput(inlines, outputs=[]):
 def readText(inlines, end, textLines=[]):
     line = inlines.pop(0)
     while end not in line:
-        print end, line
         textLines.append(line)
         line = inlines.pop(0)
     textLines.append(line[:line.find(end)])

@@ -20,7 +20,7 @@ import os, sqlalchemy as sqla#, zope.interface as zi
 
 from IPython.genutils import get_home_dir
 
-from ipython1.config.api import resolveFilePath
+# from ipython1.config.api import resolveFilePath
 from ipython1.kernel.error import DBError
 from ipython1.notebook import models
 # from ipython1.notebook.xmlutil import loadDBfromXML, dumpDBtoXML

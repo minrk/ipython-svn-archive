@@ -30,6 +30,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 from ipython1.config.base import Config
+from ipython1.config.cutils import getIpythonDir
 from twisted.spread import pb
 
 #-------------------------------------------------------------------------------
@@ -41,6 +42,7 @@ xmlrpcMEPort = 10105
 pbTCPort = 10114
 xmlrpcTCPort = 10113
 httpMEPort = 8000
+httpNBPort = 8008
 
 #-------------------------------------------------------------------------------
 # Shell Configuration
@@ -228,11 +230,40 @@ class ClientConfig(Config):
     
     connectToTaskControllerOn = {'ip': '127.0.0.1', 'port': xmlrpcTCPort}
     
+#-------------------------------------------------------------------------------
+# Notebook Configuration
+#-------------------------------------------------------------------------------
+
+# from ipython1.kernel.multienginepb import PBInteractiveMultiEngineClient
+
+from ipython1.kernel.engineservice import IEngineQueued
+from ipython1.notebook.notebook import NotebookController as NC
+from ipython1.notebook.notebookhttp import IHTTPNotebookServerFactory
+
+class NotebookConfig(Config):    
+    # RemoteController = PBInteractiveMultiEngineClient
+    """The RemoteController class to use.
+    
+    This allow new RemoteController classes that use different network
+    protocols to be used.
+    """
+    
+    engineInterface = IEngineQueued
+    networkInterfaces = {'http':{'interface': IHTTPNotebookServerFactory,
+                                    'ip'    : '',
+                                    'port'  : httpNBPort}}
+    defaultDBMode = "sqlite///"
+    activeDB = "sqlite:///%s/ipnotebooks.db"%(getIpythonDir())
+    # activeDB = "sqlite://"
+    # print activeDB
+    externalDBs = []
+    
 
 # All top-level config classes must be listed here.
 
 configClasses = {'engine'     : EngineConfig,
                  'controller' : ControllerConfig,
+                 'notebook'   : NotebookConfig,
                  'client'     : ClientConfig,
                  'shell'      : ShellConfig,
                  'mpi'        : MPIConfig}

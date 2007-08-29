@@ -24,6 +24,7 @@ setup(
     entry_points = {
             'console_scripts': ['ipengine = ipython1.scripts.ipengine:start',
                                 'ipcontroller = ipython1.scripts.ipcontroller:start',
+                                'ipnotebook = ipython1.scripts.ipnotebook:start',
                                 'ipcluster = ipython1.scripts.ipcluster:main']
         },
 
