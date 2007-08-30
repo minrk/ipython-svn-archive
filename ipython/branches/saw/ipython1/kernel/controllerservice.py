@@ -116,7 +116,10 @@ class IControllerCore(Interface):
     
     def onUnregisterEngineDoNot(f):
         """Stop calling f on engine unregistration"""
-                
+        
+    def onNEnginesRegisteredDo(n, f, *arg, **kwargs):
+        """Call f(*args, **kwargs) the first time the nth engine registers."""
+                    
 class IControllerBase(IControllerCore):
     """The basic controller interface."""
     pass 
@@ -142,6 +145,7 @@ class ControllerService(object, service.Service):
         self.availableIDs = range(maxEngines,-1,-1)   # [255,...,0]
         self._onRegister = []
         self._onUnregister = []
+        self._onNRegistered = []
     
     #---------------------------------------------------------------------------
     # Methods used to save the engine info to a log file
@@ -251,6 +255,16 @@ class ControllerService(object, service.Service):
             except:
                 self._onRegister.pop(i)
         
+        # Call functions when the nth engine is registered and them remove them
+        for i, (n, f, args, kwargs) in enumerate(self._onNRegistered):
+            if len(self.engines.keys()) == n:
+                try:
+                    f(*args, **kwargs)
+                except:
+                    log.msg("Function %r failed when the %ith engine registered" % (f, n))
+                finally:
+                    self._onNRegistered.pop(i)
+        
         return {'id':getID}
     
     def unregisterEngine(self, id):
@@ -305,6 +319,13 @@ class ControllerService(object, service.Service):
                 self._onUnregister.pop(i)
                 return
 
+    def onNEnginesRegisteredDo(self, n, f, *args, **kwargs):
+        if len(self.engines.keys()) >= n:
+            f(*args, **kwargs)
+        else:
+            self._onNRegistered.append((n,f,args,kwargs))
+            
+
 #-------------------------------------------------------------------------------
 # Base class for adapting controller to different client APIs
 #-------------------------------------------------------------------------------
@@ -346,3 +367,6 @@ class ControllerAdapterBase(object):
     
     def onUnregisterEngineDoNot(self, f):
         return self.controller.onUnregisterEngineDoNot(f)        
+
+    def onNEnginesRegisteredDo(self, n, f, *args, **kwargs):
+        return self.controller.onNEnginesRegisteredDo(n, f, *args, **kwargs)
