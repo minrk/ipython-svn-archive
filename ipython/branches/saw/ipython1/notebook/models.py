@@ -253,11 +253,7 @@ def jsonifyNotebook(nb, keepdict=False, justme=False):
 #-------------------------------------------------------------------------------
 
 metadata = MetaData()
-if not hasattr(metadata, 'connect'):
-    class MetaWrapper(MetaData):
-        def connect(self, engine):
-            self.bind = engine
-    metadata = MetaWrapper()
+assert hasattr(metadata, 'connect'), "Need SQLAlchemy version >= 0.3.5"
 # Tables
 
 tagsTable = Table('tags', metadata,

@@ -18,13 +18,14 @@ __docformat__ = "restructuredtext en"
 from random import randint
 from twisted.trial import unittest
 
+from ipython1.kernel.error import NotFoundError
+
 try:# check our dependency
     import sqlalchemy as sqla, simplejson
 except ImportError:
     sqla = None
 else:
     from ipython1.notebook import notebook, dbutil, xmlutil
-    from ipython1.kernel.error import NotFoundError
     from ipython1.notebook.models import TextCell, InputCell, Section, Node, Tag
     # get potential warning out of the way of test output
     engine = sqla.create_engine("sqlite:///")
@@ -158,7 +159,7 @@ if sqla:
         def testxmlBackup(self):
             session = self.nbc.session
             self.loadNodes(8)
-            s = xmlutil.dumpDBtoXML(self.nbc.session, '/Users/minrk/s1.xml')
+            s = xmlutil.dumpDBtoXML(self.nbc.session)
             u = self.u
             nodes = session.query(Node).select()
             kidl = [len(nb.root.children) for nb in u.user.notebooks]
