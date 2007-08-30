@@ -1,5 +1,4 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_notebook_models -*-
 """The main notebook Classes, serialization, and database system
 """
 __docformat__ = "restructuredtext en"

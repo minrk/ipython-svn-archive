@@ -18,16 +18,18 @@ __docformat__ = "restructuredtext en"
 from random import randint
 from twisted.trial import unittest
 
-try:
+try:# check our dependency
+    import sqlalchemy as sqla
+except ImportError:
+    sqla = None
+else:
     from ipython1.notebook import notebook, dbutil, xmlutil
     from ipython1.kernel.error import NotFoundError
     from ipython1.notebook.models import TextCell, InputCell, Section, Node, Tag
-except ImportError:
-    pass
-else:
-    engine = dbutil.sqla.create_engine("sqlite:///")
+    # engine = dbutil.sqla.create_engine("sqlite:///")
     
     # get warning out of the way of test output
+if sqla is not None:
     class NotebookTestCase(unittest.TestCase):
             
         def setUp(self):
@@ -230,3 +232,7 @@ else:
             taglist = self.nbc.session.query(Tag).select()
             self.assertEquals(len(taglist), 6, "incorrect number of tags exist")
     
+else:
+    class NoSQLAlchemy(unittest.TestCase):
+        def testSkipNBTests(self):
+            pass
