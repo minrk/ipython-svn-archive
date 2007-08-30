@@ -689,7 +689,9 @@ class InteractiveShell(object,Magic):
         try:
             doctest.DocTestRunner
         except AttributeError:
-            # This is only for python 2.3 compatibility, remove once we move to 2.4 only.
+            # This is only for python 2.3 compatibility, remove once we move to
+            # 2.4 only.
+            pass
         else:
             doctest.DocTestRunner.run = dhook_wrap(doctest.DocTestRunner.run)
 
