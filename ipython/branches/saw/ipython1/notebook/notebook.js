@@ -48,7 +48,6 @@ connect = function(){
     d.addCallback(setUser);
     d.addCallback(getUserList);
 };
-
 disconnect = function(){
 /*    alert("disconnecting");*/
     return doSimpleXMLHttpRequest("/disconnectUser", {userID:user.userID}); 
@@ -56,7 +55,6 @@ disconnect = function(){
 addLoadEvent(connect);
 
 setUser = function(req){
-/*    alert(req.responseText);*/
     user = evalJSONRequest(req);
     if (!user.username){//try again
         alert("Connect User Failed");
@@ -71,7 +69,6 @@ setUser = function(req){
         return refreshNBTable();
     }
 };
-
 getUserList = function(){
     var d = doSimpleXMLHttpRequest("/getUsers");
     d.addCallback(_getUserList);
@@ -88,7 +85,6 @@ refreshNBTable = function(){
     d.addCallback(getUserList);
     return d;
 }
-
 setupNBTable = function(req){
     var books = evalJSONRequest(req).list;
     var data = {};
@@ -107,14 +103,12 @@ setupNBTable = function(req){
     }
     sortableManager.initWithData(data);
 };
-
 addNotebook = function(){
     var title = prompt("Title", "title");
     var d = doSimpleXMLHttpRequest("/addNotebook", {userID:user.userID,title:title});
     d.addCallback(refreshNBTable);
     return d;
 };
-
 setPermission = function(book){
     if (book.userID == user.userID){
         book.permission = "own";
@@ -139,7 +133,6 @@ setPermission = function(book){
     }
     return book;
 };
-
 setActiveNotebook = function(nbID){
     if (activeNotebook){
         closeNotebook();
@@ -148,7 +141,6 @@ setActiveNotebook = function(nbID){
     d.addCallback(_setActiveNotebook);
     return d;
 };
-
 _setActiveNotebook = function(req){
     activeNotebook = evalJSONRequest(req).list[0];
     activeNotebook = setPermission(activeNotebook);
@@ -223,7 +215,6 @@ isPending = function(nodeID){
     return false;
 };
 isin = function(element, array){
-/*    alert(element+array.toString());*/
     var i;
     for (i=0;i<array.length;i++){
         if (element == array[i]){
@@ -231,6 +222,45 @@ isin = function(element, array){
         }
     }
     return false;
+};
+
+resizeTextArea = function(textarea,e){
+        // this also captures Shift+Enter to execute
+        var numRows = textarea.value.split("\n").length;
+        var td = textarea.parentNode; // td
+        if (e && e.keyCode == 13 && !(e.shifKey && td.className == "inContent")){
+            textarea.style.height = (numRows+1 || 1).toString()+".2em";
+        }else{
+            textarea.style.height = (numRows || 1).toString()+".2em";
+        }
+        if (td.className == "inContent"){
+            if (e && e.shiftKey && e.keyCode == 13){//shift-enter
+                var d = updateTextArea(textarea, true);
+                var t = getMyTable(textarea);
+                pending.push(t.node.nodeID);
+                textarea.disabled = true;
+                if (!d){
+                    execute(t.node.nodeID).addCallback(refreshNotebook);
+                }else{
+                    d.addCallback(function(){
+                        execute(t.node.nodeID).addCallback(refreshNotebook);
+                    });
+                }
+            }else{
+                //proper action tbd
+            }
+        }
+};
+toggleCollapse = function(collapseObj){
+    var t = getMyTable(collapseObj);
+    for (var i=1; i<t.childNodes.length; i++){
+        var row = t.childNodes[i];
+        if (row.style.display == "none"){
+            row.style.display = "";
+        }else{
+            row.style.display = "none";
+        }
+    }
 };
 
 /*********************** control functions ********************/
@@ -280,7 +310,7 @@ dumpNotebook = function(){
 };
 
 /*********************** main notebook functions ********************/
-
+/** permissions section **/
 permissionTable = function(){
     var t = document.createElement("table");
     t.className = "permission";
@@ -360,7 +390,6 @@ addUsers = function(textarea){
         u = getUserByKey("username", uname);
         if (u && !isin(uname, users) && !isin(u.userID, args[klass])){
             args[klass].push(u.userID);
-/*            alert(u.userID);*/
         }
     }
     var d = doSimpleXMLHttpRequest("/add"+klass[0].toUpperCase()+klass.substring(1), args);
@@ -377,6 +406,7 @@ dropUser = function(span){
     d.addCallback(refreshNotebook);
 };
 
+/** main draw functions **/
 gapTable = function(index){
     var t = document.createElement("table");
     t.className = "gap";
@@ -389,7 +419,6 @@ gapTable = function(index){
     span = document.createElement("span");
     span.className = "controlLink";
     span.onclick = function(){addSection(t);};
-/*    span.sett*/
     span.innerHTML = "Section";
     td.appendChild(span);
     span = document.createElement("span");
@@ -413,7 +442,6 @@ gapTable = function(index){
     
     return t;
 };
-
 nodeTableFromJSON = function(node){
     var t = document.createElement("table");
     t.className = node.nodeType;
@@ -432,7 +460,6 @@ nodeTableFromJSON = function(node){
         td.innerHTML = node.title;
     }else{
         td.className = "cellTitle";
-/*        td.innerHTML = node.nodeType;*/
     }
     tr.appendChild(td);
     td = document.createElement("td");
@@ -511,7 +538,6 @@ nodeTableFromJSON = function(node){
         ta.onfocus = function(){this.value = "";};
         ta.setAttribute("onblur", "addTags(this, event);");
         ta.setAttribute("onkeypress", "maybeAddTags(this, event);");
-    /*    ta.setAttribute("onkeypress", "resizeTagArea(this, event);");*/
         td.appendChild(ta);
     }
     tr.appendChild(td);
@@ -519,7 +545,6 @@ nodeTableFromJSON = function(node){
 
     tr = document.createElement("tr");
     td = document.createElement("td");
-/*    td.colspan = 2;*/
     td.setAttribute("colspan", 2);
     td.className = "comment";
     var ta = document.createElement("textarea");
@@ -542,7 +567,6 @@ nodeTableFromJSON = function(node){
     tr.appendChild(td);
     t.appendChild(tr);
     resizeTextArea(ta,null);
-/*    alertNode(node);*/
     
     if (t.className == "section"){
         tr = document.createElement("tr");
@@ -560,7 +584,6 @@ nodeTableFromJSON = function(node){
         };
         tr.appendChild(td);
         t.appendChild(tr);
-/*        alert(td.abbr);*/
         
     }else if (t.className == "inputCell"){
         tr = document.createElement("tr");
@@ -658,8 +681,6 @@ nodeTableFromJSON = function(node){
         t.appendChild(tr);
         resizeTextArea(ta,null);
     }
-/*    alertNode(node);//for debug*/
-    
     return t;
 };
 updateTitle = function(titleTD){
@@ -677,7 +698,6 @@ updateTitle = function(titleTD){
 };
 updateTextArea = function(textarea){
     var t = getMyTable(textarea);
-/*    var nodeID = t.node.nodeID;*/
     if (t.node[textarea.className] == textarea.value){
         //no change
         return;
@@ -686,7 +706,6 @@ updateTextArea = function(textarea){
     args.userID = user.userID;
     args.nodeID = t.node.nodeID;
     args[textarea.className]= textarea.value;
-/*    alert(textarea.className);*/
     var d = doSimpleXMLHttpRequest("/editNode", args);
     d.addCallback(_updateNode, t);
     return d;
@@ -696,6 +715,7 @@ _updateNode = function(t,req){
     var newt = nodeTableFromJSON(node);
     swapDOM(t, newt);
 };
+
 /********** tag functions    ***********/
 getTags = function(table){
     var spanlist = getElementsByTagAndClassName("SPAN", "tag");
@@ -749,9 +769,6 @@ dropTag = function(span){
     args.nodeID = t.node.nodeID;
     span.parentNode.removeChild(span);
     args.tags = span.innerHTML;
-/*    if (args.tags.length == 0){
-        args.tags = "\n";
-    }*/
     var d = doSimpleXMLHttpRequest("/dropTag", args);
     d.addCallback(_updateNode, t);
 }
@@ -808,7 +825,6 @@ moveNode = function(nodeID){
     var d = doSimpleXMLHttpRequest("/moveNode",args);
     d.addCallback(refreshNotebook);
 };
-
 execute = function(nodeID){
     var args = {};
     args.userID = user.userID;
@@ -825,46 +841,4 @@ _execute = function(nodeID, result){
         }
     }
     return result;
-};
-
-
-resizeTextArea = function(textarea,e){
-        // this also captures Shift+Enter to execute
-        var numRows = textarea.value.split("\n").length;
-        var td = textarea.parentNode; // td
-        if (e && e.keyCode == 13 && !(e.shifKey && td.className == "inContent")){
-            textarea.style.height = (numRows+1 || 1).toString()+".2em";
-        }else{
-            textarea.style.height = (numRows || 1).toString()+".2em";
-        }
-        if (td.className == "inContent"){
-/*            Cell.lastChild.firstChild.firstChild.innerHTML = "In&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;:"*/
-            if (e && e.shiftKey && e.keyCode == 13){//shift-enter
-                var d = updateTextArea(textarea, true);
-                var t = getMyTable(textarea);
-                pending.push(t.node.nodeID);
-                textarea.disabled = true;
-                if (!d){
-                    execute(t.node.nodeID).addCallback(refreshNotebook);
-                }else{
-                    d.addCallback(function(){
-                        execute(t.node.nodeID).addCallback(refreshNotebook);
-                    });
-                }
-            }else{
-                //proper action tbd
-            }
-        }
-};
-
-toggleCollapse = function(collapseObj){
-    var t = getMyTable(collapseObj);
-    for (var i=1; i<t.childNodes.length; i++){
-        var row = t.childNodes[i];
-        if (row.style.display == "none"){
-            row.style.display = "";
-        }else{
-            row.style.display = "none";
-        }
-    }
 };
