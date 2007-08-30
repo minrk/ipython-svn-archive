@@ -27,4 +27,10 @@ from pprint import pformat, pprint
 import tutils
 from tutils import test_path
 
-from ipython1.test.ipdoctest import IPDocTestLoader,makeTestSuite
+try:
+    import pexpect
+except ImportError:
+    pexpect = None
+else:
+    from ipython1.test.ipdoctest import IPDocTestLoader,makeTestSuite
+    
