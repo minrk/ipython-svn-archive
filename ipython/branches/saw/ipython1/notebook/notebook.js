@@ -23,7 +23,8 @@ getParam = function(name){
 // globals
 var gapID = 0;
 var selectedCell = "";
-var user = Object();
+var user = {};
+var userlist = {};
 var activeNotebook = null;
 var pending = [];
 
@@ -37,24 +38,19 @@ connect = function(){
     if (email == null){
     	email = prompt("email?", "");
     }
-    if (!selectedCell){
-        selectedCell = "";
-    }
-    if (!gapID){
-        gapID = 0;
-    }
-    if (!activeNotebook){
-        activeNotebook = null;
-    }
-    if (!pending){
-        pending = [];
-    }
+    selectedCell = "";
+    gapID = 0;
+    activeNotebook = null;
+    pending = [];
+    user = {};
+    userlist = {};
     var d = doSimpleXMLHttpRequest("/connectUser", {email:email, username:username});
     d.addCallback(setUser);
+    d.addCallback(getUserList);
 };
 
 disconnect = function(){
-    alert("disconnecting");
+/*    alert("disconnecting");*/
     return doSimpleXMLHttpRequest("/disconnectUser", {userID:user.userID}); 
 };
 addLoadEvent(connect);
@@ -76,43 +72,36 @@ setUser = function(req){
     }
 };
 
+getUserList = function(){
+    var d = doSimpleXMLHttpRequest("/getUsers");
+    d.addCallback(_getUserList);
+    return d;
+};
+_getUserList = function(req){
+    userList = evalJSONRequest(req).list;
+}
+
 /*********************** sidebar functions ********************/
 refreshNBTable = function(){
     var d = doSimpleXMLHttpRequest("/getNotebooks", {userID:user.userID});
     d.addCallback(setupNBTable);
+    d.addCallback(getUserList);
     return d;
 }
 
 setupNBTable = function(req){
-    var books = evalJSONRequest(req).notebooks;
-    var data = Object();
+    var books = evalJSONRequest(req).list;
+    var data = {};
     data.columns = ["title", "created", "modified", "permission", "notebookID"];
     data.rows = new Array;
     for (var i=0; i<books.length; i++) {
         var book = books[i];
-        var row = Array();
+        var row = [];
+        book = setPermission(book);
         row.push(book.title);
         row.push(book.dateCreated);
         row.push(book.dateModified);
-        if (book.userID == user.userID){
-            row.push("o");
-        }else{
-            for (var i=0; i<books.writers.length; i++){
-                if (books.writers[i] == user.userID){
-                    row.push("w");
-                }
-            }
-            if (row.length < 4){
-                for (var i=0; i<books.readers.length; i++){
-                    if (books.readers[i] == user.userID){
-                        row.push("r");
-                    }
-                }
-            }
-            if (row.length < 4){
-                alert(book.userID);
-            }
-        }
+        row.push(book.permission);
         row.push(book.notebookID);
         data.rows.push(row);
     }
@@ -126,25 +115,34 @@ addNotebook = function(){
     return d;
 };
 
-getNodeTable = function(element){
-    var nodeTables = getElementsByTagAndClassname("table", "section");
-    nodeTables += getElementsByTagAndClassname("table", "inputCell");
-    nodeTables += getElementsByTagAndClassname("table", "textCell");
-/*    alert(nodeTables.length);*/
-    for (var i=0;i<nodeTables.length;i++){
-        var nt = nodeTables[i];
-        if (isParent(nt, element)){
-            return nt;
+setPermission = function(book){
+    if (book.userID == user.userID){
+        book.permission = "own";
+    }else{
+        for (var i=0; i<book.writers.length; i++){
+            if (book.writers[i] == user.userID){
+                book.permission = "write";
+                break;
+            }
+        }
+        if (!book.permission){
+            for (var i=0; i<book.readers.length; i++){
+                if (book.readers[i] == user.userID){
+                    book.permission = "read";
+                    break;
+                }
+            }
+        }
+        if (!book.permission){
+            alert("Permission setting error");
         }
     }
+    return book;
 };
 
 setActiveNotebook = function(nbID){
     if (activeNotebook){
-        var s = prompt("save before switching?").toLowerCase();
-        if (s == "yes" || s == "y"){
-            saveActiveNotebook();
-        }
+        closeNotebook();
     }
     var d = doSimpleXMLHttpRequest("/getNotebooks", {userID:user.userID, notebookID:nbID});
     d.addCallback(_setActiveNotebook);
@@ -152,41 +150,52 @@ setActiveNotebook = function(nbID){
 };
 
 _setActiveNotebook = function(req){
-    activeNotebook = evalJSONRequest(req).notebooks[0];
+    activeNotebook = evalJSONRequest(req).list[0];
+    activeNotebook = setPermission(activeNotebook);
     if (!activeNotebook){
         alert(req.responseText);
     }else{
         var nbtd = getElementsByTagAndClassName("td", "notebook")[0];
         nbtd.innerHTML = "";
+        nbtd.appendChild(permissionTable());
         nbtd.appendChild(nodeTableFromJSON(activeNotebook.root));
     }
 };
 
-refreshNotebook = function(){
-    if (!activeNotebook){
-        alert("No Active Notebook!");
-        return;
-    }
-    var d = doSimpleXMLHttpRequest("/getNotebooks", {userID:user.userID, notebookID:activeNotebook.notebookID});
-    d.addCallback(_setActiveNotebook);
-    return d;
-};
-
 /**** utility functions ******/
-
+strip = function(s){
+    while (s.length > 0 && s[0] == " "){
+        s = s.substring(1);
+    }
+    while (s.length > 0 && s[s.length-1] == " "){
+        s = s.substring(0,s.length-2);
+    }
+    return s;
+};
+getList = function(table, klass){
+    var spanlist = getElementsByTagAndClassName("SPAN", klass);
+    var readerlist = [];
+    var i;
+    var span;
+    for (i=0;i<spanlist.length;i++){
+        span = spanlist[i];
+        if (getMyTable(span) == table){
+            readerlist.push(span.innerHTML);
+        }
+    }
+    return readerlist;
+};
 alertNode = function(node){
     var s = "id:"+node.nodeID+"\n";
     s += "nodeType:"+node.nodeType+"\n";
     alert(s);
 };
-
 getMyTable = function(element){
     while ((element.tagName != "TABLE") && element.tagName != "BODY"){
         element = element.parentNode;
     }
     return element;
 };
-
 getMySection = function(element){
     element = element.parentNode; // ensure that I don't get me back
     while ((element.tagName != "TABLE" || element.className != "section") && element.tagName != "BODY"){
@@ -194,16 +203,17 @@ getMySection = function(element){
     }
     return element;
 };
-
 getMyChildren = function(section){
     return section.childNodes[section.childNodes.length-1].cells[0];
 };
-
-previousNode = function(node){
-    var childrenTD = getMyChildren(getMySection(node));
-    alert("TBimp")
-};
-
+getUserByKey = function(key, value){
+    for (var i=0;i<userList.length;i++){
+        var u = userList[i];
+        if (u[key] == value){
+            return u;
+        }
+    }
+}
 isPending = function(nodeID){
     for (var i=0; i<pending.length; i++){
         if (nodeID == pending[i]){
@@ -211,9 +221,161 @@ isPending = function(nodeID){
         }
     }
     return false;
-}
+};
+isin = function(element, array){
+/*    alert(element+array.toString());*/
+    var i;
+    for (i=0;i<array.length;i++){
+        if (element == array[i]){
+            return true;
+        }
+    }
+    return false;
+};
+
+/*********************** control functions ********************/
+refreshNotebook = function(){
+    if (!activeNotebook){
+        alert("No Active Notebook!");
+        return;
+    }
+    var d = getUserList();
+    d.addCallback(function(){
+        return doSimpleXMLHttpRequest("/getNotebooks", {userID:user.userID, notebookID:activeNotebook.notebookID});
+    });
+    d.addCallback(_setActiveNotebook);
+    return d;
+};
+dropNotebook = function(){
+    if (!activeNotebook){
+        alert("No Active Notebook");
+    }else{
+        var d = doSimpleXMLHttpRequest("/dropNotebook",{userID:user.userID, notebookID:activeNotebook.notebookID});
+        d.addCallback(refreshNBTable)
+        activeNotebook = null;
+        var nbtd = getElementsByTagAndClassName("td", "notebook")[0];
+        nbtd.innerHTML = "";
+    }
+};
+closeNotebook = function(){
+    if (!activeNotebook){
+        alert("No Active Notebook");
+    }else{
+        activeNotebook = null;
+        var nbtd = getElementsByTagAndClassName("td", "notebook")[0];
+        nbtd.innerHTML = "";
+    }
+};
+dumpNotebook = function(){
+    if (!activeNotebook){
+        alert("No Active Notebook");
+    }else{
+        var loc = document.location;
+        if (loc.search.indexOf("?") > -1){
+            loc = loc.href.substring(0,loc.search.indexOf("?"));
+        }
+        var qs = queryString({userID:user.userID, notebookID:activeNotebook.notebookID});
+        window.open(loc+"notebook.xml?"+qs);
+    }
+};
 
 /*********************** main notebook functions ********************/
+
+permissionTable = function(){
+    var t = document.createElement("table");
+    t.className = "permission";
+    var tr = document.createElement("tr");
+    var td = document.createElement("td");
+    td.className = "readers";
+    td.innerHTML = "Readers: ";
+    for (var i=0;i<activeNotebook.readers.length;i++){
+        span = document.createElement("span");
+        span.className = "reader";
+        if (activeNotebook.permission == "own"){
+            span.setAttribute("onclick", "dropUser(this);");
+        }
+        span.innerHTML = getUserByKey("userID",activeNotebook.readers[i]).username;
+        td.appendChild(span);
+        td.innerHTML += ", ";
+    }
+    if (activeNotebook.permission == "own"){
+        ta = document.createElement("textarea");
+        ta.className = "reader";
+        ta.value = "add reader";
+        ta.onfocus = function(){this.value = "";};
+        ta.setAttribute("onblur", "addUsers(this);");
+        ta.setAttribute("onkeypress", "maybeAddUsers(this, event);");
+        td.appendChild(ta);
+    }
+    tr.appendChild(td);
+    td = document.createElement("td");
+    td.className = "writers";
+    td.innerHTML = "Writers: ";
+    for (var i=0;i<activeNotebook.writers.length;i++){
+        span = document.createElement("span");
+        span.className = "writer";
+        if (activeNotebook.permission == "own"){
+            span.setAttribute("onclick", "dropUser(this);");
+        }
+        span.innerHTML = getUserByKey("userID",activeNotebook.writers[i]).username;
+        td.appendChild(span);
+        td.innerHTML += ", ";
+    }
+    if (activeNotebook.permission == "own"){
+        ta = document.createElement("textarea");
+        ta.className = "writer";
+        ta.value = "add writer";
+        ta.onfocus = function(){this.value = "";};
+        ta.setAttribute("onblur", "addUsers(this);");
+        ta.setAttribute("onkeypress", "maybeAddUsers(this, event);");
+        td.appendChild(ta);
+    }
+    tr.appendChild(td);
+    t.appendChild(tr);
+    return t;
+}
+maybeAddUsers = function(textarea, event){
+    if (event.keyCode == 13){
+        addUsers(textarea);
+    }
+};
+addUsers = function(textarea){
+    var klass = textarea.className;
+    var t = getMyTable(textarea);
+    var args = {};
+    args.userID = user.userID;
+    args.notebookID = activeNotebook.notebookID;
+    var l = textarea.value.replace(/\n/g, "").split(",");
+    textarea.value = "";
+    if (l.length == 0){
+        return;
+    }
+    args[klass] = [];
+    var users = getList(t, klass);
+    var i;
+    var u;
+    var uname;
+    for (i=0; i<l.length;i++){
+        uname = strip(l[i]);
+        u = getUserByKey("username", uname);
+        if (u && !isin(uname, users) && !isin(u.userID, args[klass])){
+            args[klass].push(u.userID);
+/*            alert(u.userID);*/
+        }
+    }
+    var d = doSimpleXMLHttpRequest("/add"+klass[0].toUpperCase()+klass.substring(1), args);
+    d.addCallback(refreshNotebook);
+};
+dropUser = function(span){
+    var klass = span.className;
+    var args = {};
+    args.userID = user.userID;
+    args.notebookID = activeNotebook.notebookID;
+    span.parentNode.removeChild(span);
+    args[klass] = getUserByKey("username", span.innerHTML).userID;
+    var d = doSimpleXMLHttpRequest("/drop"+klass[0].toUpperCase()+klass.substring(1), args);
+    d.addCallback(refreshNotebook);
+};
 
 gapTable = function(index){
     var t = document.createElement("table");
@@ -264,11 +426,13 @@ nodeTableFromJSON = function(node){
     var td = document.createElement("td");
     if (node.nodeType == "section"){
         td.className = "sectionTitle";
-        td.setAttribute("onclick","updateTitle(this);");
+        if (activeNotebook.permission == "own" || activeNotebook.permission == "write"){
+            td.setAttribute("onclick","updateTitle(this);");
+        }
         td.innerHTML = node.title;
     }else{
         td.className = "cellTitle";
-        td.innerHTML = node.nodeType;
+/*        td.innerHTML = node.nodeType;*/
     }
     tr.appendChild(td);
     td = document.createElement("td");
@@ -296,53 +460,60 @@ nodeTableFromJSON = function(node){
     tr.appendChild(td);
     t.appendChild(tr);
     //control
+    if (activeNotebook.permission == "own" || activeNotebook.permission == "write"){
+        tr = document.createElement("tr");
+        td = document.createElement("td");
+        td.setAttribute("colspan", 2);
+        td.className = "nodeActions";
+        span = document.createElement("span");
+        span.className = "controlLink";
+        span.onclick = function(){moveNode(node.nodeID);};
+        span.innerHTML = "move";
+        td.appendChild(span);
+        span = document.createElement("span");
+        span.innerHTML = "&nbsp;&nbsp;|&nbsp;&nbsp;";
+        td.appendChild(span);
+        span = document.createElement("span");
+        span.className = "controlLink";
+        span.innerHTML = "drop";
+        span.onclick = function(){dropNode(node.nodeID);};
+        td.appendChild(span);
+//        span = document.createElement("span");
+//        span.innerHTML = "&nbsp;&nbsp;|&nbsp;&nbsp;";
+//        td.appendChild(span);
+//        span = document.createElement("span");
+//        span.className = "controlLink";
+//        span.innerHTML = "save";
+//        span.onclick = function(){saveNode(node.nodeID);};
+//        td.appendChild(span);
+        tr.appendChild(td);
+        t.appendChild(tr);
+    }
     tr = document.createElement("tr");
     td = document.createElement("td");
+    td.className = "tag";
     td.setAttribute("colspan", 2);
-    td.className = "nodeActions";
-    span = document.createElement("span");
-    span.className = "controlLink";
-    span.onclick = function(){moveNode(node.nodeID);};
-    span.innerHTML = "move";
-    td.appendChild(span);
-    span = document.createElement("span");
-    span.innerHTML = "&nbsp;&nbsp;|&nbsp;&nbsp;";
-    td.appendChild(span);
-    span = document.createElement("span");
-    span.className = "controlLink";
-    span.innerHTML = "drop";
-    span.onclick = function(){dropNode(node.nodeID);};
-    td.appendChild(span);
-    span = document.createElement("span");
-    span.innerHTML = "&nbsp;&nbsp;|&nbsp;&nbsp;";
-    td.appendChild(span);
-    span = document.createElement("span");
-    span.className = "controlLink";
-    span.innerHTML = "save";
-    span.onclick = function(){saveNode(node.nodeID);};
-    td.appendChild(span);
-    tr.appendChild(td);
-    t.appendChild(tr);
-    
-    tr = document.createElement("tr");
-    td = document.createElement("td");
-    td.setAttribute("colspan", 2);
+    td.innerHTML = "&nbsp;"
     for (var i=0;i<node.tags.length;i++){
         span = document.createElement("span");
         span.className = "tag";
-        span.setAttribute("onclick", "removeTag(this);");
+        if (activeNotebook.permission == "own" || activeNotebook.permission == "write"){
+            span.setAttribute("onclick", "dropTag(this);");
+        }
         span.innerHTML = node.tags[i];
         td.appendChild(span);
         td.innerHTML += ", ";
     }
-    ta = document.createElement("textarea");
-    ta.className = "tag";
-    ta.value = "add tag";
-    ta.onfocus = function(){this.value = "";};
-    ta.setAttribute("onblur", "updateTags(this, event);");
-    ta.setAttribute("onkeypress", "maybeUpdateTags(this, event);");
-/*    ta.setAttribute("onkeypress", "resizeTagArea(this, event);");*/
-    td.appendChild(ta);
+    if (activeNotebook.permission == "own" || activeNotebook.permission == "write"){
+        ta = document.createElement("textarea");
+        ta.className = "tag";
+        ta.value = "tag";
+        ta.onfocus = function(){this.value = "";};
+        ta.setAttribute("onblur", "addTags(this, event);");
+        ta.setAttribute("onkeypress", "maybeAddTags(this, event);");
+    /*    ta.setAttribute("onkeypress", "resizeTagArea(this, event);");*/
+        td.appendChild(ta);
+    }
     tr.appendChild(td);
     t.appendChild(tr);
 
@@ -355,7 +526,6 @@ nodeTableFromJSON = function(node){
     ta.className = "comment";
     ta.setAttribute("onblur","updateTextArea(this,event);");
     ta.setAttribute("onkeypress", "resizeTextArea(this, event);");
-    td.appendChild(ta);
     if (node.comment.length < 1){
         ta.value = "comments";
         ta.onfocus = function(){
@@ -365,6 +535,10 @@ nodeTableFromJSON = function(node){
     }else{
         ta.value = node.comment;
     }
+    if (!activeNotebook.permission || activeNotebook.permission == "read"){
+        ta.disabled = true;
+    }
+    td.appendChild(ta);
     tr.appendChild(td);
     t.appendChild(tr);
     resizeTextArea(ta,null);
@@ -375,10 +549,14 @@ nodeTableFromJSON = function(node){
         td = document.createElement("td");
         td.setAttribute("colspan", 2);
         td.className = "children";
-        td.appendChild(gapTable(0));
+        if (activeNotebook.permission == "own" || activeNotebook.permission == "write"){
+            td.appendChild(gapTable(node.notebookID, 0));
+        }
         for (var i=0; i<node.children.length; i++){
             td.appendChild(nodeTableFromJSON(node.children[i]));
-            td.appendChild(gapTable(node.notebookID, i+1));
+            if (activeNotebook.permission == "own" || activeNotebook.permission == "write"){
+                td.appendChild(gapTable(node.notebookID, i+1));
+            }
         };
         tr.appendChild(td);
         t.appendChild(tr);
@@ -387,10 +565,11 @@ nodeTableFromJSON = function(node){
     }else if (t.className == "inputCell"){
         tr = document.createElement("tr");
         td = document.createElement("td");
+        td.className = "input";
         td.setAttribute("colspan", 2);
         var div = document.createElement("div");
         div.className = "inLabel";
-        div.innerHTML = "In&nbsp;&nbsp;&nbsp;&nbsp;[&nbsp;&nbsp;]:";
+        div.innerHTML = "In&nbsp;&nbsp;:";
         td.appendChild(div);
         div = document.createElement("div");
         div.className = "inContent";
@@ -399,6 +578,9 @@ nodeTableFromJSON = function(node){
         ta.setAttribute("onkeypress", "resizeTextArea(this, event);");
         ta.className = "input";
         ta.value = node.input;
+        if (!activeNotebook.permission || activeNotebook.permission == "read"){
+            ta.disabled = true;
+        }
         if (isPending(node.nodeID)){
             ta.disabled = true;
         }
@@ -410,10 +592,11 @@ nodeTableFromJSON = function(node){
         
         tr = document.createElement("tr");
         td = document.createElement("td");
+        td.className = "output";
         td.setAttribute("colspan", 2);
         div = document.createElement("div");
         div.className = "outLabel";
-        div.innerHTML = "Out&nbsp;[&nbsp;&nbsp;]:";
+        div.innerHTML = "Out&nbsp;:";
         td.appendChild(div);
         div = document.createElement("div");
         div.className = "outContent";
@@ -443,6 +626,9 @@ nodeTableFromJSON = function(node){
         }else{
             ta.value = node.format;
         }
+        if (!activeNotebook.permission || activeNotebook.permission == "read"){
+            ta.disabled = true;
+        }
         td.appendChild(ta);
         tr.appendChild(td);
         t.appendChild(tr);
@@ -463,6 +649,9 @@ nodeTableFromJSON = function(node){
                 };
         }else{
             ta.value = node.textData;
+        }
+        if (!activeNotebook.permission || activeNotebook.permission == "read"){
+            ta.disabled = true;
         }
         td.appendChild(ta);
         tr.appendChild(td);
@@ -508,54 +697,41 @@ _updateNode = function(t,req){
     swapDOM(t, newt);
 };
 /********** tag functions    ***********/
-stripTag = function(tag){
-    while (tag.length > 0 && tag[0] == " "){
-        tag = tag.substring(1);
-    }
-    while (tag.length > 0 && tag[tag.length-1] == " "){
-        tag = tag.substring(0,tag.length-2);
-    }
-    return tag;
-};
 getTags = function(table){
     var spanlist = getElementsByTagAndClassName("SPAN", "tag");
-    var taglist = new Array;
-    for (i=0; i < spanlist.length; i++){
-        if (isParent(spanlist[i], table)){
-            taglist.push(spanlist[i].innerHTML);
-/*            alert(spanlist[i].innerHTML);*/
+    var taglist = [];
+    var i;
+    var span;
+    for (i=0;i<spanlist.length;i++){
+        span = spanlist[i];
+        if (getMyTable(span) == table){
+            taglist.push(span.innerHTML);
         }
     }
     return taglist;
 };
-isin = function(element, array){
-    for (var i=0;i<array.length;i++){
-        if (element == array[i]){
-            return true;
-        }
-    }
-    return false;
-};
-maybeUpdateTags = function(textarea, event){
+maybeAddTags = function(textarea, event){//check for <Enter>
     if (event.keyCode == 13){
-        updateTags(textarea);
+        addTags(textarea);
     }
 };
-updateTags = function(textarea){
+addTags = function(textarea){
     var t = getMyTable(textarea);
-/*    var nodeID = t.node.nodeID;*/
     var args = {};
     args.userID = user.userID;
     args.nodeID = t.node.nodeID;
-    var l = textarea.value.split(",");
+    var l = textarea.value.replace(/\n/g, "").split(",");
     textarea.value = "";
     if (l.length == 0){
         return;
     }
-    args.tags = getTags(t);
+    var taglist = getTags(t);
+    args.tags = [];
     var len = args.tags.length;
-    for (var i=0; i < l.length; i++){
-        var tag = stripTag(l[i]);
+    var i;
+    var tag;
+    for (i=0; i<l.length;i++){
+        tag = strip(l[i]);
         if (tag != "" && !isin(tag, args.tags)){
             args.tags.push(tag);
         }
@@ -563,21 +739,24 @@ updateTags = function(textarea){
     if (args.tags.length <= len){
         return;
     }
-/*    alert(nodeID);*/
-    var d = doSimpleXMLHttpRequest("/editNode", args);
+    var d = doSimpleXMLHttpRequest("/addTag", args);
     d.addCallback(_updateNode, t);
 };
-removeTag = function(span){
-    alert(span);
+dropTag = function(span){
     var t = getMyTable(span);
     var args = {};
     args.userID = user.userID;
     args.nodeID = t.node.nodeID;
     span.parentNode.removeChild(span);
-    args.tags = getTags(t);
-    var d = doSimpleXMLHttpRequest("/editNode", args);
+    args.tags = span.innerHTML;
+/*    if (args.tags.length == 0){
+        args.tags = "\n";
+    }*/
+    var d = doSimpleXMLHttpRequest("/dropTag", args);
     d.addCallback(_updateNode, t);
 }
+/********** node functions    ***********/
+
 addSection = function(gapt){
     var args = {};
     args.userID = user.userID;
@@ -613,7 +792,6 @@ addCell = function(gapt, nodeType){
     var d = doSimpleXMLHttpRequest("/addNode",args);
     d.addCallback(refreshNotebook);
 };
-
 dropNode = function(nodeID){
     var args = {};
     args.userID = user.userID;
@@ -621,7 +799,6 @@ dropNode = function(nodeID){
     var d = doSimpleXMLHttpRequest("/dropNode",args);
     d.addCallback(refreshNotebook);
 };
-
 moveNode = function(nodeID){
     var args = {};
     args.userID = user.userID;
@@ -648,42 +825,6 @@ _execute = function(nodeID, result){
         }
     }
     return result;
-};
-
-dumpNotebook = function(){
-    if (!activeNotebook){
-        alert("No Active Notebook");
-    }else{
-/*        alert(document.location);*/
-        var loc = document.location;
-        if (loc.search.indexOf("?") > -1){
-            loc = loc.href.substring(0,loc.search.indexOf("?"));
-        }
-        var qs = queryString({userID:user.userID, notebookID:activeNotebook.notebookID});
-        window.open(loc+"notebook.xml?"+qs);
-    }
-};
-
-dropNotebook = function(){
-    if (!activeNotebook){
-        alert("No Active Notebook");
-    }else{
-        var d = doSimpleXMLHttpRequest("/dropNotebook",{userID:user.userID, notebookID:activeNotebook.notebookID});
-        d.addCallback(refreshNBTable)
-        activeNotebook = null;
-        var nbtd = getElementsByTagAndClassName("td", "notebook")[0];
-        nbtd.innerHTML = "";
-    }
-}
-
-
-handleOutput = function(cmd_id, id, out){
-    var cell = document.getElementById(cmd_id);
-    cell.lastChild.firstChild.firstChild.innerHTML = "In&nbsp;["+id+"]:";
-    cell.lastChild.firstChild.lastChild.firstChild.disabled = false;
-    cell.lastChild.lastChild.firstChild.innerHTML = "Out["+id+"]:";
-    var output = cell.lastChild.lastChild.lastChild;
-    output.innerHTML = out+"&nbsp";
 };
 
 

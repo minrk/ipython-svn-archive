@@ -359,6 +359,8 @@ SortableManager.prototype = {
             processMochiTAL(dom, this.data);
             template.node = swapDOM(template.node, dom);
         }
+        //permission based coloring
+        
  
 
     }

@@ -275,35 +275,47 @@ class NotebookController(object):
     
     def addWriter(self, userID, nbID, writerID):
         """adds write permissions on a notebook for a user"""
+        assert writerID != userID, "cannot have self as a writer"
         user = self.checkUser(userID)
         nb = self.checkNotebook(user, nbID)
-        if user not in nb.writers:
-            nb.writers.append(user)
-        if user in nb.readers:
-            nb.readers.remove(user)
+        writer = self.userQuery.selectone_by(userID=writerID)
+        if writer not in nb.writers:
+            nb.writers.append(writer)
+        if writer in nb.readers:
+            nb.readers.remove(writer)
+        self.session.flush()
     
     def dropWriter(self, userID, nbID, writerID):
         """removes write permissions on a notebook for a user"""
+        assert writerID != userID, "cannot have self as a writer"
         user = self.checkUser(userID)
         nb = self.checkNotebook(user, nbID)
-        if user in nb.writers:
-            nb.writers.remove(user)
+        writer = self.userQuery.selectone_by(userID=writerID)
+        if writer in nb.writers:
+            nb.writers.remove(writer)
+        self.session.flush()
     
     def addReader(self, userID, nbID, readerID):
         """adds read permissions on a notebook for a user"""
+        assert readerID != userID, "cannot have self as a reader"
         user = self.checkUser(userID)
         nb = self.checkNotebook(user, nbID)
-        if user not in nb.writers:
-            nb.writers.append(user)
-        if user in nb.writers:
-            nb.writers.remove(user)
+        reader = self.userQuery.selectone_by(userID=readerID)
+        if reader not in nb.readers:
+            nb.readers.append(reader)
+        if reader in nb.writers:
+            nb.writers.remove(reader)
+        self.session.flush()
     
     def dropReader(self, userID, nbID, readerID):
         """removes read permissions on a notebook for a user"""
+        assert readerID != userID, "cannot have self as a reader"
         user = self.checkUser(userID)
         nb = self.checkNotebook(user, nbID)
-        if user in nb.readers:
-            nb.readers.remove(user)
+        reader = self.userQuery.selectone_by(userID=readerID)
+        if reader in nb.readers:
+            nb.readers.remove(reader)
+        self.session.flush()
     
     def addTag(self, userID, nodeID, tag):
         """add a tag to a node by ID"""

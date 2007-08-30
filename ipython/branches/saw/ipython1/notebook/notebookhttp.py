@@ -64,6 +64,8 @@ class HTTPNotebookServer(static.File):
         self.putChild('connectUser', HTTPNotebookConnectUser(self.nbc))
         self.putChild('disconnectUser', HTTPNotebookDisconnectUser(self.nbc))
         
+        self.putChild('getUsers', HTTPNotebookGetUsers(self.nbc))
+        
         self.putChild('addNode', HTTPNotebookAddNode(self.nbc))
         self.putChild('dropNode', HTTPNotebookDropNode(self.nbc))
         self.putChild('getNodes', HTTPNotebookGetNode(self.nbc))
@@ -142,7 +144,7 @@ headers: %r
             if isinstance(result, type(None)):
                 data = ""
             elif isinstance(result, list):
-                data = simplejson.dumps({'notebooks':
+                data = simplejson.dumps({'list':
                     [r.jsonify(keepdict=True, justme=justme) for r in result]})
             else:
                 data = result.jsonify(justme=justme)
@@ -196,6 +198,30 @@ class HTTPNotebookDisconnectUser(HTTPNotebookBaseMethod):
             return d
     
 
+
+class HTTPNotebookGetUsers(HTTPNotebookBaseMethod):
+    
+    def renderHTTP(self, request):
+        print request, request.args
+        try:
+            users = []
+            userIDs = request.args.get('userIDs')
+            if userIDs:
+                userIDs = map(int, userIDs)
+                users += [self.nbc.userQuery.selectone_by(userID=id) for id in userIDs]
+            usernames = request.args.get('usernames')
+            if usernames:
+                users += [self.nbc.userQuery.selectone_by(username=name) for name in usernames]
+            if not users:# default to all
+                users = self.nbc.userQuery.select()
+            d = defer.succeed(users)
+        except Exception, e:
+            return self.packageFailure(failure.Failure(e))
+        else:
+            d.addCallback(self.packageSuccess, justme=True)
+            d.addErrback(self.packageFailure)
+            return d
+    
 
 ################# Node Commands ######################
 class HTTPNotebookAddNode(HTTPNotebookBaseMethod):
@@ -278,7 +304,10 @@ class HTTPNotebookEditNode(HTTPNotebookBaseMethod):
                 elif k in ['parentID','nextID', 'previousID']:
                     flags[k] = int(v[0])
                 elif k == 'tags':
-                    flags[k] = [models.Tag(t) for t in v]
+                    if '\n' in v:
+                        flags[k] = []
+                    else:
+                        flags[k] = [models.Tag(t) for t in v]
                 else:
                     raise KeyError("No Such Property:%s"%k)
             d = defer.execute(self.nbc.editNode, userID, nodeID, **flags)
@@ -332,8 +361,10 @@ class HTTPNotebookAddTag(HTTPNotebookBaseMethod):
         try:
             userID = int(request.args['userID'][0])
             nodeID = int(request.args['nodeID'][0])
-            tag = request.args['tag'][0]
-            d = defer.execute(self.nbc.addTag, userID, nodeID, tag)
+            for tag in request.args['tags']:
+                self.nbc.addTag(userID, nodeID, tag)
+            d = defer.execute(self.nbc.getNode, userID, nodeID=nodeID)
+            d.addCallback(lambda _: _[0])
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
@@ -349,8 +380,11 @@ class HTTPNotebookDropTag(HTTPNotebookBaseMethod):
         try:
             userID = int(request.args['userID'][0])
             nodeID = int(request.args['nodeID'][0])
-            tag = request.args['tag'][0]
-            d = defer.execute(self.nbc.dropTag, userID, nodeID, tag)
+            for tag in request.args['tags']:
+                self.nbc.dropTag(userID, nodeID, tag)
+                
+            d = defer.execute(self.nbc.getNode, userID, nodeID=nodeID)
+            d.addCallback(lambda _: _[0])
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
@@ -420,8 +454,10 @@ class HTTPNotebookAddWriter(HTTPNotebookBaseMethod):
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
-            writerID = int(request.args['writerID'][0])
-            d = defer.execute(self.nbc.addWriter, userID, nbID, writerID)
+            writers = map(int, request.args.get('writer', []))
+            for writerID in writers:
+                self.nbc.addWriter(userID, nbID, writerID)
+            d = defer.succeed(None)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
@@ -437,8 +473,10 @@ class HTTPNotebookDropWriter(HTTPNotebookBaseMethod):
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
-            writerID = int(request.args['writerID'][0])
-            d = defer.execute(self.nbc.dropWriter, userID, nbID, writerID)
+            writers = map(int, request.args.get('writer', []))
+            for writerID in writers:
+                self.nbc.dropWriter(userID, nbID, writerID)
+            d = defer.succeed(None)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
@@ -454,8 +492,10 @@ class HTTPNotebookAddReader(HTTPNotebookBaseMethod):
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
-            readerID = int(request.args['readerID'][0])
-            d = defer.execute(self.nbc.addReader, userID, nbID, readerID)
+            readers = map(int, request.args.get('reader', []))
+            for readerID in readers:
+                self.nbc.addReader(userID, nbID, readerID)
+            d = defer.succeed(None)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
@@ -471,8 +511,10 @@ class HTTPNotebookDropReader(HTTPNotebookBaseMethod):
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
-            readerID = int(request.args['readerID'][0])
-            d = defer.execute(self.nbc.dropReader, userID, nbID, readerID)
+            readers = map(int, request.args.get('reader', []))
+            for readerID in readers:
+                self.nbc.dropReader(userID, nbID, readerID)
+            d = defer.succeed(None)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:

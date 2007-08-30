@@ -23,13 +23,13 @@ table.mainTable
 }
 table.mainTable td{border: thin solid gray;}
 
-table.section, table.section td,table.gap{
+table.section, table.section td, table.section textarea{
     border-color: #CCCCFF;
 }
-table.inputCell, table.inputCell td{
+table.inputCell, table.inputCell td, table.inputCell textarea{
     border-color: #FFAAAA;
 }
-table.textCell, table.textCell td{
+table.textCell, table.textCell td, table.textCell textarea{
     border-color: #AAFFAA;
 }
 td.sectionTitle{
@@ -59,7 +59,7 @@ td{
     border-bottom: thin solid;
 }
 td.children{
-    padding: 1px;
+    padding: 2px;
     vertical-align: top;
 }
 
@@ -67,8 +67,8 @@ td.nodeHead{
     font-weight: bold;
     text-align: right;
     font-size:10px;
-    padding: 6px;
-    color: #111100;
+    padding: 2px;
+    color: black;
 }
 
 span.date{
@@ -78,8 +78,19 @@ span.date{
 
 td.nodeActions{
 }
-
-span.tag{
+table.permission{
+    border-color: #EEEEFF;
+}
+td.tags{
+    padding: 2px;
+}
+td.readers, td.writers{
+    font-size: 13px;
+    padding: 2px;
+    width: 50%;
+}
+span.tag, span.reader, span.writer{
+    font-family: Courier;
     text-decoration: underline;
     color: blue;
 }
@@ -92,9 +103,12 @@ textarea.format{
     font-style: italic;
     color: red;
 }
-td.gap {
+table.gap {
     font-size: 11px;
-    padding: 2px;
+    padding: 16px;
+/*    padding-bottom: 4px;*/
+    border-color: #EEEEEE;
+/*    border: thick solid black;*/
 }
 div.pageHeader
 {
@@ -134,39 +148,28 @@ td.notebook
   min-height: 400px;
   width: 100%;
   overflow: auto;
-  padding: 5px;
+  padding: 0px;
   border-left: thin solid gray;
 }
-/*
-  An ioCell consists of two columns: inOut and collapse
-  inOut consists of an inRow and outRow, each of which has its Label and Content
-*/
-div.ioCell
-{
-  margin-bottom: 10px;
-  font-family: Courier New, monospace;
-  font-size: 10pt;
+td.input, td.output{
+    font-family: Courier, monospace;
+    font-size: 10pt;
 }
-
-div.inOut
-{
-  margin-right: 10px; /* should be same as div.collapse width plus some spacing (5px)*/
-}
-
 div.inLabel
 {
   float: left;
   padding: 2px;
+  padding-top: 4px;
   color: blue;
 }
 div.inContent
 {
-/*  padding: 2px;*/
+  padding: 2px;
   overflow: hidden;
 }
-textarea.ioCell
+textarea.input
 {
-  font-family: Courier New, monospace;
+  font-family: Courier, monospace;
   font-size: 10pt;
 }
 
@@ -178,40 +181,18 @@ div.outLabel
 }
 div.outContent
 {
+/*  font-family: Courier New, monospace;*/
+/*  font-size: 10pt;*/
   padding: 2px;
   float: left;
 }
 
 
-/*
-  A Text Cell consists of two columns: text and collapse
-*/
-div.textCell
+textarea.textData
 {
-  margin-bottom: 10px;
-}
-div.textCol
-{
-  margin-right: 10px; /* should be same as div.collapse width plus some spacing (5px)*/
-}
-textarea.textCell
-{
-  font-family: Tahoma, sans-serif;
+  font-family: Courier, monospace;
   font-size: 10pt;
 }
-
-/*
-  A Group consists of two columns: content and collapse
-*/
-div.group
-{
-  margin-bottom: 10px;
-}
-div.content
-{
-  margin-right: 10px; /* should be same as div.collapse width plus some spacing (5px)*/
-}
-
 /* -------------- */
 textarea
 {
@@ -220,7 +201,7 @@ textarea
 /*  height: 1em;*/
 }
 
-textarea.tag {
+textarea.tag, textarea.reader, textarea.writer {
     width: 200px;
     height: 1.2em;
 }
@@ -308,6 +289,7 @@ table.nblist tfoot td, table.nblist tfoot th {
 
 td.collapse{
   width: 5px; /* width should be same as div.inOut margin-right */
+  border: thin solid green;
 /*  background-color: white;*/
   cursor: pointer;
 }
