@@ -27,8 +27,8 @@ class utilsTestCase(unittest.TestCase):
 ### Main
 # This ensures that the code will run either standalone as a script, or that it
 # can be picked up by Twisted's `trial` test wrapper to run all the tests.
-
-if __name__ == '__main__':
-    unittest.main(testLoader=IPDocTestLoader(dt_files,dt_modules))
-else:
-    testSuite = lambda : makeTestSuite(__name__,dt_files,dt_modules)
+if tcommon.pexpect is not None:
+    if __name__ == '__main__':
+        unittest.main(testLoader=IPDocTestLoader(dt_files,dt_modules))
+    else:
+        testSuite = lambda : makeTestSuite(__name__,dt_files,dt_modules)
