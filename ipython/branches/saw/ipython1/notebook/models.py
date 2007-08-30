@@ -253,7 +253,10 @@ def jsonifyNotebook(nb, keepdict=False, justme=False):
 #-------------------------------------------------------------------------------
 
 metadata = MetaData()
-
+if not hasattr(metadata, 'connect'):
+    def mdconnect(md, engine):
+        md.bind = engine
+    metadata.connect = mdconnect
 # Tables
 
 tagsTable = Table('tags', metadata,
