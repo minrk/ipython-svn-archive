@@ -1659,12 +1659,15 @@ Currently the magic system has the following functions:\n"""
           """
         
         # fail immediately if the given expression can't be compiled
+        
+        expr = self.shell.prefilter(parameter_s,False)
+        
         try:
             mode = 'eval'
-            code = compile(parameter_s,'<timed eval>',mode)
+            code = compile(expr,'<timed eval>',mode)
         except SyntaxError:
             mode = 'exec'
-            code = compile(parameter_s,'<timed exec>',mode)
+            code = compile(expr,'<timed exec>',mode)
         # skew measurement as little as possible
         glob = self.shell.user_ns
         clk = clock2
