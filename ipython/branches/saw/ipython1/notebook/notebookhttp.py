@@ -473,7 +473,7 @@ class HTTPNotebookDropWriter(HTTPNotebookBaseMethod):
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
-            writers = map(int, request.args.get('writer', []))
+            writers = map(int, request.args.get('Writer', []))
             for writerID in writers:
                 self.nbc.dropWriter(userID, nbID, writerID)
             d = defer.succeed(None)
@@ -511,7 +511,7 @@ class HTTPNotebookDropReader(HTTPNotebookBaseMethod):
         try:
             userID = int(request.args['userID'][0])
             nbID = int(request.args['notebookID'][0])
-            readers = map(int, request.args.get('reader', []))
+            readers = map(int, request.args.get('Reader', []))
             for readerID in readers:
                 self.nbc.dropReader(userID, nbID, readerID)
             d = defer.succeed(None)

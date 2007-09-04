@@ -12,7 +12,7 @@ On page load, the SortableManager:
   (or javascript-disabled browser).
 - Clones the thead element from the table because it will be replaced on each
   sort.
-- Sets up a default sort key of "notebook_name" and queues a load of the json
+- Sets up a default sort key of "object_name" and queues a load of the json
   document.
 
 
@@ -31,7 +31,7 @@ On sort request:
   to the first field in the th's mochi:sortcolumn attribute), and attaches
   onclick, onmousedown, onmouseover, onmouseout behaviors to them. The second
   field of mochi:sortcolumn attribute is used to perform a non-string sort.
-- Performs the sort on the notebooks list.  If the second field of
+- Performs the sort on the objects list.  If the second field of
   mochi:sortcolumn was not "str", then a custom function is used and the
   results are stored away in a __sort__ key, which is then used to perform the
   sort (read: shwartzian transform).
@@ -155,18 +155,18 @@ SortableManager = function () {
 
 SortableManager.prototype = {
 
-    "initialize": function () {
+    "initialize": function (prefix, sortkey) {
         // just rip all mochi-examples out of the DOM
-        var examples = getElementsByTagAndClassName(null, "mochi-example");
+        var examples = getElementsByTagAndClassName(null, prefix+"-example");
         while (examples.length) {
             swapDOM(examples.pop(), null);
         }
         // make a template list
-        var templates = getElementsByTagAndClassName(null, "mochi-template");
+        var templates = getElementsByTagAndClassName(null, prefix+"-template");
         for (var i = 0; i < templates.length; i++) {
             var template = templates[i];
             var proto = template.cloneNode(true);
-            removeElementClass(proto, "mochi-template");
+            removeElementClass(proto, prefix+"-template");
             this.templates.push({
                 "template": proto,
                 "node": template
@@ -183,11 +183,11 @@ SortableManager.prototype = {
         }
 
         // to find sort columns
-        this.thead = getElementsByTagAndClassName("thead", null)[0];
+        this.thead = getElementsByTagAndClassName("thead", prefix)[0];
         this.thead_proto = this.thead.cloneNode(true);
 
-        this.sortkey = "dateModified";
-/*        this.loadFromURL("json", "notebooks.json");*/
+        this.sortkey = sortkey;
+/*        this.loadFromURL("json", "objects.json");*/
     },
 
     "loadFromURL": function (format, url) {
@@ -244,19 +244,19 @@ SortableManager.prototype = {
         
         ***/
 
-        // reformat to [{column:value, ...}, ...] style as the notebooks key
-        var notebooks = [];
+        // reformat to [{column:value, ...}, ...] style as the objects key
+        var objects = [];
         var rows = data.rows;
         var cols = data.columns;
         for (var i = 0; i < rows.length; i++) {
             var row = rows[i];
-            var notebook = {};
+            var object = {};
             for (var j = 0; j < cols.length; j++) {
-                notebook[cols[j]] = row[j];
+                object[cols[j]] = row[j];
             }
-            notebooks.push(notebook);
+            objects.push(object);
         }
-        data.notebooks = notebooks;
+        data.objects = objects;
         this.data = data;
         // perform a sort and display based upon the previous sort state,
         // defaulting to an ascending sort if this is the first sort
@@ -340,15 +340,15 @@ SortableManager.prototype = {
         if (!sortfunc) {
             throw new TypeError("unsupported sort style " + repr(sortstyle));
         }
-        var notebooks = this.data.notebooks;
-        for (var i = 0; i < notebooks.length; i++) {
-            var notebook = notebooks[i];
-            notebook.__sort__ = sortfunc(notebook[key]);
+        var objects = this.data.objects;
+        for (var i = 0; i < objects.length; i++) {
+            var object = objects[i];
+            object.__sort__ = sortfunc(object[key]);
         }
 
         // perform the sort based on the state given (forward or reverse)
         var cmp = (forward ? keyComparator : reverseKeyComparator);
-        notebooks.sort(cmp("__sort__"));
+        objects.sort(cmp("__sort__"));
 
         // process every template with the given data
         // and put the processed templates in the DOM
@@ -369,17 +369,7 @@ SortableManager.prototype = {
 
 // create the global SortableManager and initialize it on page load
 sortableManager = new SortableManager();
-//sortableManager.initialize();
-addLoadEvent(sortableManager.initialize);
-// rewrite the view-source links
-/*addLoadEvent(function () {
-    var elems = getElementsByTagAndClassName("A", "view-source");
-    var page = "ajax_tables/";
-    for (var i = 0; i < elems.length; i++) {
-        var elem = elems[i];
-        var href = elem.href.split(/\//).pop();
-        elem.target = "_blank";
-        elem.href = "../view-source/view-source.html#" + page + href;
-    }
-});
-*/
+sortableManager2 = new SortableManager();
+
+addLoadEvent(function() {sortableManager.initialize("notebook", "dateModified")});
+addLoadEvent(function() {sortableManager2.initialize("user", "username")});

@@ -14,8 +14,21 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 # Imports
 #-------------------------------------------------------------------------------
+import sqlalchemy
 from sqlalchemy import *
-import datetime, simplejson
+import datetime
+try:
+    import simplejson
+except:
+    simplejson = None
+
+if not hasattr(MetaData, 'connect'):
+    msg = getattr(sqlalchemy, "__version__", "")
+    if msg:
+        msg = "You are running SQLAlchemy version: %s\n"%msg
+    msg += "Need SQLAlchemy version >= 0.3.5, try 'easy_install -U sqlalchemy'\
+        or goto http://www.sqlalchemy.org/ for up to date code."
+    raise ImportError(msg)
 
 def indent(s, n):
     """indent a multi-line string `s`, `n` spaces"""
@@ -186,7 +199,7 @@ def jsonifyUser(u, keepdict=False, justme=False):
     else:
         d['notebooks'] = [nb.notebookID for nb in u.notebooks]
     # print d
-    if keepdict:
+    if keepdict or simplejson is None:
         return d
     return simplejson.dumps(d)
 
@@ -197,7 +210,7 @@ def jsonifyNode(n, nodeType="node", keepdict=False, justme=False):
         d[key] = getattr(n, key)
     d['tags'] = [t.name for t in n.tags]
     # print d
-    if keepdict:
+    if keepdict or simplejson is None:
         return d
     return simplejson.dumps(d)
 
@@ -209,7 +222,7 @@ def jsonifySection(sec, keepdict=False, justme=False):
     else:
         d['children'] = [sec[i].jsonify(True,False) for i in range(len(sec._children))]
     # print d
-    if keepdict:
+    if keepdict or simplejson is None:
         return d
     return simplejson.dumps(d)
 
@@ -218,7 +231,7 @@ def jsonifyTextCell(tc, keepdict=False, justme=False):
     d['format'] = tc.format
     d['textData'] = tc.textData
     # print d
-    if keepdict:
+    if keepdict or simplejson is None:
         return d
     return simplejson.dumps(d)
 
@@ -227,7 +240,7 @@ def jsonifyInputCell(ic, keepdict=False, justme=False):
     d['input'] = ic.input
     d['output'] = ic.output
     # print d
-    if keepdict:
+    if keepdict or simplejson is None:
         return d
     return simplejson.dumps(d)
 
@@ -244,7 +257,7 @@ def jsonifyNotebook(nb, keepdict=False, justme=False):
     else:
         d['rootID'] = nb.root.nodeID
     # print d
-    if keepdict:
+    if keepdict or simplejson is None:
         return d
     return simplejson.dumps(d)
 
@@ -253,7 +266,6 @@ def jsonifyNotebook(nb, keepdict=False, justme=False):
 #-------------------------------------------------------------------------------
 
 metadata = MetaData()
-assert hasattr(metadata, 'connect'), "Need SQLAlchemy version >= 0.3.5"
 # Tables
 
 tagsTable = Table('tags', metadata,
@@ -543,6 +555,7 @@ class Notebook(Timestamper):
 # SQLAlchemy Mappers and Joins
 #-------------------------------------------------------------------------------
 
+
 tagMapper = mapper(Tag, tagsTable,
     properties = {
         'providers': relation(Node, secondary=tagLinksTable)
@@ -624,12 +637,6 @@ sectionMapper = mapper(Section, sectionsTable, inherits = nodeMapper, polymorphi
 
 userMapper = mapper(User, usersTable,
     properties={
-        # 'nodes':relation(Node, 
-        # primaryjoin=usersTable.c.userID==nodesTable.c.userID,
-        # cascade="all, delete-orphan", backref='user'),
-        # 'cells':relation(Cell,
-        # primaryjoin=usersTable.c.userID==nodesTable.c.userID,
-        # ),
         'notebooks':relation(Notebook,
         primaryjoin=usersTable.c.userID==notebooksTable.c.userID,
         cascade="all, delete-orphan", backref='user',

@@ -18,9 +18,9 @@
             </td>
         </tr>
         <tr>
-            <td class="sidebar" id="sidebar">
-            <table class="nblist" id="sortable_table">
-                <thead>
+            <td class="sidebar" id="notebookList">
+            <table class="sidebar">
+                <thead class="notebook">
                     <tr>
                         <th mochi:sortcolumn="title istr">title</th>
                         <th mochi:sortcolumn="created str">created</th>
@@ -29,13 +29,30 @@
                         <th mochi:sortcolumn="notebookID str" class="invisible">id</th>
                     </tr>
                 </thead>
-                <tbody class="mochi-template">
-                    <tr mochi:repeat="item notebooks" onclick="setActiveNotebook(this.cells[4].innerHTML);">
+                <tbody class="notebook-template">
+                    <tr mochi:repeat="item objects" onclick="setActiveNotebook(this.cells[4].innerHTML);">
                          <td mochi:content="item.title" class="sideTitle" colspan=3>title</td>
                          <td mochi:content="item.created" class="invisible">2005-02-10</td>
                          <td mochi:content="item.modified" class="invisible">2007-02-11</td>
                          <td mochi:content="item.permission">o</td>
                          <td mochi:content="item.notebookID" class="invisible">1</td>
+                     </tr>
+                </tbody>
+            </table>
+            <hr>
+            <table class="sidebar" id="userList">
+                <thead class="user">
+                    <tr>
+                        <th mochi:sortcolumn="username istr">user</th>
+                        <th mochi:sortcolumn="email istr">email</th>
+                        <th mochi:sortcolumn="userID str" class="invisible">id</th>
+                    </tr>
+                </thead>
+                <tbody class="user-template">
+                    <tr mochi:repeat="item objects">
+                         <td mochi:content="item.username" class="sideTitle">user</td>
+                         <td mochi:content="item.email">email</td>
+                         <td mochi:content="item.userID" class="invisible">1</td>
                      </tr>
                 </tbody>
             </table>

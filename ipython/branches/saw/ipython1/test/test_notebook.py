@@ -21,7 +21,7 @@ from twisted.trial import unittest
 from ipython1.kernel.error import NotFoundError
 
 try:# check our dependency
-    import sqlalchemy as sqla, simplejson
+    import sqlalchemy as sqla
 except ImportError:
     sqla = None
 else:
@@ -234,6 +234,6 @@ if sqla:
             self.assertEquals(len(taglist), 6, "incorrect number of tags exist")
     
 else:
-    class MissingDependency(unittest.TestCase):
+    class MissingSQLAlchemy(unittest.TestCase):
         def testSkipNBTests(self):
             pass

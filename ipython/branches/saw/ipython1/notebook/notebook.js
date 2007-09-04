@@ -75,7 +75,21 @@ getUserList = function(){
     return d;
 };
 _getUserList = function(req){
+/*    return;*/
     userList = evalJSONRequest(req).list;
+/*    return;*/
+    var data = {};
+    data.columns = ["username", "email", "userID"];
+    data.rows = [];
+    for (var i=0; i<userList.length; i++){
+        var u = userList[i];
+        var row = [];
+        row.push(u.username);
+        row.push(u.email);
+        row.push(u.userID);
+        data.rows.push(row);
+    }
+    sortableManager2.initWithData(data);
 }
 
 /*********************** sidebar functions ********************/
@@ -316,11 +330,21 @@ permissionTable = function(){
     t.className = "permission";
     var tr = document.createElement("tr");
     var td = document.createElement("td");
+    if (activeNotebook.permission != "own"){
+        td.className = "owner";
+        td.innerHTML = "Owner:&nbsp;"
+        var span = document.createElement("span");
+        span.className = "owner";
+        span.innerHTML = getUserByKey("userID",activeNotebook.userID).username;
+        td.appendChild(span);
+        tr.appendChild(td);
+        td = document.createElement("td");
+    }
     td.className = "readers";
     td.innerHTML = "Readers: ";
     for (var i=0;i<activeNotebook.readers.length;i++){
         span = document.createElement("span");
-        span.className = "reader";
+        span.className = "Reader";
         if (activeNotebook.permission == "own"){
             span.setAttribute("onclick", "dropUser(this);");
         }
@@ -333,8 +357,8 @@ permissionTable = function(){
         ta.className = "reader";
         ta.value = "add reader";
         ta.onfocus = function(){this.value = "";};
-        ta.setAttribute("onblur", "addUsers(this);");
-        ta.setAttribute("onkeypress", "maybeAddUsers(this, event);");
+        ta.setAttribute("onblur", "addMembers(this);");
+        ta.setAttribute("onkeypress", "maybeAddMembers(this, event);");
         td.appendChild(ta);
     }
     tr.appendChild(td);
@@ -343,7 +367,7 @@ permissionTable = function(){
     td.innerHTML = "Writers: ";
     for (var i=0;i<activeNotebook.writers.length;i++){
         span = document.createElement("span");
-        span.className = "writer";
+        span.className = "Writer";
         if (activeNotebook.permission == "own"){
             span.setAttribute("onclick", "dropUser(this);");
         }
@@ -356,20 +380,20 @@ permissionTable = function(){
         ta.className = "writer";
         ta.value = "add writer";
         ta.onfocus = function(){this.value = "";};
-        ta.setAttribute("onblur", "addUsers(this);");
-        ta.setAttribute("onkeypress", "maybeAddUsers(this, event);");
+        ta.setAttribute("onblur", "addMembers(this);");
+        ta.setAttribute("onkeypress", "maybeAddMembers(this, event);");
         td.appendChild(ta);
     }
     tr.appendChild(td);
     t.appendChild(tr);
     return t;
 }
-maybeAddUsers = function(textarea, event){
+maybeAddMembers = function(textarea, event){
     if (event.keyCode == 13){
-        addUsers(textarea);
+        addMembers(textarea);
     }
 };
-addUsers = function(textarea){
+addMembers = function(textarea){
     var klass = textarea.className;
     var t = getMyTable(textarea);
     var args = {};
@@ -392,8 +416,12 @@ addUsers = function(textarea){
             args[klass].push(u.userID);
         }
     }
+    if (args[klass].length <= 0){
+        return;
+    }
     var d = doSimpleXMLHttpRequest("/add"+klass[0].toUpperCase()+klass.substring(1), args);
     d.addCallback(refreshNotebook);
+    return d;
 };
 dropUser = function(span){
     var klass = span.className;
@@ -520,7 +548,7 @@ nodeTableFromJSON = function(node){
     td = document.createElement("td");
     td.className = "tag";
     td.setAttribute("colspan", 2);
-    td.innerHTML = "&nbsp;"
+/*    td.innerHTML = "tags:"*/
     for (var i=0;i<node.tags.length;i++){
         span = document.createElement("span");
         span.className = "tag";
@@ -614,13 +642,18 @@ nodeTableFromJSON = function(node){
         resizeTextArea(ta,null);
         
         tr = document.createElement("tr");
-        td = document.createElement("td");
         td.className = "output";
         td.setAttribute("colspan", 2);
-        div = document.createElement("div");
-        div.className = "outLabel";
-        div.innerHTML = "Out&nbsp;:";
-        td.appendChild(div);
+        var ot = document.createElement("table");
+        ot.className = "output"
+        var otr = document.createElement("tr");
+        var otd = document.createElement("td");
+/*        div = document.createElement("div");*/
+        otd.className = "outLabel";
+        otd.innerHTML = "Out&nbsp;:";
+        otr.appendChild(otd);
+        otd = document.createElement("td");
+        otd.className = "outContent";
         div = document.createElement("div");
         div.className = "outContent";
         if (node.output.length < 1 || isPending(node.nodeID)){
@@ -628,7 +661,10 @@ nodeTableFromJSON = function(node){
         }else{
             div.innerHTML = node.output.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/\n/g,"<br>\n");
         }
-        td.appendChild(div);
+        otd.appendChild(div);
+        otr.appendChild(otd);
+        ot.appendChild(otr);
+        td.appendChild(ot);
         tr.appendChild(td);
         t.appendChild(tr);
         
