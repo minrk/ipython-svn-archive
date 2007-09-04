@@ -22,12 +22,11 @@ from ipython1.kernel.error import NotFoundError
 
 try:# check our dependency
     import sqlalchemy as sqla
+    from ipython1.notebook import notebook, dbutil, xmlutil
+    from ipython1.notebook.models import TextCell, InputCell, Section, Node, Tag
 except ImportError:
     sqla = None
 else:
-    from ipython1.notebook import notebook, dbutil, xmlutil
-    from ipython1.notebook.models import TextCell, InputCell, Section, Node, Tag
-    # get potential warning out of the way of test output
     engine = sqla.create_engine("sqlite:///")
 
 if sqla:
