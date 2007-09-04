@@ -112,10 +112,10 @@ def make_IPython(argv=None,user_ns=None,user_global_ns=None,debug=1,
                          "IPython %s -- An enhanced Interactive Python."
                          % (__version__,),
 """\
-? or %quickref -> Introduction to IPython's features, or quick reference.
-%magic  -> Information about IPython's 'magic' % functions.
-help    -> Python's own help system.
-object? -> Details about 'object'. ?object also works, ?? prints more.
+?         -> Introduction to IPython's features
+%quickref -> Quick reference.
+help      -> Python's own help system.
+object?   -> Details about 'object'. ?object also works, ?? prints more.
 """ ]
 
     IP.usage = interactive_usage
