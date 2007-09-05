@@ -341,9 +341,14 @@ class Inspector:
         # Get docstring, special-casing aliases:
         if isalias:
             if not callable(obj):
-                ds = "Alias to the system command:\n  %s" % obj[1]
+                try:
+                    ds = "Alias to the system command:\n  %s" % obj[1]
+                except:
+                    ds = "Alias: " + str(obj)
             else:
                 ds = "Alias to " + str(obj)
+                if obj.__doc__:
+                    ds += "\nDocstring:\n" + obj.__doc__
         else:
             ds = getdoc(obj)
             if ds is None:
