@@ -29,8 +29,54 @@ from ipython1.kernel.task import ITaskController
 import ipython1.config.api as config
 
 controllerConfig = config.getConfigObject('controller')
+
+
         
-def main():
+
+def main(logfile):
+    if logfile:
+        logfile = logfile + str(os.getpid()) + '.log'
+        try:
+            openLogFile = open(logfile, 'w')
+        except:
+            openLogFile = sys.stdout
+    else:
+        openLogFile = sys.stdout
+    log.startLogging(openLogFile)
+    
+    # Execute any user defined import statements
+    if controllerConfig.controllerImportStatement:
+        try:
+            exec controllerConfig.controllerImportStatement
+        except:
+            log.msg("Error running controllerImportStatement: %s" % controllerConfig.controllerImportStatement)
+    
+    # Create and configure the core ControllerService
+    cs = controllerservice.ControllerService()
+    
+    # Start listening for engines  
+    efac = controllerConfig.engineServerProtocolInterface(cs)
+    reactor.listenTCP(
+        port=controllerConfig.listenForEnginesOn['port'],
+        factory=efac,
+        interface=controllerConfig.listenForEnginesOn['ip'])
+        
+    for ciname, ci in controllerConfig.controllerInterfaces.iteritems():
+        log.msg("Starting controller interface: " + ciname)
+        adaptedController = ci['controllerInterface'](cs)
+        for niname, ni in ci['networkInterfaces'].iteritems():
+            log.msg("Starting controller network interface (%s): %s:%s:%i" % (ciname,niname,ni['ip'],ni['port']))
+            fac = ni['interface'](adaptedController)
+            reactor.listenTCP(
+                port=ni['port'],
+                factory=fac,
+                interface=ni['ip'])
+                    
+    # Start the controller service and set things running
+    cs.startService()
+    reactor.run()
+
+def start():
     parser = OptionParser()
     parser.set_defaults(logfile='')
         
@@ -63,8 +109,7 @@ def main():
           
     # Configuration files and profiles
     if options.profile and not options.rcfile:
-        config.updateConfigWithProfile('ipcontroller', options.profile,
-                                       options.ipythondir)
+        config.updateConfigWithProfile('ipcontroller', options.profile, options.ipythondir)
     elif options.rcfile and not options.profile:
         config.updateConfigWithFile(options.rcfile, options.ipythondir)
     else:
@@ -86,8 +131,8 @@ def main():
     if options.taskport is not None:
         controllerConfig.controllerInterfaces['task']['networkInterfaces'][di]['port'] = options.taskport
         
-    startController(options.logfile)
+    main(options.logfile)
     
     
 if __name__ == "__main__":
-    main()
+    start()
