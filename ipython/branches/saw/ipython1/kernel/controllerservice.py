@@ -259,9 +259,10 @@ class ControllerService(object, service.Service):
         for i, (n, f, args, kwargs) in enumerate(self._onNRegistered):
             if len(self.engines.keys()) == n:
                 try:
-                    f(*args, **kwargs)
-                except:
-                    log.msg("Function %r failed when the %ith engine registered" % (f, n))
+                    try:
+                        f(*args, **kwargs)
+                    except:
+                        log.msg("Function %r failed when the %ith engine registered" % (f, n))
                 finally:
                     self._onNRegistered.pop(i)
         
