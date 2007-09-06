@@ -2174,9 +2174,9 @@ want to merge them back into the new files.""" % locals()
         # print "=>",tgt #dbg
         if callable(tgt):
             if '$' in line_info.line:
-                call_meth = '(_ip.itpl(%s))'
+                call_meth = '(_ip, _ip.itpl(%s))'
             else:
-                call_meth = '(%s)'
+                call_meth = '(_ip,%s)'
             line_out = ("%s_sh.%s" + call_meth) % (line_info.preWhitespace,
                                          line_info.iFun, 
             make_quoted_expr(line_info.line))
