@@ -10,9 +10,9 @@ There are two ways this module can be used:
 Customization
 =============
 
-Configuration information is held by a set of configuration objects.  The attributes
-of these objects contain the actual configuration information.  A user performs
-customization by getting one of the configuration objects:
+Configuration information is held by a set of configuration objects.  The
+attributes of these objects contain the actual configuration information.  A
+user performs customization by getting one of the configuration objects:
 
 ::
 
@@ -31,8 +31,8 @@ attributes can be found in the ipython1.config.objects module.
 Access to Configuration Information
 ===================================
 
-The actual configuration information about something can be retrieved in a similar 
-manner:
+The actual configuration information about something can be retrieved in a
+similar manner:
 
 ::
 
@@ -67,10 +67,11 @@ _configObjects = {}
 def getConfigObject(key):
     """Return a new or previously created `Config` object by key.
     
-    Configuration objects for a given key are created only once for each process.
+    Configuration objects for a given key are created only once for each
+    process.
 
-    This function returns a configuration object either by creating a new one or by
-    finding an already existing one in the cache.
+    This function returns a configuration object either by creating a new one
+    or by finding an already existing one in the cache.
     """
     
     global _configObjects
@@ -96,8 +97,8 @@ def resolveFilePath(filename, ipythondir = None):
     3.  In the IPYTHONDIR environment variable if it exists
     4.  In the ~/.ipython directory
 
-    Note:  The IPYTHONDIR is also used by the trunk version of IPython so changing 
-           it will also affect it was well.
+    Note: The IPYTHONDIR is also used by the trunk version of IPython so
+           changing it will also affect it was well.
     """
     
     # In cwd or by absolute path with ~ expanded

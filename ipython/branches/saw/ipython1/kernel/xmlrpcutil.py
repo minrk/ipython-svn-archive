@@ -17,6 +17,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 # import cPickle as pickle
+import sys
 import xmlrpclib
 # import httplib
 # import urllib
@@ -75,8 +76,17 @@ class Transport(xmlrpclib.Transport):
             # If anything goes wrong, retry by first closing the connection.
             # Any exceptions at this point are allowed to propagate out for
             # handling code to deal with them.
-            self.connection.close()
-            self._full_request(host,handler,request_body)
+            try:
+                self.connection.close()
+                self._full_request(host,handler,request_body)
+            except:
+                last_type = sys.last_type.__name__
+                msg=("Error connecting to the server, please recreate the "
+                     "client.\n"
+                     "The original internal error was:\n"
+                     "%s: %s" % (last_type,sys.last_value)
+                     )
+                raise error.ConnectionError(msg)
         
         response = self.connection.getresponse()
         errcode = response.status

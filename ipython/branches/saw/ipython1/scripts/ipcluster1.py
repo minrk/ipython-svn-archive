@@ -98,14 +98,13 @@ import ipython1.kernel.api as kernel
 from ipython1.config import cutils
 from ipython1.core import error
 from ipython1.tools import utils
+from ipython1.tools.hatch import start, stop 
+
 
 #---------------------------------------------------------------------------
 # Normal code begins
 #---------------------------------------------------------------------------
 
-# Utilities to stop/kill a process by PID
-stop = lambda pid: os.kill(pid,signal.SIGINT)
-kill = lambda pid: os.kill(pid,signal.SIGTERM)
 
 def parse_args():
     """Parse command line and return opts,args."""
@@ -138,30 +137,6 @@ def parse_args():
 
     return parser.parse_args()
 
-def numAlive(controller,engines):
-    """Return the number of processes still alive."""
-    retcodes = [controller.poll()] + \
-               [e.poll() for e in engines]
-    return retcodes.count(None)
-
-
-def cleanup(clean,controller,engines):
-    """Stop the controller and engines with the given cleanup method."""
-    
-    for e in engines:
-        if e.poll() is None:
-            print 'Stopping engine, pid',e.pid
-            clean(e.pid)
-    if controller.poll() is None:
-        print 'Stopping controller, pid',controller.pid
-        clean(controller.pid)
-
-
-def ensureDir(path):
-    """Ensure a directory exists or raise an exception."""
-    if not os.path.isdir(path):
-        os.makedirs(path)
-
 
 def startMsg(control_host,control_port=10105):
     """Print a startup message"""
@@ -180,184 +155,6 @@ def startMsg(control_host,control_port=10105):
     print
 
 
-def stopCluster(controller,engines):
-    """ """
-    print 'Stopping cluster.  Cleaning up...'
-    cleanup(stop,controller,engines)
-    for i in range(4):
-        time.sleep(i+2)
-        nZombies = numAlive(controller,engines)
-        if  nZombies== 0:
-            print 'OK: All processes cleaned up.'
-            break
-        print 'Trying again, %d processes did not stop...' % nZombies
-        cleanup(kill,controller,engines)
-        if numAlive(controller,engines) == 0:
-            print 'OK: All processes cleaned up.'
-            break
-    else:
-        print '*'*75
-        print 'ERROR: could not kill some processes, try to do it',
-        print 'manually.'
-        zombies = []
-        if controller.returncode is None:
-            print 'Controller is alive: pid =',controller.pid
-            zombies.append(controller.pid)
-        liveEngines = [ e for e in engines if e.returncode is None ]
-        for e in liveEngines:
-            print 'Engine is alive:     pid =',e.pid
-            zombies.append(e.pid)
-        print
-        print 'Zombie summary:',' '.join(map(str,zombies))
-
-def startController(logfile):
-    """
-    """
-    return Popen(['ipcontroller','--logfile',logfile])
-
-def startEngines(logfile,n=1):
-    """
-    """
-    return [ Popen(['ipengine','--logfile',logfile]) for i in range(n) ]
-
-def startLocalCluster(n=1,logfile=None):
-    """
-    """
-    # Store all logs inside the ipython directory
-    ipdir = cutils.getIpythonDir()
-    pjoin = os.path.join
-
-    if logfile is None:
-        logdir_base = pjoin(ipdir,'log')
-        ensureDir(logdir_base)
-        logfile = pjoin(logdir_base,'ipcluster-')
-
-    #print 'Starting controller:',
-    controller = startController(logfile)
-    #print 'Controller PID:',controller.pid
-
-    # We now get a remote controller so we can test that the controller/engines
-    # are really up and active before we return.
-    rc = kernel.RemoteController(('127.0.0.1',10105))
-    for ntry in range(1,5):
-        try:
-            rc.getIDs()
-        except socket.error:
-            time.sleep(ntry)
-        else:
-            break
-    else:
-        # Normal loop exit means something went seriously wrong
-        raise error.ControllerCreationError("Controller could not be created")
-
-    # At this point, the controller is up and running, we start the engines.
-    #print 'Starting engines:   ',
-
-    englogfile = '%s%s-' % (logfile,controller.pid)
-    engines = startEngines(englogfile,n)
-
-    # Now, we need to ensure that the controller has at least as many engines
-    # connected as we asked for.
-
-    # XXX: this is currently not very foolproof: a controller could have older
-    # engines hooked to it.  We should add to the engines the ability to tell
-    # us their pid as part of their official API, so we actually validate that
-    # the PIDs we want are *really* connected to the controller.
-    for ntry in range(1,5):
-        ids = rc.getIDs()
-        if len(ids)>=n:
-            break
-        time.sleep(ntry)
-    else:
-        # Normal loop exit means something went seriously wrong
-        raise error.EngineCreationError("Not all engines could be created")
-    
-    #eids = [e.pid for e in engines]
-    #print 'Engines PIDs:  ',eids
-    #print 'Log files: %s*' % englogfile
-    
-    #proc_ids = eids + [controller.pid]
-    #procs = engines + [controller]
-
-    return controller,engines
-    
-    
-def clusterLocal(opt):
-    """Start a cluster on the local machine."""
-
-    controller,engines = startLocalCluster(opt.n,opt.logfile)
-    
-    grpid = os.getpgrp()
-
-    try:
-        startMsg('127.0.0.1')
-        print 'You can also hit Ctrl-C to stop it, or use from the cmd line:'
-        print
-        print 'kill -INT',grpid
-        print
-        try:
-            while True:
-                time.sleep(5)
-        except:
-            pass
-    finally:
-        stopCluster(controller,engines)
-
-def clusterRemote(opt,arg):
-    """Start a remote cluster over SSH"""
-
-    # Load the remote cluster configuration
-    clConfig = {}
-    execfile(opt.clusterfile,clConfig)
-    contConfig = clConfig['controller']
-    engConfig = clConfig['engines']
-    # Determine where to find sshx:
-    sshx = clConfig.get('sshx',os.environ.get('IPYTHON_SSHX','sshx'))
-    
-    # Store all logs inside the ipython directory
-    ipdir = cutils.getIpythonDir()
-    pjoin = os.path.join
-
-    logfile = opt.logfile
-    if logfile is None:
-        logdir_base = pjoin(ipdir,'log')
-        ensureDir(logdir_base)
-        logfile = pjoin(logdir_base,'ipcluster')
-
-    # Append this script's PID to the logfile name always
-    logfile = '%s-%s' % (logfile,os.getpid())
-    
-    print 'Starting controller:'
-    # Controller data:
-    xsys = os.system
-
-    contHost = contConfig['host']
-    contLog = '%s-con-%s-' % (logfile,contHost)
-    cmd = "ssh %s '%s' 'ipcontroller --logfile %s' &" % \
-          (contHost,sshx,contLog)
-    #print 'cmd:<%s>' % cmd  # dbg
-    xsys(cmd)
-    time.sleep(2)
-
-    print 'Starting engines:   '
-    for engineHost,engineData in engConfig.iteritems():
-        if isinstance(engineData,int):
-            numEngines = engineData
-        else:
-            raise NotImplementedError('port configuration not finished for engines')
-
-        print 'Sarting %d engines on %s' % (numEngines,engineHost)
-        engLog = '%s-eng-%s-' % (logfile,engineHost)
-        for i in range(numEngines):
-            cmd = "ssh %s '%s' 'ipengine --controller-ip %s --logfile %s' &" % \
-                      (engineHost,sshx,contHost,engLog)
-            #print 'cmd:<%s>' % cmd  # dbg
-            xsys(cmd)
-        # Wait after each host a little bit
-        time.sleep(1)
-            
-    startMsg(contConfig['host'])
-        
 def main():
     """Main driver for the two big options: local or remote cluster."""
     

@@ -39,34 +39,7 @@ if mpiConfig.mpiImportStatement:
     except ImportError:
         mpi = None
 
-def main(n, logfile):
-    if logfile:
-        logfile = logfile + str(os.getpid()) + '.log'
-        try:
-            openLogFile = open(logfile, 'w')
-        except:
-            openLogFile = sys.stdout
-    else:
-        openLogFile = sys.stdout
-    log.startLogging(openLogFile)
-    for i in range(n):
-        service = EngineService(shellConfig.shellClass,
-            mpi=mpi)
-        fac = engineConfig.engineClientProtocolInterface(service)
-        reactor.connectTCP(
-            host=engineConfig.connectToControllerOn['ip'], 
-            port=engineConfig.connectToControllerOn['port'],
-            factory=fac)
-        service.startService()
-        if shellConfig.shellImportStatement:
-            try:
-                service.execute(shellConfig.shellImportStatement)
-            except:
-                log.msg("Error running shellImportStatement: %s" % shellConfig.shellImportStatement)
-                
-    reactor.run()
-
-def start(n=1):
+def main(n=1):
     parser = OptionParser()
     parser.set_defaults(n=n)
     parser.set_defaults(profile = '')
@@ -106,7 +79,7 @@ def start(n=1):
     if options.controllerport is not None:
         engineConfig.connectToControllerOn['port'] = options.controllerport
         
-    main(options.n, options.logfile)
+    startEngines(options.logfile,options.n)
     
 if __name__ == "__main__":
-    start()
+    main()
