@@ -571,7 +571,7 @@ class InteractiveShell(object,Magic):
                              )
             auto_alias = auto_alias + ls_extra
         elif os.name in ['nt','dos']:
-            auto_alias = ('dir dir /on', 'ls dir /on',
+            auto_alias = ('ls dir /on',
                           'ddir dir /ad /on', 'ldir dir /ad /on',
                           'mkdir mkdir','rmdir rmdir','echo echo',
                           'ren ren','cls cls','copy copy')
