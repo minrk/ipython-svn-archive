@@ -1008,9 +1008,24 @@ class SList(list):
     
     p = paths = property(get_paths)
 
+    def grep(self, pattern, prune = False):
+        """ Return all strings matching 'pattern' (a regex or callable) 
+        
+        This is case-insensitive. If prune is true, return all items
+        NOT matching the pattern.
+        """
+        if isinstance(pattern, basestring):
+            pred = lambda x : re.search(pattern, x, re.IGNORECASE)
+        else:
+            pred = pattern
+        if not prune:
+            return SList([el for el in self if pred(el)])
+        else:
+            return SList([el for el in self if not pred(el)])
+
 def print_slist(arg):
     """ Prettier (non-repr-like) and more informative printer for SList """
-    print "SList (.p, .n, .l, .s available). Value:"
+    print "SList (.p, .n, .l, .s, .grep() available). Value:"
     nlprint(arg)
     
 print_slist = result_display.when_type(SList)(print_slist)
