@@ -241,18 +241,7 @@ __IPYTHON__.default_option('cd','-q')
 
 # This is redundant, ipy_user_conf.py will determine this
 # Load all of $PATH as aliases
-if os.name == 'posix':
-#    # %rehash is very fast, but it doesn't check for executability, it simply
-#    # dumps everything in $PATH as an alias. Use rehashx if you want more
-#    # checks.
-    __IPYTHON__.magic_rehash()
-else:
-#    # Windows users: the list of extensions considered executable is read from
-#    # the environment variable 'pathext'.  If this is undefined, IPython
-#    # defaults to EXE, COM and BAT.
-#    # %rehashx is the one which does extension analysis, at the cost of
-#    # being much slower than %rehash.
-    __IPYTHON__.magic_rehashx()
+__IPYTHON__.magic_rehashx()
 
 # Remove %sc,%sx if present as aliases
 __IPYTHON__.magic_unalias('sc')
