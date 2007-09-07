@@ -1013,6 +1013,11 @@ class SList(list):
         
         This is case-insensitive. If prune is true, return all items
         NOT matching the pattern.
+        
+        Examples::
+        
+            a.grep( lambda x: x.startswith('C') )
+            a.grep('Cha.*log', prune=1)
         """
         if isinstance(pattern, basestring):
             pred = lambda x : re.search(pattern, x, re.IGNORECASE)
