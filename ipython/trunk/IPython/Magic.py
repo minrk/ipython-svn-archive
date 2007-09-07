@@ -2709,7 +2709,12 @@ Defaulting color scheme to 'NoColor'"""
 
         This history is automatically maintained by the %cd command, and
         always available as the global list variable _dh. You can use %cd -<n>
-        to go to directory number <n>."""
+        to go to directory number <n>.
+        
+        Note that most of time, you should view directory history by entering
+        cd -<TAB>.
+        
+        """
 
         dh = self.shell.user_ns['_dh']
         if parameter_s:
@@ -2938,6 +2943,8 @@ Defaulting color scheme to 'NoColor'"""
     def magic_r(self, parameter_s=''):
         """Repeat previous input.
 
+        Note: Consider using the more powerfull %rep instead!
+        
         If given an argument, repeats the previous command which starts with
         the same string, otherwise it just repeats the previous input.
 
