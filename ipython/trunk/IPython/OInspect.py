@@ -238,8 +238,7 @@ class Inspector:
         if inspect.isclass(obj):
             header = self.__head('Class constructor information:\n')
             obj = obj.__init__
-        elif type(obj) is types.InstanceType or \
-             isinstance(obj,object):
+        elif type(obj) is types.InstanceType:
             obj = obj.__call__
 
         output = self.__getdef(obj,oname)
@@ -408,8 +407,7 @@ class Inspector:
             fname = inspect.getabsfile(obj)
             if fname.endswith('<string>'):
                 fname = 'Dynamically generated function. No source code available.'
-            if (fname.endswith('.so') or fname.endswith('.dll') or 
-                not os.path.isfile(fname)):
+            if (fname.endswith('.so') or fname.endswith('.dll')):
                 binary_file = True
             out.writeln(header('File:\t\t')+fname)
         except:
@@ -426,11 +424,11 @@ class Inspector:
         # avoid repetitions).  If source fails, we add them back, see below.
         if ds and detail_level == 0:
                 out.writeln(header('Docstring:\n') + indent(ds))
-
                 
         # Original source code for any callable
         if detail_level:
-            # Flush the source cache because inspect can return out-of-date source
+            # Flush the source cache because inspect can return out-of-date
+            # source
             linecache.checkcache()
             source_success = False
             try:

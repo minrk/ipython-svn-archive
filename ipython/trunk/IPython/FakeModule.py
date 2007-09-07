@@ -14,7 +14,9 @@ $Id$"""
 #  the file COPYING, distributed as part of this software.
 #*****************************************************************************
 
-class FakeModule:
+import types
+
+class FakeModule(types.ModuleType):
     """Simple class with attribute access to fake a module.
 
     This is not meant to replace a module, but to allow inserting a fake
@@ -23,7 +25,6 @@ class FakeModule:
     sessions.
 
     Do NOT use this code for anything other than this IPython private hack."""
-
     def __init__(self,adict):
 
         # It seems pydoc (and perhaps others) needs any module instance to
@@ -33,14 +34,14 @@ class FakeModule:
                 return 1
             adict['__nonzero__'] = __nonzero__
 
-            self.__dict__ = adict
+            self._dict_ = adict
 
         # modules should have a __file__ attribute
         adict.setdefault('__file__',__file__)
 
     def __getattr__(self,key):
         try:
-            return self.__dict__[key]
+            return self._dict_[key]
         except KeyError, e:
             raise AttributeError("FakeModule object has no attribute %s" % e)
 
