@@ -46,6 +46,7 @@ from IPython.ipmaker import make_IPython
 from IPython.Magic import Magic
 from IPython.ipstruct import Struct
 
+
 # Globals
 # global flag to pass around information about Ctrl-C without exceptions
 KBINT = False
