@@ -2391,7 +2391,23 @@ want to merge them back into the new files.""" % locals()
         """A safe version of the builtin execfile().
 
         This version will never throw an exception, and knows how to handle
-        ipython logs as well."""
+        ipython logs as well.
+
+        :Parameters:
+          fname : string
+            Name of the file to be executed.
+            
+          where : tuple
+            One or two namespaces, passed to execfile() as (globals,locals).
+            If only one is given, it is passed as both.
+
+        :Keywords:
+          islog : boolean (False)
+
+          quiet : boolean (True)
+
+          exit_ignore : boolean (False)
+          """
 
         def syspath_cleanup():
             """Internal cleanup routine for sys.path."""
@@ -2424,6 +2440,7 @@ want to merge them back into the new files.""" % locals()
         kw.setdefault('islog',0)
         kw.setdefault('quiet',1)
         kw.setdefault('exit_ignore',0)
+        
         first = xfile.readline()
         loghead = str(self.loghead_tpl).split('\n',1)[0].strip()
         xfile.close()
