@@ -41,11 +41,10 @@ class ScriptTestManager(object):
         """
         """
         
-        if result is None:
-            result = unittest.TestResult()
-            result.startTest(self)
-
         self.result = result
+
+        if result is None:
+            self.reset()
 
         # names of methods that record failure or success in TestCase
         # instances.  We wrap them all with our results recording decorator.
@@ -84,6 +83,12 @@ class ScriptTestManager(object):
 
         for methname in recmethods:
             setattr(self, methname, getattr(test,methname))
+
+    def reset(self):
+        """Reset the internal result object to a fresh one"""
+        
+        self.result = unittest.TestResult()
+        self.result.startTest(self)
 
     def succeed(self):
         self.result.addSuccess(self)
@@ -137,7 +142,8 @@ class _TestManagerFactory(object):
 
 # Declare the two publicly-useful factories
 mkScriptTestManager = _TestManagerFactory(ScriptTestManager)
-mkNumpyScriptTestManager = _TestManagerFactory(NumpyScriptTestManager)
+if has_numpy:
+    mkNumpyScriptTestManager = _TestManagerFactory(NumpyScriptTestManager)
 
 
 class MyTextTestRunner(unittest.TextTestRunner):
