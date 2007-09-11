@@ -1,4 +1,33 @@
 """Support for running one or more standalone scripts as real unittests.
+
+Two particularly useful top-level objects are:
+
+- mkScriptTestManager
+- mkNumpyScriptTestManager
+
+They are similar in use, but the second only exists if numpy is available.
+
+These objects return 'test managers', objects which contain assert/fail/succeed
+methods to manage a test (much like TestCase instances), but allowing you to
+have multiple test conditions individually recorded throughout your script.
+Here's a simple example of their use::
+
+
+    from snakeoil.oilscript import mkScriptTestManager
+    test = mkScriptTestManager()
+
+    # Once you have your test object, you can declare individual test
+    # successes:
+    for i in range(3):
+        test.succeed()
+
+    # or make checks
+    x, y = 1,2
+    test.assertEquals(x+y,3)
+
+    # Print a final summary:
+    print test.summary()
+
 """
 __docformat__ = "restructuredtext en"
 
