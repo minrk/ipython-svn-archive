@@ -22,6 +22,7 @@ __license__ = Release.license
 # required modules from the Python standard library
 import __main__
 import commands
+import doctest
 import os
 import re
 import shlex
@@ -834,6 +835,36 @@ def dhook_wrap(func,*a,**k):
 
     f.__doc__ = func.__doc__
     return f
+
+#----------------------------------------------------------------------------
+def doctest_reload():
+    """Properly reload doctest to reuse it interactively.
+
+    This routine:
+
+      - reloads doctest
+      
+      - resets its global 'master' attribute to None, so that multiple uses of
+      the module interactively don't produce cumulative reports.
+    
+      - Monkeypatches its core test runner method to protect it from IPython's
+      modified displayhook.  Doctest expects the default displayhook behavior
+      deep down, so our modification breaks it completely.  For this reason, a
+      hard monkeypatch seems like a reasonable solution rather than asking
+      users to manually use a different doctest runner when under IPython."""
+
+    import doctest
+    reload(doctest)
+    doctest.master=None
+
+    try:
+        doctest.DocTestRunner
+    except AttributeError:
+        # This is only for python 2.3 compatibility, remove once we move to
+        # 2.4 only.
+        pass
+    else:
+        doctest.DocTestRunner.run = dhook_wrap(doctest.DocTestRunner.run)
 
 #----------------------------------------------------------------------------
 class HomeDirError(Error):
