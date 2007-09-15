@@ -972,6 +972,11 @@ class IPShellQt4(IPThread):
 
         from PyQt4 import QtCore, QtGui
 
+        if QtCore.PYQT_VERSION_STR == '4.3':
+            warn('''PyQt4 version 4.3 detected.
+If you experience repeated threading warnings, please update PyQt4.
+''')
+
         self.exec_ = hijack_qt4()
 
         # Allows us to use both Tk and QT.
