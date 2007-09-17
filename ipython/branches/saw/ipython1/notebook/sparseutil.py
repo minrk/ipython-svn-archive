@@ -1,6 +1,18 @@
 # encoding: utf-8
 # -*- test-case-name: ipython1.test.test_notebook_xmlutil -*-
-"""The XML Representation of Notebook components
+"""The Sparse Representation of Notebook components
+Sparse Notebooks are simple representations of notebooks.  Tags are not
+supported, nor is TextCell Formatting.  Sparse Notebooks are valid
+executable Python.  Inputs are unprefixed, and without decoration.  Outputs
+are prefixed with '#>'.  Arbitrary layers of Sections can be used for
+organizational purposes when loading the notebook into an interactive
+environment.  Sections can be opened with control lines, such as:
+`# py-section the rest of the line is the title`
+Sections can be closed with: `# py-section-end`
+note: whitespace is trimmed, so any `^\s*#\s*py-section\s*Title Stuff\s*$` is
+valid.
+Comments are attached to objects, and they go after the object to which they
+are attached.
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
@@ -24,7 +36,7 @@ from ipython1.notebook import models, dbutil
 # INPUTS = ["py-input"]
 OUTPUT = "#>"
 TEXTS = ['"""', "'''"]
-CONTROLS = ["py-input", "py-output", "py-section", "py-section-end"]
+CONTROLS = ["py-section", "py-section-end"]
     
 # def __init__(self, user):
 #     self.user = user
@@ -32,19 +44,20 @@ CONTROLS = ["py-input", "py-output", "py-section", "py-section-end"]
 #     self.sectionStack = []
 
 def control(line):
-    if line and line.strip()[0] == '#':
-        if line[:2] == OUTPUT:
-            return "py-output", line[2:]
-        splits = line.split(' ',2)
-        if len(splits) > 1:
-            if splits[1] in CONTROLS:
-                if len(splits) > 2:
-                    return splits[1], splits[2]
-                else:
-                    return splits[1] , ""
-        return 'py-comment', line[1:]
+    if line[:2] == OUTPUT:
+        return "py-output", line[2:]
     elif line[:3] in TEXTS:
         return line[:3], line[3:]
+    elif line and line.strip()[0] == '#':
+        line = line.strip()[1:]
+        splits = map(str.strip, line.strip().split(' ',1))
+        if len(splits) > 0:
+            if splits[0] in CONTROLS:
+                if len(splits) > 1:
+                    return splits[0], splits[1]
+                else:
+                    return splits[0] , ""
+        return 'py-comment', line
     return None, line
 
 def readComments(inlines, comments=[]):
@@ -56,26 +69,23 @@ def readComments(inlines, comments=[]):
         ctrl, line = control(inlines.pop(0))
         if ctrl == 'py-comment':
             comments.append(line)
-    print "cmt:",comments
+    # print "cmt:",comments
     return ctrl, line, comments
 
 def readInput(inlines, inputs=[]):
     ctrl, line = control(inlines.pop(0))
-    # print ctrl, line
-    while inlines and line[:2] != OUTPUT:
+    while inlines and ctrl is None:
         inputs.append(line)
-        line = inlines.pop(0)
-        # print line
-    print "inp:",inputs, line
-    return "py-output", line[2:], inputs
+        ctrl, line = control(inlines.pop(0))
+    # print "inp:",inputs
+    return ctrl, line, inputs
 
 def readOutput(inlines, outputs=[]):
-    # lines = []
     ctrl, line = control(inlines.pop(0))
     while inlines and ctrl == "py-output":
         outputs.append(line)
         ctrl, line = control(inlines.pop(0))
-    print "out:",outputs
+    # print "out:",outputs
     return ctrl, line, outputs
 
 def readText(inlines, end, textLines=[]):
@@ -139,22 +149,28 @@ def loadNotebookFromSparse(session, user, s, fname=False):
                 active.textData = '\n'.join(textLines)
             ctrl, line = control(inlines.pop(0))
         elif ctrl is None and line: # read input
-            active = models.InputCell()
-            sectionStack[-1].addChild(active)
-            session.flush()
+            if not isinstance(active, models.InputCell) or active.output != "":
+                # create new input if active is not IO, or if we have
+                # already written to the output
+                active = models.InputCell()
+                sectionStack[-1].addChild(active)
+                session.flush()
             ctrl, line, inputs = readInput(inlines, [line])
-            active.input = '\n'.join(inputs)
-            # if ctrl == "py-output":
+            if active.input: #append, so we are missing a '\n'
+                active.input += '\n'
+            active.input += '\n'.join(inputs)
         elif ctrl == "py-output":
             if not isinstance(active, models.InputCell):
                 raise SyntaxError("%i:%s"%(filelen-len(inlines), line))
             else:
                 ctrl, line, outputs = readOutput(inlines, [line])
+                if active.output: #append, so we are missing a '\n'
+                    active.output += '\n'
                 active.output += '\n'.join(outputs)
                 # active.output += '\n' + line
         else:
             # skip blank lines
-            print "skip:",ctrl, line
+            # print "skip:",ctrl, line
             ctrl, line = control(inlines.pop(0))
     return nb
 

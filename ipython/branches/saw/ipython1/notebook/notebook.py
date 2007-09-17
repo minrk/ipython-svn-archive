@@ -20,7 +20,7 @@ import zope.interface as zi
 import sqlalchemy as sqla
 from twisted.python.failure import Failure
 from ipython1.kernel.error import NotFoundError
-from ipython1.notebook import models, dbutil, xmlutil
+from ipython1.notebook import models, dbutil, xmlutil, sparseutil
 
 
 #-------------------------------------------------------------------------------
@@ -55,8 +55,10 @@ class INotebookController(zi.Interface):
     def moveNode(userID, nodeID, newParentID, index=None):
         """move a node to new parent at index"""
     
-    def execute(userID, nodeID):
-        """executes the input of an IO cell, updating the output on completion"""
+    def execute(userID, nodeID, test=False):
+        """executes the input of an IO cell, updating the output on completion,
+        if the test flag is set to True, then it will be run as a test, where
+        the output is checked against the current"""
         
     def addNotebook(userID, title):
         """create a notebook and root Section for `user` with `title`"""
@@ -87,6 +89,9 @@ class INotebookController(zi.Interface):
     
     def loadNotebookFromXML(xmlstr):
         """load a notebook from an xmlstring"""
+    
+    def loadNotebookFromSparse(sparseStr):
+        """load a notebook from a sparse string"""
     
     
 
@@ -238,22 +243,35 @@ class NotebookController(object):
         node = self.checkNode(user, nodeID)
         dbutil.dropObject(self.session, node)
     
+    def _testOutput(self, result, node):
+        if isinstance(result, Failure):
+            result = result.getTraceback()
+        else:
+            result = result.get("stdout","")
+        if node.output == result:
+            return True, result
+        else:
+            return False, result
+    
     def _updateOutput(self, result, node):
         if isinstance(result, Failure):
             result = result.getTraceback()
         else:
             result = result.get("stdout","")
         node.output = result
-        print result
+        # print result
         return result
         
-    def execute(self, userID, nodeID):
+    def execute(self, userID, nodeID, test=False):
         user = self.checkUser(userID)
         assert self.engine is not None, "No engine to execute"
         node = self.checkNode(user, nodeID)
         assert isinstance(node, models.InputCell), "Only Execute IO Cells"
         d = self.engine.execute(node.input)
-        d.addBoth(self._updateOutput, node)
+        if test:
+            d.addBoth(self._testOutput, node)
+        else:
+            d.addBoth(self._updateOutput, node)
         return d
         
     # notebook functions
@@ -335,8 +353,13 @@ class NotebookController(object):
             parent = self.nodeQuery.selectone_by(userID=userID, nodeID=parentID)
         else:
             parent = None
-        sec = xmlutil.loadNotebookFromXML(self.session, user, xmlstr)
-        return sec
+        nb = xmlutil.loadNotebookFromXML(self.session, user, xmlstr)
+        return nb
+    
+    def loadNotebookFromSparse(self, userID, sparseStr):
+        user = self.checkUser(userID)
+        nb = sparseutil.loadNotebookFromSparse(self.session, user, sparseStr)
+        return nb
     
 
 class INotebookUser(zi.Interface):
@@ -356,7 +379,7 @@ class INotebookUser(zi.Interface):
     def moveNode(nodeID, newParentID, index=None):
         """move a node to new parent at index"""
     
-    def execute(nodeID):
+    def execute(nodeID, test=False):
         """"""
     
     def addNotebook(title):
@@ -386,7 +409,10 @@ class INotebookUser(zi.Interface):
     def dropTag(nodeID, tag):
         """drop a tag from a node by ID"""
     
-    def loadNotebookFromXML(xmlstr, parentID=None):
+    def loadNotebookFromXML(xmlstr):
+        """"""
+    
+    def loadNotebookFromSparse(spstr):
         """"""
     
 
@@ -422,8 +448,8 @@ class NotebookUser(object):
     def editNode(self, nodeID, **options):
         return self.nbc.editNode(self.user.userID, nodeID, **options)
     
-    def execute(self, nodeID):
-        return self.nbc.execute(self.user.userID, nodeID)
+    def execute(self, nodeID, test=False):
+        return self.nbc.execute(self.user.userID, nodeID, test)
     
     def addNotebook(self, title):
         return self.nbc.addNotebook(self.user.userID, title)
@@ -452,7 +478,10 @@ class NotebookUser(object):
     def dropTag(self, nodeID, tag):
         return self.nbc.dropTag(self.user.userID, nodeID, tag)
     
-    def loadNotebookFromXML(self, xmlstr, parentID=None):
-        return self.nbc.loadNotebookFromXML(self.user.userID, xmlstr, parentID)
+    def loadNotebookFromXML(self, xmlstr):
+        return self.nbc.loadNotebookFromXML(self.user.userID, xmlstr)
+    
+    def loadNotebookFromSparse(self, spstr):
+        return self.nbc.loadNotebookFromSparse(self.user.userID, spstr)
     
 
