@@ -21,10 +21,10 @@ from ipython1.notebook import models, dbutil
 
 
 # class parseLoader(object):
-INPUTS = [">>>"]
-CONTINUES = ["..."]
+# INPUTS = ["py-input"]
+OUTPUT = "#>"
 TEXTS = ['"""', "'''"]
-CONTROLS = ["py-section", "py-section-end"]
+CONTROLS = ["py-input", "py-output", "py-section", "py-section-end"]
     
 # def __init__(self, user):
 #     self.user = user
@@ -32,7 +32,9 @@ CONTROLS = ["py-section", "py-section-end"]
 #     self.sectionStack = []
 
 def control(line):
-    if line and line[0] == '#':
+    if line and line.strip()[0] == '#':
+        if line[:2] == OUTPUT:
+            return "py-output", line[2:]
         splits = line.split(' ',2)
         if len(splits) > 1:
             if splits[1] in CONTROLS:
@@ -41,10 +43,6 @@ def control(line):
                 else:
                     return splits[1] , ""
         return 'py-comment', line[1:]
-    elif line[:3] in INPUTS:
-        return 'py-input', line[4:]
-    elif line[:3] in CONTINUES:
-        return 'py-continue', line[4:]
     elif line[:3] in TEXTS:
         return line[:3], line[3:]
     return None, line
@@ -54,26 +52,30 @@ def readComments(inlines, comments=[]):
     ctrl, line = control(inlines.pop(0))
     if ctrl == 'py-comment':
         comments.append(line)
-    while inlines and ctrl in [None, 'py-comment']:
+    while inlines and (ctrl == 'py-comment' or line == ""):
         ctrl, line = control(inlines.pop(0))
         if ctrl == 'py-comment':
             comments.append(line)
+    print "cmt:",comments
     return ctrl, line, comments
 
 def readInput(inlines, inputs=[]):
-    # lines = []
     ctrl, line = control(inlines.pop(0))
-    while inlines and ctrl == 'py-continue':
+    # print ctrl, line
+    while inlines and line[:2] != OUTPUT:
         inputs.append(line)
-        ctrl, line = control(inlines.pop(0))
-    return ctrl, line, inputs
+        line = inlines.pop(0)
+        # print line
+    print "inp:",inputs, line
+    return "py-output", line[2:], inputs
 
 def readOutput(inlines, outputs=[]):
     # lines = []
     ctrl, line = control(inlines.pop(0))
-    while inlines and ctrl is None and line[:4] == "    ":
-        outputs.append(line[4:])
+    while inlines and ctrl == "py-output":
+        outputs.append(line)
         ctrl, line = control(inlines.pop(0))
+    print "out:",outputs
     return ctrl, line, outputs
 
 def readText(inlines, end, textLines=[]):
@@ -107,9 +109,7 @@ def loadNotebookFromSparse(session, user, s, fname=False):
     active = nb.root
     ctrl, line = control(inlines.pop(0))
     while inlines: # main parsing loop
-        if ctrl is None:
-            ctrl, line = control(inlines.pop(0))
-        elif ctrl == 'py-comment': # read comments
+        if ctrl == 'py-comment': # read comments
             ctrl, line, comments = readComments(inlines, [line])
             if active.comment:
                 comments = [active.comment]+comments
@@ -138,19 +138,24 @@ def loadNotebookFromSparse(session, user, s, fname=False):
                 textLines = readText(inlines, end, [line])
                 active.textData = '\n'.join(textLines)
             ctrl, line = control(inlines.pop(0))
-        elif ctrl == 'py-input':
+        elif ctrl is None and line: # read input
             active = models.InputCell()
             sectionStack[-1].addChild(active)
             session.flush()
             ctrl, line, inputs = readInput(inlines, [line])
             active.input = '\n'.join(inputs)
-            if ctrl == None and line[:4] == "    ":
-                ctrl, line, outputs = readOutput(inlines, [line[4:]])
-                active.output = '\n'.join(outputs)
+            # if ctrl == "py-output":
+        elif ctrl == "py-output":
+            if not isinstance(active, models.InputCell):
+                raise SyntaxError("%i:%s"%(filelen-len(inlines), line))
+            else:
+                ctrl, line, outputs = readOutput(inlines, [line])
+                active.output += '\n'.join(outputs)
+                # active.output += '\n' + line
         else:
-            # I do not think this can happen
-            raise SyntaxError("Parse Error, line %i: %s"%(filelen-len(inlines), line))
-    
+            # skip blank lines
+            print "skip:",ctrl, line
+            ctrl, line = control(inlines.pop(0))
     return nb
 
 

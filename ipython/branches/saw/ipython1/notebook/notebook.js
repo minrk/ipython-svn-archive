@@ -310,7 +310,7 @@ closeNotebook = function(){
         nbtd.innerHTML = "";
     }
 };
-dumpNotebook = function(){
+dumpNotebook = function(mode){
     if (!activeNotebook){
         alert("No Active Notebook");
     }else{
@@ -319,7 +319,11 @@ dumpNotebook = function(){
             loc = loc.href.substring(0,loc.search.indexOf("?"));
         }
         var qs = queryString({userID:user.userID, notebookID:activeNotebook.notebookID});
-        window.open(loc+"notebook.xml?"+qs);
+        if (mode == "xml"){
+            window.open(loc+"notebook.xml?"+qs);
+        }else if (mode == "sparse"){
+            window.open(loc+"notebook.py?"+qs);
+        }
     }
 };
 

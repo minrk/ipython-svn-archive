@@ -10,11 +10,11 @@
         <div class="pageHeader" id="header">IPythonNotebook</div>
         <table class="mainTable">
             <tr>
-            <td class="controlRow" align="center">
+            <td class="controlRow" align="center" id="sidebarControl">
             <span class="controlLink" onclick="addNotebook();">Add</span>  |  <span class="controlLink" onclick="refreshNBTable();">Refresh</span>  |  <span class="controlLink" onclick="loadNBfromXML();">Load</span>
             </td>
-            <td class="controlRow" align="center" id="mainControlRow">
-            <span class="controlLink" onclick="refreshNotebook();">Refresh</span>  |  <span class="controlLink" onclick="dropNotebook();">Drop</span>  |  <span class="controlLink" onclick="dumpNotebook();">XML</span>
+            <td class="controlRow" align="center" id="mainControl">
+            <span class="controlLink" onclick="refreshNotebook();">Refresh</span>  |  <span class="controlLink" onclick="dropNotebook();">Drop</span>  |  <span class="controlLink" onclick="dumpNotebook('xml');">XML</span>  |  <span class="controlLink" onclick="dumpNotebook('sparse');">Sparse</span>
             </td>
         </tr>
         <tr>

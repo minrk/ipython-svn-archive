@@ -56,14 +56,8 @@ def sparseTextCell(cell):
     return s
 
 def sparseInputCell(cell):
-    inlines = cell.input.splitlines()
-    if inlines:
-        s = '>>> '+inlines.pop(0)+'\n'
-        while inlines:
-            s += '... '+inlines.pop(0)+'\n'
-    else:
-        s = '>>> \n'
-    s += indent(cell.output,4) + '\n'
+    s = cell.input + "\n#>"
+    s += cell.output.replace("\n","\n#>") + '\n'
     if cell.comment:
         s += '#' + cell.comment.replace('\n', '\n#') + '\n'
     return s

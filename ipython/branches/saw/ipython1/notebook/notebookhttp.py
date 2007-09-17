@@ -85,12 +85,14 @@ class HTTPNotebookServer(static.File):
         self.putChild('addReader', HTTPNotebookAddReader(self.nbc))
         self.putChild('dropReader', HTTPNotebookDropReader(self.nbc))
         
-        self.putChild('bookFromXML', HTTPNotebookFromXML(self.nbc))
+        self.putChild('loadNotebook', HTTPNotebookLoad(self.nbc))
         self.putChild('notebook.xml', HTTPNotebookToXML(self.nbc))
+        self.putChild('notebook.py', HTTPNotebookToSparse(self.nbc))
         
         # self.putChild('getNBTable', HTTPNotebookGetNBTable(self.nbc))
         
         # js/css resources
+        
         self.putChild('notebook.css', static.File(thisdir+'/notebook.css', defaultType="text/css"))
         
         self.mochikit = resource.Resource()
@@ -523,7 +525,7 @@ class HTTPNotebookDropReader(HTTPNotebookBaseMethod):
             return d
     
 
-class HTTPNotebookFromXML(HTTPNotebookBaseMethod):
+class HTTPNotebookLoad(HTTPNotebookBaseMethod):
     
     def renderHTTP(self, request):
         print request, request.args
@@ -561,6 +563,28 @@ class HTTPNotebookToXML(HTTPNotebookBaseMethod):
             return self.packageFailure(failure.Failure(e))
         else:
             # d.addCallback(self.packageSuccess, justme=False)
+            d.addErrback(self.packageFailure)
+            return d
+    
+
+def _sparse(nb):
+    data = str(nb[0].sparse())
+    response = http.Response(200, stream=stream.MemoryStream(data))
+    response.headers.setHeader('content-type', http_headers.MimeType('text', 'plain'))
+    return response
+
+class HTTPNotebookToSparse(HTTPNotebookBaseMethod):
+    
+    def renderHTTP(self, request):
+        print request, request.args
+        try:
+            userID = int(request.args['userID'][0])
+            nbID = int(request.args['notebookID'][0])
+            d = defer.execute(self.nbc.getNotebook, userID, notebookID=nbID)
+            d.addCallback(_sparse)
+        except Exception, e:
+            return self.packageFailure(failure.Failure(e))
+        else:
             d.addErrback(self.packageFailure)
             return d
     
