@@ -1104,7 +1104,7 @@ def make_quoted_expr(s):
     else:
         # give up, backslash-escaped string will do
         return '"%s"' % esc_quotes(s)
-    res = itpl("$raw$quote$s$tailpadding$quote$tail")
+    res = raw + quote + s + tailpadding + quote + tail
     return res
 
 
