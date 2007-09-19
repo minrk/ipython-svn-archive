@@ -1,4 +1,4 @@
-#!/usr/env/python
+#!/usr/bin/env python
 
 import random, sys
 from optparse import OptionParser
