@@ -84,21 +84,21 @@ def start(n=1):
         help="log file name (default is stdout)")
     
     # Configuration files and profiles
-    parser.add_option("-p", "--profile", type="string", dest="profile",
-        help="the name of a profile")
-    parser.add_option("--rcfile", type="string", dest="rcfile",
-        help="the name of a configuration file")
+    # parser.add_option("-p", "--profile", type="string", dest="profile",
+    #     help="the name of a profile")
+    # parser.add_option("--rcfile", type="string", dest="rcfile",
+    #     help="the name of a configuration file")
     parser.add_option("--ipythondir", type="string", dest="ipythondir",
         help="look for config files and profiles in this directory")
     (options, args) = parser.parse_args()
             
     # Configuration files and profiles
-    if options.profile and not options.rcfile:
-        config.updateConfigWithProfile('ipengine', options.profile, options.ipythondir)
-    elif options.rcfile and not options.profile:
-        config.updateConfigWithFile(options.rcfile, options.ipythondir)
-    else:
-        config.updateConfigWithFile('ipenginerc.py', options.ipythondir)
+    # if options.profile and not options.rcfile:
+    #     config.updateConfigWithProfile('ipengine', options.profile, options.ipythondir)
+    # elif options.rcfile and not options.profile:
+    #     config.updateConfigWithFile(options.rcfile, options.ipythondir)
+    # else:
+    config.updateConfigWithFile('ipenginerc.py', options.ipythondir)
         
     # Now override with command line options
     if options.controllerip is not None:

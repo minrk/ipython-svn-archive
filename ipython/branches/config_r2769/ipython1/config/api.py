@@ -59,85 +59,85 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import os
-from IPython.genutils import get_home_dir
-from ipython1.config.objects import configClasses
+from ipython1.config.cutils import getHomeDir, getIpythonDir
+from ipython1.external.configobj import ConfigObj
 
-_configObjects = {}
-
-def getConfigObject(key):
-    """Return a new or previously created `Config` object by key.
+class ConfigObjManager(object):
     
-    Configuration objects for a given key are created only once for each
-    process.
-
-    This function returns a configuration object either by creating a new one
-    or by finding an already existing one in the cache.
-    """
-    
-    global _configObjects
-    co = _configObjects.get(key)
-    if co is None:
-        klass = configClasses[key]
-        _configObjects[key] = klass()
-    return _configObjects[key]
-
-def updateConfigWithFile(filename, ipythondir = None):
-    """Update all configuration objects from a config file."""
-    f = resolveFilePath(filename, ipythondir)
-    if f is not None:
-        execfile(f)
-    
-def resolveFilePath(filename, ipythondir = None):
-    """Resolve filenames into absolute paths.
-    
-    This function looks in the following directories in order:
-    
-    1.  In the current working directory or by absolute path with ~ expanded
-    2.  In ipythondir if that is set
-    3.  In the IPYTHONDIR environment variable if it exists
-    4.  In the ~/.ipython directory
-
-    Note: The IPYTHONDIR is also used by the trunk version of IPython so
-           changing it will also affect it was well.
-    """
-    
-    # In cwd or by absolute path with ~ expanded
-    trythis = os.path.expanduser(filename)
-    if os.path.isfile(trythis):
-        return trythis
+    def __init__(self, configObj, filename=None):
+        self.current = configObj
+        self.filename = filename
         
-    # In ipythondir if it is set
-    if ipythondir is not None:
-        trythis = ipythondir + '/' + filename
-        if os.path.isfile(trythis):
-            return trythis        
+    def getConfigObj(self):
+        return self.current
+    
+    def updateConfigObj(self, newConfig):
+        self.current.merge(newConfig)
         
-    # In the IPYTHONDIR environment variable if it exists
-    IPYTHONDIR = os.environ.get('IPYTHONDIR')
-    if IPYTHONDIR is not None:
-        trythis = IPYTHONDIR + '/' + filename
+    def updateConfigObjFromFile(self, filename):
+        newConfig = ConfigObj(filename, file_error=False)
+        self.current.merge(newConfig)
+        
+    def updateConfigObjFromDefaultFile(self, ipythondir=None):
+        if self.filename is not None:
+            fname = self.resolveFilePath(self.filename, ipythondir)
+            print fname
+            self.updateConfigObjFromFile(fname)
+
+    def writeConfigObjToFile(self, filename):
+        f = open(filename, 'w')
+        self.current.write(f)
+        f.close()
+
+    def asImportable(self, key):
+        package = '.'.join(key.split('.')[0:-1])
+        obj = key.split('.')[-1]
+        execString = 'from %s import %s' % (package, obj)
+        exec execString
+        exec 'temp = %s' % obj 
+        print temp
+        return temp  
+
+    def resolveFilePath(self, filename, ipythondir = None):
+        """Resolve filenames into absolute paths.
+
+        This function looks in the following directories in order:
+
+        1.  In the current working directory or by absolute path with ~ expanded
+        2.  In ipythondir if that is set
+        3.  In the IPYTHONDIR environment variable if it exists
+        4.  In the ~/.ipython directory
+
+        Note: The IPYTHONDIR is also used by the trunk version of IPython so
+               changing it will also affect it was well.
+        """
+
+        # In cwd or by absolute path with ~ expanded
+        trythis = os.path.expanduser(filename)
         if os.path.isfile(trythis):
             return trythis
-        
-    # In the ~/.ipython directory
-    trythis = get_home_dir() + '/.ipython/' + filename
-    if os.path.isfile(trythis):
-        return trythis
-        
-    return None
 
-def updateConfigWithProfile(base, name, ipythondir = None):
-    """Updates all configuration objects using a profile.
-    
-    The full profile name is built as baserc_name.py."""
-    f = resolveProfile(base, name, ipythondir)
-    if f is not None:
-        execfile(f)
+        # In ipythondir if it is set
+        if ipythondir is not None:
+            trythis = ipythondir + '/' + filename
+            if os.path.isfile(trythis):
+                return trythis        
 
-def resolveProfile(base, name, ipythondir = None):
-    """Builds a full profile name baserc_name.py and resolves its path."""
-    fullProfileName = base + 'rc_' + name + '.py'
-    return resolveFilePath(fullProfileName, ipythondir)
+        # In the IPYTHONDIR environment variable if it exists
+        IPYTHONDIR = os.environ.get('IPYTHONDIR')
+        if IPYTHONDIR is not None:
+            trythis = IPYTHONDIR + '/' + filename
+            if os.path.isfile(trythis):
+                return trythis
+
+        # In the ~/.ipython directory
+        trythis = getHomeDir() + '/.ipython/' + filename
+        if os.path.isfile(trythis):
+            return trythis
+
+        return None
+
+
     
     
 
