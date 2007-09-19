@@ -367,7 +367,7 @@ class FIFOScheduler(object):
     def schedule(self):
         for t in self.tasks:
             for w in self.workers:
-                checks = t.options.get('depends', {})
+                checks = t.options.get('requires', {})
                 if not checks: # no dependencies
                     return self.popWorker(), self.popTask()
                 against = {}
