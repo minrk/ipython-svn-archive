@@ -23,23 +23,25 @@ from twisted.internet import reactor
 from twisted.python import log
 
 from ipython1.kernel.engineservice import EngineService
-import ipython1.config.api as config
 
-engineConfig = config.getConfigObject('engine')
-shellConfig = config.getConfigObject('shell')
-mpiConfig = config.getConfigObject('mpi')
-config.updateConfigWithFile('mpirc.py')
+from ipython1.kernel.config import configManager as kernelConfigManager
+from ipython1.core.config import configManager as coreConfigManager
 
 # MPI module should be loaded first
 
 mpi = None
-if mpiConfig.mpiImportStatement:
+kco = kernelConfigManager.getConfigObj()
+mpiis = kco['mpi']['mpiImportStatement']
+if mpiis:
     try:
-        exec mpiConfig.mpiImportStatement
+        exec mpiis
     except ImportError:
         mpi = None
 
 def main(n, logfile):
+    kco = kernelConfigManager.getConfigObj()
+    cco = coreConfigManager.getConfigObj()
+    
     if logfile:
         logfile = logfile + str(os.getpid()) + '.log'
         try:
@@ -50,19 +52,22 @@ def main(n, logfile):
         openLogFile = sys.stdout
     log.startLogging(openLogFile)
     for i in range(n):
-        service = EngineService(shellConfig.shellClass,
-            mpi=mpi)
-        fac = engineConfig.engineClientProtocolInterface(service)
+        shellClass = coreConfigManager.asImportable(cco['shell']['shellClass'])
+        print shellClass
+        service = EngineService(shellClass, mpi=mpi)
+        fac = kernelConfigManager.asImportable(kco['engine']['engineClientProtocolInterface'])(service)
+        print fac
         reactor.connectTCP(
-            host=engineConfig.connectToControllerOn['ip'], 
-            port=engineConfig.connectToControllerOn['port'],
+            host=kco['engine']['connectToControllerOn']['ip'], 
+            port=kco['engine']['connectToControllerOn']['port'],
             factory=fac)
         service.startService()
-        if shellConfig.shellImportStatement:
+        sis = cco['shell']['shellImportStatement']
+        if sis:
             try:
-                service.execute(shellConfig.shellImportStatement)
+                service.execute(sis)
             except:
-                log.msg("Error running shellImportStatement: %s" % shellConfig.shellImportStatement)
+                log.msg("Error running shellImportStatement: %s" % sis)
                 
     reactor.run()
 
@@ -98,13 +103,15 @@ def start(n=1):
     # elif options.rcfile and not options.profile:
     #     config.updateConfigWithFile(options.rcfile, options.ipythondir)
     # else:
-    config.updateConfigWithFile('ipenginerc.py', options.ipythondir)
-        
+    kernelConfigManager.updateConfigObjFromDefaultFile(options.ipythondir)
+    coreConfigManager.updateConfigObjFromDefaultFile(options.ipythondir)
+
+    kco = kernelConfigManager.getConfigObj()
     # Now override with command line options
     if options.controllerip is not None:
-        engineConfig.connectToControllerOn['ip'] = options.controllerip
+        kco['engine']['connectToControllerOn']['ip'] = options.controllerip
     if options.controllerport is not None:
-        engineConfig.connectToControllerOn['port'] = options.controllerport
+        kco['engine']['connectToControllerOn']['port'] = options.controllerport
         
     main(options.n, options.logfile)
     

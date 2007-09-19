@@ -95,7 +95,6 @@ class ConfigObjManager(object):
         execString = 'from %s import %s' % (package, obj)
         exec execString
         exec 'temp = %s' % obj 
-        print temp
         return temp  
 
     def resolveFilePath(self, filename, ipythondir = None):
