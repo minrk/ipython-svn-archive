@@ -1,0 +1,7 @@
+graft doc
+exclude doc/ChangeLog.*
+
+global-exclude *~
+global-exclude *.pyc
+global-exclude .dircopy.log
+global-exclude .svn

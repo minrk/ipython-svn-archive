@@ -1,0 +1,39 @@
+======================================
+ py2doctest example - file inclusions
+======================================
+
+Basic usage
+===========
+
+This simple example shows how to write standalone text/reST files that contain
+the bulk of your documentation, while further including pure code files via
+special %run directives.
+
+For example, the contents of file pydt3_inc1.py will be executed and included
+below directly.
+
+%run pydt3_inc1.py
+
+You can include more than one file in this manner:
+
+%run pydt3_inc2.py
+
+
+As well as keep regular doctests done 'the old fashioned way'::
+
+    >>> print "Hello world"
+    Hello world
+
+
+Personal opinion
+================
+
+I think the mode of auto-generating a full doctest file from Python code is
+more conveniently used by writing the text inside '###' comments and using
+SnakeOil's conversion to reST, since that allows you to have editor support for
+the actual Python programming, where it is more critical than when editing the
+text.
+
+But some people prefer to edit reST, so this option is also offered.  It would
+be particularly useful if there was an editor (or emacs mode) that supported
+full Python when indented and reST otherwise.
