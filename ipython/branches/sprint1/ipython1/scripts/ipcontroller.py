@@ -48,19 +48,20 @@ def main(logfile):
             log.msg("Error running controllerImportStatement: %s" % controllerConfig.controllerImportStatement)
     
     # Start listening for engines  
-    checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
-    checker.addUser(controllerConfig.accessCredentials['user'],\
-                    controllerConfig.accessCredentials['password'])
+
     
     # Create and configure the core ControllerService
-    cs = controllerservice.ControllerService(checker)
+    cs = controllerservice.ControllerService()
 
-    efac = controllerConfig.engineServerProtocolInterface(cs)
+    # Make the controller listen for engines.
+    efac = controllerConfig.engineInterface['interface'](cs)
+    efac.registerChecker(controllerConfig.engineInterface['checker'])
     reactor.listenTCP(
-        port=controllerConfig.listenForEnginesOn['port'],
+        port=controllerConfig.engineInterface['port'],
         factory=efac,
-        interface=controllerConfig.listenForEnginesOn['ip'])
+        interface=controllerConfig.engineInterface['ip'])
         
+    # Start the client interfaces.
     for ciname, ci in controllerConfig.controllerInterfaces.iteritems():
         log.msg("Starting controller interface: " + ciname)
         adaptedController = ci['controllerInterface'](cs)

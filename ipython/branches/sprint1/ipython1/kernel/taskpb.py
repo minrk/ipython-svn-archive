@@ -39,9 +39,9 @@ import cPickle as pickle
 #-------------------------------------------------------------------------------
 
 class IPBTaskController(Interface):
-    ''
+    """"""
     def perspective_run(task):
-        ''
+        """"""
     
 class PBTaskControllerFromTaskController(pb.Avatar):
     ''

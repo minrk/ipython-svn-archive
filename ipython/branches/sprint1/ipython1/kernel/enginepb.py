@@ -640,8 +640,9 @@ class IPBRemoteEngineRoot(Interface):
 class PBRemoteEngineRootFromService(pb.Avatar):
     """Adapts a IControllerBase to an IPBRemoteEngineRoot.
     
-    This is an adapter between the actual ControllerService that
-    implements IControllerBase and PB.
+    This is an adapter between the actual ControllerService that 
+    implements IControllerBase and PB.  It is an Avatar because we
+    want to be able to use authentication.
     """
     
     implements(IPBRemoteEngineRoot)
@@ -685,12 +686,16 @@ class PBEngineServerRealm:
     implements(portal.IRealm)
 
     def __init__(self, service):
+        assert IControllerBase.providedBy(service), \
+            "IControllerBase is not provided by " + repr(service)
         self.service = service
 
     def requestAvatar(self, avatarId, mind, *interfaces):
-        if pb.IPerspective not in interfaces:
-            raise NotImplementedError
-        return pb.IPerspective, IPBRemoteEngineRoot(self.service), lambda:None
+        if pb.IPerspective in interfaces:
+            return pb.IPerspective, IPBRemoteEngineRoot(self.service), lambda: None
+        else:
+            raise KeyError("None of the requested interfaces is supported")
+
 
 class IPBEngineServerFactory(IProtocolFactory):
     """This is the server factory used by PB on the controller."""
@@ -714,8 +719,7 @@ def PBEngineServerFactoryFromService(service):
     service -> PB root
     service -> PBEngineServerFactory
     """
-    assert IControllerBase.providedBy(service), \
-        "IControllerBase is not provided by " + repr(service)
+
     p = portal.Portal(PBEngineServerRealm(service))
     p.registerChecker(service.checker)
     return PBEngineServerFactory(p)

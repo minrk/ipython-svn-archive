@@ -30,7 +30,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 from ipython1.config.base import Config
-from twisted.cred import credentials
+from twisted.cred import credentials, checkers
 from twisted.spread import pb
 
 #-------------------------------------------------------------------------------
@@ -178,17 +178,18 @@ networkInterfacesTC = {
     'pb': pbTC}
 
 
+
+checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
+checker.addUser('guest', 'open-sesame')
+
+
 class ControllerConfig(Config):
-    #engineServerProtocolInterface = IVanillaEngineServerFactory
-    engineServerProtocolInterface = IPBEngineServerFactory
+    engineInterface = {'interface': IPBEngineServerFactory,
+                       'ip': '',
+                       'port': enginePort,
+                       'checker': checker}
     """The interface for the network protocol for talking to engines."""
     
-    listenForEnginesOn  = {'ip': '', 'port': enginePort}
-    """The ip and port to listen for engine on."""
-
-    accessCredentials = {'user' : 'guest', 'password' : 'open-sesame'}
-    """the user and password combo to allow connections from engines"""
-
     controllerInterfaces = {'multiengine': {'controllerInterface': IMultiEngine, 
                                             'networkInterfaces': networkInterfacesME,
                                             'default': 'xmlrpc'},
