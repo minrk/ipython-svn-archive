@@ -70,6 +70,7 @@ class IEngineCore(zi.Interface):
     """
     
     id = zi.interface.Attribute("the id of the Engine object")
+    properties = zi.interface.Attribute("A dict of properties of the Engine")
     
     def execute(lines):
         """Execute lines of Python code.
@@ -184,12 +185,28 @@ class IEngineThreaded(zi.Interface):
 #-------------------------------------------------------------------------------
 # Functions and classes to implement the EngineService
 #-------------------------------------------------------------------------------
+class IPENGINE(object):
+    """This is the object through which the user can edit the `properties`
+    attribute of an Engine."""
+    def __init__(self):
+        self.properties = {}
+        self._fix=True
+    
+    def __setattr__(self, k,v):
+        if hasattr(self,'_fix'):
+            raise error.KernelError("I am protected!")
+        else:
+            object.__setattr__(self, k, v)
+    
+    def __delattr__(self, key):
+        raise error.KernelError("I am protected!")
+    
 
 class EngineService(object, service.Service):
     """Adapt a IPython shell into a IEngine implementing Twisted Service."""
     
     zi.implements(IEngineBase)
-                
+    properties = {}
     def __init__(self, shellClass=Interpreter, mpi=None):
         """Create an EngineService.
         
@@ -200,10 +217,14 @@ class EngineService(object, service.Service):
         self.shell = self.shellClass()
         self.mpi = mpi
         self.id = None
+        self.OBJ = IPENGINE()
+        # self.OBJ.properties={}
+        self.properties = self.OBJ.properties
         if self.mpi is not None:
             log.msg("MPI started with rank = %i and size = %i" % 
                 (self.mpi.rank, self.mpi.size))
             self.id = self.mpi.rank
+        
     
     # Make id a property so that the shell can get the updated id
         
@@ -217,7 +238,7 @@ class EngineService(object, service.Service):
     id = property(_getID, _setID)
         
     def _seedNamespace(self):
-        self.shell.push(**{'mpi': self.mpi, 'id' : self.id})
+        self.shell.push(**{'mpi': self.mpi, 'id' : self.id, '_IPENGINE' :self.OBJ})
         
     def executeAndRaise(self, msg, callable, *args, **kwargs):
         """Call a method of self.shell and wrap any exception."""
@@ -230,6 +251,7 @@ class EngineService(object, service.Service):
             f = failure.Failure(ev,et,None)
             d.errback(f)
         else:
+            # print self.OBJ.properties
             d.callback(result)
 
         return d
@@ -399,6 +421,7 @@ class QueuedEngine(object):
             "engine passed to QueuedEngine doesn't provide IEngineBase"
 
         self.engine = engine
+        self.properties = self.engine.properties
         self.id = engine.id
         self.queued = []
         self.history = {}

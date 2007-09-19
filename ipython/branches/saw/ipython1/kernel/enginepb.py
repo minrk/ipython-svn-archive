@@ -259,6 +259,9 @@ class IPBEngine(Interface):
         
         Returns a deferred to a pickled dict of key, Serialized pairs.
         """
+    
+    def remote_getProperties():
+        """pull the properties dict for this engine"""
 
 
 class PBEngineReferenceFromService(pb.Referenceable, object):
@@ -288,7 +291,14 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         #d.addCallback(lambda r: log.msg("Got result: " + str(r)))
         d.addErrback(packageFailure)
         return d
-        
+    
+    def remote_getProperties(self):
+        d = defer.succeed(self.service.properties)
+        d.addCallback(pickle.dumps, 2)
+        # d.addCallback(checkMessageSize, repr(keys))
+        d.addErrback(packageFailure)
+        return d
+    
     #---------------------------------------------------------------------------
     # Old version of push
     #---------------------------------------------------------------------------
@@ -421,6 +431,7 @@ class EngineFromReference(object):
     def __init__(self, reference):
         self.reference = reference
         self._id = None
+        self.properties = {}
         self.currentCommand = None
     
     def callRemote(self, *args, **kwargs):
@@ -442,6 +453,21 @@ class EngineFromReference(object):
     
     id = property(getID, setID)
     
+    def setProperties(self, pickleprops, result):
+        try:
+            newp = pickle.loads(pickleprops)
+            self.properties.clear()
+            self.properties.update(newp)
+        except:
+            log.msg("could not update properties")
+        return result
+    
+    def getProperties(self, result):
+        """get the properties dict"""
+        d = self.callRemote('getProperties')
+        return d.addBoth(self.setProperties, result)
+        
+    
     #---------------------------------------------------------------------------
     # Methods from IEngine
     #---------------------------------------------------------------------------
@@ -451,7 +477,9 @@ class EngineFromReference(object):
     #---------------------------------------------------------------------------
     
     def execute(self, lines):
-        return self.callRemote('execute', lines).addCallback(self.checkReturnForFailure)
+        d = self.callRemote('execute', lines)
+        d.addCallback(self.getProperties)
+        return d.addCallback(self.checkReturnForFailure)
 
     #---------------------------------------------------------------------------
     # push

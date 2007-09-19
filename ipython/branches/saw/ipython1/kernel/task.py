@@ -213,6 +213,7 @@ class WorkerFromQueuedEngine(object):
     def __init__(self, qe):
         self.queuedEngine = qe
         self.workerID = None
+        self.properties = qe.properties
     
     def run(self, task):
         """Run task in worker's namespace.
@@ -222,7 +223,6 @@ class WorkerFromQueuedEngine(object):
         
         :Returns: `Deferred` to a `TaskResult` object.
         """
-        
         if task.clearBefore:
             d = self.queuedEngine.reset()
         else:
@@ -320,6 +320,11 @@ class IScheduler(zi.Interface):
     def ready():
         """Returns True if there is something to do, False otherwise"""
     
+    def schedule():
+        """Returns a tuple of the worker and task pair for the next
+        task to be run.
+        """
+    
 
 class FIFOScheduler(object):
     """A basic First-In-First-Out (Queue) Scheduler.
@@ -346,7 +351,7 @@ class FIFOScheduler(object):
                     return self.tasks.pop(i)
             raise IndexError("No task #%i"%id)
     
-    def addWorker(self, worker, **flags):        
+    def addWorker(self, worker, **flags):
         self.workers.append(worker)
     
     def popWorker(self, id=None):
@@ -359,9 +364,20 @@ class FIFOScheduler(object):
                     return self.workers.pop(i)
             raise IndexError("No worker #%i"%id)
     
-    def ready(self):
-        return bool(self.workers and self.tasks)
+    def schedule(self):
+        for t in self.tasks:
+            for w in self.workers:
+                checks = t.options.get('depends', {})
+                if not checks: # no dependencies
+                    return self.popWorker(), self.popTask()
+                against = {}
+                for k,v in checks.iteritems():
+                    against[k] = w.properties.get(k)
+                if checks == against:
+                    return self.popWorker(w.workerID), self.popTask(t.taskID)
+        return None, None
     
+
 
 class LIFOScheduler(FIFOScheduler):
     """A Last-In-First-Out (Stack) Scheduler.  This scheduler should naively
@@ -463,7 +479,6 @@ class TaskController(cs.ControllerAdapterBase):
     
     def registerWorker(self, id):
         """Called by controller.registerEngine."""
-        
         if self.workers.get(id):
             raise "We already have one!  This should not happen."
         self.workers[id] = IWorker(self.controller.engines[id])
@@ -566,18 +581,16 @@ class TaskController(cs.ControllerAdapterBase):
     
     def distributeTasks(self):
         """Distribute tasks while self.scheduler has things to do."""
-        
-        while self.scheduler.ready():
-            # get worker
-            worker = self.scheduler.popWorker()
-            # get task
-            task = self.scheduler.popTask()
+        worker, task = self.scheduler.schedule()
+        while worker and task:
+            # get worker and task
             # add to pending
             self.pendingTasks[worker.workerID] = task
             # run/link callbacks
             d = worker.run(task)
             log.msg("running task #%i on worker %i" %(task.taskID, worker.workerID))
             d.addBoth(self.taskCompleted, task.taskID, worker.workerID)
+            worker, task = self.scheduler.schedule()
     
     def taskCompleted(self, result, taskID, workerID):
         """This is the err/callback for a completed task."""

@@ -45,6 +45,7 @@ class FailingEngineService(object, service.Service):
                 
     def __init__(self, shellClass=None, mpi=None):
         self.id = None
+        self.properties={}
     
     def _setID(self, id):
         self._id = id
