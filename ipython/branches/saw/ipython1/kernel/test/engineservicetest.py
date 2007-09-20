@@ -27,7 +27,7 @@ from ipython1.kernel import newserialized
 from ipython1.kernel import error 
 import ipython1.kernel.engineservice as es
 from ipython1.core.interpreter import Interpreter
-from ipython1.test.testgenerator import (EngineExecuteTestGenerator, 
+from ipython1.testutils.testgenerator import (EngineExecuteTestGenerator, 
     EnginePushPullTestGenerator, 
     EngineFailingExecuteTestGenerator,
     EngineGetResultTestGenerator)

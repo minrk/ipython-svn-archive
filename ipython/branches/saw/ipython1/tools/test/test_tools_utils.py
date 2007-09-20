@@ -3,8 +3,8 @@
 """
 
 # Module imports
-import tcommon
-from tcommon import *
+from ipython1.testutils import tcommon
+from ipython1.testutils.tcommon import *
 
 # If you have standalone doctests in a separate file, set their names in the
 # dt_files variable (as a single string  or a list thereof):

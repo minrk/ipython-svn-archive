@@ -2,7 +2,7 @@
 
 This file is meant to be used as
 
-from tcommon import *
+from ipython1.testutils.tcommon import *
 
 by any test code.
 

@@ -22,7 +22,7 @@ from twisted.internet import defer
 
 from ipython1.kernel import task, controllerservice as cs, engineservice as es
 from ipython1.kernel.multiengine import IMultiEngine
-from ipython1.test.util import DeferredTestCase
+from ipython1.testutils.util import DeferredTestCase
 
 def _printer(r):
     """passthrough callback for debugging"""

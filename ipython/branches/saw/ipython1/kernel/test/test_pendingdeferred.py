@@ -18,9 +18,9 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import tcommon
-from tcommon import *
+from ipython1.testutils.tcommon import *
 
-from ipython1.test.util import DeferredTestCase
+from ipython1.testutils.util import DeferredTestCase
 
 from twisted.internet import defer
 import ipython1.kernel.pendingdeferred as pd

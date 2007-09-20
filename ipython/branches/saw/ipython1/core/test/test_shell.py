@@ -15,9 +15,8 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-from twisted.trial import unittest
+import unittest
 from ipython1.core import shell
-from ipython1.kernel.error import NotDefined
 
 resultKeys = ('commandIndex', 'stdin', 'stdout', 'stderr')
 

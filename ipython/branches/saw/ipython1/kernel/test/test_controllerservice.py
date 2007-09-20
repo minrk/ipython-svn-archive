@@ -24,9 +24,9 @@ __docformat__ = "restructuredtext en"
 
 from twisted.application.service import IService
 from ipython1.kernel.controllerservice import ControllerService
-from ipython1.test import multienginetest as met
+from ipython1.kernel.test import multienginetest as met
 from controllertest import IControllerCoreTestCase
-from ipython1.test.util import DeferredTestCase
+from ipython1.testutils.util import DeferredTestCase
 
 class BasicControllerServiceTest(DeferredTestCase,
     IControllerCoreTestCase):

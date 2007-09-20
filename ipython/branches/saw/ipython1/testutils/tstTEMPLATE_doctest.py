@@ -11,6 +11,6 @@ gets confused."""
 
 # Setup - all imports are done in tcommon
 import tcommon; reload(tcommon)  # for interactive use
-from tcommon import *
+from ipython1.testutils.tcommon import *
 
 # Doctest code begins here

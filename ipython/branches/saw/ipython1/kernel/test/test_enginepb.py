@@ -27,13 +27,13 @@ import zope.interface as zi
 from ipython1.kernel import pbconfig
 from ipython1.kernel.error import PBMessageSizeError
 from ipython1.kernel import engineservice as es
-from ipython1.test.util import DeferredTestCase
+from ipython1.testutils.util import DeferredTestCase
 from ipython1.kernel.controllerservice import IControllerBase
 from ipython1.kernel.enginepb import \
     PBRemoteEngineRootFromService, \
     PBEngineClientFactory
     
-from ipython1.test.engineservicetest import \
+from ipython1.kernel.test.engineservicetest import \
     IEngineCoreTestCase, \
     IEngineSerializedTestCase, \
     IEngineQueuedTestCase

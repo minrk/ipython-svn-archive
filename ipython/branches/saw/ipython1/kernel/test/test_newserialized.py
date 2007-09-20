@@ -17,7 +17,7 @@ __docformat__ = "restructuredtext en"
 
 import zope.interface as zi
 from twisted.trial import unittest
-from ipython1.test.util import DeferredTestCase
+from ipython1.testutils.util import DeferredTestCase
 
 from ipython1.kernel.newserialized import \
     ISerialized, \

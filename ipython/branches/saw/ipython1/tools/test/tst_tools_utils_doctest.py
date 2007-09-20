@@ -1,6 +1,6 @@
 # Setup - all imports are done in tcommon
-from ipython1.test import tcommon
-from ipython1.test.tcommon import *
+from ipython1.testutils import tcommon
+from ipython1.testutils.tcommon import *
 
 # Doctest code begins here
 from ipython1.tools import utils
