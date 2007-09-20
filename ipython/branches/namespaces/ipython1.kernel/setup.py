@@ -15,7 +15,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name = "ipython1",
+    name = "ipython1.kernel",
     version = "0.9alpha2",
     packages = find_packages(),
     namespace_packages=['ipython1'],
@@ -25,7 +25,6 @@ setup(
     entry_points = {
             'console_scripts': ['ipengine = ipython1.scripts.ipengine:start',
                                 'ipcontroller = ipython1.scripts.ipcontroller:start',
-                                'ipnotebook = ipython1.scripts.ipnotebook:start',
                                 'ipcluster = ipython1.scripts.ipcluster:main']
         },
 

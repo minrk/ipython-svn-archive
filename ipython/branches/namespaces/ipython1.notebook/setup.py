@@ -15,7 +15,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name = "ipython1",
+    name = "ipython1.notebook",
     version = "0.9alpha2",
     packages = find_packages(),
     namespace_packages=['ipython1'],
@@ -23,10 +23,7 @@ setup(
     zip_safe = True,
     include_package_data = True,
     entry_points = {
-            'console_scripts': ['ipengine = ipython1.scripts.ipengine:start',
-                                'ipcontroller = ipython1.scripts.ipcontroller:start',
-                                'ipnotebook = ipython1.scripts.ipnotebook:start',
-                                'ipcluster = ipython1.scripts.ipcluster:main']
+            'console_scripts': ['ipnotebook = ipython1.notebook.ipnotebook:start']
         },
 
     author = "Fernando Perez / Brian Granger",
