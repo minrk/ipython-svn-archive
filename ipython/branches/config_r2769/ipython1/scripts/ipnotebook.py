@@ -24,13 +24,14 @@ from twisted.python import log
 
 from ipython1.kernel.engineservice import EngineService
 from ipython1.notebook import notebook, xmlutil, dbutil
-import ipython1.config.api as config
 
-notebookConfig = config.getConfigObject('notebook')
-shellConfig = config.getConfigObject('shell')
-
+from ipython1.notebook.config import configManager as notebookConfigManager
+from ipython1.core.config import configManager as coreConfigManager
 
 def main(logfile):
+    nco = notebookConfigManager.getConfigObj()
+    cco = coreConfigManager.getConfigObj()
+    
     if logfile:
         logfile = logfile + str(os.getpid()) + '.log'
         try:
@@ -41,27 +42,32 @@ def main(logfile):
         openLogFile = sys.stdout
     log.startLogging(openLogFile)
     
-    service = EngineService(shellConfig.shellClass)
+    shellClass = coreConfigManager._import(cco['shell']['shellClass'])
+    service = EngineService(shellClass)
     service.startService()
-    if shellConfig.shellImportStatement:
+    sis = cco['shell']['shellImportStatement']
+    if sis:
         try:
-            service.execute(shellConfig.shellImportStatement)
+            service.execute(sis)
         except:
-            log.msg("Error running shellImportStatement: %s" % shellConfig.shellImportStatement)
-    engine = notebookConfig.engineInterface(service)
+            log.msg("Error running shellImportStatement: %s" % sis)
+    engineInterface = notebookConfigManager._import(nco['notebook']['engineInterface'])
+    engine = engineInterface(service)
     
-    dbutil.initDB(notebookConfig.activeDB)
+    dbutil.initDB(nco['notebook']['activeDB'])
     
-    if notebookConfig.externalDBs:
-        log.msg("Loading External DBs: %s"%notebookConfig.externalDBs)
-        xmlutil.mergeDBs([notebookConfig.activeDB]+notebookConfig.externalDBs)
+    exdbs = nco['notebook']['externalDBs']
+    log.msg("%r" % exdbs)
+    if exdbs:
+        log.msg("Loading External DBs: %s"%exdbs)
+        xmlutil.mergeDBs([nco['notebook']['activeDB']]+exdbs)
     
     nbc = notebook.NotebookController(engine)
-    for niname, ni in notebookConfig.networkInterfaces.iteritems():
-        log.msg("Starting notebook network interface: %s:%s:%i" % (niname,ni['ip'],ni['port']))
+    for niname, ni in nco['notebook']['networkInterfaces'].iteritems():
+        log.msg("Starting notebook network interface: %s:%s:%i" % (niname,ni['ip'],ni.as_int('port')))
         reactor.listenTCP(
-            port=ni['port'],
-            factory=ni['interface'](nbc),
+            port=ni.as_int('port'),
+            factory=notebookConfigManager._import(ni['interface'])(nbc),
             interface=ni['ip'])
     reactor.run()
 
@@ -79,28 +85,34 @@ def start(n=1):
         help="log file name (default is stdout)")
     
     # Configuration files and profiles
-    parser.add_option("-p", "--profile", type="string", dest="profile",
-        help="the name of a profile")
-    parser.add_option("--rcfile", type="string", dest="rcfile",
-        help="the name of a configuration file")
+    # parser.add_option("-p", "--profile", type="string", dest="profile",
+    #     help="the name of a profile")
+    # parser.add_option("--rcfile", type="string", dest="rcfile",
+    #     help="the name of a configuration file")
     parser.add_option("--ipythondir", type="string", dest="ipythondir",
         help="look for config files and profiles in this directory")
     (options, args) = parser.parse_args()
             
     # Configuration files and profiles
-    if options.profile and not options.rcfile:
-        config.updateConfigWithProfile('ipnotebook', options.profile, options.ipythondir)
-    elif options.rcfile and not options.profile:
-        config.updateConfigWithFile(options.rcfile, options.ipythondir)
-    else:
-        config.updateConfigWithFile('ipnotebookrc.py', options.ipythondir)
+    # if options.profile and not options.rcfile:
+    #     config.updateConfigWithProfile('ipnotebook', options.profile, options.ipythondir)
+    # elif options.rcfile and not options.profile:
+    #     config.updateConfigWithFile(options.rcfile, options.ipythondir)
+    # else:
+    notebookConfigManager.updateConfigObjFromDefaultFile(options.ipythondir)
+    coreConfigManager.updateConfigObjFromDefaultFile(options.ipythondir)
+    
+    nco = notebookConfigManager.getConfigObj()
     
     for dbname in args:
         if "://" not in dbname:
-            dbname = notebookConfig.defaultDBMode+dbname
+            dbname = nco['notebook']['defaultDBMode']+dbname
         assert os.path.isfile(dbname[dbname.find("://"+4)]), "no such DB:"%dbname
-        if dbname not in notebookConfig.externalDBs:
-            notebookConfig.externalDBs.append(dbname)
+        exdbs = nco['notebook']['externalDBs']
+        if dbname not in exdbs:
+            exdbs.append(dbname)
+            nco['notebook']['externalDBs'] = exdbs
+            notebookConfigManager.updateConfigObj(nco)
         
     # Now override with command line options
     main(options.logfile)

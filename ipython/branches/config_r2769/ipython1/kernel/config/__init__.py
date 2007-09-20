@@ -18,10 +18,6 @@ httpNBPort = 8008
 # Engine Configuration
 #-------------------------------------------------------------------------------
 
-
-from ipython1.kernel.enginepb import PBEngineClientFactory
-
-
 engineConfig = {
     'connectToControllerOn': {'ip': '127.0.0.1', 'port': enginePort},
     'engineClientProtocolInterface': 'ipython1.kernel.enginepb.PBEngineClientFactory'
@@ -30,22 +26,6 @@ engineConfig = {
 #-------------------------------------------------------------------------------
 # MPI Configuration
 #-------------------------------------------------------------------------------
-
-# Uncomment for Mpi4Py
-# mpiConfig.mpiImportStatement = """from mpi4py import MPI as mpi
-# mpi.rank = mpi.COMM_WORLD.Get_size()
-# mpi.size = mpi.COMM_WORLD.Get_rank()
-# """
-
-# Uncomment For PyTrlinos
-# mpiConfig.mpiImportStatement = """
-# from PyTrilinos import Epetra
-# class SimpleStruct:
-#     pass
-# mpi = SimpleStruct()
-# mpi.rank = 0
-# mpi.size = 0
-# """
 
 mpiConfig = {
     'mpi4py': """from mpi4py import MPI as mpi

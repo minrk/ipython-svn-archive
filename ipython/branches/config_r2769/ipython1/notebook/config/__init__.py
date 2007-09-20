@@ -1,130 +1,27 @@
 from ipython1.external.configobj import ConfigObj
+from ipython1.config.cutils import getIpythonDir
 from ipython1.config.api import ConfigObjManager
 
-defaultKernelConfig = ConfigObj()
-
-#-------------------------------------------------------------------------------
-# Default Port Values
-#-------------------------------------------------------------------------------
-
-enginePort = 10201
-xmlrpcMEPort = 10105
-pbTCPort = 10114
-xmlrpcTCPort = 10113
-httpMEPort = 8000
-httpNBPort = 8008
+defaultNotebookConfig = ConfigObj()
     
 #-------------------------------------------------------------------------------
-# Engine Configuration
+# Notebook Configuration
 #-------------------------------------------------------------------------------
 
-
-from ipython1.kernel.enginepb import PBEngineClientFactory
-
-
-engineConfig = {
-    'connectToControllerOn': {'ip': '127.0.0.1', 'port': enginePort},
-    'engineClientProtocolInterface': 'ipython1.kernel.enginepb.PBEngineClientFactory'
-}
-
-#-------------------------------------------------------------------------------
-# MPI Configuration
-#-------------------------------------------------------------------------------
-
-# Uncomment for Mpi4Py
-# mpiConfig.mpiImportStatement = """from mpi4py import MPI as mpi
-# mpi.rank = mpi.COMM_WORLD.Get_size()
-# mpi.size = mpi.COMM_WORLD.Get_rank()
-# """
-
-# Uncomment For PyTrlinos
-# mpiConfig.mpiImportStatement = """
-# from PyTrilinos import Epetra
-# class SimpleStruct:
-#     pass
-# mpi = SimpleStruct()
-# mpi.rank = 0
-# mpi.size = 0
-# """
-
-mpiConfig = {
-    'mpi4py': """from mpi4py import MPI as mpi
-mpi.rank = mpi.COMM_WORLD.Get_size()
-mpi.size = mpi.COMM_WORLD.Get_rank()
-""",    
-    'pytrilinos': """from PyTrilinos import Epetra
-class SimpleStruct:
-    pass
-mpi = SimpleStruct()
-mpi.rank = 0
-mpi.size = 0
-""",
-    'default': ''
-}
-
-#-------------------------------------------------------------------------------
-# Controller Configuration
-#-------------------------------------------------------------------------------
-
-xmlrpcME = {
-    'interface': 'ipython1.kernel.multienginexmlrpc.IXMLRPCMultiEngineFactory', 
-    'ip': '', 
-    'port': xmlrpcMEPort
-}
-            
-networkInterfacesME = {
-    'xmlrpc':xmlrpcME
-}
-
-xmlrpcTC = {
-    'interface': 'ipython1.kernel.taskxmlrpc.IXMLRPCTaskControllerFactory',
-    'ip':'',
-    'port': xmlrpcTCPort
-}
-
-pbTC = {
-    'interface': 'ipython1.kernel.taskpb.IPBTaskControllerFactory',
-    'ip': '',
-    'port': pbTCPort
-}
-
-networkInterfacesTC = {
-    'xmlrpc':xmlrpcTC
-}
-
-controllerConfig = {
-    'engineServerProtocolInterface': 'ipython1.kernel.enginepb.IPBEngineServerFactory',
-    'listenForEnginesOn': {'ip': '', 'port': enginePort},
-    'controllerInterfaces': {
-        'multiengine': {
-            'controllerInterface': 'ipython1.kernel.multiengine.IMultiEngine', 
-            'networkInterfaces': networkInterfacesME,
-            'default': 'xmlrpc'
-        },
-        'task' : {
-            'controllerInterface': 'ipython1.kernel.task.ITaskController', 
-            'networkInterfaces': networkInterfacesTC,
-            'default': 'xmlrpc'
+notebookConfig = {
+    'engineInterface': 'ipython1.kernel.engineservice.IEngineQueued',
+    'networkInterfaces': {
+        'http': {
+            'interface': 'ipython1.notebook.notebookhttp.IHTTPNotebookServerFactory',
+            'ip'    : '',
+            'port'  : 8008
         }
     },
-    'controllerImportStatement': ''
-}    
-
-#-------------------------------------------------------------------------------
-# Client Configuration
-#-------------------------------------------------------------------------------
-
-clientConfig = {
-    'RemoteController': 'ipython1.kernel.multienginexmlrpc.XMLRPCInteractiveMultiEngineClient',
-    'connectToRemoteControllerOn': {'ip': '127.0.0.1', 'port': xmlrpcMEPort},
-    'TaskController': 'ipython1.kernel.taskxmlrpc.XMLRPCInteractiveTaskClient',
-    'connectToTaskControllerOn': {'ip': '127.0.0.1', 'port': xmlrpcTCPort}
+    'defaultDBMode': "sqlite///",
+    'activeDB': "sqlite:///%s/ipnotebooks.db"%(getIpythonDir()),
+    'externalDBs': []
 }
 
-defaultKernelConfig['engine'] = engineConfig
-defaultKernelConfig['mpi'] = mpiConfig
-defaultKernelConfig['controller'] = controllerConfig
-defaultKernelConfig['client'] = clientConfig
+defaultNotebookConfig['notebook'] = notebookConfig
 
-
-configManager = ConfigObjManager(defaultKernelConfig, 'ipython1.kernel.ini')
+configManager = ConfigObjManager(defaultNotebookConfig, 'ipython1.notebook.ini')
