@@ -26,14 +26,10 @@ from ipython1.kernel import controllerservice
 from ipython1.kernel.multiengine import IMultiEngine
 from ipython1.kernel.task import ITaskController
 
-import ipython1.config.api as config
-
-controllerConfig = config.getConfigObject('controller')
-
-
-        
+from ipython1.kernel.config import configManager as kernelConfigManager
 
 def main(logfile):
+    co = kernelConfigManager.getConfigObj()
     if logfile:
         logfile = logfile + str(os.getpid()) + '.log'
         try:
@@ -45,30 +41,31 @@ def main(logfile):
     log.startLogging(openLogFile)
     
     # Execute any user defined import statements
-    if controllerConfig.controllerImportStatement:
+    cis = co['controller']['controllerImportStatement']
+    if cis:
         try:
-            exec controllerConfig.controllerImportStatement
+            exec cis
         except:
-            log.msg("Error running controllerImportStatement: %s" % controllerConfig.controllerImportStatement)
+            log.msg("Error running controllerImportStatement: %s" % cis)
     
     # Create and configure the core ControllerService
     cs = controllerservice.ControllerService()
     
-    # Start listening for engines  
-    efac = controllerConfig.engineServerProtocolInterface(cs)
+    # Start listening for engines
+    efac = kernelConfigManager._import(co['controller']['engineServerProtocolInterface'])(cs)
     reactor.listenTCP(
-        port=controllerConfig.listenForEnginesOn['port'],
+        port=co['controller']['listenForEnginesOn'].as_int('port'),
         factory=efac,
-        interface=controllerConfig.listenForEnginesOn['ip'])
+        interface=co['controller']['listenForEnginesOn']['ip'])
         
-    for ciname, ci in controllerConfig.controllerInterfaces.iteritems():
+    for ciname, ci in co['controller']['controllerInterfaces'].iteritems():
         log.msg("Starting controller interface: " + ciname)
-        adaptedController = ci['controllerInterface'](cs)
+        adaptedController = kernelConfigManager._import(ci['controllerInterface'])(cs)
         for niname, ni in ci['networkInterfaces'].iteritems():
-            log.msg("Starting controller network interface (%s): %s:%s:%i" % (ciname,niname,ni['ip'],ni['port']))
-            fac = ni['interface'](adaptedController)
+            log.msg("Starting controller network interface (%s): %s:%s:%i" % (ciname,niname,ni['ip'],ni.as_int('port')))
+            fac = kernelConfigManager._import(ni['interface'])(adaptedController)
             reactor.listenTCP(
-                port=ni['port'],
+                port=ni.as_int('port'),
                 factory=fac,
                 interface=ni['ip'])
                     
@@ -99,38 +96,40 @@ def start():
         help="log file name (default is stdout)")
     
     # Configuration files and profiles
-    parser.add_option("-p", "--profile", type="string", dest="profile",
-        help="the name of a profile")
-    parser.add_option("--rcfile", type="string", dest="rcfile",
-        help="the name of a configuration file")
+    # parser.add_option("-p", "--profile", type="string", dest="profile",
+    #     help="the name of a profile")
+    # parser.add_option("--rcfile", type="string", dest="rcfile",
+    #     help="the name of a configuration file")
     parser.add_option("--ipythondir", type="string", dest="ipythondir",
         help="look for config files and profiles in this directory")
     (options, args) = parser.parse_args()
           
     # Configuration files and profiles
-    if options.profile and not options.rcfile:
-        config.updateConfigWithProfile('ipcontroller', options.profile, options.ipythondir)
-    elif options.rcfile and not options.profile:
-        config.updateConfigWithFile(options.rcfile, options.ipythondir)
-    else:
-        config.updateConfigWithFile('ipcontrollerrc.py', options.ipythondir)
-        
-    # Update withh command line options
+    # if options.profile and not options.rcfile:
+    #     config.updateConfigWithProfile('ipcontroller', options.profile, options.ipythondir)
+    # elif options.rcfile and not options.profile:
+    #     config.updateConfigWithFile(options.rcfile, options.ipythondir)
+    # else:
+    kernelConfigManager.updateConfigObjFromDefaultFile(options.ipythondir)
+    co = kernelConfigManager.getConfigObj()
+    
+    # Update with command line options
     if options.engineip is not None:
-        controllerConfig.listenForEnginesOn['ip'] = options.engineip
+        co['controller']['listenForEnginesOn']['ip'] = options.engineip
     if options.engineport is not None:
-        controllerConfig.listenForEnginesOn['port'] = options.engineport
-    di = controllerConfig.controllerInterfaces['multiengine']['default']
+        co['controller']['listenForEnginesOn']['port'] = options.engineport
+    di = co['controller']['controllerInterfaces']['multiengine']['default']
     if options.rcip is not None:
-        controllerConfig.controllerInterfaces['multiengine']['networkInterfaces'][di]['ip'] = options.rcip
+        co['controller']['controllerInterfaces']['multiengine']['networkInterfaces'][di]['ip'] = options.rcip
     if options.rcport is not None:
-        controllerConfig.controllerInterfaces['multiengine']['networkInterfaces'][di]['port'] = options.rcport
-    di = controllerConfig.controllerInterfaces['task']['default']
+        co['controller']['controllerInterfaces']['multiengine']['networkInterfaces'][di]['port'] = options.rcport
+    di = co['controller']['controllerInterfaces']['task']['default']
     if options.taskip is not None:
-        controllerConfig.controllerInterfaces['task']['networkInterfaces'][di]['ip'] = options.taskip
+        co['controller']['controllerInterfaces']['task']['networkInterfaces'][di]['ip'] = options.taskip
     if options.taskport is not None:
-        controllerConfig.controllerInterfaces['task']['networkInterfaces'][di]['port'] = options.taskport
-        
+        co['controller']['controllerInterfaces']['task']['networkInterfaces'][di]['port'] = options.taskport
+
+    kernelConfigManager.updateConfigObj(co)
     main(options.logfile)
     
     
