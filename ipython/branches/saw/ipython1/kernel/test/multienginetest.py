@@ -20,7 +20,7 @@ from ipython1.kernel import engineservice as es
 from ipython1.kernel.multiengine import IEngineMultiplexer, IEngineCoordinator 
 from ipython1.kernel import newserialized
 from ipython1.kernel.error import NotDefined
-from ipython1.test import util
+from ipython1.testutils import util
 from ipython1.kernel import newserialized
 from ipython1.kernel.error import InvalidEngineID, NoEnginesRegistered
 from ipython1.kernel.test.engineservicetest import validCommands, invalidCommands

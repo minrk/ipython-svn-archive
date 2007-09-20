@@ -17,7 +17,7 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-import tcommon
+from ipython1.testutils import tcommon
 from ipython1.testutils.tcommon import *
 
 from ipython1.testutils.util import DeferredTestCase
