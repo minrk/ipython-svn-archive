@@ -23,9 +23,9 @@ setup(
     zip_safe = True,
     include_package_data = True,
     entry_points = {
-            'console_scripts': ['ipengine = ipython1.scripts.ipengine:start',
-                                'ipcontroller = ipython1.scripts.ipcontroller:start',
-                                'ipcluster = ipython1.scripts.ipcluster:main']
+            'console_scripts': ['ipengine = ipython1.kernel.scripts.ipengine:start',
+                                'ipcontroller = ipython1.kernel.scripts.ipcontroller:start',
+                                'ipcluster = ipython1.kernel.scripts.ipcluster:main']
         },
 
     author = "Fernando Perez / Brian Granger",
