@@ -18,8 +18,9 @@ setup(
     name = "ipython1",
     version = "0.9alpha2",
     packages = find_packages(),
+    namespace_packages=['ipython1'],
     
-    zip_safe = False,
+    zip_safe = True,
     include_package_data = True,
     entry_points = {
             'console_scripts': ['ipengine = ipython1.scripts.ipengine:start',
