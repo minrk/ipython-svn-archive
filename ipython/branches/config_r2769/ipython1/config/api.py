@@ -1,52 +1,6 @@
 # encoding: utf-8
 """
 This is the official entry point to IPython's configuration system.  
-
-There are two ways this module can be used:
-
-1.  To customize various components of IPython.
-2.  To access to configuration information for various components of IPython.
-
-Customization
-=============
-
-Configuration information is held by a set of configuration objects.  The
-attributes of these objects contain the actual configuration information.  A
-user performs customization by getting one of the configuration objects:
-
-::
-
-    import ipython1.config.api as config
-    enginerc = config.getConfigObject('engine')
-    
-And then setting attributes of that object:
-
-::
-
-    enginerc.maxMessageSize = 100
-    
-Documentation on the types of configuration objects and the meaning of their
-attributes can be found in the ipython1.config.objects module.
-
-Access to Configuration Information
-===================================
-
-The actual configuration information about something can be retrieved in a
-similar manner:
-
-::
-
-    import ipython1.config.api as config
-    enginerc = config.getConfigObject('engine')
-    maxMessageSize = enginerc.maxMessageSize
-
-Questions about the sysetem
-===========================
-
-1.  How should we allow IPYTHONDIR to be set as a command line option?
-2.  Should we distinguish between profiles and configuration files?
-3.  How should we enforce dependencies?
-
 """
 __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
