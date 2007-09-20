@@ -52,7 +52,7 @@ def main(logfile):
     cs = controllerservice.ControllerService()
     
     # Start listening for engines
-    efac = kernelConfigManager.asImportable(co['controller']['engineServerProtocolInterface'])(cs)
+    efac = kernelConfigManager._import(co['controller']['engineServerProtocolInterface'])(cs)
     reactor.listenTCP(
         port=co['controller']['listenForEnginesOn'].as_int('port'),
         factory=efac,
@@ -60,10 +60,10 @@ def main(logfile):
         
     for ciname, ci in co['controller']['controllerInterfaces'].iteritems():
         log.msg("Starting controller interface: " + ciname)
-        adaptedController = kernelConfigManager.asImportable(ci['controllerInterface'])(cs)
+        adaptedController = kernelConfigManager._import(ci['controllerInterface'])(cs)
         for niname, ni in ci['networkInterfaces'].iteritems():
             log.msg("Starting controller network interface (%s): %s:%s:%i" % (ciname,niname,ni['ip'],ni.as_int('port')))
-            fac = kernelConfigManager.asImportable(ni['interface'])(adaptedController)
+            fac = kernelConfigManager._import(ni['interface'])(adaptedController)
             reactor.listenTCP(
                 port=ni.as_int('port'),
                 factory=fac,
@@ -130,7 +130,6 @@ def start():
         co['controller']['controllerInterfaces']['task']['networkInterfaces'][di]['port'] = options.taskport
 
     kernelConfigManager.updateConfigObj(co)
-    print kernelConfigManager.getConfigObj()
     main(options.logfile)
     
     

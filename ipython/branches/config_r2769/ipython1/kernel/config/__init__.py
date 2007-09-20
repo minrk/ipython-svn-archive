@@ -31,9 +31,35 @@ engineConfig = {
 # MPI Configuration
 #-------------------------------------------------------------------------------
 
+# Uncomment for Mpi4Py
+# mpiConfig.mpiImportStatement = """from mpi4py import MPI as mpi
+# mpi.rank = mpi.COMM_WORLD.Get_size()
+# mpi.size = mpi.COMM_WORLD.Get_rank()
+# """
+
+# Uncomment For PyTrlinos
+# mpiConfig.mpiImportStatement = """
+# from PyTrilinos import Epetra
+# class SimpleStruct:
+#     pass
+# mpi = SimpleStruct()
+# mpi.rank = 0
+# mpi.size = 0
+# """
+
 mpiConfig = {
-    'mpiImportStatement': '',
-    'mpi4py': 'from mpi4py import MPI as mpi'
+    'mpi4py': """from mpi4py import MPI as mpi
+mpi.rank = mpi.COMM_WORLD.Get_size()
+mpi.size = mpi.COMM_WORLD.Get_rank()
+""",    
+    'pytrilinos': """from PyTrilinos import Epetra
+class SimpleStruct:
+    pass
+mpi = SimpleStruct()
+mpi.rank = 0
+mpi.size = 0
+""",
+    'default': ''
 }
 
 #-------------------------------------------------------------------------------
@@ -98,7 +124,7 @@ clientConfig = {
 defaultKernelConfig['engine'] = engineConfig
 defaultKernelConfig['mpi'] = mpiConfig
 defaultKernelConfig['controller'] = controllerConfig
-defaultKernelConfig['clientConfig'] = clientConfig
+defaultKernelConfig['client'] = clientConfig
 
 
 configManager = ConfigObjManager(defaultKernelConfig, 'ipython1.kernel.ini')

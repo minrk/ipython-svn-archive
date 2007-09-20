@@ -28,19 +28,30 @@ from ipython1.kernel.config import configManager as kernelConfigManager
 from ipython1.core.config import configManager as coreConfigManager
 
 # MPI module should be loaded first
-
-mpi = None
-kco = kernelConfigManager.getConfigObj()
-mpiis = kco['mpi']['mpiImportStatement']
-if mpiis:
-    try:
-        exec mpiis
-    except ImportError:
-        mpi = None
+# BEG 9/20/07: I don't think we need to do this first anymore.  Let's leave this here for a while
+# and make sure of this.
+# mpi = None
+# kco = kernelConfigManager.getConfigObj()
+# mpiis = kco['mpi']['mpiImportStatement']
+# if mpiis:
+#     try:
+#         exec mpiis
+#     except ImportError:
+#         mpi = None
 
 def main(n, logfile):
     kco = kernelConfigManager.getConfigObj()
     cco = coreConfigManager.getConfigObj()
+    
+    mpikey = kco['mpi']['default']
+    mpiImportStatement = kco['mpi'].get(mpikey, None)
+    if mpiImportStatement is not None:
+        try:
+            exec mpiImportStatement
+        except:
+            mpi = None
+    else:
+        mpi = None
     
     if logfile:
         logfile = logfile + str(os.getpid()) + '.log'
@@ -51,15 +62,14 @@ def main(n, logfile):
     else:
         openLogFile = sys.stdout
     log.startLogging(openLogFile)
+    
     for i in range(n):
-        shellClass = coreConfigManager.asImportable(cco['shell']['shellClass'])
-        print shellClass
+        shellClass = coreConfigManager._import(cco['shell']['shellClass'])
         service = EngineService(shellClass, mpi=mpi)
-        fac = kernelConfigManager.asImportable(kco['engine']['engineClientProtocolInterface'])(service)
-        print fac
+        fac = kernelConfigManager._import(kco['engine']['engineClientProtocolInterface'])(service)
         reactor.connectTCP(
             host=kco['engine']['connectToControllerOn']['ip'], 
-            port=kco['engine']['connectToControllerOn']['port'],
+            port=kco['engine']['connectToControllerOn'].as_int('port'),
             factory=fac)
         service.startService()
         sis = cco['shell']['shellImportStatement']
@@ -83,6 +93,8 @@ def start(n=1):
         help="the TCP port the controller is listening on")
     parser.add_option("--controller-ip", type="string", dest="controllerip",
         help="the TCP ip address of the controller")
+    parser.add_option("--mpi", type="string", dest="mpi",
+        help="How to enable MPI (mpi4py, pytrilinos, or empty string to disable)")
     parser.add_option("-n", "--num", type="int", dest="n",
         help="the number of engines to start in this process")
     parser.add_option("-l", "--logfile", type="string", dest="logfile",
@@ -112,6 +124,8 @@ def start(n=1):
         kco['engine']['connectToControllerOn']['ip'] = options.controllerip
     if options.controllerport is not None:
         kco['engine']['connectToControllerOn']['port'] = options.controllerport
+    if options.mpi is not None:
+        kco['mpi']['default'] = options.mpi
         
     main(options.n, options.logfile)
     

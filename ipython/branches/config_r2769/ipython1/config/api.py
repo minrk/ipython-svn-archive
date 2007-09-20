@@ -64,9 +64,11 @@ from ipython1.external.configobj import ConfigObj
 
 class ConfigObjManager(object):
     
-    def __init__(self, configObj, filename=None):
+    def __init__(self, configObj, filename):
         self.current = configObj
+        self.current.indent_type = '    '
         self.filename = filename
+        self.writeDefaultConfigFile()
         
     def getConfigObj(self):
         return self.current
@@ -79,17 +81,22 @@ class ConfigObjManager(object):
         self.current.merge(newConfig)
         
     def updateConfigObjFromDefaultFile(self, ipythondir=None):
-        if self.filename is not None:
-            fname = self.resolveFilePath(self.filename, ipythondir)
-            print fname
-            self.updateConfigObjFromFile(fname)
+        fname = self.resolveFilePath(self.filename, ipythondir)
+        self.updateConfigObjFromFile(fname)
 
     def writeConfigObjToFile(self, filename):
         f = open(filename, 'w')
         self.current.write(f)
         f.close()
 
-    def asImportable(self, key):
+    def writeDefaultConfigFile(self):
+        ipdir = getIpythonDir()
+        fname = ipdir + '/' + self.filename
+        if not os.path.isfile(fname):
+            print "Writing the configuration file to: " + fname
+            self.writeConfigObjToFile(fname)
+    
+    def _import(self, key):
         package = '.'.join(key.split('.')[0:-1])
         obj = key.split('.')[-1]
         execString = 'from %s import %s' % (package, obj)
@@ -122,15 +129,7 @@ class ConfigObjManager(object):
             if os.path.isfile(trythis):
                 return trythis        
 
-        # In the IPYTHONDIR environment variable if it exists
-        IPYTHONDIR = os.environ.get('IPYTHONDIR')
-        if IPYTHONDIR is not None:
-            trythis = IPYTHONDIR + '/' + filename
-            if os.path.isfile(trythis):
-                return trythis
-
-        # In the ~/.ipython directory
-        trythis = getHomeDir() + '/.ipython/' + filename
+        trythis = getIpythonDir() + '/' + filename
         if os.path.isfile(trythis):
             return trythis
 
