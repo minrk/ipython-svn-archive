@@ -57,6 +57,12 @@ class Task(object):
         recoveryTask : Task
             This is the Task to be run when the task has exhausted its retries
             Default=None.
+        depends : Dependency, dict, list, str
+            This is the dependency structure for the Task, which determines
+            whether a task can be run on a Worker.  If depends is given as
+            a dict, list, or str, then it is passed to the constructor
+            for a Dependency.  See the Dependency doc for details.
+            Default=None
         options : dict
             Any other keyword options for more elaborate uses of tasks
     
@@ -218,7 +224,7 @@ class Dependency(_Dependency):
     `key` is a string, by which values will be pulled from the properties dict.
     `value` is the target value against which the property is tested.
         Default: True
-    `test` is a simple comparision operator: '==', '<', '>=' etc.
+    `test` is a simple comparison operator: '==', '<', '>=' etc.
         Default: '=='
     
     a Dependency object can be constructed with a dict, list, or string:
@@ -249,8 +255,6 @@ class Dependency(_Dependency):
     >>>d.depends('a') # also d.depends('a', True, '==')
     >>>d.depends('b', False)
     
-        
-    
     """
     
     def __init__(self, init=[]):
@@ -270,7 +274,7 @@ class Dependency(_Dependency):
                 raise TypeError("Bad Strtest: %r"%e)
             self.test = self.strtest
         else:
-            raise SyntaxError("Dependencies incorrectly formatted")
+            raise TypeError("Dependencies incorrectly formatted")
     
     def depend(self, key, value=True, test='=='):
         assert isinstance(self.dependencies, list), "cannot edit dependencies of strtest"
