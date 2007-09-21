@@ -16,7 +16,7 @@ from setuptools import setup, find_packages
 
 setup(
     name = "ipython1",
-    version = "0.9alpha2",
+    version = "0.9alpha3",
     packages = find_packages(),
     
     zip_safe = False,
