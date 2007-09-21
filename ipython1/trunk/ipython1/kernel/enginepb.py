@@ -52,7 +52,7 @@ from ipython1.kernel.pbutil import packageFailure, unpackageFailure, checkMessag
 from ipython1.kernel.pbconfig import CHUNK_SIZE
 from ipython1.kernel.util import gatherBoth
 from ipython1.kernel import newserialized
-from ipython1.kernel.error import PBMessageSizeError
+from ipython1.kernel.error import PBMessageSizeError, ProtocolError
 from ipython1.kernel import controllerservice, protocols
 from ipython1.kernel.controllerservice import IControllerBase
 from ipython1.kernel.engineservice import \
@@ -222,7 +222,7 @@ class IPBEngine(Interface):
         
         pNamespace is a pickled dict of key, object pairs. 
         """
-
+        
     def remote_pull(*keys):
         """Pull objects from a users namespace by keys.
         
@@ -295,7 +295,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     def remote_getProperties(self):
         d = defer.succeed(self.service.properties)
         d.addCallback(pickle.dumps, 2)
-        # d.addCallback(checkMessageSize, repr(keys))
+        d.addCallback(checkMessageSize, 'properties')
         d.addErrback(packageFailure)
         return d
     
@@ -454,12 +454,15 @@ class EngineFromReference(object):
     id = property(getID, setID)
     
     def setProperties(self, pickleprops, result):
+        pickleprops = unpackageFailure(pickleprops)
+        if isinstance(pickleprops, Failure):
+            return pickleprops
         try:
             newp = pickle.loads(pickleprops)
             self.properties.clear()
             self.properties.update(newp)
-        except:
-            log.msg("could not update properties")
+        except Exception, e:
+            raise ProtocolError("could not update properties:%r"%e)
         return result
     
     def getProperties(self, result):

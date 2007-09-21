@@ -42,7 +42,10 @@ class IdInUse(KernelError):
 
 class ProtocolError(KernelError):
     pass
-    
+
+class ConnectionError(KernelError):
+    pass
+
 class InvalidEngineID(KernelError):
     pass
     

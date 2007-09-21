@@ -93,7 +93,7 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
         try:
             task = pickle.loads(binTask.data)
         except:
-            d = defer.fail(pickle.UnPickleableError("Could not unmarshal task"))
+            d = defer.fail(pickle.UnpickleableError("Could not unmarshal task"))
         else:
             d = self.taskController.run(task)
         d.addCallback(self.packageSuccess)

@@ -17,7 +17,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 # import cPickle as pickle
-import sys
+# import sys
 import xmlrpclib
 # import httplib
 # import urllib
@@ -28,7 +28,7 @@ import xmlrpclib
 import string
 from types import *
 
-from ipython1.kernel.error import ProtocolError
+from ipython1.kernel import error
 # from ipython1.external.twisted.web2 import server, channel
 # from ipython1.external.twisted.web2 import http, resource
 # from ipython1.external.twisted.web2 import responsecode, stream
@@ -79,12 +79,12 @@ class Transport(xmlrpclib.Transport):
             try:
                 self.connection.close()
                 self._full_request(host,handler,request_body)
-            except:
-                last_type = sys.last_type.__name__
+            except Exception, e:
+                # last_type = e.__name__
                 msg=("Error connecting to the server, please recreate the "
                      "client.\n"
                      "The original internal error was:\n"
-                     "%s: %s" % (last_type,sys.last_value)
+                     "%r" % e
                      )
                 raise error.ConnectionError(msg)
         
@@ -94,7 +94,7 @@ class Transport(xmlrpclib.Transport):
         headers = response.msg
 
         if errcode != 200:
-            raise ProtocolError(
+            raise error.ProtocolError(
                 host + handler,
                 errcode, errmsg,
                 headers

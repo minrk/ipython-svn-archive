@@ -16,6 +16,8 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
+from types import FunctionType as function
+
 import zope.interface as zi, string
 from twisted.internet import defer, reactor
 from twisted.python import components, log, failure
@@ -68,7 +70,7 @@ class Task(object):
     """
     def __init__(self, expression, resultNames=None, setupNS=None,
             clearBefore=False, clearAfter=False, retries=0, 
-            recoveryTask=None, **options):
+            recoveryTask=None, depends=None, **options):
         self.expression = expression
         if isinstance(resultNames, str):
             self.resultNames = [resultNames]
@@ -79,7 +81,12 @@ class Task(object):
         self.clearAfter = clearAfter
         self.retries=retries
         self.recoveryTask = recoveryTask
-        
+        if depends is None:
+            self.dependency = _Dependency()
+        elif isinstance(depends, Dependency):
+            self.dependency = depends
+        else:
+            self.dependency = Dependency(depends)
         self.options = options
         self.taskID = None
 
@@ -122,13 +129,13 @@ class resultNS:
 
 class TaskResult(object):
     """An object for returning task results.
-
+        
         This object encapsulates the results of a task.  On task
         success it will have a keys attribute that will have a list
         of the variables that have been pulled back.  These variables
         are accessible as attributes of this class as well.  On 
         success the failure attribute will be None.
-
+        
         In task failure, keys will be empty, but failure will contain
         the failure object that encapsulates the remote exception.
         One can also simply call the raiseException() method of 
@@ -139,15 +146,15 @@ class TaskResult(object):
         to the results.  If the Task had resultNames=['a', 'b'], then the 
         Task Result will have attributes tr.ns.a, tr.ns.b for those values.
         Accessing tr.ns will raise the remote failure if the task failed.
-
+        
         The engineID attribute should have the engineID of the engine
         that ran the task.  But, because engines can come and go in
         the ipython task system, the engineID may not continue to be
         valid or accurate.
-
+        
         The taskID attribute simply gives the taskID that the task
         is tracked under.
-        """
+    """
     taskID = None
     
     def _getNS(self):
@@ -190,6 +197,122 @@ class TaskResult(object):
         """Re-raise any remote exceptions in the local python session."""
         if self.failure is not None:
             self.failure.raiseException()
+
+
+class _Dependency(object):
+    """an empty Dependency that provides only the `test` method, 
+    for defaulting in a Task"""
+    def test(self, properties):
+        return True
+    
+
+class Dependency(_Dependency):
+    """an object to enable elaborate dependency tests against the properites
+    of a worker.
+    Standard form is a list of the form [(key, value, test),].  The primary
+    method of this object is this.test(properties), where properties is a 
+    dictionary of the properties of a worker.  Tests are made of the form:
+    if properties.get(key) `test` value: True
+    this.test() will return True if 
+    
+    `key` is a string, by which values will be pulled from the properties dict.
+    `value` is the target value against which the property is tested.
+        Default: True
+    `test` is a simple comparision operator: '==', '<', '>=' etc.
+        Default: '=='
+    
+    a Dependency object can be constructed with a dict, list, or string:
+    >>>d = Dependency(dict(a=True,b='asdf'))
+        is equivalent to:
+    >>>d = Dependency([('a', True, '=='), ('b', 'asdf', '==')])
+        is equivalent to:
+    >>>d = Dependency(['a', ('b', 'asdf')])
+    another example:
+    >>>d = Dependency([('memory', '2GB', '>=')])
+    >>>d.test(properties)
+        will only return true of properties.get('memory') >= '2GB'
+    
+    string construction is different.  String construction allows the user
+    to define an analytic test function in one of two ways.
+    First, a function called test, taking one argument, and returning True|False
+    >>>d = Dependency('''def test(properties):
+                ...
+                return True # or False
+                ''')
+    or a boolean expression in terms of a dict called 'properties':
+    >>>d = Dependency("properties['a'] == True and properties['mem'] > '1GB'")
+    
+    dependencies can be added through d.depend(key, value, test) in the same way
+    as the constructor, unless the dependency was constructed from a string.
+    >>>d.depends(['a', ('b', False)])
+        is equivalent to
+    >>>d.depends('a') # also d.depends('a', True, '==')
+    >>>d.depends('b', False)
+    
+        
+    
+    """
+    
+    def __init__(self, init=[]):
+        self.dependencies = []
+        if isinstance(init, (dict, list, tuple)):
+            self.depend(init)
+        elif isinstance(init, str):
+            if "def test" not in init:
+                self.dependencies = "def test(properties):  return %s"%init
+            else:
+                self.dependencies = init
+            # check for valid dependency string
+            exec(self.dependencies)
+            try:
+                test({})
+            except Exception, e:
+                raise TypeError("Bad Strtest: %r"%e)
+            self.test = self.strtest
+        else:
+            raise SyntaxError("Dependencies incorrectly formatted")
+    
+    def depend(self, key, value=True, test='=='):
+        assert isinstance(self.dependencies, list), "cannot edit dependencies of strtest"
+        if isinstance(key, dict):
+            [self.depend(k, v, '==') for k,v in key.iteritems()]
+        elif isinstance(key, (list, tuple)):
+            for d in key:
+                if isinstance(d, (list, tuple)):
+                    self.depend(*d)
+                elif isinstance(d, str):
+                    self.depend(d)
+                else:
+                    raise TypeError("Bad Dependency list:%s"%key)
+        elif isinstance(key, str):
+            self.dependencies.append((key, value, test))
+    
+    def undepend(self, key):
+        assert isinstance(self.dependencies, list), "cannot edit dependencies of strtest"
+        zipd = zip(*self.dependencies)
+        if key in zipd[0]:
+            self.dependencies.pop(list(zipd[0]).index(key))
+    
+    def test(self, properties):
+        for key, target, test in self.dependencies:
+            c = cmp(properties.get(key), target)
+            if c == 0 and '=' in test:
+                continue
+            elif c == 1 and '>' in test:
+                continue
+            elif c == -1 and '<' in test:
+                continue
+            else:
+                return False
+        return True
+    
+    def strtest(self, properties):
+        exec self.dependencies
+        try:
+            return test(properties)
+        except Exception, e:
+            log.msg("maybe bad strtest: %r"%e)
+            return False
 
 class IWorker(zi.Interface):
     """The Basic Worker Interface. 
@@ -367,13 +490,7 @@ class FIFOScheduler(object):
     def schedule(self):
         for t in self.tasks:
             for w in self.workers:
-                checks = t.options.get('requires', {})
-                if not checks: # no dependencies
-                    return self.popWorker(), self.popTask()
-                against = {}
-                for k,v in checks.iteritems():
-                    against[k] = w.properties.get(k)
-                if checks == against:
+                if t.dependency.test(w.properties):
                     return self.popWorker(w.workerID), self.popTask(t.taskID)
         return None, None
     
