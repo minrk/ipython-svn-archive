@@ -1,3 +1,0 @@
-#!/usr/bin/env bash
-epydoc --parse-only --html -v -o doc/html ipython1
-

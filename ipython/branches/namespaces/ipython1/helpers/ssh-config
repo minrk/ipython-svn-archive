@@ -1,9 +1,0 @@
-Host bassi
-    HostName        bassi.nersc.gov
-    User            myusername
-
-Host bassi-forward
-    HostName      bassi.nersc.gov
-    LocalForward  10105 bassi.nersc.gov:10105
-    LocalForward  8080 bassi.nersc.gov:8080
-    User          myusername

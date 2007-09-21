@@ -1,9 +1,0 @@
-syntax: glob
-.svn
-*~
-.*.swp
-.*.swo
-*.pyc
-*.pyo
-*.so
-ipython1.egg-info
