@@ -185,6 +185,7 @@ class IEngineThreaded(zi.Interface):
 #-------------------------------------------------------------------------------
 # Functions and classes to implement the EngineService
 #-------------------------------------------------------------------------------
+
 class IPENGINE(object):
     """This is the object through which the user can edit the `properties`
     attribute of an Engine."""
@@ -635,3 +636,19 @@ class Command(object):
         
         self.deferred.errback(reason)
 
+class ThreadedEngineService(EngineService):
+    
+    zi.implements(IEngineBase)
+
+    def __init__(self, shellClass=Interpreter, mpi=None):
+        EngineService.__init__(self, shellClass, mpi)
+        # Only import this if we are going to use this class
+        from twisted.internet import threads
+        
+    def execute(self, lines):
+        msg = """engine: %r
+method: execute(lines)
+lines = %s""" % (self.id, lines)
+        d = threads.deferToThread(self.executeAndRaise, msg, self.shell.execute, lines)
+        d.addCallback(self.addIDToResult)
+        return d
