@@ -12,7 +12,46 @@
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
+import sys
 from setuptools import setup, find_packages
+
+#---------------------------------------------------------------------------
+# Test for dependencies
+#---------------------------------------------------------------------------
+
+from setupext import print_line, print_raw, print_status, print_message, \
+    check_for_ipython, check_for_zopeinterface, check_for_twisted, \
+    check_for_pexpect, check_for_httplib2, check_for_sqlalchemy, \
+    check_for_simplejson
+
+print_line()
+print_raw("BUILDING IPYTHON1")
+print_status('python', sys.version)
+print_status('platform', sys.platform)
+if sys.platform == 'win32':
+    print_status('Windows version', sys.getwindowsversion())
+print_raw("")
+print_raw("REQUIRED DEPENDENCIES")
+
+if not check_for_ipython():
+    sys.exit(1)
+if not check_for_zopeinterface():
+    sys.exit(1)
+if not check_for_twisted():
+    sys.exit(1)
+
+print_raw("")
+print_raw("OPTIONAL DEPENDENCIES")
+
+check_for_pexpect()
+check_for_httplib2()
+check_for_sqlalchemy()
+check_for_simplejson()
+
+#---------------------------------------------------------------------------
+# The actual setup
+#---------------------------------------------------------------------------
+
 
 setup(
     name = "ipython1",

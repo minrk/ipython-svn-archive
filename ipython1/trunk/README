@@ -4,52 +4,44 @@ IPython1 README
 
 :Author:  Brian E. Granger
 :Contact: ellisonbg@gmail.com
-:Date: April 24, 2007
+:Date: September 20, 2007
 
 .. contents::
 
 Overview
 ========
 
-This file gives an overview of the IPython1 kernel.  The IPython kernel exposes
-Python over the network and allows parallel and distributed applications to be
-developed, debugged, tested, executed and monitored interactively and
-collaboratively.
+This file gives an overview of IPython1.  IPython1 has a sophisticated and powerful architecture for parallel and distributed computing.  This architecture abstracts out parallelism in a very general way.  This enables ipython1 to support many different styles of parallelism including::
+
+1. Single program, multiple data (SPMD), message passing applications.
+2. Task farming.
+3. General Multiple Program, Multiple Data (MPMD) parallelism.
+4. Data parallel.
+5. Combinations of these approaches.
+5. Custom user defined approaches.
 
 For installation instructions, see the INSTALL file in this directory.
 
-The IPython kernel is a component of a future release of IPython called
-IPython1.  While IPython1 is not completed, the kernel module is fully
-functional and can be used with current IPython versions.
-
-The IPython kernel is essentially a network enabled Python instance and
-consists of three components: the IPython Engine, the IPython Controller and
-various Controller Clients.
+The IPython1 architecture consists of three components: the IPython Engine, the IPython Controller and various Controller Clients.
 
 IPython Engine
 --------------
 
 The IPython Engine is a Python instance that takes Python commands over a
-network connection.  Eventually, the IPython Engine will be an IPython
-instance, but for now, it is plain Python.  The Engine can also handle incoming
-and outgoing Python objects send over a network connection.  When multiple
-Engines are started, parallel and distributed computing becomes possible.  An
-important feature of the IPython Engines is that they block while user code is
-being executed.  Read on for how the Controller deals with this limitation to 
-expose a nice clean asynchronous API to the user.
+network connection.  Eventually, the IPython Engine will be a full IPython
+interpreter, but for now, it is a regular Python interpreter.  The Engine can also handle incoming and outgoing Python objects sent over a network connection.  When multiple Engines are started, parallel and distributed computing becomes possible.  An important feature of an IPython Engine is that it blocks while user code is being executed.  Read on for how the Controller solves this problem to expose a clean asynchronous API to the user.
 
 IPython Controller
 ------------------
 
-The IPython Controller provides an interface for working with a set of Engines.
-The basic notion of a controller is something to which engines can connect.
-It manages a queue for each Engine and exposes a fully asynchronous interface
-to each Engine.  Because the Controller listens on a network port for Engines
-to connect to it, it must be started before any Engines are started.  The
-Controller also provides a single point of contact for users who wish to
+The IPython Controller provides an interface for working with a set of Engines.  At an abstract level, the Controller is an object and process to which IPython Engines can connect.  For each connected Engine, the Controller manages a queue of commands in incoming/outgoing Python objects.  While the Engines themselves block when user code is run, the Controller hides that from the user to provide a fully asynchronous interface to a set of computing resources.  Because the Controller listens on a network port for Engines to connect to it, it must be started before any Engines are started.  
+
+The Controller also provides a single point of contact for users who wish to
 utilize the Engines connected to the Controller.  There are different ways 
-(read interfaces) of working with a controller.  Currently we have two
+(ways=interfaces) of working with a controller.  Currently we have two
 default interfaces to the controller:  RemoteController and TaskController.
+
+Additional interfaces can be added to to enable other styles of parallelism.
 
 Controller Clients
 ------------------
@@ -194,22 +186,3 @@ It is best to check out the examples of using the task farming stuff in
 ipython1/doc/examples.
 
 
-Things To Do
-============
-
-Current:
-
-* Planning with Min and Fernando.
-* Begin to add tests for task controller and client.
-* Convert standalone test scripts to using Fernando's new spawning stuff.
-* Add capability to spawn engines using mpirun.
-* Refactor the exceptions in xmlrpcutil.
-
-Ongoing:
-
-* is it a message, result or command in the new core?
-* should the id attribute of engines be called engineID? (there are lots of ids around)
-* Write tutorial for task farming stuff.
-* Code review for taskpb.py.
-* Have Min update multienginehttp/taskhttp so tests pass (barrier stuff)
-* clean up mpi.so
