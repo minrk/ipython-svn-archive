@@ -119,7 +119,14 @@ class IXMLRPCMultiEngine(Interface):
         the queues status's.  This method will never return the id of a pending 
         deferred.    
         """
+    
+    def xmlrpc_getProperties(request, clientID, targets):
+        """Get the properties dict from targets.
         
+        This method always blocks.  This means that it will always return
+        the queues status's.  This method will never return the id of a pending 
+        deferred.    
+        """
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
@@ -247,6 +254,10 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     @packageResult
     def xmlrpc_queueStatus(self, request, clientID, targets):
         return self.smultiengine.queueStatus(clientID, True, targets)
+    
+    @packageResult
+    def xmlrpc_getProperties(self, request, clientID, targets):
+        return self.smultiengine.getProperties(clientID, True, targets)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
@@ -759,6 +770,15 @@ class XMLRPCMultiEngineClient(object):
         See the docstring for `queueStatus` for full details.
         """
         return self.queueStatus('all')
+    
+    def getProperties(self, targets):
+        """Get properties from targets"""
+        self._checkClientID()
+        result = self._executeRemoteMethod(self._server.getProperties, self._clientID, targets)
+        return result
+    
+    def getPropertiesAll(self):
+        return self.getProperties('all')
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods

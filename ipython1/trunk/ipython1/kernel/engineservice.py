@@ -269,7 +269,6 @@ class EngineService(object, service.Service):
             f = failure.Failure(ev,et,None)
             d.errback(f)
         else:
-            # print self.OBJ.properties
             d.callback(result)
             
         return d
@@ -441,7 +440,6 @@ class QueuedEngine(object):
             "engine passed to QueuedEngine doesn't provide IEngineBase"
             
         self.engine = engine
-        # self.properties = self.engine.properties
         self.id = engine.id
         self.queued = []
         self.history = {}
@@ -449,15 +447,10 @@ class QueuedEngine(object):
         self.currentCommand = None
         self.failureObservers = []
     
-    def _getProperties(self):
-        # print 'qp'
+    def getProperties(self):
         return self.engine.properties
     
-    def _setProperties(self, dikt):
-        self.engine.properties.clear()
-        self.engine.properties.update(dikt)
-    
-    properties = property(_getProperties, _setProperties)
+    properties = property(getProperties, lambda self, _: None)
     # Queue management methods.  You should not call these directly
     
     def submitCommand(self, cmd):

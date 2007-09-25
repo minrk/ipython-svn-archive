@@ -202,7 +202,14 @@ class IEngineMultiplexer(Interface):
         
     def queueStatusAll():
         """Get the status of all the queues."""
-        
+    
+    def getProperties(targets):
+        """get the properties dict from the targets."""
+    
+    def getPropertiesAll():
+        """get all the properties dicts."""
+    
+    
 class IEngineCoordinator(Interface):
     """Methods that work on multiple engines explicitly."""
         
@@ -297,15 +304,15 @@ class MultiEngine(ControllerAdapterBase):
         """
         if isinstance(targets, int):
             if targets not in self.engines.keys():
-                log.msg("Engine with id %d is not registered" % targets)
-                raise error.InvalidEngineID("Engine with id %d is not registered" % targets)
+                log.msg("Engine with id %i is not registered" % targets)
+                raise error.InvalidEngineID("Engine with id %i is not registered" % targets)
             else: 
                 return [self.engines[targets]]
         elif isinstance(targets, (list, tuple)):
             for id in targets:
                 if id not in self.engines.keys():
-                    log.msg("Engine with id %s is not registered" % repr(id))
-                    raise error.InvalidEngineID("Engine with id %s is not registered" % repr(id))  
+                    log.msg("Engine with id %r is not registered" % id)
+                    raise error.InvalidEngineID("Engine with id %r is not registered" % id)  
             return map(self.engines.get, targets)
         elif targets == 'all':
             eList = self.engines.values()
@@ -339,7 +346,7 @@ class MultiEngine(ControllerAdapterBase):
             AttributeError
                 If the method doesn't exist on one of the engines.
         """
-        log.msg("Performing %s on %s" % (methodName, targets))
+        log.msg("Performing %s on %r" % (methodName, targets))
         # This will and should raise if targets is not valid!
         engines = self.engineList(targets)
         dList = []
@@ -464,7 +471,7 @@ class MultiEngine(ControllerAdapterBase):
         return self.clearQueue('all')
     
     def queueStatus(self, targets):
-        log.msg("Getting queue status on %s" % targets)
+        log.msg("Getting queue status on %r" % targets)
         try:
             engines = self.engineList(targets)
         except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
@@ -477,16 +484,33 @@ class MultiEngine(ControllerAdapterBase):
                               fireOnOneErrback=1,
                               consumeErrors=1,
                               logErrors=0)  
-                          
+    
     def queueStatusAll(self):
         return self.queueStatus('all')
-
+    
+    def getProperties(self, targets):
+        log.msg("Getting properties on %r" % targets)
+        try:
+            engines = self.engineList(targets)
+        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
+            return defer.fail(failure.Failure())            
+        else:
+            dList = [defer.execute(lambda :e.properties) for e in engines]
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)  
+            # return defer.succeed([e.properties for e in engines])
+    
+    def getPropertiesAll(self):
+        return self.getProperties('all')
+    
     #---------------------------------------------------------------------------
     # IEngineCoordinator methods
     #---------------------------------------------------------------------------
 
     def scatter(self, targets, key, seq, style='basic', flatten=False):
-        log.msg("Scattering %s to %s" % (key, targets))
+        log.msg("Scattering %r to %r" % (key, targets))
         try:
             engines = self.engineList(targets)
         except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
@@ -512,7 +536,7 @@ class MultiEngine(ControllerAdapterBase):
     
     def gather(self, targets, key, style='basic'):
         """gather a distributed object, and reassemble it"""
-        log.msg("Gathering %s from %s" % (key, targets))
+        log.msg("Gathering %s from %r" % (key, targets))
         try:
              engines = self.engineList(targets)
         except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
@@ -619,6 +643,10 @@ class SynchronousMultiEngine(PendingDeferredAdapter):
     @twoPhase
     def queueStatus(self, targets):
         return self.multiengine.queueStatus(targets)
+
+    @twoPhase
+    def getProperties(self, targets):
+        return self.multiengine.getProperties(targets)
 
     @twoPhase
     def scatter(self, targets, key, seq, style='basic', flatten=False):

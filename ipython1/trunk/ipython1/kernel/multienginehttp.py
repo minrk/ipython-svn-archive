@@ -17,7 +17,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import cPickle as pickle
-import httplib2, urllib, codecs
+import httplib2, urllib
 
 from zope.interface import Interface, implements
 from twisted.internet import defer
@@ -65,6 +65,7 @@ class HTTPMultiEngineRoot(resource.Resource):
         self.child_kill = HTTPMultiEngineKill(self.smultiengine)
         self.child_clearQueue = HTTPMultiEngineClearQueue(self.smultiengine)
         self.child_queueStatus = HTTPMultiEngineQueueStatus(self.smultiengine)
+        self.child_getProperties = HTTPMultiEngineGetProperties(self.smultiengine)
         self.child_scatter = HTTPMultiEngineScatter(self.smultiengine)
         self.child_gather = HTTPMultiEngineGather(self.smultiengine)
         self.child_getIDs = HTTPMultiEngineGetIDs(self.smultiengine)
@@ -333,6 +334,25 @@ class HTTPMultiEngineQueueStatus(HTTPMultiEngineBaseMethod):
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
             d = self.smultiengine.queueStatus(clientID, True, targetsArg)
+            # d.addBoth(_printer)
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEngineGetProperties(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            targetsString = request.prepath[1]
+            clientID = int(request.args['clientID'][0])
+            block = int(request.args['block'][0])
+        except:
+            return self._badRequest(request)
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            d = self.smultiengine.getProperties(clientID, True, targetsArg)
             # d.addBoth(_printer)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d

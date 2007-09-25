@@ -176,7 +176,7 @@ class PBEngineClientFactory(pb.PBClientFactory, object):
         # Now register myself with the controller
         desiredID = self.service.id
         d = self.rootObject.callRemote('registerEngine', self.engineReference, 
-            desiredID, os.getpid())
+            desiredID, os.getpid(), self.service.properties)
         return d.addCallbacks(self._referenceSent, self._getRootFailure)
     
     def _referenceSent(self, registrationDict):
@@ -287,18 +287,38 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     def remote_setID(self, id):
         self.service.id = id
     
+    def _checkProperties(self, result, props):
+        try:
+            dosync = props != self.service.properties
+        except:# could have numpy arrays, so do slower pickle compare
+            try:
+                dosync = pickle.dumps(props, 2) != pickle.dumps(self.service.properties, 2)
+            except pickle.PicklingError:
+                dosync = True
+        if dosync:
+            try:
+                pprops = pickle.dumps(self.service.properties, 2)
+            except pickle.PicklingError, e:
+                f = failure.Failure(e)
+                f.cleanFailure()
+                pprops = packageFailure(f)
+            return pprops, result
+        else:
+            return False, result
+    
     def remote_execute(self, lines):
         props = copy.deepcopy(self.service.properties)
         d = self.service.execute(lines)
-        d.addCallback(lambda r, p: (p!=self.service.properties, r), props)
-        #d.addCallback(lambda r: log.msg("Got result: " + str(r)))
         d.addErrback(packageFailure)
+        d.addCallback(self._checkProperties, props)
+        d.addErrback(packageFailure)
+        #d.addCallback(lambda r: log.msg("Got result: " + str(r)))
         return d
     
     def remote_getProperties(self):
         d = defer.succeed(self.service.properties)
         d.addCallback(pickle.dumps, 2)
-        d.addCallback(checkMessageSize, 'properties')
+        # d.addCallback(checkMessageSize, 'properties')
         d.addErrback(packageFailure)
         return d
     
@@ -456,32 +476,30 @@ class EngineFromReference(object):
     
     id = property(getID, setID)
     
-    def _getProperties(self):
-        """get the properties dict"""
-        d = self.callRemote('getProperties')
-        d.addCallback(unpackageFailure)
-        d.addCallback(pickle.loads)
-        d.addCallback(self.setProperties)
-        return d
-    
     def syncProperties(self, r):
         try:
-            dosync, result = r
-            if dosync:
-                log.msg("syncing properties")
-                d = self._getProperties()
-                d.addBoth(lambda _: result)
-                return d
-            else:
-                return result
-        except:
+            psync, result = r
+        except (ValueError, TypeError):
             return r
+        else:
+            if psync:
+                # log.msg("sync properties")
+                pick = self.checkReturnForFailure(psync)
+                # print pick
+                if isinstance(pick, failure.Failure):
+                    self.properties = pick
+                    return pick
+                else:
+                    self.properties = pickle.loads(pick)
+            return result
     
     def setProperties(self, dikt):
-        self._properties.clear()
-        self._properties.update(dikt)
+        self._properties = dikt
+        # self._properties.update(dikt)
     
     def getProperties(self):
+        if isinstance(self._properties, failure.Failure):
+            self._properties.raiseException()
         return self._properties
     
     properties = property(getProperties, setProperties)
@@ -602,6 +620,7 @@ class EngineFromReference(object):
     def kill(self):
         #this will raise pb.PBConnectionLost on success
         d = self.callRemote('kill')
+        d.addCallback(self.syncProperties)
         d.addCallback(self.checkReturnForFailure)
         d.addErrback(self.killBack)
         return d
@@ -682,7 +701,7 @@ class IPBRemoteEngineRoot(Interface):
     to PB.
     """
     
-    def remote_registerEngine(self, engineReference, id=None, pid=None):
+    def remote_registerEngine(self, engineReference, id=None, pid=None, properties={}):
         """Register new engine on controller."""
     
 
@@ -700,9 +719,10 @@ class PBRemoteEngineRootFromService(pb.Root):
             "IControllerBase is not provided by " + repr(service)
         self.service = service
     
-    def remote_registerEngine(self, engineReference, id=None, pid=None):
+    def remote_registerEngine(self, engineReference, id=None, pid=None, properties={}):
         # First adapt the engineReference to a basic non-queued engine
         engine = IEngineBase(engineReference)
+        engine.properties = properties
         # Make it an IQueuedEngine before registration
         remoteEngine = IEngineQueued(engine)
         # Get the ip/port of the remote side

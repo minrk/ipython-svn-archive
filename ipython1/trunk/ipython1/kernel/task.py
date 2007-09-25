@@ -27,10 +27,6 @@ from ipython1.kernel import controllerservice as cs
 from ipython1.kernel.pendingdeferred import PendingDeferredAdapter, twoPhase
 from ipython1.kernel.util import gatherBoth, DeferredList
 
-def _printer(r):
-    print "_print: ",r
-    return r
-
 class Task(object):
     """Our representation of a task for the `TaskController` interface.
 
@@ -340,17 +336,11 @@ class WorkerFromQueuedEngine(object):
     def __init__(self, qe):
         self.queuedEngine = qe
         self.workerID = None
-        # self.properties = qe.properties
     
-    def _getProperties(self):
-        # print 'wp'
+    def getProperties(self):
         return self.queuedEngine.properties
     
-    def _setProperties(self, dikt):
-        self.queuedEngine.properties.clear()
-        self.queuedEngine.properties.update(dikt)
-    
-    properties = property(_getProperties, _setProperties)
+    properties = property(getProperties, lambda self, _:None)
     
     def run(self, task):
         """Run task in worker's namespace.
