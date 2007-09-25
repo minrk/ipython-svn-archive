@@ -307,7 +307,10 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
             return False, result
     
     def remote_execute(self, lines):
-        props = copy.deepcopy(self.service.properties)
+        try:
+            props = copy.deepcopy(self.service.properties)
+        except: # cannot copy means probably bad properties, so guarantee update
+            props = None
         d = self.service.execute(lines)
         d.addErrback(packageFailure)
         d.addCallback(self._checkProperties, props)

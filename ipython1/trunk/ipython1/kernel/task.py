@@ -494,7 +494,11 @@ class FIFOScheduler(object):
     def schedule(self):
         for t in self.tasks:
             for w in self.workers:
-                if t.dependency.test(w.properties):
+                try:# do not allow exceptions to break this
+                    cando = t.dependency.test(w.properties)
+                except:
+                    cando = False
+                if cando:
                     return self.popWorker(w.workerID), self.popTask(t.taskID)
         return None, None
     
