@@ -254,7 +254,7 @@ class EngineService(object, service.Service):
         return self._id
     
     id = property(_getID, _setID)
-        
+    
     def _seedNamespace(self):
         self.shell.push(**{'mpi': self.mpi, 'id' : self.id})
     
@@ -433,22 +433,31 @@ class QueuedEngine(object):
         keepUpToDate: whether to update the remote status when the 
                       queue is empty.  Defaults to False.
         """
-
+        
         # This is the right way to do these tests rather than 
         # IEngineCore in list(zi.providedBy(engine)) which will only 
         # picks of the interfaces that are directly declared by engine.
         assert IEngineBase.providedBy(engine), \
             "engine passed to QueuedEngine doesn't provide IEngineBase"
-
+            
         self.engine = engine
-        self.properties = self.engine.properties
+        # self.properties = self.engine.properties
         self.id = engine.id
         self.queued = []
         self.history = {}
         self.engineStatus = {}
         self.currentCommand = None
         self.failureObservers = []
-        
+    
+    def _getProperties(self):
+        # print 'qp'
+        return self.engine.properties
+    
+    def _setProperties(self, dikt):
+        self.engine.properties.clear()
+        self.engine.properties.update(dikt)
+    
+    properties = property(_getProperties, _setProperties)
     # Queue management methods.  You should not call these directly
     
     def submitCommand(self, cmd):

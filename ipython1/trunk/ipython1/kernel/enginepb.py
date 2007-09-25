@@ -33,13 +33,13 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-import os
+import os, time, copy
 import cPickle as pickle
 
 from twisted.python import components, log, failure
 from twisted.python.failure import Failure
 from twisted.spread import pb
-from twisted.internet import defer, reactor
+from twisted.internet import defer, reactor, threads
 from twisted.internet.interfaces import IProtocolFactory
 from zope.interface import Interface, implements, Attribute
 from twisted.spread.util import Pager, StringPager, CallbackPageCollector
@@ -216,44 +216,44 @@ class IPBEngine(Interface):
         
         Upon failure returns a pickled Failure.
         """
-        
+    
     def remote_push(self, pNamespace):
         """Push a namespace into the users namespace.
         
         pNamespace is a pickled dict of key, object pairs. 
         """
-        
+    
     def remote_pull(*keys):
         """Pull objects from a users namespace by keys.
         
         Returns a deferred to a pickled tuple of objects.  If any single
         key has a problem, the Failure of that will be returned.
         """
-
+    
     def remote_getResult(i=None):
         """Get result i.
         
         Returns a deferred to a pickled result dict.
         """
-        
+    
     def remote_reset():
         """Reset the Engine."""
-        
+    
     def remote_kill():
         """Stop the Engines reactor."""
-        
+    
     def remote_keys():
         """Get variable names that are currently defined in the user's namespace.
         
         Returns a deferred to a tuple of keys.
         """
-        
+    
     def remote_pushSerialized(pNamespace):
         """Push a dict of keys and serialized objects into users namespace.
         
         @arg pNamespace: a pickle namespace of keys and serialized objects.
         """
-
+    
     def remote_pullSerialized(*keys):
         """Pull objects from users namespace by key as Serialized.
         
@@ -262,6 +262,7 @@ class IPBEngine(Interface):
     
     def remote_getProperties():
         """pull the properties dict for this engine"""
+    
 
 
 class PBEngineReferenceFromService(pb.Referenceable, object):
@@ -279,7 +280,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
             "IEngineBase is not provided by" + repr(service)
         self.service = service
         self.collectors = {}
-        
+    
     def remote_getID(self):
         return self.service.id
     
@@ -287,7 +288,9 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         self.service.id = id
     
     def remote_execute(self, lines):
+        props = copy.deepcopy(self.service.properties)
         d = self.service.execute(lines)
+        d.addCallback(lambda r, p: (p!=self.service.properties, r), props)
         #d.addCallback(lambda r: log.msg("Got result: " + str(r)))
         d.addErrback(packageFailure)
         return d
@@ -310,14 +313,14 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
             return defer.fail(failure.Failure()).addErrback(packageFailure)
         else:
             return self.service.push(**namespace).addErrback(packageFailure)
-        
+    
     #---------------------------------------------------------------------------
     # Paging version of push
     #---------------------------------------------------------------------------
-
+    
     # NOTE:  These are not being used right now due to problems with PBs 
     # paging handling  (BG 1/15/07).
-
+    
     def remote_getCollectorForKey(self, key):
         #log.msg("Creating a collector for key" + key)
         if self.collectors.has_key(key):
@@ -326,11 +329,11 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         coll = SerializedCollector()
         self.collectors[key] = coll
         return coll
-        
+    
     def removeCollector(self, key):
         if self.collectors.has_key(key):
             self.collectors.pop(key)
-        
+    
     def remote_finishPushPaging(self, key):
         #log.msg("finishPushPaging for key: " + key)
         coll = self.collectors.get(key, None)
@@ -340,14 +343,14 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
             d = coll.getDeferredToCollected()
             d.addCallback(self.handlePagedPush, key)
             return d
-        
+    
     def handlePagedPush(self, serial, key):
         log.msg("I got a serial! " + repr(serial) + key)
         d = self.service.pushSerialized(**{key:serial})           
         d.addErrback(packageFailure)
         self.removeCollector(key)
         return d
-        
+    
     #---------------------------------------------------------------------------
     # pull
     #---------------------------------------------------------------------------     
@@ -358,7 +361,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         d.addCallback(checkMessageSize, repr(keys))
         d.addErrback(packageFailure)
         return d
-        
+    
     # NOTE:  The paging version of pull is not being used right now  (BG 1/15/07).
     
     def remote_pullPaging(self, key, collector):
@@ -366,10 +369,10 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         d.addCallback(newserialized.serialize)
         d.addCallbacks(self._startPaging, packageFailure, callbackArgs=(collector,))
         return d
-        
+    
     def _startPaging(self, serial, collector):
         pager = SerializedPager(collector, serial, chunkSize=CHUNK_SIZE)
-        
+    
     #---------------------------------------------------------------------------
     # Other methods
     #---------------------------------------------------------------------------
@@ -405,7 +408,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         d.addCallback(checkMessageSize, repr(keys))
         d.addErrback(packageFailure)
         return d
-
+    
 
 components.registerAdapter(PBEngineReferenceFromService,
                            IEngineBase,
@@ -431,7 +434,7 @@ class EngineFromReference(object):
     def __init__(self, reference):
         self.reference = reference
         self._id = None
-        self.properties = {}
+        self._properties = {}
         self.currentCommand = None
     
     def callRemote(self, *args, **kwargs):
@@ -453,41 +456,54 @@ class EngineFromReference(object):
     
     id = property(getID, setID)
     
-    def setProperties(self, pickleprops, result):
-        pickleprops = unpackageFailure(pickleprops)
-        if isinstance(pickleprops, Failure):
-            return pickleprops
-        try:
-            newp = pickle.loads(pickleprops)
-            self.properties.clear()
-            self.properties.update(newp)
-        except Exception, e:
-            raise ProtocolError("could not update properties:%r"%e)
-        return result
-    
-    def getProperties(self, result):
+    def _getProperties(self):
         """get the properties dict"""
         d = self.callRemote('getProperties')
-        return d.addBoth(self.setProperties, result)
-        
+        d.addCallback(unpackageFailure)
+        d.addCallback(pickle.loads)
+        d.addCallback(self.setProperties)
+        return d
+    
+    def syncProperties(self, r):
+        try:
+            dosync, result = r
+            if dosync:
+                log.msg("syncing properties")
+                d = self._getProperties()
+                d.addBoth(lambda _: result)
+                return d
+            else:
+                return result
+        except:
+            return r
+    
+    def setProperties(self, dikt):
+        self._properties.clear()
+        self._properties.update(dikt)
+    
+    def getProperties(self):
+        return self._properties
+    
+    properties = property(getProperties, setProperties)
     
     #---------------------------------------------------------------------------
     # Methods from IEngine
     #---------------------------------------------------------------------------
-
+    
     #---------------------------------------------------------------------------
     # execute
     #---------------------------------------------------------------------------
     
     def execute(self, lines):
+        # self._needProperties = True
         d = self.callRemote('execute', lines)
-        d.addCallback(self.getProperties)
+        d.addCallback(self.syncProperties)
         return d.addCallback(self.checkReturnForFailure)
-
+    
     #---------------------------------------------------------------------------
     # push
     #---------------------------------------------------------------------------
-
+    
     def pushOld(self, **namespace):
         try:
             package = pickle.dumps(namespace, 2)
@@ -500,9 +516,9 @@ class EngineFromReference(object):
             else:
                 d = self.callRemote('push', package)
                 return d.addCallback(self.checkReturnForFailure)
-            
+    
     # Paging version
-
+    
     def pushNew(self, **namespace):
         dList = []
         for k, v in namespace.iteritems():
@@ -512,7 +528,7 @@ class EngineFromReference(object):
                           fireOnOneErrback=1,
                           logErrors=0, 
                           consumeErrors=1)
-                        
+    
     def pushPaging(self, key, obj):
         try:
             serial = newserialized.serialize(obj)
@@ -532,19 +548,19 @@ class EngineFromReference(object):
         pager = SerializedPager(collector, serial, chunkSize=CHUNK_SIZE)
         d = self.callRemote('finishPushPaging', key)
         return d
-
+    
     push = pushOld
     
     #---------------------------------------------------------------------------
     # pull
     #---------------------------------------------------------------------------
-
+    
     def pullOld(self, *keys):
         d = self.callRemote('pull', *keys)
         d.addCallback(self.checkReturnForFailure)
         d.addCallback(pickle.loads)
         return d
-        
+    
     # Paging version
         
     def pullPaging(self, key):
@@ -554,7 +570,7 @@ class EngineFromReference(object):
         d.addCallback(lambda _: collector.getDeferredToCollected())
         d.addCallback(newserialized.unserialize)
         return d
-        
+    
     def pullNew(self, *keys):
         if len(keys) == 1:
             return self.pullPaging(keys[0])
@@ -567,9 +583,9 @@ class EngineFromReference(object):
                            logErrors=0, 
                            consumeErrors=1)
             return d
-                          
+    
     pull = pullOld
-
+    
     #---------------------------------------------------------------------------
     # Other methods
     #---------------------------------------------------------------------------
@@ -578,19 +594,22 @@ class EngineFromReference(object):
         return self.callRemote('getResult', i).addCallback(self.checkReturnForFailure)
     
     def reset(self):
-        return self.callRemote('reset').addCallback(self.checkReturnForFailure)
-
+        self._refreshProperties = True
+        d = self.callRemote('reset')
+        d.addCallback(self.syncProperties)
+        return d.addCallback(self.checkReturnForFailure)
+    
     def kill(self):
         #this will raise pb.PBConnectionLost on success
         d = self.callRemote('kill')
         d.addCallback(self.checkReturnForFailure)
         d.addErrback(self.killBack)
         return d
-        
+    
     def killBack(self, f):
         f.trap(pb.PBConnectionLost)
         return None
-
+    
     def keys(self):
         return self.callRemote('keys').addCallback(self.checkReturnForFailure)
     
@@ -612,7 +631,7 @@ class EngineFromReference(object):
             else:
                 d = self.callRemote('pushSerialized', package)
                 return d.addCallback(self.checkReturnForFailure)
-       
+    
     # The new paging version
     
     def pushSerializedNew(self, **namespace):      
@@ -624,13 +643,13 @@ class EngineFromReference(object):
                           fireOnOneErrback=1,
                           logErrors=0, 
                           consumeErrors=1)
-        
+    
     def pullSerialized(self, *keys):
         d = self.callRemote('pullSerialized', *keys)
         d.addCallback(self.checkReturnForFailure)
         d.addCallback(pickle.loads)
         return d
-
+    
     pushSerialized = pushSerializedOld
  
     #---------------------------------------------------------------------------
@@ -644,6 +663,7 @@ class EngineFromReference(object):
         other side should prepend the string FAILURE: to any pickled Failure.
         """
         return unpackageFailure(r)
+    
 
 components.registerAdapter(EngineFromReference,
     pb.RemoteReference,

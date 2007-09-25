@@ -288,7 +288,7 @@ class Dependency(_Dependency):
                     self.depend(d)
                 else:
                     raise TypeError("Bad Dependency list:%s"%key)
-        elif isinstance(key, str):
+        else:
             self.dependencies.append((key, value, test))
     
     def undepend(self, key):
@@ -340,7 +340,17 @@ class WorkerFromQueuedEngine(object):
     def __init__(self, qe):
         self.queuedEngine = qe
         self.workerID = None
-        self.properties = qe.properties
+        # self.properties = qe.properties
+    
+    def _getProperties(self):
+        # print 'wp'
+        return self.queuedEngine.properties
+    
+    def _setProperties(self, dikt):
+        self.queuedEngine.properties.clear()
+        self.queuedEngine.properties.update(dikt)
+    
+    properties = property(_getProperties, _setProperties)
     
     def run(self, task):
         """Run task in worker's namespace.
