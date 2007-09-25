@@ -80,3 +80,5 @@ TaskController = kernelConfigManager._import(co['client']['TaskController'])
 defaultTaskController = (co['client']['connectToTaskControllerOn']['ip'],
     co['client']['connectToTaskControllerOn']['port'])
 """The (ip,port) tuple of the default task controller."""
+
+from ipython1.kernel.engineservice import getEngine

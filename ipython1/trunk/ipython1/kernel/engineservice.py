@@ -138,6 +138,7 @@ class IEngineSerialized(zi.Interface):
         Raises NameError is any one of the objects does not exist.
         """
     
+
 class IEngineBase(IEngineCore, IEngineSerialized):
     """The basic engine interface that EngineService will implement.
     
@@ -159,10 +160,10 @@ class IEngineQueued(IEngineBase):
     
     def clearQueue():
         """Clear the queue."""
-        
+    
     def queueStatus():
         """Get the queued and pending commands in the queue."""
-        
+    
     def registerFailureObserver(obs):
         """Register an observer of pending Failures.
         
@@ -171,30 +172,33 @@ class IEngineQueued(IEngineBase):
     
     def unregisterFailureObserver(obs):
         """Unregister an observer of pending Failures."""
+    
 
-    
-    
 class IEngineThreaded(zi.Interface):
     """A place holder for threaded commands.  
     
     All methods should return deferreds.
     """
     pass
-    
-    
+
+
+
+
 #-------------------------------------------------------------------------------
 # Functions and classes to implement the EngineService
 #-------------------------------------------------------------------------------
 
-class IPENGINE(object):
+class EngineAPI(object):
     """This is the object through which the user can edit the `properties`
     attribute of an Engine."""
-    def __init__(self):
+    _fix=False
+    def __init__(self, id):
+        self.id = id
         self.properties = {}
         self._fix=True
     
     def __setattr__(self, k,v):
-        if hasattr(self,'_fix'):
+        if self._fix:
             raise error.KernelError("I am protected!")
         else:
             object.__setattr__(self, k, v)
@@ -203,11 +207,26 @@ class IPENGINE(object):
         raise error.KernelError("I am protected!")
     
 
+_apiDict = {}
+
+def getEngine(id):
+    """Get the Engine API object, whcih currently just provides the properties 
+    object, by ID"""
+    global _apiDict
+    if not _apiDict.get(id):
+        _apiDict[id] = EngineAPI(id)
+    return _apiDict[id]
+
+def dropEngine(id):
+    """remove an engine"""
+    global _apiDict
+    if _apiDict.has_key(id):
+        del _apiDict[id]
+
 class EngineService(object, service.Service):
     """Adapt a IPython shell into a IEngine implementing Twisted Service."""
     
     zi.implements(IEngineBase)
-    properties = {}
     def __init__(self, shellClass=Interpreter, mpi=None):
         """Create an EngineService.
         
@@ -218,29 +237,27 @@ class EngineService(object, service.Service):
         self.shell = self.shellClass()
         self.mpi = mpi
         self.id = None
-        self.OBJ = IPENGINE()
-        # self.OBJ.properties={}
-        self.properties = self.OBJ.properties
+        self.properties = getEngine(self.id).properties
         if self.mpi is not None:
             log.msg("MPI started with rank = %i and size = %i" % 
                 (self.mpi.rank, self.mpi.size))
             self.id = self.mpi.rank
-        
     
     # Make id a property so that the shell can get the updated id
         
     def _setID(self, id):
         self._id = id
+        self.properties = getEngine(id).properties
         self.shell.push(**{'id': id})
-        
+    
     def _getID(self):
         return self._id
-        
+    
     id = property(_getID, _setID)
         
     def _seedNamespace(self):
-        self.shell.push(**{'mpi': self.mpi, 'id' : self.id, '_IPENGINE' :self.OBJ})
-        
+        self.shell.push(**{'mpi': self.mpi, 'id' : self.id})
+    
     def executeAndRaise(self, msg, callable, *args, **kwargs):
         """Call a method of self.shell and wrap any exception."""
         d = defer.Deferred()
@@ -254,15 +271,15 @@ class EngineService(object, service.Service):
         else:
             # print self.OBJ.properties
             d.callback(result)
-
+            
         return d
-
+    
         
     def startService(self):
         """Start the service and seed the user's namespace."""
         
         self._seedNamespace()
-        
+    
     # The IEngine methods.  See the interface for documentation.
     
     def execute(self, lines):
@@ -272,18 +289,18 @@ lines = %s""" % (self.id, lines)
         d = self.executeAndRaise(msg, self.shell.execute, lines)
         d.addCallback(self.addIDToResult)
         return d
-
+    
     def addIDToResult(self, result):
         result['id'] = self.id
         return result
-
+    
     def push(self, **namespace):
         msg = """engine: %r
 method: push(**namespace)
 namespace.keys() = %r""" % (self.id, namespace.keys())
         d = self.executeAndRaise(msg, self.shell.push, **namespace)
         return d
-        
+    
     def pull(self, *keys):
         msg = """engine %r
 method: pull(*keys)
@@ -315,10 +332,12 @@ i = %r""" % (self.id, i)
 method: reset()""" % self.id
         del self.shell
         self.shell = self.shellClass()
+        self.properties.clear()
         d = self.executeAndRaise(msg, self._seedNamespace)
         return d
     
     def kill(self):
+        dropEngine(self.id)
         try:
             reactor.stop()
         except RuntimeError:
@@ -326,7 +345,7 @@ method: reset()""" % self.id
             return defer.fail()
         else:
             return defer.succeed(None)
-
+    
     def keys(self):
         """Return a list of variables names in the users top level namespace.
         
@@ -341,7 +360,7 @@ method: reset()""" % self.id
                          'In', 'Out', '_', '__', '___', '__IP', 'input', 'raw_input']:
                 remotes.append(k)
         return defer.succeed(remotes)
-
+    
     def pushSerialized(self, **sNamespace):
         msg = """engine %r
 method: pushSerialized(**sNamespace)
