@@ -33,7 +33,7 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-import os, time, copy
+import os, time
 import cPickle as pickle
 
 from twisted.python import components, log, failure
@@ -287,33 +287,15 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     def remote_setID(self, id):
         self.service.id = id
     
-    def _checkProperties(self, result, props):
-        try:
-            dosync = props != self.service.properties
-        except:# could have numpy arrays, so do slower pickle compare
-            try:
-                dosync = pickle.dumps(props, 2) != pickle.dumps(self.service.properties, 2)
-            except pickle.PicklingError:
-                dosync = True
-        if dosync:
-            try:
-                pprops = pickle.dumps(self.service.properties, 2)
-            except pickle.PicklingError, e:
-                f = failure.Failure(e)
-                f.cleanFailure()
-                pprops = packageFailure(f)
-            return pprops, result
-        else:
-            return False, result
+    def _checkProperties(self, result):
+        dosync = self.service.properties.modified
+        self.service.properties.modified = False
+        return (dosync and pickle.dumps(self.service.properties, 2)), result
     
     def remote_execute(self, lines):
-        try:
-            props = copy.deepcopy(self.service.properties)
-        except: # cannot copy means probably bad properties, so guarantee update
-            props = None
         d = self.service.execute(lines)
         d.addErrback(packageFailure)
-        d.addCallback(self._checkProperties, props)
+        d.addCallback(self._checkProperties)
         d.addErrback(packageFailure)
         #d.addCallback(lambda r: log.msg("Got result: " + str(r)))
         return d
@@ -486,9 +468,8 @@ class EngineFromReference(object):
             return r
         else:
             if psync:
-                # log.msg("sync properties")
+                log.msg("sync properties")
                 pick = self.checkReturnForFailure(psync)
-                # print pick
                 if isinstance(pick, failure.Failure):
                     self.properties = pick
                     return pick

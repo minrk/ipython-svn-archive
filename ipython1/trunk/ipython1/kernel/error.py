@@ -85,6 +85,8 @@ class NotAPendingResult(KernelError):
 class UnpickleableException(KernelError):
     pass
 
+class InvalidProperty(KernelError):
+    pass
 
 # DB Error for database related errors in notebook
 class DBError(KernelError):
