@@ -49,6 +49,8 @@ class HTTPTaskRoot(resource.Resource):
         self.child_run = HTTPTaskRun(self.tc)
         self.child_abort = HTTPTaskAbort(self.tc)
         self.child_getresult = HTTPTaskGetResult(self.tc)
+        self.child_barrier = HTTPTaskBarrier(self.tc)
+        self.child_spin = HTTPTaskSpin(self.tc)
     
     def renderHTTP(self, request):
         return http.Response(200, stream=stream.MemoryStream(repr(request)))
@@ -142,6 +144,27 @@ class HTTPTaskGetResult(HTTPTaskBaseMethod):
             return d
     
 
+class HTTPTaskBarrier(HTTPTaskBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            taskID = map(int,request.args['taskIDs'])
+        except Exception, e:
+            return self.packageFailure(failure.Failure(e))
+        else:
+            d = self.tc.barrier(taskIDs)
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
+    
+
+class HTTPTaskSpin(HTTPTaskBaseMethod):
+    
+    def renderHTTP(self, request):
+        d = self.tc.spin()
+        d.addCallbacks(self.packageSuccess, self.packageFailure)
+        return d
+    
+
 class IHTTPTaskControllerFactory(Interface):
     pass
 
@@ -215,6 +238,12 @@ class HTTPTaskClient(object):
     
     def getTaskResult(self, taskID, block=None):
         return self._executeRemoteMethod('getresult', taskID=taskID)
+    
+    def barrier(self, taskIDs):
+        return self._executeRemoteMethod('barrier', taskIDs=taskIDs)
+    
+    def spin(self):
+        return self._executeRemoteMethod('spin')
     
         
 class HTTPInteractiveTaskClient(HTTPTaskClient, InteractiveTaskClient):

@@ -58,8 +58,28 @@ class PBTaskControllerFromTaskController(pb.Avatar):
             return result
     
     def perspective_run(self, task):
-        d = self.staskcontroller.run(pickle.loads(task))
-        d.addCallback(self.staskcontroller.getTaskResult, True)
+        d = defer.execute(pickle.loads, task)
+        d.addCallback(self.staskcontroller.run)
+        d.addCallback(self.packageFailure)
+        return d
+    
+    def perspective_getTaskResult(self, taskID):
+        d = self.staskcontroller.getTaskResult(taskID)
+        d.addCallback(self.packageFailure)
+        return d
+    
+    def perspective_abort(self, taskID):
+        d = self.staskcontroller.abort(taskID)
+        d.addCallback(self.packageFailure)
+        return d
+    
+    def perspective_barrier(self, taskIDs):
+        d = self.staskcontroller.barrier(taskIDs)
+        d.addCallback(self.packageFailure)
+        return d
+    
+    def perspective_spin(self):
+        d = self.staskcontroller.spin()
         d.addCallback(self.packageFailure)
         return d
     
@@ -99,9 +119,9 @@ components.registerAdapter(PBServerFactoryFromTaskController,
 #-------------------------------------------------------------------------------
 # CLIENT CLASSES
 #-------------------------------------------------------------------------------
-class PBTaskClient(object):
+class PBTaskClient(taskclient.TaskClient):
     """
-    XMLRPC based TaskController client that implements ITaskController.
+    PB based TaskController client that implements ITaskController.
     """
     implements(Task.ITaskController)
     def __init__(self, perspective):
@@ -114,7 +134,22 @@ class PBTaskClient(object):
         return d
     
     def getTaskResult(self, taskID):
-        raise ImportError
+        d = self.perspective.callRemote('getTaskResult', taskID)
+        d.addCallback(unpackageFailure)
+        return d
     
     def abort(self, taskID):
+        d = self.perspective.callRemote('spin')
+        d.addCallback(unpackageFailure)
+        return d
+    
+    def spin(self):
+        d = self.perspective.callRemote('spin')
+        d.addCallback(unpackageFailure)
+        return d
+    
+    def barrier(self, taskIDs):
         raise NotImplementedError
+        # d = self.perspective.callRemote('spin')
+        # d.addCallback(unpackageFailure)
+        # return d

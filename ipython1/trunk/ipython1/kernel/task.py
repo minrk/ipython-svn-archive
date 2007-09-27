@@ -392,6 +392,8 @@ components.registerAdapter(WorkerFromQueuedEngine, es.IEngineQueued, IWorker)
 class IScheduler(zi.Interface):
     """The interface for a Scheduler.
     """
+    zi.Attribute("nworkers", "the number of unassigned workers")
+    zi.Attribute("ntasks", "the number of unscheduled tasks")
     
     def addTask(task, **flags):
         """Add a task to the queue of the Scheduler.
@@ -464,6 +466,15 @@ class FIFOScheduler(object):
     def __init__(self):
         self.tasks = []
         self.workers = []
+    
+    def _ntasks(self):
+        return len(self.tasks)
+    
+    def _nworkers(self):
+        return len(self.workers)
+    
+    ntasks = property(_ntasks, lambda self, _:None)
+    nworkers = property(_nworkers, lambda self, _:None)
     
     def addTask(self, task, **flags):    
         self.tasks.append(task)
@@ -573,6 +584,11 @@ class ITaskController(cs.IControllerBase):
         Returns None on success.
         """
     
+    def spin():
+        """touch the scheduler, to resume scheduling without submitting
+        a task.
+        """
+    
 
 class TaskController(cs.ControllerAdapterBase):
     """The Task based interface to a Controller object.
@@ -583,6 +599,8 @@ class TaskController(cs.ControllerAdapterBase):
     
     zi.implements(ITaskController)
     SchedulerClass = FIFOScheduler
+    
+    timeout = 30
     
     def __init__(self, controller):
         self.controller = controller
@@ -596,7 +614,9 @@ class TaskController(cs.ControllerAdapterBase):
         self.finishedResults = {} # dict of {taskID:actualResult}
         self.workers = {} # dict of {workerID:worker}
         self.abortPending = [] # dict of {taskID:abortDeferred}
+        self.idleLater = None # delayed call object for timeout
         self.scheduler = self.SchedulerClass()
+        
         for id in self.controller.engines.keys():
                 self.workers[id] = IWorker(self.controller.engines[id])
                 self.workers[id].workerID = id
@@ -685,6 +705,9 @@ class TaskController(cs.ControllerAdapterBase):
         d.addCallbacks(lambda r: None)
         return d
     
+    def spin(self):
+        return defer.succeed(self.distributeTasks())
+    
     #---------------------------------------------------------------------------
     # Queue methods
     #---------------------------------------------------------------------------
@@ -707,6 +730,13 @@ class TaskController(cs.ControllerAdapterBase):
     def distributeTasks(self):
         """Distribute tasks while self.scheduler has things to do."""
         worker, task = self.scheduler.schedule()
+        if not worker and not task:
+            if self.idleLater and self.idleLater.called:# we are inside failIdle
+                self.idleLater = None
+            else:
+                self.checkIdle()
+            return False
+        # else something to do:
         while worker and task:
             # get worker and task
             # add to pending
@@ -716,6 +746,30 @@ class TaskController(cs.ControllerAdapterBase):
             log.msg("running task #%i on worker %i" %(task.taskID, worker.workerID))
             d.addBoth(self.taskCompleted, task.taskID, worker.workerID)
             worker, task = self.scheduler.schedule()
+        # check for idle timeout:
+        self.checkIdle()
+        return True
+    
+    def checkIdle(self):
+        if self.idleLater and not self.idleLater.called:
+            self.idleLater.cancel()
+        if self.scheduler.ntasks and self.workers and \
+                    self.scheduler.nworkers == len(self.workers):
+            self.idleLater = reactor.callLater(self.timeout, self.failIdle)
+        else:
+            self.idleLater = None
+    
+    def failIdle(self):
+        if not self.distributeTasks():
+            while self.scheduler.ntasks:
+                t = self.scheduler.popTask()
+                msg = "Task %i failed to execute due to unmet dependencies"%t.taskID
+                msg += " for %i seconds"%self.timeout
+                log.msg("Task %i Aborted by timeout"%t.taskID)
+                f = failure.Failure(error.TaskTimeout(msg))
+                self._finishTask(t.taskID, f)
+        self.idleLater = None
+                
     
     def taskCompleted(self, result, taskID, workerID):
         """This is the err/callback for a completed task."""

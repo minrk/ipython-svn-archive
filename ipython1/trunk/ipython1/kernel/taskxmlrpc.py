@@ -57,7 +57,10 @@ class IXMLRPCTaskController(Interface):
         
     def xmlrpc_barrier(request, taskIDs):
         """"""
-
+    
+    def xmlrpc_spin(request):
+        """"""
+    
 
 class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
     """XML-RPC attachmeot for controller.
@@ -114,6 +117,12 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
 
     def xmlrpc_barrier(self, request, taskIDs):
         d = self.taskController.barrier(taskIDs)
+        d.addCallback(self.packageSuccess)
+        d.addErrback(self.packageFailure)
+        return d        
+    
+    def xmlrpc_spin(self, request):
+        d = self.taskController.spin()
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d        
@@ -266,7 +275,14 @@ class XMLRPCTaskClient(object):
                 A sequence of taskIDs to block on.
         """
         result = self._executeRemoteMethod(self._server.barrier, taskIDs)
+        return result
     
+    def spin(self):
+        """touch the scheduler, to resume scheduling without submitting
+        a task.
+        """
+        result = self._executeRemoteMethod(self._server.spin)
+
 
 components.registerAdapter(XMLRPCTaskClient, 
         xmlrpclib.ServerProxy, Task.ITaskController)

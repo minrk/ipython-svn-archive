@@ -79,6 +79,9 @@ class ClientError(KernelError):
 class TaskAborted(KernelError):
     pass
 
+class TaskTimeout(KernelError):
+    pass
+
 class NotAPendingResult(KernelError):
     pass
 
