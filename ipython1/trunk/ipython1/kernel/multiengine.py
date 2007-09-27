@@ -355,7 +355,7 @@ class MultiEngine(ControllerAdapterBase):
             if meth is not None:
                 dList.append(meth(*args, **kwargs))
             else:
-                raise AttributeError("Engine %i does not have method %s" % (engine.id, methodName))
+                raise AttributeError("Engine %i does not have method %s" % (e.id, methodName))
         return dList
     
     def _performOnEnginesAndGatherBoth(self, methodName, targets, *args, **kwargs):
@@ -488,21 +488,84 @@ class MultiEngine(ControllerAdapterBase):
     def queueStatusAll(self):
         return self.queueStatus('all')
     
-    def getProperties(self, targets):
+    def getProperties(self, targets, *keys):
         log.msg("Getting properties on %r" % targets)
         try:
             engines = self.engineList(targets)
         except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
             return defer.fail(failure.Failure())            
         else:
-            dList = [defer.execute(lambda :e.properties) for e in engines]
+            dList = [e.getProperties(*keys) for e in engines]
             return gatherBoth(dList, 
                               fireOnOneErrback=1,
                               consumeErrors=1,
-                              logErrors=0)  
-            # return defer.succeed([e.properties for e in engines])
+                              logErrors=0)
     
-    def getPropertiesAll(self):
+    def getPropertiesAll(self, *keys):
+        return self.getProperties('all', *keys)
+    
+    def setProperties(self, targets, **properties):
+        log.msg("Setting properties on %r" % targets)
+        try:
+            engines = self.engineList(targets)
+        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
+            return defer.fail(failure.Failure())            
+        else:
+            dList = [e.setProperties(**properties) for e in engines]
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)
+    
+    def setPropertiesAll(self, **properties):
+        return self.setProperties('all', **properties)
+    
+    def hasProperties(self, targets, *keys):
+        log.msg("Checking properties on %r" % targets)
+        try:
+            engines = self.engineList(targets)
+        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
+            return defer.fail(failure.Failure())            
+        else:
+            dList = [e.hasProperties(*keys) for e in engines]
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)
+    
+    def hasPropertiesAll(self, *keys):
+        return self.hasProperties('all', *keys)
+    
+    def delProperties(self, targets, *keys):
+        log.msg("Deleting properties on %r" % targets)
+        try:
+            engines = self.engineList(targets)
+        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
+            return defer.fail(failure.Failure())            
+        else:
+            dList = [e.delProperties(*keys) for e in engines]
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)
+    
+    def delPropertiesAll(self, *keys):
+        return self.getProperties('all', *keys)
+    
+    def clearProperties(self, targets):
+        log.msg("Clearing properties on %r" % targets)
+        try:
+            engines = self.engineList(targets)
+        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
+            return defer.fail(failure.Failure())            
+        else:
+            dList = [e.clearProperties() for e in engines]
+            return gatherBoth(dList, 
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)
+    
+    def clearPropertiesAll(self):
         return self.getProperties('all')
     
     #---------------------------------------------------------------------------
@@ -595,67 +658,83 @@ class SynchronousMultiEngine(PendingDeferredAdapter):
     def __init__(self, multiengine):
         self.multiengine = multiengine
         PendingDeferredAdapter.__init__(self)
-
+    
     #---------------------------------------------------------------------------
     # Decorated pending deferred methods
     #---------------------------------------------------------------------------
-
+    
     @twoPhase
     def execute(self, targets, lines):
         return self.multiengine.execute(targets, lines)
-
+    
     @twoPhase
     def push(self, targets, **namespace):
         return self.multiengine.push(targets, **namespace)
-        
+    
     @twoPhase
     def pull(self, targets, *keys):
         return self.multiengine.pull(targets, *keys)
-        
+    
     @twoPhase
     def getResult(self, targets, i=None):
         return self.multiengine.getResult(targets, i)
-        
+    
     @twoPhase
     def reset(self, targets):
         return self.multiengine.reset(targets)
-        
+    
     @twoPhase
     def keys(self, targets):
         return self.multiengine.keys(targets)
-
+    
     @twoPhase
     def kill(self, targets, controller=False):
         return self.multiengine.kill(targets, controller)
-        
+    
     @twoPhase
     def pushSerialized(self, targets, **namespace):
         return self.multiengine.pushSerialized(targets, **namespace)
-        
+    
     @twoPhase
     def pullSerialized(self, targets, *keys):
         return self.multiengine.pullSerialized(targets, *keys)
-        
+    
     @twoPhase
     def clearQueue(self, targets):
         return self.multiengine.clearQueue(targets)
-        
+    
     @twoPhase
     def queueStatus(self, targets):
         return self.multiengine.queueStatus(targets)
-
+    
     @twoPhase
-    def getProperties(self, targets):
-        return self.multiengine.getProperties(targets)
-
+    def setProperties(self, targets, **properties):
+        return self.multiengine.setProperties(targets, **properties)
+    
+    @twoPhase
+    def getProperties(self, targets, *keys):
+        return self.multiengine.getProperties(targets, *keys)
+    
+    @twoPhase
+    def hasProperties(self, targets, *keys):
+        return self.multiengine.hasProperties(targets, *keys)
+    
+    @twoPhase
+    def delProperties(self, targets, *keys):
+        return self.multiengine.delProperties(targets, *keys)
+    
+    @twoPhase
+    def clearProperties(self, targets, *keys):
+        return self.multiengine.clearProperties(targets, *keys)
+    
     @twoPhase
     def scatter(self, targets, key, seq, style='basic', flatten=False):
         return self.multiengine.scatter(targets, key, seq, style, flatten)
-
+    
     @twoPhase
     def gather(self, targets, key, style='basic'):
         return self.multiengine.gather(targets, key, style)
-        
+    
     #---------------------------------------------------------------------------
     # IMultiEngine methods
     #---------------------------------------------------------------------------

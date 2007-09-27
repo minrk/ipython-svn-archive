@@ -120,12 +120,20 @@ class IXMLRPCMultiEngine(Interface):
         deferred.    
         """
     
-    def xmlrpc_getProperties(request, clientID, targets):
-        """Get the properties dict from targets.
-        
-        This method always blocks.  This means that it will always return
-        the queues status's.  This method will never return the id of a pending 
-        deferred.    
+    def xmlrpc_setProperties(request, clientID, block, targets, pproperties):
+        """Set values to the properties dict by keys on targets.
+        """
+    def xmlrpc_getProperties(request, clientID, block, targets, *keys):
+        """Get the properties dict from targets by key.
+        """
+    def xmlrpc_delProperties(request, clientID, block, targets, *keys):
+        """Delete values from the properties dict on targets by key.
+        """
+    def xmlrpc_hasProperties(request, clientID, block, targets, *keys):
+        """Check the properties dict on `targets` for keys.
+        """
+    def xmlrpc_clearProperties(request, clientID, block, targets):
+        """Clear the properties dict from targets.
         """
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
@@ -256,8 +264,30 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         return self.smultiengine.queueStatus(clientID, True, targets)
     
     @packageResult
-    def xmlrpc_getProperties(self, request, clientID, targets):
-        return self.smultiengine.getProperties(clientID, True, targets)
+    def xmlrpc_setProperties(self, request, clientID, block, targets, binaryNS):
+        try:
+            ns = pickle.loads(binaryNS.data)
+        except:
+            d = defer.fail(failure.Failure())
+        else:
+            d = self.smultiengine.setProperties(clientID, block, targets, **ns)
+        return d
+    
+    @packageResult
+    def xmlrpc_getProperties(self, request, clientID, block, targets, *keys):
+        return self.smultiengine.getProperties(clientID, block, targets, *keys)
+    
+    @packageResult
+    def xmlrpc_hasProperties(self, request, clientID, block, targets, *keys):
+        return self.smultiengine.hasProperties(clientID, block, targets, *keys)
+    
+    @packageResult
+    def xmlrpc_delProperties(self, request, clientID, block, targets, *keys):
+        return self.smultiengine.delProperties(clientID, block, targets, *keys)
+    
+    @packageResult
+    def xmlrpc_clearProperties(self, request, clientID, block, targets, *keys):
+        return self.smultiengine.clearProperties(clientID, block, targets, *keys)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
@@ -572,7 +602,7 @@ class XMLRPCMultiEngineClient(object):
         if not localBlock:
             result = PendingResult(self, result)
         return result
-                
+    
     def pushAll(self, **ns):
         """Push Python objects by key to all targets.
         
@@ -615,7 +645,7 @@ class XMLRPCMultiEngineClient(object):
         See the docstring for `pull` for full details.
         """
         return self.pull('all', *keys)
-        
+    
     def getResult(self, targets, i=None):
         """Get the stdin/stdout/stderr of a previously executed command on targets.
         
@@ -640,7 +670,7 @@ class XMLRPCMultiEngineClient(object):
         else:
             result = ResultList(result)
         return result
-         
+    
     def getResultAll(self, i=None):
         """Get the stdin/stdout/stderr of a previously executed command on all targets.
         
@@ -666,7 +696,7 @@ class XMLRPCMultiEngineClient(object):
         if not localBlock:
             result = PendingResult(self, result)
         return result    
-        
+    
     def resetAll(self):
         """Reset the namespace on all targets.
         
@@ -691,7 +721,7 @@ class XMLRPCMultiEngineClient(object):
         if not localBlock:
             result = PendingResult(self, result)
         return result 
-          
+    
     def keysAll(self):
         """List all the variable names defined on each engine/target.
         
@@ -724,7 +754,7 @@ class XMLRPCMultiEngineClient(object):
         See the docstring for `kill` for full details.
         """
         return self.kill('all', controller)
-        
+    
     def clearQueue(self, targets):
         """Clear the command queue on targets.
         
@@ -742,7 +772,7 @@ class XMLRPCMultiEngineClient(object):
         self._checkClientID()
         result = self._executeRemoteMethod(self._server.clearQueue, self._clientID, targets)
         return result
-        
+    
     def clearQueueAll(self):
         """Clear the command queue on all targets.
         
@@ -771,14 +801,66 @@ class XMLRPCMultiEngineClient(object):
         """
         return self.queueStatus('all')
     
-    def getProperties(self, targets):
-        """Get properties from targets"""
+    def setProperties(self, targets, **properties):
+        """Set properties on targets by key/value"""
         self._checkClientID()
-        result = self._executeRemoteMethod(self._server.getProperties, self._clientID, targets)
+        binPackage = xmlrpc.Binary(pickle.dumps(properties, 2))
+        localBlock = self._reallyBlock()
+        result = self._executeRemoteMethod(self._server.setProperties, self._clientID, localBlock, targets, binPackage)
+        if not localBlock:
+            result = PendingResult(self, result)
         return result
     
-    def getPropertiesAll(self):
-        return self.getProperties('all')
+    def setPropertiesAll(self, **properties):
+        return self.setProperties('all', **properties)
+    
+    def getProperties(self, targets, *keys):
+        """Get properties from targets by keys, defaulting to all"""
+        self._checkClientID()
+        localBlock = self._reallyBlock()
+        result = self._executeRemoteMethod(self._server.getProperties, self._clientID, localBlock, targets, *keys)
+        if not localBlock:
+            result = PendingResult(self, result)
+        return result
+    
+    def getPropertiesAll(self, *keys):
+        return self.getProperties('all', *keys)
+    
+    def hasProperties(self, targets, *keys):
+        """Check properties on targets by keys"""
+        self._checkClientID()
+        localBlock = self._reallyBlock()
+        result = self._executeRemoteMethod(self._server.hasProperties, self._clientID, localBlock, targets, *keys)
+        if not localBlock:
+            result = PendingResult(self, result)
+        return result
+    
+    def hasPropertiesAll(self, *keys):
+        return self.hasProperties('all', *keys)
+    
+    def delProperties(self, targets, *keys):
+        """Delete properties from targets by keys"""
+        self._checkClientID()
+        localBlock = self._reallyBlock()
+        result = self._executeRemoteMethod(self._server.delProperties, self._clientID, localBlock, targets, *keys)
+        if not localBlock:
+            result = PendingResult(self, result)
+        return result
+    
+    def delPropertiesAll(self, *keys):
+        return self.delProperties('all', *keys)
+    
+    def clearProperties(self, targets):
+        """Clear properties from targets"""
+        self._checkClientID()
+        localBlock = self._reallyBlock()
+        result = self._executeRemoteMethod(self._server.clearProperties, self._clientID, localBlock, targets)
+        if not localBlock:
+            result = PendingResult(self, result)
+        return result
+    
+    def clearPropertiesAll(self):
+        return self.clearProperties('all')
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods

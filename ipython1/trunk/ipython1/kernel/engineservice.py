@@ -140,7 +140,27 @@ class IEngineSerialized(zi.Interface):
         """
     
 
-class IEngineBase(IEngineCore, IEngineSerialized):
+class IEngineProperties(zi.Interface):
+    """Methods for access to the properties object of an Engine"""
+    
+    properties = zi.Attribute("A StrictDict object, containing the properties")
+    
+    def setProperties(**properties):
+        """set properties by key and value"""
+    
+    def getProperties(*keys):
+        """get a list of properties by `keys`, if no keys specified, get all"""
+    
+    def delProperties(*keys):
+        """delete properties by `keys`"""
+    
+    def hasProperties(*keys):
+        """get a list of bool values for whether `properties` has `keys`"""
+
+    def clearProperties():
+        """clear the properties dict"""
+    
+class IEngineBase(IEngineCore, IEngineSerialized, IEngineProperties):
     """The basic engine interface that EngineService will implement.
     
     This exists so it is easy to specify adapters that adapt to and from the
@@ -188,8 +208,9 @@ class IEngineThreaded(zi.Interface):
 #-------------------------------------------------------------------------------
 # Functions and classes to implement the EngineService
 #-------------------------------------------------------------------------------
-class EngineProperties(dict):
-    """This is the interface to the properties of an Engine.
+class StrictDict(dict):
+    """This is a strict copying dictionary for use as the interface to the 
+    properties of an Engine.
     :IMPORTANT:
         This object copies the values you set to it, and returns copies to you
         when you request them.  The only way to change properties os explicitly
@@ -239,6 +260,12 @@ class EngineProperties(dict):
         for k,v in dikt.iteritems():
             self[k] = v
     
+    def fromkeys(self, *keys):
+        d = {}
+        for k in keys:
+            d[k] = self[k]
+        return d
+    
     def pop(self, key):
         self.modified = True
         return dict.pop(self, key)
@@ -261,7 +288,7 @@ class EngineAPI(object):
     _fix=False
     def __init__(self, id):
         self.id = id
-        self.properties = EngineProperties()
+        self.properties = StrictDict()
         self._fix=True
     
     def __setattr__(self, k,v):
@@ -382,8 +409,10 @@ keys = %r""" % (self.id, keys)
                            logErrors=1, 
                            consumeErrors=1)
             return dTotal
-        else:
+        elif len(keys) > 0:
             return self.executeAndRaise(msg, self.shell.pull, keys[0])
+        else:
+            return self.executeAndRaise(msg, self.shell.pull, None)
     
     def getResult(self, i=None):
         msg = """engine %r
@@ -426,6 +455,44 @@ method: reset()""" % self.id
                          'In', 'Out', '_', '__', '___', '__IP', 'input', 'raw_input']:
                 remotes.append(k)
         return defer.succeed(remotes)
+    
+    def setProperties(self, **properties):
+        msg = """engine: %r
+method: setProperties(**properties)
+properties.keys() = %r""" % (self.id, properties.keys())
+        return self.executeAndRaise(msg, self.properties.update, properties)
+    
+    def getProperties(self, *keys):
+        msg = """engine %r
+method: getProperties(*keys)
+keys = %r""" % (self.id, keys)
+        if not keys:# default to all
+            keys = self.properties.keys()
+        return self.executeAndRaise(msg, self.properties.fromkeys, *keys)
+    
+    def _doDel(self, *keys):
+        for key in keys:
+            del self.properties[key]
+    
+    def delProperties(self, *keys):
+        msg = """engine %r
+method: delProperties(*keys)
+keys = %r""" % (self.id, keys)
+        return self.executeAndRaise(msg, self._doDel, *keys)
+    
+    def _doHas(self, *keys):
+        return [self.properties.has_key(key) for key in keys]
+    
+    def hasProperties(self, *keys):
+        msg = """engine %r
+method: hasProperties(*keys)
+keys = %r""" % (self.id, keys)
+        return self.executeAndRaise(msg, self._doHas, *keys)
+    
+    def clearProperties(self):
+        msg = """engine %r
+method: clearProperties()""" % (self.id)
+        return self.executeAndRaise(msg, self.properties.clear)
     
     def pushSerialized(self, **sNamespace):
         msg = """engine %r
@@ -514,10 +581,10 @@ class QueuedEngine(object):
         self.currentCommand = None
         self.failureObservers = []
     
-    def getProperties(self):
+    def _getProperties(self):
         return self.engine.properties
     
-    properties = property(getProperties, lambda self, _: None)
+    properties = property(_getProperties, lambda self, _: None)
     # Queue management methods.  You should not call these directly
     
     def submitCommand(self, cmd):
@@ -647,6 +714,30 @@ class QueuedEngine(object):
         pass
     
     #---------------------------------------------------------------------------
+    # IEngineProperties methods
+    #---------------------------------------------------------------------------
+
+    @queue
+    def setProperties(self, **namespace):
+        pass
+        
+    @queue
+    def getProperties(self, *keys):
+        pass
+    
+    @queue
+    def delProperties(self, *keys):
+        pass
+    
+    @queue
+    def hasProperties(self, *keys):
+        pass
+    
+    @queue
+    def clearProperties(self):
+        pass
+    
+    #---------------------------------------------------------------------------
     # IQueuedEngine methods
     #---------------------------------------------------------------------------
     
@@ -669,10 +760,10 @@ class QueuedEngine(object):
         dikt = {'queue':map(repr,self.queued), 'pending':pending}
         return defer.succeed(dikt)
         
-    def registerFailureObserver(obs):
+    def registerFailureObserver(self, obs):
         self.failureObservers.append(obs)
     
-    def unregisterFailureObserver(obs):
+    def unregisterFailureObserver(self, obs):
         self.failureObservers.remove(obs)
     
 

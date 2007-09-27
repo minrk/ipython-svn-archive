@@ -58,7 +58,8 @@ from ipython1.kernel.controllerservice import IControllerBase
 from ipython1.kernel.engineservice import \
     IEngineBase, \
     IEngineQueued, \
-    EngineService
+    EngineService, \
+    StrictDict
 
 #-------------------------------------------------------------------------------
 # Classes to enable paging of large objects
@@ -176,7 +177,7 @@ class PBEngineClientFactory(pb.PBClientFactory, object):
         # Now register myself with the controller
         desiredID = self.service.id
         d = self.rootObject.callRemote('registerEngine', self.engineReference, 
-            desiredID, os.getpid(), self.service.properties)
+            desiredID, os.getpid(), pickle.dumps(self.service.properties,2))
         return d.addCallbacks(self._referenceSent, self._getRootFailure)
     
     def _referenceSent(self, registrationDict):
@@ -260,8 +261,21 @@ class IPBEngine(Interface):
         Returns a deferred to a pickled dict of key, Serialized pairs.
         """
     
-    def remote_getProperties():
-        """pull the properties dict for this engine"""
+    def remote_setProperties(pNamespace):
+        """update the properties for this engine"""
+    
+    def remote_getProperties(*keys):
+        """pull a subdict of the properties for this engine by keys"""
+    
+    def remote_hasProperties(*keys):
+        """check for keys in the properties for this engine"""
+    
+    def remote_delProperties(*keys):
+        """remove values of the properties for this engine by keys"""
+    
+    def remote_clearProperties():
+        """clear the properties for this engine"""
+    
     
 
 
@@ -300,12 +314,42 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         #d.addCallback(lambda r: log.msg("Got result: " + str(r)))
         return d
     
-    def remote_getProperties(self):
-        d = defer.succeed(self.service.properties)
+    def remote_setProperties(self, pNamespace):
+        try:
+            namespace = pickle.loads(pNamespace)
+        except:
+            return defer.fail(failure.Failure()).addErrback(packageFailure)
+        else:
+            return self.service.setProperties(**namespace).addErrback(packageFailure)
+    
+    def remote_getProperties(self, *keys):
+        d = self.service.getProperties(*keys)
         d.addCallback(pickle.dumps, 2)
-        # d.addCallback(checkMessageSize, 'properties')
+        d.addCallback(checkMessageSize, repr(keys))
         d.addErrback(packageFailure)
         return d
+    
+    def remote_hasProperties(self, *keys):
+        d = self.service.hasProperties(*keys)
+        d.addCallback(pickle.dumps, 2)
+        d.addCallback(checkMessageSize, repr(keys))
+        d.addErrback(packageFailure)
+        return d
+    
+    def remote_delProperties(self, *keys):
+        d = self.service.delProperties(*keys)
+        # d.addCallback(pickle.dumps, 2)
+        # d.addCallback(checkMessageSize, repr(keys))
+        d.addErrback(packageFailure)
+        return d
+    
+    def remote_clearProperties(self):
+        d = self.service.clearProperties()
+        # d.addCallback(pickle.dumps, 2)
+        # d.addCallback(checkMessageSize, repr(keys))
+        d.addErrback(packageFailure)
+        return d
+    
     
     #---------------------------------------------------------------------------
     # Old version of push
@@ -439,7 +483,7 @@ class EngineFromReference(object):
     def __init__(self, reference):
         self.reference = reference
         self._id = None
-        self._properties = {}
+        self._properties = StrictDict()
         self.currentCommand = None
     
     def callRemote(self, *args, **kwargs):
@@ -477,16 +521,17 @@ class EngineFromReference(object):
                     self.properties = pickle.loads(pick)
             return result
     
-    def setProperties(self, dikt):
-        self._properties = dikt
+    def _setProperties(self, dikt):
+        self._properties.clear()
+        self._properties.update(dikt)
         # self._properties.update(dikt)
     
-    def getProperties(self):
+    def _getProperties(self):
         if isinstance(self._properties, failure.Failure):
             self._properties.raiseException()
         return self._properties
     
-    properties = property(getProperties, setProperties)
+    properties = property(_getProperties, _setProperties)
     
     #---------------------------------------------------------------------------
     # Methods from IEngine
@@ -617,6 +662,49 @@ class EngineFromReference(object):
         return self.callRemote('keys').addCallback(self.checkReturnForFailure)
     
     #---------------------------------------------------------------------------
+    # Properties methods
+    #---------------------------------------------------------------------------
+    
+    def setProperties(self, **properties):
+        try:
+            package = pickle.dumps(properties, 2)
+        except:
+            return defer.fail(failure.Failure())
+        else:
+            package = checkMessageSize(package, properties.keys())
+            if isinstance(package, failure.Failure):
+                return defer.fail(package)
+            else:
+                d = self.callRemote('setProperties', package)
+                return d.addCallback(self.checkReturnForFailure)
+        return d
+    
+    def getProperties(self, *keys):
+        d = self.callRemote('getProperties', *keys)
+        d.addCallback(self.checkReturnForFailure)
+        d.addCallback(pickle.loads)
+        return d
+    
+    def hasProperties(self, *keys):
+        d = self.callRemote('hasProperties', *keys)
+        d.addCallback(self.checkReturnForFailure)
+        d.addCallback(pickle.loads)
+        return d
+    
+    def delProperties(self, *keys):
+        d = self.callRemote('delProperties', *keys)
+        d.addCallback(self.checkReturnForFailure)
+        # d.addCallback(pickle.loads)
+        return d
+    
+    def clearProperties(self):
+        d = self.callRemote('clearProperties')
+        d.addCallback(self.checkReturnForFailure)
+        return d
+    
+    
+    
+    #---------------------------------------------------------------------------
     # push/pullSerialized
     #---------------------------------------------------------------------------
         
@@ -685,7 +773,7 @@ class IPBRemoteEngineRoot(Interface):
     to PB.
     """
     
-    def remote_registerEngine(self, engineReference, id=None, pid=None, properties={}):
+    def remote_registerEngine(self, engineReference, id=None, pid=None, pproperties=None):
         """Register new engine on controller."""
     
 
@@ -703,10 +791,11 @@ class PBRemoteEngineRootFromService(pb.Root):
             "IControllerBase is not provided by " + repr(service)
         self.service = service
     
-    def remote_registerEngine(self, engineReference, id=None, pid=None, properties={}):
+    def remote_registerEngine(self, engineReference, id=None, pid=None, pproperties=None):
         # First adapt the engineReference to a basic non-queued engine
         engine = IEngineBase(engineReference)
-        engine.properties = properties
+        if pproperties:
+            engine.properties = pickle.loads(pproperties)
         # Make it an IQueuedEngine before registration
         remoteEngine = IEngineQueued(engine)
         # Get the ip/port of the remote side

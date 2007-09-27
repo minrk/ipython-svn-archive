@@ -729,6 +729,7 @@ class TaskController(cs.ControllerAdapterBase):
     
     def distributeTasks(self):
         """Distribute tasks while self.scheduler has things to do."""
+        log.msg("distributing Tasks")
         worker, task = self.scheduler.schedule()
         if not worker and not task:
             if self.idleLater and self.idleLater.called:# we are inside failIdle
