@@ -50,7 +50,7 @@ from ipython1.kernel.engineservice import \
     IEngineQueued
     
 from ipython1.config import cutils
-from ipython1.kernel import pickleutil
+#from ipython1.kernel import pickleutil
 
 #-------------------------------------------------------------------------------
 # Interfaces for the Controller

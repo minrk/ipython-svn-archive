@@ -60,7 +60,7 @@ __docformat__ = "restructuredtext en"
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
-from ipython1.kernel import pickleutil
+#from ipython1.kernel import pickleutil
 
 from ipython1.kernel.config import configManager as kernelConfigManager
 co = kernelConfigManager.getConfigObj()
