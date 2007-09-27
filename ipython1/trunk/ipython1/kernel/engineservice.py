@@ -45,7 +45,7 @@ import zope.interface as zi
 from ipython1.core.interpreter import Interpreter
 from ipython1.kernel import newserialized, error, util
 from ipython1.kernel.util import gatherBoth, DeferredList
-#from ipython1.kernel import pickleutil
+from ipython1.kernel import codeutil
 
 
 #-------------------------------------------------------------------------------
