@@ -253,8 +253,10 @@ class Dependency(_Dependency):
     
     """
     
-    def __init__(self, init=[]):
+    def __init__(self, init=None):
         self.dependencies = []
+        if init is None:
+            return
         if isinstance(init, (dict, list, tuple)):
             self.depend(init)
         elif isinstance(init, str):
