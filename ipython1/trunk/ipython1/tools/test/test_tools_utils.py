@@ -7,22 +7,23 @@ from ipython1.testutils import tcommon
 from ipython1.testutils.tcommon import *
 
 # If you have standalone doctests in a separate file, set their names in the
-# dt_files variable (as a single string  or a list thereof):
-# dt_files = ['tst_tools_utils_doctest.txt',
-#             'tst_tools_utils_doctest2.txt']
-dt_files = []
+# dt_files variable (as a single string  or a list thereof).  The mkPath call
+# forms an absolute path based on the current file, it is not needed if you
+# provide the full pahts.
+dt_files = fullPath(__file__,['tst_tools_utils_doctest.txt',
+                              'tst_tools_utils_doctest2.txt'])
 
 # If you have any modules whose docstrings should be scanned for embedded tests
 # as examples accorging to standard doctest practice, set them here (as a
 # single string or a list thereof):
-# dt_modules = 'ipython1.tools.utils'
-dt_modules = []
+dt_modules = 'ipython1.tools.utils'
+
 ##########################################################################
 ### Regular unittest test classes go here
 
-class utilsTestCase(unittest.TestCase):
-    def test_foo(self):
-        pass
+## class utilsTestCase(unittest.TestCase):
+##     def test_foo(self):
+##         pass
         
 ##########################################################################
 ### Main

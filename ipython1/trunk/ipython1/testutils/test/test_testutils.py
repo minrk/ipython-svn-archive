@@ -43,15 +43,15 @@ dt_files = fullPath(__file__,[])
 # If you have any modules whose docstrings should be scanned for embedded tests
 # as examples accorging to standard doctest practice, set them here (as a
 # single string or a list thereof):
-dt_modules = []
+dt_modules = ['ipython1.testutils.tutils']
 
 #-------------------------------------------------------------------------------
 # Regular Unittests
 #-------------------------------------------------------------------------------
 
-class FooTestCase(unittest.TestCase):
-    def test_foo(self):
-        pass
+## class FooTestCase(unittest.TestCase):
+##     def test_foo(self):
+##         pass
         
 #-------------------------------------------------------------------------------
 # Regular Unittests

@@ -55,6 +55,7 @@ Limitations:
 import __builtin__
 import doctest
 import inspect
+import os
 import re
 import sys
 import unittest
@@ -465,12 +466,17 @@ class IPDocTestLoader(unittest.TestLoader):
     def __init__(self,dt_files=None,dt_modules=None,test_finder=None):
         """Initialize the test loader.
 
-        Optional inputs:
-          - doctests(None): a string containing the text to be assigned as the
-          __doc__ attribute for a module in the loadTestsFromModule method.
+        :Keywords:
 
-          - dt_module(None): a module object whose docstrings should be
-          scanned for embedded doctests, following the normal doctest API.
+          dt_files : list (None)
+            List of names of files to be executed as doctests.
+            
+          dt_modules : list (None)
+            List of module names to be scanned for doctests in their
+            docstrings. 
+
+          test_finder : instance (None)
+            Instance of a testfinder (see doctest for details).
         """
 
         if dt_files is None: dt_files = []
@@ -495,7 +501,8 @@ class IPDocTestLoader(unittest.TestLoader):
         for fname in self.dt_files:
             #print 'mod:',module  # dbg
             #print 'fname:',fname  # dbg
-            suite.addTest(doctest.DocFileSuite(fname))
+            #suite.addTest(doctest.DocFileSuite(fname))
+            suite.addTest(doctest.DocFileSuite(fname,module_relative=False))
         # Add docstring tests from module, if given at construction time
         for mod in self.dt_modules:
             suite.addTest(doctest.DocTestSuite(mod,
@@ -515,11 +522,11 @@ def my_import(name):
         mod = getattr(mod, comp)
     return mod
 
-def makeTestSuite(module_name,dt_files=None,dt_modules=None):
+def makeTestSuite(module_name,dt_files=None,dt_modules=None,idt=True):
     """Make a TestSuite object for a given module, specified by name.
 
-    This extracts all the doctests associated with a module using an
-    IPDocTestLoader object.
+    This extracts all the doctests associated with a module using a
+    DocTestLoader object.
 
     :Parameters:
 
@@ -527,12 +534,30 @@ def makeTestSuite(module_name,dt_files=None,dt_modules=None):
 
     :Keywords:
 
-      - `dt_module` : string
-        Name of a module to be scanned for doctests in docstrings.
+      dt_files : list of strings
+        List of names of plain text files to be treated as doctests.
+
+      dt_modules : list of strings
+        List of names of modules to be scanned for doctests in docstrings.
+
+      idt : bool (True)
+        If True, return integrated doctests.  This means that each filename
+        listed in dt_files is turned into a *single* unittest, suitable for
+        running via unittest's runner or Twisted's Trial runner.  If false, the
+        dt_files parameter is returned unmodified, so that other test runners
+        (such as oilrun) can run the doctests with finer granularity.
     """
 
     mod = my_import(module_name)
-    return IPDocTestLoader(dt_files,dt_modules).loadTestsFromModule(mod)
+    if idt:
+        suite = IPDocTestLoader(dt_files,dt_modules).loadTestsFromModule(mod)
+    else:
+        suite = IPDocTestLoader(None,dt_modules).loadTestsFromModule(mod)
+        
+    if idt:
+        return suite
+    else:
+        return suite,dt_files
 
 # Copied from doctest in py2.5 and modified for our purposes (since they don't
 # parametrize what we need)

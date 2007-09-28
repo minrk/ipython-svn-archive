@@ -25,7 +25,7 @@ from pprint import pformat, pprint
 
 # From the IPython test lib
 import tutils
-from tutils import test_path
+from tutils import fullPath
 
 try:
     import pexpect
