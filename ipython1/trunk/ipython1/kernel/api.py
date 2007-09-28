@@ -74,7 +74,7 @@ defaultRemoteController = (co['client']['connectToRemoteControllerOn']['ip'],
     co['client']['connectToRemoteControllerOn']['port'])
 """The (ip,port) tuple of the default controller."""
 
-from ipython1.kernel.task import Task
+from ipython1.kernel.task import Task, Dependency
 
 TaskController = kernelConfigManager._import(co['client']['TaskController'])
 """The default TaskController class obtained from config information."""

@@ -5,12 +5,13 @@ Current:
 
 * Refactor the clients to use blockingCallInThread.
 * Finish threaded versions of things.
-* Come up with a way of checking for dependencies intelligently (matplotlib)
 * Finish MPI support for the controller<->engine communication.
 * Convert standalone test scripts to using Fernando's new spawning stuff.
 * Merge in Fernando's testing stuff into ipython1.testutils.
 * Add capability to spawn engines using mpirun.
 * Refactor the exceptions in xmlrpcutil.
+* Finish the properties and dependencies stuff.
+* Get functions integrated into our API as pickleable objects.
 
 Ongoing:
 

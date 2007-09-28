@@ -165,7 +165,7 @@ def startMsg(control_host,control_port=10105):
     print 'For interactive use, you can make a Remote Controller with:'
     print
     print 'import ipython1.kernel.api as kernel'
-    print "ipc = kernel.RemoteController((%r,%s))" % \
+    print "rc = kernel.RemoteController((%r,%s))" % \
           (control_host,control_port)
     print
     print 'You can then cleanly stop the cluster from IPython using:'
