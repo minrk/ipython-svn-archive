@@ -275,14 +275,14 @@ class IEngineSerializedTestCase(object):
         return d
 
 class IEngineQueuedTestCase(object):
-    """Test an IEngineCore implementer."""
+    """Test an IEngineQueued implementer."""
         
     def testIEngineQueuedInterface(self):
-        """Does self.engine claim to implement IEngineCore?"""
+        """Does self.engine claim to implement IEngineQueued?"""
         self.assert_(es.IEngineQueued.providedBy(self.engine))
         
     def testIEngineQueuedInterfaceMethods(self):
-        """Does self.engine have the methods and attributes in IEngireCore."""
+        """Does self.engine have the methods and attributes in IEngireQueued."""
         for m in list(es.IEngineQueued):
             self.assert_(hasattr(self.engine, m))
             
@@ -309,3 +309,57 @@ class IEngineQueuedTestCase(object):
         result.addCallback(lambda r: 'queue' in r and 'pending' in r)
         d = self.assertDeferredEquals(result, True)
         return d
+
+class IEnginePropertiesTestCase(object):
+    """Test an IEngineProperties implementor."""
+    
+    def testIEnginePropertiesInterface(self):
+        """Does self.engine claim to implement IEngineProperties?"""
+        self.assert_(es.IEngineProperties.providedBy(self.engine))
+    
+    def testIEnginePropertiesInterfaceMethods(self):
+        """Does self.engine have the methods and attributes in IEngireProperties."""
+        for m in list(es.IEngineProperties):
+            self.assert_(hasattr(self.engine, m))
+    
+    def testGetSetProperties(self):
+        dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
+        d = self.engine.setProperties(**dikt)
+        d.addCallback(lambda r: self.engine.getProperties())
+        d = self.assertDeferredEquals(d, dikt)
+        d.addCallback(lambda r: self.engine.getProperties('c'))
+        d = self.assertDeferredEquals(d, {'c': dikt['c']})
+        d.addCallback(lambda r: self.engine.setProperties(c=False))
+        d.addCallback(lambda r: self.engine.getProperties('c', 'd'))
+        d = self.assertDeferredEquals(d, dict(c=False, d=None))
+        return d
+    
+    def testClearProperties(self):
+        dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
+        d = self.engine.setProperties(**dikt)
+        d.addCallback(lambda r: self.engine.clearProperties())
+        d.addCallback(lambda r: self.engine.getProperties())
+        d = self.assertDeferredEquals(d, {})
+        return d
+    
+    def testDelHasProperties(self):
+        dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
+        d = self.engine.setProperties(**dikt)
+        d.addCallback(lambda r: self.engine.delProperties('b','e'))
+        d.addCallback(lambda r: self.engine.hasProperties(*'abcde'))
+        d = self.assertDeferredEquals(d, [True, False, True, True, False])
+        return d
+    
+    def testStrictDict(self):
+        s = """import ipython1.kernel.api as kernel
+p = kernel.getEngine(%s).properties"""%self.engine.id
+        d = self.engine.execute(s)
+        d.addCallback(lambda r: self.engine.execute("p['a'] = lambda _:None"))
+        d = self.assertDeferredRaises(d, error.InvalidProperty)
+        d.addCallback(lambda r: self.engine.execute("p['a'] = range(5)"))
+        d.addCallback(lambda r: self.engine.execute("p['a'].append(5)"))
+        d.addCallback(lambda r: self.engine.getProperties('a'))
+        d = self.assertDeferredEquals(d, dict(a=range(5)))
+        return d
+        
+    

@@ -31,13 +31,15 @@ from ipython1.kernel.test.engineservicetest import \
     IEngineCoreTestCase, \
     IEngineSerializedTestCase, \
     IEngineQueuedTestCase, \
+    IEnginePropertiesTestCase, \
     FailingEngineService, \
     FailingEngineError
     
 
 class BasicEngineServiceTest(DeferredTestCase,
                              IEngineCoreTestCase, 
-                             IEngineSerializedTestCase):
+                             IEngineSerializedTestCase,
+                             IEnginePropertiesTestCase):
     
     def setUp(self):
         self.engine = es.EngineService()
@@ -49,6 +51,7 @@ class BasicEngineServiceTest(DeferredTestCase,
 class QueuedEngineServiceTest(DeferredTestCase,
                               IEngineCoreTestCase, 
                               IEngineSerializedTestCase,
+                              IEnginePropertiesTestCase,
                               IEngineQueuedTestCase):
                               
     def setUp(self):

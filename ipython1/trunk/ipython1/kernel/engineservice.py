@@ -243,6 +243,8 @@ class StrictDict(dict):
         return copy.deepcopy(dict.__getitem__(self, key))
     
     def __setitem__(self, key, value):
+        # check if this entry is valid for transport around the network
+        # and copying
         try:
             pickle.dumps(key, 2)
             pickle.dumps(value, 2)
@@ -260,12 +262,6 @@ class StrictDict(dict):
         for k,v in dikt.iteritems():
             self[k] = v
     
-    def fromkeys(self, *keys):
-        d = {}
-        for k in keys:
-            d[k] = self[k]
-        return d
-    
     def pop(self, key):
         self.modified = True
         return dict.pop(self, key)
@@ -278,6 +274,13 @@ class StrictDict(dict):
         self.modified = True
         dict.clear(self)
     
+    def subDict(self, *keys):
+        d = {}
+        for key in keys:
+            d[key] = self[key]
+        return d
+    
+
 
 class EngineAPI(object):
     """This is the object through which the user can edit the `properties`
@@ -466,9 +469,9 @@ properties.keys() = %r""" % (self.id, properties.keys())
         msg = """engine %r
 method: getProperties(*keys)
 keys = %r""" % (self.id, keys)
-        if not keys:# default to all
+        if not keys:
             keys = self.properties.keys()
-        return self.executeAndRaise(msg, self.properties.fromkeys, *keys)
+        return self.executeAndRaise(msg, self.properties.subDict, *keys)
     
     def _doDel(self, *keys):
         for key in keys:
