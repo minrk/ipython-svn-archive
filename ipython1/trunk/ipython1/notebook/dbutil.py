@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_notebook_dbutil -*-
+# -*- test-case-name: ipython1.notebook.test.test_notebook_dbutil -*-
 """The database utils for the notebook system
 """
 __docformat__ = "restructuredtext en"

@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_newserialized -*-
+# -*- test-case-name: ipython1.kernel.test.test_newserialized -*-
 """Refactored serialization classes and interfaces.
 """
 __docformat__ = "restructuredtext en"

@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_notebook_xmlutil -*-
+# -*- test-case-name: ipython1.notebook.test.test_notebook_sparseutil -*-
 """The Sparse Representation of Notebook components
 Sparse Notebooks are simple representations of notebooks.  Tags are not
 supported, nor is TextCell Formatting.  Sparse Notebooks are valid

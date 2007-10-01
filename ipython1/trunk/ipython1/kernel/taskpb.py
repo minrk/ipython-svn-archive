@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_taskcontrollerpb -*-
+# -*- test-case-name: ipython1.kernel.test.test_taskcontrollerpb -*-
 """
 A PB interface to a TaskController.
 Ken Kinder <ken@kenkinder.com>

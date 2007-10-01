@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_taskcontrollerxmlrpc -*-
+# -*- test-case-name: ipython1.kernel.test.test_taskcontrollerxmlrpc -*-
 """The Generic Task Client object.  This must be subclassed based on your 
 connection method.
 """

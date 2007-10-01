@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_multiengine -*-
+# -*- test-case-name: ipython1.kernel.test.test_multiengine -*-
 """XMLRPC Utilities
 """
 __docformat__ = "restructuredtext en"

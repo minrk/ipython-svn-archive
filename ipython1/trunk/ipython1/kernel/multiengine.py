@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_multiengine -*-
+# -*- test-case-name: ipython1.kernel.test.test_multiengine -*-
 """Adapt the IPython ControllerServer to IMultiEngine.
 
 This module provides classes that adapt a ControllerService to the 

@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_task -*-
+# -*- test-case-name: ipython1.kernel.test.test_task -*-
 """Task farming representation of the ControllerService.
 """
 __docformat__ = "restructuredtext en"
@@ -252,6 +252,7 @@ class Dependency(_Dependency):
     >>>d.depends('b', False)
     
     """
+    validTests = ['==', '<=', '>=', '<', '>', 'in', 'not in']
     
     def __init__(self, init=None):
         self.dependencies = []
@@ -276,6 +277,8 @@ class Dependency(_Dependency):
     
     def depend(self, key, value=True, test='=='):
         assert isinstance(self.dependencies, list), "cannot edit dependencies of strtest"
+        assert test in self.validTests, "%r not valid test, use %s"%(test, self.validTests)
+        # print 'depending:%s'%key
         if isinstance(key, dict):
             [self.depend(k, v, '==') for k,v in key.iteritems()]
         elif isinstance(key, (list, tuple)):
@@ -297,15 +300,33 @@ class Dependency(_Dependency):
     
     def test(self, properties):
         for key, target, test in self.dependencies:
-            c = cmp(properties.get(key), target)
-            if c == 0 and '=' in test:
-                continue
-            elif c == 1 and '>' in test:
-                continue
-            elif c == -1 and '<' in test:
-                continue
+            if test == 'in':
+                # print 'intest'
+                try:
+                    if properties.get(key) not in target:
+                        return False
+                except TypeError:
+                    return False
+            elif test == 'not in':
+                try:
+                    if properties.get(key) in target:
+                        return False
+                except TypeError:
+                    return False
             else:
-                return False
+                c = cmp(properties.get(key), target)
+                # print c, key, target, test
+                if c == 0 and '=' in test:
+                    continue
+                elif c == 1 and '>' in test:
+                    continue
+                elif c == -1 and '<' in test:
+                    continue
+                else:
+                    # print "failing:"
+                    return False
+                    
+        # print 'returning'
         return True
     
     def strtest(self, properties):

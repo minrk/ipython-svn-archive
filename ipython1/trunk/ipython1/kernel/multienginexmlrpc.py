@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_multienginexmlrpc -*-
+# -*- test-case-name: ipython1.kernel.test.test_multienginexmlrpc -*-
 """An XML-RPC interface for an `ISynchronousMultiEngine`.
 
 This class lets XML-RPC clients talk to a `ControllerService` through the

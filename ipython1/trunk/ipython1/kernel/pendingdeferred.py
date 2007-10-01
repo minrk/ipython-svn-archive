@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_pendingdeferred -*-
+# -*- test-case-name: ipython1.kernel.test.test_pendingdeferred -*-
 """Classes to manage pending Deferreds.
 
 A pending deferred is a deferred that may or may not have fired.  This module

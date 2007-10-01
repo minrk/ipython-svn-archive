@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_multiengineclient -*-
+# -*- test-case-name: ipython1.kernel.test.test_multiengineclient -*-
 """General Classes for IMultiEngine clients.
 """
 __docformat__ = "restructuredtext en"

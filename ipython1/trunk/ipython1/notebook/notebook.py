@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_notebook -*-
+# -*- test-case-name: ipython1.notebook.test.test_notebook -*-
 """The main notebook server system
 """
 __docformat__ = "restructuredtext en"

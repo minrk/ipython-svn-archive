@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_enginepb -*-
+# -*- test-case-name: ipython1.kernel.test.test_enginepb -*-
 """Expose the IPython EngineService using Twisted's Perspective Broker.
 
 This modules defines interfaces and adapters to connect an EngineService to

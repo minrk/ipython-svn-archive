@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_multiengine -*-
+# -*- test-case-name: ipython1.notebook.test.test_notebookhttp -*-
 """REST web service interface to an INotebookController
 """
 __docformat__ = "restructuredtext en"

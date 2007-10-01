@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_controllerservice -*-
+# -*- test-case-name: ipython1.kernel.test.test_controllerservice -*-
 """A Twisted Service for the IPython Controller.
 
 The IPython Controller:

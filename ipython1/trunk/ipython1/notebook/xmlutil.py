@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.test.test_notebook_xmlutil -*-
+# -*- test-case-name: ipython1.notebook.test.test_notebook_xmlutil -*-
 """The XML Representation of Notebook components
 """
 __docformat__ = "restructuredtext en"
