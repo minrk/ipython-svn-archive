@@ -70,6 +70,13 @@ class HTTPMultiEngineRoot(resource.Resource):
         self.child_gather = HTTPMultiEngineGather(self.smultiengine)
         self.child_getIDs = HTTPMultiEngineGetIDs(self.smultiengine)
         
+        self.child_getProperties = HTTPMultiEngineGetProperties(self.smultiengine)
+        self.child_setProperties = HTTPMultiEngineSetProperties(self.smultiengine)
+        self.child_hasProperties = HTTPMultiEngineHasProperties(self.smultiengine)
+        self.child_delProperties = HTTPMultiEngineDelProperties(self.smultiengine)
+        self.child_clearProperties = HTTPMultiEngineClearProperties(self.smultiengine)
+        
+        
         self.child_getPendingResult = HTTPMultiEngineGetPendingResult(self.smultiengine)
         self.child_getAllPendingResults = HTTPMultiEngineGetAllPendingResults(self.smultiengine)
         self.child_registerClient = HTTPMultiEngineRegisterClient(self.smultiengine)
@@ -341,6 +348,26 @@ class HTTPMultiEngineQueueStatus(HTTPMultiEngineBaseMethod):
             return self.packageFailure(failure.Failure(error.InvalidEngineID()))
     
 
+class HTTPMultiEngineSetProperties(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            targetsString = request.prepath[1]
+            clientID = int(request.args['clientID'][0])
+            block = int(request.args['block'][0])
+            pns = request.args['namespace'][0]
+            ns = pickle.loads(pns)
+        except:
+            return self._badRequest(request)
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            d = self.smultiengine.setProperties(clientID, block, targetsArg, **ns)
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
 class HTTPMultiEngineGetProperties(HTTPMultiEngineBaseMethod):
     
     def renderHTTP(self, request):
@@ -348,17 +375,79 @@ class HTTPMultiEngineGetProperties(HTTPMultiEngineBaseMethod):
             targetsString = request.prepath[1]
             clientID = int(request.args['clientID'][0])
             block = int(request.args['block'][0])
+            keys = pickle.loads(request.args['keys'][0])
         except:
             return self._badRequest(request)
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
-            d = self.smultiengine.getProperties(clientID, True, targetsArg)
+            d = self.smultiengine.getProperties(clientID, block, targetsArg, *keys)
             # d.addBoth(_printer)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
         else:
             return self.packageFailure(failure.Failure(error.InvalidEngineID()))
     
+
+class HTTPMultiEngineHasProperties(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            targetsString = request.prepath[1]
+            clientID = int(request.args['clientID'][0])
+            block = int(request.args['block'][0])
+            keys = pickle.loads(request.args['keys'][0])
+        except:
+            return self._badRequest(request)
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            d = self.smultiengine.hasProperties(clientID, block, targetsArg, *keys)
+            # d.addBoth(_printer)
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEngineDelProperties(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            targetsString = request.prepath[1]
+            clientID = int(request.args['clientID'][0])
+            block = int(request.args['block'][0])
+            keys = pickle.loads(request.args['keys'][0])
+        except:
+            return self._badRequest(request)
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            d = self.smultiengine.delProperties(clientID, block, targetsArg, *keys)
+            # d.addBoth(_printer)
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
+class HTTPMultiEngineClearProperties(HTTPMultiEngineBaseMethod):
+    
+    def renderHTTP(self, request):
+        try:
+            targetsString = request.prepath[1]
+            clientID = int(request.args['clientID'][0])
+            block = int(request.args['block'][0])
+            # keys = pickle.loads(request.args['keys'][0])
+        except:
+            return self._badRequest(request)
+        targetsArg = self.parseTargets(targetsString)
+        if targetsArg is not False:
+            d = self.smultiengine.clearProperties(clientID, block, targetsArg)
+            # d.addBoth(_printer)
+            d.addCallbacks(self.packageSuccess, self.packageFailure)
+            return d
+        else:
+            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
+    
+
 
 class HTTPMultiEngineScatter(HTTPMultiEngineBaseMethod):
     
@@ -674,7 +763,7 @@ class HTTPMultiEngineClient(object):
         if not localBlock:
             result = PendingResult(self, result)
         return result
-                
+    
     def pushAll(self, **ns):
         """Push Python objects by key to all targets.
         
@@ -718,7 +807,7 @@ class HTTPMultiEngineClient(object):
         See the docstring for `pull` for full details.
         """
         return self.pull('all', *keys)
-        
+    
     def getResult(self, targets, i=None):
         """Get the stdin/stdout/stderr of a previously executed command on targets.
         
@@ -742,7 +831,7 @@ class HTTPMultiEngineClient(object):
         else:
             result = ResultList(result)
         return result
-         
+    
     def getResultAll(self, i=None):
         """Get the stdin/stdout/stderr of a previously executed command on all targets.
         
@@ -769,7 +858,7 @@ class HTTPMultiEngineClient(object):
         if not localBlock:
             result = PendingResult(self, result)
         return result    
-        
+    
     def resetAll(self):
         """Reset the namespace on all targets.
         
@@ -795,7 +884,7 @@ class HTTPMultiEngineClient(object):
         if not localBlock:
             result = PendingResult(self, result)
         return result 
-          
+    
     def keysAll(self):
         """List all the variable names defined on each engine/target.
         
@@ -829,7 +918,7 @@ class HTTPMultiEngineClient(object):
         See the docstring for `kill` for full details.
         """
         return self.kill('all', controller)
-        
+    
     def clearQueue(self, targets):
         """Clear the command queue on targets.
         
@@ -848,7 +937,7 @@ class HTTPMultiEngineClient(object):
         result = self._executeRemoteMethod('clearQueue', targets, 
                 clientID = self._clientID, block=False)
         return result
-        
+    
     def clearQueueAll(self):
         """Clear the command queue on all targets.
         
@@ -878,6 +967,188 @@ class HTTPMultiEngineClient(object):
         See the docstring for `queueStatus` for full details.
         """
         return self.queueStatus('all')
+    
+    
+    def setProperties(self, targets, **namespace):
+        """Update the properties with key/value pairs.
+        
+        This method takes all key/value pairs passed in as keyword arguments
+        and pushes (sends) them to the engines specified in targets.  Simple
+        types are recommended (strings, numbers, etc.).
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            namespace : dict
+                The keyword arguments of that contain the key/value pairs
+                that will be pushed.
+                
+        Examples
+        ========
+        
+        >>> rc.setProperties('all', a=5)    # sets e.properties['a'] = 5 on all
+        >>> rc.setProperties(0, b=30)       # sets e.properties['b'] = 30 on 0
+        """
+        
+        self._checkClientID()
+        # binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
+        localBlock = self._reallyBlock()
+        result = self._executeRemoteMethod('setProperties', targets, 
+            clientID=self._clientID, block=localBlock, namespace=namespace)
+        if not localBlock:
+            result = PendingResult(self, result)
+        return result
+    
+    def setPropertiesAll(self, **ns):
+        """update properties on all targets.
+        
+        See the docstring for `setProperties` for full details.
+        """
+        return self.setProperties('all', **ns)
+    
+    def hasProperties(self, targets, *keys):
+        """check the properties dicts of engines for keys.
+        
+        This method gets the Python objects specified in keys from the engines specified
+        in targets, returning a dict for each engine.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            keys: list or tuple of str
+                A list of variable names as string of the properties to be
+                checked.
+                
+        :Returns: A list of lists of boolean values for each target.
+                if no keys specified, the whole properties dict is pulled.
+        
+        Examples
+        ========
+        
+        >> rc.hasPropertiesAll('a', 'b')
+        [[True, False],[False, True],[True, True]]
+        """
+        self._checkClientID()
+        localBlock = self._reallyBlock()
+        result = self._executeRemoteMethod('hasProperties', targets, 
+            clientID=self._clientID, block=localBlock, keys=keys)
+        if not localBlock:
+            result = PendingResult(self, result)
+        return result
+    
+    def hasPropertiesAll(self, *keys):
+        """check if values exist on properties objects on all engines by keys.
+        
+        See the docstring for `hasProperties` for full details.
+        """
+        return self.hasProperties('all', *keys)
+    
+    def getProperties(self, targets, *keys):
+        """Pull subdicts of properties objects on engines by keys.
+        
+        This method gets the Python objects specified in keys from the engines specified
+        in targets, returning a dict for each engine.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            keys: list or tuple of str
+                A list of variable names as string of the Python objects to be pulled
+                back to the client.
+                
+        :Returns: A list of dictionary objects for each target.
+                if no keys specified, the whole properties dict is pulled.
+        
+        Examples
+        ========
+        
+        >> rc.getPropertiesAll('a')
+        [{'a':10},{'a':10},{'a':10}]
+        """
+        self._checkClientID()
+        localBlock = self._reallyBlock()
+        result = self._executeRemoteMethod('getProperties', targets, 
+            clientID=self._clientID, block=localBlock, keys=keys)
+        if not localBlock:
+            result = PendingResult(self, result)
+        return result
+    
+    def getPropertiesAll(self, *keys):
+        """Pull subdicts of properties objects on all engines by keys.
+        
+        See the docstring for `getProperties` for full details.
+        """
+        return self.getProperties('all', *keys)
+    
+    def delProperties(self, targets, *keys):
+        """remove elements from properties objects on engines by keys.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            keys: list or tuple of str
+                A list of property labels to be cleared
+                
+        :Returns: None
+        
+        Examples
+        ========
+        
+        >> rc.delPropertiesAll('a')
+        [None, None]
+        """
+        self._checkClientID()
+        localBlock = self._reallyBlock()
+        result = self._executeRemoteMethod('delProperties', targets, 
+            clientID=self._clientID, block=localBlock, keys=keys)
+        if not localBlock:
+            result = PendingResult(self, result)
+        return result
+    
+    def delPropertiesAll(self, *keys):
+        """remove elements from properties objects on all engines by keys.
+        
+        See the docstring for `delProperties` for full details.
+        """
+        return self.delProperties('all', *keys)
+    
+    def clearProperties(self, targets):
+        """clear the properties objects on engines.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+                
+        :Returns: None for each engine
+        
+        Examples
+        ========
+        
+        >> rc.clearPropertiesAll()
+        [None, None, None]
+        >> rc.getPropertiesAll()
+        [{}, {}, {}]
+        """
+        self._checkClientID()
+        localBlock = self._reallyBlock()
+        result = self._executeRemoteMethod('clearProperties', targets, 
+            clientID=self._clientID, block=localBlock)
+        if not localBlock:
+            result = PendingResult(self, result)
+        return result
+    
+    def clearPropertiesAll(self, *keys):
+        """clear the properties objects on all engines.
+        
+        See the docstring for `clearProperties` for full details.
+        """
+        return self.clearProperties('all', *keys)
+    
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
@@ -920,7 +1191,7 @@ class HTTPMultiEngineClient(object):
         if not localBlock:
             result = PendingResult(self, result)
         return result
-        
+    
     def scatterAll(self, key, seq, style='basic', flatten=False):
         """Partition and distribute a sequence to all targets/engines.
         
@@ -953,14 +1224,14 @@ class HTTPMultiEngineClient(object):
         if not localBlock:
             result = PendingResult(self, result)
         return result        
-        
+    
     def gatherAll(self, key, style='basic'):
         """Gather a set of sequence partitions that are distributed on all targets.
         
         See the docstring for `gather` for full details.
         """
         return self.gather('all', key, style)
-
+    
 
 class HTTPInteractiveMultiEngineClient(HTTPMultiEngineClient, InteractiveMultiEngineClient):
     

@@ -262,8 +262,11 @@ class Dependency(_Dependency):
             self.depend(init)
         elif isinstance(init, str):
             if "def test" not in init:
+                # guess it is a boolean test
+                # i.e. "properties['a'] == 5 and properties.has_key('b')"
                 self.dependencies = "def test(properties):  return %s"%init
             else:
+                # guess it was defined as a 'def test(properties)' function
                 self.dependencies = init
             # check for valid dependency string
             exec(self.dependencies)
@@ -336,6 +339,7 @@ class Dependency(_Dependency):
         except Exception, e:
             log.msg("maybe bad strtest: %r"%e)
             return False
+    
 
 class IWorker(zi.Interface):
     """The Basic Worker Interface. 
@@ -360,10 +364,10 @@ class WorkerFromQueuedEngine(object):
         self.queuedEngine = qe
         self.workerID = None
     
-    def getProperties(self):
+    def _getProperties(self):
         return self.queuedEngine.properties
     
-    properties = property(getProperties, lambda self, _:None)
+    properties = property(_getProperties, lambda self, _:None)
     
     def run(self, task):
         """Run task in worker's namespace.
@@ -409,6 +413,7 @@ class WorkerFromQueuedEngine(object):
             else:
                 resultDict = dict(zip(names, result))
         return TaskResult(resultDict, self.queuedEngine.id)
+    
 
 components.registerAdapter(WorkerFromQueuedEngine, es.IEngineQueued, IWorker)
 
