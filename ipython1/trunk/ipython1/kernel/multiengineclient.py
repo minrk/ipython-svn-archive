@@ -18,6 +18,7 @@ __docformat__ = "restructuredtext en"
 
 import sys
 import cPickle as pickle
+from types import FunctionType
 
 from twisted.internet import reactor
 from twisted.python import components
@@ -387,7 +388,7 @@ class InteractiveMultiEngineClient(object):
         """Return the number of available engines."""
         return len(self.getIDs())
         
-    def map(self, targets, functionSource, seq, style='basic'):
+    def map(self, targets, func, seq, style='basic'):
         """A parallelized version of Python's builtin map.
         
         This function implements the following pattern:
@@ -400,8 +401,9 @@ class InteractiveMultiEngineClient(object):
             targets : int, list or 'all'
                 The engine ids the action will apply to.  Call `getIDs` to see
                 a list of currently available engines.
-            functionSource : str
-                A Python string that names a callable defined on the engines.
+            func : str, function
+                An actual function object or a Python string that names a 
+                callable defined on the engines.
             seq : list, tuple or numpy array
                 The local sequence to be scattered.
             style : str
@@ -413,21 +415,37 @@ class InteractiveMultiEngineClient(object):
         Example
         =======
         
-        >>> map('lambda x: x*x', range(10000))
+        >>> rc.mapAll('lambda x: x*x', range(10000))
         [0,2,4,9,25,36,...]
         """
-        saveBlock = self.block
-        self.block = False
-        sourceToRun = \
-            '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
-            functionSource        
-        pd1 = self.scatter(targets, '_ipython_map_seq', seq, style)
-        print pd1.getResult()
-        pd2 = self.execute(targets, sourceToRun)
-        print pd2.getResult()
-        pd3 = self.gather(targets, '_ipython_map_seq_result', style)
-        self.block = saveBlock
-        return pd3.getResult()
+
+        if self.block:
+            if isinstance(func, FunctionType):
+                self.push(targets, _ipython_map_func=func)
+                sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
+            elif isinstance(func, str):
+                sourceToRun = \
+                    '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
+                    func
+            else:
+                raise TypeError("func must be a function or str")
+            self.scatter(targets, '_ipython_map_seq', seq, style)
+            self.execute(targets, sourceToRun)
+            return self.gather(targets, '_ipython_map_seq_result', style)                
+        else:
+            if isinstance(func, FunctionType):
+                pd1 = self.push(targets, _ipython_map_func=func)
+                sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
+            elif isinstance(func, str):
+                sourceToRun = \
+                    '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
+                    func
+            else:
+                raise TypeError("func must be a function or str")            
+            pd2 = self.scatter(targets, '_ipython_map_seq', seq, style)        
+            pd3 = self.execute(targets, sourceToRun)
+            pd4 = self.gather(targets, '_ipython_map_seq_result', style)
+            return pd4
             
     def mapAll(self, functionSource, seq, style='basic'):
         """Parallel map on all engines.

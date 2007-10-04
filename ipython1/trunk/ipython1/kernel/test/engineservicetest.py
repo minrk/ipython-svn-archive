@@ -24,7 +24,8 @@ from twisted.application import service
 import zope.interface as zi
 
 from ipython1.kernel import newserialized
-from ipython1.kernel import error 
+from ipython1.kernel import error
+from ipython1.kernel.pickleutil import can, uncan
 import ipython1.kernel.engineservice as es
 from ipython1.core.interpreter import Interpreter
 from ipython1.testutils.testgenerator import (EngineExecuteTestGenerator, 
@@ -121,6 +122,14 @@ invalidCommands = [('a=1/0',ZeroDivisionError),
                    ("import abababsdbfsbaljasdlja",ImportError),
                    ("raise Exception()",Exception)]
 
+def testf(x):
+    return 2.0*x
+
+globala = 99
+
+def testg(x):
+    return  globala*x
+
 class IEngineCoreTestCase(object):
     """Test an IEngineCore implementer."""
 
@@ -202,6 +211,43 @@ class IEngineCoreTestCase(object):
         d.addCallback(lambda c: c.all())
         return self.assertDeferredEquals(d, True)
         
+    def testPushFunction(self):
+                    
+        d = self.engine.push(f=testf)
+        d.addCallback(lambda _: self.engine.execute('result = f(10)'))
+        d.addCallback(lambda _: self.engine.pull('result'))
+        d.addCallback(lambda r: self.assertEquals(r, testf(10)))
+        d.addCallback(lambda _: self.engine.push(f=testf,a=30))
+        d.addCallback(lambda _: self.engine.execute('result = f(10)'))
+        d.addCallback(lambda _: self.engine.pull('result'))
+        d.addCallback(lambda r: self.assertEquals(r, testf(10)))
+        return d
+
+    def testPullFunction(self):
+        d = self.engine.push(f=testf)
+        d.addCallback(lambda _: self.engine.pull('f'))
+        d.addCallback(lambda r: self.assertEquals(r(10), testf(10)))
+        d.addCallback(lambda _: self.engine.push(f=testf,a=30))
+        d.addCallback(lambda _: self.engine.pull('f','a'))
+        d.addCallback(lambda r: self.assertEquals(r[0](10), testf(10)))
+        return d
+        
+    def testPushFunctionGlobal(self):
+        """Make sure that pushed functions pick up the user's namespace for globals."""
+        d = self.engine.push(g=testg, globala=globala)
+        d.addCallback(lambda _: self.engine.execute('result = g(10)'))
+        d.addCallback(lambda _: self.engine.pull('result'))
+        d.addCallback(lambda r: self.assertEquals(r, testg(10)))
+        return d
+
+    # It is actually a bit subtle about how to get this pulled off correctly in all cases.
+    # def testPullFunctionGlobal(self):
+    #     """Make sure that pushed functions pick up the user's namespace for globals."""
+    #     d = self.engine.push(g=testg, globala=globala)
+    #     d.addCallback(lambda _: self.engine.pull('g'))
+    #     d.addCallback(lambda r: self.assertEquals(r(10), testg(10)))
+    #     return d
+        
     def testGetResultFailure(self):
         d = self.engine.getResult(None)
         d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
@@ -264,6 +310,13 @@ class IEngineSerializedTestCase(object):
             value = self.engine.pullSerialized('key')
             value.addCallback(lambda serial: newserialized.IUnSerialized(serial).getObject())
             d = self.assertDeferredEquals(value,o,d)
+        return d
+
+    def testPushFunctionSerialized(self):
+        d = self.engine.pushSerialized(f=newserialized.serialize(can(testf)))
+        d.addCallback(lambda _: self.engine.execute('result = f(10)'))
+        d.addCallback(lambda _: self.engine.pull('result'))
+        d.addCallback(lambda r: self.assertEquals(r, testf(10)))
         return d
 
     def testPullSerializedFailures(self):

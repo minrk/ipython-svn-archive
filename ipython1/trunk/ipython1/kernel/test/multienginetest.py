@@ -49,6 +49,16 @@ class IMultiEngineBaseTestCase(object):
             self.engines.append(e)
 
 
+def testf(x):
+    return 2.0*x
+
+globala = 99
+
+def testg(x):
+    return  globala*x
+
+
+
 class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
     """A test for any object that implements IEngineMultiplexer.
     
@@ -227,6 +237,48 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda _: self.multiengine.getResult(0, 10))
         d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
         return d    
+    
+    def testPushFunction(self):
+        self.addEngine(1)
+        d = self.multiengine.push(0,f=testf)
+        d.addCallback(lambda _: self.multiengine.execute(0,'result = f(10)'))
+        d.addCallback(lambda _: self.multiengine.pull(0, 'result'))
+        d.addCallback(lambda r: self.assertEquals(r[0], testf(10)))
+        d.addCallback(lambda _: self.multiengine.push(0,newf=testf, a=globala))
+        d.addCallback(lambda _: self.multiengine.execute(0,'result = newf(10)'))
+        d.addCallback(lambda _: self.multiengine.pull(0, 'result'))
+        d.addCallback(lambda r: self.assertEquals(r[0], testf(10)))
+        return d
+    
+    def testPullFunction(self):
+        self.addEngine(1)
+        d = self.multiengine.push(0,f=testf,a=globala)
+        d.addCallback(lambda _: self.multiengine.pull(0, 'f'))
+        d.addCallback(lambda r: self.assertEquals(r[0](10), testf(10)))
+        d.addCallback(lambda _: self.multiengine.pull(0, 'f', 'a'))
+        d.addCallback(lambda r: self.assertEquals((r[0][0](10),r[0][1]),(testf(10),globala)))
+        return d
+    
+    def testPushFunctionAll(self):
+        self.addEngine(4)
+        d = self.multiengine.pushAll(f=testf)
+        d.addCallback(lambda _: self.multiengine.executeAll('result = f(10)'))
+        d.addCallback(lambda _: self.multiengine.pullAll('result'))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[testf(10)]))
+        d.addCallback(lambda _: self.multiengine.pushAll(newf=testf,a=globala))
+        d.addCallback(lambda _: self.multiengine.execute(0,'result = newf(10)'))
+        d.addCallback(lambda _: self.multiengine.pullAll('result'))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[testf(10)]))
+        return d        
+
+    def testPullFunctionAll(self):
+        self.addEngine(4)
+        d = self.multiengine.pushAll(f=testf,a=globala)
+        d.addCallback(lambda _: self.multiengine.pullAll('f'))
+        d.addCallback(lambda r: self.assertEquals([func(10) for func in r], 4*[testf(10)]))
+        d.addCallback(lambda _: self.multiengine.pullAll('f', 'a'))
+        d.addCallback(lambda r: self.assertEquals([subresult[0](10) for subresult in r],4*[testf(10)]))
+        return d
     
 class IEngineCoordinatorTestCase(IMultiEngineBaseTestCase):
     """A test for any object that implements IEngineCoordinator.

@@ -4,6 +4,7 @@ import compiler
 from compiler.ast import Discard
 import codeop
 import __builtin__
+from types import FunctionType
 
 # Local imports.
 from ipython1.external.Itpl import ItplNS
@@ -346,6 +347,11 @@ Engine action that caused the error:
         ----------
         **kwds
         """          
+        
+        # First set the func_globals for all functions to self.namespace
+        for k, v in kwds.iteritems():
+            if isinstance(v, FunctionType):
+                kwds[k] = FunctionType(v.func_code, self.namespace)
 
         self.namespace.update(kwds)
 

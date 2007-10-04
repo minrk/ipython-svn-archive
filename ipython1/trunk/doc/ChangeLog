@@ -1,3 +1,13 @@
+2007-10-03  Brian Granger <ellisonbg@gmail.com>
+
+	* ipython1.kernel:  Any FunctionType can now be pulled or 
+	pushed to the engines.  This includes fuctions with references
+	to globals, but does not include closures.  The map/mapAll
+	methods have been adapted to take functions now.  This approach
+	doesn't work for classes that are callable though.  Still need
+	to add tests of how push/pullSerialized handle this.
+
+
 2007-06-21  Brian Granger <ellisonbg@gmail.com>
 
 	* ipython1.core.interpreter:  Made sure that funny edge cases

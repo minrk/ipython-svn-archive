@@ -26,7 +26,7 @@ import xmlrpclib
 
 from zope.interface import Interface, implements
 from twisted.internet import defer
-from twisted.python import components, failure
+from twisted.python import components, failure, log
 
 from ipython1.external.twisted.web2 import xmlrpc, server, channel
 
@@ -38,6 +38,16 @@ from ipython1.kernel.multiengineclient import ResultList, QueueStatusList
 from ipython1.kernel.multiengineclient import wrapResultList
 from ipython1.kernel.multiengineclient import InteractiveMultiEngineClient
 from ipython1.kernel.xmlrpcutil import Transport
+from ipython1.kernel.pickleutil import \
+    can, \
+    canDict, \
+    canSequence, \
+    uncan, \
+    uncanDict, \
+    uncanSequence
+
+# Needed to access the true globals from __main__.__dict__ 
+import __main__
 
 #-------------------------------------------------------------------------------
 # The Controller side of things
@@ -211,7 +221,7 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         f.cleanFailure()
         return self.packageSuccess(f)
 
-    def packageSuccess(self, obj):    
+    def packageSuccess(self, obj):
         serial = pickle.dumps(obj, 2)
         return xmlrpc.Binary(serial)
        
@@ -230,12 +240,21 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         except:
             d = defer.fail(failure.Failure())
         else:
+            namespace = uncanDict(namespace) # Uncan any functions in the namespace
             d = self.smultiengine.push(clientID, block, targets, **namespace)
         return d
 
+    def _canMultipleKeys(self, result):
+        return [canSequence(r) for r in result]
+
     @packageResult
     def xmlrpc_pull(self, request, clientID, block, targets, *keys):
-        return self.smultiengine.pull(clientID, block, targets, *keys)
+        d = self.smultiengine.pull(clientID, block, targets, *keys)
+        if len(keys)>1:
+            d.addCallback(self._canMultipleKeys)
+        if len(keys)>0:
+            d.addCallback(canSequence)
+        return d
     
     @packageResult
     def xmlrpc_getResult(self, request, clientID, block, targets, i=None):
@@ -596,7 +615,8 @@ class XMLRPCMultiEngineClient(object):
         """
         
         self._checkClientID()
-        binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
+        cannedNamespace = canDict(namespace)
+        binPackage = xmlrpc.Binary(pickle.dumps(cannedNamespace, 2))
         localBlock = self._reallyBlock()
         result = self._executeRemoteMethod(self._server.push, self._clientID, localBlock, targets, binPackage)
         if not localBlock:
@@ -634,7 +654,28 @@ class XMLRPCMultiEngineClient(object):
         """
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.pull, self._clientID, localBlock, targets, *keys)
+        userGlobals = __main__.__dict__
+        
+        
+        def processPullResult(rawResult):
+            result = pickle.loads(rawResult.data)
+            if isinstance(result, failure.Failure):
+                result.raiseException()
+            else:
+                if len(keys)>1:
+                    uncannedResult = [uncanSequence(r, userGlobals) for r in result]
+                    return uncannedResult
+                if len(keys)>0:
+                    uncannedResult = [uncan(r, userGlobals) for r in result]
+                    return uncannedResult
+
+        try:
+            rawResult = self._server.pull(self._clientID, localBlock, targets, *keys)
+            return processPullResult(rawResult)
+        except error.InvalidClientID:
+            self._getClientID()
+            rawResult = self._server.pull(self._clientID, localBlock, targets, *keys)
+            return processPullResult(rawResult)
         if not localBlock:
             result = PendingResult(self, result)
         return result

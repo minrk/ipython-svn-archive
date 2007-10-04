@@ -12,14 +12,17 @@ __docformat__ = "restructuredtext en"
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
+from types import FunctionType
+
 class ParallelFunction:
     """A function that operates in parallel on sequences."""
-    def __init__(self, targets, functionName, remoteController):
+    def __init__(self, targets, func, remoteController):
         """Create a `ParallelFunction`.
         """
-        self.fname = functionName
+        assert isinstance(func, (str, FunctionType)), "func must be a fuction or str"
+        self.func = func
         self.rc = remoteController
         self.targets = targets
         
     def __call__(self,sequence):
-        return self.rc.map(self.targets, self.fname, sequence)
+        return self.rc.map(self.targets, self.func, sequence)

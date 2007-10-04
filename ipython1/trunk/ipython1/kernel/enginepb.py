@@ -60,7 +60,15 @@ from ipython1.kernel.engineservice import \
     IEngineQueued, \
     EngineService, \
     StrictDict
-
+from ipython1.kernel.pickleutil import \
+    can, \
+    canDict, \
+    canSequence, \
+    uncan, \
+    uncanDict, \
+    uncanSequence
+    
+    
 #-------------------------------------------------------------------------------
 # Classes to enable paging of large objects
 #-------------------------------------------------------------------------------
@@ -361,6 +369,11 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         except:
             return defer.fail(failure.Failure()).addErrback(packageFailure)
         else:
+            # The usage of globals() here is an attempt to bind any pickled functions
+            # to the globals of this module.  What we really want is to have it bound
+            # to the globals of the callers module.  This will require walking the 
+            # stack.  BG 10/3/07.
+            namespace = uncanDict(namespace, globals())
             return self.service.push(**namespace).addErrback(packageFailure)
     
     #---------------------------------------------------------------------------
@@ -406,6 +419,10 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         
     def remote_pull(self, *keys):
         d = self.service.pull(*keys)
+        if len(keys)>1:
+            d.addCallback(canSequence)
+        elif len(keys)==1:
+            d.addCallback(can)
         d.addCallback(pickle.dumps, 2)
         d.addCallback(checkMessageSize, repr(keys))
         d.addErrback(packageFailure)
@@ -553,7 +570,7 @@ class EngineFromReference(object):
     
     def pushOld(self, **namespace):
         try:
-            package = pickle.dumps(namespace, 2)
+            package = pickle.dumps(canDict(namespace), 2)
         except:
             return defer.fail(failure.Failure())
         else:
@@ -606,6 +623,14 @@ class EngineFromReference(object):
         d = self.callRemote('pull', *keys)
         d.addCallback(self.checkReturnForFailure)
         d.addCallback(pickle.loads)
+        # The usage of globals() here is an attempt to bind any pickled functions
+        # to the globals of this module.  What we really want is to have it bound
+        # to the globals of the callers module.  This will require walking the 
+        # stack.  BG 10/3/07.
+        if len(keys)>1:
+            d.addCallback(uncanSequence, globals())
+        elif len(keys)>0:
+            d.addCallback(uncan, globals())
         return d
     
     # Paging version

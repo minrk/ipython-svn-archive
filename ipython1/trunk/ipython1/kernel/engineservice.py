@@ -46,6 +46,7 @@ from ipython1.core.interpreter import Interpreter
 from ipython1.kernel import newserialized, error, util
 from ipython1.kernel.util import gatherBoth, DeferredList
 from ipython1.kernel import codeutil
+from ipython1.kernel.pickleutil import can, uncan
 
 
 #-------------------------------------------------------------------------------
@@ -505,7 +506,11 @@ sNamespace.keys() = %r""" % (self.id, sNamespace.keys())
         for k,v in sNamespace.iteritems():
             try:
                 unserialized = newserialized.IUnSerialized(v)
-                ns[k] = unserialized.getObject()
+                # The usage of globals() here is an attempt to bind any pickled functions
+                # to the globals of this module.  What we really want is to have it bound
+                # to the globals of the callers module.  This will require walking the 
+                # stack.  BG 10/3/07.
+                ns[k] = uncan(unserialized.getObject(),globals())
             except:
                 return defer.fail()
         return self.executeAndRaise(msg, self.shell.push, **ns)
