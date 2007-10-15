@@ -473,7 +473,12 @@ class Inspector:
             # most cases they will, but it's nice to print all the info for
             # objects which use instance-customized docstrings.
             if ds:
-                class_ds = getdoc(obj.__class__)
+                try:
+                    cls = getattr(obj,'__class__')
+                except:
+                    class_ds = None
+                else:
+                    class_ds = getdoc(cls)
                 # Skip Python's auto-generated docstrings
                 if class_ds and \
                        (class_ds.startswith('function(code, globals[,') or \
