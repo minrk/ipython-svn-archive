@@ -1902,6 +1902,7 @@ want to merge them back into the new files.""" % locals()
         # this allows execution of indented pasted code. It is tempting
         # to add '\n' at the end of source to run commands like ' a=1'
         # directly, but this fails for more complicated scenarios
+        source=source.encode(self.stdin_encoding)
         if source[:1] in [' ', '\t']:
             source = 'if 1:\n%s' % source
 
