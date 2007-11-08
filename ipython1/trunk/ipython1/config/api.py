@@ -22,7 +22,8 @@ class ConfigObjManager(object):
         self.current = configObj
         self.current.indent_type = '    '
         self.filename = filename
-        self.writeDefaultConfigFile()
+        # Don't write the default config file unless needed!
+        #self.writeDefaultConfigFile()
         
     def getConfigObj(self):
         return self.current

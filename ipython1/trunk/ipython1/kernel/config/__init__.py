@@ -42,13 +42,16 @@ mpiConfig = {
     'mpi4py': """from mpi4py import MPI as mpi
 mpi.rank = mpi.COMM_WORLD.Get_size()
 mpi.size = mpi.COMM_WORLD.Get_rank()
+print 'Mpi4Py integration enabled'
 """,    
     'pytrilinos': """from PyTrilinos import Epetra
 class SimpleStruct:
     pass
 mpi = SimpleStruct()
-mpi.rank = 0
-mpi.size = 0
+comm = Epetra.PyComm()
+mpi.rank = comm.MyPID()
+mpi.size = comm.NumProc()
+print 'PyTrilinos integration enabled'
 """,
     'default': ''
 }
