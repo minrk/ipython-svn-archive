@@ -1,13 +1,14 @@
 #!/usr/bin/env python
-"""Shell is an interactive text control in which a user types in
-commands to be sent to the interpreter.  This particular shell is
-based on wxPython's wxStyledTextCtrl.
+"""
+Widget for a front-end to ipython, using wxStyledTextCtrl.
 
-Sponsored by Orbtech - Your source for Python programming expertise."""
+This file was originally inspired from PyShell, written by Pratick K. O'Brien
+<pobrien@orbtech.com>.
+"""
 
-__author__ = "Patrick K. O'Brien <pobrien@orbtech.com>"
-__cvsid__ = "$Id: shell.py,v 1.20 2007/01/17 23:05:14 RD Exp $"
-__revision__ = "$Revision: 1.20 $"[11:-2]
+__author__ = """Eric Jones <eric@enthought.com>, 
+                 Gael Varoquaux <gael.varoquaux@normalesup.org>"""
+__version__ = "0.0.1"
 
 # standard imports
 import keyword
@@ -23,41 +24,24 @@ from wx import stc
 from wx.py.buffer import Buffer
 from wx.py import dispatcher
 from wx.py import editwindow
-from wx.py import frame
 
 # ipython imports
-from ipython1.core1.interpreter import Interpreter as IPythonInterpreter
+from ipython1.core.interpreter import Interpreter as IPythonInterpreter
 
 from ipreadline import IPReadline
-
-
-##########################################################################
-# Global Variables
-##########################################################################
-
 
 NAVKEYS = (wx.WXK_END, wx.WXK_LEFT, wx.WXK_RIGHT,
            wx.WXK_UP, wx.WXK_DOWN, wx.WXK_PRIOR, wx.WXK_NEXT)
 
 
-##########################################################################
-# Monkey Patches
-##########################################################################
-
 sys.ps3 = '<-- '  # Input prompt.
 
-
-
 class Shell(editwindow.EditWindow):
-    """Shell based on StyledTextCtrl."""
-
-    name = 'Shell'
-    revision = __revision__
+    """WxPython frontend for ipython."""
 
     def __init__(self, parent, id=-1, pos=wx.DefaultPosition,
                  size=wx.DefaultSize, style=wx.CLIP_CHILDREN,
                  introText='', locals=None, InterpClass=None,
-                 startupScript=None, execStartupScript=True,
                  *args, **kwds):
         """ Create Shell instance.
         """
@@ -67,21 +51,12 @@ class Shell(editwindow.EditWindow):
         # lines are wider than the shell width.
         self.wrap()
 
-
-        # We want all the variables available in __main__ within our local
-        # dict. (
-        # fixme: Do we really want this?  Is this something handled by
-        #        IPython?
-        if locals is None:
-            import __main__
-            locals = __main__.__dict__
-
-        self._ipython_interpreter = IPythonInterpreter(namespace=locals)
+        self._ipython_interpreter = IPythonInterpreter(user_ns={})
 
         self.ip_readline = IPReadline(interpreter=self._ipython_interpreter)
 
         # Set up the buffer.
-        # fixme: What is this?
+        # FIXME: What is this?
         self.buffer = Buffer()
 
         # Find out for which keycodes the interpreter will autocomplete.
@@ -93,16 +68,6 @@ class Shell(editwindow.EditWindow):
 
         # Keep track of multi-line commands.
         self.more = False
-
-        # Create the command history.  Commands are added into the
-        # front of the list (ie. at index 0) as they are entered.
-        # self.historyIndex is the current position in the history; it
-        # gets incremented as you retrieve the previous command,
-        # decremented as you retrieve the next, and reset when you hit
-        # Enter.  self.historyIndex == -1 means you're on the current
-        # command, not in the history.
-        self.history = []
-        self.historyIndex = -1
 
         #seb add mode for "free edit"
         self.noteMode = 0
@@ -123,21 +88,9 @@ class Shell(editwindow.EditWindow):
         # Assign some pseudo keywords to the interpreter's namespace.
         self.setBuiltinKeywords()
 
-        # Do this last so the user has complete control over their
-        # environment.  They can override anything they want.
-        if execStartupScript:
-            if startupScript is None:
-                startupScript = os.environ.get('PYTHONSTARTUP')
-            self.execStartupScript(startupScript)
         self.prompt()
 
         wx.CallAfter(self.ScrollToLine, 0)
-
-
-    def clearHistory(self):
-        self.history = []
-        self.historyIndex = -1
-        dispatcher.send(signal="Shell.clearHistory")
 
     def OnIdle(self, event):
         """Free the CPU to do other things."""
@@ -170,33 +123,6 @@ class Shell(editwindow.EditWindow):
         # hide rather than quit so we should just post the event and
         # let the surrounding app decide what it wants to do.
         self.write('Click on the close button to leave the application.')
-
-
-    def execStartupScript(self, startupScript):
-        """Execute the user's PYTHONSTARTUP script if they have one."""
-        if startupScript and os.path.isfile(startupScript):
-            text = 'Startup script executed: ' + startupScript
-            self.ip_readline.push_text('print %r; execfile(%r)' % 
-                                                (text, startupScript))
-            #self.interp.startupScript = startupScript
-        else:
-            self.ip_readline.push_text('')
-
-
-    def about(self):
-        """Display information about Py."""
-        text = """
-Author: %r
-Py Shell Revision: %s
-Python Version: %s
-wxPython Version: %s
-wxPython PlatformInfo: %s
-Platform: %s""" % \
-        (__author__, self.revision,
-         sys.version.split()[0], wx.VERSION_STRING, str(wx.PlatformInfo),
-         sys.platform)
-        self.write(text.strip())
-
 
     def OnChar(self, event):
         """Keypress event handler.
@@ -242,6 +168,7 @@ Platform: %s""" % \
         else:
             # Allow the normal event handling to take place.
             event.Skip()
+
 
 
     def OnKeyDown(self, event):
@@ -412,12 +339,12 @@ Platform: %s""" % \
         # Replace with the previous command from the history buffer.
         elif (controlDown and key == wx.WXK_UP) \
                  or (altDown and key in (ord('P'), ord('p'))):
-            self.OnHistoryReplace(step=+1)
+            self.replaceFromHistory(step=-1)
 
         # Replace with the next command from the history buffer.
         elif (controlDown and key == wx.WXK_DOWN) \
                  or (altDown and key in (ord('N'), ord('n'))):
-            self.OnHistoryReplace(step=-1)
+            self.replaceFromHistory(step=+1)
 
         # Insert the previous command from the history buffer.
         elif (shiftDown and key == wx.WXK_UP) and self.CanEdit():
@@ -469,46 +396,47 @@ Platform: %s""" % \
 
     def OnShowCompHistory(self):
         """Show possible autocompletion Words from already typed words."""
+        # FIXME: To be done
+        pass
 
-        #copy from history
-        his = self.history[:]
-
-        #put together in one string
-        joined = " ".join (his)
-        import re
-
-        #sort out only "good" words
-        newlist = re.split("[ \.\[\]=}(\)\,0-9\"]", joined)
-
-        #length > 1 (mix out "trash")
-        thlist = []
-        for i in newlist:
-            if len (i) > 1:
-                thlist.append (i)
-
-        #unique (no duplicate words
-        #oneliner from german python forum => unique list
-        unlist = [thlist[i] for i in xrange(len(thlist)) if thlist[i] not in thlist[:i]]
-
-        #sort lowercase
-        unlist.sort(lambda a, b: cmp(a.lower(), b.lower()))
-
-        #this is more convenient, isn't it?
-        self.AutoCompSetIgnoreCase(True)
-
-        #join again together in a string
-        stringlist = " ".join(unlist)
-
-        #pos von 0 noch ausrechnen
-
-        #how big is the offset?
-        cpos = self.GetCurrentPos() - 1
-        while chr (self.GetCharAt (cpos)).isalnum():
-            cpos -= 1
-
-        #the most important part
-        self.AutoCompShow(self.GetCurrentPos() - cpos -1, stringlist)
-
+##        #copy from history
+##        his = self.history[:]
+##
+##        #put together in one string
+##        joined = " ".join (his)
+##        import re
+##
+##        #sort out only "good" words
+##        newlist = re.split("[ \.\[\]=}(\)\,0-9\"]", joined)
+##
+##        #length > 1 (mix out "trash")
+##        thlist = []
+##        for i in newlist:
+##            if len (i) > 1:
+##                thlist.append (i)
+##
+##        #unique (no duplicate words)
+##        unlist = [thlist[i] 
+##                    for i in xrange(len(thlist)) 
+##                    if thlist[i] not in thlist[:i]]
+##
+##        #sort lowercase
+##        unlist.sort(lambda a, b: cmp(a.lower(), b.lower()))
+##
+##        #this is more convenient, isn't it?
+##        self.AutoCompSetIgnoreCase(True)
+##
+##        #join again together in a string
+##        stringlist = " ".join(unlist)
+##
+##        #how big is the offset?
+##        cpos = self.GetCurrentPos() - 1
+##        while chr (self.GetCharAt (cpos)).isalnum():
+##            cpos -= 1
+##
+##        #the most important part
+##        self.AutoCompShow(self.GetCurrentPos() - cpos -1, stringlist)
+##
 
     def clearCommand(self):
         """Delete the current, unexecuted command."""
@@ -518,21 +446,20 @@ Platform: %s""" % \
         self.ReplaceSelection('')
         self.more = False
 
-    def OnHistoryReplace(self, step):
-        """Replace with the previous/next command from the history buffer."""
-        self.clearCommand()
-        self.replaceFromHistory(step)
-
     def replaceFromHistory(self, step):
         """Replace selection with command from the history buffer."""
-        ps2 = str(sys.ps2)
-        self.ReplaceSelection('')
-        newindex = self.historyIndex + step
-        if -1 <= newindex <= len(self.history):
-            self.historyIndex = newindex
-        if 0 <= newindex <= len(self.history)-1:
-            command = self.history[self.historyIndex]
-            command = command.replace('\n', os.linesep + ps2)
+        current_command = self.get_current_command()
+        # FIXME: This works only for step in (1, -1)
+        if step == -1:
+            command = self.ip_readline.get_history_item_previous(
+                                                            current_command)
+        elif step == 1:
+            command = self.ip_readline.get_history_item_next(
+                                                            current_command)
+        else:
+            return
+        if command is not None:
+            self.clearCommand()
             self.ReplaceSelection(command)
 
     def OnHistoryInsert(self, step):
@@ -546,34 +473,8 @@ Platform: %s""" % \
 
     def OnHistorySearch(self):
         """Search up the history buffer for the text in front of the cursor."""
-        if not self.CanEdit():
-            return
-        startpos = self.GetCurrentPos()
-        # The text up to the cursor is what we search for.
-        numCharsAfterCursor = self.GetTextLength() - startpos
-        searchText = self.getCommand(rstrip=False)
-        if numCharsAfterCursor > 0:
-            searchText = searchText[:-numCharsAfterCursor]
-        if not searchText:
-            return
-        # Search upwards from the current history position and loop
-        # back to the beginning if we don't find anything.
-        if (self.historyIndex <= -1) \
-        or (self.historyIndex >= len(self.history)-2):
-            searchOrder = range(len(self.history))
-        else:
-            searchOrder = range(self.historyIndex+1, len(self.history)) + \
-                          range(self.historyIndex)
-        for i in searchOrder:
-            command = self.history[i]
-            if command[:len(searchText)] == searchText:
-                # Replace the current selection with the one we found.
-                self.ReplaceSelection(command[len(searchText):])
-                endpos = self.GetCurrentPos()
-                self.SetSelection(endpos, startpos)
-                # We've now warped into middle of the history.
-                self.historyIndex = i
-                break
+        ### XXX: To be implemented
+        pass
 
     def setStatusText(self, text):
         """Display status information."""
@@ -589,19 +490,12 @@ Platform: %s""" % \
             self.more = True
             self.prompt()
 
-    def processLine(self):
-        """Process the line of text at which the user hit Enter."""
-
-        # The user hit ENTER and we need to decide what to do. They
-        # could be sitting on any line in the shell.
-
+    def get_current_command(self):
         thepos = self.GetCurrentPos()
         startpos = self.promptPosEnd
         endpos = self.GetTextLength()
         # Fixme: the ps2 prompt must be requested from the engine
         ps2 = str(sys.ps2)
-        # If they hit RETURN inside the current command, execute the
-        # command.
         if self.CanEdit():
             self.SetCurrentPos(endpos)
             # fixme: commented out for now.
@@ -624,6 +518,15 @@ Platform: %s""" % \
             #else:
             #    self.push(command)
             #    wx.FutureCall(1, self.EnsureCaretVisible)
+            return command
+
+    def processLine(self):
+        """Process the line of text at which the user hit Enter."""
+
+        # The user hit ENTER and we need to decide what to do. They
+        # could be sitting on any line in the shell.
+        command = self.get_current_command()
+        if command is not None:
             self.push(command)
             wx.FutureCall(1, self.EnsureCaretVisible)
 
@@ -731,7 +634,7 @@ Platform: %s""" % \
         # Execute the code.
         # fixme: Need to handle the case when a line doesn't represent a full
         #        line of code (like the more part of the old interpreter)
-        ip_output,self.more = self.ip_readline.push_text(command)
+        ip_output, self.more = self.ip_readline.push_text(command)
 
         if isinstance(ip_output,dict):
             self.write(''.join(ip_output['exception_value']))
@@ -752,21 +655,8 @@ Platform: %s""" % \
         self.waiting = False
         del busy
 
-        if not self.more:
-            self.addHistory(command.rstrip())
         if not silent:
             self.prompt(ip_output.prompt_num)
-
-    def addHistory(self, command):
-        """Add command to the command history."""
-        # Reset the history position.
-        self.historyIndex = -1
-        # Insert this command into the history, unless it's a blank
-        # line or the same as the last command.
-        if command != '' \
-        and (len(self.history) == 0 or command != self.history[0]):
-            self.history.insert(0, command)
-            dispatcher.send(signal="Shell.addHistory", command=command)
 
     def write(self, text):
         """Display text in the shell.
@@ -831,55 +721,9 @@ Platform: %s""" % \
         self.EnsureCaretVisible()
         self.ScrollToColumn(0)
 
-    def ask(self, prompt='Please enter your response:'):
-        """Get response from the user using a dialog box."""
-        dialog = wx.TextEntryDialog(None, prompt,
-                                    'Input Dialog (Raw)', '')
-        try:
-            if dialog.ShowModal() == wx.ID_OK:
-                text = dialog.GetValue()
-                return text
-        finally:
-            dialog.Destroy()
-        return ''
-
-    def pause(self):
-        """Halt execution pending a response from the user."""
-        self.ask('Press enter to continue:')
-
     def clear(self):
         """Delete all text from the shell."""
         self.ClearAll()
-
-    def run(self, command, prompt=True, verbose=True):
-        """Execute command as if it was typed in directly.
-        >>> shell.run('print "this"')
-        >>> print "this"
-        this
-        >>>
-        """
-        # Go to the very bottom of the text.
-        endpos = self.GetTextLength()
-        self.SetCurrentPos(endpos)
-        command = command.rstrip()
-        if prompt: self.prompt()
-        if verbose: self.write(command)
-        self.push(command)
-
-    def runfile(self, filename):
-        """Execute all commands in file as if they were typed into the
-        shell."""
-        file = open(filename)
-        try:
-            self.prompt()
-            for command in file.readlines():
-                if command[:6] == 'shell.':
-                    # Run shell methods silently.
-                    self.run(command, prompt=False, verbose=False)
-                else:
-                    self.run(command, prompt=False, verbose=True)
-        finally:
-            file.close()
 
     def autoCompleteShow(self, command, offset = 0):
         """Display auto-completion popup list."""
@@ -1141,7 +985,6 @@ Platform: %s""" % \
         self.SetZoom(points)
 
 
-
     def LoadSettings(self, config):
         self.autoComplete              = config.ReadBool('Options/AutoComplete', True)
         self.autoCompleteIncludeMagic  = config.ReadBool('Options/AutoCompleteIncludeMagic', True)
@@ -1161,7 +1004,6 @@ Platform: %s""" % \
             self.SetZoom(zoom)
 
 
-
     def SaveSettings(self, config):
         config.WriteBool('Options/AutoComplete', self.autoComplete)
         config.WriteBool('Options/AutoCompleteIncludeMagic', self.autoCompleteIncludeMagic)
@@ -1175,7 +1017,19 @@ Platform: %s""" % \
         config.WriteInt('View/Zoom/Shell', self.GetZoom())
 
 if __name__ == '__main__':
-    app = wx.PyWidgetTester(size = (640, 480))
-    #app.SetWidget(IPWxFrontEnd, -1)
-    app.SetWidget(Shell, -1)
+    class MainWindow(wx.Frame):
+        def __init__(self, parent, id, title):
+            wx.Frame.__init__(self, parent, id, title, size=(300,250))
+            self._sizer = wx.BoxSizer(wx.VERTICAL)
+            self.shell = Shell(self)
+            self._sizer.Add(self.shell, 1, wx.EXPAND)
+            self.SetSizer(self._sizer)
+            self.SetAutoLayout(1)
+            self.Show(True)
+
+    app = wx.PySimpleApp()
+    frame = MainWindow(None, wx.ID_ANY, 'Ipython')
+    frame.SetSize((780, 460))
+    shell = frame.shell
     app.MainLoop()
+

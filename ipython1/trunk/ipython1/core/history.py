@@ -1,13 +1,21 @@
-""" Manage the input and output history of the interpreter.
+""" Manage the input and output history of the interpreter and the
+frontend.
+
+There are 2 different history objects, one that lives in the interpreter,
+and one that lives in the frontend. They are synced with a diff at each
+execution of a command, as the interpreter history is a real stack, its
+existing entries are not mutable.
 """
+
+from copy import copy
 
 # Local imports.
 from util import InputList
 
 
+##############################################################################
 class History(object):
-    """ An object managing the input and output history at the interpreter
-    level.
+    """ An object managing the input and output history.
     """
 
     def __init__(self, input_cache=None, output_cache=None):
@@ -21,13 +29,27 @@ class History(object):
 
         # A list to store input commands.
         if input_cache is None:
-            input_cache = InputList([''])
+            input_cache =InputList([])
         self.input_cache = input_cache
 
         # A dictionary to store trapped output.
         if output_cache is None:
             output_cache = {}
         self.output_cache = output_cache
+
+    def get_history_item(self, index):
+        """ Returns the history string at index, where index is the
+        distance from the end (positive). 
+        """
+        if index>0 and index<len(self.input_cache):
+            return self.input_cache[index]
+
+
+##############################################################################
+class InterpreterHistory(History):
+    """ An object managing the input and output history at the interpreter
+    level.
+    """
 
     def setup_namespace(self, namespace):
         """ Add the input and output caches into the interpreter's namespace
@@ -63,9 +85,38 @@ class History(object):
             self.namespace_additions['_'] = new_obj
             self.output_cache[number] = new_obj
 
-        interpreter.namespace.update(self.namespace_additions)
+        interpreter.user_ns.update(self.namespace_additions)
         self.input_cache.add(number, python)
 
 
+    def get_history_item(self, index):
+        """ Returns the history string at index, where index is the
+        distance from the end (positive). 
+        """
+        if index>0 and index<(len(self.input_cache)-1):
+            return self.input_cache[-index]
+
+    def get_input_cache(self):
+        return copy(self.input_cache)
+
+    def get_input_after(self, index):
+        """ Returns the list of the commands entered after index.
+        """
+        # We need to call directly list.__getslice__, because this object
+        # is not a real list.
+        return list.__getslice__(self.input_cache, index,
+                                                len(self.input_cache))
 
 
+##############################################################################
+class FrontEndHistory(History):
+    """ An object managing the input and output history at the frontend.
+        It is used as a local cache to reduce network latency problems
+        and multiple users editing the same thing.
+    """
+
+    def add_items(self, item_list):
+        """ Adds the given command list to the stack of executed
+            commands.
+        """
+        self.input_cache.extend(item_list)

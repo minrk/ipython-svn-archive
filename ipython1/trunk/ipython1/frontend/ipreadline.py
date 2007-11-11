@@ -2,8 +2,10 @@
 IPReadline: interface between the Interpreter and the FrontEnd. 
 """
 
-from ipython1.core1.interpreter import Interpreter, COMPILER_ERROR, \
+from ipython1.core.interpreter import Interpreter, COMPILER_ERROR, \
                 COMPLETE_INPUT, INCOMPLETE_INPUT
+
+from ipython1.core.history import FrontEndHistory
 
 # XXX - Get this info from the interpreter, not from readline (since we may
 # well NOT have readline around)
@@ -53,13 +55,29 @@ class IPReadline(object):
     The FrontEnd, manages its line-buffer (moves the cursors, add the
     characters) but asks the IPReadline what to do with an user input
     throught the "process_key" method (to be implemented).
-    """
 
-    def __init__(self, interpreter=None):
+    XXX: Currently the interpreter is local and sits in the same process.
+    However we need to be able to have a process boundary between the
+    interpreter and the readline. This will probably be implemented by
+    an adapter interpreter.
+    """
+    
+    
+    # History cursor: the position of the history refered from the start
+    # of the history list.
+    history_index = 0
+
+    def __init__(self, interpreter=None, history=None):
         if interpreter is None:
             self.interpreter = Interpreter()
         else:
             self.interpreter = interpreter
+        if history is None:
+            self.history = FrontEndHistory(
+                        input_cache=self.interpreter.get_history_input_cache()
+                        + [''])
+        else:
+            self.history = history
 
     def process_key(self, char, buffer, position, insert=True):
         """ called when a char is entered in the current buffer (ie line)
@@ -84,26 +102,38 @@ class IPReadline(object):
 
             The return values are
 
-            X,more
+            X, more
 
             X can be several things (FIXME!), more is a boolean indicating
             whether more input is expected. """
         
         is_complete = self.interpreter.feed_block(text)
         print "Is complete ?", is_complete  # dbg
-        if is_complete == INCOMPLETE_INPUT:
+        if is_complete[0] == INCOMPLETE_INPUT:
             return "\n",True
-        elif is_complete == COMPILER_ERROR:
+        elif is_complete[0] == COMPILER_ERROR:
             # FIXME: Hack, there should really be user feedback for an
             # error.
             print 'ERROR:',self.interpreter.message
             return self.interpreter.message,False
-        elif is_complete == COMPLETE_INPUT:
+        elif is_complete[0] == COMPLETE_INPUT:
             result_dict = self.interpreter.execute(text)
             # FIXME: This is blocking. It should be easy to switch from a
             # non-block (threaded) behavior) to a blocking behavior.
             # return PendingResult()
-            return InterpreterResult(result_dict),False
+
+            ### Sync the local history with the interpreter's ###
+            # First remove the current edited line:
+            self.history.input_cache.pop()
+            self.interpreter.get_history_input_after(
+                        len(self.history.input_cache))
+            self.history.input_cache.extend(
+                    self.interpreter.get_history_input_after(
+                        len(self.history.input_cache)))
+            self.history_index = len(self.history.input_cache) 
+            # Add a blank line at the end of the history.
+            self.history.input_cache.append('')
+            return InterpreterResult(result_dict), False
 
     def fetch_docstring(self, position):
         pass
@@ -114,6 +144,26 @@ class IPReadline(object):
         for delim in completer_delims:
             word = word.split(delim)[-1]
         return word
+
+    def get_history_item_previous(self, current_line):
+        """ Returns previous history string and decrement history cursor.
+        """
+        new_cursor = self.history_index - 1
+        command = self.history.get_history_item(new_cursor)
+        if command is not None:
+            self.history.input_cache[self.history_index] = current_line
+            self.history_index = new_cursor
+        return command
+
+    def get_history_item_next(self, current_line):
+        """ Returns next history string and increment history cursor.
+        """
+        new_cursor = self.history_index + 1
+        command = self.history.get_history_item(new_cursor)
+        if command is not None:
+            self.history.input_cache[self.history_index] = current_line
+            self.history_index = new_cursor
+        return command
 
     def complete(self, position):
         word = self.get_docstring(position)

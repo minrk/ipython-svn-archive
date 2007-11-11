@@ -1,22 +1,46 @@
 # Standard library imports.
-import sys
-import compiler
 from compiler.ast import Discard
-import codeop
-import __builtin__
 from types import FunctionType
 
-# Local imports.
-from ipython1.external.Itpl import ItplNS
-from display_trap import DisplayTrap
-from macro import Macro
-from traceback_trap import TracebackTrap
-from util import Bunch, system_shell
-
-# Temporarily use this until it is ported to ipython1
-from IPython import ultraTB
+import __builtin__
+import codeop
+import compiler
 import pprint
+import sys
+import traceback
 
+# Local imports.
+from ipython1.core import ultraTB
+from ipython1.core.display_trap import DisplayTrap
+from ipython1.core.macro import Macro
+from ipython1.core.prompts import CachedOutput
+from ipython1.core.traceback_trap import TracebackTrap
+from ipython1.core.util import Bunch, system_shell
+from ipython1.external.Itpl import ItplNS
+
+# Global constants
+COMPILER_ERROR = 'error'
+INCOMPLETE_INPUT = 'incomplete'
+COMPLETE_INPUT = 'complete'
+
+##############################################################################
+# TEMPORARY!!! fake configuration, while we decide whether to use tconfig or
+# not
+
+rc = Bunch()
+rc.cache_size = 100
+rc.pprint = True
+rc.separate_in = '\n'
+rc.separate_out = '\n'
+rc.separate_out2 = ''
+rc.prompt_in1 = r'In [\#]: '
+rc.prompt_in2 = r'   .\\D.: '
+rc.prompt_out = ''
+rc.prompts_pad_left = False
+
+##############################################################################
+
+# Top-level utilities
 def default_display_formatters():
     """ Return a list of default display formatters.
     """
@@ -31,32 +55,33 @@ def default_traceback_formatters():
     from traceback_formatter import PlainTracebackFormatter
     return [PlainTracebackFormatter()]
 
-
-# XXX - experimental code to try to send exceptions over the wire with better
-# information... Doesn't really work yet. - fperez
-## import new
-## def ewrap(evalue,msg):
-##     evalue.message = msg
-##     def __str__(self):
-##         return self.__ipython_message
-    
-##     evalue.__str__ = new.instancemethod(__str__,evalue,evalue.__class__)
-
+# Top-level classes
+class NotDefined(object):    pass
 
 class Interpreter(object):
     """ An interpreter object.
 
     fixme: needs to negotiate available formatters with frontends.
+
+    Important: the interpeter should be built so that it exposes a method
+    for each attribute/method of its sub-object. This way it can be
+    replaced by a network adapter.
     """
 
-    def __init__(self, namespace=None, translator=None, magic=None,
-        display_formatters=None, traceback_formatters=None, output_trap=None,
-        history=None, message_cache=None, filename='<string>', config=None):
+    def __init__(self, user_ns=None, global_ns=None,translator=None,
+                 magic=None, display_formatters=None,
+                 traceback_formatters=None, output_trap=None, history=None,
+                 message_cache=None, filename='<string>', config=None):
 
-        # The namespace.
-        if namespace is None:
-            namespace = {}
-        self.namespace = namespace
+        # The local/global namespaces for code execution
+        local_ns = user_ns  # compatibility name
+        if local_ns is None:
+            local_ns = {}
+        self.user_ns = local_ns
+        # The local namespace
+        if global_ns is None:
+            global_ns = {}
+        self.user_global_ns = global_ns
 
         # An object that will translate commands into executable Python.
         # The current translator does not work properly so for now we are going
@@ -90,9 +115,12 @@ class Interpreter(object):
 
         # An object that manages the history.
         if history is None:
-            from ipython1.core.history import History
-            history = History()
+            from ipython1.core.history import InterpreterHistory
+            history = InterpreterHistory()
         self.history = history
+        self.get_history_item = history.get_history_item
+        self.get_history_input_cache = history.get_input_cache
+        self.get_history_input_after = history.get_input_after
 
         # An object that caches all of the return messages.
         if message_cache is None:
@@ -137,6 +165,23 @@ class Interpreter(object):
 
         # The number of the current cell.
         self.current_cell_number = 1
+
+        # Initialize cache, set in/out prompts and printing system
+        self.outputcache = CachedOutput(self,
+                                        rc.cache_size,
+                                        rc.pprint,
+                                        input_sep = rc.separate_in,
+                                        output_sep = rc.separate_out,
+                                        output_sep2 = rc.separate_out2,
+                                        ps1 = rc.prompt_in1,
+                                        ps2 = rc.prompt_in2,
+                                        ps_out = rc.prompt_out,
+                                        pad_left = rc.prompts_pad_left)
+
+        # Need to decide later if this is the right approach, but clients
+        # commonly use sys.ps1/2, so it may be best to just set them here
+        sys.ps1 = self.outputcache.prompt1.p_str
+        sys.ps2 = self.outputcache.prompt2.p_str
 
         # This is the message dictionary assigned temporarily when running the
         # code.
@@ -206,11 +251,11 @@ Engine action that caused the error:
 
         # Create a message dictionary with all of the information we will be
         # returning to the frontend and other listeners.
-        message = dict(number=self.current_cell_number)
+        message = self.setup_message()
 
         # Massage the input and store the raw and translated commands into
         # a dict.
-        input = dict(raw=commands)
+        user_input = dict(raw=commands)
         if self.translator is not None:
             python = self.translator(commands, message)
             if python is None:
@@ -219,8 +264,8 @@ Engine action that caused the error:
                 return message
         else:
             python = commands
-        input['translated'] = python
-        message['input'] = input
+        user_input['translated'] = python
+        message['input'] = user_input
 
         # Set the message object so that any magics executed in the code have
         # access.
@@ -272,8 +317,8 @@ Engine action that caused the error:
     def execute_python(self, python):
         """ Actually run the Python code in the namespace.
 
-        Parameters
-        ----------
+        :Parameters:
+
         python : str
             Pure, exec'able Python code. Special IPython commands should have
             already been translated into pure Python.
@@ -284,25 +329,44 @@ Engine action that caused the error:
         try:
             commands = self.split_commands(python)
         except (SyntaxError, IndentationError), e:
-            # The code has incorrect syntax. Return the exception object with
-            # the message.
-            self.message['syntax_error'] = e
             # Save the exc_info so compilation related exceptions can be
             # reraised
             self.traceback_trap.args = sys.exc_info()
-            return
+            self.pack_exception(self.message,e)
+            return None
 
         for cmd in commands:
             try:
                 code = self.command_compiler(cmd, self.filename, 'single')
             except (SyntaxError, OverflowError, ValueError), e:
-                self.message['syntax_error'] = e
                 self.traceback_trap.args = sys.exc_info()
+                self.pack_exception(self.message,e)
+                # No point in continuing if one block raised
+                return None
             else:
-                try:
-                    exec code in self.namespace
-                except:
-                    self.traceback_trap.args = sys.exc_info()
+                self.execute_block(code)
+
+    def execute_block(self,code):
+        """Execute a single block of code in the user namespace.
+
+        Return value: a flag indicating whether the code to be run completed
+        successfully:
+
+          - 0: successful execution.
+          - 1: an error occurred.
+          """
+        
+        outflag = 1 # start by assuming error, success will reset it
+        try:
+            exec code in self.user_ns
+            outflag = 0
+        except SystemExit:
+            self.resetbuffer()
+            self.traceback_trap.args = sys.exc_info()
+        except:
+            self.traceback_trap.args = sys.exc_info()
+
+        return outflag
 
     def execute_macro(self, macro):
         """ Execute the value of a macro.
@@ -333,10 +397,17 @@ Engine action that caused the error:
         In the future we might want to also reset the other stateful
         things like that the Interpreter has, like In, Out, etc.
         """
-        self.namespace = {}
+        self.user_ns.clear()
         self.setup_namespace()
 
-    def complete(self, text):
+    def complete(self,line,text=None, pos=None):
+        """Complete the given text.
+
+        :Parameters:
+
+          text : str
+            Text fragment to be completed on.  Typically this is
+        """
         # fixme: implement
         raise NotImplementedError
 
@@ -348,13 +419,70 @@ Engine action that caused the error:
         **kwds
         """          
         
-        # First set the func_globals for all functions to self.namespace
+        # First set the func_globals for all functions to self.user_ns
         for k, v in kwds.iteritems():
             if isinstance(v, FunctionType):
-                kwds[k] = FunctionType(v.func_code, self.namespace)
+                kwds[k] = FunctionType(v.func_code, self.user_ns)
 
-        self.namespace.update(kwds)
+        self.user_ns.update(kwds)
 
+    def pack_exception(self,message,exc):
+        message['exception'] = exc.__class__
+        message['exception_value'] = \
+        traceback.format_exception_only(exc.__class__, exc)
+
+    def feed_block(self, source, filename='<input>', symbol='single'):
+        """Compile some source in the interpreter.
+
+        One several things can happen:
+
+        1) The input is incorrect; compile_command() raised an
+        exception (SyntaxError or OverflowError).
+
+        2) The input is incomplete, and more input is required;
+        compile_command() returned None.  Nothing happens.
+
+        3) The input is complete; compile_command() returned a code
+        object.  The code is executed by calling self.runcode() (which
+        also handles run-time exceptions, except for SystemExit).
+
+        The return value is:
+
+          - True in case 2
+
+          - False in the other cases, unless an exception is raised, where
+          None is returned instead.  This can be used by external callers to
+          know whether to continue feeding input or not.
+
+        The return value can be used to decide whether to use sys.ps1 or
+        sys.ps2 to prompt the next line."""
+
+        self.message = self.setup_message()
+
+        try:
+            code = self.command_compiler(source,filename,symbol)
+        except (OverflowError, SyntaxError, IndentationError, ValueError ), e:
+            # Case 1
+            self.traceback_trap.args = sys.exc_info()
+            self.pack_exception(self.message,e)
+            return COMPILER_ERROR,False
+
+        if code is None:
+            # Case 2: incomplete input.  This means that the input can span
+            # multiple lines.  But we still need to decide when to actually
+            # stop taking user input.  Later we'll add auto-indentation support
+            # somehow.  In the meantime, we'll just stop if there are two lines
+            # of pure whitespace at the end.
+            last_two = source.rsplit('\n',2)[-2:]
+            print 'last two:',last_two  # dbg
+            if len(last_two)==2 and all(s.isspace() for s in last_two):
+                return COMPLETE_INPUT,False
+            else:
+                return INCOMPLETE_INPUT, True
+        else:
+            # Case 3
+            return COMPLETE_INPUT, False
+        
     def pull(self, key):
         """ Get an item out of the namespace by key.
         
@@ -371,15 +499,12 @@ Engine action that caused the error:
         TypeError if the key is not a string.
         NameError if the object doesn't exist.
         """
-        
-        class NotDefined(object):
-            pass
-        
+
         if not isinstance(key, str):
             raise TypeError("Objects must be keyed by strings.")
         # Get the value this way in order to check for the presence of the key
         # and obtaining it actomically. No locks!
-        result = self.namespace.get(key, NotDefined())
+        result = self.user_ns.get(key, NotDefined())
         if isinstance(result, NotDefined):
             raise NameError('name %s is not defined' % key)
         else:
@@ -433,6 +558,7 @@ Engine action that caused the error:
         """
 
         # Taken from IPython.
+        raise NotImplementedError('Not ported yet')
 
         args = arg_string.split(' ', 1)
         magic_name = args[0]
@@ -452,25 +578,37 @@ Engine action that caused the error:
 
     #### Private 'Interpreter' interface #######################################
 
+    def setup_message(self):
+        """Return a message object.
+
+        This method prepares and returns a message dictionary.  This dict
+        contains the various fields that are used to transfer information about
+        execution, results, tracebacks, etc, to clients (either in or out of
+        process ones).  Because of the need to work with possibly out of
+        process clients, this dict MUST contain strictly pickle-safe values.
+        """
+
+        return dict(number=self.current_cell_number)
+    
     def setup_namespace(self):
         """ Add things to the namespace.
         """
 
-        self.namespace.setdefault('__name__', '__main__')
-        self.namespace.setdefault('__builtins__', __builtin__)
-        self.namespace['__IP'] = self
+        self.user_ns.setdefault('__name__', '__main__')
+        self.user_ns.setdefault('__builtins__', __builtin__)
+        self.user_ns['__IP'] = self
         if self.raw_input_builtin is not None:
-            self.namespace['raw_input'] = self.raw_input_builtin
+            self.user_ns['raw_input'] = self.raw_input_builtin
         if self.input_builtin is not None:
-            self.namespace['input'] = self.input_builtin
-        
+            self.user_ns['input'] = self.input_builtin
+
         builtin_additions = dict(
             ipmagic=self.ipmagic,
         )
         __builtin__.__dict__.update(builtin_additions)
 
         if self.history is not None:
-            self.history.setup_namespace(self.namespace)
+            self.history.setup_namespace(self.user_ns)
 
     def set_traps(self):
         """ Set all of the output, display, and traceback traps.
@@ -567,7 +705,7 @@ Engine action that caused the error:
         template : str
         """
 
-        return str(ItplNS(template, self.namespace))
+        return str(ItplNS(template, self.user_ns))
 
     def _possible_macro(self, obj):
         """ If the object is a macro, execute it.

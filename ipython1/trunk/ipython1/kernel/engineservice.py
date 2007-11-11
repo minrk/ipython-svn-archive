@@ -454,7 +454,7 @@ method: reset()""" % self.id
         """
         
         remotes = []
-        for k in self.shell.namespace.iterkeys():
+        for k in self.shell.user_ns.iterkeys():
             if k not in ['__name__', '_ih', '_oh', '__builtins__',
                          'In', 'Out', '_', '__', '___', '__IP', 'input', 'raw_input']:
                 remotes.append(k)

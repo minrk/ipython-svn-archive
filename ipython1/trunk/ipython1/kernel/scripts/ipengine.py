@@ -52,7 +52,7 @@ def main(n, logfile):
             mpi = None
     else:
         mpi = None
-
+    
     if logfile:
         logfile = logfile + str(os.getpid()) + '.log'
         try:
@@ -126,7 +126,7 @@ def start(n=1):
         kco['engine']['connectToControllerOn']['port'] = options.controllerport
     if options.mpi is not None:
         kco['mpi']['default'] = options.mpi
-            
+        
     main(options.n, options.logfile)
     
 if __name__ == "__main__":
