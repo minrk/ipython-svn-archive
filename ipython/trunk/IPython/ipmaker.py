@@ -301,9 +301,9 @@ object?   -> Details about 'object'. ?object also works, ?? prints more.
 
     try:
         getopt.processArguments(argv)
-    except:
+    except DPyGetOpt.ArgumentError, exc:
         print cmd_line_usage
-        warn('\nError in Arguments: ' + `sys.exc_value`)
+        warn('\nError in Arguments: "%s"' % exc)
         sys.exit(1)
 
     # convert the options dict to a struct for much lighter syntax later

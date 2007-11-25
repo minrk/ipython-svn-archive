@@ -1405,8 +1405,9 @@ Currently the magic system has the following functions:\n"""
 
         The file is executed in a namespace initially consisting only of
         __name__=='__main__' and sys.argv constructed as indicated. It thus
-        sees its environment as if it were being run as a stand-alone
-        program. But after execution, the IPython interactive namespace gets
+        sees its environment as if it were being run as a stand-alone program
+        (except for sharing global objects such as previously imported
+        modules). But after execution, the IPython interactive namespace gets
         updated with all variables defined in the program (except for __name__
         and sys.argv). This allows for very convenient loading of code for
         interactive work, while giving each program a 'clean sheet' to run in.

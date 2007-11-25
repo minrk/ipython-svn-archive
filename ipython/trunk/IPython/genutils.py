@@ -620,9 +620,9 @@ def process_cmdline(argv,names=[],defaults={},usage=''):
 
     try:
         getopt.processArguments(argv)
-    except:
+    except DPyGetOpt.ArgumentError, exc:
         print usage
-        warn(`sys.exc_value`,level=4)
+        warn('"%s"' % exc,level=4)
 
     defaults.update(getopt.optionValues)
     args = getopt.freeValues
