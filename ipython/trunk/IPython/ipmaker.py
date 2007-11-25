@@ -200,7 +200,7 @@ object?   -> Details about 'object'. ?object also works, ?? prints more.
                       deep_reload = 0,
                       editor = '0',
                       help = 0,
-                      interact = 0,
+                      interact = 1,
                       ipythondir = ipythondir_def,
                       log = 0,
                       logfile = '',
