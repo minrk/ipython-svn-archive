@@ -55,7 +55,6 @@ import sys
 import tempfile
 import traceback
 import types
-import pickleshare
 from sets import Set
 from pprint import pprint, pformat
 
@@ -63,6 +62,7 @@ from pprint import pprint, pformat
 #import IPython
 from IPython import Debugger,OInspect,PyColorize,ultraTB
 from IPython.ColorANSI import ColorScheme,ColorSchemeTable  # too long names
+from IPython.Extensions import pickleshare
 from IPython.FakeModule import FakeModule
 from IPython.Itpl import Itpl,itpl,printpl,ItplNS,itplns
 from IPython.Logger import Logger
@@ -1841,6 +1841,7 @@ want to merge them back into the new files.""" % locals()
                     self.indent_current_nsp -= 4
             else:
                 self.indent_current_nsp = 0
+
     def runlines(self,lines):
         """Run a string of one or more lines of source.
 
