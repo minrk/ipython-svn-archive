@@ -1147,6 +1147,14 @@ Currently the magic system has the following functions:\n"""
                    'Current session state plus future input saved.')
             logger.logstate()
 
+    def magic_logstop(self,parameter_s=''):
+        """Fully stop logging and close log file.
+
+        In order to start logging again, a new %logstart call needs to be made,
+        possibly (though not necessarily) with a new filename, mode and other
+        options."""
+        self.logger.logstop()
+
     def magic_logoff(self,parameter_s=''):
         """Temporarily stop logging.
 
