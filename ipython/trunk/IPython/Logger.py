@@ -264,7 +264,6 @@ which already exists. But you must first start the logging process with
         
         self.logfile.close()
         self.logfile = None
-        self.logfname = ''
         self.log_active = False
 
     # For backwards compatibility, in case anyone was using this.
