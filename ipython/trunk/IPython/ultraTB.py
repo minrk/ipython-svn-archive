@@ -135,11 +135,18 @@ def findsource(object):
     FIXED version with which we monkeypatch the stdlib to work around a bug."""
 
     file = getsourcefile(object) or getfile(object)
-    module = getmodule(object, file)
-    if module:
-        lines = linecache.getlines(file, module.__dict__)
+    # If the object is a frame, then trying to get the globals dict from its
+    # module won't work. Instead, the frame object itself has the globals
+    # dictionary.
+    globals_dict = None
+    if inspect.isframe(object):
+        # XXX: can this ever be false?
+        globals_dict = object.f_globals
     else:
-        lines = linecache.getlines(file)
+        module = getmodule(object, file)
+        if module:
+            globals_dict = module.__dict__
+    lines = linecache.getlines(file, globals_dict)
     if not lines:
         raise IOError('could not get source code')
 
