@@ -618,7 +618,7 @@ class InteractiveShell(object,Magic):
         namespace.
         """
 
-        return str(ItplNS(cmd.replace('#','\#'),
+        return str(ItplNS(cmd,
                           self.user_ns,  # globals
                           # Skip our own frame in searching for locals:
                           sys._getframe(depth+1).f_locals # locals
