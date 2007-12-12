@@ -79,6 +79,16 @@ import IPython.prefilter as prefilter
 import IPython.shadowns
 # Globals
 
+# make converting between str and unicode easy, so str() will work most of the
+# time
+
+try:
+    sys.setappdefaultencoding(sys.stdin.encoding or 'ascii')
+except:
+    # Many python versions don't have sys.setappdefaultencoding
+    reload(sys)
+    sys.setdefaultencoding(sys.stdin.encoding or 'ascii')
+
 # store the builtin raw_input globally, and use this always, in case user code
 # overwrites it (like wx.py.PyShell does)
 raw_input_original = raw_input
@@ -1911,7 +1921,7 @@ want to merge them back into the new files.""" % locals()
         # this allows execution of indented pasted code. It is tempting
         # to add '\n' at the end of source to run commands like ' a=1'
         # directly, but this fails for more complicated scenarios
-        source=source.encode(self.stdin_encoding)
+        source = str(source)
         if source[:1] in [' ', '\t']:
             source = 'if 1:\n%s' % source
 
