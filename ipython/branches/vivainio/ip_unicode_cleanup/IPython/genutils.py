@@ -276,9 +276,10 @@ def arg_split(s,posix=False):
     #
     # first, to ensure that shlex gets a normal string.  Input from anyone who
     # knows more about unicode and shlex than I would be good to have here...
-    lex = shlex.shlex(s, posix=posix)
+    enc = s.encode(sys.stdin.encoding,'backslashreplace')
+    lex = shlex.shlex(enc, posix=posix)
     lex.whitespace_split = True
-    return list(lex)
+    return [el.decode(sys.stdin.encoding) for el in lex]
 
 def system(cmd,verbose=0,debug=0,header=''):
     """Execute a system command, return its exit status.
@@ -1146,8 +1147,8 @@ def make_quoted_expr(s):
         quote = "'''"
     else:
         # give up, backslash-escaped string will do
-        return '"%s"' % esc_quotes(s)
-    res = raw + quote + s + tailpadding + quote + tail
+        return 'u"%s"' % esc_quotes(s)
+    res = 'u' + raw + quote + s + tailpadding + quote + tail
     return res
 
 

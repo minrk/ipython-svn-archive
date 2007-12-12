@@ -198,13 +198,10 @@ class Itpl:
         result = []
         app = result.append
         for live, chunk in self.chunks:
-            if live: app(str(eval(chunk,glob,loc)))
+            if live: app(unicode(eval(chunk,glob,loc)))
             else: app(chunk)
         out = ''.join(result)
-        try:
-            return str(out)
-        except UnicodeError:
-            return out.encode(self.codec,self.encoding_errors)
+        return unicode(out)
 
     def __str__(self):
         """Evaluate and substitute the appropriate parts of the string."""
@@ -249,10 +246,10 @@ class ItplNS(Itpl):
         return "<ItplNS %s >" % repr(self.format)
 
 # utilities for fast printing
-def itpl(text): return str(Itpl(text))
+def itpl(text): return unicode(Itpl(text))
 def printpl(text): print itpl(text)
 # versions with namespace
-def itplns(text,globals,locals=None): return str(ItplNS(text,globals,locals))
+def itplns(text,globals,locals=None): return unicode(ItplNS(text,globals,locals))
 def printplns(text,globals,locals=None): print itplns(text,globals,locals)
 
 class ItplFile:
