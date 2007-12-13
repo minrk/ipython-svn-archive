@@ -2075,7 +2075,8 @@ want to merge them back into the new files.""" % locals()
                         histlen = self.readline.get_current_history_length()
                         newhist = self.input_hist_raw[-1].rstrip()
                         self.readline.remove_history_item(histlen-1)
-                        self.readline.replace_history_item(histlen-2,newhist)
+                        self.readline.replace_history_item(histlen-2,
+                                        newhist.encode(self.stdin_encoding))
                     except AttributeError:
                         pass # re{move,place}_history_item are new in 2.4.                
             else:
