@@ -33,70 +33,107 @@ class EmacsMode(basemode.BaseMode):
         self._keylog=(lambda x,y: None)
         self.previous_func=None
         self.prompt=">>>"
+
     def __repr__(self):
         return "<EmacsMode>"
 
     def add_key_logger(self,logfun):
         """logfun should be function that takes disp_fun and line_buffer object """
         self._keylog=logfun
-        
-    def _readline_from_keyboard(self):
+
+
+    def _readline_from_keyboard_poll(self):
         c=self.console
         def nop(e):
             pass
-        while 1:
+        try:
+            event = c.getkeypress()
+        except KeyboardInterrupt:
+            event=self.handle_ctrl_c()
             self._update_line()
-            lbuf=self.l_buffer
-            log_sock("point:%d mark:%d selection_mark:%d"%(lbuf.point,lbuf.mark,lbuf.selection_mark))
-            try:
-                event = c.getkeypress()
-                log_sock(u">>%s"%event)
-            except KeyboardInterrupt:
-                from pyreadline.keysyms.common import KeyPress
-                from pyreadline.console.event import Event
-                event=Event(0,0)
-                event.char="c"
-                event.keyinfo=KeyPress("c",shift=False,control=True,meta=False,keyname=None)
-                log_sock("KBDIRQ")
-                if self.allow_ctrl_c:
-                    now=time.time()
-                    if (now-self.ctrl_c_timeout)<self.ctrl_c_tap_time_interval:
-                        raise
-                    else:
-                        self.ctrl_c_timeout=now
-                    pass
-                else:
-                    raise
-            if self.next_meta:
-                self.next_meta = False
-                control, meta, shift, code = event.keyinfo
-                event.keyinfo = (control, True, shift, code)
+            return False
 
-            #Process exit keys. Only exit on empty line
-            keyinfo=event.keyinfo.tuple()
-            if keyinfo in self.exit_dispatch:
-                if lineobj.EndOfLine(self.l_buffer) == 0:
-                    raise EOFError
-            if len(keyinfo[-1])>1:
-                default=nop
+        if self.next_meta:
+            self.next_meta = False
+            control, meta, shift, code = event.keyinfo
+            event.keyinfo = (control, True, shift, code)
+
+        #Process exit keys. Only exit on empty line
+        keyinfo=event.keyinfo.tuple()
+        if keyinfo in self.exit_dispatch:
+            if lineobj.EndOfLine(self.l_buffer) == 0:
+                raise EOFError
+        if len(keyinfo[-1])>1:
+            default=nop
+        else:
+            default=self.self_insert
+        dispatch_func = self.key_dispatch.get(keyinfo,default)
+
+        log("readline from keyboard:%s,%s"%(keyinfo,dispatch_func))
+        log_sock("%s|%s"%(format(keyinfo),dispatch_func.__name__),"bound_function")
+        r = None
+        if dispatch_func:
+            r = dispatch_func(event)
+            self._keylog(dispatch_func,self.l_buffer)
+            self.l_buffer.push_undo()
+
+        self.previous_func = dispatch_func
+        self._update_line()
+        if r:
+            return True
+        return False
+
+
+    def handle_ctrl_c(self):
+        from pyreadline.keysyms.common import KeyPress
+        from pyreadline.console.event import Event
+        log_sock("KBDIRQ")
+        event=Event(0,0)
+        event.char="c"
+        event.keyinfo=KeyPress("c",shift=False,control=True,meta=False,keyname=None)
+        if self.allow_ctrl_c:
+            now=time.time()
+            if (now-self.ctrl_c_timeout)<self.ctrl_c_tap_time_interval:
+                log_sock("Raise KeyboardInterrupt")
+                raise KeyboardInterrupt
             else:
-                default=self.self_insert
-            dispatch_func = self.key_dispatch.get(keyinfo,default)
-            
-            log("readline from keyboard:%s,%s"%(keyinfo,dispatch_func))
-            log_sock((u"%s|%s"%(ensure_unicode(format(keyinfo)),dispatch_func.__name__)),"bound_function")
-            r = None
-            if dispatch_func:
-                r = dispatch_func(event)
-                self._keylog(dispatch_func,self.l_buffer)
-                self.l_buffer.push_undo()
+                self.ctrl_c_timeout=now
+        else:
+            raise KeyboardInterrupt
 
-            self.previous_func = dispatch_func
-            if r:
-                self._update_line()
+        dispatch_func = self.key_dispatch.get(event.keyinfo.tuple(),None)
+        if dispatch_func:
+            r = dispatch_func(event)
+            self._keylog(dispatch_func,self.l_buffer)
+            self.l_buffer.push_undo()
+        
+    def _readline_from_keyboard(self):
+        while 1:
+            if self._readline_from_keyboard_poll():
                 break
 
+    def readline_event_available(self):
+        return self.console.peek()
+
     def readline(self, prompt=''):
+        c = self.console
+        self.readline_setup(prompt)
+        log("in readline: %s"%self.paste_line_buffer)
+        if len(self.paste_line_buffer)>0:
+            self.l_buffer=lineobj.ReadLineTextBuffer(self.paste_line_buffer[0])
+            self._update_line()
+            self.paste_line_buffer=self.paste_line_buffer[1:]
+        else:
+            self._readline_from_keyboard()
+        c.write('\r\n')
+
+        self.add_history(self.l_buffer.copy())
+
+        log('returning(%s)' % self.l_buffer.get_line_text())
+        return self.l_buffer.get_line_text() + '\n'
+
+
+    def readline_setup(self, prompt=''):
         '''Try to act like GNU readline.'''
         # handle startup_hook
         self.ctrl_c_timeout=time.time()
@@ -122,21 +159,8 @@ class EmacsMode(basemode.BaseMode):
                 print 'pre_input_hook failed'
                 traceback.print_exc()
                 self.pre_input_hook = None
+        self._update_line()
 
-        log("in readline: %s"%self.paste_line_buffer)
-        if len(self.paste_line_buffer)>0:
-            self.l_buffer=lineobj.ReadLineTextBuffer(self.paste_line_buffer[0])
-            self._update_line()
-            self.paste_line_buffer=self.paste_line_buffer[1:]
-            c.write('\r\n')
-        else:
-            self._readline_from_keyboard()
-            c.write('\r\n')
-
-        self.add_history(self.l_buffer.copy())
-
-        log('returning(%s)' % self.l_buffer.get_line_text())
-        return self.l_buffer.get_line_text() + '\n'
 
 #########  History commands
     def previous_history(self, e): # (C-p)
@@ -369,12 +393,12 @@ class EmacsMode(basemode.BaseMode):
 
     def yank(self, e): # (C-y)
         '''Yank the top of the kill ring into the buffer at point. '''
-        self.l_buffer.yank()
+        pass
 
     def yank_pop(self, e): # (M-y)
         '''Rotate the kill-ring, and yank the new top. You can only do this
         if the prior command is yank or yank-pop.'''
-        self.l_buffer.yank_pop()
+        pass
 
 
     def digit_argument(self, e): # (M-0, M-1, ... M--)
@@ -582,7 +606,7 @@ class EmacsMode(basemode.BaseMode):
         #self._bind_key('Control-Shift-v',   self.quoted_insert)
         self._bind_key('Control-v',         self.paste)
         self._bind_key('Alt-v',             self.ipython_paste)
-        self._bind_key('Control-y',         self.yank)
+        self._bind_key('Control-y',         self.paste)
         self._bind_key('Control-k',         self.kill_line)
         self._bind_key('Control-m',         self.set_mark)
         self._bind_key('Control-q',         self.copy_region_to_clipboard)
