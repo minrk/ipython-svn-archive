@@ -1,3 +1,8 @@
+2007-12-27  Ville Vainio  <vivainio@gmail.com>
+
+	* ipy_completers.py: Applied arno's patch to get proper list of 
+	packages in import completer. Closes #196.
+
 2007-12-12  Ville Vainio  <vivainio@gmail.com>
 
 	* genutils.py (abbrev_cwd): Terminal title now shows 2 levels of current
