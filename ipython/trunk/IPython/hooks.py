@@ -213,5 +213,3 @@ def generate_prompt(self, is_continuation):
 def generate_output_prompt(self):
     ip = self.api
     return str(ip.IP.outputcache.prompt_out)
-        
-   

@@ -323,6 +323,13 @@ class BasePrompt(object):
         else:
             return os.sep
 
+    def __nonzero__(self):
+        """Implement boolean behavior.
+
+        Checks whether the p_str attribute is non-empty"""
+
+        return bool(self.p_template)
+
 class Prompt1(BasePrompt):
     """Input interactive prompt similar to Mathematica's."""
 

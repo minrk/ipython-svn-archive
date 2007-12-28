@@ -1247,6 +1247,10 @@ want to merge them back into the new files.""" % locals()
         
     def savehist(self):
         """Save input history to a file (via readline library)."""
+
+        if not self.has_readline:
+            return
+        
         try:
             self.readline.write_history_file(self.histfile)
         except:

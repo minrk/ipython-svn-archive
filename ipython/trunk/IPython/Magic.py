@@ -1566,8 +1566,7 @@ Currently the magic system has the following functions:\n"""
         
         stats = None
         try:
-            if self.shell.has_readline:
-                self.shell.savehist()
+            self.shell.savehist()
 
             if opts.has_key('p'):
                 stats = self.magic_prun('',0,opts,arg_lst,prog_ns)
