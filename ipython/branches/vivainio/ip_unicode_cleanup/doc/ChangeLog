@@ -1,3 +1,8 @@
+2007-12-28  Ville Vainio  <vivainio@gmail.com>
+
+	* ipy_server.py: TCP socket server for "remote control" of an IPython 
+	instance.
+
 2007-12-27  Ville Vainio  <vivainio@gmail.com>
 
 	* ipy_completers.py: Applied arno's patch to get proper list of 
