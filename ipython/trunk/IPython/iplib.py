@@ -1552,6 +1552,7 @@ want to merge them back into the new files.""" % locals()
         while 1:
             try:
                 self.interact(banner)
+                break
             except KeyboardInterrupt:
                 # this should not be necessary, but KeyboardInterrupt
                 # handling seems rather unpredictable...
