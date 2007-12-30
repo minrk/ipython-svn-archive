@@ -154,6 +154,7 @@ $self.bug_tracker
         # Construct report on disk
         report.write(self.make_report(traceback))
         report.close()
+        raw_input("Press enter to exit:")
 
     def make_report(self,traceback):
         """Return a string containing a crash report."""

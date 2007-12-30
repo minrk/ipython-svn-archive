@@ -218,7 +218,6 @@ class InteractiveShell(object,Magic):
         for ns in (user_ns,user_global_ns):
             if ns is not None and type(ns) != types.DictType:
                 raise TypeError,'namespace must be a dictionary'
-
         # Job manager (for jobs run as background threads)
         self.jobs = BackgroundJobManager()
 
@@ -1551,7 +1550,13 @@ want to merge them back into the new files.""" % locals()
             else:                
                 banner = self.BANNER+self.banner2
 
-        self.interact(banner)
+        while 1:
+            try:
+                self.interact(banner)
+            except KeyboardInterrupt:
+                # this should not be necessary, but KeyboardInterrupt
+                # handling seems rather unpredictable...
+                self.write("\nKeyboardInterrupt in interact()\n")
 
     def exec_init_cmd(self):
         """Execute a command given at the command line.
@@ -1682,14 +1687,18 @@ want to merge them back into the new files.""" % locals()
                     self.rl_do_indent = False
                     
             except KeyboardInterrupt:
-                self.write('\nKeyboardInterrupt\n')
-                self.resetbuffer()
-                # keep cache in sync with the prompt counter:
-                self.outputcache.prompt_count -= 1
-
-                if self.autoindent:
-                    self.indent_current_nsp = 0
-                more = 0
+                #double-guard against keyboardinterrupts during kbdint handling
+                try:
+                    self.write('\nKeyboardInterrupt\n')
+                    self.resetbuffer()
+                    # keep cache in sync with the prompt counter:
+                    self.outputcache.prompt_count -= 1
+    
+                    if self.autoindent:
+                        self.indent_current_nsp = 0
+                    more = 0
+                except KeyboardInterrupt:
+                    pass
             except EOFError:
                 if self.autoindent:
                     self.rl_do_indent = False

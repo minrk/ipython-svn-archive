@@ -869,7 +869,7 @@ class VerboseTB(TBTools):
         try:
             self.debugger()
         except KeyboardInterrupt:
-            print "KeyboardInterrupt"
+            print "\nKeyboardInterrupt"
 
 #----------------------------------------------------------------------------
 class FormattedTB(VerboseTB,ListTB):
@@ -987,7 +987,7 @@ class AutoFormattedTB(FormattedTB):
         try:
             self.debugger()
         except KeyboardInterrupt:
-            print "KeyboardInterrupt"
+            print "\nKeyboardInterrupt"
 
     def text(self,etype=None,value=None,tb=None,context=5,mode=None):
         if etype is None:
