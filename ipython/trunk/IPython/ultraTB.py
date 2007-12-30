@@ -866,7 +866,10 @@ class VerboseTB(TBTools):
             self.handler()
         else:
             self.handler((etype, evalue, etb))
-        self.debugger()
+        try:
+            self.debugger()
+        except KeyboardInterrupt:
+            print "KeyboardInterrupt"
 
 #----------------------------------------------------------------------------
 class FormattedTB(VerboseTB,ListTB):
@@ -981,7 +984,10 @@ class AutoFormattedTB(FormattedTB):
             self.tb_offset = tb_offset
         else:
             print >> out, self.text(etype, evalue, etb)
-        self.debugger()
+        try:
+            self.debugger()
+        except KeyboardInterrupt:
+            print "KeyboardInterrupt"
 
     def text(self,etype=None,value=None,tb=None,context=5,mode=None):
         if etype is None:
