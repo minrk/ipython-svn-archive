@@ -1672,12 +1672,18 @@ want to merge them back into the new files.""" % locals()
         
         while not self.exit_now:
             if more:
-                prompt = self.hooks.generate_prompt(True)
+                try:
+                    prompt = self.hooks.generate_prompt(True)
+                except:
+                    self.showtraceback()
                 if self.autoindent:
                     self.rl_do_indent = True
                     
             else:
-                prompt = self.hooks.generate_prompt(False)
+                try:
+                    prompt = self.hooks.generate_prompt(False)
+                except:
+                    self.showtraceback()
             try:
                 line = self.raw_input(prompt,more)
                 if self.exit_now:
