@@ -1124,7 +1124,7 @@ IPython will create a minimal default configuration for you.
             else:
                 inif = 'ipythonrc'
             minimal_setup = {'ipy_user_conf.py' : 'import ipy_defaults', inif : '# intentionally left blank' }    
-            os.makedirs(ipythondir)
+            os.makedirs(ipythondir, mode = 0777)
             for f, cont in minimal_setup.items():
                 open(ipythondir + '/' + f,'w').write(cont)
                              
