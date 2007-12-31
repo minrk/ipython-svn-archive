@@ -104,7 +104,7 @@ class Itpl:
     evaluation and substitution happens in the namespace of the
     caller when str(instance) is called."""
 
-    def __init__(self, format,codec='utf_8',encoding_errors='backslashreplace'):
+    def __init__(self, format,codec=sys.stdin.encoding,encoding_errors='backslashreplace'):
         """The single mandatory argument to this constructor is a format
         string.
 
@@ -198,7 +198,13 @@ class Itpl:
         result = []
         app = result.append
         for live, chunk in self.chunks:
-            if live: app(str(eval(chunk,glob,loc)))
+            if live:
+                val = eval(chunk,glob,loc)
+                try:
+                    app(str(val))
+                except UnicodeEncodeError:
+                    app(unicode(val))
+                
             else: app(chunk)
         out = ''.join(result)
         try:
