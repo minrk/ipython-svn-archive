@@ -44,18 +44,20 @@ from IPython.excolors import ExceptionColors
 # See if we can use pydb.
 has_pydb = False
 prompt = 'ipdb> '
-try:
-    import pydb
-    if hasattr(pydb.pydb, "runl") and pydb.version>'1.17':
-        # Version 1.17 is broken, and that's what ships with Ubuntu Edgy, so we
-        # better protetct against it.
-        has_pydb = True
-        from pydb import Pdb as OldPdb
-except ImportError:
-    pass
+#We have to check this directly from sys.argv, config struct not yet available
+if '-pydb' in sys.argv:
+    try:        
+        import pydb
+        if hasattr(pydb.pydb, "runl") and pydb.version>'1.17':
+            # Version 1.17 is broken, and that's what ships with Ubuntu Edgy, so we
+            # better protect against it.
+            has_pydb = True
+    except ImportError:
+        print "Pydb (http://bashdb.sourceforge.net/pydb/) does not seem to be available"
 
 if has_pydb:
     from pydb import Pdb as OldPdb
+    #print "Using pydb for %run -d and post-mortem" #dbg
     prompt = 'ipydb> '
 else:
     from pdb import Pdb as OldPdb
