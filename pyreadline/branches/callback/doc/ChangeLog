@@ -1,3 +1,11 @@
+2008-01-04 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Merging from trunk 2920:2921:Chunking calls to WriteConsoleW to ensure not exceeding 64k limit
+
+2007-12-17 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
+	* Added callbackinterface. Currently only available in emacs mode.
+          See examples directory for an example of how to use it. Example
+          adapted from example by Stefan Rank
+
 2007-11-28 Jörgen Stenarson  <jorgen.stenarson -at- bostream.nu>
 	* Warning messages for failed calls to parse_and_bind now disabled by default 
 	  Can be enabled by call to debug_output("on_nologfile") in pyreadlineconfig.ini
