@@ -190,6 +190,7 @@ object?   -> Details about 'object'. ?object also works, ?? prints more.
                       autoedit_syntax = 0,
                       autoindent = 0,
                       automagic = 1,
+                      autoexec = [],
                       banner = 1,
                       c = '',
                       cache_size = 1000,
