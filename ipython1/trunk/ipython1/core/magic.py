@@ -44,7 +44,7 @@ class Magic(object):
 
         # Namespaces to search.
         # fixme: implement internal and alias namespaces.
-        user_ns = self.interpreter.namespace
+        user_ns = self.interpreter.user_ns
         internal_ns = {}
         builtin_ns = __builtin__.__dict__
         alias_ns = {}

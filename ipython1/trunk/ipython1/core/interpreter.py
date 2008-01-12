@@ -1,3 +1,9 @@
+"""Central interpreter object for an IPython engine.
+
+The interpreter is the object whose job is to process lines of user input and
+actually execute them in the user's namespace.
+"""
+
 # Standard library imports.
 from compiler.ast import Discard
 from types import FunctionType
@@ -313,6 +319,19 @@ Engine action that caused the error:
             raise einfo[0],einfo[1],einfo[2]
         else:
             return message
+
+    def generate_prompt(self, is_continuation):
+        """Calculate and return a string with the prompt to display.
+
+        :Parameters:
+          is_continuation : bool
+            Whether the input line is continuing multiline input or not, so
+          that a proper continuation prompt can be computed."""
+        
+        if is_continuation:
+            return str(self.outputcache.prompt2)
+        else:
+            return str(self.outputcache.prompt1)
 
     def execute_python(self, python):
         """ Actually run the Python code in the namespace.

@@ -114,7 +114,7 @@ class IPReadline(object):
         elif is_complete[0] == COMPILER_ERROR:
             # FIXME: Hack, there should really be user feedback for an
             # error.
-            print 'ERROR:',self.interpreter.message
+            #print 'ERROR:',self.interpreter.message  # dbg
             return self.interpreter.message,False
         elif is_complete[0] == COMPLETE_INPUT:
             result_dict = self.interpreter.execute(text)

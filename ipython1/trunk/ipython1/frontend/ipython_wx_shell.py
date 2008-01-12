@@ -51,7 +51,15 @@ class Shell(editwindow.EditWindow):
         # lines are wider than the shell width.
         self.wrap()
 
-        self._ipython_interpreter = IPythonInterpreter(user_ns={})
+        # We want all the variables available in __main__ within our local
+        # dict. (
+        # fixme: Do we really want this?  Is this something handled by
+        #        IPython?
+        if locals is None:
+            import __main__
+            locals = __main__.__dict__
+
+        self._ipython_interpreter = IPythonInterpreter(user_ns=locals)
 
         self.ip_readline = IPReadline(interpreter=self._ipython_interpreter)
 
@@ -123,6 +131,16 @@ class Shell(editwindow.EditWindow):
         # hide rather than quit so we should just post the event and
         # let the surrounding app decide what it wants to do.
         self.write('Click on the close button to leave the application.')
+
+    def execStartupScript(self, startupScript):
+        """Execute the user's PYTHONSTARTUP script if they have one."""
+        if startupScript and os.path.isfile(startupScript):
+            text = 'Startup script executed: ' + startupScript
+            self.ip_readline.push_text('print %r; execfile(%r)' % 
+                                                (text, startupScript))
+            #self.interp.startupScript = startupScript
+        else:
+            self.ip_readline.push_text('')
 
     def OnChar(self, event):
         """Keypress event handler.
@@ -1031,5 +1049,6 @@ if __name__ == '__main__':
     frame = MainWindow(None, wx.ID_ANY, 'Ipython')
     frame.SetSize((780, 460))
     shell = frame.shell
+
     app.MainLoop()
 
