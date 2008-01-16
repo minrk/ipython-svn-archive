@@ -42,6 +42,12 @@ from path import path
 if os.name == "nt":
     from IPython.winconsole import get_console_size
 
+try:
+    set
+except:
+    from sets import Set as set
+
+
 #****************************************************************************
 # Exceptions
 class Error(Exception):
