@@ -5,22 +5,127 @@ IPython1 Development Guidelines
 Overview
 ========
 
-Installation and Dependencies
-=============================
+IPython1 is the next generation of IPython.  It is named such for two reasons:
+
+- Eventually, IPython1 will become IPython version 1.0.
+- This new code base needs to be able to co-exist with the existing IPython until
+  it is a full replacement for it.  Thus we needed a different name.  We couldn't
+  use ``ipython`` (lowercase) as some files systems are case insensitive.
+
+There are two, no three, main goals of the IPython1 effort:
+
+1. Clean up the existing codebase and write lots of tests.
+2. Separate the core functionality of IPython from the terminal to enable IPython
+   to be used from within a variety of GUI applications.
+3. Implement a system for interactive parallel computing.
+
+While the third goal may seem a bit unrelated to the main focus of IPython, it turns
+out that the technologies required for this goal are nearly identical with those
+required for goal two. This is the main reason the interactive parallel computing
+capabilities are being put into IPython proper. Current the third of these goals is
+largely completed.
+
+This document describes IPython1 from the perspective of developers.  
 
 
 Project Organization
 ====================
+
+Subpackages
+-----------
+
+IPython1 is organized into semi self-contained subpackages.  Each of the subpackages will have its own:
+
+- **Dependencies**.  One of the most important things to keep in mind in
+  partitioning code amongst subpackages, is that they should be used to cleanly
+  encapsulate dependencies.  
+- **Tests**.  Each subpackage shoud have its own ``tests`` subdirectory that
+  contains all of the tests for that package.  For information about writing tests
+  for IPython1, see the `Testing`_ section of this document.
+- **Configuration**.  Each subpackage should have its own ``config`` subdirectory
+  that contains the configuration information for the components of the 
+  subpackage.  For information about how the IPython1 configuration system
+  works, see the `Configuration`_ section of this document.
+- **Scripts**.  Each subpackage should have its own ``scripts`` subdirectory that
+  contains all of the command line scripts associated with the subpackage.
+
+Installation and Dependencies
+-----------------------------
+   
+IPython1 will not use `setuptools`_ for installation. Instead, we will use standard
+``setup.py`` scripts that use `distutils`_. While there are a number a extremely nice
+features that `setuptools`_ has (like namespace packages), the current implementation
+of `setuptools`_ has performance problems, particularly on shared file systems. In
+particular, when Python packages are installed on NSF file systems, import times
+become much too long (up towards 10 seconds). 
+
+Because IPython is being used extensively in the context of high performance
+computing, where performance is critical but shared file systems are common, we feel
+these performance hits are not acceptable. Thus, until the performance problems
+associated with `setuptools`_ are addressed, we will stick with plain `distutils`_. We
+are hopeful that these problems will be addressed and that we will eventually begin
+using `setuptools`_. Because of this, we are trying to organize IPython1 in a way that
+will make the eventual transition to `setuptools`_ as painless as possible.
+
+Because we will be using `distutils`_, there will be no method for automatically installing dependencies.  Instead, we are following the approach of `Matplotlib`_ which can be summarized as follows:
+
+- Distinguish between required and optional dependencies.  However, the required
+  dependencies for IPython should be only the Python standard library.
+- Upon installation check to see which optional dependencies are present and tell
+  the user which parts of IPython need which optional dependencies.
+
+It is absolutely critical that each subpackage of IPython has a clearly specified set
+of dependencies and that dependencies are not carelessly inherited from other IPython
+subpackages. Furthermore, tests that have certain dependencies should not fail if
+those dependencies are not present. Instead they should be skipped and print a
+message.
+
+.. _setuptools: http://peak.telecommunity.com/DevCenter/setuptools
+.. _distutils: http://docs.python.org/lib/module-distutils.html
+.. _Matplotlib: http://matplotlib.sourceforge.net/
+
+Specific Subpackages
+--------------------
+
+``core``
+	This is the core functionality of IPython that is independent of the
+	terminal, network and GUIs.  Most of the code that is in the current
+	IPython trunk will be refactored, cleaned up and moved here.
+
+``kernel``
+	The enables the IPython core to be expose to a the network.  This is
+	also where all of the parallel computing capabilities are to be found.
+	
+``tconfig``
+	The configuration package used by IPython.
+
+``frontends``
+	The various frontends for IPython.  A frontend is the end-user application
+	that exposes the capabilities of IPython to the user.  The most basic frontend
+	will simply be a terminal based application that looks just like today 's 
+	IPython.  Other frontends will likely be more powerful and based on GUI toolkits.
+
+``notebook``
+	An application that allows users to work with IPython notebooks.
+
+``tools``
+	This is where general utilities go.
+	
+
+
 
 Version Control
 ===============
 
 Currently IPython uses `Subversion`_ for its version control system. In the near
 future, we will be transitioning to `Mercurial`_, which is a distributed version
-control system that provides considerably more flexibility than `Subversion`_.
+control system that provides more flexibility than `Subversion`_.
 
 More details about how we use `Mercurial`_ will be provided here as we make this
 transition.
+
+.. _Subversion: http://subversion.tigris.org/
+.. _Mercurial: http://www.selenic.com/mercurial/wiki/
 
 
 Documentation
@@ -119,15 +224,16 @@ seems absolutely necessary the more specific ``IPY`` or ``ipy`` are preferred.
 Testing
 =======
 
-It is extremely important that all code contributed to IPython has tests.  Tests
-should be written as unittests, doctests or as entities that the `Nose`_ testing
-package will find. Regardless of how the tests are written, we will use `Nose`_ for
-discovering and running the tests.
+It is extremely important that all code contributed to IPython has tests. Tests should
+be written as unittests, doctests or as entities that the `Nose`_ testing package will
+find. Regardless of how the tests are written, we will use `Nose`_ for discovering and
+running the tests. `Nose`_ will be required to run the IPython test suite, but will
+not be required to simply use IPython.
 
 .. _Nose: http://code.google.com/p/python-nose/
 
-Tests of `Twisted`_ using code should be written by subclassing the `TestCase` class
-that comes with `twisted.trial.unittest`. When this is done, `Nose`_ will be able to
+Tests of `Twisted`_ using code should be written by subclassing the ``TestCase`` class
+that comes with ``twisted.trial.unittest``. When this is done, `Nose`_ will be able to
 run the tests and the twisted reactor will be handled correctly.
 
 .. _Twisted: http://www.twistedmatrix.com
