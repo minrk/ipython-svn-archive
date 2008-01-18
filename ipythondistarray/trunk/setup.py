@@ -53,6 +53,7 @@ ExeBinary = lambda executable: Executable(**executable)
 def main():
     setup(packages = ['ipythondistarray',
                       'ipythondistarray.tests'],
+          package_data = {'ipythondistarray' : ['include/*.pxi']}
           headers = [LibHeader(hdr) for hdr in headers()],
           ext_modules = [ExtModule(ext) for ext in ext_modules()],
           executables = [ExeBinary(exe) for exe in executables()],
