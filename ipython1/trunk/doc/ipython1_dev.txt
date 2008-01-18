@@ -1,0 +1,163 @@
+==================================
+IPython1 Development Guidelines
+==================================
+
+Overview
+========
+
+Installation and Dependencies
+=============================
+
+
+Project Organization
+====================
+
+Version Control
+===============
+
+Currently IPython uses `Subversion`_ for its version control system. In the near
+future, we will be transitioning to `Mercurial`_, which is a distributed version
+control system that provides considerably more flexibility than `Subversion`_.
+
+More details about how we use `Mercurial`_ will be provided here as we make this
+transition.
+
+
+Documentation
+=============
+
+Standalone Documentation
+------------------------
+
+All standalone documentation should be written in plain text (``.txt``) files using
+`reStructuredText`_ for markup and formatting. All such documentation should be placed
+in the top level directory ``docs`` of the IPython source tree. Or, when appropriate,
+a suitably named subdirectory should be used. The documentation in this location will
+serve as the main source for IPython documentation and all existing documentation
+should be converted to this format.
+
+In the future, the text files in the ``docs`` directory will be used to generate all
+forms of documentation for IPython. This include documentation on the IPython website
+as well as *pdf* documentation.
+
+.. _reStructuredText: http://docutils.sourceforge.net/rst.html
+
+Docstring Format
+----------------
+
+Good docstrings are very important. All new code will use `Epydoc`_ for generating API
+docs, so we will follow the `Epydoc`_ conventions. More specifically, we will use
+`reStructuredText`_ for markup and formatting, since it is understood by a wide
+variety of tools. This means that if in the future we have any reason to change from
+`Epydoc`_ to something else, we'll have fewer transition pains.
+
+Details about using `reStructuredText`_ for docstrings can be found `here
+<http://epydoc.sourceforge.net/manual-othermarkup.html>`_.
+
+.. _Epydoc: http://epydoc.sourceforge.net/
+
+Additional PEPs of interest regarding documentation of code:
+
+- `Docstring Conventions <http://www.python.org/peps/pep-0257.html>`_
+- `Docstring Processing System Framework <http://www.python.org/peps/pep-0256.html>`_
+- `Docutils Design Specification <http://www.python.org/peps/pep-0258.html>`_
+
+
+Coding Conventions
+==================
+
+General
+-------
+
+In general, we'll try to follow the standard Python style conventions as described here:
+
+- `Style Guide for Python Code  <http://www.python.org/peps/pep-0008.html>`_  
+
+
+Other comments:
+
+- In a large file, top level classes and functions should be 
+  separated by 2-3 lines to make it easier to separate them visually.
+- Use 4 spaces for indentation.
+- Keep the ordering of methods the same in classes that have the same 
+  methods.  This is particularly true for classes that implement 
+  similar interfaces and for interfaces that are similar.
+
+Naming Conventions
+------------------
+
+In terms of naming conventions, we'll follow the guidelines from the `Style Guide for
+Python Code`_, which boil down to accepting existing standards where one has been
+established by historical use of a third party library (such as WX or lxml, for
+example). 
+
+For all new IPython code (and much existing code is being refactored), we'll use:
+
+- All ``lowercase`` module names.
+
+- ``CamelCase`` for class names.
+
+- ``lowerCamelCase`` for methods, functions, variables and attributes.
+
+Implementation-specific *private* methods will use ``_single_underscore_prefix``.
+Names with a leading double underscore will *only* be used in special cases, as they
+makes subclassing difficult (such names are not easily seen by child classes).
+
+Occasionally some run-in lowercase names are used, but mostly for very short names or
+where we are implementing methods very similar to existing ones in a base class (like
+``runlines()`` where ``runsource()`` and ``runcode()`` had established precedent).
+
+The old IPython codebase has a big mix of classes and modules prefixed with an
+explicit ``IP``. In Python this is mostly unnecessary, redundant and frowned upon, as
+namespaces offer cleaner prefixing. The only case where this approach is justified is
+for classes which are expected to be imported into external namespaces and a very
+generic name (like Shell) is too likely to clash with something else. We'll need to
+revisit this issue as we clean up and refactor the code, but in general we should
+remove as many unnecessary ``IP``/``ip`` prefixes as possible. However, if a prefix
+seems absolutely necessary the more specific ``IPY`` or ``ipy`` are preferred.
+
+Testing
+=======
+
+It is extremely important that all code contributed to IPython has tests.  Tests
+should be written as unittests, doctests or as entities that the `Nose`_ testing
+package will find. Regardless of how the tests are written, we will use `Nose`_ for
+discovering and running the tests.
+
+.. _Nose: http://code.google.com/p/python-nose/
+
+Tests of `Twisted`_ using code should be written by subclassing the `TestCase` class
+that comes with `twisted.trial.unittest`. When this is done, `Nose`_ will be able to
+run the tests and the twisted reactor will be handled correctly.
+
+.. _Twisted: http://www.twistedmatrix.com
+
+Each subpackage in IPython should have its own ``tests`` directory that contains all
+of the tests for that subpackage. This allows each subpackage to be self-contained. If
+a subpackage has any dependencies beyond the Python standard library, the tests for
+that subpackage should be skipped if the dependencies are not found. This is very
+important so users don't get tests failing because they don't have dependencies.
+
+We also need to look into use Noses ability to tag tests to allow a more modular
+approach of running tests.
+
+Configuration
+=============
+
+IPython uses the ``tconfig`` subpackage for configuration purposes. The ``tconfig``
+subpackage is based on `ConfigObj`_ and a `Traits`_-like validation model. The
+resulting configuration files are `.ini`_ files.
+
+.. _ConfigObj: http://www.voidspace.org.uk/python/configobj.html
+.. _Traits: http://code.enthought.com/traits/
+.. _.ini: http://docs.python.org/lib/module-ConfigParser.html
+
+Each subpackage of IPython should contain a ``config`` subdirectory that contains all
+of the configuration information for the subpackage.
+
+
+
+
+
+
+
