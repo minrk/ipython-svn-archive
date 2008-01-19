@@ -55,7 +55,8 @@ from pprint import PrettyPrinter
 # but over time we'll move here all the public API for user-accessible things.
 __all__ = ['editor', 'fix_error_editor', 'result_display',
            'input_prefilter', 'shutdown_hook', 'late_startup_hook',
-           'generate_prompt', 'generate_output_prompt','shell_hook']
+           'generate_prompt', 'generate_output_prompt','shell_hook',
+           'show_in_pager']
 
 pformat = PrettyPrinter().pformat
 
@@ -137,6 +138,8 @@ class CommandChainDispatcher:
                 if exc.args or exc.kwargs:
                     args = exc.args
                     kw = exc.kwargs
+        # if no function will accept it, raise TryNext up to the caller
+        raise ipapi.TryNext
                 
     def __str__(self):
         return str(self.chain)
@@ -218,4 +221,11 @@ def shell_hook(self,cmd):
     """ Run system/shell command a'la os.system() """
 
     shell(cmd, header=self.rc.system_header, verbose=self.rc.system_verbose)
+
+
+def show_in_pager(self,s):
+    """ Run a string through pager """
+    # raising TryNext here will use the default paging functionality
+    raise ipapi.TryNext
+    
 
