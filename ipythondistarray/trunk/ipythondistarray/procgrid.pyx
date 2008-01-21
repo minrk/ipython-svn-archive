@@ -1,6 +1,6 @@
 
-include "Includes/python.pxi"
-include "Includes/stdlib.pxi"
+include "./include/python.pxi"
+include "./include/stdlib.pxi"
 
 cdef class ProcGrid:
 

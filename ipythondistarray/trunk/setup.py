@@ -1,5 +1,5 @@
 
-#----------------------------------------------------------------------------
+#--------- -------------------------------------------------------------------
 # Metadata
 #----------------------------------------------------------------------------
 
@@ -19,14 +19,14 @@ metadata = {
 
 def ext_modules():
     import sys
-
-    # An example
-    # libmpi = dict(name='mpi4py.libmpi',
-    #               sources=['mpi/ext/libmpi.c'],
-    #               depends=['mpi/ext/libmpi.h'])
-    # 
-    # allext = [libmpi]
-    allext = []
+    
+    maps = dict(name='ipythondistarray.maps',
+                sources=['ipythondistarray/maps.c'])
+    procgrid = dict(name='ipythondistarray.procgrid',
+                    sources=['ipythondistarray/procgrid.c'])
+    test_mpi = dict(name='ipythondistarray.tests.test_mpi',
+                    sources=['ipythondistarray/tests/test_mpi.c'])
+    allext = [maps, procgrid, test_mpi]
     return allext
 
 def headers():
@@ -53,7 +53,7 @@ ExeBinary = lambda executable: Executable(**executable)
 def main():
     setup(packages = ['ipythondistarray',
                       'ipythondistarray.tests'],
-          package_data = {'ipythondistarray' : ['include/*.pxi']}
+          package_data = {'ipythondistarray' : ['include/*.pxi']},
           headers = [LibHeader(hdr) for hdr in headers()],
           ext_modules = [ExtModule(ext) for ext in ext_modules()],
           executables = [ExeBinary(exe) for exe in executables()],

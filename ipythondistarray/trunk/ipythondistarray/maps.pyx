@@ -1,4 +1,4 @@
-include "Includes/python.pxi"
+include "include/python.pxi"
 
 # cdef public class Map [ object MapObj, type MapType ]:
 cdef class Map:
@@ -36,7 +36,7 @@ def test1():
     cdef BlockMap m
     m = BlockMap(16,4)
     for i from 0 <= i < 1000:
-        m.pyowner(3)
+        m.owner(3)
 
 def test2():
     cdef BlockMap m
@@ -48,7 +48,7 @@ def test3():
     cdef BlockMap m
     m = BlockMap(16,4)
     for i from 0 <= i < 1000:
-        m.dual_owner(3)
+        m.c_owner(3)
 
 cdef public foo(int i):
     return i
