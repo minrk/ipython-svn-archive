@@ -1,99 +1,14 @@
-import numpy as np
-from ipythondistarray import mpicore
 from mpi4py import MPI
+import numpy as np
 
-class Map(object):
-    
-    def __init__(self, nglobal, nprocs):
-        self.nglobal = nglobal
-        self.nprocs = nprocs
-        self.nlocal = self.nglobal/self.nprocs
-        if self.nglobal%self.nprocs > 0:
-            self.nlocal += 1
-    
-    def owner(self, global_i):
-        raise NotImplemented("implement in sublcass")
-        
-    def local_i(self, global_i):
-        raise NotImplemented("implement in sublcass")
-        
-    def global_i(self, owner, local_i):
-        raise NotImplemented("implement in sublcass")
+from ipythondistarray import mpibase
+from ipythondistarray import maps
 
-
-class BlockMap(Map):
-        
-    def owner(self, global_i):
-        return global_i/self.nlocal
-        
-    def local_i(self, global_i):
-        local_i = global_i%self.nprocs
-        return self.owner(global_i), local_i
-        
-    def global_i(self, owner, local_i):
-        return owner*self.nlocal + local_i
-
-class CyclicMap(Map):
-    
-    def owner(self, global_i):
-        return global_i%self.nprocs
-    
-    def local_i(self, global_i):
-        local_i = global_i/self.nprocs
-        return self.owner(global_i), local_i
-        
-    def global_i(self, owner, local_i):
-        return owner + local_i*self.nlocal
-
-class BlockCyclicMap(Map):
-    pass
-
-bp1 = BlockMap(16, 2)
-bp2 = CyclicMap(16, 2)
-
-import numpy
-result = numpy.empty((16,16),dtype='int32')
-
-grid = numpy.arange(4, dtype='int32')
-grid.shape=(2,2)
-
-for i in range(16):
-    for j in range(16):
-        # print bp1.owner(i), bp2.owner(j)
-        result[i,j] = grid[bp1.owner(i), bp2.owner(j)] 
-
-# print result
-
-# shape 
-# # of processors [0,...,N-1]
-# Which dims are dist
-# processor grid for load balancing
-# Maps
-# (2, 4*b, 6*b) -> processor grid
-# 
-
-def factor2(n):
-    intn = int(n)
-    factors = []
-    i = 0
-
-    # 1 is a special case
-    if n == 1:
-        return [(1,1)]
-
-    while 1:
-        i += 1
-
-        if i > n:
-            break
-
-        if n % i == 0:
-            # if n/i not in factors.keys():
-            factors.append((i, n/i))
-
-    return factors
 
 class InvalidBaseCommError(Exception):
+    pass
+
+class InvalidGridShapeError(Exception):
     pass
 
 
@@ -119,6 +34,7 @@ class DistArray(object):
         self._init_grid_shape()
         self._init_comm()
         self._init_maps()
+        self._init_local_shape()
         self._allocate()
              
     def __del__(self):
@@ -127,7 +43,7 @@ class DistArray(object):
              
     def _init_base_comm(self):
         if self.base_comm is None:
-            self.base_comm = mpicore.COMM_PRIVATE
+            self.base_comm = mpibase.COMM_PRIVATE
         elif isinstance(self.base_comm, MPI.Comm):
             pass
         else:
@@ -156,57 +72,25 @@ class DistArray(object):
         self.cart_coords = self.comm.Get_coords(self.comm_rank) 
         
     def _init_maps(self):
-        pass
-        
-    def _parse_dist(self):
-        map_class_list = []
+        map_list = []
         distdims = []
-        for k, v in dist.iteritems():
+        for k, v in self.dist.iteritems():
             distdims.append(k)
-            map_classes.append(self._to_map_class(v))
-        self.distdims = distdims
-        self.map_classes = map_classes
-        self.ndistdim = len(distdims)
+            map_list.append(self._get_map(v))
+        self.distdims = tuple(distdims)
+        self.maps = tuple(map_list)
             
-    def _to_map_class(self, code):
-        if isinstance(code, Map):
-            return code
-        elif isinstance(code, str):
-            lower_code = code.lower()
-            if lower_code == 'b':
-                return BlockMap
-            elif lower_code == 'c':
-                return CyclicMap
-            elif lower_code == 'bc':
-                return BlockCyclicMap
-            else:
-                raise Exception("Invalid mapping")
-        else:
-            raise Exception("Invalid mapping")
+    def _get_map(self, code):
+        return maps.get_map(code)
+        
+    def _init_local_shape(self):
+        local_shape = self.shape
+        for i in self.distdims:
+            local_shape[i] = self.maps[i].shape
+        self.local_shape = local_shape
         
     def _allocate(self):
         self.local_array = np.empty(self.local_shape, dtype=self.dtype)
-        
-
-        
-    def __getitem__(self, key):
-        """Get an item by global indices.
-        
-        (i,j,k,...) -> (owner, owner), (p,q,k) -> (owner, (p,q,k,...))
-        
-        """
-        owners = numpy.empty(self.ndistdim, dtype=int)
-        local_indices = numpy.asaray(key, dtype=int)
-        for i in range(self.ndistdim):
-            dim = self.distdims[i]
-            local_i = key[dim]
-            owner, p = self.maps[i].local_i(local_i)
-            owners[i] = owner
-            local_indices[dim] = p
-
-        print owners
-        print local_indices
-            
             
         
       
