@@ -12,6 +12,7 @@ cdef class Comm:
             self.comm
             
     cdef MPI_Group c_get_group(self):
+        pass
     
     cdef int c_get_size(self):
         cdef int size, ierr
@@ -24,8 +25,8 @@ cdef class Comm:
         return rank
         
     cdef MPI_Comm c_clone(self):
-    
-cdef public class Group:
+        pass
+        
+cdef class Group:
 
-    cdef MPI_Group group
-
+    pass

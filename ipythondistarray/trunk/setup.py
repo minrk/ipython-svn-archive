@@ -20,10 +20,12 @@ metadata = {
 def ext_modules():
     import sys
     
-    maps = dict(name='ipythondistarray.maps',
-                sources=['ipythondistarray/maps.c'])
-    procgrid = dict(name='ipythondistarray.procgrid',
-                    sources=['ipythondistarray/procgrid.c'])
+    maps = dict(name='ipythondistarray.maps_fast',
+                sources=['ipythondistarray/maps_fast.c'])
+    procgrid = dict(name='ipythondistarray.procgrid_fast',
+                    sources=['ipythondistarray/procgrid_fast.c'])
+    mpibase = dict(name='ipythondistarray.mpibase_fast',
+                    sources=['ipythondistarray/mpibase_fast.c'])
     test_mpi = dict(name='ipythondistarray.tests.test_mpi',
                     sources=['ipythondistarray/tests/test_mpi.c'])
     allext = [maps, procgrid, test_mpi]
