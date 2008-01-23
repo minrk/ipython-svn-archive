@@ -25,7 +25,7 @@ class DistArray(object):
         self.shape = shape
         self.dist = dist
         self.dtype = np.dtype(dtype)
-        self.ndistdim = len(keys(self.dist))
+        self.ndistdim = len(self.dist.keys())
         self.grid_shape = grid_shape
         self.base_comm = comm
         self.comm = None
@@ -55,14 +55,13 @@ class DistArray(object):
         if self.grid_shape is None:
             raise NotImplementedError("grid_shape==None is not supported")
         else:
-            # Make it into a tuple
             try:
                 self.grid_shape = tuple(self.grid_shape)
             except:
                 raise InvalidGridShapeError("grid_shape not castable to a tuple")
-            if len(grid_shape)!=self.ndistdim:
+            if len(self.grid_shape)!=self.ndistdim:
                 raise InvalidGridShapeError("grid_shape has the wrong length")
-            ngriddim = reduce(lambda x,y: x*y, grid_shape)
+            ngriddim = reduce(lambda x,y: x*y, self.grid_shape)
             if ngriddim != self.comm_size:
                 raise InvalidGridShapeError("grid_shape is incompatible with the number of processors")
         
@@ -76,7 +75,7 @@ class DistArray(object):
         distdims = []
         for k, v in self.dist.iteritems():
             distdims.append(k)
-            map_list.append(self._get_map(v))
+            map_list.append(self._get_map_class(v))
         self.distdims = tuple(distdims)
         self.map_classes = tuple(map_list)
             
@@ -84,13 +83,15 @@ class DistArray(object):
         return maps.get_map_class(code)
         
     def _init_maps(self):
-        local_shape = self.shape
-        for i in self.distdims:
-            local_shape[i] = self.maps[i].shape
-        self.local_shape = local_shape
+        pass
+        # local_shape = self.shape
+        # for i in self.distdims:
+        #     local_shape[i] = self.maps[i].shape
+        # self.local_shape = local_shape
         
     def _allocate(self):
-        self.local_array = np.empty(self.local_shape, dtype=self.dtype)
+        pass
+        # self.local_array = np.empty(self.local_shape, dtype=self.dtype)
             
         
       
