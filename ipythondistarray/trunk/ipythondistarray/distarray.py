@@ -33,8 +33,8 @@ class DistArray(object):
         self._init_base_comm()
         self._init_grid_shape()
         self._init_comm()
+        self._init_map_classes()
         self._init_maps()
-        self._init_local_shape()
         self._allocate()
              
     def __del__(self):
@@ -71,19 +71,19 @@ class DistArray(object):
             self.ndistdim*(False,), False)
         self.cart_coords = self.comm.Get_coords(self.comm_rank) 
         
-    def _init_maps(self):
+    def _init_map_classes(self):
         map_list = []
         distdims = []
         for k, v in self.dist.iteritems():
             distdims.append(k)
             map_list.append(self._get_map(v))
         self.distdims = tuple(distdims)
-        self.maps = tuple(map_list)
+        self.map_classes = tuple(map_list)
             
-    def _get_map(self, code):
-        return maps.get_map(code)
+    def _get_map_class(self, code):
+        return maps.get_map_class(code)
         
-    def _init_local_shape(self):
+    def _init_maps(self):
         local_shape = self.shape
         for i in self.distdims:
             local_shape[i] = self.maps[i].shape
