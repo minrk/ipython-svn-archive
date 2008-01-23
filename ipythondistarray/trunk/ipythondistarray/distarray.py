@@ -83,15 +83,27 @@ class DistArray(object):
         return maps.get_map_class(code)
         
     def _init_maps(self):
-        pass
-        # local_shape = self.shape
-        # for i in self.distdims:
-        #     local_shape[i] = self.maps[i].shape
-        # self.local_shape = local_shape
+        maps = []
+        local_shape = []
+        for i, distdim in enumerate(self.distdims):
+            minst = self.map_classes[i](self.shape[distdim], self.grid_shape[i])
+            local_shape.append(minst.local_shape)
+            maps.append(minst)
+        self.maps = tuple(maps)
+        self.local_shape = tuple(local_shape)
         
     def _allocate(self):
-        pass
-        # self.local_array = np.empty(self.local_shape, dtype=self.dtype)
+        self.local_array = np.empty(self.local_shape, dtype=self.dtype)
+        
+    def get_localarray(self):
+        return self.local_array
+        
+    def set_localarray(self, a):
+        a = np.asarray(a, dtype=self.dtype, order='C')
+        if a.shape != self.local_shape:
+            raise ValueError("incompatible local array shape")
+        self.local_array = a
+        
             
         
       
