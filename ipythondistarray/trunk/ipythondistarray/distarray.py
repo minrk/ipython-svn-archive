@@ -18,6 +18,9 @@ class GridShapeError(Exception):
 class DistError(Exception):
     pass
 
+class DistMatrixError(Exception):
+    pass
+
 class DistArray(object):
     
     def __init__(self, shape, dist={0:'b'}, dtype=float, grid_shape=None,
@@ -144,20 +147,33 @@ class DistArray(object):
             raise ValueError("incompatible local array shape")
         self.local_array = a
         
-    def owner(self, *args):
-        indices = args
+    def owner_rank(self, *indices):
         owners = [self.maps[i].owner(indices[self.distdims[i]]) for i in range(self.ndistdim)]
         return self.comm.Get_cart_rank(owners)
+        
+    def owner_coords(self, *indices):
+        owners = [self.maps[i].owner(indices[self.distdims[i]]) for i in range(self.ndistdim)]
+        return owners          
+    
+    def local_ind(self, *global_ind):
+        local_ind = list(global_ind)
+        for i in range(self.ndistdim):
+            dd = self.distdims[i]
+            local_ind[dd] = self.maps[i].local_index(global_ind[dd])
+        return tuple(local_ind)
+
+    def global_ind(self, owner, *local_ind):
+        pass
         
     def get_dist_matrix(self):
         if self.ndim==2:
             a = np.empty(self.shape,dtype=int)
             for i in range(self.shape[0]):
                 for j in range(self.shape[1]):
-                    a[i,j] = self.owner(i,j)
+                    a[i,j] = self.owner_rank(i,j)
             return a
         else:
-            raise Exception("The dist matrix can only be created for a 2d array")
+            raise DistMatrixError("The dist matrix can only be created for a 2d array")
         
             
         

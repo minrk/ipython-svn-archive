@@ -2,12 +2,9 @@ import unittest
 from ipythondistarray import utils
 
 
-class TestCreateFactors(unittest.TestCase):
+class TestMultPartitions(unittest.TestCase):
     
-    def test12(self):
-        f = utils.create_factors(12,size=2)
-        self.assertEquals(f,[[2,6],[3,4]])
-        f = utils.create_factors(12,size=3)
-        self.assertEquals(f,[[2,2,3]])
-        f = utils.create_factors(12,size=4)
-        self.assertEquals(f,[])
+    def test_both_methods(self):
+        for s in [2,3]:
+            for n in range(2, 512):
+                self.assertEquals(utils.mult_partitions(n,s), utils.create_factors(n,s))

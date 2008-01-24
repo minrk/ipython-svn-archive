@@ -25,53 +25,59 @@ def create_factors(n, size=2):
         if n == total:
             factor = [divs[i] for i in indices]
             factor.sort()
+            factor = tuple(factor)
             if factor not in factors:
                 factors.append(factor)
     return factors
 
 
-def divs_minmax(n, dmin, dmax):
-    """Find the divisors of n in the interval [dmin,dmax]."""
+def divisors_minmax(n, dmin, dmax):
+    """Find the divisors of n in the interval (dmin,dmax]."""
     i = dmin+1
     while i<=dmax:
         if n % i == 0:
             yield i
         i += 1
-
-def factor_pairs(n, cutoff=2):
-    factors = []
-    if n == 1:
-        return []
-
-    i=cutoff+1
-    # print "i: ", i
-    while i<int(sqrt(n))+1:
-        if n % i == 0:
-            pair = [i,n/i]
-            pair.sort()
-            print "Adding pair: ", i, pair
-            factors.append(pair)
-        i += 1
-
-    return factors
-
-def cfactors(n, s, pd=1):
-    if s == 2:
-        return factor_pairs(n, pd)
         
-    divs = divs_minmax(n, pd, int(sqrt(n)))
-    divs = list(divs)
-    print "divs: ", divs
+def list_or_tuple(seq):
+    return isinstance(seq, (list, tuple))
+        
+def flatten(seq, to_expand=list_or_tuple):
+    """Flatten a nested sequence."""
+    for item in seq:
+        if to_expand(item):
+            for subitem in flatten(item, to_expand):
+                yield subitem
+        else:
+            yield item
+
+def mult_partitions(n, s):
+    """Compute the multiplicative partitions of n of size s
+    
+    >>> mult_partitions(52,3)
+    [(2, 2, 13)]
+    >>> mult_partitions(52,2)
+    [(2, 26), (4, 13)]
+    """
+    return [tuple(flatten(p)) for p in mult_partitions_recurs(n,s)]
+
+def mult_partitions_recurs(n, s, pd=1):
+    if s == 1:
+        return [n]        
+    divs = divisors_minmax(n, pd, int(sqrt(n)))
     fs = []
     for d in divs:
-        print "cfactor for %s with s=%s, previous=%s:" % (n/d,s-1,pd)
-        fs.extend([(d,f) for f in cfactors(n/d, s-1, pd)])
+        fs.extend([(d,f) for f in mult_partitions_recurs(n/d, s-1, pd)])
         pd = d
     return fs
 
 
 def mirror_sort(seq, ref_seq):
-    """Sort s2 into the order that s1 is in."""
+    """Sort s2 into the order that s1 is in.
+    
+    >>> mirror_sort(range(5),[1,5,2,4,3])
+    [0, 4, 1, 3, 2]
+    """
     assert len(seq)==len(ref_seq), "Sequences must have the same length"
     shift = zip(range(len(ref_seq)),ref_seq)
     shift.sort(key=lambda x:x[1])
@@ -80,18 +86,3 @@ def mirror_sort(seq, ref_seq):
     for s_index in range(len(shift)):
         newseq[shift[s_index]] = seq[s_index]
     return newseq
-
-
-
-def factor(n): 
-    d = 2 
-    factors = [ ] 
-    while n >= d*d: 
-        if n % d == 0:
-            n = n/d
-            factors.append((d,n)) 
-        else: 
-            d = d + 1 
-    if n > 1: 
-        factors.append(n) 
-    return factors

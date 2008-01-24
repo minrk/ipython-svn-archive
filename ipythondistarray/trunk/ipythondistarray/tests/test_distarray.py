@@ -67,6 +67,8 @@ class TestInit(unittest.TestCase):
             self.assertEquals(da.grid_shape,(2,2,3))                  
             comm.Free()
 
+class TestDistMatrix(unittest.TestCase):
+
     def test_plot_dist_matrix(self):
         comm = create_comm(12)
         if not comm==MPI.COMM_NULL:
@@ -80,6 +82,28 @@ class TestInit(unittest.TestCase):
                 pylab.draw() 
                 pylab.show()
             comm.Free()
+
+class TestLocalInd(unittest.TestCase):
+    
+    def test_basic(self):
+        comm = create_comm(4)
+        if not comm==MPI.COMM_NULL:
+            da = distarray.DistArray((4,4),comm=comm)
+            self.assertEquals(da.shape,(4,4))
+            self.assertEquals(da.grid_shape,(4,))
+            a = da.get_dist_matrix()
+            if comm.Get_rank()==0:
+                import pylab
+                pylab.ion()
+                pylab.matshow(a)
+                pylab.colorbar()
+                pylab.draw() 
+                pylab.show()
+                for i in range(da.shape[0]):
+                    for j in range(da.shape[1]):
+                        print i,j, da.local_ind(i,j), da.owner_rank(i,j)
+                        # self.assertEquals(True,(i,j))
+            comm.Free()        
 
 
 if __name__ == '__main__':
