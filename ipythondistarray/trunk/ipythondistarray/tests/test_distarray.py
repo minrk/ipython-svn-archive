@@ -70,14 +70,14 @@ class TestInit(unittest.TestCase):
     def test_plot_dist_matrix(self):
         comm = create_comm(12)
         if not comm==MPI.COMM_NULL:
-            da = distarray.DistArray((10,50), dist=('b','c'),comm=comm)
+            da = distarray.DistArray((10,10), dist=('c','c'),comm=comm)
             a = da.get_dist_matrix()
             if comm.Get_rank()==0:
                 import pylab
                 pylab.ion()
                 pylab.matshow(a)
                 pylab.colorbar()
-                pylab.draw()
+                pylab.draw() 
                 pylab.show()
             comm.Free()
 

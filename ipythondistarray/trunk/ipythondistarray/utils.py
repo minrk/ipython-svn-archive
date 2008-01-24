@@ -38,18 +38,36 @@ def divs_minmax(n, dmin, dmax):
             yield i
         i += 1
 
-def cfactors(n, s, pd=0):
+def factor_pairs(n, cutoff=2):
+    factors = []
+    if n == 1:
+        return []
+
+    i=cutoff+1
+    # print "i: ", i
+    while i<int(sqrt(n))+1:
+        if n % i == 0:
+            pair = [i,n/i]
+            pair.sort()
+            print "Adding pair: ", i, pair
+            factors.append(pair)
+        i += 1
+
+    return factors
+
+def cfactors(n, s, pd=1):
     if s == 2:
-        print factor_pairs(n, pd+2)
-        return
-    divs = divs_minmax(n, pd+1, int(sqrt(n)))
+        return factor_pairs(n, pd)
+        
+    divs = divs_minmax(n, pd, int(sqrt(n)))
     divs = list(divs)
     print "divs: ", divs
+    fs = []
     for d in divs:
         print "cfactor for %s with s=%s, previous=%s:" % (n/d,s-1,pd)
-        print cfactors(n/d, s-1, pd)
+        fs.extend([(d,f) for f in cfactors(n/d, s-1, pd)])
         pd = d
-        
+    return fs
 
 
 def mirror_sort(seq, ref_seq):
@@ -63,23 +81,7 @@ def mirror_sort(seq, ref_seq):
         newseq[shift[s_index]] = seq[s_index]
     return newseq
 
-def factor_pairs(n, cutoff=2):
-    factors = []
-    if n == 1:
-        return []
-    i = cutoff
-    while i<n:
-        if n % i == 0:
-            pair = [i,n/i]
-            pair.sort()
-            if pair not in factors:
-                factors.append(pair)
-        i += 1
 
-    if factors==[]:
-        return n
-    else:
-        return factors
 
 def factor(n): 
     d = 2 
