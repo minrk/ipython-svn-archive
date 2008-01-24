@@ -144,6 +144,20 @@ class DistArray(object):
             raise ValueError("incompatible local array shape")
         self.local_array = a
         
+    def owner(self, *args):
+        indices = args
+        owners = [self.maps[i].owner(indices[self.distdims[i]]) for i in range(self.ndistdim)]
+        return self.comm.Get_rank(owners)
+        
+    def _print_distribution(self):
+        print "HI"
+        if self.ndim==2:
+            a = numpy.empty(self.shape,dtype=int)
+            for i in range(shape[0]):
+                for j in range(shape[1]):
+                    a[i,j] = self.owner(i,j)
+            print a
+        
             
         
       

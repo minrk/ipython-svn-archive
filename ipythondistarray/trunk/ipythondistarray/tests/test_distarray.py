@@ -40,6 +40,7 @@ class TestInit(unittest.TestCase):
             self.assertEquals(da.local_shape,(4,))
             self.assertEquals(da.local_array.shape, da.local_shape)
             self.assertEquals(da.local_array.dtype, da.dtype)
+            da._print_distribution
             comm.Free()
         
     def test_localarray(self):
