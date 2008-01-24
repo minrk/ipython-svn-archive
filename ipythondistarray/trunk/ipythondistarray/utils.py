@@ -30,7 +30,7 @@ def create_factors(n, size=2):
     return factors
 
 
-def similarity_sort(seq, ref_seq):
+def mirror_sort(seq, ref_seq):
     """Sort s2 into the order that s1 is in."""
     assert len(seq)==len(ref_seq), "Sequences must have the same length"
     shift = zip(range(len(ref_seq)),ref_seq)
