@@ -1,4 +1,4 @@
-
+from math import sqrt
 
 def divisors(n):
     i = 2
@@ -30,6 +30,28 @@ def create_factors(n, size=2):
     return factors
 
 
+def divs_minmax(n, dmin, dmax):
+    """Find the divisors of n in the interval [dmin,dmax]."""
+    i = dmin+1
+    while i<=dmax:
+        if n % i == 0:
+            yield i
+        i += 1
+
+def cfactors(n, s, pd=0):
+    if s == 2:
+        print factor_pairs(n, pd+2)
+        return
+    divs = divs_minmax(n, pd+1, int(sqrt(n)))
+    divs = list(divs)
+    print "divs: ", divs
+    for d in divs:
+        print "cfactor for %s with s=%s, previous=%s:" % (n/d,s-1,pd)
+        print cfactors(n/d, s-1, pd)
+        pd = d
+        
+
+
 def mirror_sort(seq, ref_seq):
     """Sort s2 into the order that s1 is in."""
     assert len(seq)==len(ref_seq), "Sequences must have the same length"
@@ -41,11 +63,11 @@ def mirror_sort(seq, ref_seq):
         newseq[shift[s_index]] = seq[s_index]
     return newseq
 
-def factor_pairs(n):
+def factor_pairs(n, cutoff=2):
     factors = []
     if n == 1:
         return []
-    i = 2
+    i = cutoff
     while i<n:
         if n % i == 0:
             pair = [i,n/i]

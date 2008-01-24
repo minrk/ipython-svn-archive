@@ -40,7 +40,6 @@ class TestInit(unittest.TestCase):
             self.assertEquals(da.local_shape,(4,))
             self.assertEquals(da.local_array.shape, da.local_shape)
             self.assertEquals(da.local_array.dtype, da.dtype)
-            da._print_distribution
             comm.Free()
         
     def test_localarray(self):
@@ -67,6 +66,21 @@ class TestInit(unittest.TestCase):
             da = distarray.DistArray((100,50,300),dist='b',comm=comm)
             self.assertEquals(da.grid_shape,(2,2,3))                  
             comm.Free()
+
+    def test_plot_dist_matrix(self):
+        comm = create_comm(12)
+        if not comm==MPI.COMM_NULL:
+            da = distarray.DistArray((10,50), dist=('b','c'),comm=comm)
+            a = da.get_dist_matrix()
+            if comm.Get_rank()==0:
+                import pylab
+                pylab.ion()
+                pylab.matshow(a)
+                pylab.colorbar()
+                pylab.draw()
+                pylab.show()
+            comm.Free()
+
 
 if __name__ == '__main__':
     try:

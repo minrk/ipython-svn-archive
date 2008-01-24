@@ -147,16 +147,17 @@ class DistArray(object):
     def owner(self, *args):
         indices = args
         owners = [self.maps[i].owner(indices[self.distdims[i]]) for i in range(self.ndistdim)]
-        return self.comm.Get_rank(owners)
+        return self.comm.Get_cart_rank(owners)
         
-    def _print_distribution(self):
-        print "HI"
+    def get_dist_matrix(self):
         if self.ndim==2:
-            a = numpy.empty(self.shape,dtype=int)
-            for i in range(shape[0]):
-                for j in range(shape[1]):
+            a = np.empty(self.shape,dtype=int)
+            for i in range(self.shape[0]):
+                for j in range(self.shape[1]):
                     a[i,j] = self.owner(i,j)
-            print a
+            return a
+        else:
+            raise Exception("The dist matrix can only be created for a 2d array")
         
             
         
