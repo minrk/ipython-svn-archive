@@ -3,6 +3,7 @@ import numpy as np
 
 from ipythondistarray import mpibase
 from ipythondistarray import maps
+from ipythondistarray import utils
 
 
 class InvalidBaseCommError(Exception):
@@ -53,7 +54,7 @@ class DistArray(object):
         
     def _init_grid_shape(self):
         if self.grid_shape is None:
-            raise NotImplementedError("grid_shape==None is not supported")
+            self.grid_shape = _optimize_grid_shape()
         else:
             try:
                 self.grid_shape = tuple(self.grid_shape)
@@ -64,6 +65,11 @@ class DistArray(object):
             ngriddim = reduce(lambda x,y: x*y, self.grid_shape)
             if ngriddim != self.comm_size:
                 raise InvalidGridShapeError("grid_shape is incompatible with the number of processors")
+        
+    def _optimize_grid_shape(self):
+        factors = utils.create_factors(self.comm_size, self.ndistdim)
+        reduced_shape = [shape[i] for i in self.distdims]
+        factors = [utils.similarity_sort(f, reduced_shape) for f in factors]
         
     def _init_comm(self):
         self.comm = self.base_comm.Create_cart(self.grid_shape,

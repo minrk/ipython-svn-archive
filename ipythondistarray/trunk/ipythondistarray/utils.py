@@ -29,6 +29,18 @@ def create_factors(n, size=2):
                 factors.append(factor)
     return factors
 
+
+def similarity_sort(seq, ref_seq):
+    """Sort s2 into the order that s1 is in."""
+    assert len(seq)==len(ref_seq), "Sequences must have the same length"
+    shift = zip(range(len(ref_seq)),ref_seq)
+    shift.sort(key=lambda x:x[1])
+    shift = [s[0] for s in shift]
+    newseq = len(ref_seq)*[0]
+    for s_index in range(len(shift)):
+        newseq[shift[s_index]] = seq[s_index]
+    return newseq
+
 def factor_pairs(n):
     factors = []
     if n == 1:
