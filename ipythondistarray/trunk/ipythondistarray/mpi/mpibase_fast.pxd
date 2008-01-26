@@ -1,4 +1,4 @@
-include "include/mpi.pxi"
+include "../include/mpi.pxi"
 
 cdef class Comm:
         

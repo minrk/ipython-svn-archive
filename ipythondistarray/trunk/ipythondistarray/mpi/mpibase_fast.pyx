@@ -1,4 +1,4 @@
-include 'include/mpi.pxi'
+include '../include/mpi.pxi'
 
 # Importing this calls MPI_Init and insures that MPI_Finalize is called
 # at the right time.

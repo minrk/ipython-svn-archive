@@ -3,8 +3,9 @@ import numpy as np
 from mpi4py import MPI
 from numpy.testing.utils import assert_array_equal, assert_array_almost_equal
 
-from ipythondistarray import maps, distarray
-from ipythondistarray import mpibase, utils
+from ipythondistarray.core import maps, distarray
+from ipythondistarray.mpi import mpibase
+from ipythondistarray import utils
 
 def create_comm(size=4):
 

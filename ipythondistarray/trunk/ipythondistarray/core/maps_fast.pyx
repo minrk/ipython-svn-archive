@@ -1,4 +1,4 @@
-include "include/python.pxi"
+include "../include/python.pxi"
 
 # cdef public class Map [ object MapObj, type MapType ]:
 cdef class Map:

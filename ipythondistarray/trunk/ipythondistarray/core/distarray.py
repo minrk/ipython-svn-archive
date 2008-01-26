@@ -1,8 +1,8 @@
 from mpi4py import MPI
 import numpy as np
 
-from ipythondistarray import mpibase
-from ipythondistarray import maps
+from ipythondistarray.mpi import mpibase
+from ipythondistarray.core import maps
 from ipythondistarray import utils
 
 

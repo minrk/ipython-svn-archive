@@ -1,5 +1,5 @@
 import unittest
-from ipythondistarray import maps
+from ipythondistarray.core import maps
 
 class TestMapBase(unittest.TestCase):
     
