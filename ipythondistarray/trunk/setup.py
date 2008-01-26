@@ -20,14 +20,14 @@ metadata = {
 def ext_modules():
     import sys
     
-    maps = dict(name='ipythondistarray.maps_fast',
-                sources=['ipythondistarray/maps_fast.c'])
-    procgrid = dict(name='ipythondistarray.procgrid_fast',
-                    sources=['ipythondistarray/procgrid_fast.c'])
-    mpibase = dict(name='ipythondistarray.mpibase_fast',
-                    sources=['ipythondistarray/mpibase_fast.c'])
-    test_mpi = dict(name='ipythondistarray.tests.test_mpi',
-                    sources=['ipythondistarray/tests/test_mpi.c'])
+    maps = dict(name='ipythondistarray.core.maps_fast',
+                sources=['ipythondistarray/core/maps_fast.c'])
+    procgrid = dict(name='ipythondistarray.core.procgrid_fast',
+                    sources=['ipythondistarray/core/procgrid_fast.c'])
+    mpibase = dict(name='ipythondistarray.mpi.mpibase_fast',
+                    sources=['ipythondistarray/mpi/mpibase_fast.c'])
+    test_mpi = dict(name='ipythondistarray.mpi.tests.test_mpi',
+                    sources=['ipythondistarray/mpi/tests/test_mpi.c'])
     allext = [maps, procgrid, test_mpi]
     return allext
 
@@ -37,6 +37,20 @@ def headers():
 
 def executables():
     return []
+
+def packages():
+    return = ['ipythondistarray',
+              'ipythondistarray.tests',
+              'ipythondistarray.core',
+              'ipythondistarray.core.tests',
+              'ipythondistarray.mpi',
+              'ipythondistarray.mpi.tests',
+              'ipythondistarray.random',
+              'ipythondistarray.random.tests',
+              'ipythondistarray.linalg',
+              'ipythondistarray.linalg.tests',
+              'ipythondistarray.fft',
+              'ipythondistarray.fft.tests']
 
 
 #----------------------------------------------------------------------------
@@ -53,8 +67,7 @@ ExtModule = lambda extension: Extension(**extension)
 ExeBinary = lambda executable: Executable(**executable)
 
 def main():
-    setup(packages = ['ipythondistarray',
-                      'ipythondistarray.tests'],
+    setup(packages = packages(),
           package_data = {'ipythondistarray' : ['include/*.pxi']},
           headers = [LibHeader(hdr) for hdr in headers()],
           ext_modules = [ExtModule(ext) for ext in ext_modules()],
