@@ -29,6 +29,7 @@ class DistArray(object):
         """
         self.ndim = len(shape)
         self.shape = shape
+        self.size = reduce(lambda x,y: x*y, shape)
         self.dist = dist
         self.dtype = np.dtype(dtype)
         self.grid_shape = grid_shape
@@ -103,7 +104,7 @@ class DistArray(object):
         if self.ndistdim==1:
             self.grid_shape = (self.comm_size,)
         else:
-            factors = utils.create_factors(self.comm_size, self.ndistdim)
+            factors = utils.mult_partitions(self.comm_size, self.ndistdim)
             if factors != []:
                 reduced_shape = [self.shape[i] for i in self.distdims]
                 factors = [utils.mirror_sort(f, reduced_shape) for f in factors]
@@ -134,18 +135,24 @@ class DistArray(object):
             maps.append(minst)
         self.maps = tuple(maps)
         self.local_shape = tuple(local_shape)
+        self.local_size = reduce(lambda x,y: x*y, self.local_shape)
         
     def _allocate(self):
         self.local_array = np.empty(self.local_shape, dtype=self.dtype)
         
     def get_localarray(self):
-        return self.local_array
+        b = buffer(self.local_array)
+        ref = np.frombuffer(b,dtype=self.local_array.dtype)
+        ref.shape = self.local_array.shape
+        return self.ref
         
     def set_localarray(self, a):
         a = np.asarray(a, dtype=self.dtype, order='C')
         if a.shape != self.local_shape:
             raise ValueError("incompatible local array shape")
-        self.local_array = a
+        b = buffer(a)
+        self.local_array = np.frombuffer(b,dtype=self.dtype)
+        self.local_array = self.local_shape
         
     def owner_rank(self, *indices):
         owners = [self.maps[i].owner(indices[self.distdims[i]]) for i in range(self.ndistdim)]
@@ -155,6 +162,12 @@ class DistArray(object):
         owners = [self.maps[i].owner(indices[self.distdims[i]]) for i in range(self.ndistdim)]
         return owners          
     
+    def rank_to_coords(self, rank):
+        return self.comm.Get_coords(rank)
+    
+    def coords_to_rank(self, coords):
+        return self.comm.Get_cart_rank(coords)
+        
     def local_ind(self, *global_ind):
         local_ind = list(global_ind)
         for i in range(self.ndistdim):
@@ -163,7 +176,15 @@ class DistArray(object):
         return tuple(local_ind)
 
     def global_ind(self, owner, *local_ind):
-        pass
+        if isinstance(owner_rank, int):
+            owner_coords = self.rank_to_coords(owner)
+        else:
+            owner_coords = owner
+        global_ind = list(local_ind)
+        for i in range(self.ndistdim):
+            dd = self.distdims[i]
+            global_ind[dd] = self.maps[i].global_index(owner_coords[i], local_ind[dd])
+        return tuple(global_ind)
         
     def get_dist_matrix(self):
         if self.ndim==2:
@@ -173,8 +194,7 @@ class DistArray(object):
                     a[i,j] = self.owner_rank(i,j)
             return a
         else:
-            raise DistMatrixError("The dist matrix can only be created for a 2d array")
-        
+            raise DistMatrixError("The dist matrix can only be created for a 2d array")        
             
         
       

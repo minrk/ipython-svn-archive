@@ -29,7 +29,7 @@ class BlockMap(Map):
         return i/self.local_shape
         
     def local_index(self, i):
-        return i%self.grid_shape
+        return i%self.local_shape
         
     def global_index(self, owner, p):
         return owner*self.local_shape + p
@@ -43,7 +43,7 @@ class CyclicMap(Map):
         return i/self.grid_shape
         
     def global_index(self, owner, p):
-        return owner + p*self.local_shape
+        return owner + p*self.grid_shape
 
 class BlockCyclicMap(Map):
     pass

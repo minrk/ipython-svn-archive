@@ -30,10 +30,13 @@ class TestBlockMap(unittest.TestCase):
         self.assertEquals(4*range(4),p)
         m = maps.BlockMap(17,4)
         p = [m.local_index(i) for i in range(17)]
-        self.assertEquals(4*range(4)+[0],p)
+        self.assertEquals(3*range(5)+[0,1],p)
         m = maps.BlockMap(15,4)
         p = [m.local_index(i) for i in range(15)]
         self.assertEquals(3*range(4)+[0,1,2],p)
+        m = maps.BlockMap(10,2)
+        p = [m.local_index(i) for i in range(10)]
+        self.assertEquals(2*range(5),p)
         
 class TestCyclicMap(unittest.TestCase):
      
@@ -58,6 +61,9 @@ class TestCyclicMap(unittest.TestCase):
         m = maps.CyclicMap(15,4)
         p = [m.local_index(i) for i in range(15)]
         self.assertEquals(4*[0]+4*[1]+4*[2]+3*[3],p)
+        m = maps.BlockMap(10,2)
+        p = [m.local_index(i) for i in range(10)]
+        self.assertEquals(2*range(5),p)
 
 class TestRegistry(unittest.TestCase):
     
