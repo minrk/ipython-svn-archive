@@ -1,7 +1,7 @@
 # mpicc -o testmpi.o -I/Developer/SDKs/MacOSX10.5.sdk/System/Library/Frameworks/Python.framework/Versions/2.5/include/python2.5 testmpi.c
 # mpicc -dynamiclib -o testmpi.so testmpi.o -framework Python
 
-include '../include/mpi.pxi'
+include '../../include/mpi.pxi'
 
 
 import sys

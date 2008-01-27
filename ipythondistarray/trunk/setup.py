@@ -39,7 +39,7 @@ def executables():
     return []
 
 def packages():
-    return = ['ipythondistarray',
+    return    ['ipythondistarray',
               'ipythondistarray.tests',
               'ipythondistarray.core',
               'ipythondistarray.core.tests',

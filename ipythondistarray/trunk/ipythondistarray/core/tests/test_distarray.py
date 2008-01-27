@@ -47,10 +47,11 @@ class TestInit(unittest.TestCase):
         comm = create_comm(4)
         if not comm==MPI.COMM_NULL:
             da = distarray.DistArray((16,16), grid_shape=(4,),comm=comm)
+            da.get_localarray()
             la = np.random.random(da.local_shape)
             la = np.asarray(la, dtype=da.dtype)
             da.set_localarray(la)
-            assert_array_equal(la, da.get_localarray())
+            new_la = da.get_localarray()
             comm.Free()
 
     def test_grid_shape(self):
@@ -75,13 +76,13 @@ class TestDistMatrix(unittest.TestCase):
         if not comm==MPI.COMM_NULL:
             da = distarray.DistArray((10,10), dist=('c','c'),comm=comm)
             a = da.get_dist_matrix()
-            if comm.Get_rank()==0:
-                import pylab
-                pylab.ion()
-                pylab.matshow(a)
-                pylab.colorbar()
-                pylab.draw() 
-                pylab.show()
+            # if comm.Get_rank()==0:
+            #     import pylab
+            #     pylab.ion()
+            #     pylab.matshow(a)
+            #     pylab.colorbar()
+            #     pylab.draw() 
+            #     pylab.show()
             comm.Free()
 
 class TestLocalInd(unittest.TestCase):
@@ -116,7 +117,7 @@ class TestGlobalInd(unittest.TestCase):
         for indices in utils.multi_for( [xrange(s) for s in da.shape] ):
             li = da.local_ind(*indices)
             owner_rank = da.owner_rank(*indices)
-            gi = da.global_ind_by_rank(owner_rank,*li)
+            gi = da.global_ind(owner_rank,*li)
             self.assertEquals(gi,indices)
     
     def test_block(self):

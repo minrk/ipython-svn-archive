@@ -97,3 +97,6 @@ def outer_zip(seqa, seqb):
     
     """
     return [[(i,j) for j in seqb] for i in seqa]
+
+def _raise_nie():
+    raise NotImplementedError("This has not yet been implemented for distributed arrays")
