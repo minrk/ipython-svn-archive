@@ -363,6 +363,51 @@ class DistArray(object):
     def squeeze(self):
         _raise_nie()
      
+    def asdist(self, shape, dist={0:'b'}, grid_shape=None):
+        new_da = DistArray(shape, self.dtype, dist, grid_shape, self.base_comm)
+        base_comm = self.base_comm
+        local_array = self.local_array
+        new_local_array = da.local_array
+        recv_counts = np.zeros(self.comm_size, dtype=int)
+
+        status = MPI.Status()
+        MPI.Attach_buffer(np.empty(128+MPI.BSEND_OVERHEAD,dtype=float))
+        done_count = 0
+        
+        for old_local_inds, item in np.ndenumerate(local_array):
+
+            # Compute the new owner
+            global_inds = self.global_ind(new_da.comm_rank, old_local_inds)
+            new_owner = new_da.owner_rank(global_inds)
+            if new_owner==self.owner_rank:
+                pass
+                # Just move the data to the right place in new_local_array
+            else:
+                # Send to the new owner with default tag
+                # Bsend is probably best, but Isend is also a possibility.
+                request = comm.Isend(item, dest=new_owner)
+
+            # Recv
+            incoming = comm.Iprobe(MPI.ANY_SOURCE, MPI.ANY_TAG, status)
+            if incoming:
+                old_owner = status.Get_source()
+                tag = status.Get_tag()
+                data = comm.Recv(old_owner, tag)
+                if tag==2:
+                    done_count += 1
+                # Figure out where new location of old_owner, tag
+                new_local_ind = local_ind_by_owner_and_location(old_owner, location)
+                new_local_array[new_local_ind] = y
+                recv_counts[old_owner] = recv_counts[old_owner]+1
+        
+        while done_count < self.comm_size:
+            pass
+            
+        
+        MPI.Detach_buffer()
+            
+     
+     
     #----------------------------------------------------------------------------
     # 3.2.3 Array item selection and manipulation
     #----------------------------------------------------------------------------   

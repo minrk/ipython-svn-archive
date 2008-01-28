@@ -143,12 +143,12 @@ cdef extern from "mpi.h":
 
     # /* opaque types (C) */ 
     ctypedef int MPI_Aint
-    ctypedef int MPI_Status 
+    ctypedef int MPI_Status
  
     # /* handles to assorted structures (C) */ 
     ctypedef int MPI_Group 
     ctypedef int MPI_Comm 
-    ctypedef int MPI_Datatype 
+    ctypedef int MPI_Datatype
     ctypedef int MPI_Request 
     ctypedef int MPI_Op
     ctypedef int MPI_Errhandler
