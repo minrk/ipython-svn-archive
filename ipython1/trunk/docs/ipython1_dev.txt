@@ -192,9 +192,7 @@ Naming Conventions
 ------------------
 
 In terms of naming conventions, we'll follow the guidelines from the `Style Guide for
-Python Code`_, which boil down to accepting existing standards where one has been
-established by historical use of a third party library (such as WX or lxml, for
-example). 
+Python Code`_.
 
 For all new IPython code (and much existing code is being refactored), we'll use:
 
@@ -202,7 +200,22 @@ For all new IPython code (and much existing code is being refactored), we'll use
 
 - ``CamelCase`` for class names.
 
-- ``lowerCamelCase`` for methods, functions, variables and attributes.
+- ``lowercase_with_underscores`` for methods, functions, variables and attributes.
+
+This may be confusing as most of the existing IPython1 codebase uses a different convention (``lowerCamelCase`` for methods and attributes).  Slowly, we will move IPython1 over to the new
+convention, providing shadow names for backward compatibility in public interfaces. 
+
+There are, however, some important exceptions to these rules.  In some cases, IPython
+code will interface with packages (Twisted, Wx, Qt) that use other conventions.  At some level this makes it impossible to adhere to our own standards at all times.  In particular, when subclassing classes that use other naming conventions, you must follow their naming conventions.  To deal with cases like this, we propose the following policy:
+
+- If you are subclassing a class that uses different conventions, use its
+  naming conventions throughout your subclass.  Thus, if you are creating a 
+  Twisted Protocol class, used Twisted's ``namingSchemeForMethodsAndAttributes.``
+
+- All IPython's official interfaces should use our conventions.  In some cases 
+  this will mean that you need to provide shadow names (first implement ``fooBar``
+  and then ``foo_bar = fooBar``).  We want to avoid this at all costs, but it 
+  will probably be necessary at times.  But, please use this sparingly!
 
 Implementation-specific *private* methods will use ``_single_underscore_prefix``.
 Names with a leading double underscore will *only* be used in special cases, as they
@@ -211,6 +224,9 @@ makes subclassing difficult (such names are not easily seen by child classes).
 Occasionally some run-in lowercase names are used, but mostly for very short names or
 where we are implementing methods very similar to existing ones in a base class (like
 ``runlines()`` where ``runsource()`` and ``runcode()`` had established precedent).
+
+
+
 
 The old IPython codebase has a big mix of classes and modules prefixed with an
 explicit ``IP``. In Python this is mostly unnecessary, redundant and frowned upon, as
