@@ -1,7 +1,11 @@
+2008-01-28  Brian Granger <ellisonbg@gmail.com>
+
+    * ipython1_dev.txt: Added a new IPython developer guidelines document.
+
 2007-11-13 Darren Dale <darren.dale@cornell.edu>
 
-        * Fixed a formatting in tconfig: when generating a default config 
-        file, line wrapping was occuring in the middle of words.
+    * Fixed a formatting in tconfig: when generating a default config 
+    file, line wrapping was occuring in the middle of words.
 
 2007-10-03  Brian Granger <ellisonbg@gmail.com>
 
