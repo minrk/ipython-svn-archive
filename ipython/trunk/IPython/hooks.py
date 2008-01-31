@@ -222,10 +222,16 @@ def shell_hook(self,cmd):
 
     shell(cmd, header=self.rc.system_header, verbose=self.rc.system_verbose)
 
-
 def show_in_pager(self,s):
     """ Run a string through pager """
     # raising TryNext here will use the default paging functionality
     raise ipapi.TryNext
+
+def pre_command_hook(self,cmd):
+    """" Executed before starting to execute a command """
+    return None
+
+def post_command_hook(self,cmd):
+    """ Executed after executing a command """
     
 

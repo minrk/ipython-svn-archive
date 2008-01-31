@@ -39,7 +39,7 @@ from IPython.Itpl import Itpl,itpl,printpl
 from IPython import DPyGetOpt, platutils
 from IPython.generics import result_display
 import IPython.ipapi
-from path import path
+from IPython.external.path import path
 if os.name == "nt":
     from IPython.winconsole import get_console_size
 
