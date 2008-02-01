@@ -1,19 +1,33 @@
 Things To Do
 ============
 
-Current:
 
+Actions:
+
+* Change setup.py to use plain distutils and create a separate setupegg.py script.
+  - Figure out how to handle external things like twisted, twisted.web2.
+  - Make a .ini file for packages to include/install
+* Move all the IPython1 documentation to REST text files.
+* Get tconfig in place.
+  - traitslite
+* Move ipython1 to new coding conventions.
+* Make sure that the Controller does not ever unpickle things.
 * Refactor the clients to use blockingCallInThread.
-* Finish threaded versions of things.
-* Finish MPI support for the controller<->engine communication.
 * Convert standalone test scripts to using Fernando's new spawning stuff.
-* Merge in Fernando's testing stuff into ipython1.testutils.
-* Add capability to spawn engines using mpirun.
-* Refactor the exceptions in xmlrpcutil.
+* Redo how scatter/gather works.
+* Get paging working for PB.
+* Refactor the exceptions in xmlrpcutil?
 * Finish the properties and dependencies stuff.
 * Get functions integrated into our API as pickleable objects.
 
-Ongoing:
+Someday maybe:
+
+* Merge in Fernando's testing stuff into ipython1.testutils.
+* Add capability to spawn engines using mpirun.
+* Finish MPI support for the controller<->engine communication.
+
+
+Questions:
 
 * is it a message, result or command in the new core?
 * should the id attribute of engines be called engineID? (there are lots of ids around)
