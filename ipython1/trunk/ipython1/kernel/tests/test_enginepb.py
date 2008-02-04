@@ -33,7 +33,7 @@ from ipython1.kernel.enginepb import \
     PBRemoteEngineRootFromService, \
     PBEngineClientFactory
     
-from ipython1.kernel.test.engineservicetest import \
+from ipython1.kernel.tests.engineservicetest import \
     IEngineCoreTestCase, \
     IEngineSerializedTestCase, \
     IEngineQueuedTestCase

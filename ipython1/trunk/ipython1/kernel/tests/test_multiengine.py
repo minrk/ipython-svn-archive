@@ -19,7 +19,7 @@ from twisted.internet import defer
 from ipython1.testutils.util import DeferredTestCase
 from ipython1.kernel.controllerservice import ControllerService
 from ipython1.kernel.multiengine import IMultiEngine, ISynchronousMultiEngine
-from ipython1.kernel.test.multienginetest import \
+from ipython1.kernel.tests.multienginetest import \
     IEngineMultiplexerTestCase, \
     IEngineCoordinatorTestCase, \
     IMultiEngineBaseTestCase

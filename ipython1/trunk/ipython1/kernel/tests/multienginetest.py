@@ -23,7 +23,7 @@ from ipython1.kernel.error import NotDefined
 from ipython1.testutils import util
 from ipython1.kernel import newserialized
 from ipython1.kernel.error import InvalidEngineID, NoEnginesRegistered
-from ipython1.kernel.test.engineservicetest import validCommands, invalidCommands
+from ipython1.kernel.tests.engineservicetest import validCommands, invalidCommands
 from ipython1.testutils.testgenerator import (MultiEngineExecuteAllTestGenerator,
     MultiEngineFailingExecuteTestGenerator,
     MultiEngineGetResultTestGenerator)
