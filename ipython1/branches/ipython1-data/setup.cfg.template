@@ -1,4 +1,0 @@
-[packages]
-kernel = True
-notebook = True
-frontend = True
