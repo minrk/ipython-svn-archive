@@ -1,0 +1,10 @@
+#!/bin/sh
+
+# Configure environment, because SSH starts processes with a naked environment
+# by default, and not all systems are set up to honor setting it via the
+# ~/.ssh/environment file.
+
+. $HOME/.bashrc
+
+# Start the actual script we want
+"$@"
