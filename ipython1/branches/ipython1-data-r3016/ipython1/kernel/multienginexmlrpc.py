@@ -30,13 +30,15 @@ from twisted.python import components, failure, log
 
 from ipython1.external.twisted.web2 import xmlrpc, server, channel
 
-from ipython1.kernel import error
+from ipython1.kernel import error 
+from ipython1.kernel.util import printer
 from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
 from ipython1.kernel.multiengine import ISynchronousMultiEngine
 from ipython1.kernel.multiengineclient import PendingResult
 from ipython1.kernel.multiengineclient import ResultList, QueueStatusList
 from ipython1.kernel.multiengineclient import wrapResultList
 from ipython1.kernel.multiengineclient import InteractiveMultiEngineClient
+from ipython1.kernel.multiengineclient import MultiEngineCoordinator
 from ipython1.kernel.xmlrpcutil import Transport
 from ipython1.kernel.pickleutil import \
     can, \
@@ -155,15 +157,6 @@ class IXMLRPCMultiEngine(Interface):
         This method always blocks.
         """
         
-    #---------------------------------------------------------------------------
-    # IEngineCoordinator related methods
-    #---------------------------------------------------------------------------
-        
-    def xmlrpc_scatter(request, clientID, block, targets, key, seq, style='basic', flatten=False):
-        """"""
-        
-    def xmlrpc_gather(request, clientID, block, targets, key, style='basic'):
-        """"""
     #---------------------------------------------------------------------------
     # Pending Deferred related methods
     #---------------------------------------------------------------------------            
@@ -314,25 +307,7 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     
     def xmlrpc_getIDs(self, request):
         return self.smultiengine.getIDs()
-     
-    #---------------------------------------------------------------------------
-    # IEngineCoordinator related methods
-    #---------------------------------------------------------------------------
-    
-    @packageResult
-    def xmlrpc_scatter(self, request, clientID, block, targets, key, bseq, style='basic', flatten=False):
-        try:
-            seq = pickle.loads(bseq.data)
-        except:
-            d = defer.fail(failure.Failure())
-        else:
-            d = self.smultiengine.scatter(clientID, block, targets, key, seq, style, flatten)
-        return d      
-    
-    @packageResult
-    def xmlrpc_gather(self, request, clientID, block, targets, key, style='basic'):
-        return self.smultiengine.gather(clientID, block, targets, key, style)
-    
+         
     #---------------------------------------------------------------------------
     # Pending Deferred related methods
     #---------------------------------------------------------------------------            
@@ -397,7 +372,7 @@ components.registerAdapter(XMLRPCServerFactoryFromMultiEngine,
 # The Client side of things
 #-------------------------------------------------------------------------------
 
-class XMLRPCMultiEngineClient(object):
+class XMLRPCMultiEngineClient(MultiEngineCoordinator):
     """Client that talks to a IMultiEngine adapted controller over XML-RPC.
     
     This class is usually aliased to RemoteController in ipython1.kernel.api
@@ -656,18 +631,20 @@ class XMLRPCMultiEngineClient(object):
         localBlock = self._reallyBlock()
         userGlobals = __main__.__dict__
         
-        
         def processPullResult(rawResult):
             result = pickle.loads(rawResult.data)
             if isinstance(result, failure.Failure):
                 result.raiseException()
             else:
-                if len(keys)>1:
-                    uncannedResult = [uncanSequence(r, userGlobals) for r in result]
-                    return uncannedResult
-                if len(keys)>0:
-                    uncannedResult = [uncan(r, userGlobals) for r in result]
-                    return uncannedResult
+                if not localBlock:
+                    return PendingResult(self, result) 
+                else:
+                    if len(keys)>1:
+                        uncannedResult = [uncanSequence(r, userGlobals) for r in result]
+                        return uncannedResult
+                    if len(keys)>0:
+                        uncannedResult = [uncan(r, userGlobals) for r in result]
+                        return uncannedResult
 
         try:
             rawResult = self._server.pull(self._clientID, localBlock, targets, *keys)
@@ -676,9 +653,6 @@ class XMLRPCMultiEngineClient(object):
             self._getClientID()
             rawResult = self._server.pull(self._clientID, localBlock, targets, *keys)
             return processPullResult(rawResult)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result
     
     def pullAll(self, *keys):
         """Pull Python objects by key from all targets.
@@ -910,78 +884,6 @@ class XMLRPCMultiEngineClient(object):
     def getIDs(self):
         """Get a list of the ids of the engines that are registered."""
         return self._server.getIDs()
-    
-    #---------------------------------------------------------------------------
-    # IEngineCoordinator related methods
-    #---------------------------------------------------------------------------
-    
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        """Partition and distribute a sequence to a set of targets/engines.
-        
-        This method partitions a Python sequence and then pushes the partitions
-        to a set of engines.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            key : str
-                What to call the partitions on the engines.
-            seq : list, tuple or numpy array
-                The sequence to be partitioned and pushed.
-            style : str
-                The style of partitioning to use.  Only 'basic' is supported
-            flatten : boolean
-                Should length 1 partitions be flattened to scalars upon pushing.
-        """
-        self._checkClientID()
-        bseq = xmlrpc.Binary(pickle.dumps(seq,2))
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.scatter, self._clientID, 
-            localBlock, targets, key, bseq, style, flatten)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result
-        
-    def scatterAll(self, key, seq, style='basic', flatten=False):
-        """Partition and distribute a sequence to all targets/engines.
-        
-        See the docstring for `scatter` for full details.
-        """
-        return self.scatter('all', key, seq, style, flatten)
-    
-    def gather(self, targets, key, style='basic'):
-        """Gather a set of sequence partitions that are distributed on targets.
-        
-        This method is the inverse of `scatter` and gather parts of an overall
-        sequence that are distributed among the engines and reassembles the 
-        partitions into a single sequence which is returned.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            key : str
-                The name of the sequences on the engines.
-            style : str
-                Only 'basic' is supported currently.
-                
-        :Returns:  The reassembled sequence.
-        """
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.gather, self._clientID, 
-            localBlock, targets, key, style)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result        
-        
-    def gatherAll(self, key, style='basic'):
-        """Gather a set of sequence partitions that are distributed on all targets.
-        
-        See the docstring for `gather` for full details.
-        """
-        return self.gather('all', key, style)
 
 
 class XMLRPCInteractiveMultiEngineClient(XMLRPCMultiEngineClient, InteractiveMultiEngineClient):

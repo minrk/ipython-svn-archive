@@ -33,8 +33,8 @@ def parallelDiffs(rc, num, N):
     print "Running with", num_per_engine, "per engine."
     rc.pushAll(num_per_engine=num_per_engine, N=N)
     rc.executeAll('diffs = ensembleDiffs(num_per_engine, N)')
-    pd = rc.gatherAll('diffs')
-    return pd.getResult(block=True)
+	# gather blocks always for now
+    return rc.gatherAll('diffs')
 
 
 # Main code

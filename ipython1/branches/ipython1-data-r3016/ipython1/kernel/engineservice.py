@@ -44,7 +44,7 @@ import zope.interface as zi
 
 from ipython1.core.interpreter import Interpreter
 from ipython1.kernel import newserialized, error, util
-from ipython1.kernel.util import gatherBoth, DeferredList
+from ipython1.kernel.twistedutil import gatherBoth, DeferredList
 from ipython1.kernel import codeutil
 from ipython1.kernel.pickleutil import can, uncan
 
@@ -204,11 +204,11 @@ class IEngineThreaded(zi.Interface):
     pass
 
 
-
-
 #-------------------------------------------------------------------------------
 # Functions and classes to implement the EngineService
 #-------------------------------------------------------------------------------
+
+
 class StrictDict(dict):
     """This is a strict copying dictionary for use as the interface to the 
     properties of an Engine.

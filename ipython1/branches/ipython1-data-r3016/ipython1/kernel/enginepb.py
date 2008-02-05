@@ -50,10 +50,11 @@ DelayedCall.debug = True
 from ipython1.kernel import pbconfig
 from ipython1.kernel.pbutil import packageFailure, unpackageFailure, checkMessageSize
 from ipython1.kernel.pbconfig import CHUNK_SIZE
-from ipython1.kernel.util import gatherBoth
+from ipython1.kernel.util import printer
+from ipython1.kernel.twistedutil import gatherBoth
 from ipython1.kernel import newserialized
 from ipython1.kernel.error import PBMessageSizeError, ProtocolError
-from ipython1.kernel import controllerservice, protocols
+from ipython1.kernel import controllerservice
 from ipython1.kernel.controllerservice import IControllerBase
 from ipython1.kernel.engineservice import \
     IEngineBase, \
@@ -416,7 +417,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     #---------------------------------------------------------------------------
     # pull
     #---------------------------------------------------------------------------     
-        
+                
     def remote_pull(self, *keys):
         d = self.service.pull(*keys)
         if len(keys)>1:
@@ -618,7 +619,7 @@ class EngineFromReference(object):
     #---------------------------------------------------------------------------
     # pull
     #---------------------------------------------------------------------------
-    
+        
     def pullOld(self, *keys):
         d = self.callRemote('pull', *keys)
         d.addCallback(self.checkReturnForFailure)

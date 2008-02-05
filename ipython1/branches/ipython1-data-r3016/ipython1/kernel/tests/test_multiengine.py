@@ -21,13 +21,11 @@ from ipython1.kernel.controllerservice import ControllerService
 from ipython1.kernel.multiengine import IMultiEngine, ISynchronousMultiEngine
 from ipython1.kernel.tests.multienginetest import \
     IEngineMultiplexerTestCase, \
-    IEngineCoordinatorTestCase, \
     IMultiEngineBaseTestCase
     
     
 class BasicMultiEngineTestCase(DeferredTestCase,
-    IEngineMultiplexerTestCase,
-    IEngineCoordinatorTestCase):
+    IEngineMultiplexerTestCase):
     
     def setUp(self):
         self.controller = ControllerService()
