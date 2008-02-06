@@ -35,6 +35,7 @@ from ipython1.kernel.multiengineclient import PendingResult
 from ipython1.kernel.multiengineclient import ResultList, QueueStatusList
 from ipython1.kernel.multiengineclient import wrapResultList
 from ipython1.kernel.multiengineclient import InteractiveMultiEngineClient
+from ipython1.kernel.multiengineclient import MultiEngineCoordinator
 from ipython1.kernel.multiengine import \
     IMultiEngine, \
     ISynchronousMultiEngine
@@ -66,8 +67,6 @@ class HTTPMultiEngineRoot(resource.Resource):
         self.child_clearQueue = HTTPMultiEngineClearQueue(self.smultiengine)
         self.child_queueStatus = HTTPMultiEngineQueueStatus(self.smultiengine)
         self.child_getProperties = HTTPMultiEngineGetProperties(self.smultiengine)
-        self.child_scatter = HTTPMultiEngineScatter(self.smultiengine)
-        self.child_gather = HTTPMultiEngineGather(self.smultiengine)
         self.child_getIDs = HTTPMultiEngineGetIDs(self.smultiengine)
         
         self.child_getProperties = HTTPMultiEngineGetProperties(self.smultiengine)
@@ -448,52 +447,6 @@ class HTTPMultiEngineClearProperties(HTTPMultiEngineBaseMethod):
             return self.packageFailure(failure.Failure(error.InvalidEngineID()))
     
 
-
-class HTTPMultiEngineScatter(HTTPMultiEngineBaseMethod):
-    
-    def renderHTTP(self, request):
-        try:
-            targetsString = request.prepath[1]
-            clientID = int(request.args['clientID'][0])
-            block = int(request.args['block'][0])
-            key = request.args['key'][0]
-            seq = pickle.loads(request.args['seq'][0])
-            style = request.args['style'][0]
-            flatten = bool(int(request.args['flatten'][0]))
-        except:
-            return self._badRequest(request)
-        targetsArg = self.parseTargets(targetsString)
-        if targetsArg is not False:
-            d = self.smultiengine.scatter(clientID, block, targetsArg,
-                key, seq, style, flatten)
-            d.addCallbacks(self.packageSuccess, self.packageFailure)
-            return d
-        else:
-            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
-    
-
-class HTTPMultiEngineGather(HTTPMultiEngineBaseMethod):
-    
-    def renderHTTP(self, request):
-        try:
-            targetsString = request.prepath[1]
-            clientID = int(request.args['clientID'][0])
-            block = int(request.args['block'][0])
-            key = request.args['key'][0]
-            style = request.args['style'][0]
-        except:
-            return self._badRequest(request)
-        targetsArg = self.parseTargets(targetsString)
-        if targetsArg is not False:
-            d = self.smultiengine.gather(clientID, block, targetsArg, key, style)
-            d.addBoth(_printer)
-            d.addCallbacks(self.packageSuccess, self.packageFailure)
-            return d
-        else:
-            return self.packageFailure(failure.Failure(error.InvalidEngineID()))
-    
-
-
 class HTTPMultiEngineGetIDs(HTTPMultiEngineBaseMethod):
     
     def renderHTTP(self, request):
@@ -567,7 +520,7 @@ components.registerAdapter(HTTPServerFactoryFromMultiEngine,
 #-------------------------------------------------------------------------------
 # components.
 
-class HTTPMultiEngineClient(object):
+class HTTPMultiEngineClient(MultiEngineCoordinator):
     """Client that talks to a IMultiEngine adapted controller over HTTP.
     
     This class is usually aliased to RemoteController in ipython1.kernel.api

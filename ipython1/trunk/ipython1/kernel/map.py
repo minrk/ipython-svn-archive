@@ -88,7 +88,7 @@ class Map:
         if isinstance(testObject, (types.ListType, types.TupleType)):
             return genutil_flatten(listOfPartitions)
         # If we have scalars, just return listOfPartitions
-        return listOfPartitions    
+        return listOfPartitions
 
 class RoundRobinMap(Map):
     """Partitions a sequence in a roun robin fashion.

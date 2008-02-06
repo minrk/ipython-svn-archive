@@ -44,9 +44,8 @@ import zope.interface as zi
 
 from ipython1.core.interpreter import Interpreter
 from ipython1.kernel import newserialized, error, util
-from ipython1.kernel.util import gatherBoth, DeferredList
+from ipython1.kernel.twistedutil import gatherBoth, DeferredList
 from ipython1.kernel import codeutil
-from ipython1.kernel.pickleutil import can, uncan
 
 
 #-------------------------------------------------------------------------------
@@ -92,9 +91,22 @@ class IEngineCore(zi.Interface):
     def pull(*keys):
         """Pulls values out of the user's namespace by keys.
         
-        Returns a deferred to tuple objects or a single object.
+        Returns a deferred to a tuple objects or a single object.
         
-        Raises NameError is any one of objects does not exist.
+        Raises NameError if any one of objects doess not exist.
+        """
+    
+    def pushFunction(**namespace):
+        """Push a dict of key, function pairs into the user's namespace.
+        
+        Returns a deferred to None or a failure."""
+    
+    def pullFunction(*keys):
+        """Pulls functions out of the user's namespace by keys.
+        
+        Returns a deferred to a tuple of functions or a single function.
+        
+        Raises NameError if any one of the functions does not exist.
         """
     
     def getResult(i=None):
@@ -204,11 +216,11 @@ class IEngineThreaded(zi.Interface):
     pass
 
 
-
-
 #-------------------------------------------------------------------------------
 # Functions and classes to implement the EngineService
 #-------------------------------------------------------------------------------
+
+
 class StrictDict(dict):
     """This is a strict copying dictionary for use as the interface to the 
     properties of an Engine.
@@ -402,7 +414,10 @@ namespace.keys() = %r""" % (self.id, namespace.keys())
         msg = """engine %r
 method: pull(*keys)
 keys = %r""" % (self.id, keys)
-        if len(keys) > 1:
+        
+        if len(keys)==1:
+            return self.executeAndRaise(msg, self.shell.pull, keys[0])
+        elif len(keys) > 1:
             pulledDeferreds = []
             for key in keys:
                 d = self.executeAndRaise(msg, self.shell.pull, key)
@@ -413,10 +428,35 @@ keys = %r""" % (self.id, keys)
                            logErrors=1, 
                            consumeErrors=1)
             return dTotal
-        elif len(keys) > 0:
-            return self.executeAndRaise(msg, self.shell.pull, keys[0])
         else:
             return self.executeAndRaise(msg, self.shell.pull, None)
+    
+    def pushFunction(self, **namespace):
+        msg = """engine: %r
+method: pushFunction(**namespace)
+namespace.keys() = %r""" % (self.id, namespace.keys())
+        d = self.executeAndRaise(msg, self.shell.pushFunction, **namespace)
+        return d
+    
+    def pullFunction(self, *keys):
+        msg = """engine %r
+method: pullFunction(*keys)
+keys = %r""" % (self.id, keys)
+        if len(keys)==1:
+            return self.executeAndRaise(msg, self.shell.pullFunction, keys[0])
+        elif len(keys) > 1:
+            pulledDeferreds = []
+            for key in keys:
+                d = self.executeAndRaise(msg, self.shell.pullFunction, key)
+                pulledDeferreds.append(d)
+            # This will fire on the first failure and log the rest.
+            dTotal = gatherBoth(pulledDeferreds, 
+                           fireOnOneErrback=1,
+                           logErrors=1, 
+                           consumeErrors=1)
+            return dTotal
+        else:
+            return self.executeAndRaise(msg, self.shell.pullFunction, None)        
     
     def getResult(self, i=None):
         msg = """engine %r
@@ -506,11 +546,7 @@ sNamespace.keys() = %r""" % (self.id, sNamespace.keys())
         for k,v in sNamespace.iteritems():
             try:
                 unserialized = newserialized.IUnSerialized(v)
-                # The usage of globals() here is an attempt to bind any pickled functions
-                # to the globals of this module.  What we really want is to have it bound
-                # to the globals of the callers module.  This will require walking the 
-                # stack.  BG 10/3/07.
-                ns[k] = uncan(unserialized.getObject(),globals())
+                ns[k] = unserialized.getObject()
             except:
                 return defer.fail()
         return self.executeAndRaise(msg, self.shell.push, **ns)
@@ -519,10 +555,15 @@ sNamespace.keys() = %r""" % (self.id, sNamespace.keys())
         msg = """engine %r
 method: pullSerialized(*keys)
 keys = %r""" % (self.id, keys)
-        if len(keys) > 1:
+        if len(keys)==1:
+            key = keys[0]
+            d = self.executeAndRaise(msg, self.shell.pull, key)
+            d.addCallback(newserialized.serialize)
+            return d
+        elif len(keys)>1:            
             pulledDeferreds = []
             for key in keys:
-                d = self.executeAndRaise(msg, self.shell.pull,key)
+                d = self.executeAndRaise(msg, self.shell.pull, key)
                 pulledDeferreds.append(d)
             # This will fire on the first failure and log the rest.
             dList = gatherBoth(pulledDeferreds, 
@@ -534,18 +575,13 @@ keys = %r""" % (self.id, keys)
                 serials = []
                 for v in values:
                     try:
-                        serials = newserialized.serialize(v)
+                        serials.append(newserialized.serialize(v))
                     except:
                         return defer.fail(failure.Failure())
-                return dict(zip(keys, values))
+                return dict(zip(keys, serials))
             return packThemUp
-        else:
-            key = keys[0]
-            d = self.executeAndRaise(msg, self.shell.pull, key)
-            d.addCallback(newserialized.serialize)
-            return d
-    
-    
+
+
 def queue(methodToQueue):
     def queuedMethod(this, *args, **kwargs):
         name = methodToQueue.__name__
@@ -684,6 +720,14 @@ class QueuedEngine(object):
     def pull(self, *keys):
         pass
         
+    @queue
+    def pushFunction(self, **namespace):
+        pass      
+    
+    @queue
+    def pullFunction(self, *keys):
+        pass        
+
     def getResult(self, i=None):
         if i is None:
             i = max(self.history.keys()+[None])

@@ -17,7 +17,7 @@ __docformat__ = "restructuredtext en"
 from twisted.internet import defer
 
 from ipython1.kernel import engineservice as es
-from ipython1.kernel.multiengine import IEngineMultiplexer, IEngineCoordinator 
+from ipython1.kernel.multiengine import IEngineMultiplexer
 from ipython1.kernel import newserialized
 from ipython1.kernel.error import NotDefined
 from ipython1.testutils import util
@@ -70,7 +70,7 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         self.assert_(IEngineMultiplexer.providedBy(self.multiengine))
         
     def testIEngineMultiplexerInterfaceMethods(self):
-        """Does self.engine have the methods and attributes in IEngireCore."""
+        """Does self.engine have the methods and attributes in IEngineCore."""
         for m in list(IEngineMultiplexer):
             self.assert_(hasattr(self.multiengine, m))
     
@@ -240,87 +240,43 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
     
     def testPushFunction(self):
         self.addEngine(1)
-        d = self.multiengine.push(0,f=testf)
+        d = self.multiengine.pushFunction(0,f=testf)
         d.addCallback(lambda _: self.multiengine.execute(0,'result = f(10)'))
         d.addCallback(lambda _: self.multiengine.pull(0, 'result'))
         d.addCallback(lambda r: self.assertEquals(r[0], testf(10)))
-        d.addCallback(lambda _: self.multiengine.push(0,newf=testf, a=globala))
-        d.addCallback(lambda _: self.multiengine.execute(0,'result = newf(10)'))
+        d.addCallback(lambda _: self.multiengine.push(0,globala=globala))
+        d.addCallback(lambda _: self.multiengine.pushFunction(0,g=testg))
+        d.addCallback(lambda _: self.multiengine.execute(0,'result = g(10)'))
         d.addCallback(lambda _: self.multiengine.pull(0, 'result'))
-        d.addCallback(lambda r: self.assertEquals(r[0], testf(10)))
+        d.addCallback(lambda r: self.assertEquals(r[0], testg(10)))
         return d
     
     def testPullFunction(self):
         self.addEngine(1)
-        d = self.multiengine.push(0,f=testf,a=globala)
-        d.addCallback(lambda _: self.multiengine.pull(0, 'f'))
+        d = self.multiengine.push(0,a=globala)
+        d.addCallback(lambda _: self.multiengine.pushFunction(0,f=testf))
+        d.addCallback(lambda _: self.multiengine.pullFunction(0, 'f'))
         d.addCallback(lambda r: self.assertEquals(r[0](10), testf(10)))
-        d.addCallback(lambda _: self.multiengine.pull(0, 'f', 'a'))
-        d.addCallback(lambda r: self.assertEquals((r[0][0](10),r[0][1]),(testf(10),globala)))
         return d
     
     def testPushFunctionAll(self):
         self.addEngine(4)
-        d = self.multiengine.pushAll(f=testf)
+        d = self.multiengine.pushFunctionAll(f=testf)
         d.addCallback(lambda _: self.multiengine.executeAll('result = f(10)'))
         d.addCallback(lambda _: self.multiengine.pullAll('result'))
         d.addCallback(lambda r: self.assertEquals(r, 4*[testf(10)]))
-        d.addCallback(lambda _: self.multiengine.pushAll(newf=testf,a=globala))
-        d.addCallback(lambda _: self.multiengine.execute(0,'result = newf(10)'))
+        d.addCallback(lambda _: self.multiengine.pushAll(globala=globala))
+        d.addCallback(lambda _: self.multiengine.pushFunctionAll(testg=testg))
+        d.addCallback(lambda _: self.multiengine.executeAll('result = testg(10)'))
         d.addCallback(lambda _: self.multiengine.pullAll('result'))
-        d.addCallback(lambda r: self.assertEquals(r, 4*[testf(10)]))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[testg(10)]))
         return d        
 
     def testPullFunctionAll(self):
         self.addEngine(4)
-        d = self.multiengine.pushAll(f=testf,a=globala)
-        d.addCallback(lambda _: self.multiengine.pullAll('f'))
+        d = self.multiengine.pushFunctionAll(f=testf)
+        d.addCallback(lambda _: self.multiengine.pullFunctionAll('f'))
         d.addCallback(lambda r: self.assertEquals([func(10) for func in r], 4*[testf(10)]))
-        d.addCallback(lambda _: self.multiengine.pullAll('f', 'a'))
-        d.addCallback(lambda r: self.assertEquals([subresult[0](10) for subresult in r],4*[testf(10)]))
         return d
-    
-class IEngineCoordinatorTestCase(IMultiEngineBaseTestCase):
-    """A test for any object that implements IEngineCoordinator.
-    
-    self.multiengine must be defined and implement IEngineCoordinator.
-    self.engine must be a list of engines.
-    """
-    
-    def testIEngineCoordinatorInterface(self):
-        """Does self.engine claim to implement IEngineCore?"""
-        self.assert_(IEngineCoordinator.providedBy(self.multiengine))
-        
-    def testIEngineCoordinatorInterfaceMethods(self):
-        """Does self.engine have the methods and attributes in IEngireCore."""
-        for m in list(IEngineCoordinator):
-            self.assert_(hasattr(self.multiengine, m))
-    
-    def testIEngineCoordinatorDeferreds(self):
-        self.addEngine(1)
-        l = [
-        self.multiengine.scatterAll('a', range(10)),
-        self.multiengine.gatherAll('a')
-        ]
-        for d in l:
-            self.assert_(isinstance(d, defer.Deferred))
-        return defer.DeferredList(l)
-    
-    def testScatterGather(self):
-        self.addEngine(8)
-        try:
-            import numpy
-            a = numpy.random.random(100)
-            d = self.multiengine.scatterAll('a', a)
-            d.addCallback(lambda _: self.multiengine.gatherAll('a'))
-            d.addCallback(lambda b: (a==b).all())
-            d = self.assertDeferredEquals(d, True)
-        except ImportError:
-            print "no numpy"
-            d = defer.succeed(None)
-        l = range(100)
-        d.addCallback(lambda _: self.multiengine.scatterAll('l', l))
-        d.addCallback(lambda _: self.multiengine.gatherAll('l'))
-        return self.assertDeferredEquals(d,l)
     
 

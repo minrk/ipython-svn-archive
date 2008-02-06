@@ -32,8 +32,8 @@ from twisted.internet import defer, reactor
 from twisted.python import log, components, failure
 from zope.interface import Interface, implements, Attribute
 
-from ipython1.kernel.util import gatherBoth
-from ipython1.kernel import map as Map
+from ipython1.kernel.util import printer
+from ipython1.kernel.twistedutil import gatherBoth
 from ipython1.kernel import error
 from ipython1.kernel.controllerservice import \
     ControllerAdapterBase, \
@@ -125,6 +125,18 @@ class IEngineMultiplexer(Interface):
         
     def pullAll(*keys):
         """Pull from all targets."""
+          
+    def pushFunction(targets, **namespace):
+        """"""
+        
+    def pushFunctionAll(**namespace):
+        """"""
+        
+    def pullFunction(targets, *keys):
+        """"""
+        
+    def pullFunctionAll(*keys):
+        """"""
                 
     def getResult(targets, i=None):
         """Get the result for command i from targets.
@@ -209,49 +221,8 @@ class IEngineMultiplexer(Interface):
     def getPropertiesAll():
         """get all the properties dicts."""
     
-    
-class IEngineCoordinator(Interface):
-    """Methods that work on multiple engines explicitly."""
-        
-    #---------------------------------------------------------------------------
-    # Coordinated methods
-    #---------------------------------------------------------------------------
-         
-    def scatter(targets, key, seq, style='basic', flatten=False):
-        """Partition and distribute a sequence to targets.
-        
-        :Parameters:
-            key : str
-                The variable name to call the scattered sequence.
-            seq : list, tuple, array
-                The sequence to scatter.  The type should be preserved.
-            style : string
-                A specification of how the sequence is partitioned.  Currently 
-                only 'basic' is implemented.
-            flatten : boolean
-                Should single element sequences be converted to scalars.
-        """
-    
-    def scatterAll(key, seq, style='basic', flatten=False):
-        """Scatter to all targets."""
-    
-    def gather(targets, key, style='basic'):
-        """Gather object key from targets.
 
-        :Parameters:
-            key : string
-                The name of a sequence on the targets to gather.
-            style : string
-                A specification of how the sequence is partitioned.  Currently 
-                only 'basic' is implemented.                
-        """
-    
-    def gatherAll(key, style='basic'):
-        """Gather from all targets."""
-        
-        
-class IMultiEngine(IEngineMultiplexer, 
-                   IEngineCoordinator):
+class IMultiEngine(IEngineMultiplexer):
     """A controller that exposes an explicit interface to all of its engines.
     
     This is the primary inteface for interactive usage.
@@ -398,6 +369,18 @@ class MultiEngine(ControllerAdapterBase):
     
     def pullAll(self, *keys):
         return self.pull('all', *keys)
+    
+    def pushFunction(self, targets, **ns):
+        return self._performOnEnginesAndGatherBoth('pushFunction', targets, **ns)
+        
+    def pushFunctionAll(self, **ns):
+        return self.pushFunction('all', **ns)
+        
+    def pullFunction(self, targets, *keys):
+        return self._performOnEnginesAndGatherBoth('pullFunction', targets, *keys)
+    
+    def pullFunctionAll(self, *keys):
+        return self.pullFunction('all', *keys)
     
     def getResult(self, targets, i=None):
         return self._performOnEnginesAndGatherBoth('getResult', targets, i)
@@ -568,58 +551,6 @@ class MultiEngine(ControllerAdapterBase):
     def clearPropertiesAll(self):
         return self.getProperties('all')
     
-    #---------------------------------------------------------------------------
-    # IEngineCoordinator methods
-    #---------------------------------------------------------------------------
-
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        log.msg("Scattering %r to %r" % (key, targets))
-        try:
-            engines = self.engineList(targets)
-        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
-            return defer.fail(failure.Failure())
-        else:
-            nEngines = len(engines)    
-            mapClass = Map.styles[style]
-            mapObject = mapClass()
-            dList = []
-            for index, engine in enumerate(engines):
-                partition = mapObject.getPartition(seq, index, nEngines)
-                if flatten and len(partition) == 1:    
-                    dList.append(engine.push(**{key: partition[0]}))
-                else:
-                    dList.append(engine.push(**{key: partition}))
-            return gatherBoth(dList, 
-                              fireOnOneErrback=1,
-                              consumeErrors=1,
-                              logErrors=0)  
-                              
-    def scatterAll(self, key, seq, style='basic', flatten=False):
-        return self.scatter('all', key, seq, style, flatten)
-    
-    def gather(self, targets, key, style='basic'):
-        """gather a distributed object, and reassemble it"""
-        log.msg("Gathering %s from %r" % (key, targets))
-        try:
-             engines = self.engineList(targets)
-        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
-            return defer.fail(failure.Failure())
-        else:
-            nEngines = len(engines)    
-            dList = []
-            for e in engines:
-                dList.append(e.pull(key))    
-            mapClass = Map.styles[style]
-            mapObject = mapClass()
-            d = gatherBoth(dList, 
-                           fireOnOneErrback=1,
-                           consumeErrors=1,
-                           logErrors=0)  
-            return d.addCallback(mapObject.joinPartitions)
-    
-    def gatherAll(self, key, style='basic'):
-        return self.gather('all', key, style)
-
 
 components.registerAdapter(MultiEngine, 
                            IControllerBase, 
@@ -673,8 +604,18 @@ class SynchronousMultiEngine(PendingDeferredAdapter):
     
     @twoPhase
     def pull(self, targets, *keys):
-        return self.multiengine.pull(targets, *keys)
+        d = self.multiengine.pull(targets, *keys)
+        return d
+
+    @twoPhase
+    def pushFunction(self, targets, **namespace):
+        return self.multiengine.pushFunction(targets, **namespace)
     
+    @twoPhase
+    def pullFunction(self, targets, *keys):
+        d = self.multiengine.pullFunction(targets, *keys)
+        return d
+
     @twoPhase
     def getResult(self, targets, i=None):
         return self.multiengine.getResult(targets, i)
@@ -726,14 +667,6 @@ class SynchronousMultiEngine(PendingDeferredAdapter):
     @twoPhase
     def clearProperties(self, targets, *keys):
         return self.multiengine.clearProperties(targets, *keys)
-    
-    @twoPhase
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        return self.multiengine.scatter(targets, key, seq, style, flatten)
-    
-    @twoPhase
-    def gather(self, targets, key, style='basic'):
-        return self.multiengine.gather(targets, key, style)
     
     #---------------------------------------------------------------------------
     # IMultiEngine methods

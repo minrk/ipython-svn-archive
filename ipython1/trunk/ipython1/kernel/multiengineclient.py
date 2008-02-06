@@ -29,6 +29,7 @@ from IPython.ColorANSI import TermColors
 
 from ipython1.kernel import error
 from ipython1.kernel.parallelfunction import ParallelFunction
+from ipython1.kernel import map as Map
 
 
 #-------------------------------------------------------------------------------
@@ -421,7 +422,7 @@ class InteractiveMultiEngineClient(object):
 
         if self.block:
             if isinstance(func, FunctionType):
-                self.push(targets, _ipython_map_func=func)
+                self.pushFunction(targets, _ipython_map_func=func)
                 sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
             elif isinstance(func, str):
                 sourceToRun = \
@@ -434,7 +435,7 @@ class InteractiveMultiEngineClient(object):
             return self.gather(targets, '_ipython_map_seq_result', style)                
         else:
             if isinstance(func, FunctionType):
-                pd1 = self.push(targets, _ipython_map_func=func)
+                pd1 = self.pushFunction(targets, _ipython_map_func=func)
                 sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
             elif isinstance(func, str):
                 sourceToRun = \
@@ -488,3 +489,104 @@ class InteractiveMultiEngineClient(object):
         See the docstring for `parallelize` for more details.
         """
         return self.parallelize('all', functionName)
+
+
+#-------------------------------------------------------------------------------
+# MultiEngineCoordinator
+#-------------------------------------------------------------------------------
+
+class MultiEngineCoordinator(object):
+    
+    def scatter(self, targets, key, seq, style='basic', flatten=False):
+        """Partition and distribute a sequence to a set of targets/engines.
+        
+        This method partitions a Python sequence and then pushes the partitions
+        to a set of engines.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            key : str
+                What to call the partitions on the engines.
+            seq : list, tuple or numpy array
+                The sequence to be partitioned and pushed.
+            style : str
+                The style of partitioning to use.  Only 'basic' is supported
+            flatten : boolean
+                Should length 1 partitions be flattened to scalars upon pushing.
+        """
+        self._checkClientID()
+        localBlock = self._reallyBlock()
+        if targets=='all':
+            engines = self.getIDs()
+        else:
+            engines = targets
+        nEngines = len(engines)    
+        mapClass = Map.styles[style]
+        mapObject = mapClass()
+        results = []
+        for index, engine in enumerate(engines):
+            partition = mapObject.getPartition(seq, index, nEngines)
+            if flatten and len(partition) == 1:    
+                results.append(self.push(engine, **{key: partition[0]}))
+            else:
+                results.append(self.push(engine, **{key: partition}))           
+        if not localBlock:
+            self.barrier(*results)
+        return nEngines*[None]
+        
+    def scatterAll(self, key, seq, style='basic', flatten=False):
+        """Partition and distribute a sequence to all targets/engines.
+        
+        See the docstring for `scatter` for full details.
+        """
+        return self.scatter('all', key, seq, style, flatten)
+    
+    scatter_all = scatterAll
+    
+    def gather(self, targets, key, style='basic'):
+        """Gather a set of sequence partitions that are distributed on targets.
+        
+        This method is the inverse of `scatter` and gather parts of an overall
+        sequence that are distributed among the engines and reassembles the 
+        partitions into a single sequence which is returned.
+        
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            key : str
+                The name of the sequences on the engines.
+            style : str
+                Only 'basic' is supported currently.
+                
+        :Returns:  The reassembled sequence.
+        """  
+        self._checkClientID()
+        localBlock = self._reallyBlock()
+        if targets=='all':
+            engines = self.getIDs()
+        else:
+            engines = targets
+        nEngines = len(engines)    
+        mapClass = Map.styles[style]
+        mapObject = mapClass()
+        results = []
+        for index, engine in enumerate(engines):
+            results.append(self.zipPull(engine, key))
+        if localBlock:
+            return mapObject.joinPartitions(results)
+        else:
+            self.barrier(*results)
+            results = [r.r for r in results]
+            return mapObject.joinPartitions(results)
+         
+    def gatherAll(self, key, style='basic'):
+        """Gather a set of sequence partitions that are distributed on all targets.
+        
+        See the docstring for `gather` for full details.
+        """
+        return self.gather('all', key, style)
+
+    gather_all = gatherAll

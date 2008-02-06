@@ -19,7 +19,6 @@ import cPickle as pickle
 
 from twisted.python.failure import Failure
 from twisted.python import failure
-from twisted.internet import reactor, defer
 import threading, sys
 
 from ipython1.kernel import pbconfig
@@ -92,35 +91,3 @@ SIZE_LIMIT  (kB): %d
         return Failure(PBMessageSizeError(s))
     else:
         return m
-        
-        
-class ReactorInThread(threading.Thread):
-    """Run the twisted reactor in a different thread."""
-    def run(self):
-        reactor.run(installSignalHandlers=0)
-
-
-# This code is from 
-# http://twistedmatrix.com/trac/ticket/1042
-def blockingCallFromThread(func, *args, **kwargs):
-    # print func
-    # print args
-    # print kwargs
-    e = threading.Event()
-    l = []
-    def _got_result(result):
-        # print result
-        l.append(result)
-        e.set()
-        return None
-    def wrapped_func():
-        d = defer.maybeDeferred(func, *args, **kwargs)
-        d.addBoth(_got_result)
-    reactor.callFromThread(wrapped_func)
-    e.wait()
-    result = l[0]
-    if isinstance(result, Failure):
-        # Whee!  Cross-thread exceptions!
-        result.raiseException()
-    else:
-        return result

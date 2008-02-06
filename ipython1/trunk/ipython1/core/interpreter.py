@@ -436,19 +436,23 @@ Engine action that caused the error:
         Parameters
         ----------
         **kwds
-        """          
-        
-        # First set the func_globals for all functions to self.user_ns
-        for k, v in kwds.iteritems():
-            if isinstance(v, FunctionType):
-                kwds[k] = FunctionType(v.func_code, self.user_ns)
+        """
 
         self.user_ns.update(kwds)
+
+    def pushFunction(self, **kwds):
+        # First set the func_globals for all functions to self.user_ns
+        new_kwds = {}
+        for k, v in kwds.iteritems():
+            if not isinstance(v, FunctionType):
+                raise TypeError("function object expected")
+            new_kwds[k] = FunctionType(v.func_code, self.user_ns)
+        self.user_ns.update(new_kwds)        
 
     def pack_exception(self,message,exc):
         message['exception'] = exc.__class__
         message['exception_value'] = \
-        traceback.format_exception_only(exc.__class__, exc)
+            traceback.format_exception_only(exc.__class__, exc)
 
     def feed_block(self, source, filename='<input>', symbol='single'):
         """Compile some source in the interpreter.
@@ -529,6 +533,8 @@ Engine action that caused the error:
         else:
             return result
 
+    def pullFunction(self, key):
+        return self.pull(key)
 
     #### Interactive user API ##################################################
 

@@ -24,8 +24,7 @@ from twisted.python import components, log, failure
 
 from ipython1.kernel import engineservice as es, error
 from ipython1.kernel import controllerservice as cs
-from ipython1.kernel.pendingdeferred import PendingDeferredAdapter, twoPhase
-from ipython1.kernel.util import gatherBoth, DeferredList
+from ipython1.kernel.twistedutil import gatherBoth, DeferredList
 
 class Task(object):
     """Our representation of a task for the `TaskController` interface.

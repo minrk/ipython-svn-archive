@@ -50,10 +50,11 @@ DelayedCall.debug = True
 from ipython1.kernel import pbconfig
 from ipython1.kernel.pbutil import packageFailure, unpackageFailure, checkMessageSize
 from ipython1.kernel.pbconfig import CHUNK_SIZE
-from ipython1.kernel.util import gatherBoth
+from ipython1.kernel.util import printer
+from ipython1.kernel.twistedutil import gatherBoth
 from ipython1.kernel import newserialized
 from ipython1.kernel.error import PBMessageSizeError, ProtocolError
-from ipython1.kernel import controllerservice, protocols
+from ipython1.kernel import controllerservice
 from ipython1.kernel.controllerservice import IControllerBase
 from ipython1.kernel.engineservice import \
     IEngineBase, \
@@ -211,81 +212,8 @@ class IPBEngine(Interface):
     If a remote or local exception is raised, the appropriate Failure
     will be returned instead.
     """
-        
-    def remote_getID():
-        """return this.id"""
+    pass
     
-    def remote_setID(id):
-        """set this.id"""
-    
-    def remote_execute(lines):
-        """Execute lines of Python code.
-        
-        Returns a deferred to a result dict.
-        
-        Upon failure returns a pickled Failure.
-        """
-    
-    def remote_push(self, pNamespace):
-        """Push a namespace into the users namespace.
-        
-        pNamespace is a pickled dict of key, object pairs. 
-        """
-    
-    def remote_pull(*keys):
-        """Pull objects from a users namespace by keys.
-        
-        Returns a deferred to a pickled tuple of objects.  If any single
-        key has a problem, the Failure of that will be returned.
-        """
-    
-    def remote_getResult(i=None):
-        """Get result i.
-        
-        Returns a deferred to a pickled result dict.
-        """
-    
-    def remote_reset():
-        """Reset the Engine."""
-    
-    def remote_kill():
-        """Stop the Engines reactor."""
-    
-    def remote_keys():
-        """Get variable names that are currently defined in the user's namespace.
-        
-        Returns a deferred to a tuple of keys.
-        """
-    
-    def remote_pushSerialized(pNamespace):
-        """Push a dict of keys and serialized objects into users namespace.
-        
-        @arg pNamespace: a pickle namespace of keys and serialized objects.
-        """
-    
-    def remote_pullSerialized(*keys):
-        """Pull objects from users namespace by key as Serialized.
-        
-        Returns a deferred to a pickled dict of key, Serialized pairs.
-        """
-    
-    def remote_setProperties(pNamespace):
-        """update the properties for this engine"""
-    
-    def remote_getProperties(*keys):
-        """pull a subdict of the properties for this engine by keys"""
-    
-    def remote_hasProperties(*keys):
-        """check for keys in the properties for this engine"""
-    
-    def remote_delProperties(*keys):
-        """remove values of the properties for this engine by keys"""
-    
-    def remote_clearProperties():
-        """clear the properties for this engine"""
-    
-    
-
 
 class PBEngineReferenceFromService(pb.Referenceable, object):
     """Adapt an IEngineBase to an IPBEngine implementer exposing it to PB.
@@ -315,65 +243,33 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         return (dosync and pickle.dumps(self.service.properties, 2)), result
     
     def remote_execute(self, lines):
+        """Execute lines of Python code.
+        
+        Returns a deferred to a result dict.
+        
+        Upon failure returns a pickled Failure.
+        """
         d = self.service.execute(lines)
         d.addErrback(packageFailure)
         d.addCallback(self._checkProperties)
         d.addErrback(packageFailure)
         #d.addCallback(lambda r: log.msg("Got result: " + str(r)))
         return d
-    
-    def remote_setProperties(self, pNamespace):
-        try:
-            namespace = pickle.loads(pNamespace)
-        except:
-            return defer.fail(failure.Failure()).addErrback(packageFailure)
-        else:
-            return self.service.setProperties(**namespace).addErrback(packageFailure)
-    
-    def remote_getProperties(self, *keys):
-        d = self.service.getProperties(*keys)
-        d.addCallback(pickle.dumps, 2)
-        d.addCallback(checkMessageSize, repr(keys))
-        d.addErrback(packageFailure)
-        return d
-    
-    def remote_hasProperties(self, *keys):
-        d = self.service.hasProperties(*keys)
-        d.addCallback(pickle.dumps, 2)
-        d.addCallback(checkMessageSize, repr(keys))
-        d.addErrback(packageFailure)
-        return d
-    
-    def remote_delProperties(self, *keys):
-        d = self.service.delProperties(*keys)
-        # d.addCallback(pickle.dumps, 2)
-        # d.addCallback(checkMessageSize, repr(keys))
-        d.addErrback(packageFailure)
-        return d
-    
-    def remote_clearProperties(self):
-        d = self.service.clearProperties()
-        # d.addCallback(pickle.dumps, 2)
-        # d.addCallback(checkMessageSize, repr(keys))
-        d.addErrback(packageFailure)
-        return d
-    
-    
+        
     #---------------------------------------------------------------------------
     # Old version of push
     #---------------------------------------------------------------------------
         
     def remote_push(self, pNamespace):
+        """Push a namespace into the users namespace.
+        
+        pNamespace is a pickled dict of key, object pairs. 
+        """
         try:
             namespace = pickle.loads(pNamespace)
         except:
             return defer.fail(failure.Failure()).addErrback(packageFailure)
         else:
-            # The usage of globals() here is an attempt to bind any pickled functions
-            # to the globals of this module.  What we really want is to have it bound
-            # to the globals of the callers module.  This will require walking the 
-            # stack.  BG 10/3/07.
-            namespace = uncanDict(namespace, globals())
             return self.service.push(**namespace).addErrback(packageFailure)
     
     #---------------------------------------------------------------------------
@@ -416,13 +312,14 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     #---------------------------------------------------------------------------
     # pull
     #---------------------------------------------------------------------------     
-        
+                
     def remote_pull(self, *keys):
+        """Pull objects from a users namespace by keys.
+        
+        Returns a deferred to a pickled tuple of objects.  If any single
+        key has a problem, the Failure of that will be returned.
+        """
         d = self.service.pull(*keys)
-        if len(keys)>1:
-            d.addCallback(canSequence)
-        elif len(keys)==1:
-            d.addCallback(can)
         d.addCallback(pickle.dumps, 2)
         d.addCallback(checkMessageSize, repr(keys))
         d.addErrback(packageFailure)
@@ -438,21 +335,59 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     
     def _startPaging(self, serial, collector):
         pager = SerializedPager(collector, serial, chunkSize=CHUNK_SIZE)
+
+    #---------------------------------------------------------------------------
+    # push/pullFuction
+    #---------------------------------------------------------------------------
     
+    def remote_pushFunction(self, pNamespace):
+        try:
+            namespace = pickle.loads(pNamespace)
+        except:
+            return defer.fail(failure.Failure()).addErrback(packageFailure)
+        else:
+            # The usage of globals() here is an attempt to bind any pickled functions
+            # to the globals of this module.  What we really want is to have it bound
+            # to the globals of the callers module.  This will require walking the 
+            # stack.  BG 10/3/07.
+            namespace = uncanDict(namespace, globals())
+            return self.service.pushFunction(**namespace).addErrback(packageFailure)
+    
+    def remote_pullFunction(self, *keys):
+        d = self.service.pullFunction(*keys)
+        if len(keys)>1:
+            d.addCallback(canSequence)
+        elif len(keys)==1:
+            d.addCallback(can)
+        d.addCallback(pickle.dumps, 2)
+        d.addCallback(checkMessageSize, repr(keys))
+        d.addErrback(packageFailure)
+        return d
+
     #---------------------------------------------------------------------------
     # Other methods
     #---------------------------------------------------------------------------
     
     def remote_getResult(self, i=None):
+        """Get result i.
+        
+        Returns a deferred to a pickled result dict.
+        """
         return self.service.getResult(i).addErrback(packageFailure)
     
     def remote_reset(self):
+        """Reset the Engine."""
         return self.service.reset().addErrback(packageFailure)
     
     def remote_kill(self):
+        """Stop the Engines reactor."""
         return self.service.kill().addErrback(packageFailure)
     
     def remote_keys(self):
+        """Get variable names that are currently defined in the user's namespace.
+        
+        Returns a deferred to a tuple of keys.
+        """
         return self.service.keys().addErrback(packageFailure)
     
     #---------------------------------------------------------------------------
@@ -460,6 +395,10 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     #---------------------------------------------------------------------------
     
     def remote_pushSerialized(self, pNamespace):
+        """Push a dict of keys and serialized objects into users namespace.
+        
+        @arg pNamespace: a pickle namespace of keys and serialized objects.
+        """
         try:
             namespace = pickle.loads(pNamespace)
         except:
@@ -469,9 +408,58 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
             return d.addErrback(packageFailure)
     
     def remote_pullSerialized(self, *keys):
+        """Pull objects from users namespace by key as Serialized.
+        
+        Returns a deferred to a pickled dict of key, Serialized pairs.
+        """
         d = self.service.pullSerialized(*keys)
         d.addCallback(pickle.dumps, 2)
         d.addCallback(checkMessageSize, repr(keys))
+        d.addErrback(packageFailure)
+        return d
+    
+    #---------------------------------------------------------------------------
+    # Properties interface
+    #---------------------------------------------------------------------------
+    
+    def remote_setProperties(self, pNamespace):
+        """Update the properties for this engine"""
+        try:
+            namespace = pickle.loads(pNamespace)
+        except:
+            return defer.fail(failure.Failure()).addErrback(packageFailure)
+        else:
+            return self.service.setProperties(**namespace).addErrback(packageFailure)
+    
+    def remote_getProperties(self, *keys):
+        """Pull a subdict of the properties for this engine by keys"""
+        d = self.service.getProperties(*keys)
+        d.addCallback(pickle.dumps, 2)
+        d.addCallback(checkMessageSize, repr(keys))
+        d.addErrback(packageFailure)
+        return d
+    
+    def remote_hasProperties(self, *keys):
+        """Check for keys in the properties for this engine."""
+        d = self.service.hasProperties(*keys)
+        d.addCallback(pickle.dumps, 2)
+        d.addCallback(checkMessageSize, repr(keys))
+        d.addErrback(packageFailure)
+        return d
+    
+    def remote_delProperties(self, *keys):
+        """Remove values of the properties for this engine by keys."""
+        d = self.service.delProperties(*keys)
+        # d.addCallback(pickle.dumps, 2)
+        # d.addCallback(checkMessageSize, repr(keys))
+        d.addErrback(packageFailure)
+        return d
+    
+    def remote_clearProperties(self):
+        """Clear the properties for this engine."""
+        d = self.service.clearProperties()
+        # d.addCallback(pickle.dumps, 2)
+        # d.addCallback(checkMessageSize, repr(keys))
         d.addErrback(packageFailure)
         return d
     
@@ -570,7 +558,7 @@ class EngineFromReference(object):
     
     def pushOld(self, **namespace):
         try:
-            package = pickle.dumps(canDict(namespace), 2)
+            package = pickle.dumps(namespace, 2)
         except:
             return defer.fail(failure.Failure())
         else:
@@ -618,19 +606,11 @@ class EngineFromReference(object):
     #---------------------------------------------------------------------------
     # pull
     #---------------------------------------------------------------------------
-    
+        
     def pullOld(self, *keys):
         d = self.callRemote('pull', *keys)
         d.addCallback(self.checkReturnForFailure)
         d.addCallback(pickle.loads)
-        # The usage of globals() here is an attempt to bind any pickled functions
-        # to the globals of this module.  What we really want is to have it bound
-        # to the globals of the callers module.  This will require walking the 
-        # stack.  BG 10/3/07.
-        if len(keys)>1:
-            d.addCallback(uncanSequence, globals())
-        elif len(keys)>0:
-            d.addCallback(uncan, globals())
         return d
     
     # Paging version
@@ -657,6 +637,37 @@ class EngineFromReference(object):
             return d
     
     pull = pullOld
+
+    #---------------------------------------------------------------------------
+    # push/pullFunction
+    #---------------------------------------------------------------------------
+    
+    def pushFunction(self, **namespace):
+        try:
+            package = pickle.dumps(canDict(namespace), 2)
+        except:
+            return defer.fail(failure.Failure())
+        else:
+            package = checkMessageSize(package, namespace.keys())
+            if isinstance(package, failure.Failure):
+                return defer.fail(package)
+            else:
+                d = self.callRemote('pushFunction', package)
+                return d.addCallback(self.checkReturnForFailure)    
+    
+    def pullFunction(self, *keys):
+        d = self.callRemote('pullFunction', *keys)
+        d.addCallback(self.checkReturnForFailure)
+        d.addCallback(pickle.loads)
+        # The usage of globals() here is an attempt to bind any pickled functions
+        # to the globals of this module.  What we really want is to have it bound
+        # to the globals of the callers module.  This will require walking the 
+        # stack.  BG 10/3/07.
+        if len(keys)==1:
+            d.addCallback(uncan, globals())
+        elif len(keys)>1:
+            d.addCallback(uncanSequence, globals())            
+        return d
     
     #---------------------------------------------------------------------------
     # Other methods

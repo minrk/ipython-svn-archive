@@ -1,3 +1,20 @@
+2008-02-05  Brian Granger <ellisonbg@gmail.com>
+
+	* ipython1.kernel.enginepb/multienginexmlrpc: Simplified certain 
+	interfaces so that they are simply a pass.  This was done for
+	interfaces that 1) are not part of the public API and 2)
+	only have one implementation (and always will).
+
+	* ipython1.kernel: Created new pushFunction/pullFunctions in the API
+	of the engines.  These functions now have all the needed logic for
+	pushing/pulling functions.  The logic has been removed from regular
+	push/pull to make things more robust.
+	
+	* ipython1.kernel.multiengine and friends:  Removed the 
+	IMultiEngineCoordinator interface (gather/scatter) entirely from the
+	controller.  These things are now handled by the client using push/pull.
+	This was done to make the load on the controller lighter.
+
 2008-01-28  Brian Granger <ellisonbg@gmail.com>
 
     * ipython1_dev.txt: Added a new IPython developer guidelines document.
