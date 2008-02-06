@@ -1,0 +1,13 @@
+==================
+  SnakeOil  ToDo
+==================
+
+* %doctest_mode magic for IPython.
+
+
+Done
+====
+
+* run standalone tests as unittests
+
+* test collector
