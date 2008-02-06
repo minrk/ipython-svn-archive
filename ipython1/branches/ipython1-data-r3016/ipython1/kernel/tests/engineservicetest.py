@@ -147,7 +147,7 @@ class IEngineCoreTestCase(object):
         self.assert_(es.IEngineCore.providedBy(self.engine))
         
     def testIEngineCoreInterfaceMethods(self):
-        """Does self.engine have the methods and attributes in IEngireCore."""
+        """Does self.engine have the methods and attributes in IEngineCore."""
         for m in list(es.IEngineCore):
             self.assert_(hasattr(self.engine, m))
             
@@ -213,40 +213,26 @@ class IEngineCoreTestCase(object):
         
     def testPushFunction(self):
                     
-        d = self.engine.push(f=testf)
-        d.addCallback(lambda _: self.engine.execute('result = f(10)'))
-        d.addCallback(lambda _: self.engine.pull('result'))
-        d.addCallback(lambda r: self.assertEquals(r, testf(10)))
-        d.addCallback(lambda _: self.engine.push(f=testf,a=30))
+        d = self.engine.pushFunction(f=testf)
         d.addCallback(lambda _: self.engine.execute('result = f(10)'))
         d.addCallback(lambda _: self.engine.pull('result'))
         d.addCallback(lambda r: self.assertEquals(r, testf(10)))
         return d
 
     def testPullFunction(self):
-        d = self.engine.push(f=testf)
-        d.addCallback(lambda _: self.engine.pull('f'))
-        d.addCallback(lambda r: self.assertEquals(r(10), testf(10)))
-        d.addCallback(lambda _: self.engine.push(f=testf,a=30))
-        d.addCallback(lambda _: self.engine.pull('f','a'))
+        d = self.engine.pushFunction(f=testf, g=testg)
+        d.addCallback(lambda _: self.engine.pullFunction('f','g'))
         d.addCallback(lambda r: self.assertEquals(r[0](10), testf(10)))
         return d
         
     def testPushFunctionGlobal(self):
         """Make sure that pushed functions pick up the user's namespace for globals."""
-        d = self.engine.push(g=testg, globala=globala)
+        d = self.engine.push(globala=globala)
+        d.addCallback(lambda _: self.engine.pushFunction(g=testg))
         d.addCallback(lambda _: self.engine.execute('result = g(10)'))
         d.addCallback(lambda _: self.engine.pull('result'))
         d.addCallback(lambda r: self.assertEquals(r, testg(10)))
         return d
-
-    # It is actually a bit subtle about how to get this pulled off correctly in all cases.
-    # def testPullFunctionGlobal(self):
-    #     """Make sure that pushed functions pick up the user's namespace for globals."""
-    #     d = self.engine.push(g=testg, globala=globala)
-    #     d.addCallback(lambda _: self.engine.pull('g'))
-    #     d.addCallback(lambda r: self.assertEquals(r(10), testg(10)))
-    #     return d
         
     def testGetResultFailure(self):
         d = self.engine.getResult(None)
@@ -310,13 +296,6 @@ class IEngineSerializedTestCase(object):
             value = self.engine.pullSerialized('key')
             value.addCallback(lambda serial: newserialized.IUnSerialized(serial).getObject())
             d = self.assertDeferredEquals(value,o,d)
-        return d
-
-    def testPushFunctionSerialized(self):
-        d = self.engine.pushSerialized(f=newserialized.serialize(can(testf)))
-        d.addCallback(lambda _: self.engine.execute('result = f(10)'))
-        d.addCallback(lambda _: self.engine.pull('result'))
-        d.addCallback(lambda r: self.assertEquals(r, testf(10)))
         return d
 
     def testPullSerializedFailures(self):

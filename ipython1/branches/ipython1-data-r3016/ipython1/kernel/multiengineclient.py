@@ -422,7 +422,7 @@ class InteractiveMultiEngineClient(object):
 
         if self.block:
             if isinstance(func, FunctionType):
-                self.push(targets, _ipython_map_func=func)
+                self.pushFunction(targets, _ipython_map_func=func)
                 sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
             elif isinstance(func, str):
                 sourceToRun = \
@@ -435,7 +435,7 @@ class InteractiveMultiEngineClient(object):
             return self.gather(targets, '_ipython_map_seq_result', style)                
         else:
             if isinstance(func, FunctionType):
-                pd1 = self.push(targets, _ipython_map_func=func)
+                pd1 = self.pushFunction(targets, _ipython_map_func=func)
                 sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
             elif isinstance(func, str):
                 sourceToRun = \

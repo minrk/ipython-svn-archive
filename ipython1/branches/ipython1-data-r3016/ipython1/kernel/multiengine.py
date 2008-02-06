@@ -125,6 +125,18 @@ class IEngineMultiplexer(Interface):
         
     def pullAll(*keys):
         """Pull from all targets."""
+          
+    def pushFunction(targets, **namespace):
+        """"""
+        
+    def pushFunctionAll(**namespace):
+        """"""
+        
+    def pullFunction(targets, *keys):
+        """"""
+        
+    def pullFunctionAll(*keys):
+        """"""
                 
     def getResult(targets, i=None):
         """Get the result for command i from targets.
@@ -358,6 +370,18 @@ class MultiEngine(ControllerAdapterBase):
     def pullAll(self, *keys):
         return self.pull('all', *keys)
     
+    def pushFunction(self, targets, **ns):
+        return self._performOnEnginesAndGatherBoth('pushFunction', targets, **ns)
+        
+    def pushFunctionAll(self, **ns):
+        return self.pushFunction('all', **ns)
+        
+    def pullFunction(self, targets, *keys):
+        return self._performOnEnginesAndGatherBoth('pullFunction', targets, *keys)
+    
+    def pullFunctionAll(self, *keys):
+        return self.pullFunction('all', *keys)
+    
     def getResult(self, targets, i=None):
         return self._performOnEnginesAndGatherBoth('getResult', targets, i)
                 
@@ -581,6 +605,15 @@ class SynchronousMultiEngine(PendingDeferredAdapter):
     @twoPhase
     def pull(self, targets, *keys):
         d = self.multiengine.pull(targets, *keys)
+        return d
+
+    @twoPhase
+    def pushFunction(self, targets, **namespace):
+        return self.multiengine.pushFunction(targets, **namespace)
+    
+    @twoPhase
+    def pullFunction(self, targets, *keys):
+        d = self.multiengine.pullFunction(targets, *keys)
         return d
 
     @twoPhase
