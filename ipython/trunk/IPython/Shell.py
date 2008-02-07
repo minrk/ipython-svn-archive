@@ -982,6 +982,12 @@ class IPShellQt4(IPThread):
 
         from PyQt4 import QtCore, QtGui
 
+        try:
+            # present in PyQt4-4.2.1 or later
+            QtCore.pyqtRemoveInputHook()
+        except AttributeError:
+            pass
+
         if QtCore.PYQT_VERSION_STR == '4.3':
             warn('''PyQt4 version 4.3 detected.
 If you experience repeated threading warnings, please update PyQt4.
