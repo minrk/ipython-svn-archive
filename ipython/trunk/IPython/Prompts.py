@@ -535,8 +535,12 @@ class CachedOutput:
             # first handle the cache and counters
 
             # do not print output if input ends in ';'
-            if self.prompt_count and self.input_hist[self.prompt_count].endswith(';\n'):
-                return
+            try:
+                if self.input_hist[self.prompt_count].endswith(';\n'):
+                    return
+            except IndexError:
+                # some uses of ipshellembed may fail here
+                pass
             # don't use print, puts an extra space
             cout_write(self.output_sep)
             outprompt = self.shell.hooks.generate_output_prompt()
