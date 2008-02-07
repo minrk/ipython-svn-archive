@@ -15,10 +15,10 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-import threading
+import threading, Queue, atexit
 
 from twisted.internet import defer, reactor
-from twisted.python import log
+from twisted.python import log, failure
 
 #-------------------------------------------------------------------------------
 # Classes related to twisted and threads
@@ -27,8 +27,14 @@ from twisted.python import log
 
 class ReactorInThread(threading.Thread):
     """Run the twisted reactor in a different thread."""
+    
     def run(self):
         reactor.run(installSignalHandlers=0)
+        # self.join()
+        
+    def stop(self):
+        blockingCallFromThread(reactor.stop)
+        self.join()
 
 def blockingCallFromThread(f, *a, **kw):
     """

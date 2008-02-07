@@ -30,6 +30,14 @@ from IPython.ColorANSI import TermColors
 from ipython1.kernel import error
 from ipython1.kernel.parallelfunction import ParallelFunction
 from ipython1.kernel import map as Map
+from ipython1.kernel.pendingdeferred import PendingDeferredManager, twoPhase
+from ipython1.kernel.multiengine import \
+    IFullMultiEngine, \
+    EngineMultiplexerAll, \
+    MultiEngineCoordinator, \
+    MultiEngineMapper, \
+    MultiEngineExtras, \
+    IFullSynchronousMultiEngine
 
 
 #-------------------------------------------------------------------------------
@@ -251,45 +259,7 @@ class InteractiveMultiEngineClient(object):
         return self._magicTargets
     
     magicTargets = property(_getMagicTargets, _setMagicTargets, None, None)
-            
-    def _transformPullResult(self, pushResult, multitargets, lenKeys):
-        if not multitargets:
-            result = pushResult[0]
-        elif lenKeys > 1:
-            result = zip(*pushResult)
-        elif lenKeys is 1:
-            result = list(pushResult)
-        return result
-        
-    def zipPull(self, targets, *keys):
-        """Pull, but return results in a different format from `pull`.
-        
-        This method basically returns zip(pull(targets, *keys)), with a few 
-        edge cases handled differently.  Users of chainsaw will find this format 
-        familiar.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            keys: list or tuple of str
-                A list of variable names as string of the Python objects to be pulled
-                back to the client.
-
-        :Returns: A list of pulled Python objects for each target.
-        """
-        result = self.pull(targets, *keys)
-        multitargets = not isinstance(targets, int) and len(targets) > 1
-        lenKeys = len(keys)
-        if self.block:
-            result = self._transformPullResult(result, multitargets, lenKeys)
-        else:
-            result.addCallback(self._transformPullResult, multitargets, lenKeys)
-        return result
-            
-    def zipPullAll(self, *keys):
-        return self.zipPull('all', *keys)
-                    
+                                
     def activate(self):
         """Make this `RemoteController` active for parallel magic commands.
         
@@ -316,40 +286,7 @@ class InteractiveMultiEngineClient(object):
             __IPYTHON__.activeController = self
         except NameError:
             print "The IPython Controller magics only work within IPython."
-            
-    def run(self, targets, fname, block=None):
-        """Run a .py file on targets.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            fname : str
-                The filename of a .py file on the local system to be sent to and run
-                on the engines.
-            block : boolean
-                Should I block or not.  If block=True, wait for the action to
-                complete and return the result.  If block=False, return a
-                `PendingResult` object that can be used to later get the
-                result.  If block is not specified, the block attribute 
-                will be used instead. 
-        """
-        fileobj = open(fname,'r')
-        source = fileobj.read()
-        fileobj.close()
-        # if the compilation blows, we get a local error right away
-        code = compile(source,fname,'exec')
-        
-        # Now run the code
-        return self.execute(targets, source, block)
-        
-    def runAll(self, fname, block=None):
-        """Run a .py file on all engines.
-        
-        See the docstring for `run` for more details.
-        """
-        return self.run('all', fname, block)
-        
+                    
     def __setitem__(self, key, value):
         """Add a dictionary interface for pushing/pulling.
         
@@ -389,72 +326,6 @@ class InteractiveMultiEngineClient(object):
         """Return the number of available engines."""
         return len(self.getIDs())
         
-    def map(self, targets, func, seq, style='basic'):
-        """A parallelized version of Python's builtin map.
-        
-        This function implements the following pattern:
-        
-        1. The sequence seq is scattered to the given targets.
-        2. map(functionSource, seq) is called on each engine.
-        3. The resulting sequences are gathered back to the local machine.
-                
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            func : str, function
-                An actual function object or a Python string that names a 
-                callable defined on the engines.
-            seq : list, tuple or numpy array
-                The local sequence to be scattered.
-            style : str
-                Only 'basic' is supported for now.
-                
-        :Returns: A list of len(seq) with functionSource called on each element
-        of seq.
-                
-        Example
-        =======
-        
-        >>> rc.mapAll('lambda x: x*x', range(10000))
-        [0,2,4,9,25,36,...]
-        """
-
-        if self.block:
-            if isinstance(func, FunctionType):
-                self.pushFunction(targets, _ipython_map_func=func)
-                sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
-            elif isinstance(func, str):
-                sourceToRun = \
-                    '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
-                    func
-            else:
-                raise TypeError("func must be a function or str")
-            self.scatter(targets, '_ipython_map_seq', seq, style)
-            self.execute(targets, sourceToRun)
-            return self.gather(targets, '_ipython_map_seq_result', style)                
-        else:
-            if isinstance(func, FunctionType):
-                pd1 = self.pushFunction(targets, _ipython_map_func=func)
-                sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
-            elif isinstance(func, str):
-                sourceToRun = \
-                    '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
-                    func
-            else:
-                raise TypeError("func must be a function or str")            
-            pd2 = self.scatter(targets, '_ipython_map_seq', seq, style)        
-            pd3 = self.execute(targets, sourceToRun)
-            pd4 = self.gather(targets, '_ipython_map_seq_result', style)
-            return pd4
-            
-    def mapAll(self, functionSource, seq, style='basic'):
-        """Parallel map on all engines.
-        
-        See the docstring for `map` for more details.
-        """
-        return self.map('all', functionSource, seq, style)
-
     def parallelize(self, targets, functionName):
         """Build a `ParallelFunction` object for functionName on engines.
         
@@ -492,101 +363,122 @@ class InteractiveMultiEngineClient(object):
 
 
 #-------------------------------------------------------------------------------
-# MultiEngineCoordinator
+# IFullSynchronousMultiEngine -> SyncMultiEngineClient adaptor
 #-------------------------------------------------------------------------------
 
-class MultiEngineCoordinator(object):
-    
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        """Partition and distribute a sequence to a set of targets/engines.
-        
-        This method partitions a Python sequence and then pushes the partitions
-        to a set of engines.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            key : str
-                What to call the partitions on the engines.
-            seq : list, tuple or numpy array
-                The sequence to be partitioned and pushed.
-            style : str
-                The style of partitioning to use.  Only 'basic' is supported
-            flatten : boolean
-                Should length 1 partitions be flattened to scalars upon pushing.
-        """
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        if targets=='all':
-            engines = self.getIDs()
-        else:
-            engines = targets
-        nEngines = len(engines)    
-        mapClass = Map.styles[style]
-        mapObject = mapClass()
-        results = []
-        for index, engine in enumerate(engines):
-            partition = mapObject.getPartition(seq, index, nEngines)
-            if flatten and len(partition) == 1:    
-                results.append(self.push(engine, **{key: partition[0]}))
-            else:
-                results.append(self.push(engine, **{key: partition}))           
-        if not localBlock:
-            self.barrier(*results)
-        return nEngines*[None]
-        
-    def scatterAll(self, key, seq, style='basic', flatten=False):
-        """Partition and distribute a sequence to all targets/engines.
-        
-        See the docstring for `scatter` for full details.
-        """
-        return self.scatter('all', key, seq, style, flatten)
-    
-    scatter_all = scatterAll
-    
-    def gather(self, targets, key, style='basic'):
-        """Gather a set of sequence partitions that are distributed on targets.
-        
-        This method is the inverse of `scatter` and gather parts of an overall
-        sequence that are distributed among the engines and reassembles the 
-        partitions into a single sequence which is returned.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            key : str
-                The name of the sequences on the engines.
-            style : str
-                Only 'basic' is supported currently.
-                
-        :Returns:  The reassembled sequence.
-        """  
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        if targets=='all':
-            engines = self.getIDs()
-        else:
-            engines = targets
-        nEngines = len(engines)    
-        mapClass = Map.styles[style]
-        mapObject = mapClass()
-        results = []
-        for index, engine in enumerate(engines):
-            results.append(self.zipPull(engine, key))
-        if localBlock:
-            return mapObject.joinPartitions(results)
-        else:
-            self.barrier(*results)
-            results = [r.r for r in results]
-            return mapObject.joinPartitions(results)
-         
-    def gatherAll(self, key, style='basic'):
-        """Gather a set of sequence partitions that are distributed on all targets.
-        
-        See the docstring for `gather` for full details.
-        """
-        return self.gather('all', key, style)
 
-    gather_all = gatherAll
+class IFullBlockingMultiEngineClient(Interface):
+    pass
+
+
+class FullBlockingMultiEngineClient(EngineMultiplexerAll,
+        MultiEngineCoordinator, 
+        MultiEngineMapper, 
+        MultiEngineExtras):
+
+    implements(IFullBlockingMultiEngineClient)
+    
+    def __init__(self, smultiengine):
+        self.smultiengine = smultiengine
+        self.block = True
+    
+    def _reallyBlock(self, block=None):
+        if block is None:
+            return self.block
+        else:
+            if block in (True, False):
+                return block
+            else:
+                raise ValueError("block must be True or False")
+    
+    def _blockFromThread(self, function, *args, **kwargs):
+        block = self._reallyBlock()
+        result = blockingCallFromThread(function, block, *args, **kwargs)
+        if block:
+            result = ResultList(result)
+        else:
+            result = PendingResult(self, result)
+            result.addCallback(wrapResultList)
+        return result
+                
+    #---------------------------------------------------------------------------
+    # IEngineMultiplexer related methods
+    #---------------------------------------------------------------------------
+    
+    def execute(self, targets, lines, block=None):
+        block = self._reallyBlock(block)
+        result = blockingCallFromThread(self.smultiengine.execute, block,
+            targets, lines)
+        if block:
+            result = ResultList(result)
+        else:
+            result = PendingResult(self, result)
+            result.addCallback(wrapResultList)
+        return result
+
+    def push(self, targets, **namespace):
+        return self._blockFromThread(self.smultiengine.push, targets, **namespace)
+
+    def pull(self, targets, *keys):
+        return self.smultiengine.pull(True, targets, *keys)
+
+    def pushFunction(self, targets, **namespace):
+        return self.smultiengine.pushFunction(True, targets, **namespace)
+
+    def pullFunction(self, targets, *keys):
+        return self.smultiengine.pullFunction(True, targets, *keys)
+
+    def pushSerialized(self, targets, **namespace):
+        return self.smultiengine.pushSerialized(True, targets, **namespace)
+
+    def pullSerialized(self, targets, *keys):
+        return self.smultiengine.pullSerialized(True, targets, *keys)
+    
+    def getResult(self, targets, i=None):
+        return self.smultiengine.getResult(True, targets, i)
+    
+    def reset(self, targets):
+        self.smultiengine.reset(True, targets)
+
+    def keys(self, targets):
+        self.smultiengine.keys(True, targets)
+    
+    def kill(self, targets, controller=False):
+        self.smultiengine.kill(True, targets)
+
+    def clearQueue(self, targets):
+        self.smultiengine.clearQueue(True, targets)
+    
+    def queueStatus(self, targets):
+        self.smultiengine.queueStatus(True, targets)
+
+    def setProperties(self, targets, **properties):
+        self.smultiengine.setProperties(True, targets)
+
+    def getProperties(self, targets, *keys):
+        self.smultiengine.getProperties(True, targets, *keys)
+
+    def hasProperties(self, targets, *keys):
+        self.smultiengine.hasProperties(True, targets, *keys)
+    
+    def delProperties(self, targets, *keys):
+        self.smultiengine.delProperties(True, targets, *keys)
+    
+    def clearProperties(self, targets):
+        self.smultiengine.clearProperties(True, targets, *keys)
+    
+    #---------------------------------------------------------------------------
+    # IMultiEngine related methods
+    #---------------------------------------------------------------------------
+    
+    def getIDs(self):
+        self.smultiengine.getIDs(True)
+
+
+components.registerAdapter(FullBlockingMultiEngineClient,
+            IFullSynchronousMultiEngine, IFullBlockingMultiEngineClient)
+
+    
+
+
+

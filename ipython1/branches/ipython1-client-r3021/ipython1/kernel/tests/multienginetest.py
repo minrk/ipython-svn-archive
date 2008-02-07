@@ -44,7 +44,7 @@ class IMultiEngineBaseTestCase(object):
         for i in range(n):
             e = es.EngineService()
             e.startService()
-            regDict = self.multiengine.registerEngine(es.QueuedEngine(e), None)
+            regDict = self.controller.registerEngine(es.QueuedEngine(e), None)
             e.id = regDict['id']
             self.engines.append(e)
 
@@ -76,23 +76,18 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
     
     def testIEngineMultiplexerDeferreds(self):
         self.addEngine(1)
-        
-        l = [
-        self.multiengine.execute(0, 'a=5'),
-        self.multiengine.push(0, a=5),
-        self.multiengine.push(0, a=5, b='asdf', c=[1,2,3]),
-        self.multiengine.pull(0, 'a', 'b', 'c'),
-        self.multiengine.getResult(0),
-        self.multiengine.reset(0),
-        self.multiengine.keys(0),
-        self.multiengine.pushSerialized(0, a=newserialized.serialize(10)),
-        self.multiengine.pullSerialized(0, 'a'),
-        self.multiengine.clearQueue(0),
-        self.multiengine.queueStatus(0),
-        ]
-        for d in l:
-            self.assert_(isinstance(d, defer.Deferred))
-        return defer.DeferredList(l, consumeErrors=1)
+        d = self.multiengine.execute(0, 'a=5')
+        d.addCallback(lambda _: self.multiengine.push(0, a=5))
+        d.addCallback(lambda _: self.multiengine.push(0, a=5, b='asdf', c=[1,2,3]))
+        d.addCallback(lambda _: self.multiengine.pull(0, 'a', 'b', 'c'))
+        d.addCallback(lambda _: self.multiengine.getResult(0))
+        d.addCallback(lambda _: self.multiengine.reset(0))
+        d.addCallback(lambda _: self.multiengine.keys(0))
+        d.addCallback(lambda _: self.multiengine.pushSerialized(0, a=newserialized.serialize(10)))
+        d.addCallback(lambda _: self.multiengine.pullSerialized(0, 'a'))
+        d.addCallback(lambda _: self.multiengine.clearQueue(0))
+        d.addCallback(lambda _: self.multiengine.queueStatus(0))
+        return d
     
     def testInvalidEngineID(self):
          self.addEngine(1)
@@ -171,16 +166,23 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
     
     def testPushPull(self):
         self.addEngine(1)
-        objs = [10,"hi there",1.2342354,{"p":(1,2)}]
-        d = defer.succeed(None)
-        for o in objs:
-            d0 = self.multiengine.push(0, key=o)
-            value = self.multiengine.pull(0, 'key')
-            d = self.assertDeferredEquals(value, [o] , d)
-        self.multiengine.reset(0)
-        d1 = self.multiengine.pull(0, "a")
-        d1.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
-        return defer.DeferredList([d, d0, d1])
+        objs = [10,"hi there",1.2342354,{"p":(1,2)}]        
+        d = self.multiengine.push(0, key=objs[0])
+        d.addCallback(lambda _: self.multiengine.pull(0, 'key'))
+        d.addCallback(lambda r: self.assertEquals(r, [objs[0]]))
+        d.addCallback(lambda _: self.multiengine.push(0, key=objs[1]))
+        d.addCallback(lambda _: self.multiengine.pull(0, 'key'))
+        d.addCallback(lambda r: self.assertEquals(r, [objs[1]]))
+        d.addCallback(lambda _: self.multiengine.push(0, key=objs[2]))
+        d.addCallback(lambda _: self.multiengine.pull(0, 'key'))
+        d.addCallback(lambda r: self.assertEquals(r, [objs[2]]))        
+        d.addCallback(lambda _: self.multiengine.push(0, key=objs[3]))
+        d.addCallback(lambda _: self.multiengine.pull(0, 'key'))
+        d.addCallback(lambda r: self.assertEquals(r, [objs[3]]))
+        d.addCallback(lambda _: self.multiengine.reset(0))
+        d.addCallback(lambda _: self.multiengine.pull(0, 'a'))
+        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        return d
     
     def testPushPullAll(self):
         self.addEngine(4)
@@ -200,7 +202,29 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
     
     def testPushPullSerialized(self):
         self.addEngine(1)
-        objs = [10,"hi there",1.2342354,{"p":(1,2)}]
+        objs = [10,"hi there",1.2342354,{"p":(1,2)}]        
+        d = self.multiengine.pushSerialized(0, key=newserialized.serialize(objs[0]))
+        d.addCallback(lambda _: self.multiengine.pullSerialized(0, 'key'))
+        d.addCallback(lambda serial: newserialized.IUnSerialized(serial[0]).getObject())
+        d.addCallback(lambda r: self.assertEquals(r, objs[0]))
+        d.addCallback(lambda _: self.multiengine.pushSerialized(0, key=newserialized.serialize(objs[1])))
+        d.addCallback(lambda _: self.multiengine.pullSerialized(0, 'key'))
+        d.addCallback(lambda serial: newserialized.IUnSerialized(serial[0]).getObject())
+        d.addCallback(lambda r: self.assertEquals(r, objs[1]))
+        d.addCallback(lambda _: self.multiengine.pushSerialized(0, key=newserialized.serialize(objs[2])))
+        d.addCallback(lambda _: self.multiengine.pullSerialized(0, 'key'))
+        d.addCallback(lambda serial: newserialized.IUnSerialized(serial[0]).getObject())
+        d.addCallback(lambda r: self.assertEquals(r, objs[2]))        
+        d.addCallback(lambda _: self.multiengine.pushSerialized(0, key=newserialized.serialize(objs[3])))
+        d.addCallback(lambda _: self.multiengine.pullSerialized(0, 'key'))
+        d.addCallback(lambda serial: newserialized.IUnSerialized(serial[0]).getObject())
+        d.addCallback(lambda r: self.assertEquals(r, objs[3]))
+        d.addCallback(lambda _: self.multiengine.reset(0))
+        d.addCallback(lambda _: self.multiengine.pullSerialized(0, 'a'))
+        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        return d
+
+        objs = [10,"hi there",1.2342354,{"p":(1,2)}]    
         d = defer.succeed(None)
         for o in objs:
             self.multiengine.pushSerialized(0, key=newserialized.serialize(o))

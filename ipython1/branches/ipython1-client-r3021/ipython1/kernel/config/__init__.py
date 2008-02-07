@@ -106,7 +106,7 @@ controllerConfig = {
 #-------------------------------------------------------------------------------
 
 clientConfig = {
-    'RemoteController': 'ipython1.kernel.multienginexmlrpc.XMLRPCInteractiveMultiEngineClient',
+    'RemoteController': 'ipython1.kernel.multienginexmlrpc.XMLRPCMultiEngineClient',
     'connectToRemoteControllerOn': {'ip': '127.0.0.1', 'port': xmlrpcMEPort},
     'TaskController': 'ipython1.kernel.taskxmlrpc.XMLRPCInteractiveTaskClient',
     'connectToTaskControllerOn': {'ip': '127.0.0.1', 'port': xmlrpcTCPort}
