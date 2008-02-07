@@ -535,7 +535,7 @@ class CachedOutput:
             # first handle the cache and counters
 
             # do not print output if input ends in ';'
-            if self.input_hist[self.prompt_count].endswith(';\n'):
+            if self.prompt_count and self.input_hist[self.prompt_count].endswith(';\n'):
                 return
             # don't use print, puts an extra space
             cout_write(self.output_sep)
