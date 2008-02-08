@@ -26,13 +26,22 @@ from twisted.python import log, failure
 
 
 class ReactorInThread(threading.Thread):
-    """Run the twisted reactor in a different thread."""
+    """Run the twisted reactor in a different thread.
+    
+    For the process to be able to exit cleanly, do the following:
+    
+    rit = ReactorInThread()
+    rit.setDaemon(True)
+    rit.start()
+    
+    """
     
     def run(self):
         reactor.run(installSignalHandlers=0)
         # self.join()
         
     def stop(self):
+        # I don't think this does anything useful.
         blockingCallFromThread(reactor.stop)
         self.join()
 

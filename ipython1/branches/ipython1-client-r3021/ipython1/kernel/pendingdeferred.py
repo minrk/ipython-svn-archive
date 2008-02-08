@@ -158,7 +158,7 @@ def twoPhase(wrappedMethod):
         if block:
             return wrappedMethod(pendingDeferredManager, *args[1:], **kwargs)
         else:
-            deferredID = pendingDeferredManager.getNextPendingDeferredID()
+            deferredID = pendingDeferredManager.getNextDeferredID()
             d = wrappedMethod(pendingDeferredManager, *args[1:], **kwargs)
             pendingDeferredManager.savePendingDeferred(deferredID, d)
             return defer.succeed(deferredID)

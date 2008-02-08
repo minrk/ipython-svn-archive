@@ -21,23 +21,23 @@ import cPickle as pickle
 from types import FunctionType
 
 from twisted.internet import reactor
-from twisted.python import components
+from twisted.python import components, log
 from twisted.python.failure import Failure
 from zope.interface import Interface, implements, Attribute
 
 from IPython.ColorANSI import TermColors
 
+from ipython1.kernel.twistedutil import blockingCallFromThread
 from ipython1.kernel import error
 from ipython1.kernel.parallelfunction import ParallelFunction
 from ipython1.kernel import map as Map
 from ipython1.kernel.pendingdeferred import PendingDeferredManager, twoPhase
+from ipython1.kernel import multiengine as me
 from ipython1.kernel.multiengine import \
     IFullMultiEngine, \
     EngineMultiplexerAll, \
-    MultiEngineCoordinator, \
-    MultiEngineMapper, \
-    MultiEngineExtras, \
-    IFullSynchronousMultiEngine
+    IFullSynchronousMultiEngine, \
+    IFullSynchronousTwoPhaseMultiEngine
 
 
 #-------------------------------------------------------------------------------
@@ -133,7 +133,7 @@ class PendingResult(object):
             else:
                 return self.result
         try:
-            result = self.client._getPendingResult(self.resultID, block)
+            result = self.client.getPendingDeferred(self.resultID, block)
         except error.ResultNotCompleted:
             return default
         except:
@@ -237,19 +237,6 @@ class QueueStatusList(list):
 
 class InteractiveMultiEngineClient(object):
         
-    #---------------------------------------------------------------------------
-    # Interactive Extensions:
-    #
-    # activate
-    # run/runAll
-    # map/mapAll
-    # parallelize/parallelizeAll
-    # __len__
-    # __setitem__
-    # __getitem__
-    
-    #---------------------------------------------------------------------------
-    
     _magicTargets = 'all'
     
     def _setMagicTargets(self, targets):
@@ -363,7 +350,7 @@ class InteractiveMultiEngineClient(object):
 
 
 #-------------------------------------------------------------------------------
-# IFullSynchronousMultiEngine -> SyncMultiEngineClient adaptor
+# IFullTwoPhaseMultiEngine -> IFullBlockingMultiEngineClient adaptor
 #-------------------------------------------------------------------------------
 
 
@@ -371,15 +358,12 @@ class IFullBlockingMultiEngineClient(Interface):
     pass
 
 
-class FullBlockingMultiEngineClient(EngineMultiplexerAll,
-        MultiEngineCoordinator, 
-        MultiEngineMapper, 
-        MultiEngineExtras):
-
+class FullBlockingMultiEngineClient(InteractiveMultiEngineClient, EngineMultiplexerAll):
+    
     implements(IFullBlockingMultiEngineClient)
     
-    def __init__(self, smultiengine):
-        self.smultiengine = smultiengine
+    def __init__(self, stpmultiengine):
+        self.stpmultiengine = stpmultiengine
         self.block = True
     
     def _reallyBlock(self, block=None):
@@ -394,20 +378,20 @@ class FullBlockingMultiEngineClient(EngineMultiplexerAll,
     def _blockFromThread(self, function, *args, **kwargs):
         block = self._reallyBlock()
         result = blockingCallFromThread(function, block, *args, **kwargs)
-        if block:
-            result = ResultList(result)
-        else:
+        if not block:
             result = PendingResult(self, result)
-            result.addCallback(wrapResultList)
         return result
-                
+    
+    def getPendingDeferred(self, deferredID, block):
+        return blockingCallFromThread(self.stpmultiengine.getPendingDeferred, deferredID, block)
+    
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
     
     def execute(self, targets, lines, block=None):
         block = self._reallyBlock(block)
-        result = blockingCallFromThread(self.smultiengine.execute, block,
+        result = blockingCallFromThread(self.stpmultiengine.execute, block,
             targets, lines)
         if block:
             result = ResultList(result)
@@ -415,70 +399,147 @@ class FullBlockingMultiEngineClient(EngineMultiplexerAll,
             result = PendingResult(self, result)
             result.addCallback(wrapResultList)
         return result
-
+    
+    def executeAll(self, lines, block=None):
+        return self.execute('all', lines, block)
+    
     def push(self, targets, **namespace):
-        return self._blockFromThread(self.smultiengine.push, targets, **namespace)
-
+        return self._blockFromThread(self.stpmultiengine.push, targets, **namespace)
+    
     def pull(self, targets, *keys):
-        return self.smultiengine.pull(True, targets, *keys)
-
+        return self._blockFromThread(self.stpmultiengine.pull, targets, *keys)
+    
     def pushFunction(self, targets, **namespace):
-        return self.smultiengine.pushFunction(True, targets, **namespace)
-
+        return self._blockFromThread(self.stpmultiengine.pushFunction, targets, **namespace)
+    
     def pullFunction(self, targets, *keys):
-        return self.smultiengine.pullFunction(True, targets, *keys)
-
+        return self._blockFromThread(self.stpmultiengine.pullFunction, targets, *keys)
+    
     def pushSerialized(self, targets, **namespace):
-        return self.smultiengine.pushSerialized(True, targets, **namespace)
-
+        return self._blockFromThread(self.stpmultiengine.pushSerialized, targets, **namespace)
+    
     def pullSerialized(self, targets, *keys):
-        return self.smultiengine.pullSerialized(True, targets, *keys)
+        return self._blockFromThread(self.stpmultiengine.pullSerialized, targets, *keys)
     
     def getResult(self, targets, i=None):
-        return self.smultiengine.getResult(True, targets, i)
+        block = self._reallyBlock()
+        result = blockingCallFromThread(self.stpmultiengine.getResult, block,
+            targets, lines)
+        if block:
+            result = ResultList(result)
+        else:
+            result = PendingResult(self, result)
+            result.addCallback(wrapResultList)
+        return result
     
     def reset(self, targets):
-        self.smultiengine.reset(True, targets)
-
+        return self._blockFromThread(self.stpmultiengine.reset, targets)
+    
     def keys(self, targets):
-        self.smultiengine.keys(True, targets)
+        return self._blockFromThread(self.stpmultiengine.keys, targets)
     
     def kill(self, targets, controller=False):
-        self.smultiengine.kill(True, targets)
-
+        return self._blockFromThread(self.stpmultiengine.kill, targets)
+    
     def clearQueue(self, targets):
-        self.smultiengine.clearQueue(True, targets)
+        return self._blockFromThread(self.stpmultiengine.clearQueue, targets)
     
     def queueStatus(self, targets):
-        self.smultiengine.queueStatus(True, targets)
-
+        return self._blockFromThread(self.stpmultiengine.queueStatus, targets)
+    
     def setProperties(self, targets, **properties):
-        self.smultiengine.setProperties(True, targets)
-
+        return self._blockFromThread(self.stpmultiengine.setProperties, targets)
+    
     def getProperties(self, targets, *keys):
-        self.smultiengine.getProperties(True, targets, *keys)
-
+        return self._blockFromThread(self.stpmultiengine.getProperties, targets, *keys)
+    
     def hasProperties(self, targets, *keys):
-        self.smultiengine.hasProperties(True, targets, *keys)
+        return self._blockFromThread(self.stpmultiengine.hasProperties, targets, *keys)
     
     def delProperties(self, targets, *keys):
-        self.smultiengine.delProperties(True, targets, *keys)
+        return self._blockFromThread(self.stpmultiengine.delProperties, targets, *keys)
     
     def clearProperties(self, targets):
-        self.smultiengine.clearProperties(True, targets, *keys)
+        return self._blockFromThread(self.stpmultiengine.clearProperties, targets, *keys)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
     def getIDs(self):
-        self.smultiengine.getIDs(True)
+        return self._blockFromThread(self.stpmultiengine.getIDs, targets)
+    
+    #---------------------------------------------------------------------------
+    # IMultiEngineCoordinator
+    #---------------------------------------------------------------------------
+             
+    def scatter(self, targets, key, seq, style='basic', flatten=False):
+        return self._blockFromThread(self.stpmultiengine.scatter, targets, 
+            key, seq, style, flatten)
+    
+    def scatterAll(self, key, seq, style='basic', flatten=False):
+        return self.scatter('all', key, seq, style, flatten)
+        
+    def gather(self, targets, key, style='basic'):
+        return self._blockFromThread(self.stpmultiengine.gather, targets, 
+            key, style)
+        
+    def gatherAll(self, key, style='basic'):
+        return self.gather('all', key, style)
+            
+    def map(self, targets, func, seq, style='basic'):
+        return self._blockFromThread(self.stpmultiengine.map, targets, func, 
+            seq, style)
+    
+    def mapAll(self, func, seq, style='basic'):
+        return self.map('all', func, seq, style)
+    
+    #---------------------------------------------------------------------------
+    # IMultiEngineExtras
+    #---------------------------------------------------------------------------
+    
+    def zipPull(self, targets, *keys):
+        return self._blockFromThread(self.stpmultiengine.zipPull, targets, *keys)
+    
+    def zipPullAll(self, *keys):
+        return self.zipPull('all', *keys)
+    
+    def run(self, targets, fname):
+        return self._blockFromThread(self.stpmultiengine.run, targets, fnamekeys)
+    
+    def runAll(self, fname):
+        return self.run('all', fname)
 
 
 components.registerAdapter(FullBlockingMultiEngineClient,
-            IFullSynchronousMultiEngine, IFullBlockingMultiEngineClient)
+            IFullSynchronousTwoPhaseMultiEngine, IFullBlockingMultiEngineClient)
 
-    
+
+#-------------------------------------------------------------------------------
+# ISynchronousMultiEngine -> IFullBlockingMultiEngineClient adaptor
+#-------------------------------------------------------------------------------
+
+def mainClientAdaptor(smultiengine):
+    client = me.IFullTwoPhaseMultiEngine(smultiengine)
+    client = me.IFullSynchronousTwoPhaseMultiEngine(client)
+    client = IFullBlockingMultiEngineClient(client)
+    return client
+
+components.registerAdapter(mainClientAdaptor,
+            me.ISynchronousMultiEngine, IFullBlockingMultiEngineClient)
+
+#-------------------------------------------------------------------------------
+# ISynchronousMultiEngine -> IFullSynchronousTwoPhaseMultiEngine adaptor
+#-------------------------------------------------------------------------------
+
+def mainAsynClientAdaptor(smultiengine):
+    client = me.IFullTwoPhaseMultiEngine(smultiengine)
+    client = me.IFullSynchronousTwoPhaseMultiEngine(client)
+    return client
+
+components.registerAdapter(mainAsynClientAdaptor,
+            me.ISynchronousMultiEngine, me.IFullSynchronousTwoPhaseMultiEngine)
+
 
 
 

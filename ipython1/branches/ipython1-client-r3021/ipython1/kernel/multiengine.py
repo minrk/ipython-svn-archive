@@ -43,12 +43,11 @@ from ipython1.kernel.controllerservice import \
     ControllerAdapterBase, \
     ControllerService, \
     IControllerBase
-# from ipython1.kernel.pendingdeferred import PendingDeferredAdapter, twoPhase
+
 
 #-------------------------------------------------------------------------------
 # Interfaces for the MultiEngine representation of a controller
 #-------------------------------------------------------------------------------
-    
 
 class IEngineMultiplexer(Interface):
     """Interface to multiple engines implementing IEngineCore/Serialized/Queued.
@@ -61,10 +60,10 @@ class IEngineMultiplexer(Interface):
     * targets = 10            # Engines are indexed by ints
     * targets = [0,1,2,3]     # A list of ints
     * targets = 'all'         # A string to indicate all targets
-
+    
     If targets is bad in any way, an InvalidEngineID will be raised.  This
     includes engines not being registered.
-
+    
     All IEngineMultiplexer multiplexer methods must return a Deferred to a list 
     with length equal to the number of targets.  The elements of the list will 
     correspond to the return of the corresponding IEngine method.
@@ -75,9 +74,9 @@ class IEngineMultiplexer(Interface):
     :Parameters:
         targets : int, list of ints, or 'all'
             Engine ids the action will apply to.
-
+    
     :Returns: Deferred to a list of results for each engine.
-
+    
     :Exception:
         InvalidEngineID
             If the targets argument is bad or engines aren't registered.
@@ -102,7 +101,7 @@ class IEngineMultiplexer(Interface):
             
     def push(targets, **namespace):
         """Push dict namespace into the user's namespace on targets.
-
+        
         See the class docstring for information about targets and possible
         exceptions this method can raise.
         
@@ -113,7 +112,7 @@ class IEngineMultiplexer(Interface):
         
     def pull(targets, *keys):
         """Pull values out of the user's namespace on targets by keys.
-
+        
         See the class docstring for information about targets and possible
         exceptions this method can raise.
         
@@ -130,10 +129,10 @@ class IEngineMultiplexer(Interface):
                 
     def getResult(targets, i=None):
         """Get the result for command i from targets.
-
+        
         See the class docstring for information about targets and possible
         exceptions this method can raise.
-
+        
         :Parameters:
             i : int or None
                 Command index or None to indicate most recent command.                
@@ -181,12 +180,24 @@ class IEngineMultiplexer(Interface):
     def queueStatus(targets):
         """Get the status of the queue on the targets."""
     
-    def getProperties(targets):
-        """get the properties dict from the targets."""
+    def setProperties(targets, **properties):
+        """set properties by key and value"""
+    
+    def getProperties(targets, *keys):
+        """get a list of properties by `keys`, if no keys specified, get all"""
+    
+    def delProperties(targets, *keys):
+        """delete properties by `keys`"""
+    
+    def hasProperties(targets, *keys):
+        """get a list of bool values for whether `properties` has `keys`"""
+    
+    def clearProperties(targets):
+        """clear the properties dict"""
 
 
 class IEngineMultiplexerAll(Interface):
-        
+    
     #---------------------------------------------------------------------------
     # Mutiplexed *All methods
     #---------------------------------------------------------------------------
@@ -202,13 +213,13 @@ class IEngineMultiplexerAll(Interface):
     
     def pushFunctionAll(**namespace):
         """"""
-
+    
     def pullFunctionAll(*keys):
         """"""
     
     def getResultAll(i=None):
         """"""
-
+    
     def resetAll():
         """"""
     
@@ -223,22 +234,35 @@ class IEngineMultiplexerAll(Interface):
         
     def pullSerializedAll(*keys):
         """"""
-
+    
     def clearQueueAll():
         """"""
-
+    
     def queueStatusAll():
         """"""
     
-    def getPropertiesAll():
+    def setProperties(**properties):
         """"""
+    
+    def getProperties(*keys):
+        """"""
+    
+    def delProperties(*keys):
+        """"""
+    
+    def hasProperties(*keys):
+        """"""
+    
+    def clearProperties():
+        """"""
+
 
 class IMultiEngine(IEngineMultiplexer, IEngineMultiplexerAll):
     """A controller that exposes an explicit interface to all of its engines.
     
     This is the primary inteface for interactive usage.
     """
-
+    
     def getIDs():
         """Return list of currently registered ids.
         
@@ -247,12 +271,12 @@ class IMultiEngine(IEngineMultiplexer, IEngineMultiplexerAll):
         
         :Returns:  A list of registered engine ids.
         """
-        
-        
+
+
+
 #-------------------------------------------------------------------------------
 # Implementation of the core MultiEngine classes
 #-------------------------------------------------------------------------------
-
 
 class EngineMultiplexerAll(object):
     
@@ -275,7 +299,7 @@ class EngineMultiplexerAll(object):
     
     def getResultAll(self, i=None):
         return self.getResult('all', i)
-
+    
     def resetAll(self):
         return self.reset('all')
     
@@ -290,7 +314,7 @@ class EngineMultiplexerAll(object):
         
     def pullSerializedAll(self, *keys):
         return self.pullSerialized('all', *keys)
-
+    
     def clearQueueAll(self):
         return self.clearQueue('all')
     
@@ -326,11 +350,11 @@ class MultiEngine(ControllerAdapterBase, EngineMultiplexerAll):
     
     def __init(self, controller):
         ControllerAdapterBase.__init__(self, controller)
-
+    
     #---------------------------------------------------------------------------
     # Helper methods
     #---------------------------------------------------------------------------
-
+    
     def engineList(self, targets):
         """Parse the targets argument into a list of valid engine objects.
         
@@ -575,32 +599,39 @@ components.registerAdapter(MultiEngine,
 
 
 #-------------------------------------------------------------------------------
-# Synchronous MultiEngine
+# Interfaces for the Synchronous MultiEngine
 #-------------------------------------------------------------------------------
 
 class ISynchronousEngineMutiplexer(Interface):
     pass
 
+
 class ISynchronousEngineMultiplexerAll(Interface):
     pass
 
-class ISynchronousMultiEngine(ISynchronousEngineMutiplexer, 
-    ISynchronousEngineMultiplexerAll):
+
+class ISynchronousMultiEngine(ISynchronousEngineMutiplexer, ISynchronousEngineMultiplexerAll):
     """Synchronous, two-phase version of IMultiEngine.
     
     Methods in this interface are identical to those of IMultiEngine, but they
-    take two additional arguments:
+    take one additional argument:
     
     execute(targets, lines) -> execute(block, targets, lines)
     
     :Parameters:
         block : boolean
             Should the method return a deferred to a deferredID or the 
-            actual result.  If block=False a deferred to a deferredId is 
+            actual result.  If block=False a deferred to a deferredID is 
             returned and the user must call `getPendingDeferred` at a later
             point.  If block=True, a deferred to the actual result comes back.
     """
-    pass
+    def getPendingDeferred(deferredID, block):
+        """"""
+
+
+#-------------------------------------------------------------------------------
+# Implementation of the Synchronous MultiEngine
+#-------------------------------------------------------------------------------
 
 class SynchronousEngineMultiplexerAll(object):
     
@@ -623,7 +654,7 @@ class SynchronousEngineMultiplexerAll(object):
     
     def getResultAll(self, block, i=None):
         return self.getResult('all', block, i)
-
+    
     def resetAll(self, block):
         return self.reset('all', block)
     
@@ -638,7 +669,7 @@ class SynchronousEngineMultiplexerAll(object):
         
     def pullSerializedAll(self, block, *keys):
         return self.pullSerialized('all', block, *keys)
-
+    
     def clearQueueAll(self, block):
         return self.clearQueue('all', block)
     
@@ -668,7 +699,7 @@ class SynchronousMultiEngine(PendingDeferredManager, SynchronousEngineMultiplexe
     
     def __init__(self, multiengine):
         self.multiengine = multiengine
-        PendingDeferredAdapter.__init__(self)
+        PendingDeferredManager.__init__(self)
     
     #---------------------------------------------------------------------------
     # Decorated pending deferred methods
@@ -686,7 +717,7 @@ class SynchronousMultiEngine(PendingDeferredManager, SynchronousEngineMultiplexe
     def pull(self, targets, *keys):
         d = self.multiengine.pull(targets, *keys)
         return d
-
+    
     @twoPhase
     def pushFunction(self, targets, **namespace):
         return self.multiengine.pushFunction(targets, **namespace)
@@ -695,7 +726,7 @@ class SynchronousMultiEngine(PendingDeferredManager, SynchronousEngineMultiplexe
     def pullFunction(self, targets, *keys):
         d = self.multiengine.pullFunction(targets, *keys)
         return d
-
+    
     @twoPhase
     def getResult(self, targets, i=None):
         return self.multiengine.getResult(targets, i)
@@ -751,7 +782,7 @@ class SynchronousMultiEngine(PendingDeferredManager, SynchronousEngineMultiplexe
     #---------------------------------------------------------------------------
     # IMultiEngine methods
     #---------------------------------------------------------------------------
-
+    
     @twoPhase
     def getIDs(self):
         """Return a list of registered engine ids.
@@ -760,7 +791,111 @@ class SynchronousMultiEngine(PendingDeferredManager, SynchronousEngineMultiplexe
         """
         return self.multiengine.getIDs()
 
+
 components.registerAdapter(SynchronousMultiEngine, IMultiEngine, ISynchronousMultiEngine)
+
+
+#-------------------------------------------------------------------------------
+# Interfaces for the TwoPhaseMultiEngine
+#-------------------------------------------------------------------------------
+
+class ITwoPhaseMultiEngine(IMultiEngine):
+    """Just like IMultiEngine, but a two-phase submit process is used.
+    
+    In the usual MultiEngine implementation, it is possible for the ordering
+    of method calls to be mixed up.  The SynchronousMultiEngine intorduces
+    a two-step submit process to fix this.  This interface is for classes that
+    wrap SynchronousMultiEngines but expose the regular MultiEngine interface.
+    """
+    smultiengine = Attribute("The underlying ISynchronousMultiEngine")
+
+
+
+#-------------------------------------------------------------------------------
+# ISynchronousMultiEngine -> ITwoPhaseMultiEngine adaptor
+#-------------------------------------------------------------------------------
+
+class TwoPhaseMultiEngineAdaptor(EngineMultiplexerAll):
+    
+    implements(ITwoPhaseMultiEngine)
+    
+    def __init__(self, smultiengine):
+        self.smultiengine = smultiengine
+    
+    def _submitThenBlock(self, methodname, *args, **kwargs):
+        method = getattr(self.smultiengine, methodname)
+        d = method(False, *args, **kwargs)
+        d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did,True))
+        return d        
+    
+    #---------------------------------------------------------------------------
+    # IEngineMultiplexer related methods
+    #---------------------------------------------------------------------------
+    
+    def execute(self, targets, lines):
+        return self._submitThenBlock('execute', targets, lines)
+    
+    def push(self, targets, **namespace):
+        return self._submitThenBlock('push', targets, **namespace)
+    
+    def pull(self, targets, *keys):
+        return self._submitThenBlock('pull', targets, *keys)
+    
+    def pushFunction(self, targets, **namespace):
+        return self._submitThenBlock('pushFunction', targets, **namespace)
+    
+    def pullFunction(self, targets, *keys):
+        return self._submitThenBlock('pullFunction', targets, *keys)
+    
+    def pushSerialized(self, targets, **namespace):
+        return self._submitThenBlock('pushSerialized', targets, **namespace)
+    
+    def pullSerialized(self, targets, *keys):
+        return self._submitThenBlock('pullSerialized', targets, *keys)
+    
+    def getResult(self, targets, i=None):
+        return self._submitThenBlock('pullSerialized', targets, i)
+    
+    def reset(self, targets):
+        return self._submitThenBlock('reset', targets)
+    
+    def keys(self, targets):
+        return self._submitThenBlock('keys', targets)
+    
+    def kill(self, targets, controller=False):
+        return self._submitThenBlock('kill', targets, controller)
+    
+    def clearQueue(self, targets):
+        return self._submitThenBlock('clearQueue', targets)
+    
+    def queueStatus(self, targets):
+        return self._submitThenBlock('queueStatus', targets)
+    
+    def setProperties(self, targets, **properties):
+        return self._submitThenBlock('setProperties', targets, **properties)
+    
+    def getProperties(self, targets, *keys):
+        return self._submitThenBlock('getProperties', targets, *keys)
+    
+    def hasProperties(self, targets, *keys):
+        return self._submitThenBlock('hasProperties', targets, *keys)
+    
+    def delProperties(self, targets, *keys):
+        return self._submitThenBlock('delProperties', targets, *keys)
+    
+    def clearProperties(self, targets):
+        return self._submitThenBlock('clearProperties', targets)
+    
+    #---------------------------------------------------------------------------
+    # IMultiEngine related methods
+    #---------------------------------------------------------------------------
+    
+    def getIDs(self):
+        return self._submitThenBlock('getIDs')
+
+
+components.registerAdapter(TwoPhaseMultiEngineAdaptor,
+            ISynchronousMultiEngine, ITwoPhaseMultiEngine)
 
 
 #-------------------------------------------------------------------------------
@@ -773,7 +908,7 @@ components.registerAdapter(SynchronousMultiEngine, IMultiEngine, ISynchronousMul
 
 class IMultiEngineCoordinator(Interface):
     """Methods that work on multiple engines explicitly."""
-             
+       
     def scatter(targets, key, seq, style='basic', flatten=False):
         """Partition and distribute a sequence to targets.
         
@@ -794,7 +929,7 @@ class IMultiEngineCoordinator(Interface):
     
     def gather(targets, key, style='basic'):
         """Gather object key from targets.
-
+    
         :Parameters:
             key : string
                 The name of a sequence on the targets to gather.
@@ -805,7 +940,45 @@ class IMultiEngineCoordinator(Interface):
     
     def gatherAll(key, style='basic'):
         """Gather from all targets."""
+    
+    def map(targets, func, seq, style='basic'):
+        """A parallelized version of Python's builtin map.
         
+        This function implements the following pattern:
+        
+        1. The sequence seq is scattered to the given targets.
+        2. map(functionSource, seq) is called on each engine.
+        3. The resulting sequences are gathered back to the local machine.
+                
+        :Parameters:
+            targets : int, list or 'all'
+                The engine ids the action will apply to.  Call `getIDs` to see
+                a list of currently available engines.
+            func : str, function
+                An actual function object or a Python string that names a 
+                callable defined on the engines.
+            seq : list, tuple or numpy array
+                The local sequence to be scattered.
+            style : str
+                Only 'basic' is supported for now.
+                
+        :Returns: A list of len(seq) with functionSource called on each element
+        of seq.
+                
+        Example
+        =======
+        
+        >>> rc.mapAll('lambda x: x*x', range(10000))
+        [0,2,4,9,25,36,...]
+        """
+            
+    def mapAll(functionSource, seq, style='basic'):
+        """Parallel map on all engines.
+        
+        See the docstring for `map` for more details.
+        """
+
+
 class MultiEngineCoordinator(object):
     """Mix in class for scater/gather.
     
@@ -827,7 +1000,7 @@ class MultiEngineCoordinator(object):
                 if not t in ids:
                     raise error.InvalidEngineID("engine with id %r does not exist"%t)
             return engines
-
+        
         d = self.getIDs()
         d.addCallback(create_targets)
         return d
@@ -881,145 +1054,9 @@ class MultiEngineCoordinator(object):
     
     def gatherAll(self, key, style='basic'):
         return self.gather('all', key, style)
-
-#-------------------------------------------------------------------------------
-# ISynchronousMultiEngineCoordinator
-#-------------------------------------------------------------------------------
-
-class ISynchronousMultiEngineCoordinator(IMultiEngineCoordinator):
-    """Methods that work on multiple engines explicitly."""
-    pass
-        
-class SynchronousMultiEngineCoordinator(object):
-    """Mix in class for scater/gather.
     
-    This can be mixed in with any ISynchronousMultiEngine implementer.
-    """
-    
-    implements(ISynchronousMultiEngineCoordinator)
-    
-    def _process_targets(self, targets):
-        
-        def create_targets(ids):
-            if isinstance(targets, int):
-                engines = [targets]
-            elif targets=='all':
-                engines = ids
-            elif isinstance(targets, (list, tuple)):
-                engines = targets
-            for t in engines:
-                if not t in ids:
-                    raise error.InvalidEngineID("engine with id %r does not exist"%t)
-            return engines
-
-        d = self.getIDs()
-        d.addCallback(create_targets)
-        return d
-    
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        log.msg("Scattering %r to %r" % (key, targets))
-        
-        def do_scatter(engines):
-            nEngines = len(engines)
-            mapClass = Map.styles[style]
-            mapObject = mapClass()
-            deferred_id_list = []
-            for index, engineid in enumerate(engines):
-                partition = mapObject.getPartition(seq, index, nEngines)
-                if flatten and len(partition) == 1:
-                    deferred_id_list.append(self.push(False, engineid, **{key: partition[0]}))
-                else:
-                    deferred_id_list.append(self.push(False, engineid, **{key: partition}))
-            d_list = [self.getPendingDeferred(self, did, True) for did in deferred_id_list]
-            return gatherBoth(d_list,
-                              fireOnOneErrback=1,
-                              consumeErrors=1,
-                              logErrors=0)
-        
-        d = self._process_targets(targets)
-        d.addCallback(do_scatter)
-        return d
-                              
-    def scatterAll(self, key, seq, style='basic', flatten=False):
-        return self.scatter('all', block, key, seq, style, flatten)
-    
-    def gather(self, targets, key, style='basic'):
-        """gather a distributed object, and reassemble it"""
-        log.msg("Gathering %s from %r" % (key, targets))
-        
-        def do_gather(engines):
-            nEngines = len(engines)    
-            deferred_id_list = []
-            for engineid in engines:
-                deferred_id_list.append(self.pull(False, engineid, key))    
-            mapClass = Map.styles[style]
-            mapObject = mapClass()
-            d_list = [self.getPendingDeferred(self, did, True) for did in deferred_id_list]           
-            d = gatherBoth(d_list,
-                           fireOnOneErrback=1,
-                           consumeErrors=1,
-                           logErrors=0)
-            d.addCallback(lambda lop: [i[0] for i in lop])
-            return d.addCallback(mapObject.joinPartitions)
-        
-        d = self._process_targets(targets)
-        d.addCallback(do_gather)
-        return d
-    
-    def gatherAll(self, key, style='basic'):
-        return self.gather('all', block, key, style)
-
-#-------------------------------------------------------------------------------
-# IMultiEngineMapper
-#-------------------------------------------------------------------------------
-
-class IMultiEngineMapper(Interface):
-    """Methods that work on multiple engines explicitly."""
-        
-    def map(targets, func, seq, style='basic'):
-        """A parallelized version of Python's builtin map.
-        
-        This function implements the following pattern:
-        
-        1. The sequence seq is scattered to the given targets.
-        2. map(functionSource, seq) is called on each engine.
-        3. The resulting sequences are gathered back to the local machine.
-                
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            func : str, function
-                An actual function object or a Python string that names a 
-                callable defined on the engines.
-            seq : list, tuple or numpy array
-                The local sequence to be scattered.
-            style : str
-                Only 'basic' is supported for now.
-                
-        :Returns: A list of len(seq) with functionSource called on each element
-        of seq.
-                
-        Example
-        =======
-        
-        >>> rc.mapAll('lambda x: x*x', range(10000))
-        [0,2,4,9,25,36,...]
-        """
-            
-    def mapAll(functionSource, seq, style='basic'):
-        """Parallel map on all engines.
-        
-        See the docstring for `map` for more details.
-        """
-
-class MultiEngineMapper(object):
-    """Methods that work on multiple engines explicitly."""
-    
-    implements(IMultiEngineMapper)
-        
     def map(self, targets, func, seq, style='basic'):
-
+    
         if isinstance(func, FunctionType):
             d = self.pushFunction(targets, _ipython_map_func=func)
             sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
@@ -1043,22 +1080,107 @@ class MultiEngineMapper(object):
         """
         return self.map('all', func, seq, style)
 
+
+
 #-------------------------------------------------------------------------------
-# ISynchronousMultiEngineMapper
+# ISynchronousMultiEngineCoordinator/ITwoPhaseMultiEngineCoordinator
 #-------------------------------------------------------------------------------
 
-class ISynchronousMultiEngineMapper(IMultiEngineMapper):
+class ISynchronousMultiEngineCoordinator(IMultiEngineCoordinator):
     """Methods that work on multiple engines explicitly."""
     pass
 
-class SynchronousMultiEngineMapper(object):
+
+class ITwoPhaseMultiEngineCoordinator(IMultiEngineCoordinator):
     """Methods that work on multiple engines explicitly."""
+    pass
+
+
+class TwoPhaseMultiEngineCoordinator(object):
+    """Mix in class for scater/gather.
     
-    implements(ISynchronousMultiEngineMapper)
+    This can be mixed in with any ITwoPhaseMultiEngine implementer.
+    """
+    
+    implements(ITwoPhaseMultiEngineCoordinator)
+    
+    def _process_targets(self, targets):
         
+        def create_targets(ids):
+            if isinstance(targets, int):
+                engines = [targets]
+            elif targets=='all':
+                engines = ids
+            elif isinstance(targets, (list, tuple)):
+                engines = targets
+            for t in engines:
+                if not t in ids:
+                    raise error.InvalidEngineID("engine with id %r does not exist"%t)
+            return engines
+        d = self.smultiengine.getIDs(True)
+        d.addCallback(create_targets)
+        return d
+    
+    def scatter(self, targets, key, seq, style='basic', flatten=False):
+        log.msg("Scattering %r to %r" % (key, targets))
+        
+        def do_scatter(engines):
+            nEngines = len(engines)
+            mapClass = Map.styles[style]
+            mapObject = mapClass()
+            deferred_id_list = []
+            for index, engineid in enumerate(engines):
+                partition = mapObject.getPartition(seq, index, nEngines)
+                if flatten and len(partition) == 1:
+                    d = self.smultiengine.push(False, engineid, **{key: partition[0]})
+                else:
+                    d = self.smultiengine.push(False, engineid, **{key: partition})
+                d.addCallback(lambda did: deferred_id_list.append(did))
+            d_list = [self.smultiengine.getPendingDeferred(did, True) for did in deferred_id_list]
+            return gatherBoth(d_list,
+                              fireOnOneErrback=1,
+                              consumeErrors=1,
+                              logErrors=0)
+        
+        d = self._process_targets(targets)
+        d.addCallback(do_scatter)
+        return d
+                              
+    def scatterAll(self, key, seq, style='basic', flatten=False):       
+        return self.scatter('all', key, seq, style, flatten)
+    
+    def gather(self, targets, key, style='basic'):
+        """gather a distributed object, and reassemble it"""
+        log.msg("Gathering %s from %r" % (key, targets))
+        
+        def do_gather(engines):
+            nEngines = len(engines)    
+            deferred_id_list = []
+            for engineid in engines:
+                d = self.smultiengine.pull(False, engineid, key)
+                d.addCallback(lambda did: deferred_id_list.append(did))
+            mapClass = Map.styles[style]
+            mapObject = mapClass()
+            d_list = [self.smultiengine.getPendingDeferred(did, True) for did in deferred_id_list]           
+            d = gatherBoth(d_list,
+                           fireOnOneErrback=1,
+                           consumeErrors=1,
+                           logErrors=0)
+            d.addCallback(lambda lop: [i[0] for i in lop])
+            return d.addCallback(mapObject.joinPartitions)
+        
+        d = self._process_targets(targets)
+        d.addCallback(do_gather)
+        return d
+    
+    def gatherAll(self, key, style='basic'):
+        return self.gather('all', key, style)
+    
     def map(self, targets, func, seq, style='basic'):
+        deferred_id_list = []
         if isinstance(func, FunctionType):
-            self.pushFunction(False, targets, _ipython_map_func=func)
+            d = self.smultiengine.pushFunction(False, targets, _ipython_map_func=func)
+            d.addCallback(lambda did: deferred_id_list.append(did))
             sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
         elif isinstance(func, str):
             sourceToRun = \
@@ -1067,9 +1189,14 @@ class SynchronousMultiEngineMapper(object):
         else:
             raise TypeError("func must be a function or str")
         
-        d = self.scatter(targets, '_ipython_map_seq', seq, style)
-        d.addCallback(lambda _: self.execute(False, targets, sourceToRun))
-        d.addCallback(lambda _: self.gather(targets, '_ipython_map_seq_result', style))
+        self.smultiengine.scatter(targets, '_ipython_map_seq', seq, style)
+        self.smultiengine.execute(False, targets, sourceToRun)
+        self.smultiengine.gather(False, targets, '_ipython_map_seq_result', style)
+        d_list = [self.smultiengine.getPendingDeferred(did, True) for did in deferred_id_list]           
+        d = gatherBoth(d_list,
+                       fireOnOneErrback=1,
+                       consumeErrors=1,
+                       logErrors=0)
         return d
             
     def mapAll(self, func, seq, style='basic'):
@@ -1078,6 +1205,8 @@ class SynchronousMultiEngineMapper(object):
         See the docstring for `map` for more details.
         """
         return self.map('all', func, seq, style)
+
+
 
 #-------------------------------------------------------------------------------
 # IMultiEngineExtras
@@ -1099,13 +1228,13 @@ class IMultiEngineExtras(Interface):
             keys: list or tuple of str
                 A list of variable names as string of the Python objects to be pulled
                 back to the client.
-
+        
         :Returns: A list of pulled Python objects for each target.
         """
-
+    
     def zipPullAll(*keys):
         """"""
-
+    
     def run(targets, fname):
         """Run a .py file on targets.
         
@@ -1123,17 +1252,18 @@ class IMultiEngineExtras(Interface):
                 result.  If block is not specified, the block attribute 
                 will be used instead. 
         """
-
+    
     def runAll(fname):
         """Run a .py file on all engines.
         
         See the docstring for `run` for more details.
         """
 
+
 class MultiEngineExtras(object):
     
     implements(IMultiEngineExtras)
-
+    
     def _transformPullResult(self, pushResult, multitargets, lenKeys):
         if not multitargets:
             result = pushResult[0]
@@ -1144,7 +1274,6 @@ class MultiEngineExtras(object):
         return result
         
     def zipPull(self, targets, *keys):
-
         d = self.pull(targets, *keys)
         multitargets = not isinstance(targets, int) and len(targets) > 1
         lenKeys = len(keys)
@@ -1170,17 +1299,23 @@ class MultiEngineExtras(object):
         return self.run('all', fname)
 
 
+
 #-------------------------------------------------------------------------------
-# ISynchronousMultiEngineExtras
+# ISynchronousMultiEngineExtras/ITwoPhaseMultiEngineExtras
 #-------------------------------------------------------------------------------
 
 class ISynchronousMultiEngineExtras(IMultiEngineExtras):
     pass
 
-class SynchronousMultiEngineExtras(object):
-    
-    implements(ISynchronousMultiEngineExtras)
 
+class ITwoPhaseMultiEngineExtras(IMultiEngineExtras):
+    pass
+
+
+class TwoPhaseMultiEngineExtras(object):
+    
+    implements(ITwoPhaseMultiEngineExtras)
+    
     def _transformPullResult(self, pushResult, multitargets, lenKeys):
         if not multitargets:
             result = pushResult[0]
@@ -1191,11 +1326,10 @@ class SynchronousMultiEngineExtras(object):
         return result
         
     def zipPull(self, targets, *keys):
-
-        did = self.pull(False, targets, *keys)
         multitargets = not isinstance(targets, int) and len(targets) > 1
         lenKeys = len(keys)
-        d = self.getPendingDeferred(did, True)
+        d = self.smultiengine.pull(False, targets, *keys)
+        d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did, True))
         d.addCallback(self._transformPullResult, multitargets, lenKeys)
         return d
         
@@ -1212,12 +1346,13 @@ class SynchronousMultiEngineExtras(object):
         except:
             return defer.fail(failure.Failure()) 
         # Now run the code
-        did = self.execute(targets, source)
-        d = self.getPendingDeferred(did, True)
+        d = self.smultiengine.execute(False, targets, source)
+        d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did, True))
         return d
         
     def runAll(self, fname):
         return self.run('all', fname)
+
 
 
 #-------------------------------------------------------------------------------
@@ -1225,206 +1360,96 @@ class SynchronousMultiEngineExtras(object):
 #-------------------------------------------------------------------------------
 
 class IFullMultiEngine(IMultiEngine, 
-    IMultiEngineCoordinator,
-    IMultiEngineMapper, 
+    IMultiEngineCoordinator, 
     IMultiEngineExtras):
+    pass
+
+
+class IFullTwoPhaseMultiEngine(ITwoPhaseMultiEngine, 
+    ITwoPhaseMultiEngineCoordinator,
+    ITwoPhaseMultiEngineExtras):
     pass
 
 class IFullSynchronousMultiEngine(ISynchronousMultiEngine, 
     ISynchronousMultiEngineCoordinator,
-    ISynchronousMultiEngineMapper, 
     ISynchronousMultiEngineExtras):
     pass
 
-
 #-------------------------------------------------------------------------------
-# IFullSynchronousMultiEngine -> IFullMultiEngine adaptor
+# ISynchronousMultiEngine -> IFullTwoPhaseMultiEngine Adaptor
 #-------------------------------------------------------------------------------
 
-
-class FullMultiEngineAdaptor(EngineMultiplexerAll,
-    MultiEngineCoordinator, 
-    MultiEngineMapper, 
-    MultiEngineExtras):
-
-    implements(IFullMultiEngine)
+class FullTwoPhaseMultiEngineAdaptor(TwoPhaseMultiEngineAdaptor, TwoPhaseMultiEngineCoordinator, TwoPhaseMultiEngineExtras):
+    
+    implements(IFullTwoPhaseMultiEngine)
     
     def __init__(self, smultiengine):
-        self.smultiengine = smultiengine
+        TwoPhaseMultiEngineAdaptor.__init__(self, smultiengine)
 
-    #---------------------------------------------------------------------------
-    # IEngineMultiplexer related methods
-    #---------------------------------------------------------------------------
-        
-    def execute(self, targets, lines):
-        return self.smultiengine.execute(True, targets, lines)
-    
-    def push(self, targets, **namespace):
-        return self.smultiengine.push(True, targets, **namespace)
 
-    def pull(self, targets, *keys):
-        return self.smultiengine.pull(True, targets, *keys)
-
-    def pushFunction(self, targets, **namespace):
-        return self.smultiengine.pushFunction(True, targets, **namespace)
-
-    def pullFunction(self, targets, *keys):
-        return self.smultiengine.pullFunction(True, targets, *keys)
-
-    def pushSerialized(self, targets, **namespace):
-        return self.smultiengine.pushSerialized(True, targets, **namespace)
-
-    def pullSerialized(self, targets, *keys):
-        return self.smultiengine.pullSerialized(True, targets, *keys)
-    
-    def getResult(self, targets, i=None):
-        return self.smultiengine.getResult(True, targets, i)
-    
-    def reset(self, targets):
-        self.smultiengine.reset(True, targets)
-
-    def keys(self, targets):
-        self.smultiengine.keys(True, targets)
-    
-    def kill(self, targets, controller=False):
-        self.smultiengine.kill(True, targets)
-
-    def clearQueue(self, targets):
-        self.smultiengine.clearQueue(True, targets)
-    
-    def queueStatus(self, targets):
-        self.smultiengine.queueStatus(True, targets)
-
-    def setProperties(self, targets, **properties):
-        self.smultiengine.setProperties(True, targets)
-
-    def getProperties(self, targets, *keys):
-        self.smultiengine.getProperties(True, targets, *keys)
-
-    def hasProperties(self, targets, *keys):
-        self.smultiengine.hasProperties(True, targets, *keys)
-    
-    def delProperties(self, targets, *keys):
-        self.smultiengine.delProperties(True, targets, *keys)
-    
-    def clearProperties(self, targets):
-        self.smultiengine.clearProperties(True, targets, *keys)
-    
-    #---------------------------------------------------------------------------
-    # IMultiEngine related methods
-    #---------------------------------------------------------------------------
-    
-    def getIDs(self):
-        self.smultiengine.getIDs(True)
-
-components.registerAdapter(FullMultiEngineAdaptor,
-            ISynchronousMultiEngine, IFullMultiEngine)
+components.registerAdapter(FullTwoPhaseMultiEngineAdaptor,
+            ISynchronousMultiEngine, IFullTwoPhaseMultiEngine)
 
 
 #-------------------------------------------------------------------------------
-# IFullMultiEngine -> IFullSynchronousMultiEngine adaptor
+# IFullTwoPhaseMultiEngine -> IFullSynchronousTwoPhaseMultiEngine
 #-------------------------------------------------------------------------------
 
-class FullSynchronousMultiEngineAdaptor(PendingDeferredManager,
-    SynchronousEngineMultiplexerAll,
-    SynchronousMultiEngineCoordinator,
-    SynchronousMultiEngineMapper, 
-    SynchronousMultiEngineExtras):
-    """Adapt an `IFullMultiEngine` -> `ISynchronousFullMultiEngine`"""
+class IFullSynchronousTwoPhaseMultiEngine(IFullSynchronousMultiEngine):
+    pass
+
+class FullSynchronousTwoPhaseMultiEngineAdaptor(SynchronousMultiEngine, SynchronousEngineMultiplexerAll):
     
-    implements(IFullSynchronousMultiEngine)
+    implements(IFullSynchronousTwoPhaseMultiEngine)
     
-    def __init__(self, multiengine):
-        self.multiengine = multiengine
-        PendingDeferredManager.__init__(self)
+    def __init__(self, tpmultiengine):
+        self.tpmultiengine = tpmultiengine
+        SynchronousMultiEngine.__init__(self, tpmultiengine)
     
     #---------------------------------------------------------------------------
-    # Decorated pending deferred methods
+    # IMultiEngineCoordinator
     #---------------------------------------------------------------------------
     
-    @twoPhase
-    def execute(self, targets, lines):
-        return self.multiengine.execute(targets, lines)
-    
-    @twoPhase
-    def push(self, targets, **namespace):
-        return self.multiengine.push(targets, **namespace)
-    
-    @twoPhase
-    def pull(self, targets, *keys):
-        return self.multiengine.pull(targets, *keys)
-    
-    @twoPhase
-    def getResult(self, targets, i=None):
-        return self.multiengine.getResult(targets, i)
-    
-    @twoPhase
-    def reset(self, targets):
-        return self.multiengine.reset(targets)
-    
-    @twoPhase
-    def keys(self, targets):
-        return self.multiengine.keys(targets)
-    
-    @twoPhase
-    def kill(self, targets, controller=False):
-        return self.multiengine.kill(targets, controller)
-    
-    @twoPhase
-    def pushSerialized(self, targets, **namespace):
-        return self.multiengine.pushSerialized(targets, **namespace)
-    
-    @twoPhase
-    def pullSerialized(self, targets, *keys):
-        return self.multiengine.pullSerialized(targets, *keys)
-    
-    @twoPhase
-    def clearQueue(self, targets):
-        return self.multiengine.clearQueue(targets)
-    
-    @twoPhase
-    def queueStatus(self, targets):
-        return self.multiengine.queueStatus(targets)
-    
-    @twoPhase
-    def setProperties(self, targets, **properties):
-        return self.multiengine.setProperties(targets, **properties)
-    
-    @twoPhase
-    def getProperties(self, targets, *keys):
-        return self.multiengine.getProperties(targets, *keys)
-    
-    @twoPhase
-    def hasProperties(self, targets, *keys):
-        return self.multiengine.hasProperties(targets, *keys)
-    
-    @twoPhase
-    def delProperties(self, targets, *keys):
-        return self.multiengine.delProperties(targets, *keys)
-    
-    @twoPhase
-    def clearProperties(self, targets, *keys):
-        return self.multiengine.clearProperties(targets, *keys)
-    
-    @twoPhase
+    @twoPhase     
     def scatter(self, targets, key, seq, style='basic', flatten=False):
-        return self.multiengine.scatter(targets, key, seq, style, flatten)
+        return self.tpmultiengine.scatter(targets, key, seq, style, flatten)
     
+    def scatterAll(self, block, key, seq, style='basic', flatten=False):
+        return self.scatter(block, 'all', key, seq, style, flatten)
+        
     @twoPhase
     def gather(self, targets, key, style='basic'):
-        return self.multiengine.gather(targets, key, style)
+        return self.tpmultiengine.gather(targets, key, style)
+        
+    def gatherAll(self, block, key, style='basic'):
+        return self.gather(block, 'all', key, style)
+    
+    @twoPhase
+    def map(self, targets, func, seq, style='basic'):
+        return self.tpmultiengine.map(targets, func, seq, style)
+        
+    def mapAll(self, block, func, seq, style='basic'):
+        return self.map(block, 'all', func, seq, style)
     
     #---------------------------------------------------------------------------
-    # IMultiEngine methods
+    # IMultiEngineExtras
     #---------------------------------------------------------------------------
-
+    
     @twoPhase
-    def getIDs(self):
-        return self.multiengine.getIDs()
+    def zipPull(self, targets, *keys):
+        return self.tpmultiengine.zipPull(targets, *keys)
+    
+    def zipPullAll(self, block, *keys):
+        return self.zipPull(block, 'all', *keys)
+    
+    @twoPhase
+    def run(self, targets, fname):
+        return self.tpmultiengine.run(targets, fname)
+    
+    def runAll(self, block, fname):
+        return self.run(block, 'all', fname)
 
-components.registerAdapter(FullSynchronousMultiEngineAdaptor, 
-    IMultiEngine, IFullSynchronousMultiEngine)
 
 
-            
-            
+components.registerAdapter(FullSynchronousTwoPhaseMultiEngineAdaptor,
+            IFullTwoPhaseMultiEngine, IFullSynchronousTwoPhaseMultiEngine)
