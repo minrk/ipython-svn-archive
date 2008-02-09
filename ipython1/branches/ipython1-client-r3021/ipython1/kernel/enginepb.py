@@ -270,7 +270,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         except:
             return defer.fail(failure.Failure()).addErrback(packageFailure)
         else:
-            return self.service.push(**namespace).addErrback(packageFailure)
+            return self.service.push(namespace).addErrback(packageFailure)
     
     #---------------------------------------------------------------------------
     # Paging version of push
@@ -304,7 +304,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     
     def handlePagedPush(self, serial, key):
         log.msg("I got a serial! " + repr(serial) + key)
-        d = self.service.pushSerialized(**{key:serial})           
+        d = self.service.pushSerialized({key:serial})           
         d.addErrback(packageFailure)
         self.removeCollector(key)
         return d
@@ -313,13 +313,13 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
     # pull
     #---------------------------------------------------------------------------     
                 
-    def remote_pull(self, *keys):
+    def remote_pull(self, keys):
         """Pull objects from a users namespace by keys.
         
         Returns a deferred to a pickled tuple of objects.  If any single
         key has a problem, the Failure of that will be returned.
         """
-        d = self.service.pull(*keys)
+        d = self.service.pull(keys)
         d.addCallback(pickle.dumps, 2)
         d.addCallback(checkMessageSize, repr(keys))
         d.addErrback(packageFailure)
@@ -351,10 +351,10 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
             # to the globals of the callers module.  This will require walking the 
             # stack.  BG 10/3/07.
             namespace = uncanDict(namespace, globals())
-            return self.service.pushFunction(**namespace).addErrback(packageFailure)
+            return self.service.pushFunction(namespace).addErrback(packageFailure)
     
-    def remote_pullFunction(self, *keys):
-        d = self.service.pullFunction(*keys)
+    def remote_pullFunction(self, keys):
+        d = self.service.pullFunction(keys)
         if len(keys)>1:
             d.addCallback(canSequence)
         elif len(keys)==1:
@@ -404,15 +404,15 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         except:
             return defer.fail(failure.Failure()).addErrback(packageFailure)
         else:
-            d = self.service.pushSerialized(**namespace)
+            d = self.service.pushSerialized(namespace)
             return d.addErrback(packageFailure)
     
-    def remote_pullSerialized(self, *keys):
+    def remote_pullSerialized(self, keys):
         """Pull objects from users namespace by key as Serialized.
         
         Returns a deferred to a pickled dict of key, Serialized pairs.
         """
-        d = self.service.pullSerialized(*keys)
+        d = self.service.pullSerialized(keys)
         d.addCallback(pickle.dumps, 2)
         d.addCallback(checkMessageSize, repr(keys))
         d.addErrback(packageFailure)
@@ -429,27 +429,27 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         except:
             return defer.fail(failure.Failure()).addErrback(packageFailure)
         else:
-            return self.service.setProperties(**namespace).addErrback(packageFailure)
+            return self.service.setProperties(namespace).addErrback(packageFailure)
     
-    def remote_getProperties(self, *keys):
+    def remote_getProperties(self, keys):
         """Pull a subdict of the properties for this engine by keys"""
-        d = self.service.getProperties(*keys)
+        d = self.service.getProperties(keys)
         d.addCallback(pickle.dumps, 2)
         d.addCallback(checkMessageSize, repr(keys))
         d.addErrback(packageFailure)
         return d
     
-    def remote_hasProperties(self, *keys):
+    def remote_hasProperties(self, keys):
         """Check for keys in the properties for this engine."""
-        d = self.service.hasProperties(*keys)
+        d = self.service.hasProperties(keys)
         d.addCallback(pickle.dumps, 2)
         d.addCallback(checkMessageSize, repr(keys))
         d.addErrback(packageFailure)
         return d
     
-    def remote_delProperties(self, *keys):
+    def remote_delProperties(self, keys):
         """Remove values of the properties for this engine by keys."""
-        d = self.service.delProperties(*keys)
+        d = self.service.delProperties(keys)
         # d.addCallback(pickle.dumps, 2)
         # d.addCallback(checkMessageSize, repr(keys))
         d.addErrback(packageFailure)
@@ -556,7 +556,7 @@ class EngineFromReference(object):
     # push
     #---------------------------------------------------------------------------
     
-    def pushOld(self, **namespace):
+    def pushOld(self, namespace):
         try:
             package = pickle.dumps(namespace, 2)
         except:
@@ -607,8 +607,8 @@ class EngineFromReference(object):
     # pull
     #---------------------------------------------------------------------------
         
-    def pullOld(self, *keys):
-        d = self.callRemote('pull', *keys)
+    def pullOld(self, keys):
+        d = self.callRemote('pull', keys)
         d.addCallback(self.checkReturnForFailure)
         d.addCallback(pickle.loads)
         return d
@@ -642,7 +642,7 @@ class EngineFromReference(object):
     # push/pullFunction
     #---------------------------------------------------------------------------
     
-    def pushFunction(self, **namespace):
+    def pushFunction(self, namespace):
         try:
             package = pickle.dumps(canDict(namespace), 2)
         except:
@@ -655,8 +655,8 @@ class EngineFromReference(object):
                 d = self.callRemote('pushFunction', package)
                 return d.addCallback(self.checkReturnForFailure)    
     
-    def pullFunction(self, *keys):
-        d = self.callRemote('pullFunction', *keys)
+    def pullFunction(self, keys):
+        d = self.callRemote('pullFunction', keys)
         d.addCallback(self.checkReturnForFailure)
         d.addCallback(pickle.loads)
         # The usage of globals() here is an attempt to bind any pickled functions
@@ -701,7 +701,7 @@ class EngineFromReference(object):
     # Properties methods
     #---------------------------------------------------------------------------
     
-    def setProperties(self, **properties):
+    def setProperties(self, properties):
         try:
             package = pickle.dumps(properties, 2)
         except:
@@ -715,20 +715,20 @@ class EngineFromReference(object):
                 return d.addCallback(self.checkReturnForFailure)
         return d
     
-    def getProperties(self, *keys):
-        d = self.callRemote('getProperties', *keys)
+    def getProperties(self, keys):
+        d = self.callRemote('getProperties', keys)
         d.addCallback(self.checkReturnForFailure)
         d.addCallback(pickle.loads)
         return d
     
-    def hasProperties(self, *keys):
-        d = self.callRemote('hasProperties', *keys)
+    def hasProperties(self, keys):
+        d = self.callRemote('hasProperties', keys)
         d.addCallback(self.checkReturnForFailure)
         d.addCallback(pickle.loads)
         return d
     
-    def delProperties(self, *keys):
-        d = self.callRemote('delProperties', *keys)
+    def delProperties(self, keys):
+        d = self.callRemote('delProperties', keys)
         d.addCallback(self.checkReturnForFailure)
         # d.addCallback(pickle.loads)
         return d
@@ -738,13 +738,11 @@ class EngineFromReference(object):
         d.addCallback(self.checkReturnForFailure)
         return d
     
-    
-    
     #---------------------------------------------------------------------------
     # push/pullSerialized
     #---------------------------------------------------------------------------
         
-    def pushSerializedOld(self, **namespace):
+    def pushSerializedOld(self, namespace):
         """Older version of pushSerialize."""
         #log.msg(repr(namespace))
         try:
@@ -771,8 +769,8 @@ class EngineFromReference(object):
                           logErrors=0, 
                           consumeErrors=1)
     
-    def pullSerialized(self, *keys):
-        d = self.callRemote('pullSerialized', *keys)
+    def pullSerialized(self, keys):
+        d = self.callRemote('pullSerialized', keys)
         d.addCallback(self.checkReturnForFailure)
         d.addCallback(pickle.loads)
         return d

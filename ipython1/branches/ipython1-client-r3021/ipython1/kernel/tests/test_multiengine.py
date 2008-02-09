@@ -18,17 +18,33 @@ __docformat__ = "restructuredtext en"
 from twisted.internet import defer
 from ipython1.testutils.util import DeferredTestCase
 from ipython1.kernel.controllerservice import ControllerService
-from ipython1.kernel.multiengine import IMultiEngine
-from ipython1.kernel.tests.multienginetest import IEngineMultiplexerTestCase
+from ipython1.kernel import multiengine as me
+from ipython1.kernel.tests.multienginetest import \
+    IMultiEngineTestCase, \
+    ISynchronousMultiEngineTestCase
     
     
 class BasicMultiEngineTestCase(DeferredTestCase,
-    IEngineMultiplexerTestCase):
+    IMultiEngineTestCase):
     
     def setUp(self):
         self.controller = ControllerService()
         self.controller.startService()
-        self.multiengine = IMultiEngine(self.controller)
+        self.multiengine = me.IMultiEngine(self.controller)
+        self.engines = []
+        
+    def tearDown(self):
+        self.controller.stopService()
+        for e in self.engines:
+            e.stopService()
+
+class SynchronousMultiEngineTestCase(DeferredTestCase,
+    ISynchronousMultiEngineTestCase):
+    
+    def setUp(self):
+        self.controller = ControllerService()
+        self.controller.startService()
+        self.multiengine = me.ISynchronousMultiEngine(me.IMultiEngine(self.controller))
         self.engines = []
         
     def tearDown(self):

@@ -154,12 +154,15 @@ def twoPhase(wrappedMethod):
     """
     
     def wrapperTwoPhase(pendingDeferredManager, *args, **kwargs):
-        block = args[0]
+        try:
+            block = kwargs.pop('block')
+        except KeyError:
+            block = True
         if block:
-            return wrappedMethod(pendingDeferredManager, *args[1:], **kwargs)
+            return wrappedMethod(pendingDeferredManager, *args, **kwargs)
         else:
             deferredID = pendingDeferredManager.getNextDeferredID()
-            d = wrappedMethod(pendingDeferredManager, *args[1:], **kwargs)
+            d = wrappedMethod(pendingDeferredManager, *args, **kwargs)
             pendingDeferredManager.savePendingDeferred(deferredID, d)
             return defer.succeed(deferredID)
        

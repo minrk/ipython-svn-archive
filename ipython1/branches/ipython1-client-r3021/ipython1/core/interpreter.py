@@ -430,7 +430,7 @@ Engine action that caused the error:
         # fixme: implement
         raise NotImplementedError
 
-    def push(self, **kwds):
+    def push(self, ns):
         """ Put value into the namespace with name key.
         
         Parameters
@@ -438,12 +438,12 @@ Engine action that caused the error:
         **kwds
         """
 
-        self.user_ns.update(kwds)
+        self.user_ns.update(ns)
 
-    def pushFunction(self, **kwds):
+    def pushFunction(self, ns):
         # First set the func_globals for all functions to self.user_ns
         new_kwds = {}
-        for k, v in kwds.iteritems():
+        for k, v in ns.iteritems():
             if not isinstance(v, FunctionType):
                 raise TypeError("function object expected")
             new_kwds[k] = FunctionType(v.func_code, self.user_ns)
@@ -506,7 +506,7 @@ Engine action that caused the error:
             # Case 3
             return COMPLETE_INPUT, False
         
-    def pull(self, key):
+    def pull(self, keys):
         """ Get an item out of the namespace by key.
         
         Parameters
@@ -523,15 +523,26 @@ Engine action that caused the error:
         NameError if the object doesn't exist.
         """
 
-        if not isinstance(key, str):
-            raise TypeError("Objects must be keyed by strings.")
-        # Get the value this way in order to check for the presence of the key
-        # and obtaining it actomically. No locks!
-        result = self.user_ns.get(key, NotDefined())
-        if isinstance(result, NotDefined):
-            raise NameError('name %s is not defined' % key)
+        if isinstance(keys, str):
+            result = self.user_ns.get(keys, NotDefined())
+            if isinstance(result, NotDefined):
+                raise NameError('name %s is not defined' % keys)        
+        elif isinstance(keys, (list, tuple)):
+            result = []
+            for key in keys:
+                if not isinstance(key, str):
+                    raise TypeError("objects must be keyed by strings.")
+                else:
+                    r = self.user_ns.get(key, NotDefined())
+                    if isinstance(r, NotDefined):
+                        raise NameError('name %s is not defined' % key)
+                    else:
+                        result.append(r)
+                    if len(keys)==1:
+                        result = result[0]
         else:
-            return result
+            raise TypeError("keys must be a strong or a list/tuple of strings")
+        return result
 
     def pullFunction(self, key):
         return self.pull(key)

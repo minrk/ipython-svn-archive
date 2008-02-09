@@ -82,13 +82,13 @@ class IEngineCore(zi.Interface):
         Returns a failure object if the execution of lines raises an exception.
         """
     
-    def push(**namespace):
+    def push(namespace):
         """Push dict namespace into the user's namespace.
         
         Returns a deferred to None or a failure.
         """
     
-    def pull(*keys):
+    def pull(keys):
         """Pulls values out of the user's namespace by keys.
         
         Returns a deferred to a tuple objects or a single object.
@@ -96,12 +96,12 @@ class IEngineCore(zi.Interface):
         Raises NameError if any one of objects doess not exist.
         """
     
-    def pushFunction(**namespace):
+    def pushFunction(namespace):
         """Push a dict of key, function pairs into the user's namespace.
         
         Returns a deferred to None or a failure."""
     
-    def pullFunction(*keys):
+    def pullFunction(keys):
         """Pulls functions out of the user's namespace by keys.
         
         Returns a deferred to a tuple of functions or a single function.
@@ -141,10 +141,10 @@ class IEngineSerialized(zi.Interface):
     All methods should return deferreds.
     """
     
-    def pushSerialized(**namespace):
+    def pushSerialized(namespace):
         """Push a dict of keys and Serialized objects into the user's namespace."""
     
-    def pullSerialized(*keys):
+    def pullSerialized(keys):
         """Pull objects by key from the user's namespace as Serialized.
         
         Returns a list of or one Serialized.
@@ -158,16 +158,16 @@ class IEngineProperties(zi.Interface):
     
     properties = zi.Attribute("A StrictDict object, containing the properties")
     
-    def setProperties(**properties):
+    def setProperties(properties):
         """set properties by key and value"""
     
-    def getProperties(*keys):
+    def getProperties(keys):
         """get a list of properties by `keys`, if no keys specified, get all"""
     
-    def delProperties(*keys):
+    def delProperties(keys):
         """delete properties by `keys`"""
     
-    def hasProperties(*keys):
+    def hasProperties(keys):
         """get a list of bool values for whether `properties` has `keys`"""
 
     def clearProperties():
@@ -403,60 +403,33 @@ lines = %s""" % (self.id, lines)
         result['id'] = self.id
         return result
     
-    def push(self, **namespace):
+    def push(self, namespace):
         msg = """engine: %r
 method: push(**namespace)
 namespace.keys() = %r""" % (self.id, namespace.keys())
-        d = self.executeAndRaise(msg, self.shell.push, **namespace)
+        d = self.executeAndRaise(msg, self.shell.push, namespace)
         return d
     
-    def pull(self, *keys):
+    def pull(self, keys):
         msg = """engine %r
 method: pull(*keys)
 keys = %r""" % (self.id, keys)
-        
-        if len(keys)==1:
-            return self.executeAndRaise(msg, self.shell.pull, keys[0])
-        elif len(keys) > 1:
-            pulledDeferreds = []
-            for key in keys:
-                d = self.executeAndRaise(msg, self.shell.pull, key)
-                pulledDeferreds.append(d)
-            # This will fire on the first failure and log the rest.
-            dTotal = gatherBoth(pulledDeferreds, 
-                           fireOnOneErrback=1,
-                           logErrors=1, 
-                           consumeErrors=1)
-            return dTotal
-        else:
-            return self.executeAndRaise(msg, self.shell.pull, None)
+        d = self.executeAndRaise(msg, self.shell.pull, keys)
+        return d
     
-    def pushFunction(self, **namespace):
+    def pushFunction(self, namespace):
         msg = """engine: %r
 method: pushFunction(**namespace)
 namespace.keys() = %r""" % (self.id, namespace.keys())
-        d = self.executeAndRaise(msg, self.shell.pushFunction, **namespace)
+        d = self.executeAndRaise(msg, self.shell.pushFunction, namespace)
         return d
     
-    def pullFunction(self, *keys):
+    def pullFunction(self, keys):
         msg = """engine %r
 method: pullFunction(*keys)
 keys = %r""" % (self.id, keys)
-        if len(keys)==1:
-            return self.executeAndRaise(msg, self.shell.pullFunction, keys[0])
-        elif len(keys) > 1:
-            pulledDeferreds = []
-            for key in keys:
-                d = self.executeAndRaise(msg, self.shell.pullFunction, key)
-                pulledDeferreds.append(d)
-            # This will fire on the first failure and log the rest.
-            dTotal = gatherBoth(pulledDeferreds, 
-                           fireOnOneErrback=1,
-                           logErrors=1, 
-                           consumeErrors=1)
-            return dTotal
-        else:
-            return self.executeAndRaise(msg, self.shell.pullFunction, None)        
+        d = self.executeAndRaise(msg, self.shell.pullFunction, keys)
+        return d
     
     def getResult(self, i=None):
         msg = """engine %r
@@ -500,13 +473,13 @@ method: reset()""" % self.id
                 remotes.append(k)
         return defer.succeed(remotes)
     
-    def setProperties(self, **properties):
+    def setProperties(self, properties):
         msg = """engine: %r
 method: setProperties(**properties)
 properties.keys() = %r""" % (self.id, properties.keys())
         return self.executeAndRaise(msg, self.properties.update, properties)
     
-    def getProperties(self, *keys):
+    def getProperties(self, keys):
         msg = """engine %r
 method: getProperties(*keys)
 keys = %r""" % (self.id, keys)
@@ -518,7 +491,7 @@ keys = %r""" % (self.id, keys)
         for key in keys:
             del self.properties[key]
     
-    def delProperties(self, *keys):
+    def delProperties(self, keys):
         msg = """engine %r
 method: delProperties(*keys)
 keys = %r""" % (self.id, keys)
@@ -527,7 +500,7 @@ keys = %r""" % (self.id, keys)
     def _doHas(self, *keys):
         return [self.properties.has_key(key) for key in keys]
     
-    def hasProperties(self, *keys):
+    def hasProperties(self, keys):
         msg = """engine %r
 method: hasProperties(*keys)
 keys = %r""" % (self.id, keys)
@@ -538,7 +511,7 @@ keys = %r""" % (self.id, keys)
 method: clearProperties()""" % (self.id)
         return self.executeAndRaise(msg, self.properties.clear)
     
-    def pushSerialized(self, **sNamespace):
+    def pushSerialized(self, sNamespace):
         msg = """engine %r
 method: pushSerialized(**sNamespace)
 sNamespace.keys() = %r""" % (self.id, sNamespace.keys())        
@@ -549,28 +522,21 @@ sNamespace.keys() = %r""" % (self.id, sNamespace.keys())
                 ns[k] = unserialized.getObject()
             except:
                 return defer.fail()
-        return self.executeAndRaise(msg, self.shell.push, **ns)
+        return self.executeAndRaise(msg, self.shell.push, ns)
     
-    def pullSerialized(self, *keys):
+    def pullSerialized(self, keys):
         msg = """engine %r
 method: pullSerialized(*keys)
 keys = %r""" % (self.id, keys)
+        if isinstance(keys, str):
+            keys = [keys]
         if len(keys)==1:
-            key = keys[0]
-            d = self.executeAndRaise(msg, self.shell.pull, key)
+            d = self.executeAndRaise(msg, self.shell.pull, keys)
             d.addCallback(newserialized.serialize)
             return d
-        elif len(keys)>1:            
-            pulledDeferreds = []
-            for key in keys:
-                d = self.executeAndRaise(msg, self.shell.pull, key)
-                pulledDeferreds.append(d)
-            # This will fire on the first failure and log the rest.
-            dList = gatherBoth(pulledDeferreds, 
-                              fireOnOneErrback=1,
-                              logErrors=0, 
-                              consumeErrors=1)
-            @dList.addCallback
+        elif len(keys)>1:
+            d = self.executeAndRaise(msg, self.shell.pull, keys)         
+            @d.addCallback
             def packThemUp(values):
                 serials = []
                 for v in values:
@@ -713,19 +679,19 @@ class QueuedEngine(object):
         pass
 
     @queue
-    def push(self, **namespace):
+    def push(self, namespace):
         pass      
     
     @queue
-    def pull(self, *keys):
+    def pull(self, keys):
         pass
         
     @queue
-    def pushFunction(self, **namespace):
+    def pushFunction(self, namespace):
         pass      
     
     @queue
-    def pullFunction(self, *keys):
+    def pullFunction(self, keys):
         pass        
 
     def getResult(self, i=None):
@@ -758,11 +724,11 @@ class QueuedEngine(object):
     #---------------------------------------------------------------------------
 
     @queue
-    def pushSerialized(self, **namespace):
+    def pushSerialized(self, namespace):
         pass
         
     @queue
-    def pullSerialized(self, *keys):
+    def pullSerialized(self, keys):
         pass
     
     #---------------------------------------------------------------------------
@@ -770,19 +736,19 @@ class QueuedEngine(object):
     #---------------------------------------------------------------------------
 
     @queue
-    def setProperties(self, **namespace):
+    def setProperties(self, namespace):
         pass
         
     @queue
-    def getProperties(self, *keys):
+    def getProperties(self, keys):
         pass
     
     @queue
-    def delProperties(self, *keys):
+    def delProperties(self, keys):
         pass
     
     @queue
-    def hasProperties(self, *keys):
+    def hasProperties(self, keys):
         pass
     
     @queue

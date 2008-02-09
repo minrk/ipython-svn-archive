@@ -17,7 +17,7 @@ __docformat__ = "restructuredtext en"
 from twisted.internet import defer
 
 from ipython1.kernel import engineservice as es
-from ipython1.kernel.multiengine import IEngineMultiplexer
+from ipython1.kernel import multiengine as me
 from ipython1.kernel import newserialized
 from ipython1.kernel.error import NotDefined
 from ipython1.testutils import util
@@ -59,19 +59,21 @@ def testg(x):
 
 
 
-class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
+class IMultiEngineTestCase(IMultiEngineBaseTestCase):
     """A test for any object that implements IEngineMultiplexer.
     
     self.multiengine must be defined and implement IEngineMultiplexer.
     """
             
-    def testIEngineMultiplexerInterface(self):
+    def testIMultiEngineInterface(self):
         """Does self.engine claim to implement IEngineCore?"""
-        self.assert_(IEngineMultiplexer.providedBy(self.multiengine))
-        
+        self.assert_(me.IEngineMultiplexer.providedBy(self.multiengine))
+        self.assert_(me.IEngineMultiplexerAll.providedBy(self.multiengine))
+        self.assert_(me.IMultiEngine.providedBy(self.multiengine))
+           
     def testIEngineMultiplexerInterfaceMethods(self):
         """Does self.engine have the methods and attributes in IEngineCore."""
-        for m in list(IEngineMultiplexer):
+        for m in list(me.IEngineMultiplexer):
             self.assert_(hasattr(self.multiengine, m))
     
     def testIEngineMultiplexerDeferreds(self):
@@ -140,7 +142,7 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         eTester = MultiEngineExecuteAllTestGenerator(validCommands, self, targets)
         d = eTester.performTests()
         return d
-
+    
     def testExecuteFailures(self):
         self.addEngine(4)
         targets = [0,2]
@@ -155,7 +157,7 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         eTester = MultiEngineExecuteAllTestGenerator(validCommands, self)
         d = eTester.performTests()
         return d
-        
+    
     def testExecuteAllFailures(self):
         self.addEngine(4)
         cmds = [x[0] for x in invalidCommands]
@@ -223,7 +225,7 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda _: self.multiengine.pullSerialized(0, 'a'))
         d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
         return d
-
+        
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]    
         d = defer.succeed(None)
         for o in objs:
@@ -239,7 +241,7 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         eTester = MultiEngineGetResultTestGenerator(validCommands, self, targets)
         d = eTester.performTests()
         return d
-
+    
     def testGetResultDefault(self):
         self.addEngine(1)
         target = 0
@@ -253,7 +255,7 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda _: self.multiengine.getResult(target))
         d.addCallback(lambda r: self.assertEquals(shellResult, popit(r[0],'id')))
         return d
-
+    
     def testGetResultFailure(self):
         self.addEngine(1)
         d = self.multiengine.getResult(0, None)
@@ -295,12 +297,56 @@ class IEngineMultiplexerTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda _: self.multiengine.pullAll('result'))
         d.addCallback(lambda r: self.assertEquals(r, 4*[testg(10)]))
         return d        
-
+    
     def testPullFunctionAll(self):
         self.addEngine(4)
         d = self.multiengine.pushFunctionAll(f=testf)
         d.addCallback(lambda _: self.multiengine.pullFunctionAll('f'))
         d.addCallback(lambda r: self.assertEquals([func(10) for func in r], 4*[testf(10)]))
         return d
+
+
+class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
     
+    def testIMultiEngineInterface(self):
+        """Does self.engine claim to implement IEngineCore?"""
+        self.assert_(me.ISynchronousEngineMultiplexer.providedBy(self.multiengine))
+        self.assert_(me.ISynchronousEngineMultiplexerAll.providedBy(self.multiengine))
+        self.assert_(me.ISynchronousMultiEngine.providedBy(self.multiengine))
+        
+    def testExecute(self):
+        self.addEngine(4)
+        d = self.multiengine.execute(True, 0, 'a=5')
+        d.addCallback(lambda _: self.assert_(True))
+        return d
+
+class ITwoPhaseMultiEngineTestCase(IMultiEngineBaseTestCase):
+    pass
+
+
+
+class IMultiEngineCoordinator(IMultiEngineBaseTestCase):
+    pass
+
+class ITwoPhaseMultiEngineCoordinator(IMultiEngineBaseTestCase):
+    pass
+
+
+class IMultiEngineExtras(IMultiEngineBaseTestCase):
+    pass
+
+class ITwoPhaseMultiEngineExtras(IMultiEngineBaseTestCase):
+    pass
+
+
+class IFullTwoPhaseMultiEngine(IMultiEngineBaseTestCase):
+    pass
+
+
+class IFullSynchronousTwoPhaseMultiEngine(IMultiEngineBaseTestCase):
+    pass
+
+
+
+
 
