@@ -358,7 +358,7 @@ class EngineService(object, service.Service):
     def _setID(self, id):
         self._id = id
         self.properties = getEngine(id).properties
-        self.shell.push(**{'id': id})
+        self.shell.push({'id': id})
     
     def _getID(self):
         return self._id
@@ -366,7 +366,7 @@ class EngineService(object, service.Service):
     id = property(_getID, _setID)
     
     def _seedNamespace(self):
-        self.shell.push(**{'mpi': self.mpi, 'id' : self.id})
+        self.shell.push({'mpi': self.mpi, 'id' : self.id})
     
     def executeAndRaise(self, msg, callable, *args, **kwargs):
         """Call a method of self.shell and wrap any exception."""

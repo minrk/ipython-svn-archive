@@ -16,13 +16,14 @@ from types import FunctionType
 
 class ParallelFunction:
     """A function that operates in parallel on sequences."""
-    def __init__(self, targets, func, remoteController):
+    def __init__(self, func, multiengine, targets, block):
         """Create a `ParallelFunction`.
         """
         assert isinstance(func, (str, FunctionType)), "func must be a fuction or str"
         self.func = func
-        self.rc = remoteController
+        self.multiengine = multiengine
         self.targets = targets
+        self.block = block
         
-    def __call__(self,sequence):
-        return self.rc.map(self.targets, self.func, sequence)
+    def __call__(self, sequence):
+        return self.multiengine.map(self.func, sequence, targets=self.targets, block=self.block)

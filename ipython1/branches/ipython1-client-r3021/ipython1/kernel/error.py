@@ -98,3 +98,6 @@ class DBError(KernelError):
 class NotFoundError(KernelError):
     pass
 
+class MissingBlockArgument(KernelError):
+    pass
+

@@ -35,7 +35,6 @@ from ipython1.kernel.pendingdeferred import PendingDeferredManager, twoPhase
 from ipython1.kernel import multiengine as me
 from ipython1.kernel.multiengine import \
     IFullMultiEngine, \
-    EngineMultiplexerAll, \
     IFullSynchronousMultiEngine, \
     IFullSynchronousTwoPhaseMultiEngine
 
@@ -236,17 +235,7 @@ class QueueStatusList(list):
 #-------------------------------------------------------------------------------    
 
 class InteractiveMultiEngineClient(object):
-        
-    _magicTargets = 'all'
-    
-    def _setMagicTargets(self, targets):
-        self._magicTargets = targets
-        
-    def _getMagicTargets(self):
-        return self._magicTargets
-    
-    magicTargets = property(_getMagicTargets, _setMagicTargets, None, None)
-                                
+                                        
     def activate(self):
         """Make this `RemoteController` active for parallel magic commands.
         
@@ -290,7 +279,8 @@ class InteractiveMultiEngineClient(object):
             value : object
                 The local Python object to push.
         """
-        return self.push('all', **{key:value})
+        targets, block = self._findTargetsAndBlock()
+        return self.push({key:value}, targets=targets, block=block)
     
     def __getitem__(self, key):
         """Add a dictionary interface for pushing/pulling.
@@ -305,7 +295,8 @@ class InteractiveMultiEngineClient(object):
          - `id`: A string representing the key.
         """
         if isinstance(key, str):
-            return self.pull('all', *(key,))
+            targets, block = self._findTargetsAndBlock()
+            return self.pull(key, targets=targets, block=block)
         else:
             raise TypeError("__getitem__ only takes strs")
             
@@ -313,7 +304,7 @@ class InteractiveMultiEngineClient(object):
         """Return the number of available engines."""
         return len(self.getIDs())
         
-    def parallelize(self, targets, functionName):
+    def parallelize(self, func, targets=None, block=None):
         """Build a `ParallelFunction` object for functionName on engines.
         
         The returned object will implement a parallel version of functionName
@@ -338,15 +329,9 @@ class InteractiveMultiEngineClient(object):
         >>> psin(range(10000))
         [0,2,4,9,25,36,...]
         """
-        
-        return ParallelFunction(targets, functionName, self)
-        
-    def parallelizeAll(self, functionName):
-        """Build a `ParallelFunction` that operates on all engines.
-        
-        See the docstring for `parallelize` for more details.
-        """
-        return self.parallelize('all', functionName)
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return ParallelFunction(func, self, targets, block)
+
 
 
 #-------------------------------------------------------------------------------
@@ -358,15 +343,16 @@ class IFullBlockingMultiEngineClient(Interface):
     pass
 
 
-class FullBlockingMultiEngineClient(InteractiveMultiEngineClient, EngineMultiplexerAll):
+class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
     
     implements(IFullBlockingMultiEngineClient)
     
     def __init__(self, stpmultiengine):
         self.stpmultiengine = stpmultiengine
         self.block = True
+        self.targets = 'all'
     
-    def _reallyBlock(self, block=None):
+    def _findBlock(self, block=None):
         if block is None:
             return self.block
         else:
@@ -374,9 +360,22 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient, EngineMultiple
                 return block
             else:
                 raise ValueError("block must be True or False")
+
+    def _findTargets(self, targets=None):
+        if targets is None:
+            return self.targets
+        else:
+            if not isinstance(targets, (str,list,tuple,int)):
+                raise ValueError("targets must be a str, list, tuple or int")
+            return targets
+    
+    def _findTargetsAndBlock(self, targets=None, block=None):
+        return self._findTargets(targets), self._findBlock(block) 
     
     def _blockFromThread(self, function, *args, **kwargs):
-        block = self._reallyBlock()
+        block = kwargs.get('block', None)
+        if block is None:
+            raise error.MissingBlockArgument("'block' keyword argument is missing")
         result = blockingCallFromThread(function, block, *args, **kwargs)
         if not block:
             result = PendingResult(self, result)
@@ -389,10 +388,10 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient, EngineMultiple
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
     
-    def execute(self, targets, lines, block=None):
-        block = self._reallyBlock(block)
-        result = blockingCallFromThread(self.stpmultiengine.execute, block,
-            targets, lines)
+    def execute(self, lines, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        result = blockingCallFromThread(self.stpmultiengine.execute, lines,
+            targets=targets, block=block)
         if block:
             result = ResultList(result)
         else:
@@ -400,31 +399,34 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient, EngineMultiple
             result.addCallback(wrapResultList)
         return result
     
-    def executeAll(self, lines, block=None):
-        return self.execute('all', lines, block)
+    def push(self, namespace, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.push, namespace,
+            targets=targets, block=block)
     
-    def push(self, targets, **namespace):
-        return self._blockFromThread(self.stpmultiengine.push, targets, **namespace)
+    def pull(self, keys, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.pull, keys, targets=targets, block=block)
     
-    def pull(self, targets, *keys):
-        return self._blockFromThread(self.stpmultiengine.pull, targets, *keys)
+    def pushFunction(self, namespace, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.pushFunction, namespace, targets=targets, block=block)
     
-    def pushFunction(self, targets, **namespace):
-        return self._blockFromThread(self.stpmultiengine.pushFunction, targets, **namespace)
+    def pullFunction(self, keys, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.pullFunction, keys, targets=targets, block=block)
     
-    def pullFunction(self, targets, *keys):
-        return self._blockFromThread(self.stpmultiengine.pullFunction, targets, *keys)
+    def pushSerialized(self, namespace, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.pushSerialized, namespace, targets=targets, block=block)
     
-    def pushSerialized(self, targets, **namespace):
-        return self._blockFromThread(self.stpmultiengine.pushSerialized, targets, **namespace)
+    def pullSerialized(self, keys, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.pullSerialized, keys, targets=targets, block=block)
     
-    def pullSerialized(self, targets, *keys):
-        return self._blockFromThread(self.stpmultiengine.pullSerialized, targets, *keys)
-    
-    def getResult(self, targets, i=None):
-        block = self._reallyBlock()
-        result = blockingCallFromThread(self.stpmultiengine.getResult, block,
-            targets, lines)
+    def getResult(self, i=None, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        result = blockingCallFromThread(self.stpmultiengine.getResult, i, targets=targets, block=block)
         if block:
             result = ResultList(result)
         else:
@@ -432,83 +434,87 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient, EngineMultiple
             result.addCallback(wrapResultList)
         return result
     
-    def reset(self, targets):
-        return self._blockFromThread(self.stpmultiengine.reset, targets)
+    def reset(self, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.reset, targets=targets, block=block)
     
-    def keys(self, targets):
-        return self._blockFromThread(self.stpmultiengine.keys, targets)
+    def keys(self, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.keys, targets=targets, block=block)
     
-    def kill(self, targets, controller=False):
-        return self._blockFromThread(self.stpmultiengine.kill, targets)
+    def kill(self, controller=False, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.kill, controller, targets=targets, block=block)
     
-    def clearQueue(self, targets):
-        return self._blockFromThread(self.stpmultiengine.clearQueue, targets)
+    def clearQueue(self, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.clearQueue, targets=targets, block=block)
     
-    def queueStatus(self, targets):
-        return self._blockFromThread(self.stpmultiengine.queueStatus, targets)
+    def queueStatus(self, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.queueStatus, targets=targets, block=block)
     
-    def setProperties(self, targets, **properties):
-        return self._blockFromThread(self.stpmultiengine.setProperties, targets)
+    def setProperties(self, properties, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.setProperties, properties, targets=targets, block=block)
     
-    def getProperties(self, targets, *keys):
-        return self._blockFromThread(self.stpmultiengine.getProperties, targets, *keys)
+    def getProperties(self, keys, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.getProperties, keys, targets=targets, block=block)
     
-    def hasProperties(self, targets, *keys):
-        return self._blockFromThread(self.stpmultiengine.hasProperties, targets, *keys)
+    def hasProperties(self, keys, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.hasProperties, keys, targets=targets, block=block)
     
-    def delProperties(self, targets, *keys):
-        return self._blockFromThread(self.stpmultiengine.delProperties, targets, *keys)
+    def delProperties(self, keys, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.delProperties, keys, targets=targets, block=block)
     
-    def clearProperties(self, targets):
-        return self._blockFromThread(self.stpmultiengine.clearProperties, targets, *keys)
+    def clearProperties(self, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.clearProperties, targets=targets, block=block)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
-    def getIDs(self):
-        return self._blockFromThread(self.stpmultiengine.getIDs, targets)
+    def getIDs(self, block=None):
+        block = self._findBlock(block)
+        return self._blockFromThread(self.stpmultiengine.getIDs, block=block)
     
     #---------------------------------------------------------------------------
     # IMultiEngineCoordinator
     #---------------------------------------------------------------------------
              
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        return self._blockFromThread(self.stpmultiengine.scatter, targets, 
-            key, seq, style, flatten)
+    def scatter(self, key, seq, style='basic', flatten=False, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.scatter, key, seq, 
+            style, flatten, targets=targets, block=block)
     
-    def scatterAll(self, key, seq, style='basic', flatten=False):
-        return self.scatter('all', key, seq, style, flatten)
-        
-    def gather(self, targets, key, style='basic'):
-        return self._blockFromThread(self.stpmultiengine.gather, targets, 
-            key, style)
-        
-    def gatherAll(self, key, style='basic'):
-        return self.gather('all', key, style)
-            
-    def map(self, targets, func, seq, style='basic'):
-        return self._blockFromThread(self.stpmultiengine.map, targets, func, 
-            seq, style)
+    def gather(self, key, style='basic', targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.gather, key, style, 
+            targets=targets, block=block)
     
-    def mapAll(self, func, seq, style='basic'):
-        return self.map('all', func, seq, style)
+    def map(self, func, seq, style='basic', targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.map, func, seq, 
+            style, targets=targets, block=block)
     
     #---------------------------------------------------------------------------
     # IMultiEngineExtras
     #---------------------------------------------------------------------------
     
-    def zipPull(self, targets, *keys):
-        return self._blockFromThread(self.stpmultiengine.zipPull, targets, *keys)
+    def zipPull(self, keys, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.zipPull, keys, 
+            targets=targets, block=block)
     
-    def zipPullAll(self, *keys):
-        return self.zipPull('all', *keys)
-    
-    def run(self, targets, fname):
-        return self._blockFromThread(self.stpmultiengine.run, targets, fnamekeys)
-    
-    def runAll(self, fname):
-        return self.run('all', fname)
+    def run(self, fname, targets=None, block=None):
+        targets, block = self._findTargetsAndBlock(targets, block)
+        return self._blockFromThread(self.stpmultiengine.run, fname,
+            targets=targets, block=block)
+
 
 
 components.registerAdapter(FullBlockingMultiEngineClient,

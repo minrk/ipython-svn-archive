@@ -139,26 +139,26 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     #---------------------------------------------------------------------------
     
     @packageResult
-    def xmlrpc_execute(self, request, lines, targets='all', block=True):
+    def xmlrpc_execute(self, request, lines, targets, block):
         return self.smultiengine.execute(lines, targets=targets, block=block)
     
     @packageResult    
-    def xmlrpc_push(self, request, binaryNS, targets='all', block=True):
+    def xmlrpc_push(self, request, binaryNS, targets, block):
         try:
             namespace = pickle.loads(binaryNS.data)
         except:
             d = defer.fail(failure.Failure())
         else:
-            d = self.smultiengine.push(namespace, targets=targets, block=block)
+            d = self.smultiengine.push(namespace, targets, block)
         return d
     
     @packageResult
-    def xmlrpc_pull(self, request, keys, targets='all', block=True):
+    def xmlrpc_pull(self, request, keys, targets, block):
         d = self.smultiengine.pull(keys, targets=targets, block=block)
         return d
     
     @packageResult    
-    def xmlrpc_pushFunction(self, request, binaryNS, targets='all', block=True):
+    def xmlrpc_pushFunction(self, request, binaryNS, targets, block):
         try:
             namespace = pickle.loads(binaryNS.data)
         except:
@@ -172,7 +172,7 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         return [canSequence(r) for r in result]
     
     @packageResult
-    def xmlrpc_pullFunction(self, request, keys, targets='all', block=True):
+    def xmlrpc_pullFunction(self, request, keys, targets, block):
         d = self.smultiengine.pullFunction(keys, targets=targets, block=block)
         if len(keys)==1:
             d.addCallback(canSequence)
@@ -181,7 +181,7 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         return d
     
     @packageResult    
-    def xmlrpc_pushSerialized(self, request, binaryNS, targets='all', block=True):
+    def xmlrpc_pushSerialized(self, request, binaryNS, targets, block):
         try:
             namespace = pickle.loads(binaryNS.data)
         except:
@@ -191,38 +191,38 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         return d
     
     @packageResult
-    def xmlrpc_pullSerialized(self, request, keys, targets='all', block=True):
+    def xmlrpc_pullSerialized(self, request, keys, targets, block):
         d = self.smultiengine.pullSerialized(keys, targets=targets, block=block)
         return d
     
     @packageResult
-    def xmlrpc_getResult(self, request, i=None, targets='all', block=True):
+    def xmlrpc_getResult(self, request, i, targets, block):
         if i == 'None':
             i = None
-        return self.smultiengine.getResult(i, targets='all', block=True)
+        return self.smultiengine.getResult(i, targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_reset(self, request, targets='all', block=True):
+    def xmlrpc_reset(self, request, targets, block):
         return self.smultiengine.reset(targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_keys(self, request, targets='all', block=True):
+    def xmlrpc_keys(self, request, targets, block):
         return self.smultiengine.keys(targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_kill(self, request, controller=False, targets='all', block=True):
+    def xmlrpc_kill(self, request, controller, targets, block):
         return self.smultiengine.kill(controller, targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_clearQueue(self, request, targets='all', block=True):
+    def xmlrpc_clearQueue(self, request, targets, block):
         return self.smultiengine.clearQueue(targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_queueStatus(self, request, targets='all', block=True):
+    def xmlrpc_queueStatus(self, request, targets, block):
         return self.smultiengine.queueStatus(targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_setProperties(self, request, binaryNS, targets='all', block=True):
+    def xmlrpc_setProperties(self, request, binaryNS, targets, block):
         try:
             ns = pickle.loads(binaryNS.data)
         except:
@@ -232,26 +232,26 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         return d
     
     @packageResult
-    def xmlrpc_getProperties(self, request, keys, targets='all', block=True):
+    def xmlrpc_getProperties(self, request, keys, targets, block):
         return self.smultiengine.getProperties(keys, targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_hasProperties(self, request, keys, targets='all', block=True):
+    def xmlrpc_hasProperties(self, request, keys, targets, block):
         return self.smultiengine.hasProperties(keys, targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_delProperties(self, request, keys, targets='all', block=True):
+    def xmlrpc_delProperties(self, request, keys, targets, block):
         return self.smultiengine.delProperties(keys, targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_clearProperties(self, request, keys, targets='all', block=True):
+    def xmlrpc_clearProperties(self, request, keys, targets, block):
         return self.smultiengine.clearProperties(keys, targets=targets, block=block)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
-    def xmlrpc_getIDs(self, request, block=True):
+    def xmlrpc_getIDs(self, request, block):
         """Get the ids of the registered engines.
         
         This method always blocks.
@@ -321,7 +321,7 @@ class XMLRPCSynchronousMultiEngineClient(object):
     # Things related to PendingDeferredManager
     #---------------------------------------------------------------------------
     
-    def getPendingDeferred(self, deferredID, block):
+    def getPendingDeferred(self, deferredID, block=True):
         d = self._proxy.callRemote('getPendingDeferred', deferredID, block)
         d.addCallback(self.unpackage)
         return d
@@ -330,101 +330,101 @@ class XMLRPCSynchronousMultiEngineClient(object):
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
         
-    def execute(self, block, targets, lines):
-        d = self._proxy.callRemote('execute', block, targets, lines)
+    def execute(self, lines, targets='all', block=True):
+        d = self._proxy.callRemote('execute', lines, targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def push(self, block, targets, **namespace):
+    def push(self, namespace, targets='all', block=True):
         binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
-        d =  self._proxy.callRemote('push', block, targets, binPackage)
+        d =  self._proxy.callRemote('push', binPackage, targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def pull(self, block, targets, *keys):
-        d = self._proxy.callRemote('pull', block, targets, *keys)
+    def pull(self, keys, targets='all', block=True):
+        d = self._proxy.callRemote('pull', keys, targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def pushFunction(self, block, targets, **namespace):
+    def pushFunction(self, namespace, targets='all', block=True):
         cannedNamespace = canDict(namespace)
         binPackage = xmlrpc.Binary(pickle.dumps(cannedNamespace, 2))
-        d = self._proxy.callRemote('pushFunction', block, targets, binPackage)
+        d = self._proxy.callRemote('pushFunction', binPackage, targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def pullFunction(self, block, targets, *keys):
-        d = self._proxy.callRemote('pullFunction', block, targets, *keys)
+    def pullFunction(self, keys, targets='all', block=True):
+        d = self._proxy.callRemote('pullFunction', keys, targets, block)
         d.addCallback(self.unpackage)
         d.addCallback(uncanSequence)
         return d
     
-    def pushSerialized(self, block, targets, **namespace):
+    def pushSerialized(self, namespace, targets='all', block=True):
         binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
-        d =  self._proxy.callRemote('pushSerialized', block, targets, binPackage)
+        d =  self._proxy.callRemote('pushSerialized', binPackage, targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def pullSerialized(self, block, targets, *keys):
-        d = self._proxy.callRemote('pullSerialized', block, targets, *keys)
+    def pullSerialized(self, keys, targets='all', block=True):
+        d = self._proxy.callRemote('pullSerialized', keys, targets, block)
         d.addCallback(self.unpackage)
         return d
         
-    def getResult(self, block, targets, i=None):
+    def getResult(self, i=None, targets='all', block=True):
         if i is None: # This is because None cannot be marshalled by xml-rpc
             i = 'None'
-        d = self._proxy.callRemote('getResult', block, targets, i)
+        d = self._proxy.callRemote('getResult', i, targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def reset(self, block, targets):
-        d = self._proxy.callRemote('reset', block, targets)
+    def reset(self, targets='all', block=True):
+        d = self._proxy.callRemote('reset', targets, block)
         d.addCallback(self.unpackage)
         return d        
     
-    def keys(self, block, targets):
-        d = self._proxy.callRemote('keys', block, targets)
+    def keys(self, targets='all', block=True):
+        d = self._proxy.callRemote('keys', targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def kill(self, block, targets, controller=False):
-        d = self._proxy.callRemote('kill', block, targets, controller)
+    def kill(self, controller=False, targets='all', block=True):
+        d = self._proxy.callRemote('kill', controller, targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def clearQueue(self, block, targets):
-        d = self._proxy.callRemote('clearQueue', block, targets)
+    def clearQueue(self, targets='all', block=True):
+        d = self._proxy.callRemote('clearQueue', targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def queueStatus(self, block, targets):
-        d = self._proxy.callRemote('queueStatus', block, targets)
+    def queueStatus(self, targets='all', block=True):
+        d = self._proxy.callRemote('queueStatus', targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def setProperties(self, block, targets, **properties):
+    def setProperties(self, properties, targets='all', block=True):
         binPackage = xmlrpc.Binary(pickle.dumps(properties, 2))
-        d = self._proxy.callRemote('setProperties', block, targets, binPackage)
+        d = self._proxy.callRemote('setProperties', binPackage, targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def getProperties(self, block, targets, *keys):
-        d = self._proxy.callRemote('getProperties', block, targets, *keys)
+    def getProperties(self, keys, targets='all', block=True):
+        d = self._proxy.callRemote('getProperties', keys, targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def hasProperties(self, block, targets, *keys):
-        d = self._proxy.callRemote('hasProperties', block, targets, *keys)
+    def hasProperties(self, keys, targets='all', block=True):
+        d = self._proxy.callRemote('hasProperties', keys, targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def delProperties(self, block, targets, *keys):
-        d = self._proxy.callRemote('delProperties', block, targets, *keys)
+    def delProperties(self, keys, targets='all', block=True):
+        d = self._proxy.callRemote('delProperties', keys, targets, block)
         d.addCallback(self.unpackage)
         return d
     
-    def clearProperties(self, block, targets):
-        d = self._proxy.callRemote('clearProperties', block, targets, *keys)
+    def clearProperties(self, targets='all', block=True):
+        d = self._proxy.callRemote('clearProperties', keys, targets, block)
         d.addCallback(self.unpackage)
         return d
     
@@ -432,7 +432,7 @@ class XMLRPCSynchronousMultiEngineClient(object):
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
-    def getIDs(self, block):
+    def getIDs(self, block=True):
         d = self._proxy.callRemote('getIDs', block)
         return d
 

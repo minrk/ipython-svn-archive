@@ -269,9 +269,9 @@ class MultiEngine(ControllerAdapterBase):
             else:
                 return eList
         else:
-            raise error.InvalidEngineID("targets argument is not an int, list of ints or 'all'")
+            raise error.InvalidEngineID("targets argument is not an int, list of ints or 'all': %r"%targets)
     
-    def _performOnEngines(self, methodName, targets, *args, **kwargs):
+    def _performOnEngines(self, methodName, *args, **kwargs):
         """Calls a method on engines and returns deferred to list of results.
         
         :Parameters:
@@ -292,6 +292,7 @@ class MultiEngine(ControllerAdapterBase):
             AttributeError
                 If the method doesn't exist on one of the engines.
         """
+        targets = kwargs.pop('targets')
         log.msg("Performing %s on %r" % (methodName, targets))
         # This will and should raise if targets is not valid!
         engines = self.engineList(targets)
@@ -304,11 +305,11 @@ class MultiEngine(ControllerAdapterBase):
                 raise AttributeError("Engine %i does not have method %s" % (e.id, methodName))
         return dList
     
-    def _performOnEnginesAndGatherBoth(self, methodName, targets, *args, **kwargs):
+    def _performOnEnginesAndGatherBoth(self, methodName, *args, **kwargs):
         """Called _performOnEngines and wraps result/exception into deferred."""
         try:
-            dList = self._performOnEngines(methodName, targets, *args, **kwargs)
-        except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
+            dList = self._performOnEngines(methodName, *args, **kwargs)
+        except (error.InvalidEngineID, AttributeError, KeyError, error.NoEnginesRegistered):
             return defer.fail(failure.Failure())
         else:
             return gatherBoth(dList, 
@@ -328,33 +329,33 @@ class MultiEngine(ControllerAdapterBase):
     #---------------------------------------------------------------------------
         
     def execute(self, lines, targets='all'):
-        return self._performOnEnginesAndGatherBoth('execute', lines, targets)
+        return self._performOnEnginesAndGatherBoth('execute', lines, targets=targets)
     
     def push(self, ns, targets='all'):
-        return self._performOnEnginesAndGatherBoth('push', ns, targets)
+        return self._performOnEnginesAndGatherBoth('push', ns, targets=targets)
         
     def pull(self, keys, targets='all'):
-        return self._performOnEnginesAndGatherBoth('pull', keys, targets)
+        return self._performOnEnginesAndGatherBoth('pull', keys, targets=targets)
     
     def pushFunction(self, ns, targets='all'):
-        return self._performOnEnginesAndGatherBoth('pushFunction', ns, targets)
+        return self._performOnEnginesAndGatherBoth('pushFunction', ns, targets=targets)
         
     def pullFunction(self, keys, targets='all'):
-        return self._performOnEnginesAndGatherBoth('pullFunction', keys, targets)
+        return self._performOnEnginesAndGatherBoth('pullFunction', keys, targets=targets)
     
     def getResult(self, i=None, targets='all'):
-        return self._performOnEnginesAndGatherBoth('getResult', i, targets)
+        return self._performOnEnginesAndGatherBoth('getResult', i, targets=targets)
     
     def reset(self, targets='all'):
-        return self._performOnEnginesAndGatherBoth('reset', targets)
+        return self._performOnEnginesAndGatherBoth('reset', targets=targets)
     
     def keys(self, targets='all'):
-        return self._performOnEnginesAndGatherBoth('keys', targets)
+        return self._performOnEnginesAndGatherBoth('keys', targets=targets)
     
     def kill(self, controller=False, targets='all'):
         if controller:
             targets = 'all'
-        d = self._performOnEnginesAndGatherBoth('kill', targets)
+        d = self._performOnEnginesAndGatherBoth('kill', targets=targets)
         if controller:
             log.msg("Killing controller")
             d.addCallback(lambda _: reactor.callLater(2.0, reactor.stop))
@@ -365,12 +366,12 @@ class MultiEngine(ControllerAdapterBase):
     def pushSerialized(self, namespace, targets='all'):
         for k, v in namespace.iteritems():
             log.msg("Pushed object %s is %f MB" % (k, v.getDataSize()))
-        d = self._performOnEnginesAndGatherBoth('pushSerialized', namespace, targets)      
+        d = self._performOnEnginesAndGatherBoth('pushSerialized', namespace, targets=targets)      
         return d
         
     def pullSerialized(self, keys, targets='all'):
         try:
-            dList = self._performOnEngines('pullSerialized', keys, targets)
+            dList = self._performOnEngines('pullSerialized', keys, targets=targets)
         except (error.InvalidEngineID, AttributeError, error.NoEnginesRegistered):
             return defer.fail(failure.Failure())
         else:
@@ -390,7 +391,7 @@ class MultiEngine(ControllerAdapterBase):
         return listOfSerialized
     
     def clearQueue(self, targets='all'):
-        return self._performOnEnginesAndGatherBoth('clearQueue', targets)         
+        return self._performOnEnginesAndGatherBoth('clearQueue', targets=targets)         
     
     def queueStatus(self, targets='all'):
         log.msg("Getting queue status on %r" % targets)
@@ -657,7 +658,7 @@ class TwoPhaseMultiEngineAdaptor(object):
         return self._submitThenBlock('push', namespace, targets)
     
     def pull(self, keys, targets='all'):
-        return self._submitThenBlock('pull', keys, targets)
+        return self._submitThenBlock('pull', keys, targets=targets)
     
     def pushFunction(self, namespace, targets='all'):
         return self._submitThenBlock('pushFunction', namespace, targets)
@@ -1176,6 +1177,7 @@ components.registerAdapter(FullTwoPhaseMultiEngineAdaptor,
 
 class IFullSynchronousTwoPhaseMultiEngine(IFullSynchronousMultiEngine):
     pass
+
 
 class FullSynchronousTwoPhaseMultiEngineAdaptor(SynchronousMultiEngine):
     
