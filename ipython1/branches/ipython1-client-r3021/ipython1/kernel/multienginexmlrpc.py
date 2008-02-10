@@ -131,7 +131,7 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     #---------------------------------------------------------------------------
     
     @packageResult
-    def xmlrpc_getPendingDeferred(self, request, deferredID, block=True):
+    def xmlrpc_getPendingDeferred(self, request, deferredID, block):
         return self.smultiengine.getPendingDeferred(deferredID, block)
        
     #---------------------------------------------------------------------------
@@ -149,7 +149,7 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         except:
             d = defer.fail(failure.Failure())
         else:
-            d = self.smultiengine.push(namespace, targets, block)
+            d = self.smultiengine.push(namespace, targets=targets, block=block)
         return d
     
     @packageResult

@@ -376,7 +376,7 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
         block = kwargs.get('block', None)
         if block is None:
             raise error.MissingBlockArgument("'block' keyword argument is missing")
-        result = blockingCallFromThread(function, block, *args, **kwargs)
+        result = blockingCallFromThread(function, *args, **kwargs)
         if not block:
             result = PendingResult(self, result)
         return result

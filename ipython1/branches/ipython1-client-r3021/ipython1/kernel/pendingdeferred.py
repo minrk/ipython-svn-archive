@@ -111,7 +111,7 @@ class PendingDeferredManager(object):
                 pd.addCallback(self._deleteAndPassThrough, deferredID)
                 return pd
             elif not pd.called and not block: # pd has not fired, but we should not block
-                return defer.fail(failure.Failure(error.ResultNotCompleted("Result not completed: %i" % deferredID)))
+                return defer.fail(failure.Failure(error.ResultNotCompleted("Result not completed: %r" % deferredID)))
             else:    # pd has fired
                 #log.msg("pendingDeferred has been called: %s: %s" % (deferredID, repr(pd.result)))
                 if isinstance(pd.result, failure.Failure):

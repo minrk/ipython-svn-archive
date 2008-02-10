@@ -51,11 +51,11 @@ class Foo(object):
     def bar(self, bahz):
         return defer.succeed('blahblah' + bahz)
 
-class TwoPhaseFoo(pd.PendingDeferredAdapter):
+class TwoPhaseFoo(pd.PendingDeferredManager):
     
     def __init__(self, foo):
         self.foo = foo
-        pd.PendingDeferredAdapter.__init__(self)
+        pd.PendingDeferredManager.__init__(self)
 
     @pd.twoPhase
     def bar(self, bahz):
@@ -71,48 +71,29 @@ class PendingDeferredManagerTest(DeferredTestCase):
         pass
         
     def testBasic(self):
-        pdm = pd.PendingDeferredManager(0)
-        for i in range(10):
-            id = pdm.getNextDeferredID()
-            self.assert_(id==i)
+        pdm = pd.PendingDeferredManager()
         dDict = {}
         for i in range(10):
             d = defer.Deferred()
-            pdm.savePendingDeferred(i, d)
-            dDict[i] = d
-        for i in range(5):
-            d = pdm.getPendingDeferred(i,block=True)
-            dDict[i].callback('foo')
+            did = pdm.getNextDeferredID()
+            pdm.savePendingDeferred(did, d)
+            dDict[did] = d
+        for did in dDict.keys()[0:5]:
+            d = pdm.getPendingDeferred(did,block=True)
+            dDict[did].callback('foo')
             d.addCallback(lambda r: self.assert_(r=='foo'))
-        for i in range(5,10):
-            d = pdm.getPendingDeferred(i,block=False)
+        for did in dDict.keys()[5:10]:
+            d = pdm.getPendingDeferred(did,block=False)
             d.addErrback(lambda f: self.assertRaises(error.ResultNotCompleted, f.raiseException))
-        for i in range(5,10):
-            dDict[i].callback('foo')
-            d = pdm.getPendingDeferred(i,block=False)
+        for did in dDict.keys()[5:10]:
+            dDict[did].callback('foo')
+            d = pdm.getPendingDeferred(did,block=False)
             d.addCallback(lambda r: self.assert_(r=='foo'))
-        for i in range(10):
-            d = pdm.getPendingDeferred(i,False)
+        for did in dDict.keys():
+            d = pdm.getPendingDeferred(did,False)
             d.addErrback(lambda f: self.assertRaises(error.InvalidDeferredID, f.raiseException))
-            
-    def testPDA(self):
-        f = Foo()
-        tpf = TwoPhaseFoo(f)
-        clientID = tpf.registerClient()
-        self.assert_(clientID==0)
-        d = tpf.bar(clientID, True, 'hi there')
-        d.addCallback(lambda r: self.assertEquals(r, 'blahblahhi there'))
-        d = tpf.bar(clientID, False, 'foobah')
-        d.addCallback(lambda r: 
-            self.assertEquals(len(tpf.pdManagers[clientID].pendingDeferreds.keys()), 1))
-        d.addCallback(lambda r: tpf.flush(clientID))
-        d.addCallback(lambda r: 
-            self.assertEquals(len(tpf.pdManagers[clientID].pendingDeferreds.keys()), 0))
-        tpf.unregisterClient(clientID)
-        d = tpf.bar(1000, True, 'boo')
-        d.addErrback(lambda f: self.assertRaises(error.InvalidClientID, f.raiseException))
-        
-        
+
+
         
 #-------------------------------------------------------------------------------
 # Regular Unittests

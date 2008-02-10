@@ -124,7 +124,7 @@ class EnginePushPullTestGenerator(TestGenerator):
         return self.testCaseInstance.assertEquals(actual, computed)
         
     def computeOutput(self, i):
-        d = self.testCaseInstance.engine.push(a=i)
+        d = self.testCaseInstance.engine.push(dict(a=i))
         d.addCallback(lambda r: self.testCaseInstance.engine.pull('a'))
         return d
 

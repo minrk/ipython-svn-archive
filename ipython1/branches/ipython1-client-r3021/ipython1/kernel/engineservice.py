@@ -475,19 +475,19 @@ method: reset()""" % self.id
     
     def setProperties(self, properties):
         msg = """engine: %r
-method: setProperties(**properties)
+method: setProperties(properties)
 properties.keys() = %r""" % (self.id, properties.keys())
         return self.executeAndRaise(msg, self.properties.update, properties)
     
-    def getProperties(self, keys):
+    def getProperties(self, keys=None):
         msg = """engine %r
-method: getProperties(*keys)
+method: getProperties(keys)
 keys = %r""" % (self.id, keys)
-        if not keys:
+        if keys is None:
             keys = self.properties.keys()
         return self.executeAndRaise(msg, self.properties.subDict, *keys)
     
-    def _doDel(self, *keys):
+    def _doDel(self, keys):
         for key in keys:
             del self.properties[key]
     
@@ -495,16 +495,16 @@ keys = %r""" % (self.id, keys)
         msg = """engine %r
 method: delProperties(*keys)
 keys = %r""" % (self.id, keys)
-        return self.executeAndRaise(msg, self._doDel, *keys)
+        return self.executeAndRaise(msg, self._doDel, keys)
     
-    def _doHas(self, *keys):
+    def _doHas(self, keys):
         return [self.properties.has_key(key) for key in keys]
     
     def hasProperties(self, keys):
         msg = """engine %r
-method: hasProperties(*keys)
+method: hasProperties(keys)
 keys = %r""" % (self.id, keys)
-        return self.executeAndRaise(msg, self._doHas, *keys)
+        return self.executeAndRaise(msg, self._doHas, keys)
     
     def clearProperties(self):
         msg = """engine %r

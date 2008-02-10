@@ -33,58 +33,11 @@ from ipython1.testutils.testgenerator import (EngineExecuteTestGenerator,
     EngineFailingExecuteTestGenerator,
     EngineGetResultTestGenerator)
 
-class FailingEngineError(Exception):
-    pass
 
-class FailingEngineService(object, service.Service):
-    """An EngineSerivce whose methods always raise FailingEngineError.
-    
-    This class is used in tests to see if errors propagate correctly.
-    """
-    
-    zi.implements(es.IEngineBase)
-                
-    def __init__(self, shellClass=None, mpi=None):
-        self.id = None
-        self.properties={}
-    
-    def _setID(self, id):
-        self._id = id
-        
-    def _getID(self):
-        return self._id
-        
-    id = property(_getID, _setID)
-        
-    def startService(self):
-        pass
-            
-    def execute(self, lines):
-        return defer.fail(failure.Failure(FailingEngineError("error text")))
+#-------------------------------------------------------------------------------
+# Tests
+#-------------------------------------------------------------------------------
 
-    def push(self, **namespace):
-        return defer.fail(failure.Failure(FailingEngineError("error text")))
-
-    def pull(self, *keys):
-        return defer.fail(failure.Failure(FailingEngineError("error text")))
-        
-    def getResult(self, i=None):
-        return defer.fail(failure.Failure(FailingEngineError("error text")))
-    
-    def reset(self):
-        return defer.fail(failure.Failure(FailingEngineError("error text")))
-    
-    def kill(self):
-        return defer.fail(failure.Failure(FailingEngineError("error text")))
-
-    def keys(self):
-        return defer.fail(failure.Failure(FailingEngineError("error text")))
-
-    def pushSerialized(self, **sNamespace):
-        return defer.fail(failure.Failure(FailingEngineError("error text")))
-    
-    def pullSerialized(self, *keys):
-        return defer.fail(failure.Failure(FailingEngineError("error text")))
     
 # A sequence of valid commands run through execute
 validCommands = ['a=5',
@@ -152,21 +105,13 @@ class IEngineCoreTestCase(object):
             self.assert_(hasattr(self.engine, m))
             
     def testIEngineCoreDeferreds(self):
-        commands = [(self.engine.execute, ('a=5',)), 
-            (self.engine.pull, ('a',)),
-            (self.engine.getResult, ()),
-            (self.engine.keys, ())]
-        dList = []
-        for c in commands:
-            d = c[0](*c[1])
-            self.assert_(isinstance(d, defer.Deferred))
-            dList.append(d)
-        d = self.engine.push(a=5)
-        self.assert_(isinstance(d, defer.Deferred))
-        dList.append(d)
-        D = defer.DeferredList(dList)
-        return D
-        
+        d = self.engine.execute('a=5')
+        d.addCallback(lambda _: self.engine.pull('a'))
+        d.addCallback(lambda _: self.engine.getResult())
+        d.addCallback(lambda _: self.engine.keys())
+        d.addCallback(lambda _: self.engine.push(dict(a=10)))
+        return d
+    
     def testExecute(self):
         eTester = EngineExecuteTestGenerator(validCommands, self)
         d = eTester.performTests()
@@ -194,7 +139,7 @@ class IEngineCoreTestCase(object):
         d.addCallback(lambda _: self.engine.execute('l = lambda x: x'))
         d.addCallback(lambda _: self.engine.pull('l'))
         d.addErrback(lambda f: self.assertRaises(pickle.PicklingError, f.raiseException))
-        d.addCallback(lambda _: self.engine.push(l=lambda x: x))
+        d.addCallback(lambda _: self.engine.push(dict(l=lambda x: x)))
         d.addErrback(lambda f: self.assertRaises(pickle.PicklingError, f.raiseException))
         return d
         
@@ -205,7 +150,7 @@ class IEngineCoreTestCase(object):
             print 'no numpy, ',
             return
         a = numpy.random.random(1000)
-        d = self.engine.push(a=a)
+        d = self.engine.push(dict(a=a))
         d.addCallback(lambda _: self.engine.pull('a'))
         d.addCallback(lambda b: b==a)
         d.addCallback(lambda c: c.all())
@@ -213,22 +158,22 @@ class IEngineCoreTestCase(object):
         
     def testPushFunction(self):
                     
-        d = self.engine.pushFunction(f=testf)
+        d = self.engine.pushFunction(dict(f=testf))
         d.addCallback(lambda _: self.engine.execute('result = f(10)'))
         d.addCallback(lambda _: self.engine.pull('result'))
         d.addCallback(lambda r: self.assertEquals(r, testf(10)))
         return d
 
     def testPullFunction(self):
-        d = self.engine.pushFunction(f=testf, g=testg)
-        d.addCallback(lambda _: self.engine.pullFunction('f','g'))
+        d = self.engine.pushFunction(dict(f=testf, g=testg))
+        d.addCallback(lambda _: self.engine.pullFunction(('f','g')))
         d.addCallback(lambda r: self.assertEquals(r[0](10), testf(10)))
         return d
         
     def testPushFunctionGlobal(self):
         """Make sure that pushed functions pick up the user's namespace for globals."""
-        d = self.engine.push(globala=globala)
-        d.addCallback(lambda _: self.engine.pushFunction(g=testg))
+        d = self.engine.push(dict(globala=globala))
+        d.addCallback(lambda _: self.engine.pushFunction(dict(g=testg)))
         d.addCallback(lambda _: self.engine.execute('result = g(10)'))
         d.addCallback(lambda _: self.engine.pull('result'))
         d.addCallback(lambda r: self.assertEquals(r, testg(10)))
@@ -279,7 +224,7 @@ class IEngineSerializedTestCase(object):
        
     def testIEngineSerializedDeferreds(self):
         dList = []
-        d = self.engine.pushSerialized(key=newserialized.serialize(12345))
+        d = self.engine.pushSerialized(dict(key=newserialized.serialize(12345)))
         self.assert_(isinstance(d, defer.Deferred))
         dList.append(d)
         d = self.engine.pullSerialized('key')
@@ -292,7 +237,7 @@ class IEngineSerializedTestCase(object):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
         d = defer.succeed(None)
         for o in objs:
-            self.engine.pushSerialized(key=newserialized.serialize(o))
+            self.engine.pushSerialized(dict(key=newserialized.serialize(o)))
             value = self.engine.pullSerialized('key')
             value.addCallback(lambda serial: newserialized.IUnSerialized(serial).getObject())
             d = self.assertDeferredEquals(value,o,d)
@@ -356,19 +301,19 @@ class IEnginePropertiesTestCase(object):
     
     def testGetSetProperties(self):
         dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
-        d = self.engine.setProperties(**dikt)
+        d = self.engine.setProperties(dikt)
         d.addCallback(lambda r: self.engine.getProperties())
         d = self.assertDeferredEquals(d, dikt)
-        d.addCallback(lambda r: self.engine.getProperties('c'))
+        d.addCallback(lambda r: self.engine.getProperties(('c',)))
         d = self.assertDeferredEquals(d, {'c': dikt['c']})
-        d.addCallback(lambda r: self.engine.setProperties(c=False))
-        d.addCallback(lambda r: self.engine.getProperties('c', 'd'))
+        d.addCallback(lambda r: self.engine.setProperties(dict(c=False)))
+        d.addCallback(lambda r: self.engine.getProperties(('c', 'd')))
         d = self.assertDeferredEquals(d, dict(c=False, d=None))
         return d
     
     def testClearProperties(self):
         dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
-        d = self.engine.setProperties(**dikt)
+        d = self.engine.setProperties(dikt)
         d.addCallback(lambda r: self.engine.clearProperties())
         d.addCallback(lambda r: self.engine.getProperties())
         d = self.assertDeferredEquals(d, {})
@@ -376,15 +321,15 @@ class IEnginePropertiesTestCase(object):
     
     def testDelHasProperties(self):
         dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
-        d = self.engine.setProperties(**dikt)
-        d.addCallback(lambda r: self.engine.delProperties('b','e'))
-        d.addCallback(lambda r: self.engine.hasProperties(*'abcde'))
+        d = self.engine.setProperties(dikt)
+        d.addCallback(lambda r: self.engine.delProperties(('b','e')))
+        d.addCallback(lambda r: self.engine.hasProperties(('a','b','c','d','e')))
         d = self.assertDeferredEquals(d, [True, False, True, True, False])
         return d
     
     def testStrictDict(self):
-        s = """import ipython1.kernel.api as kernel
-p = kernel.getEngine(%s).properties"""%self.engine.id
+        s = """from ipython1.kernel.engineservice import getEngine
+p = getEngine(%s).properties"""%self.engine.id
         d = self.engine.execute(s)
         d.addCallback(lambda r: self.engine.execute("p['a'] = lambda _:None"))
         d = self.assertDeferredRaises(d, error.InvalidProperty)

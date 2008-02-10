@@ -511,7 +511,11 @@ class ISynchronousMultiEngine(ISynchronousEngineMultiplexer):
 #-------------------------------------------------------------------------------
 
 class SynchronousMultiEngine(PendingDeferredManager):
-    """Adapt an `IMultiEngine` -> `ISynchronousMultiEngine`"""
+    """Adapt an `IMultiEngine` -> `ISynchronousMultiEngine`
+    
+    Warning, this class uses a decorator that currently uses **kwargs.  
+    Because of this block must be passed as a kwarg, not positionally.
+    """
     
     implements(ISynchronousMultiEngine)
     
@@ -644,7 +648,7 @@ class TwoPhaseMultiEngineAdaptor(object):
         kwargs['block'] = False
         method = getattr(self.smultiengine, methodname)
         d = method(*args, **kwargs)
-        d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did,True))
+        d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did, True))
         return d        
     
     #---------------------------------------------------------------------------
@@ -658,7 +662,7 @@ class TwoPhaseMultiEngineAdaptor(object):
         return self._submitThenBlock('push', namespace, targets)
     
     def pull(self, keys, targets='all'):
-        return self._submitThenBlock('pull', keys, targets=targets)
+        return self._submitThenBlock('pull', keys, targets)
     
     def pushFunction(self, namespace, targets='all'):
         return self._submitThenBlock('pushFunction', namespace, targets)
@@ -935,19 +939,21 @@ class TwoPhaseMultiEngineCoordinator(object):
             nEngines = len(engines)
             mapClass = Map.styles[style]
             mapObject = mapClass()
-            deferred_id_list = []
+            d_list = []
             for index, engineid in enumerate(engines):
                 partition = mapObject.getPartition(seq, index, nEngines)
                 if flatten and len(partition) == 1:
                     d = self.smultiengine.push({key: partition[0]}, targets=engineid, block=False)
                 else:
                     d = self.smultiengine.push({key: partition}, targets=engineid, block=False)
-                d.addCallback(lambda did: deferred_id_list.append(did))
-            d_list = [self.smultiengine.getPendingDeferred(did, True) for did in deferred_id_list]
-            return gatherBoth(d_list,
+                d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did, True))
+                d_list.append(d)
+            d = gatherBoth(d_list,
                               fireOnOneErrback=1,
                               consumeErrors=1,
                               logErrors=0)
+            d.addCallback(lambda lop: [i[0] for i in lop])
+            return d
         
         d = self._process_targets(targets)
         d.addCallback(do_scatter)
@@ -958,14 +964,14 @@ class TwoPhaseMultiEngineCoordinator(object):
         log.msg("Gathering %s from %r" % (key, targets))
         
         def do_gather(engines):
-            nEngines = len(engines)    
-            deferred_id_list = []
+            nEngines = len(engines) 
+            d_list = []
             for engineid in engines:
                 d = self.smultiengine.pull(key, targets=engineid, block=False)
-                d.addCallback(lambda did: deferred_id_list.append(did))
+                d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did, True))
+                d_list.append(d)
             mapClass = Map.styles[style]
             mapObject = mapClass()
-            d_list = [self.smultiengine.getPendingDeferred(did, True) for did in deferred_id_list]           
             d = gatherBoth(d_list,
                            fireOnOneErrback=1,
                            consumeErrors=1,
@@ -978,26 +984,23 @@ class TwoPhaseMultiEngineCoordinator(object):
         return d
     
     def map(self, func, seq, style='basic', targets='all'):
-        deferred_id_list = []
+        d_list = []
         if isinstance(func, FunctionType):
-            d = self.smultiengine.pushFunction(_ipython_map_func=func, targets=targets, block=False)
-            d.addCallback(lambda did: deferred_id_list.append(did))
+            d = self.smultiengine.pushFunction(dict(_ipython_map_func=func), targets=targets, block=False)
+            d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did, True))
             sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
         elif isinstance(func, str):
+            d = defer.succeed(None)
             sourceToRun = \
-                '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
-                func
+                '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % func
         else:
             raise TypeError("func must be a function or str")
         
-        self.smultiengine.scatter('_ipython_map_seq', seq, style, targets=targets)
-        self.smultiengine.execute(sourceToRun, targets=targets, block=False)
-        self.smultiengine.gather('_ipython_map_seq_result', style, targets=targets, block=False)
-        d_list = [self.smultiengine.getPendingDeferred(did, True) for did in deferred_id_list]           
-        d = gatherBoth(d_list,
-                       fireOnOneErrback=1,
-                       consumeErrors=1,
-                       logErrors=0)
+        d.addCallback(self.scatter('_ipython_map_seq', seq, style, targets=targets))
+        d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did, True))
+        d.addCallback(self.smultiengine.execute(sourceToRun, targets=targets, block=False))
+        d.addCallback(self.gather('_ipython_map_seq_result', style, targets=targets))
+        d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did, True))
         return d
 
 
