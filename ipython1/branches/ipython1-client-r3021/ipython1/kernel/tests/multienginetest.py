@@ -30,6 +30,11 @@ from ipython1.kernel.tests.tgenerator import (MultiEngineExecuteAllTestGenerator
     MultiEngineGetResultTestGenerator)
 from ipython1.core.interpreter import Interpreter
 
+
+#-------------------------------------------------------------------------------
+# Base classes and utilities
+#-------------------------------------------------------------------------------
+
 class IMultiEngineBaseTestCase(object):
     """Basic utilities for working with multiengine tests.
     
@@ -70,6 +75,9 @@ def isdid(did):
     return True
 
 
+#-------------------------------------------------------------------------------
+# IMultiEngineTestCase
+#-------------------------------------------------------------------------------
 
 class IMultiEngineTestCase(IMultiEngineBaseTestCase):
     """A test for any object that implements IEngineMultiplexer.
@@ -352,6 +360,10 @@ class IMultiEngineTestCase(IMultiEngineBaseTestCase):
         pass
 
 
+#-------------------------------------------------------------------------------
+# ISynchronousMultiEngineTestCase
+#-------------------------------------------------------------------------------
+
 class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
     
     def testISynchronousMultiEngineInterface(self):
@@ -549,32 +561,158 @@ class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
         return d
 
 
-
-class ITwoPhaseMultiEngineTestCase(IMultiEngineBaseTestCase):
+class ITwoPhaseMultiEngineTestCase(IMultiEngineTestCase):
+    """From an interface perspective, this is just an IMultiEngine."""
     pass
 
 
-class IMultiEngineCoordinator(IMultiEngineBaseTestCase):
+#-------------------------------------------------------------------------------
+# Coordinator test cases
+#-------------------------------------------------------------------------------
+
+class IMultiEngineCoordinatorTestCase(object):
+    
+    def testScatterGather(self):
+        self.addEngine(4)
+        d = self.multiengine.scatter('a', range(16))
+        d.addCallback(lambda r: self.multiengine.gather('a'))
+        d.addCallback(lambda r: self.assertEquals(r, range(16)))
+        return d
+    
+    def testScatterGatherNumpy(self):
+        try:
+            import numpy
+            from numpy.testing.utils import assert_array_equal, assert_array_almost_equal
+        except:
+            return
+        else:
+            self.addEngine(4)
+            a = numpy.arange(16)
+            d = self.multiengine.scatter('a', a)
+            d.addCallback(lambda r: self.multiengine.gather('a'))
+            d.addCallback(lambda r: assert_array_equal(r, a))
+            return d
+    
+    def testMap(self):
+        self.addEngine(4)
+        def f(x):
+            return x**2
+        data = range(16)
+        d = self.multiengine.map(f, data)
+        d.addCallback(lambda r: self.assertEquals(r,[f(x) for x in data]))
+        return d
+
+
+class ITwoPhaseMultiEngineCoordinatorTestCase(IMultiEngineCoordinatorTestCase):
+    pass
+            
+
+
+class ISynchronousMultiEngineCoordinatorTestCase(IMultiEngineCoordinatorTestCase):
+    
+    def testScatterGatherNonblocking(self):
+        self.addEngine(4)
+        d = self.multiengine.scatter('a', range(16), block=False)
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True)) 
+        d.addCallback(lambda r: self.multiengine.gather('a', block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True)) 
+        d.addCallback(lambda r: self.assertEquals(r, range(16)))
+        return d
+    
+    def testScatterGatherNumpyNonblocking(self):
+        try:
+            import numpy
+            from numpy.testing.utils import assert_array_equal, assert_array_almost_equal
+        except:
+            return
+        else:
+            self.addEngine(4)
+            a = numpy.arange(16)
+            d = self.multiengine.scatter('a', a, block=False)
+            d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+            d.addCallback(lambda r: self.multiengine.gather('a', block=False))
+            d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+            d.addCallback(lambda r: assert_array_equal(r, a))
+            return d
+    
+    def testMapNonblocking(self):
+        self.addEngine(4)
+        def f(x):
+            return x**2
+        data = range(16)
+        d = self.multiengine.map(f, data, block=False)
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.assertEquals(r,[f(x) for x in data]))
+        return d
+
+
+#-------------------------------------------------------------------------------
+# Extras test cases
+#-------------------------------------------------------------------------------
+
+class IMultiEngineExtrasTestCase(object):
+    
+    def testZipPull(self):
+        self.addEngine(4)
+        d = self.multiengine.push(dict(a=10,b=20))
+        d.addCallback(lambda r: self.multiengine.zipPull(('a','b')))
+        d.addCallback(lambda r: self.assert_(r, [4*[10],4*[20]]))
+        return d
+    
+    def testRun(self):
+        self.addEngine(4)
+        import tempfile
+        fname = tempfile.mktemp('foo.py')
+        f = open(fname, 'w')
+        f.write('a = 10\nb=30')
+        f.close()
+        d = self.multiengine.run(fname)
+        d.addCallback(lambda r: self.multiengine.pull(('a','b')))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[[10,30]]))
+        return d
+
+
+class ITwoPhaseMultiEngineExtras(IMultiEngineExtrasTestCase):
     pass
 
 
-class ITwoPhaseMultiEngineCoordinator(IMultiEngineBaseTestCase):
+class ISynchronousMultiEngineExtrasTestCase(IMultiEngineExtrasTestCase):
+    
+    def testZipPullNonblocking(self):
+        self.addEngine(4)
+        d = self.multiengine.push(dict(a=10,b=20))
+        d.addCallback(lambda r: self.multiengine.zipPull(('a','b'), block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True)) 
+        d.addCallback(lambda r: self.assert_(r, [4*[10],4*[20]]))
+        return d
+    
+    def testRunNonblocking(self):
+        self.addEngine(4)
+        import tempfile
+        fname = tempfile.mktemp('foo.py')
+        f = open(fname, 'w')
+        f.write('a = 10\nb=30')
+        f.close()
+        d = self.multiengine.run(fname, block=False)
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True)) 
+        d.addCallback(lambda r: self.multiengine.pull(('a','b')))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[[10,30]]))
+        return d
+
+
+#-------------------------------------------------------------------------------
+# Full interfaces
+#-------------------------------------------------------------------------------
+
+class IFullTwoPhaseMultiEngineTestCase(IMultiEngineTestCase, 
+    ITwoPhaseMultiEngineCoordinatorTestCase,
+    ITwoPhaseMultiEngineExtras):
     pass
 
 
-class IMultiEngineExtras(IMultiEngineBaseTestCase):
-    pass
-
-
-class ITwoPhaseMultiEngineExtras(IMultiEngineBaseTestCase):
-    pass
-
-
-class IFullTwoPhaseMultiEngine(IMultiEngineBaseTestCase):
-    pass
-
-
-class IFullSynchronousTwoPhaseMultiEngine(IMultiEngineBaseTestCase):
+class IFullSynchronousTwoPhaseMultiEngineTestCase(ISynchronousMultiEngineTestCase,
+    ISynchronousMultiEngineCoordinatorTestCase,
+    ISynchronousMultiEngineExtrasTestCase):
     pass
 
 

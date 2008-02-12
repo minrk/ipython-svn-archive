@@ -786,109 +786,6 @@ class IMultiEngineCoordinator(Interface):
         """
 
 
-class MultiEngineCoordinator(object):
-    """Mix in class for scater/gather.
-    
-    This can be mixed in with any IMultiEngine implementer.
-    """
-    
-    implements(IMultiEngineCoordinator)
-    
-    def _process_targets(self, targets):
-        
-        def create_targets(ids):
-            if isinstance(targets, int):
-                engines = [targets]
-            elif targets=='all':
-                engines = ids
-            elif isinstance(targets, (list, tuple)):
-                engines = targets
-            for t in engines:
-                if not t in ids:
-                    raise error.InvalidEngineID("engine with id %r does not exist"%t)
-            return engines
-        
-        d = self.getIDs()
-        d.addCallback(create_targets)
-        return d
-    
-    def scatter(self, targets, key, seq, style='basic', flatten=False):
-        log.msg("Scattering %r to %r" % (key, targets))
-        
-        def do_scatter(engines):
-            nEngines = len(engines)
-            mapClass = Map.styles[style]
-            mapObject = mapClass()
-            dList = []
-            for index, engineid in enumerate(engines):
-                partition = mapObject.getPartition(seq, index, nEngines)
-                if flatten and len(partition) == 1:
-                    dList.append(self.push(engineid, **{key: partition[0]}))
-                else:
-                    dList.append(self.push(engineid, **{key: partition}))
-            return gatherBoth(dList,
-                              fireOnOneErrback=1,
-                              consumeErrors=1,
-                              logErrors=0)
-        
-        d = self._process_targets(targets)
-        d.addCallback(do_scatter)
-        return d
-                              
-    def scatterAll(self, key, seq, style='basic', flatten=False):
-        return self.scatter('all', key, seq, style, flatten)
-    
-    def gather(self, targets, key, style='basic'):
-        """gather a distributed object, and reassemble it"""
-        log.msg("Gathering %s from %r" % (key, targets))
-        
-        def do_gather(engines):
-            nEngines = len(engines)    
-            dList = []
-            for engineid in engines:
-                dList.append(self.pull(engineid, key))    
-            mapClass = Map.styles[style]
-            mapObject = mapClass()
-            d = gatherBoth(dList,
-                           fireOnOneErrback=1,
-                           consumeErrors=1,
-                           logErrors=0)
-            d.addCallback(lambda lop: [i[0] for i in lop])
-            return d.addCallback(mapObject.joinPartitions)
-        d = self._process_targets(targets)
-        d.addCallback(do_gather)
-        return d
-    
-    def gatherAll(self, key, style='basic'):
-        return self.gather('all', key, style)
-    
-    def map(self, targets, func, seq, style='basic'):
-    
-        if isinstance(func, FunctionType):
-            d = self.pushFunction(targets, _ipython_map_func=func)
-            sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
-        elif isinstance(func, str):
-            d = defer.succeed(None)
-            sourceToRun = \
-                '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % \
-                func
-        else:
-            raise TypeError("func must be a function or str")
-        
-        d.addCallback(lambda _: self.scatter(targets, '_ipython_map_seq', seq, style))
-        d.addCallback(lambda _: self.execute(targets, sourceToRun))
-        d.addCallback(lambda _: self.gather(targets, '_ipython_map_seq_result', style))
-        return d
-            
-    def mapAll(self, func, seq, style='basic'):
-        """Parallel map on all engines.
-        
-        See the docstring for `map` for more details.
-        """
-        return self.map('all', func, seq, style)
-
-
-
 #-------------------------------------------------------------------------------
 # ISynchronousMultiEngineCoordinator/ITwoPhaseMultiEngineCoordinator
 #-------------------------------------------------------------------------------
@@ -924,7 +821,7 @@ class TwoPhaseMultiEngineCoordinator(object):
                 if not t in ids:
                     raise error.InvalidEngineID("engine with id %r does not exist"%t)
             return engines
-        d = self.smultiengine.getIDs(True)
+        d = self.smultiengine.getIDs()
         d.addCallback(create_targets)
         return d
     
@@ -992,11 +889,10 @@ class TwoPhaseMultiEngineCoordinator(object):
         else:
             raise TypeError("func must be a function or str")
         
-        d.addCallback(self.scatter('_ipython_map_seq', seq, style, targets=targets))
+        d.addCallback(lambda _: self.scatter('_ipython_map_seq', seq, style, targets=targets))
+        d.addCallback(lambda _: self.smultiengine.execute(sourceToRun, targets=targets, block=False))
         d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did, True))
-        d.addCallback(self.smultiengine.execute(sourceToRun, targets=targets, block=False))
-        d.addCallback(self.gather('_ipython_map_seq_result', style, targets=targets))
-        d.addCallback(lambda did: self.smultiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda _: self.gather('_ipython_map_seq_result', style, targets=targets))
         return d
 
 
@@ -1025,9 +921,6 @@ class IMultiEngineExtras(Interface):
         :Returns: A list of pulled Python objects for each target.
         """
     
-    def zipPullAll(*keys):
-        """"""
-    
     def run(targets, fname):
         """Run a .py file on targets.
         
@@ -1045,45 +938,6 @@ class IMultiEngineExtras(Interface):
                 result.  If block is not specified, the block attribute 
                 will be used instead. 
         """
-    
-    def runAll(fname):
-        """Run a .py file on all engines.
-        
-        See the docstring for `run` for more details.
-        """
-
-
-class MultiEngineExtras(object):
-    
-    implements(IMultiEngineExtras)
-    
-    def _transformPullResult(self, pushResult, multitargets, lenKeys):
-        if not multitargets:
-            result = pushResult[0]
-        elif lenKeys > 1:
-            result = zip(*pushResult)
-        elif lenKeys is 1:
-            result = list(pushResult)
-        return result
-        
-    def zipPull(self, keys, targets='all'):
-        d = self.pull(keys, targets=targets)
-        multitargets = not isinstance(targets, int) and len(targets) > 1
-        lenKeys = len(keys)
-        d.addCallback(self._transformPullResult, multitargets, lenKeys)
-        return d
-    
-    def run(self, fname, targets='all'):
-        fileobj = open(fname,'r')
-        source = fileobj.read()
-        fileobj.close()
-        # if the compilation blows, we get a local error right away
-        try:
-            code = compile(source,fname,'exec')
-        except:
-            return defer.fail(failure.Failure()) 
-        # Now run the code
-        return self.execute(source, targets)
 
 
 #-------------------------------------------------------------------------------

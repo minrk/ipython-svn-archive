@@ -51,7 +51,7 @@ class IPendingResult(Interface):
     """
     
     resultID=Attribute("ID of the deferred on the other side")
-    client=Attribute("An ISynchronousMultiEngineClient that I came from")
+    client=Attribute("A client that I came from")
     r=Attribute("An attribute that is a property that calls and returns getResult")
     
     def getResult(default=None, block=True):
@@ -78,6 +78,7 @@ class IPendingResult(Interface):
         any exception raised will not be caught and handled.  User must 
         catch these by hand when calling `getResult`.
         """
+
 
 class PendingResult(object):
     """A representation of a result that is not yet ready.
@@ -169,11 +170,11 @@ class PendingResult(object):
         
     def _get_r(self):
         return self.getResult(block=True)
-
+    
     r = property(_get_r)
     """This property is a shortcut to a `getResult(block=True)`."""
-        
-        
+
+
 #-------------------------------------------------------------------------------
 # Pretty printing wrappers for certain lists
 #-------------------------------------------------------------------------------    
@@ -209,16 +210,18 @@ class ResultList(list):
                         (green, target,
                         red, cmd_num, normal, cmd_stderr))
         return ''.join(output)
-        
+
+
 def wrapResultList(result):
     """A function that wraps the output of `execute`/`getResult` -> `ResultList`."""
     if len(result) == 0:
         result = [result]
     return ResultList(result)
-    
+
+
 class QueueStatusList(list):
     """A subclass of list that pretty prints the output of `queueStatus`."""
-
+    
     def __repr__(self):
         output = []
         output.append("<Queue Status List>\n")
@@ -319,9 +322,9 @@ class InteractiveMultiEngineClient(object):
                 a list of currently available engines.
             functionName : str
                 A Python string that names a callable defined on the engines.
-
+        
         :Returns:  A `ParallelFunction` object.                
-
+        
         Examples
         ========
         
@@ -331,7 +334,6 @@ class InteractiveMultiEngineClient(object):
         """
         targets, block = self._findTargetsAndBlock(targets, block)
         return ParallelFunction(func, self, targets, block)
-
 
 
 #-------------------------------------------------------------------------------
@@ -360,7 +362,7 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
                 return block
             else:
                 raise ValueError("block must be True or False")
-
+    
     def _findTargets(self, targets=None):
         if targets is None:
             return self.targets
