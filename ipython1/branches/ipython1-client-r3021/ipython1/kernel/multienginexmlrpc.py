@@ -269,12 +269,12 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
-    def xmlrpc_getIDs(self, request, block):
+    def xmlrpc_getIDs(self, request):
         """Get the ids of the registered engines.
         
         This method always blocks.
         """
-        return self.smultiengine.getIDs(block=block)
+        return self.smultiengine.getIDs()
 
 
 # The __init__ method of `XMLRPCMultiEngineFromMultiEngine` first adapts the
@@ -470,7 +470,7 @@ class XMLRPCSynchronousMultiEngineClient(object):
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
-    def getIDs(self, block=True):
-        d = self._proxy.callRemote('getIDs', block)
+    def getIDs(self):
+        d = self._proxy.callRemote('getIDs')
         return d
 

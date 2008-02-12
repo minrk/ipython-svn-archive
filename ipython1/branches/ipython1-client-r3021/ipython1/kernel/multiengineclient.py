@@ -478,9 +478,8 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
-    def getIDs(self, block=None):
-        block = self._findBlock(block)
-        return self._blockFromThread(self.stpmultiengine.getIDs, block=block)
+    def getIDs(self):
+        return self._blockFromThread(self.stpmultiengine.getIDs)
     
     #---------------------------------------------------------------------------
     # IMultiEngineCoordinator

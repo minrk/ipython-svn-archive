@@ -44,6 +44,7 @@ import zope.interface as zi
 
 from ipython1.core.interpreter import Interpreter
 from ipython1.kernel import newserialized, error, util
+from ipython1.kernel.util import printer
 from ipython1.kernel.twistedutil import gatherBoth, DeferredList
 from ipython1.kernel import codeutil
 
@@ -544,7 +545,7 @@ keys = %r""" % (self.id, keys)
                         serials.append(newserialized.serialize(v))
                     except:
                         return defer.fail(failure.Failure())
-                return dict(zip(keys, serials))
+                return serials
             return packThemUp
 
 
@@ -765,7 +766,7 @@ class QueuedEngine(object):
         for cmd in self.queued:
             cmd.deferred.errback(failure.Failure(error.QueueCleared()))
         self.queued = []
-        return defer.succeed(True)
+        return defer.succeed(None)
     
     def queueStatus(self):
         if self.currentCommand is not None:

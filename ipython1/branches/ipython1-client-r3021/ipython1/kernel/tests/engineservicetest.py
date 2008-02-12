@@ -276,7 +276,7 @@ class IEngineQueuedTestCase(object):
             
     def testClearQueue(self):
         result = self.engine.clearQueue()
-        d1 = self.assertDeferredEquals(result, True)
+        d1 = self.assertDeferredEquals(result, None)
         d1.addCallback(lambda _: self.engine.queueStatus())
         d2 = self.assertDeferredEquals(d1, {'queue':[], 'pending':'None'})
         return d2

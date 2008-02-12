@@ -204,11 +204,8 @@ class IMultiEngine(IEngineMultiplexer):
     
     def getIDs():
         """Return list of currently registered ids.
-        
-        Unlike other IMultiEngine methods, this does not return a deferred.
-        It actually returns a list of ids.
-        
-        :Returns:  A list of registered engine ids.
+                
+        :Returns:  A Deferred to a list of registered engine ids.
         """
 
 
@@ -322,7 +319,7 @@ class MultiEngine(ControllerAdapterBase):
     #---------------------------------------------------------------------------
     
     def getIDs(self):
-        return self.engines.keys()
+        return defer.succeed(self.engines.keys())
     
     #---------------------------------------------------------------------------
     # IEngineMultiplexer methods
@@ -605,11 +602,10 @@ class SynchronousMultiEngine(PendingDeferredManager):
     # IMultiEngine methods
     #---------------------------------------------------------------------------
     
-    @twoPhase
     def getIDs(self):
         """Return a list of registered engine ids.
         
-        Does not return a deferred.
+        Never use the two phase block/non-block stuff for this.
         """
         return self.multiengine.getIDs()
 
@@ -714,7 +710,7 @@ class TwoPhaseMultiEngineAdaptor(object):
     #---------------------------------------------------------------------------
     
     def getIDs(self):
-        return self._submitThenBlock('getIDs')
+        return self.smultiengine.getIDs()
 
 
 components.registerAdapter(TwoPhaseMultiEngineAdaptor,

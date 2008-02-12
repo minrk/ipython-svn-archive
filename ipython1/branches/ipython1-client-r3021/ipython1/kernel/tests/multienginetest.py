@@ -37,10 +37,10 @@ class IMultiEngineBaseTestCase(object):
     
     * self.multiengine
     * self.engines to keep track of engines for clean up"""
-
+    
     def createShell(self):
         return Interpreter()
-
+    
     def addEngine(self, n=1):
         for i in range(n):
             e = es.EngineService()
@@ -50,13 +50,17 @@ class IMultiEngineBaseTestCase(object):
             self.engines.append(e)
 
 
+
 def testf(x):
     return 2.0*x
 
+
 globala = 99
+
 
 def testg(x):
     return  globala*x
+
 
 def isdid(did):
     if not isinstance(did, str):
@@ -66,12 +70,13 @@ def isdid(did):
     return True
 
 
+
 class IMultiEngineTestCase(IMultiEngineBaseTestCase):
     """A test for any object that implements IEngineMultiplexer.
     
     self.multiengine must be defined and implement IEngineMultiplexer.
     """
-            
+    
     def testIMultiEngineInterface(self):
         """Does self.engine claim to implement IEngineCore?"""
         self.assert_(me.IEngineMultiplexer.providedBy(self.multiengine))
@@ -190,6 +195,9 @@ class IMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda _: self.multiengine.reset(targets=0))
         d.addCallback(lambda _: self.multiengine.pull('a', targets=0))
         d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.push(dict(a=10,b=20)))
+        d.addCallback(lambda _: self.multiengine.pull(('a','b')))
+        d.addCallback(lambda r: self.assertEquals(r, [[10,20]]))
         return d
     
     def testPushPullAll(self):
@@ -227,6 +235,10 @@ class IMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda _: self.multiengine.pullSerialized('key', targets=0))
         d.addCallback(lambda serial: newserialized.IUnSerialized(serial[0]).getObject())
         d.addCallback(lambda r: self.assertEquals(r, objs[3]))
+        d.addCallback(lambda _: self.multiengine.push(dict(a=10,b=range(5)), targets=0))
+        d.addCallback(lambda _: self.multiengine.pullSerialized(('a','b'), targets=0))
+        d.addCallback(lambda serial: [newserialized.IUnSerialized(s).getObject() for s in serial[0]])
+        d.addCallback(lambda r: self.assertEquals(r, [10, range(5)]))
         d.addCallback(lambda _: self.multiengine.reset(targets=0))
         d.addCallback(lambda _: self.multiengine.pullSerialized('a', targets=0))
         d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
@@ -313,6 +325,31 @@ class IMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda _: self.multiengine.pullFunction('f'))
         d.addCallback(lambda r: self.assertEquals([func(10) for func in r], 4*[testf(10)]))
         return d
+    
+    def testGetIDs(self):
+        self.addEngine(1)
+        d = self.multiengine.getIDs()
+        d.addCallback(lambda r: self.assertEquals(r, [0]))
+        d.addCallback(lambda _: self.addEngine(3))
+        d.addCallback(lambda _: self.multiengine.getIDs())
+        d.addCallback(lambda r: self.assertEquals(r, [0,1,2,3]))
+        return d
+    
+    def testClearQueue(self):
+        self.addEngine(4)
+        d = self.multiengine.clearQueue()
+        d.addCallback(lambda r: self.assertEquals(r,4*[None]))
+        return d
+    
+    def testQueueStatus(self):
+        self.addEngine(4)
+        d = self.multiengine.queueStatus(targets=0)
+        d.addCallback(lambda r: self.assert_(isinstance(r[0],tuple)))
+        return d
+    
+    def testProperties(self):
+        """This test needs to be implemented!"""
+        pass
 
 
 class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
@@ -351,9 +388,12 @@ class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
         d.addCallback(lambda _: pull('data', block=False))
         d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
-        d.addCallback(lambda r: self.assertEqual(r,4*[data]))       
+        d.addCallback(lambda r: self.assertEqual(r,4*[data]))
+        d.addCallback(lambda _: push(dict(a=10,b=20)))
+        d.addCallback(lambda _: pull(('a','b')))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[[10,20]]))
         return d
-
+    
     def testPushPullFunction(self):
         self.addEngine(4)
         pushf = self.multiengine.pushFunction
@@ -364,19 +404,19 @@ class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
         d = pushf({'testf':testf}, targets=0)
         d.addCallback(lambda r: pullf('testf', targets=0))
         d.addCallback(lambda r: self.assertEqual(r[0](1.0), testf(1.0)))
-        # d.addCallback(lambda _: execute('r = testf(10)', targets=0))
-        # d.addCallback(lambda _: pull('r', targets=0))
-        # d.addCallback(lambda r: self.assertEquals(r[0], testf(10)))
-        # d.addCallback(lambda _: pushf({'testf':testf}, block=False))
-        # d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
-        # d.addCallback(lambda _: pullf('testf', block=False))
-        # d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))        
-        # d.addCallback(lambda r: self.assertEqual(r[0](1.0), testf(1.0)))
-        # d.addCallback(lambda _: execute("def g(x): return x*x", targets=0))
-        # d.addCallback(lambda _: pullf(('testf','g'),targets=0))
-        # d.addCallback(lambda r: self.assertEquals((r[0][0](10),r[0][1](10)), (testf(10), 100)))
+        d.addCallback(lambda _: execute('r = testf(10)', targets=0))
+        d.addCallback(lambda _: pull('r', targets=0))
+        d.addCallback(lambda r: self.assertEquals(r[0], testf(10)))
+        d.addCallback(lambda _: pushf({'testf':testf}, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda _: pullf('testf', block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))        
+        d.addCallback(lambda r: self.assertEqual(r[0](1.0), testf(1.0)))
+        d.addCallback(lambda _: execute("def g(x): return x*x", targets=0))
+        d.addCallback(lambda _: pullf(('testf','g'),targets=0))
+        d.addCallback(lambda r: self.assertEquals((r[0][0](10),r[0][1](10)), (testf(10), 100)))
         return d
-
+    
     def testGetResult(self):
         shell = Interpreter()
         result1 = shell.execute('a=10')
@@ -396,52 +436,127 @@ class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
         d.addCallback(lambda r: self.assertEquals(r[0], result2))
         return d
-
-    def testReset(self):
-        pass
     
-    def testKeys(self):
-        pass
+    def testResetAndKeys(self):
+        self.addEngine(1)
+        
+        # Blocking mode
+        d = self.multiengine.push(dict(a=10, b=20, c=range(10)), targets=0)
+        d.addCallback(lambda _: self.multiengine.keys(targets=0))
+        def keys_found(keys):
+            self.assert_('a' in keys[0])
+            self.assert_('b' in keys[0])
+            self.assert_('b' in keys[0])
+        d.addCallback(keys_found)
+        d.addCallback(lambda _: self.multiengine.reset(targets=0))
+        d.addCallback(lambda _: self.multiengine.keys(targets=0))
+        def keys_not_found(keys):
+            self.assert_('a' not in keys[0])
+            self.assert_('b' not in keys[0])
+            self.assert_('b' not in keys[0])        
+        d.addCallback(keys_not_found)
+        
+        # Non-blocking mode
+        d.addCallback(lambda _: self.multiengine.push(dict(a=10, b=20, c=range(10)), targets=0))
+        d.addCallback(lambda _: self.multiengine.keys(targets=0, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        def keys_found(keys):
+            self.assert_('a' in keys[0])
+            self.assert_('b' in keys[0])
+            self.assert_('b' in keys[0])
+        d.addCallback(keys_found)
+        d.addCallback(lambda _: self.multiengine.reset(targets=0, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda _: self.multiengine.keys(targets=0, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        def keys_not_found(keys):
+            self.assert_('a' not in keys[0])
+            self.assert_('b' not in keys[0])
+            self.assert_('b' not in keys[0])        
+        d.addCallback(keys_not_found)        
+        
+        return d
     
-    def testPushSerialized(self):
-        pass
-    
-    def testPullSerialized(self):
-        pass
+    def testPushPullSerialized(self):
+        self.addEngine(1)
+        dikt = dict(a=10,b='hi there',c=1.2345,d={'p':(1,2)})
+        sdikt = {}
+        for k,v in dikt.iteritems():
+            sdikt[k] = newserialized.serialize(v)
+        d = self.multiengine.pushSerialized(dict(a=sdikt['a']), targets=0)
+        d.addCallback(lambda _: self.multiengine.pull('a',targets=0))
+        d.addCallback(lambda r: self.assertEquals(r[0], dikt['a']))
+        d.addCallback(lambda _: self.multiengine.pullSerialized('a', targets=0))
+        d.addCallback(lambda serial: newserialized.IUnSerialized(serial[0]).getObject())
+        d.addCallback(lambda r: self.assertEquals(r, dikt['a']))
+        d.addCallback(lambda _: self.multiengine.pushSerialized(sdikt, targets=0))
+        d.addCallback(lambda _: self.multiengine.pullSerialized(sdikt.keys(), targets=0))
+        d.addCallback(lambda serial: [newserialized.IUnSerialized(s).getObject() for s in serial[0]])
+        d.addCallback(lambda r: self.assertEquals(r, dikt.values()))
+        d.addCallback(lambda _: self.multiengine.reset(targets=0))
+        d.addCallback(lambda _: self.multiengine.pullSerialized('a', targets=0))
+        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        
+        # Non-blocking mode
+        d.addCallback(lambda r: self.multiengine.pushSerialized(dict(a=sdikt['a']), targets=0, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda _: self.multiengine.pull('a',targets=0))
+        d.addCallback(lambda r: self.assertEquals(r[0], dikt['a']))
+        d.addCallback(lambda _: self.multiengine.pullSerialized('a', targets=0, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda serial: newserialized.IUnSerialized(serial[0]).getObject())
+        d.addCallback(lambda r: self.assertEquals(r, dikt['a']))
+        d.addCallback(lambda _: self.multiengine.pushSerialized(sdikt, targets=0, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda _: self.multiengine.pullSerialized(sdikt.keys(), targets=0, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda serial: [newserialized.IUnSerialized(s).getObject() for s in serial[0]])
+        d.addCallback(lambda r: self.assertEquals(r, dikt.values()))
+        d.addCallback(lambda _: self.multiengine.reset(targets=0))
+        d.addCallback(lambda _: self.multiengine.pullSerialized('a', targets=0, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        return d
     
     def testClearQueue(self):
-        pass
+        self.addEngine(4)
+        d = self.multiengine.clearQueue()
+        d.addCallback(lambda r: self.multiengine.clearQueue(block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.assertEquals(r,4*[None]))
+        return d
     
     def testQueueStatus(self):
-        pass
+        self.addEngine(4)
+        d = self.multiengine.queueStatus(targets=0)
+        d.addCallback(lambda r: self.assert_(isinstance(r[0],tuple)))
+        d.addCallback(lambda r: self.multiengine.queueStatus(targets=0, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.assert_(isinstance(r[0],tuple)))
+        return d
     
-    def testSetProperties(self):
-        pass
-    
-    def testGetProperties(self):
-        pass
-    
-    def testHasProperties(self):
-        pass
-
-    def testDelProperties(self):
-        pass
-    
-    def testclearProperties(self):
+    def testProperties(self):
+        """This test needs to be implemented!"""
         pass
     
     def testGetIDs(self):
-        pass
+        self.addEngine(1)
+        d = self.multiengine.getIDs()
+        d.addCallback(lambda r: self.assertEquals(r, [0]))
+        d.addCallback(lambda _: self.addEngine(3))
+        d.addCallback(lambda _: self.multiengine.getIDs())
+        d.addCallback(lambda r: self.assertEquals(r, [0,1,2,3]))
+        return d
 
 
-    
+
 class ITwoPhaseMultiEngineTestCase(IMultiEngineBaseTestCase):
     pass
 
 
-
 class IMultiEngineCoordinator(IMultiEngineBaseTestCase):
     pass
+
 
 class ITwoPhaseMultiEngineCoordinator(IMultiEngineBaseTestCase):
     pass
@@ -449,6 +564,7 @@ class ITwoPhaseMultiEngineCoordinator(IMultiEngineBaseTestCase):
 
 class IMultiEngineExtras(IMultiEngineBaseTestCase):
     pass
+
 
 class ITwoPhaseMultiEngineExtras(IMultiEngineBaseTestCase):
     pass
