@@ -382,12 +382,12 @@ class WorkerFromQueuedEngine(object):
             d = defer.succeed(None)
             
         if task.setupNS is not None:
-            d.addCallback(lambda r: self.queuedEngine.push(**task.setupNS))
+            d.addCallback(lambda r: self.queuedEngine.push(task.setupNS))
         
         d.addCallback(lambda r: self.queuedEngine.execute(task.expression))
         
         if task.resultNames is not None:
-            d.addCallback(lambda r: self.queuedEngine.pull(*task.resultNames))
+            d.addCallback(lambda r: self.queuedEngine.pull(task.resultNames))
         else:
             d.addCallback(lambda r: None)
         

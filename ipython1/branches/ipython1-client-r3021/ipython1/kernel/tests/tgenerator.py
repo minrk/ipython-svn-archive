@@ -165,7 +165,7 @@ class MultiEngineExecuteAllTestGenerator(TestGenerator):
             self.testCaseInstance.assertEquals(actual, c)
         
     def computeOutput(self, i):
-        return self.testCaseInstance.multiengine.execute(self.targets, i)
+        return self.testCaseInstance.multiengine.execute(i, targets=self.targets)
         
 class MultiEngineFailingExecuteTestGenerator(TestGenerator):
     """A class for testing execute on the Engine."""
@@ -178,7 +178,7 @@ class MultiEngineFailingExecuteTestGenerator(TestGenerator):
         return self.testCaseInstance.assertRaises(actual, computed.raiseException)
         
     def computeOutput(self, i):
-        return self.testCaseInstance.multiengine.execute(self.targets, i)
+        return self.testCaseInstance.multiengine.execute(i, targets=self.targets)
 
 class MultiEngineGetResultTestGenerator(TestGenerator):
     """A class for testing execute on the Engine."""
@@ -195,6 +195,6 @@ class MultiEngineGetResultTestGenerator(TestGenerator):
             return self.testCaseInstance.assertEquals(actual, c)
         
     def computeOutput(self, i):
-        d = self.testCaseInstance.multiengine.execute(self.targets, i)
+        d = self.testCaseInstance.multiengine.execute(i, targets=self.targets)
         # d.addCallback(lambda r: self.testCaseInstance.multiengine.getResult(self.targets, r[0]['number']))
         return d

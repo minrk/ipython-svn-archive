@@ -72,18 +72,18 @@ class TaskTest(DeferredTestCase):
         return d
     
     def testClears(self):
-        d = self.me.execute(0,'b=1')
+        d = self.me.execute('b=1', targets=0)
         t = task.Task('a=1', clearBefore=True, resultNames='b', clearAfter=True)
         d.addCallback(lambda _:self.tc.run(t))
         d.addCallback(self.tc.getTaskResult,block=True)
         d.addCallback(lambda tr: tr.failure)
         d = self.assertDeferredRaises(d, NameError) # check b for clearBefore
-        d.addCallback(lambda _:self.me.pull(0,'a'))
+        d.addCallback(lambda _:self.me.pull('a', targets=0))
         d = self.assertDeferredRaises(d, NameError) # check a for clearAfter
         return d
     
     def testSimpleRetries(self):
-        d = self.me.execute(0, 'i=0')
+        d = self.me.execute('i=0', targets=0)
         t = task.Task("i += 1\nassert i == 16", resultNames='i',retries=10)
         t2 = task.Task("i += 1\nassert i == 16", resultNames='i',retries=10)
         
@@ -120,7 +120,7 @@ class TaskTest(DeferredTestCase):
         return d
     
     def testSetupNS(self):
-        d = self.me.execute(0, 'a=0')
+        d = self.me.execute('a=0', targets=0)
         ns = dict(a=1, b=0)
         t = task.Task("", setupNS=ns, resultNames=['a','b'])
         d.addCallback(lambda r: self.tc.run(t))

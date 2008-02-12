@@ -49,7 +49,7 @@ dt_modules = []
 class Foo(object):
     
     def bar(self, bahz):
-        return defer.succeed('blahblah' + bahz)
+        return defer.succeed('blahblah: %s' % bahz)
 
 class TwoPhaseFoo(pd.PendingDeferredManager):
     
@@ -60,7 +60,18 @@ class TwoPhaseFoo(pd.PendingDeferredManager):
     @pd.twoPhase
     def bar(self, bahz):
         return self.foo.bar(bahz)
-
+    
+    def bam(self, bahz, block):
+        def process_it(r, extra1, extra2='hi'):
+            return r+' '+extra1+' '+extra2
+        d = self.foo.bar(bahz)
+        if block:
+            d.addCallback(process_it, 'extra1', extra2='extra2')
+            return d
+        else:
+            deferredID = self.getNextDeferredID()
+            self.savePendingDeferred(deferredID, d, callback=process_it, arguments=(('extra1',), dict(extra2='extra2')))
+            return defer.succeed(deferredID)
 
 class PendingDeferredManagerTest(DeferredTestCase):
     
@@ -92,8 +103,16 @@ class PendingDeferredManagerTest(DeferredTestCase):
         for did in dDict.keys():
             d = pdm.getPendingDeferred(did,False)
             d.addErrback(lambda f: self.assertRaises(error.InvalidDeferredID, f.raiseException))
-
-
+    
+    def testCallback(self):
+        foo = Foo()
+        pdm = TwoPhaseFoo(foo)
+        d = pdm.bam('bam', block=True)
+        d.addCallback(lambda r: self.assertEquals(r, "blahblah: bam extra1 extra2"))
+        d.addCallback(lambda r: pdm.bam('bam', block=False))
+        d.addCallback(lambda did: pdm.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.assertEquals(r, "blahblah: bam extra1 extra2"))
+        return d     
         
 #-------------------------------------------------------------------------------
 # Regular Unittests

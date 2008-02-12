@@ -677,7 +677,7 @@ class TwoPhaseMultiEngineAdaptor(object):
         return self._submitThenBlock('pullSerialized', keys, targets)
     
     def getResult(self, i=None, targets='all'):
-        return self._submitThenBlock('pullSerialized', i, targets)
+        return self._submitThenBlock('getResult', i, targets)
     
     def reset(self, targets='all'):
         return self._submitThenBlock('reset', targets)

@@ -544,8 +544,8 @@ Engine action that caused the error:
             raise TypeError("keys must be a strong or a list/tuple of strings")
         return result
 
-    def pullFunction(self, key):
-        return self.pull(key)
+    def pullFunction(self, keys):
+        return self.pull(keys)
 
     #### Interactive user API ##################################################
 

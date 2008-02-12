@@ -57,7 +57,7 @@ class PendingDeferredManager(object):
 
         return guid.generate()
         
-    def savePendingDeferred(self, deferredID, d):
+    def savePendingDeferred(self, deferredID, d, callback=None, arguments=None):
         """Save a deferred to me by deferredID.
         
         :Parameters:
@@ -65,12 +65,16 @@ class PendingDeferredManager(object):
                 A deferred id the client got by calling `getNextDeferredID`.
             d : Deferred
                 The deferred to save.
+            callback : FunctionType
+                A function to add to the callback of d before returning.
+            arguments: tuple
+                A two tuple of (args, kwargs) to pass to the function
         """
         
         pd = self.pendingDeferreds.get(deferredID)
         if pd is not None:
             self.removePendingDeferred(deferredID)
-        self.pendingDeferreds[deferredID] = d
+        self.pendingDeferreds[deferredID] = (d, callback, arguments)
         
     def removePendingDeferred(self, deferredID):
         """Remove a deferred I am tracking and add a null Errback.
@@ -80,8 +84,9 @@ class PendingDeferredManager(object):
                 The id of a deferred that I am tracking.
         """
         
-        pd = self.pendingDeferreds.get(deferredID)
-        if pd is not None:
+        pd_tuple = self.pendingDeferreds.get(deferredID)
+        if pd_tuple is not None:
+            pd = pd_tuple[0]
             pd.addErrback(lambda f: None)
             del self.pendingDeferreds[deferredID]
         
@@ -104,12 +109,20 @@ class PendingDeferredManager(object):
                 Should I block until the deferred has fired.
         """
         #log.msg("getPendingDeferred: %s %s" % (repr(deferredID), repr(block)))
-        pd = self.pendingDeferreds.get(deferredID)
-        if pd is not None:
+        pd_tuple = self.pendingDeferreds.get(deferredID)
+        if pd_tuple is not None:
+            # Pull out the callback function and it args/kwargs
+            pd = pd_tuple[0]
+            cbfunc = pd_tuple[1]
+            cbfunc_args = pd_tuple[2]
+            if cbfunc_args is not None:
+                cbfunc_posargs = cbfunc_args[0]
+                cbfunc_kwargs = cbfunc_args[1]
+                
             if not pd.called and block:    # pd has not fired and we should block
                 #log.msg("pendingDeferred has not been called: %s" % deferredID)
                 pd.addCallback(self._deleteAndPassThrough, deferredID)
-                return pd
+                dToReturn = pd
             elif not pd.called and not block: # pd has not fired, but we should not block
                 return defer.fail(failure.Failure(error.ResultNotCompleted("Result not completed: %r" % deferredID)))
             else:    # pd has fired
@@ -122,6 +135,9 @@ class PendingDeferredManager(object):
                     dToReturn = defer.succeed(pd.result)
                 # It has fired so remove it!
                 self.removePendingDeferred(deferredID)
+            # Register the callback function with its args/kwargs if needed
+            if cbfunc is not None:
+                dToReturn.addCallback(cbfunc, *cbfunc_posargs, **cbfunc_kwargs)
             return dToReturn
         else:
             return defer.fail(failure.Failure(error.InvalidDeferredID('Invalid deferredID: ' + repr(deferredID))))
@@ -157,7 +173,7 @@ def twoPhase(wrappedMethod):
         try:
             block = kwargs.pop('block')
         except KeyError:
-            block = True
+            block = True  # The default if not specified
         if block:
             return wrappedMethod(pendingDeferredManager, *args, **kwargs)
         else:

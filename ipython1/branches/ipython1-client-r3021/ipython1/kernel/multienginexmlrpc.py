@@ -113,6 +113,7 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         # it.  This allow this class to do two adaptation steps.
         log.msg("Adapting: %r"%multiengine)
         self.smultiengine = ISynchronousMultiEngine(multiengine)
+        self._deferredIDCallbacks = {}
     
     #---------------------------------------------------------------------------
     # Non interface methods
@@ -132,8 +133,19 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     
     @packageResult
     def xmlrpc_getPendingDeferred(self, request, deferredID, block):
-        return self.smultiengine.getPendingDeferred(deferredID, block)
+        d = self.smultiengine.getPendingDeferred(deferredID, block)
+        try:
+            callback = self._deferredIDCallbacks.pop(deferredID)
+        except KeyError:
+            callback = None
+        if callback is not None:
+            d.addCallback(callback[0], *callback[1], **callback[2])
+        return d
        
+    def _addDeferredIDCallback(self, did, callback, *args, **kwargs):
+        self._deferredIDCallbacks[did] = (callback, args, kwargs)
+        return did
+        
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
@@ -173,11 +185,17 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     
     @packageResult
     def xmlrpc_pullFunction(self, request, keys, targets, block):
+        def can_functions(r, keys):
+            if len(keys)==1 or isinstance(keys, str):
+                result = canSequence(r)
+            elif len(keys)>1:
+                result = [canSequence(s) for s in r]
+            return result
         d = self.smultiengine.pullFunction(keys, targets=targets, block=block)
-        if len(keys)==1:
-            d.addCallback(canSequence)
-        elif len(keys)>1:
-            d.addCallback(self._canMultipleKeys)
+        if block:
+            d.addCallback(can_functions, keys)
+        else:
+            d.addCallback(lambda did: self._addDeferredIDCallback(did, can_functions, keys))
         return d
     
     @packageResult    
@@ -309,6 +327,7 @@ class XMLRPCSynchronousMultiEngineClient(object):
         self.addr = addr
         self.url = 'http://%s:%s/' % self.addr
         self._proxy = webxmlrpc.Proxy(self.url)
+        self._deferredIDCallbacks = {}
     
     #---------------------------------------------------------------------------
     # Non interface methods
@@ -324,8 +343,18 @@ class XMLRPCSynchronousMultiEngineClient(object):
     def getPendingDeferred(self, deferredID, block=True):
         d = self._proxy.callRemote('getPendingDeferred', deferredID, block)
         d.addCallback(self.unpackage)
+        try:
+            callback = self._deferredIDCallbacks.pop(deferredID)
+        except KeyError:
+            callback = None
+        if callback is not None:
+            d.addCallback(callback[0], *callback[1], **callback[2])
         return d
-                   
+    
+    def _addDeferredIDCallback(self, did, callback, *args, **kwargs):
+        self._deferredIDCallbacks[did] = (callback, args, kwargs)
+        return did
+       
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
@@ -354,9 +383,18 @@ class XMLRPCSynchronousMultiEngineClient(object):
         return d
     
     def pullFunction(self, keys, targets='all', block=True):
+        def uncan_functions(r, keys):
+            if len(keys)==1 or isinstance(keys, str):
+                return uncanSequence(r)
+            elif len(keys)>1:
+                return [uncanSequence(s) for s in r]
         d = self._proxy.callRemote('pullFunction', keys, targets, block)
-        d.addCallback(self.unpackage)
-        d.addCallback(uncanSequence)
+        if block:
+            d.addCallback(self.unpackage)
+            d.addCallback(uncan_functions, keys)
+        else:
+            d.addCallback(self.unpackage)
+            d.addCallback(lambda did: self._addDeferredIDCallback(did, uncan_functions, keys))
         return d
     
     def pushSerialized(self, namespace, targets='all', block=True):
