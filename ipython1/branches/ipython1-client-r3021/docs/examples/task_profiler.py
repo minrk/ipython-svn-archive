@@ -19,7 +19,7 @@ import random, sys
 from optparse import OptionParser
 
 from IPython.genutils import time
-from ipython1.kernel import api as kernel
+from ipython1.kernel import client
 
 def main():
     parser = OptionParser()
@@ -46,16 +46,16 @@ def main():
     (opts, args) = parser.parse_args()
     assert opts.tmax >= opts.tmin, "tmax must not be smaller than tmin"
     
-    rc = kernel.RemoteController((opts.controller, opts.meport))
-    tc = kernel.TaskController((opts.controller, opts.tport))
+    rc = client.RemoteController((opts.controller, opts.meport))
+    tc = client.TaskController((opts.controller, opts.tport))
     
     rc.block=True
     nengines = len(rc.getIDs())
-    rc.executeAll('from IPython.genutils import time')
+    rc.execute('from IPython.genutils import time')
 
     # the jobs should take a random time within a range
     times = [random.random()*(opts.tmax-opts.tmin)+opts.tmin for i in range(opts.n)]
-    tasks = [kernel.Task("time.sleep(%f)"%t) for t in times]
+    tasks = [client.Task("time.sleep(%f)"%t) for t in times]
     stime = sum(times)
     
     print "executing %i tasks, totalling %.1f secs on %i engines"%(opts.n, stime, nengines)

@@ -12,8 +12,8 @@ def pwordfreq(rc, text):
     text - The name of a string on the engines to do the freq count on.
     """
     
-    rc.executeAll('freqs = wordfreq(%s)' %text)
-    freqs_list = rc.pullAll('freqs')
+    rc.execute('freqs = wordfreq(%s)' %text)
+    freqs_list = rc.pull('freqs')
     word_set = set()
     for f in freqs_list:
         word_set.update(f.keys())
@@ -25,11 +25,11 @@ def pwordfreq(rc, text):
 
 if __name__ == '__main__':
     # Create a RemoteController
-    import ipython1.kernel.api as kernel
-    ipc = kernel.RemoteController(('127.0.0.1',10105))
+    from ipython1.kernel import client
+    ipc = client.MultiEngineController(('127.0.0.1',10105))
     
     # Run the wordfreq script on the engines.
-    ipc.runAll('wordfreq.py')
+    ipc.run('wordfreq.py')
 
     # Run the serial version
     print "Serial word frequency count:"
@@ -40,7 +40,7 @@ if __name__ == '__main__':
     # The parallel version
     print "\nParallel word frequency count:"
     files = ['davinci%i.txt' % i for i in range(4)]
-    ipc.scatterAll('textfile', files)
-    ipc.executeAll('text = open(textfile[0]).read()')
+    ipc.scatter('textfile', files)
+    ipc.execute('text = open(textfile[0]).read()')
     pfreqs = pwordfreq(ipc,'text')
     print_wordfreq(freqs)

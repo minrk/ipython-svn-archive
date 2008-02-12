@@ -142,6 +142,10 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
             d.addCallback(callback[0], *callback[1], **callback[2])
         return d
        
+    @packageResult
+    def xmlrpc_cleanOutDeferreds(self, request):
+        return self.smultiengine.cleanOutDeferreds()
+    
     def _addDeferredIDCallback(self, did, callback, *args, **kwargs):
         self._deferredIDCallbacks[did] = (callback, args, kwargs)
         return did
@@ -350,6 +354,10 @@ class XMLRPCSynchronousMultiEngineClient(object):
         if callback is not None:
             d.addCallback(callback[0], *callback[1], **callback[2])
         return d
+    
+    def cleanOutDeferreds(self):
+        d = self._proxy.callRemote('cleanOutDeferreds', deferredID, block)
+        d.addCallback(self.unpackage)        
     
     def _addDeferredIDCallback(self, did, callback, *args, **kwargs):
         self._deferredIDCallbacks[did] = (callback, args, kwargs)

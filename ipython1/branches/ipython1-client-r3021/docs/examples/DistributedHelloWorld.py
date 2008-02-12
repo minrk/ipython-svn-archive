@@ -2,17 +2,13 @@
 A Distributed Hello world
 Ken Kinder <ken@kenkinder.com>
 """
-import ipython1.kernel.api as kernel
-import ipython1.kernel.multienginexmlrpc
-import ipython1.kernel.taskxmlrpc
+from ipython1.kernel import client
 
-rc = kernel.TaskController(('127.0.0.1', 10113))
-ipc = kernel.RemoteController(('127.0.0.1', 10105))
-assert isinstance(rc, ipython1.kernel.taskxmlrpc.XMLRPCInteractiveTaskClient)
-assert isinstance(ipc, ipython1.kernel.multienginexmlrpc.XMLRPCInteractiveMultiEngineClient)
+tc = client.TaskController(('127.0.0.1', 10113))
+mec = client.MultiEngineController(('127.0.0.1', 10105))
 
-ipc.execute('all', 'import time')
-helloTaskId = rc.run(kernel.Task('time.sleep(3) ; word = "Hello,"', resultNames=['word']))
-worldTaskId = rc.run(kernel.Task('time.sleep(3) ; word = "World!"', resultNames=['word']))
+mec.execute('import time')
+helloTaskId = tc.run(client.Task('time.sleep(3) ; word = "Hello,"', resultNames=['word']))
+worldTaskId = tc.run(client.Task('time.sleep(3) ; word = "World!"', resultNames=['word']))
 
-print rc.getTaskResult(helloTaskId).ns.word, rc.getTaskResult(worldTaskId).ns.word
+print tc.getTaskResult(helloTaskId).ns.word, tc.getTaskResult(worldTaskId).ns.word

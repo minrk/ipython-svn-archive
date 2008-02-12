@@ -166,8 +166,11 @@ class PendingResult(object):
         self.callbacks.append((f, args, kwargs))
         
     def __cmp__(self, other):
-        return self.resultID - other.resultID
-        
+        if self.resultID < other.resultID:
+            return -1
+        else:
+            return 1
+            
     def _get_r(self):
         return self.getResult(block=True)
     
@@ -386,6 +389,47 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
     def getPendingDeferred(self, deferredID, block):
         return blockingCallFromThread(self.stpmultiengine.getPendingDeferred, deferredID, block)
     
+    def barrier(self, *pendingResults):
+        """Synchronize a set of `PendingResults`.
+        
+        This method is a synchronization primitive that waits for a set of
+        `PendingResult` objects to complete.  More specifically, barier does
+        the following.
+        
+        * The `PendingResult`s are sorted by resultID.
+        * The `getResult` method is called for each `PendingResult` sequentially
+          with block=True.
+        * If a `PendingResult` gets a result that is an exception, it is 
+          trapped and can be re-raised later by calling `getResult` again.
+        * The `PendingResult`s are flushed from the controller.
+                
+        After barrier has been called on a `PendingResult`, its results can 
+        be retrieved by calling `getResult` again or accesing the `r` attribute
+        of the instance.
+        """
+
+        # Convert to list for sorting and check class type 
+        prList = list(pendingResults)
+        for pr in prList:
+            if not isinstance(pr, PendingResult):
+                raise error.NotAPendingResult("Objects passed to barrier must be PendingResult instances")
+                            
+        # Sort the PendingResults so they are in order
+        prList.sort()
+        # Block on each PendingResult object
+        for pr in prList:
+            try:
+                result = pr.getResult(block=True)
+            except Exception:
+                pass
+    
+    def flush(self, controller=False):
+        r1 = blockingCallFromThread(self.stpmultiengine.cleanOutDeferreds)
+        # Semi hack to get rid of the controllers pending deferreds as well.
+        if controller:
+            r2 = blockingCallFromThread(self.stpmultiengine.multiengine.smultiengine.cleanOutDeferreds)
+        return
+    
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
@@ -481,8 +525,9 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
     #---------------------------------------------------------------------------
     
     def getIDs(self):
-        return self._blockFromThread(self.stpmultiengine.getIDs)
-    
+        result = blockingCallFromThread(self.stpmultiengine.getIDs)
+        return result
+        
     #---------------------------------------------------------------------------
     # IMultiEngineCoordinator
     #---------------------------------------------------------------------------

@@ -501,6 +501,9 @@ class ISynchronousMultiEngine(ISynchronousEngineMultiplexer):
     """
     def getPendingDeferred(deferredID, block=True):
         """"""
+    
+    def cleanOutDeferreds():
+        """"""
 
 
 #-------------------------------------------------------------------------------

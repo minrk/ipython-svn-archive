@@ -17,11 +17,11 @@ def phistogram(rc, a, bins=10, rng=None, normed=False):
             Should the histogram counts be normalized to 1
     """
     nengines = len(rc)
-    rc.pushAll(bins=bins, rng=rng)
-    rc.executeAll('import numpy')
-    rc.executeAll('hist, lower_edges = numpy.histogram(%s, bins, rng)' % a)
-    lower_edges = rc.pull(0, 'lower_edges')
-    hist_array = rc.gatherAll('hist')
+    rc.push(dict(bins=bins, rng=rng))
+    rc.execute('import numpy')
+    rc.execute('hist, lower_edges = numpy.histogram(%s, bins, rng)' % a)
+    lower_edges = rc.pull('lower_edges', targets=0)
+    hist_array = rc.gather('hist')
     hist_array.shape = (nengines,-1)
     total_hist = numpy.sum(hist_array, 0)
     if normed:

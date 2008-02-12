@@ -75,18 +75,18 @@ def remote_iterator(rc,engine,name):
     """
     # Check that the object exists on the engine and pin a reference to it
     iter_name = '_%s_rmt_iter_' % name
-    rc.execute(engine,'%s = iter(%s)' % (iter_name,name))
+    rc.execute('%s = iter(%s)' % (iter_name,name), targets=engine)
     tpl = '_tmp = %s.next()' % iter_name
     while True:
-        rc.execute(engine,tpl)
-        yield rc.pull(engine,'_tmp')[0]
+        rc.execute(tpl, targets=engine)
+        yield rc.pull('_tmp', targets=engine)[0]
 
 
 # Main, interactive testing
 if __name__ == '__main__':
 
-    import ipython1.kernel.api as kernel
-    ipc = kernel.RemoteController(('127.0.0.1',10105))
+    from ipython1.kernel import client
+    ipc = client.RemoteController(('127.0.0.1',10105))
     print 'Engine IDs:',ipc.getIDs()
 
     # Make a set of 'sorted datasets'
@@ -97,9 +97,9 @@ if __name__ == '__main__':
     # Now, imagine these had been created in the remote engines by some long
     # computation.  In this simple example, we just send them over into the
     # remote engines.  They will all be called 'a' in each engine.
-    ipc.push(0,a=a0)
-    ipc.push(1,a=a1)
-    ipc.push(2,a=a2)
+    ipc.push(dict(a=a0), targets=0)
+    ipc.push(dict(a=a1), targets=1)
+    ipc.push(dict(a=a2), targets=2)
 
     # And we now make a local object which represents the remote iterator
     aa0 = remote_iterator(ipc,0,'a')

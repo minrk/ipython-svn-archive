@@ -2,19 +2,19 @@
 # encoding: utf-8
 """Run a Monte-Carlo options pricer in parallel."""
 
-import ipython1.kernel.api as kernel
+from ipython1.kernel import client
 import numpy as N
 from mcpricer import MCOptionPricer
 
 
-tc = kernel.TaskController(('127.0.0.1', 10113))
-rc = kernel.RemoteController(('127.0.0.1', 10105))
+tc = client.TaskController(('127.0.0.1', 10113))
+rc = client.MultiEngineController(('127.0.0.1', 10105))
 
 # Initialize the common code on the engines
-rc.runAll('mcpricer.py')
+rc.run('mcpricer.py')
 
 # Push the variables that won't change (stock print, interest rate, days and MC paths)
-rc.pushAll(S=100.0, r=0.05, days=260, paths=10000)
+rc.push(dict(S=100.0, r=0.05, days=260, paths=10000))
 
 task_string = """\
 op = MCOptionPricer(S,K,sigma,r,days,paths)
@@ -30,7 +30,7 @@ sigma_vals = N.arange(0.02, 0.3, 0.02)
 taskIDs = []
 for K in K_vals:
     for sigma in sigma_vals:
-        t = kernel.Task(task_string, 
+        t = client.Task(task_string, 
             setupNS=dict(sigma=sigma,K=K),
             resultNames=['vp','ap','vc','ac','sigma','K'])
         taskIDs.append(tc.run(t))
