@@ -389,7 +389,7 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
     def getPendingDeferred(self, deferredID, block):
         return blockingCallFromThread(self.stpmultiengine.getPendingDeferred, deferredID, block)
     
-    def barrier(self, *pendingResults):
+    def barrier(self, pendingResults):
         """Synchronize a set of `PendingResults`.
         
         This method is a synchronization primitive that waits for a set of

@@ -138,7 +138,7 @@ mec.queueStatus()
 time.sleep(2.0)
 mec.queueStatus()
 
-mec.barrier(*prs)
+mec.barrier(prs)
 
 for pr in prs:
     try:
@@ -165,12 +165,12 @@ mec.block = False
 pr1 = mec.execute('a=5')
 pr2 = mec.execute('import sets')
 
-mec.barrier(pr1, pr2)
+mec.barrier((pr1, pr2))
 
 pr1 = mec.execute('1/0')
 pr2 = mec.execute('c = sets.Set()')
 
-mec.barrier(pr1, pr2)
+mec.barrier((pr1, pr2))
 try:
     pr1.r
 except ZeroDivisionError:
