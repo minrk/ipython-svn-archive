@@ -19,7 +19,7 @@ mec.activate()
 mec.block = True
 mec.getIDs()
 n = len(mec)
-assert n >= 4, "Not Enough Engines: %i"%n
+assert n >= 4, "Not Enough Engines: %i, 4 needed for this script"%n
 
 values = [
     10,
@@ -109,116 +109,116 @@ mec['a']
 
 # getResult/reset/keys
 
-# mec.getResult()
-# %result
-# mec.keys()
-# mec.reset()
-# mec.keys()
-# 
-# try:
-#     %result
-# except IndexError:
-#     print "Caught IndexError ok."
-# 
-# 
-# %px a = 5
-# mec.getResult(0)
-# mec.keys()
+mec.getResult()
+%result
+mec.keys()
+mec.reset()
+mec.keys()
 
-# # Queue management methods
-# 
-# %px import time
-# prs = [mec.execute('time.sleep(2.0)',block=False) for x in range(5)]
-# 
-# 
-# mec.queueStatus()
-# time.sleep(3.0)
-# mec.clearQueue()
-# mec.queueStatus()
-# time.sleep(2.0)
-# mec.queueStatus()
-# 
-# mec.barrier(prs)
-# 
-# for pr in prs:
-#     try:
-#         pr.r
-#     except QueueCleared:
-#         print "Caught QueueCleared OK."
-# 
-# 
-# # scatter/gather
-# 
-# mec.scatter('a', range(10))
-# mec.gather('a')
-# mec.scatter('b', numpy.arange(10))
-# mec.gather('b')
-# 
-# #-------------------------------------------------------------------------------
-# # Non-Blocking execution
-# #-------------------------------------------------------------------------------
-# 
-# mec.block = False
-# 
-# # execute
-# 
-# pr1 = mec.execute('a=5')
-# pr2 = mec.execute('import sets')
-# 
-# mec.barrier(pr1, pr2)
-# 
-# pr1 = mec.execute('1/0')
-# pr2 = mec.execute('c = sets.Set()')
-# 
-# mec.barrier()
-# try:
-#     pr1.r
-# except ZeroDivisionError:
-#     print "Caught ZeroDivisionError OK."
-# 
-# pd = mec.execute("print 'hi'")
-# pd.r
-# 
-# pd = mec.execute('1/0')
-# try:
-#     pd.r
-# except ZeroDivisionError:
-#     print "Caught ZeroDivisionError OK."
-# 
-# # Make sure we can reraise it!
-# try:
-#     pd.r
-# except ZeroDivisionError:
-#     print "Caught ZeroDivisionError OK."  
-# 
-# # push/pull
-# 
-# pd1 = mec.push(dict(a=10))
-# pd1.getResult()
-# pd2 = mec.pull('a')
-# pd2.r
-# 
-# # flush
-# 
-# mec.flush()
-# pd1 = mec.execute('a=30')
-# pd2 = mec.pull('a')
-# mec.flush()
-# 
-# try:
-#     pd1.getResult()
-# except InvalidDeferredID:
-#     print "PendingResult object was cleared OK."
-# 
-# 
-# try:
-#     pd2.getResult()
-# except InvalidDeferredID:
-#     print "PendingResult object was cleared OK."
-# 
-# 
-# 
-# # This is a command to make sure the end of the file is happy.
-# 
-# print "The tests are done!"
+try:
+    %result
+except IndexError:
+    print "Caught IndexError ok."
+
+
+%px a = 5
+mec.getResult(1)
+mec.keys()
+
+# Queue management methods
+
+%px import time
+prs = [mec.execute('time.sleep(2.0)',block=False) for x in range(5)]
+
+
+mec.queueStatus()
+time.sleep(3.0)
+mec.clearQueue()
+mec.queueStatus()
+time.sleep(2.0)
+mec.queueStatus()
+
+mec.barrier(*prs)
+
+for pr in prs:
+    try:
+        pr.r
+    except QueueCleared:
+        print "Caught QueueCleared OK."
+
+
+# scatter/gather
+
+mec.scatter('a', range(10))
+mec.gather('a')
+mec.scatter('b', numpy.arange(10))
+mec.gather('b')
+
+#-------------------------------------------------------------------------------
+# Non-Blocking execution
+#-------------------------------------------------------------------------------
+
+mec.block = False
+
+# execute
+
+pr1 = mec.execute('a=5')
+pr2 = mec.execute('import sets')
+
+mec.barrier(pr1, pr2)
+
+pr1 = mec.execute('1/0')
+pr2 = mec.execute('c = sets.Set()')
+
+mec.barrier(pr1, pr2)
+try:
+    pr1.r
+except ZeroDivisionError:
+    print "Caught ZeroDivisionError OK."
+
+pr = mec.execute("print 'hi'")
+pr.r
+
+pr = mec.execute('1/0')
+try:
+    pr.r
+except ZeroDivisionError:
+    print "Caught ZeroDivisionError OK."
+
+# Make sure we can reraise it!
+try:
+    pr.r
+except ZeroDivisionError:
+    print "Caught ZeroDivisionError OK."  
+
+# push/pull
+
+pr1 = mec.push(dict(a=10))
+pr1.getResult()
+pr2 = mec.pull('a')
+pr2.r
+
+# flush
+
+mec.flush()
+pd1 = mec.execute('a=30')
+pd2 = mec.pull('a')
+mec.flush()
+
+try:
+    pd1.getResult()
+except InvalidDeferredID:
+    print "PendingResult object was cleared OK."
+
+
+try:
+    pd2.getResult()
+except InvalidDeferredID:
+    print "PendingResult object was cleared OK."
+
+
+
+# This is a command to make sure the end of the file is happy.
+
+print "The tests are done!"
 
