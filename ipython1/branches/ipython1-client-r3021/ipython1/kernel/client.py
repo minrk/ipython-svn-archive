@@ -18,21 +18,26 @@ def MultiEngineController(addr):
     smultiengine = SynchronousMultiEngine(addr)
     return IFullBlockingMultiEngineClient(smultiengine)
 
-RemoteController = MultiEngineController
+def RemoteController(addr):
+    print "The RemoteController class is deprecated, please use MultiEngineController instead"
+    return MultiEngineController(addr)
 
-defaultMECAddress = (co['client']['connectToMultiEngineControllerOn']['ip'],
+defaultAddress = (co['client']['connectToMultiEngineControllerOn']['ip'],
     co['client']['connectToMultiEngineControllerOn']['port'])
 """The (ip,port) tuple of the default MultiEngineController."""
+
+defaultRemoteController = defaultAddress
 
 from ipython1.kernel.task import Task, Dependency
 
 TaskController = kernelConfigManager._import(co['client']['TaskController'])
 """The default TaskController class obtained from config information."""
 
-defaultTCAddress = (co['client']['connectToTaskControllerOn']['ip'],
+defaultTaskAddress = (co['client']['connectToTaskControllerOn']['ip'],
     co['client']['connectToTaskControllerOn']['port'])
 """The (ip,port) tuple of the default task controller."""
 
+defaultTaskController = defaultTaskAddress
 
 rit = ReactorInThread()
 rit.setDaemon(True)
