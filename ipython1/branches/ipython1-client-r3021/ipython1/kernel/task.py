@@ -35,10 +35,10 @@ class Task(object):
     :Parameters:
         expression : str
             A str that is valid python code that is the task.
-        resultNames : str or list of str 
+        pull : str or list of str 
             The names of objects to be pulled as results.  If not specified, 
             will return {'result', None}
-        setupNS : dict
+        push : dict
             A dict of objects to be pushed into the engines namespace before
             execution of the expression.
         clearBefore : boolean
@@ -65,19 +65,19 @@ class Task(object):
     --------
     
     >>> t = Task('dostuff(args)')
-    >>> t = Task('a=5', resultNames='a')
-    >>> t = Task('a=5\nb=4', resultNames=['a','b'])
+    >>> t = Task('a=5', pull='a')
+    >>> t = Task('a=5\nb=4', pull=['a','b'])
     >>> t = Task('os.kill(os.getpid(),9)', retries=100) # this is a bad idea
     """
-    def __init__(self, expression, resultNames=None, setupNS=None,
+    def __init__(self, expression, pull=None, push=None,
             clearBefore=False, clearAfter=False, retries=0, 
             recoveryTask=None, depends=None, **options):
         self.expression = expression
-        if isinstance(resultNames, str):
-            self.resultNames = [resultNames]
+        if isinstance(pull, str):
+            self.pull = [pull]
         else:
-            self.resultNames = resultNames
-        self.setupNS = setupNS
+            self.pull = pull
+        self.push = push
         self.clearBefore = clearBefore
         self.clearAfter = clearAfter
         self.retries=retries
@@ -144,7 +144,7 @@ class TaskResult(object):
         session.
         
         The TaskResult has a .ns member, which is a property for access
-        to the results.  If the Task had resultNames=['a', 'b'], then the 
+        to the results.  If the Task had pull=['a', 'b'], then the 
         Task Result will have attributes tr.ns.a, tr.ns.b for those values.
         Accessing tr.ns will raise the remote failure if the task failed.
         
@@ -381,13 +381,13 @@ class WorkerFromQueuedEngine(object):
         else:
             d = defer.succeed(None)
             
-        if task.setupNS is not None:
-            d.addCallback(lambda r: self.queuedEngine.push(task.setupNS))
+        if task.push is not None:
+            d.addCallback(lambda r: self.queuedEngine.push(task.push))
         
         d.addCallback(lambda r: self.queuedEngine.execute(task.expression))
         
-        if task.resultNames is not None:
-            d.addCallback(lambda r: self.queuedEngine.pull(task.resultNames))
+        if task.pull is not None:
+            d.addCallback(lambda r: self.queuedEngine.pull(task.pull))
         else:
             d.addCallback(lambda r: None)
         
@@ -398,7 +398,7 @@ class WorkerFromQueuedEngine(object):
         if task.clearAfter:
             d.addBoth(reseter)
         
-        return d.addBoth(self._zipResults, task.resultNames)
+        return d.addBoth(self._zipResults, task.pull)
     
     def _zipResults(self, result, names):
         """Callback for construting the TaskResult object."""

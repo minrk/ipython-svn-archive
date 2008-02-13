@@ -40,9 +40,9 @@ class InteractiveTaskClient(object):
         :Parameters:
             expression : str
                 A str that is valid python code that is the task.
-            resultNames : str or list of str 
+            pull : str or list of str 
                 The names of objects to be pulled as results.
-            setupNS : dict
+            push : dict
                 A dict of objects to be pushed into the engines namespace before
                 execution of the expression.
             clearBefore : boolean

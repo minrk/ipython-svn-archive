@@ -184,7 +184,7 @@ class XMLRPCTaskClient(object):
         
         The Task object is created using the following signature:
         
-        Task(expression, resultNames=None, setupNS={}, clearBefore=False, 
+        Task(expression, pull=None, push={}, clearBefore=False, 
             clearAfter=False, retries=0, **options):)
 
         The meaning of the arguments is as follows:
@@ -192,9 +192,9 @@ class XMLRPCTaskClient(object):
         :Task Parameters:
             expression : str
                 A str that is valid python code that is the task.
-            resultNames : str or list of str 
+            pull : str or list of str 
                 The names of objects to be pulled as results.
-            setupNS : dict
+            push : dict
                 A dict of objects to be pushed into the engines namespace before
                 execution of the expression.
             clearBefore : boolean
