@@ -6,7 +6,7 @@ from ipython1.kernel import codeutil
 from ipython1.kernel.config import configManager as kernelConfigManager
 from ipython1.kernel import multiengine as me
 
-co = kernelConfigManager.getConfigObj()
+co = kernelConfigManager.get_config_obj()
 
 SynchronousMultiEngine = kernelConfigManager._import(co['client']['MultiEngineImplementation'])
 """The default MultiEngineController class obtained from config information."""
@@ -16,7 +16,7 @@ def AsynMultiEngineController(addr):
     smultiengine = SynchronousMultiEngine(addr)
     return me.IFullSynchronousTwoPhaseMultiEngine(smultiengine)
 
-defaultAddress = (co['client']['connectToMultiEngineControllerOn']['ip'],
+default_address = (co['client']['connectToMultiEngineControllerOn']['ip'],
     co['client']['connectToMultiEngineControllerOn']['port'])
 """The (ip,port) tuple of the default MultiEngineController."""
 
@@ -25,8 +25,8 @@ def AsynTaskController(addr):
     _task_controller = kernelConfigManager._import(co['client']['TaskControllerImplementation'])
     return _task_controller(addr)
 
-defaultTaskAddress = (co['client']['connectToTaskControllerOn']['ip'],
+default_task_address = (co['client']['connectToTaskControllerOn']['ip'],
     co['client']['connectToTaskControllerOn']['port'])
 """The (ip,port) tuple of the default task controller."""
 
-defaultTaskController = defaultTaskAddress
+default_task_controller = default_task_address

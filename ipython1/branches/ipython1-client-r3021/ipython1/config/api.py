@@ -13,7 +13,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import os
-from ipython1.config.cutils import getHomeDir, getIpythonDir
+from ipython1.config.cutils import get_home_dir, get_ipython_dir
 from ipython1.external.configobj import ConfigObj
 
 class ConfigObjManager(object):
@@ -22,33 +22,33 @@ class ConfigObjManager(object):
         self.current = configObj
         self.current.indent_type = '    '
         self.filename = filename
-        self.writeDefaultConfigFile()
+        self.write_default_config_file()
         
-    def getConfigObj(self):
+    def get_config_obj(self):
         return self.current
     
-    def updateConfigObj(self, newConfig):
+    def update_config_obj(self, newConfig):
         self.current.merge(newConfig)
         
-    def updateConfigObjFromFile(self, filename):
+    def update_config_obj_from_file(self, filename):
         newConfig = ConfigObj(filename, file_error=False)
         self.current.merge(newConfig)
         
-    def updateConfigObjFromDefaultFile(self, ipythondir=None):
-        fname = self.resolveFilePath(self.filename, ipythondir)
-        self.updateConfigObjFromFile(fname)
+    def update_config_obj_from_default_file(self, ipythondir=None):
+        fname = self.resolve_file_path(self.filename, ipythondir)
+        self.update_config_obj_from_file(fname)
 
-    def writeConfigObjToFile(self, filename):
+    def write_config_obj_to_file(self, filename):
         f = open(filename, 'w')
         self.current.write(f)
         f.close()
 
-    def writeDefaultConfigFile(self):
-        ipdir = getIpythonDir()
+    def write_default_config_file(self):
+        ipdir = get_ipython_dir()
         fname = ipdir + '/' + self.filename
         if not os.path.isfile(fname):
             print "Writing the configuration file to: " + fname
-            self.writeConfigObjToFile(fname)
+            self.write_config_obj_to_file(fname)
     
     def _import(self, key):
         package = '.'.join(key.split('.')[0:-1])
@@ -58,7 +58,7 @@ class ConfigObjManager(object):
         exec 'temp = %s' % obj 
         return temp  
 
-    def resolveFilePath(self, filename, ipythondir = None):
+    def resolve_file_path(self, filename, ipythondir = None):
         """Resolve filenames into absolute paths.
 
         This function looks in the following directories in order:
@@ -83,7 +83,7 @@ class ConfigObjManager(object):
             if os.path.isfile(trythis):
                 return trythis        
 
-        trythis = getIpythonDir() + '/' + filename
+        trythis = get_ipython_dir() + '/' + filename
         if os.path.isfile(trythis):
             return trythis
 

@@ -45,10 +45,10 @@ class InteractiveTaskClient(object):
             push : dict
                 A dict of objects to be pushed into the engines namespace before
                 execution of the expression.
-            clearBefore : boolean
+            clear_before : boolean
                 Should the engine's namespace be cleared before the task is run.
                 Default=False.
-            clearAfter : boolean 
+            clear_after : boolean 
                 Should the engine's namespace be cleared after the task is run.
                 Default=False.
             retries : int
@@ -63,12 +63,12 @@ class InteractiveTaskClient(object):
             t = args[0]
         else:
             t = task.Task(*args, **kwargs)
-        taskID = self.run(t)
-        print "TaskID = %i"%taskID
+        taskid = self.run(t)
+        print "TaskID = %i"%taskid
         if block:
-            return self.getTaskResult(taskID, block)
+            return self.get_task_result(taskid, block)
         else:
-            return taskID
+            return taskid
 
 class IBlockingTaskClient(Interface):
     pass
@@ -85,15 +85,15 @@ class BlockingTaskClient(InteractiveTaskClient):
     def run(self, task):
         return blockingCallFromThread(self.task_controller.run, task)
     
-    def getTaskResult(self, taskID, block=False):
-        return blockingCallFromThread(self.task_controller.getTaskResult,
-            taskID, block)
+    def get_task_result(self, taskid, block=False):
+        return blockingCallFromThread(self.task_controller.get_task_result,
+            taskid, block)
     
-    def abort(self, taskID):
-        return blockingCallFromThread(self.task_controller.abort, taskID)
+    def abort(self, taskid):
+        return blockingCallFromThread(self.task_controller.abort, taskid)
     
-    def barrier(self, taskIDs):
-        return blockingCallFromThread(self.task_controller.barrier, taskIDs)
+    def barrier(self, taskids):
+        return blockingCallFromThread(self.task_controller.barrier, taskids)
     
     def spin(self):
         return blockingCallFromThread(self.task_controller.spin)

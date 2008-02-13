@@ -27,21 +27,21 @@ K_vals = N.arange(90.0,110.0,2.0)
 sigma_vals = N.arange(0.02, 0.3, 0.02)
 
 # Submit tasks
-taskIDs = []
+taskids = []
 for K in K_vals:
     for sigma in sigma_vals:
         t = client.Task(task_string, 
-            setupNS=dict(sigma=sigma,K=K),
-            resultNames=['vp','ap','vc','ac','sigma','K'])
-        taskIDs.append(tc.run(t))
+            push=dict(sigma=sigma,K=K),
+            pull=['vp','ap','vc','ac','sigma','K'])
+        taskids.append(tc.run(t))
 
-print "Submitted tasks: ", taskIDs
+print "Submitted tasks: ", taskids
 
 # Block until tasks are completed
-tc.barrier(taskIDs)
+tc.barrier(taskids)
 
 # Get the results
-results = [tc.getTaskResult(tid) for tid in taskIDs]
+results = [tc.get_task_result(tid) for tid in taskids]
 
 # Assemble the result
 vc = N.empty(K_vals.shape[0]*sigma_vals.shape[0],dtype='float64')

@@ -31,7 +31,7 @@ from ipython1.core.config import configManager as coreConfigManager
 # BEG 9/20/07: I don't think we need to do this first anymore.  Let's leave this here for a while
 # and make sure of this.
 # mpi = None
-# kco = kernelConfigManager.getConfigObj()
+# kco = kernelConfigManager.get_config_obj()
 # mpiis = kco['mpi']['mpiImportStatement']
 # if mpiis:
 #     try:
@@ -40,8 +40,8 @@ from ipython1.core.config import configManager as coreConfigManager
 #         mpi = None
 
 def main(n, logfile):
-    kco = kernelConfigManager.getConfigObj()
-    cco = coreConfigManager.getConfigObj()
+    kco = kernelConfigManager.get_config_obj()
+    cco = coreConfigManager.get_config_obj()
     
     mpikey = kco['mpi']['default']
     mpiImportStatement = kco['mpi'].get(mpikey, None)
@@ -115,10 +115,10 @@ def start(n=1):
     # elif options.rcfile and not options.profile:
     #     config.updateConfigWithFile(options.rcfile, options.ipythondir)
     # else:
-    kernelConfigManager.updateConfigObjFromDefaultFile(options.ipythondir)
-    coreConfigManager.updateConfigObjFromDefaultFile(options.ipythondir)
+    kernelConfigManager.update_config_obj_from_default_file(options.ipythondir)
+    coreConfigManager.update_config_obj_from_default_file(options.ipythondir)
 
-    kco = kernelConfigManager.getConfigObj()
+    kco = kernelConfigManager.get_config_obj()
     # Now override with command line options
     if options.controllerip is not None:
         kco['engine']['connectToControllerOn']['ip'] = options.controllerip

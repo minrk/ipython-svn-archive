@@ -57,7 +57,7 @@ class TwoPhaseFoo(pd.PendingDeferredManager):
         self.foo = foo
         pd.PendingDeferredManager.__init__(self)
 
-    @pd.twoPhase
+    @pd.two_phase
     def bar(self, bahz):
         return self.foo.bar(bahz)
     
@@ -69,8 +69,8 @@ class TwoPhaseFoo(pd.PendingDeferredManager):
             d.addCallback(process_it, 'extra1', extra2='extra2')
             return d
         else:
-            deferredID = self.getNextDeferredID()
-            self.savePendingDeferred(deferredID, d, callback=process_it, arguments=(('extra1',), dict(extra2='extra2')))
+            deferredID = self.get_next_deferred_id()
+            self.save_pending_deferred(deferredID, d, callback=process_it, arguments=(('extra1',), dict(extra2='extra2')))
             return defer.succeed(deferredID)
 
 class PendingDeferredManagerTest(DeferredTestCase):
@@ -86,22 +86,22 @@ class PendingDeferredManagerTest(DeferredTestCase):
         dDict = {}
         for i in range(10):
             d = defer.Deferred()
-            did = pdm.getNextDeferredID()
-            pdm.savePendingDeferred(did, d)
+            did = pdm.get_next_deferred_id()
+            pdm.save_pending_deferred(did, d)
             dDict[did] = d
         for did in dDict.keys()[0:5]:
-            d = pdm.getPendingDeferred(did,block=True)
+            d = pdm.get_pending_deferred(did,block=True)
             dDict[did].callback('foo')
             d.addCallback(lambda r: self.assert_(r=='foo'))
         for did in dDict.keys()[5:10]:
-            d = pdm.getPendingDeferred(did,block=False)
+            d = pdm.get_pending_deferred(did,block=False)
             d.addErrback(lambda f: self.assertRaises(error.ResultNotCompleted, f.raiseException))
         for did in dDict.keys()[5:10]:
             dDict[did].callback('foo')
-            d = pdm.getPendingDeferred(did,block=False)
+            d = pdm.get_pending_deferred(did,block=False)
             d.addCallback(lambda r: self.assert_(r=='foo'))
         for did in dDict.keys():
-            d = pdm.getPendingDeferred(did,False)
+            d = pdm.get_pending_deferred(did,False)
             d.addErrback(lambda f: self.assertRaises(error.InvalidDeferredID, f.raiseException))
     
     def testCallback(self):
@@ -110,7 +110,7 @@ class PendingDeferredManagerTest(DeferredTestCase):
         d = pdm.bam('bam', block=True)
         d.addCallback(lambda r: self.assertEquals(r, "blahblah: bam extra1 extra2"))
         d.addCallback(lambda r: pdm.bam('bam', block=False))
-        d.addCallback(lambda did: pdm.getPendingDeferred(did, True))
+        d.addCallback(lambda did: pdm.get_pending_deferred(did, True))
         d.addCallback(lambda r: self.assertEquals(r, "blahblah: bam extra1 extra2"))
         return d     
         

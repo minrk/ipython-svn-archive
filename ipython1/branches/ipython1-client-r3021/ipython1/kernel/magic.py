@@ -61,7 +61,7 @@ def magic_result(self,parameter_s=''):
             index = int(parameter_s)
         except:
             index = None
-        result = activeController.getResult(index)
+        result = activeController.get_result(index)
         return result
 
 def magic_px(self,parameter_s=''):

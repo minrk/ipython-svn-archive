@@ -29,7 +29,7 @@ from ipython1.kernel.task import ITaskController
 from ipython1.kernel.config import configManager as kernelConfigManager
 
 def main(logfile):
-    co = kernelConfigManager.getConfigObj()
+    co = kernelConfigManager.get_config_obj()
     if logfile:
         logfile = logfile + str(os.getpid()) + '.log'
         try:
@@ -110,8 +110,8 @@ def start():
     # elif options.rcfile and not options.profile:
     #     config.updateConfigWithFile(options.rcfile, options.ipythondir)
     # else:
-    kernelConfigManager.updateConfigObjFromDefaultFile(options.ipythondir)
-    co = kernelConfigManager.getConfigObj()
+    kernelConfigManager.update_config_obj_from_default_file(options.ipythondir)
+    co = kernelConfigManager.get_config_obj()
     
     # Update with command line options
     if options.engineip is not None:
@@ -129,7 +129,7 @@ def start():
     if options.taskport is not None:
         co['controller']['controllerInterfaces']['task']['networkInterfaces'][di]['port'] = options.taskport
 
-    kernelConfigManager.updateConfigObj(co)
+    kernelConfigManager.update_config_obj(co)
     main(options.logfile)
     
     

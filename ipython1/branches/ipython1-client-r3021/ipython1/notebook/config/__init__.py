@@ -10,7 +10,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 from ipython1.external.configobj import ConfigObj
-from ipython1.config.cutils import getIpythonDir
+from ipython1.config.cutils import get_ipython_dir
 from ipython1.config.api import ConfigObjManager
 
 defaultNotebookConfig = ConfigObj()
@@ -29,7 +29,7 @@ notebookConfig = {
         }
     },
     'defaultDBMode': "sqlite///",
-    'activeDB': "sqlite:///%s/ipnotebooks.db"%(getIpythonDir()),
+    'activeDB': "sqlite:///%s/ipnotebooks.db"%(get_ipython_dir()),
     'externalDBs': []
 }
 

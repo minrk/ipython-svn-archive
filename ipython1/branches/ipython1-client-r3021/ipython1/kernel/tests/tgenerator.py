@@ -142,7 +142,7 @@ class EngineGetResultTestGenerator(TestGenerator):
         
     def computeOutput(self, i):
         d = self.testCaseInstance.engine.execute(i)
-        d.addCallback(lambda r: self.testCaseInstance.engine.getResult(r['number']))
+        d.addCallback(lambda r: self.testCaseInstance.engine.get_result(r['number']))
         return d
 
 
@@ -196,5 +196,5 @@ class MultiEngineGetResultTestGenerator(TestGenerator):
         
     def computeOutput(self, i):
         d = self.testCaseInstance.multiengine.execute(i, targets=self.targets)
-        # d.addCallback(lambda r: self.testCaseInstance.multiengine.getResult(self.targets, r[0]['number']))
+        # d.addCallback(lambda r: self.testCaseInstance.multiengine.get_result(self.targets, r[0]['number']))
         return d

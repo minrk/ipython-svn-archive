@@ -178,7 +178,7 @@ def clusterLocal(opt,arg):
     """Start a cluster on the local machine."""
     
     # Store all logs inside the ipython directory
-    ipdir = cutils.getIpythonDir()
+    ipdir = cutils.get_ipython_dir()
     pjoin = os.path.join
 
     logfile = opt.logfile
@@ -257,7 +257,7 @@ def clusterRemote(opt,arg):
     sshx = clConfig.get('sshx',os.environ.get('IPYTHON_SSHX','sshx'))
     
     # Store all logs inside the ipython directory
-    ipdir = cutils.getIpythonDir()
+    ipdir = cutils.get_ipython_dir()
     pjoin = os.path.join
 
     logfile = opt.logfile

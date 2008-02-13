@@ -53,7 +53,7 @@ def http_PROPFIND(self, request):
     try:
         doc = waitForDeferred(davXMLFromStream(request.stream))
         yield doc
-        doc = doc.getResult()
+        doc = doc.get_result()
     except ValueError, e:
         log.err("Error while handling PROPFIND body: %s" % (e,))
         raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, str(e)))
@@ -107,7 +107,7 @@ def http_PROPFIND(self, request):
 
         resource_properties = waitForDeferred(resource.listProperties(request))
         yield resource_properties
-        resource_properties = resource_properties.getResult()
+        resource_properties = resource_properties.get_result()
 
         if search_properties is "names":
             properties_by_status = {
@@ -122,7 +122,7 @@ def http_PROPFIND(self, request):
             if search_properties is "all":
                 properties_to_enumerate = waitForDeferred(resource.listAllprop(request))
                 yield properties_to_enumerate
-                properties_to_enumerate = properties_to_enumerate.getResult()
+                properties_to_enumerate = properties_to_enumerate.get_result()
             else:
                 properties_to_enumerate = search_properties
 
@@ -131,7 +131,7 @@ def http_PROPFIND(self, request):
                     try:
                         resource_property = waitForDeferred(resource.readProperty(property, request))
                         yield resource_property
-                        resource_property = resource_property.getResult()
+                        resource_property = resource_property.get_result()
                     except:
                         f = Failure()
 

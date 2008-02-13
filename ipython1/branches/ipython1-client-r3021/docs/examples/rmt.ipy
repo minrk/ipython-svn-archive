@@ -28,7 +28,7 @@ def serialDiffs(num, N):
 
 
 def parallelDiffs(rc, num, N):
-    nengines = len(rc.getIDs())
+    nengines = len(rc.get_ids())
     num_per_engine = num/nengines
     print "Running with", num_per_engine, "per engine."
     rc.push(dict(num_per_engine=num_per_engine, N=N))

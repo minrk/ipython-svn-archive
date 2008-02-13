@@ -50,7 +50,7 @@ def main():
     tc = client.TaskController((opts.controller, opts.tport))
     
     rc.block=True
-    nengines = len(rc.getIDs())
+    nengines = len(rc.get_ids())
     rc.execute('from IPython.genutils import time')
 
     # the jobs should take a random time within a range
@@ -61,8 +61,8 @@ def main():
     print "executing %i tasks, totalling %.1f secs on %i engines"%(opts.n, stime, nengines)
     time.sleep(1)
     start = time.time()
-    taskIDs = [tc.run(t) for t in tasks]
-    tc.barrier(taskIDs)
+    taskids = [tc.run(t) for t in tasks]
+    tc.barrier(taskids)
     stop = time.time()
 
     ptime = stop-start

@@ -42,7 +42,7 @@ def http_MKCOL(self, request):
     """
     parent = waitForDeferred(request.locateResource(parentForURL(request.uri)))
     yield parent
-    parent = parent.getResult()
+    parent = parent.get_result()
 
     if self.fp.exists():
         log.err("Attempt to create collection where file exists: %s"
@@ -71,13 +71,13 @@ def http_MKCOL(self, request):
     x = waitForDeferred(noDataFromStream(request.stream))
     yield x
     try:
-        x.getResult()
+        x.get_result()
     except ValueError, e:
         log.err("Error while handling MKCOL body: %s" % (e,))
         raise HTTPError(responsecode.UNSUPPORTED_MEDIA_TYPE)
 
     response = waitForDeferred(mkcollection(self.fp))
     yield response
-    yield response.getResult()
+    yield response.get_result()
 
 http_MKCOL = deferredGenerator(http_MKCOL)

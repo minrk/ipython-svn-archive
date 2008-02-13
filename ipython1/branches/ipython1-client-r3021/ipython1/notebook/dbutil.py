@@ -20,7 +20,7 @@ import os, sqlalchemy as sqla#, zope.interface as zi
 
 from IPython.genutils import get_home_dir
 
-# from ipython1.config.api import resolveFilePath
+# from ipython1.config.api import resolve_file_path
 from ipython1.kernel.error import DBError
 from ipython1.notebook import models
 # from ipython1.notebook.xmlutil import loadDBfromXML, dumpDBtoXML
@@ -38,7 +38,7 @@ def connectDB(fname='ipnotebook.db', ipythondir=None):
     Connect to aa notebook database, or attempt to create a new one
     if none is found.
     """
-    f = resolveFilePath(fname, ipythondir)
+    f = resolve_file_path(fname, ipythondir)
     print f
     if f is None:
         print "Could not find DB, attempting to create new DB"

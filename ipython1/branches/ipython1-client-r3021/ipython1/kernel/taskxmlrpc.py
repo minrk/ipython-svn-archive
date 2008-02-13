@@ -50,13 +50,13 @@ class IXMLRPCTaskController(Interface):
     def xmlrpc_run(request, binTask):
         """"""
     
-    def xmlrpc_abort(request, taskID):
+    def xmlrpc_abort(request, taskid):
         """"""
         
-    def xmlrpc_getTaskResult(request, taskID, block=False):
+    def xmlrpc_get_task_result(request, taskid, block=False):
         """"""
         
-    def xmlrpc_barrier(request, taskIDs):
+    def xmlrpc_barrier(request, taskids):
         """"""
     
     def xmlrpc_spin(request):
@@ -104,20 +104,20 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
         d.addErrback(self.packageFailure)
         return d
     
-    def xmlrpc_abort(self, request, taskID):
-        d = self.taskController.abort(taskID)
+    def xmlrpc_abort(self, request, taskid):
+        d = self.taskController.abort(taskid)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d
         
-    def xmlrpc_getTaskResult(self, request, taskID, block=False):
-        d = self.taskController.getTaskResult(taskID, block)
+    def xmlrpc_get_task_result(self, request, taskid, block=False):
+        d = self.taskController.get_task_result(taskid, block)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d
 
-    def xmlrpc_barrier(self, request, taskIDs):
-        d = self.taskController.barrier(taskIDs)
+    def xmlrpc_barrier(self, request, taskids):
+        d = self.taskController.barrier(taskids)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d        
@@ -184,8 +184,8 @@ class XMLRPCTaskClient(object):
         
         The Task object is created using the following signature:
         
-        Task(expression, pull=None, push={}, clearBefore=False, 
-            clearAfter=False, retries=0, **options):)
+        Task(expression, pull=None, push={}, clear_before=False, 
+            clear_after=False, retries=0, **options):)
 
         The meaning of the arguments is as follows:
 
@@ -197,10 +197,10 @@ class XMLRPCTaskClient(object):
             push : dict
                 A dict of objects to be pushed into the engines namespace before
                 execution of the expression.
-            clearBefore : boolean
+            clear_before : boolean
                 Should the engine's namespace be cleared before the task is run.
                 Default=False.
-            clearAfter : boolean 
+            clear_after : boolean 
                 Should the engine's namespace be cleared after the task is run.
                 Default=False.
             retries : int
@@ -208,8 +208,8 @@ class XMLRPCTaskClient(object):
             options : dict
                 Any other keyword options for more elaborate uses of tasks
             
-        :Returns: The int taskID of the submitted task.  Pass this to 
-            `getTaskResult` to get the `TaskResult` object.
+        :Returns: The int taskid of the submitted task.  Pass this to 
+            `get_task_result` to get the `TaskResult` object.
         """
         assert isinstance(task, Task.Task), "task must be a Task object!"
         binTask = xmlrpc.Binary(pickle.dumps(task,2))
@@ -217,42 +217,42 @@ class XMLRPCTaskClient(object):
         d.addCallback(self.unpackage)
         return d
     
-    def getTaskResult(self, taskID, block=False):
-        """The task result by taskID.
+    def get_task_result(self, taskid, block=False):
+        """The task result by taskid.
         
         :Parameters:
-            taskID : int
-                The taskID of the task to be retrieved.
+            taskid : int
+                The taskid of the task to be retrieved.
             block : boolean
                 Should I block until the task is done?
         
         :Returns: A `TaskResult` object that encapsulates the task result.
         """
-        d = self._proxy.callRemote('getTaskResult', taskID, block)
+        d = self._proxy.callRemote('get_task_result', taskid, block)
         d.addCallback(self.unpackage)
         return d 
     
-    def abort(self, taskID):
-        """Abort a task by taskID.
+    def abort(self, taskid):
+        """Abort a task by taskid.
         
         :Parameters:
-            taskID : int
-                The taskID of the task to be aborted.
+            taskid : int
+                The taskid of the task to be aborted.
             block : boolean
                 Should I block until the task is aborted.        
         """
-        d = self._proxy.callRemote('abort', taskID)
+        d = self._proxy.callRemote('abort', taskid)
         d.addCallback(self.unpackage)
         return d 
         
-    def barrier(self, taskIDs):
+    def barrier(self, taskids):
         """Block until all tasks are completed.
         
         :Parameters:
-            taskIDs : list, tuple
-                A sequence of taskIDs to block on.
+            taskids : list, tuple
+                A sequence of taskids to block on.
         """
-        d = self._proxy.callRemote('barrier', taskIDs)
+        d = self._proxy.callRemote('barrier', taskids)
         d.addCallback(self.unpackage)
         return d 
     

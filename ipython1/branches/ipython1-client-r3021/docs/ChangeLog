@@ -5,7 +5,7 @@
 	interfaces that 1) are not part of the public API and 2)
 	only have one implementation (and always will).
 
-	* ipython1.kernel: Created new pushFunction/pullFunctions in the API
+	* ipython1.kernel: Created new push_function/pull_functions in the API
 	of the engines.  These functions now have all the needed logic for
 	pushing/pulling functions.  The logic has been removed from regular
 	push/pull to make things more robust.
@@ -31,7 +31,7 @@
 	to globals, but does not include closures.  The map/mapAll
 	methods have been adapted to take functions now.  This approach
 	doesn't work for classes that are callable though.  Still need
-	to add tests of how push/pullSerialized handle this.
+	to add tests of how push/pull_serialized handle this.
 
 
 2007-06-21  Brian Granger <ellisonbg@gmail.com>
@@ -47,16 +47,16 @@
 2007-06-17  Brian Granger <ellisonbg@gmail.com>
 
 	* ipython1.kernel.task.py: Created a new TaskResult object
-	that is returned when getTaskResult is called.  This new 
+	that is returned when get_task_result is called.  This new 
 	object provide a much simpler and intuitive way of accessing
 	the results of a task.  The variables that are pulled back
 	are available as attributes of the TaskResult object.  There
-	are also engineID, taskID attributes.  Failures are handled 
+	are also engineid, taskid attributes.  Failures are handled 
 	through a failure attribute, but remote exceptions can also
 	be reraised by calling the raiseException method.
 	
 	* ipython1.kernel.taskclient/taskxmlrpc.py:  Minor changes to reflect
-	new TaskResult object that is returned by getTaskResult.
+	new TaskResult object that is returned by get_task_result.
 	
 	* doc/examples: Updated TaskController examples to use new
 	TaskResult object.
@@ -71,7 +71,7 @@
 	* ipython1.core.interpreter.py: Added option for having execute
 	actually raise any exceptions that it gets.  Made sure that
 	SyntaxError/IndentationError is raised upon compilation.  Added
-	reset and getResult.  All the changes in core should eventually
+	reset and get_result.  All the changes in core should eventually
 	be merged in with core1.
 	
 	* ipython1.kernel.engineservice.py: Converted the basic engine
@@ -83,7 +83,7 @@
 	their code.
 	
 	* ipython1.test: updated tests to work with the new core.  
-	Added a new testgenerator.py to make writing tests easier.
+	Added a new tgenerator.py to make writing tests easier.
 
 
 2007-04-02  Brian Granger <ellisonbg@gmail.com>
@@ -97,7 +97,7 @@
 	
 	* ipython1.kernel.multiengineclient.py:  Got rid of ifoo methods
 	and replaced them by types with custom __repr__ methods.  ipull
-	is now zipPull.  Got rid of slicing and indexing notation in 
+	is now zip_pull.  Got rid of slicing and indexing notation in 
 	client class.  It led to an API that was simply too complex.
 
 

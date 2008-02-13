@@ -22,7 +22,7 @@ class TaskTestBase(object):
         for i in range(n):
             e = es.EngineService()
             e.startService()
-            regDict = self.controller.registerEngine(es.QueuedEngine(e), None)
+            regDict = self.controller.register_engine(es.QueuedEngine(e), None)
             e.id = regDict['id']
             self.engines.append(e)
 
@@ -55,10 +55,10 @@ class ITaskControllerTestCase(TaskTestBase):
     
     def testClears(self):
         self.addEngine(1)
-        t = task.Task('a=1', clearBefore=True, pull='b', clearAfter=True)
+        t = task.Task('a=1', clear_before=True, pull='b', clear_after=True)
         d = self.multiengine.execute('b=1', targets=0)
         d.addCallback(lambda _: self.tc.run(t))
-        d.addCallback(lambda tid: self.tc.getTaskResult(tid,block=True))
+        d.addCallback(lambda tid: self.tc.get_task_result(tid,block=True))
         d.addCallback(lambda tr: tr.failure)
         d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
         d.addCallback(lambda _:self.multiengine.pull('a', targets=0))
@@ -71,12 +71,12 @@ class ITaskControllerTestCase(TaskTestBase):
         t2 = task.Task("i += 1\nassert i == 16", pull='i',retries=10)
         d = self.multiengine.execute('i=0', targets=0)
         d.addCallback(lambda r: self.tc.run(t))
-        d.addCallback(self.tc.getTaskResult, block=True)
+        d.addCallback(self.tc.get_task_result, block=True)
         d.addCallback(lambda tr: tr.ns.i)
         d.addErrback(lambda f: self.assertRaises(AssertionError, f.raiseException))
         
         d.addCallback(lambda r: self.tc.run(t2))
-        d.addCallback(self.tc.getTaskResult, block=True)
+        d.addCallback(self.tc.get_task_result, block=True)
         d.addCallback(lambda tr: tr.ns.i)
         d.addCallback(lambda r: self.assertEquals(r, 16))
         return d
@@ -84,10 +84,10 @@ class ITaskControllerTestCase(TaskTestBase):
     def testRecoveryTasks(self):
         self.addEngine(1)
         t = task.Task("i=16", pull='i')
-        t2 = task.Task("raise Exception", recoveryTask=t, retries = 2)
+        t2 = task.Task("raise Exception", recovery_task=t, retries = 2)
         
         d = self.tc.run(t2)
-        d.addCallback(self.tc.getTaskResult, block=True)
+        d.addCallback(self.tc.get_task_result, block=True)
         d.addCallback(lambda tr: tr.ns.i)
         d.addCallback(lambda r: self.assertEquals(r, 16))
         return d
@@ -95,11 +95,11 @@ class ITaskControllerTestCase(TaskTestBase):
     def testInfiniteRecoveryLoop(self):
         self.addEngine(1)
         t = task.Task("raise Exception", retries = 5)
-        t2 = task.Task("assert False", retries = 2, recoveryTask = t)
-        t.recoveryTask = t2
+        t2 = task.Task("assert False", retries = 2, recovery_task = t)
+        t.recovery_task = t2
         
         d = self.tc.run(t)
-        d.addCallback(self.tc.getTaskResult, block=True)
+        d.addCallback(self.tc.get_task_result, block=True)
         d.addCallback(lambda tr: tr.ns.i)
         d.addErrback(lambda f: self.assertRaises(AssertionError, f.raiseException))
         return d
@@ -110,7 +110,7 @@ class ITaskControllerTestCase(TaskTestBase):
         ns = dict(a=1, b=0)
         t = task.Task("", push=ns, pull=['a','b'])
         d.addCallback(lambda r: self.tc.run(t))
-        d.addCallback(self.tc.getTaskResult, block=True)
+        d.addCallback(self.tc.get_task_result, block=True)
         d.addCallback(lambda tr: {'a':tr.ns.a, 'b':tr['b']})
         d.addCallback(lambda r: self.assertEquals(r, ns))
         return d
@@ -119,19 +119,19 @@ class ITaskControllerTestCase(TaskTestBase):
         self.addEngine(1)
         t1 = task.Task('a=5', pull='a')
         d = self.tc.run(t1)
-        d.addCallback(self.tc.getTaskResult, block=True)
+        d.addCallback(self.tc.get_task_result, block=True)
         d.addCallback(lambda tr: (tr.ns.a,tr['a'],tr.failure, tr.raiseException()))
         d.addCallback(lambda r: self.assertEquals(r, (5,5,None,None)))  
         
         t2 = task.Task('7=5')
         d.addCallback(lambda r: self.tc.run(t2))
-        d.addCallback(self.tc.getTaskResult, block=True)
+        d.addCallback(self.tc.get_task_result, block=True)
         d.addCallback(lambda tr: tr.ns)
         d.addErrback(lambda f: self.assertRaises(SyntaxError, f.raiseException))
         
         t3 = task.Task('', pull='b')
         d.addCallback(lambda r: self.tc.run(t3))
-        d.addCallback(self.tc.getTaskResult, block=True)
+        d.addCallback(self.tc.get_task_result, block=True)
         d.addCallback(lambda tr: tr.ns)
         d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
         return d

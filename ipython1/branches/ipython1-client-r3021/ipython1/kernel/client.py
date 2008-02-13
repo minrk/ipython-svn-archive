@@ -10,7 +10,7 @@ from ipython1.kernel.task import Task, Dependency
 from ipython1.kernel.twistedutil import ReactorInThread
 from ipython1.kernel.config import configManager as kernelConfigManager
 
-co = kernelConfigManager.getConfigObj()
+co = kernelConfigManager.get_config_obj()
 
 SynchronousMultiEngine = kernelConfigManager._import(co['client']['MultiEngineImplementation'])
 """The default MultiEngineController class obtained from config information."""
@@ -24,11 +24,11 @@ def RemoteController(addr):
     print "The RemoteController class is deprecated, please use MultiEngineController instead"
     return MultiEngineController(addr)
 
-defaultAddress = (co['client']['connectToMultiEngineControllerOn']['ip'],
+default_address = (co['client']['connectToMultiEngineControllerOn']['ip'],
     co['client']['connectToMultiEngineControllerOn']['port'])
 """The (ip,port) tuple of the default MultiEngineController."""
 
-defaultRemoteController = defaultAddress
+default_remote_controller = default_address
 
 
 
@@ -37,11 +37,11 @@ def TaskController(addr):
     _task_controller = kernelConfigManager._import(co['client']['TaskControllerImplementation'])
     return IBlockingTaskClient(_task_controller(addr))
 
-defaultTaskAddress = (co['client']['connectToTaskControllerOn']['ip'],
+default_task_address = (co['client']['connectToTaskControllerOn']['ip'],
     co['client']['connectToTaskControllerOn']['port'])
 """The (ip,port) tuple of the default task controller."""
 
-defaultTaskController = defaultTaskAddress
+default_task_controller = default_task_address
 
 
 

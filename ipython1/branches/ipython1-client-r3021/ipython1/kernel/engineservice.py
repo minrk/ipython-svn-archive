@@ -97,12 +97,12 @@ class IEngineCore(zi.Interface):
         Raises NameError if any one of objects doess not exist.
         """
     
-    def pushFunction(namespace):
+    def push_function(namespace):
         """Push a dict of key, function pairs into the user's namespace.
         
         Returns a deferred to None or a failure."""
     
-    def pullFunction(keys):
+    def pull_function(keys):
         """Pulls functions out of the user's namespace by keys.
         
         Returns a deferred to a tuple of functions or a single function.
@@ -110,7 +110,7 @@ class IEngineCore(zi.Interface):
         Raises NameError if any one of the functions does not exist.
         """
     
-    def getResult(i=None):
+    def get_result(i=None):
         """Get the stdin/stdout/stderr of command i.
         
         Returns a deferred to a dict with keys
@@ -142,10 +142,10 @@ class IEngineSerialized(zi.Interface):
     All methods should return deferreds.
     """
     
-    def pushSerialized(namespace):
+    def push_serialized(namespace):
         """Push a dict of keys and Serialized objects into the user's namespace."""
     
-    def pullSerialized(keys):
+    def pull_serialized(keys):
         """Pull objects by key from the user's namespace as Serialized.
         
         Returns a list of or one Serialized.
@@ -159,19 +159,19 @@ class IEngineProperties(zi.Interface):
     
     properties = zi.Attribute("A StrictDict object, containing the properties")
     
-    def setProperties(properties):
+    def set_properties(properties):
         """set properties by key and value"""
     
-    def getProperties(keys=None):
+    def get_properties(keys=None):
         """get a list of properties by `keys`, if no keys specified, get all"""
     
-    def delProperties(keys):
+    def del_properties(keys):
         """delete properties by `keys`"""
     
-    def hasProperties(keys):
+    def has_properties(keys):
         """get a list of bool values for whether `properties` has `keys`"""
 
-    def clearProperties():
+    def clear_properties():
         """clear the properties dict"""
     
 class IEngineBase(IEngineCore, IEngineSerialized, IEngineProperties):
@@ -193,19 +193,19 @@ class IEngineQueued(IEngineBase):
     All methods should return deferreds.
     """
     
-    def clearQueue():
+    def clear_queue():
         """Clear the queue."""
     
-    def queueStatus():
+    def queue_status():
         """Get the queued and pending commands in the queue."""
     
-    def registerFailureObserver(obs):
+    def register_failure_observer(obs):
         """Register an observer of pending Failures.
         
         The observer must implement IFailureObserver.
         """
     
-    def unregisterFailureObserver(obs):
+    def unregister_failure_observer(obs):
         """Unregister an observer of pending Failures."""
     
 
@@ -230,7 +230,7 @@ class StrictDict(dict):
         when you request them.  The only way to change properties os explicitly
         through the setitem and getitem of the dictionary interface.
         Example:
-        >>> e = kernel.getEngine(id)
+        >>> e = kernel.get_engine(id)
         >>> L = someList
         >>> e.properties['L'] = L
         >>> L == e.properties['L']
@@ -320,7 +320,7 @@ class EngineAPI(object):
 
 _apiDict = {}
 
-def getEngine(id):
+def get_engine(id):
     """Get the Engine API object, whcih currently just provides the properties 
     object, by ID"""
     global _apiDict
@@ -328,7 +328,7 @@ def getEngine(id):
         _apiDict[id] = EngineAPI(id)
     return _apiDict[id]
 
-def dropEngine(id):
+def drop_engine(id):
     """remove an engine"""
     global _apiDict
     if _apiDict.has_key(id):
@@ -348,7 +348,7 @@ class EngineService(object, service.Service):
         self.shell = self.shellClass()
         self.mpi = mpi
         self.id = None
-        self.properties = getEngine(self.id).properties
+        self.properties = get_engine(self.id).properties
         if self.mpi is not None:
             log.msg("MPI started with rank = %i and size = %i" % 
                 (self.mpi.rank, self.mpi.size))
@@ -358,7 +358,7 @@ class EngineService(object, service.Service):
         
     def _setID(self, id):
         self._id = id
-        self.properties = getEngine(id).properties
+        self.properties = get_engine(id).properties
         self.shell.push({'id': id})
     
     def _getID(self):
@@ -418,23 +418,23 @@ keys = %r""" % (self.id, keys)
         d = self.executeAndRaise(msg, self.shell.pull, keys)
         return d
     
-    def pushFunction(self, namespace):
+    def push_function(self, namespace):
         msg = """engine: %r
-method: pushFunction(**namespace)
+method: push_function(**namespace)
 namespace.keys() = %r""" % (self.id, namespace.keys())
-        d = self.executeAndRaise(msg, self.shell.pushFunction, namespace)
+        d = self.executeAndRaise(msg, self.shell.push_function, namespace)
         return d
     
-    def pullFunction(self, keys):
+    def pull_function(self, keys):
         msg = """engine %r
-method: pullFunction(*keys)
+method: pull_function(*keys)
 keys = %r""" % (self.id, keys)
-        d = self.executeAndRaise(msg, self.shell.pullFunction, keys)
+        d = self.executeAndRaise(msg, self.shell.pull_function, keys)
         return d
     
-    def getResult(self, i=None):
+    def get_result(self, i=None):
         msg = """engine %r
-method: getResult(i=None)
+method: get_result(i=None)
 i = %r""" % (self.id, i)
         d = self.executeAndRaise(msg, self.shell.getCommand, i)
         d.addCallback(self.addIDToResult)
@@ -450,7 +450,7 @@ method: reset()""" % self.id
         return d
     
     def kill(self):
-        dropEngine(self.id)
+        drop_engine(self.id)
         try:
             reactor.stop()
         except RuntimeError:
@@ -474,15 +474,15 @@ method: reset()""" % self.id
                 remotes.append(k)
         return defer.succeed(remotes)
     
-    def setProperties(self, properties):
+    def set_properties(self, properties):
         msg = """engine: %r
-method: setProperties(properties)
+method: set_properties(properties)
 properties.keys() = %r""" % (self.id, properties.keys())
         return self.executeAndRaise(msg, self.properties.update, properties)
     
-    def getProperties(self, keys=None):
+    def get_properties(self, keys=None):
         msg = """engine %r
-method: getProperties(keys)
+method: get_properties(keys)
 keys = %r""" % (self.id, keys)
         if keys is None:
             keys = self.properties.keys()
@@ -492,29 +492,29 @@ keys = %r""" % (self.id, keys)
         for key in keys:
             del self.properties[key]
     
-    def delProperties(self, keys):
+    def del_properties(self, keys):
         msg = """engine %r
-method: delProperties(*keys)
+method: del_properties(*keys)
 keys = %r""" % (self.id, keys)
         return self.executeAndRaise(msg, self._doDel, keys)
     
     def _doHas(self, keys):
         return [self.properties.has_key(key) for key in keys]
     
-    def hasProperties(self, keys):
+    def has_properties(self, keys):
         msg = """engine %r
-method: hasProperties(keys)
+method: has_properties(keys)
 keys = %r""" % (self.id, keys)
         return self.executeAndRaise(msg, self._doHas, keys)
     
-    def clearProperties(self):
+    def clear_properties(self):
         msg = """engine %r
-method: clearProperties()""" % (self.id)
+method: clear_properties()""" % (self.id)
         return self.executeAndRaise(msg, self.properties.clear)
     
-    def pushSerialized(self, sNamespace):
+    def push_serialized(self, sNamespace):
         msg = """engine %r
-method: pushSerialized(**sNamespace)
+method: push_serialized(**sNamespace)
 sNamespace.keys() = %r""" % (self.id, sNamespace.keys())        
         ns = {}
         for k,v in sNamespace.iteritems():
@@ -525,9 +525,9 @@ sNamespace.keys() = %r""" % (self.id, sNamespace.keys())
                 return defer.fail()
         return self.executeAndRaise(msg, self.shell.push, ns)
     
-    def pullSerialized(self, keys):
+    def pull_serialized(self, keys):
         msg = """engine %r
-method: pullSerialized(*keys)
+method: pull_serialized(*keys)
 keys = %r""" % (self.id, keys)
         if isinstance(keys, str):
             keys = [keys]
@@ -592,10 +592,10 @@ class QueuedEngine(object):
         self.currentCommand = None
         self.failureObservers = []
     
-    def _getProperties(self):
+    def _get_properties(self):
         return self.engine.properties
     
-    properties = property(_getProperties, lambda self, _: None)
+    properties = property(_get_properties, lambda self, _: None)
     # Queue management methods.  You should not call these directly
     
     def submitCommand(self, cmd):
@@ -666,7 +666,7 @@ class QueuedEngine(object):
         # queue before we clear it.  We should clear ONLY the commands that were in
         # the queue when the error occured. 
         self.currentCommand.finished = True
-        self.clearQueue()
+        self.clear_queue()
         self.currentCommand.handleError(reason)
         
         return None
@@ -688,14 +688,14 @@ class QueuedEngine(object):
         pass
         
     @queue
-    def pushFunction(self, namespace):
+    def push_function(self, namespace):
         pass      
     
     @queue
-    def pullFunction(self, keys):
+    def pull_function(self, keys):
         pass        
 
-    def getResult(self, i=None):
+    def get_result(self, i=None):
         if i is None:
             i = max(self.history.keys()+[None])
 
@@ -703,17 +703,17 @@ class QueuedEngine(object):
         # Uncomment this line to disable chaching of results
         #cmd = None
         if cmd is None:
-            return self.submitCommand(Command('getResult', i))
+            return self.submitCommand(Command('get_result', i))
         else:
             return defer.succeed(cmd)
         
     def reset(self):
-        self.clearQueue()
+        self.clear_queue()
         self.history = {}  # reset the cache - I am not sure we should do this
         return self.submitCommand(Command('reset'))
     
     def kill(self):
-        self.clearQueue()
+        self.clear_queue()
         return self.submitCommand(Command('kill'))
     
     @queue
@@ -725,11 +725,11 @@ class QueuedEngine(object):
     #---------------------------------------------------------------------------
 
     @queue
-    def pushSerialized(self, namespace):
+    def push_serialized(self, namespace):
         pass
         
     @queue
-    def pullSerialized(self, keys):
+    def pull_serialized(self, keys):
         pass
     
     #---------------------------------------------------------------------------
@@ -737,30 +737,30 @@ class QueuedEngine(object):
     #---------------------------------------------------------------------------
 
     @queue
-    def setProperties(self, namespace):
+    def set_properties(self, namespace):
         pass
         
     @queue
-    def getProperties(self, keys=None):
+    def get_properties(self, keys=None):
         pass
     
     @queue
-    def delProperties(self, keys):
+    def del_properties(self, keys):
         pass
     
     @queue
-    def hasProperties(self, keys):
+    def has_properties(self, keys):
         pass
     
     @queue
-    def clearProperties(self):
+    def clear_properties(self):
         pass
     
     #---------------------------------------------------------------------------
     # IQueuedEngine methods
     #---------------------------------------------------------------------------
     
-    def clearQueue(self):
+    def clear_queue(self):
         """Clear the queue, but doesn't cancel the currently running commmand."""
         
         for cmd in self.queued:
@@ -768,7 +768,7 @@ class QueuedEngine(object):
         self.queued = []
         return defer.succeed(None)
     
-    def queueStatus(self):
+    def queue_status(self):
         if self.currentCommand is not None:
             if self.currentCommand.finished:
                 pending = repr(None)
@@ -779,10 +779,10 @@ class QueuedEngine(object):
         dikt = {'queue':map(repr,self.queued), 'pending':pending}
         return defer.succeed(dikt)
         
-    def registerFailureObserver(self, obs):
+    def register_failure_observer(self, obs):
         self.failureObservers.append(obs)
     
-    def unregisterFailureObserver(self, obs):
+    def unregister_failure_observer(self, obs):
         self.failureObservers.remove(obs)
     
 

@@ -53,7 +53,7 @@ class DistributedSpider(object):
             self.allLinks.append(url)
             if url.startswith(self.site):
                 print '    ', url
-                self.linksWorking[url] = self.tc.run(client.Task('links = fetchAndParse(url)', resultNames=['links'], setupNS={'url': url}))
+                self.linksWorking[url] = self.tc.run(client.Task('links = fetchAndParse(url)', pull=['links'], push={'url': url}))
         
     def onVisitDone(self, result, url):
         print url, ':'
@@ -76,9 +76,9 @@ class DistributedSpider(object):
     
     def synchronize(self):
         for url, taskId in self.linksWorking.items():
-            # Calling getTaskResult with block=False will return None if the
+            # Calling get_task_result with block=False will return None if the
             # task is not done yet.  This provides a simple way of polling.
-            result = self.tc.getTaskResult(taskId, block=False)
+            result = self.tc.get_task_result(taskId, block=False)
             if result is not None:
                 self.onVisitDone(result, url)
 

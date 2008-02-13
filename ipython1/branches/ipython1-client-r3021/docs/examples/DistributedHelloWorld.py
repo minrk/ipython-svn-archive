@@ -8,7 +8,7 @@ tc = client.TaskController(('127.0.0.1', 10113))
 mec = client.MultiEngineController(('127.0.0.1', 10105))
 
 mec.execute('import time')
-helloTaskId = tc.run(client.Task('time.sleep(3) ; word = "Hello,"', resultNames=['word']))
-worldTaskId = tc.run(client.Task('time.sleep(3) ; word = "World!"', resultNames=['word']))
+helloTaskId = tc.run(client.Task('time.sleep(3) ; word = "Hello,"', pull=['word']))
+worldTaskId = tc.run(client.Task('time.sleep(3) ; word = "World!"', pull=['word']))
 
-print tc.getTaskResult(helloTaskId).ns.word, tc.getTaskResult(worldTaskId).ns.word
+print tc.get_task_result(helloTaskId).ns.word, tc.get_task_result(worldTaskId).ns.word

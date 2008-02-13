@@ -50,7 +50,7 @@ def _readHeaders(stream):
         if isinstance(line, defer.Deferred):
             line = defer.waitForDeferred(line)
             yield line
-            line = line.getResult()
+            line = line.get_result()
         #print "GOT", line
         if not line.endswith('\r\n'):
             if line == "":
@@ -176,7 +176,7 @@ class MultipartMimeStream(object):
         if isinstance(line, defer.Deferred):
             line = defer.waitForDeferred(line)
             yield line
-            line = line.getResult()
+            line = line.get_result()
         if line != self.boundary + '\r\n':
             raise MimeFormatError("Extra data before first boundary: %r looking for: %r" % (line, self.boundary + '\r\n'))
         
@@ -191,7 +191,7 @@ class MultipartMimeStream(object):
         if isinstance(line, defer.Deferred):
             line = defer.waitForDeferred(line)
             yield line
-            line = line.getResult()
+            line = line.get_result()
         
         if line == "--\r\n":
             # THE END!
@@ -254,7 +254,7 @@ def parseMultipartFormData(stream, boundary,
         if isinstance(datas, defer.Deferred):
             datas = defer.waitForDeferred(datas)
             yield datas
-            datas = datas.getResult()
+            datas = datas.get_result()
         if datas is None:
             break
         
@@ -275,7 +275,7 @@ def parseMultipartFormData(stream, boundary,
         if isinstance(x, defer.Deferred):
             x = defer.waitForDeferred(x)
             yield x
-            x = x.getResult()
+            x = x.get_result()
         if filename is None:
             # Is a normal form field
             outfile.seek(0)
@@ -344,7 +344,7 @@ def parse_urlencoded(stream, maxMem=100*1024, maxFields=1024,
         if isinstance(datas, defer.Deferred):
             datas = defer.waitForDeferred(datas)
             yield datas
-            datas = datas.getResult()
+            datas = datas.get_result()
         if datas is None:
             break
         name, value = datas

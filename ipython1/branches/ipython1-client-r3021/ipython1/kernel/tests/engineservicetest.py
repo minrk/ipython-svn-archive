@@ -28,7 +28,7 @@ from ipython1.kernel import error
 from ipython1.kernel.pickleutil import can, uncan
 import ipython1.kernel.engineservice as es
 from ipython1.core.interpreter import Interpreter
-from ipython1.testutils.testgenerator import (EngineExecuteTestGenerator, 
+from ipython1.kernel.tests.tgenerator import (EngineExecuteTestGenerator, 
     EnginePushPullTestGenerator, 
     EngineFailingExecuteTestGenerator,
     EngineGetResultTestGenerator)
@@ -107,7 +107,7 @@ class IEngineCoreTestCase(object):
     def testIEngineCoreDeferreds(self):
         d = self.engine.execute('a=5')
         d.addCallback(lambda _: self.engine.pull('a'))
-        d.addCallback(lambda _: self.engine.getResult())
+        d.addCallback(lambda _: self.engine.get_result())
         d.addCallback(lambda _: self.engine.keys())
         d.addCallback(lambda _: self.engine.push(dict(a=10)))
         return d
@@ -158,31 +158,31 @@ class IEngineCoreTestCase(object):
         
     def testPushFunction(self):
                     
-        d = self.engine.pushFunction(dict(f=testf))
+        d = self.engine.push_function(dict(f=testf))
         d.addCallback(lambda _: self.engine.execute('result = f(10)'))
         d.addCallback(lambda _: self.engine.pull('result'))
         d.addCallback(lambda r: self.assertEquals(r, testf(10)))
         return d
 
     def testPullFunction(self):
-        d = self.engine.pushFunction(dict(f=testf, g=testg))
-        d.addCallback(lambda _: self.engine.pullFunction(('f','g')))
+        d = self.engine.push_function(dict(f=testf, g=testg))
+        d.addCallback(lambda _: self.engine.pull_function(('f','g')))
         d.addCallback(lambda r: self.assertEquals(r[0](10), testf(10)))
         return d
         
     def testPushFunctionGlobal(self):
         """Make sure that pushed functions pick up the user's namespace for globals."""
         d = self.engine.push(dict(globala=globala))
-        d.addCallback(lambda _: self.engine.pushFunction(dict(g=testg)))
+        d.addCallback(lambda _: self.engine.push_function(dict(g=testg)))
         d.addCallback(lambda _: self.engine.execute('result = g(10)'))
         d.addCallback(lambda _: self.engine.pull('result'))
         d.addCallback(lambda r: self.assertEquals(r, testg(10)))
         return d
         
     def testGetResultFailure(self):
-        d = self.engine.getResult(None)
+        d = self.engine.get_result(None)
         d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
-        d.addCallback(lambda _: self.engine.getResult(10))
+        d.addCallback(lambda _: self.engine.get_result(10))
         d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
         return d
             
@@ -199,7 +199,7 @@ class IEngineCoreTestCase(object):
             dikt.pop(key)
             return dikt
         d = self.engine.execute(cmd)
-        d.addCallback(lambda _: self.engine.getResult())
+        d.addCallback(lambda _: self.engine.get_result())
         d.addCallback(lambda r: self.assertEquals(shellResult, popit(r,'id')))
         return d
 
@@ -224,10 +224,10 @@ class IEngineSerializedTestCase(object):
        
     def testIEngineSerializedDeferreds(self):
         dList = []
-        d = self.engine.pushSerialized(dict(key=newserialized.serialize(12345)))
+        d = self.engine.push_serialized(dict(key=newserialized.serialize(12345)))
         self.assert_(isinstance(d, defer.Deferred))
         dList.append(d)
-        d = self.engine.pullSerialized('key')
+        d = self.engine.pull_serialized('key')
         self.assert_(isinstance(d, defer.Deferred))
         dList.append(d)
         D = defer.DeferredList(dList)
@@ -237,17 +237,17 @@ class IEngineSerializedTestCase(object):
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]
         d = defer.succeed(None)
         for o in objs:
-            self.engine.pushSerialized(dict(key=newserialized.serialize(o)))
-            value = self.engine.pullSerialized('key')
+            self.engine.push_serialized(dict(key=newserialized.serialize(o)))
+            value = self.engine.pull_serialized('key')
             value.addCallback(lambda serial: newserialized.IUnSerialized(serial).getObject())
             d = self.assertDeferredEquals(value,o,d)
         return d
 
     def testPullSerializedFailures(self):
-        d = self.engine.pullSerialized('a')
+        d = self.engine.pull_serialized('a')
         d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
         d.addCallback(lambda _: self.engine.execute('l = lambda x: x'))
-        d.addCallback(lambda _: self.engine.pullSerialized('l'))
+        d.addCallback(lambda _: self.engine.pull_serialized('l'))
         d.addErrback(lambda f: self.assertRaises(pickle.PicklingError, f.raiseException))
         return d
 
@@ -265,24 +265,24 @@ class IEngineQueuedTestCase(object):
             
     def testIEngineQueuedDeferreds(self): 
         dList = []
-        d = self.engine.clearQueue()
+        d = self.engine.clear_queue()
         self.assert_(isinstance(d, defer.Deferred))
         dList.append(d)
-        d = self.engine.queueStatus()
+        d = self.engine.queue_status()
         self.assert_(isinstance(d, defer.Deferred))
         dList.append(d)
         D = defer.DeferredList(dList)
         return D
             
     def testClearQueue(self):
-        result = self.engine.clearQueue()
+        result = self.engine.clear_queue()
         d1 = self.assertDeferredEquals(result, None)
-        d1.addCallback(lambda _: self.engine.queueStatus())
+        d1.addCallback(lambda _: self.engine.queue_status())
         d2 = self.assertDeferredEquals(d1, {'queue':[], 'pending':'None'})
         return d2
         
     def testQueueStatus(self):
-        result = self.engine.queueStatus()
+        result = self.engine.queue_status()
         result.addCallback(lambda r: 'queue' in r and 'pending' in r)
         d = self.assertDeferredEquals(result, True)
         return d
@@ -301,41 +301,41 @@ class IEnginePropertiesTestCase(object):
     
     def testGetSetProperties(self):
         dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
-        d = self.engine.setProperties(dikt)
-        d.addCallback(lambda r: self.engine.getProperties())
+        d = self.engine.set_properties(dikt)
+        d.addCallback(lambda r: self.engine.get_properties())
         d = self.assertDeferredEquals(d, dikt)
-        d.addCallback(lambda r: self.engine.getProperties(('c',)))
+        d.addCallback(lambda r: self.engine.get_properties(('c',)))
         d = self.assertDeferredEquals(d, {'c': dikt['c']})
-        d.addCallback(lambda r: self.engine.setProperties(dict(c=False)))
-        d.addCallback(lambda r: self.engine.getProperties(('c', 'd')))
+        d.addCallback(lambda r: self.engine.set_properties(dict(c=False)))
+        d.addCallback(lambda r: self.engine.get_properties(('c', 'd')))
         d = self.assertDeferredEquals(d, dict(c=False, d=None))
         return d
     
     def testClearProperties(self):
         dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
-        d = self.engine.setProperties(dikt)
-        d.addCallback(lambda r: self.engine.clearProperties())
-        d.addCallback(lambda r: self.engine.getProperties())
+        d = self.engine.set_properties(dikt)
+        d.addCallback(lambda r: self.engine.clear_properties())
+        d.addCallback(lambda r: self.engine.get_properties())
         d = self.assertDeferredEquals(d, {})
         return d
     
     def testDelHasProperties(self):
         dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
-        d = self.engine.setProperties(dikt)
-        d.addCallback(lambda r: self.engine.delProperties(('b','e')))
-        d.addCallback(lambda r: self.engine.hasProperties(('a','b','c','d','e')))
+        d = self.engine.set_properties(dikt)
+        d.addCallback(lambda r: self.engine.del_properties(('b','e')))
+        d.addCallback(lambda r: self.engine.has_properties(('a','b','c','d','e')))
         d = self.assertDeferredEquals(d, [True, False, True, True, False])
         return d
     
     def testStrictDict(self):
-        s = """from ipython1.kernel.engineservice import getEngine
-p = getEngine(%s).properties"""%self.engine.id
+        s = """from ipython1.kernel.engineservice import get_engine
+p = get_engine(%s).properties"""%self.engine.id
         d = self.engine.execute(s)
         d.addCallback(lambda r: self.engine.execute("p['a'] = lambda _:None"))
         d = self.assertDeferredRaises(d, error.InvalidProperty)
         d.addCallback(lambda r: self.engine.execute("p['a'] = range(5)"))
         d.addCallback(lambda r: self.engine.execute("p['a'].append(5)"))
-        d.addCallback(lambda r: self.engine.getProperties('a'))
+        d.addCallback(lambda r: self.engine.get_properties('a'))
         d = self.assertDeferredEquals(d, dict(a=range(5)))
         return d
         

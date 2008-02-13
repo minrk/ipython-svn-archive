@@ -66,7 +66,7 @@ class IControllerCore(Interface):
         
     engines = Attribute("A dict of engine ids and engine instances.")
         
-    def registerEngine(remoteEngine, id=None, ip=None, port=None, 
+    def register_engine(remoteEngine, id=None, ip=None, port=None, 
         pid=None):
         """Register new remote engine.
         
@@ -88,7 +88,7 @@ class IControllerCore(Interface):
         :Returns: A dict of {'id':id} and possibly other key, value pairs.
         """
     
-    def unregisterEngine(id):
+    def unregister_engine(id):
         """Handle a disconnecting engine.
         
         :Parameters:
@@ -96,7 +96,7 @@ class IControllerCore(Interface):
                 The integer engine id of the engine to unregister.
         """
         
-    def onRegisterEngineDo(f, includeID, *args, **kwargs):
+    def on_register_engine_do(f, includeID, *args, **kwargs):
         """Call ``f(*args, **kwargs)`` when an engine is registered.
         
         :Parameters:
@@ -104,7 +104,7 @@ class IControllerCore(Interface):
                 If True the first argument to f will be the id of the engine.
         """
             
-    def onUnregisterEngineDo(f, includeID, *args, **kwargs):
+    def on_unregister_engine_do(f, includeID, *args, **kwargs):
         """Call ``f(*args, **kwargs)`` when an engine is unregistered.
         
         :Parameters:
@@ -112,13 +112,13 @@ class IControllerCore(Interface):
                 If True the first argument to f will be the id of the engine.
         """
     
-    def onRegisterEngineDoNot(f):
+    def on_register_engine_do_not(f):
         """Stop calling f on engine registration"""
     
-    def onUnregisterEngineDoNot(f):
+    def on_unregister_engine_do_not(f):
         """Stop calling f on engine unregistration"""
         
-    def onNEnginesRegisteredDo(n, f, *arg, **kwargs):
+    def on_n_engines_registered_do(n, f, *arg, **kwargs):
         """Call f(*args, **kwargs) the first time the nth engine registers."""
                     
 class IControllerBase(IControllerCore):
@@ -168,7 +168,7 @@ class ControllerService(object, service.Service):
     
     def _getEngineInfoLogFile(self):
         # Store all logs inside the ipython directory
-        ipdir = cutils.getIpythonDir()
+        ipdir = cutils.get_ipython_dir()
         pjoin = os.path.join
         logdir_base = pjoin(ipdir,'log')
         if not os.path.isdir(logdir_base):
@@ -207,25 +207,25 @@ class ControllerService(object, service.Service):
     # IControllerCore methods
     #---------------------------------------------------------------------------
         
-    def registerEngine(self, remoteEngine, id=None,
+    def register_engine(self, remoteEngine, id=None,
         ip=None, port=None, pid=None):
         """Register new engine connection"""
         
         # What happens if these assertions fail?
         assert IEngineCore.providedBy(remoteEngine), \
-            "engine passed to registerEngine doesn't provide IEngineCore"
+            "engine passed to register_engine doesn't provide IEngineCore"
         assert IEngineSerialized.providedBy(remoteEngine), \
-            "engine passed to registerEngine doesn't provide IEngineSerialized"
+            "engine passed to register_engine doesn't provide IEngineSerialized"
         assert IEngineQueued.providedBy(remoteEngine), \
-            "engine passed to registerEngine doesn't provide IEngineQueued"
+            "engine passed to register_engine doesn't provide IEngineQueued"
         assert isinstance(id, int) or id is None, \
-            "id to registerEngine must be an integer or None"
+            "id to register_engine must be an integer or None"
         assert isinstance(ip, str) or ip is None, \
-            "ip to registerEngine must be a string or None"
+            "ip to register_engine must be a string or None"
         assert isinstance(port, int) or port is None, \
-            "port to registerEngine must be an integer or None"
+            "port to register_engine must be an integer or None"
         assert isinstance(pid, int) or pid is None, \
-            "pid to registerEngine must be an integer or None"
+            "pid to register_engine must be an integer or None"
             
         desiredID = id
         if desiredID in self.engines.keys():
@@ -269,11 +269,11 @@ class ControllerService(object, service.Service):
         
         return {'id':getID}
     
-    def unregisterEngine(self, id):
+    def unregister_engine(self, id):
         """Unregister engine by id."""
         
         assert isinstance(id, int) or id is None, \
-            "id to unregisterEngine must be an integer or None"
+            "id to unregister_engine must be an integer or None"
         
         msg = "unregistered engine %i" %id
         log.msg(msg)
@@ -299,29 +299,29 @@ class ControllerService(object, service.Service):
                 except:
                     self._onUnregister.pop(i)
     
-    def onRegisterEngineDo(self, f, includeID, *args, **kwargs):
+    def on_register_engine_do(self, f, includeID, *args, **kwargs):
         assert callable(f), "f must be callable"
         self._onRegister.append((f,args,kwargs,includeID))
 
-    def onUnregisterEngineDo(self, f, includeID, *args, **kwargs):
+    def on_unregister_engine_do(self, f, includeID, *args, **kwargs):
         assert callable(f), "f must be callable"
         self._onUnregister.append((f,args,kwargs,includeID))
     
-    def onRegisterEngineDoNot(self, f):
+    def on_register_engine_do_not(self, f):
         for i in range(len(self._onRegister)):
             g = self._onRegister[i][0]
             if f == g:
                 self._onRegister.pop(i)
                 return
     
-    def onUnregisterEngineDoNot(self, f):
+    def on_unregister_engine_do_not(self, f):
         for i in range(len(self._onUnregister)):
             g = self._onUnregister[i][0]
             if f == g:
                 self._onUnregister.pop(i)
                 return
 
-    def onNEnginesRegisteredDo(self, n, f, *args, **kwargs):
+    def on_n_engines_registered_do(self, n, f, *args, **kwargs):
         if len(self.engines.keys()) >= n:
             f(*args, **kwargs)
         else:
@@ -350,25 +350,25 @@ class ControllerAdapterBase(object):
         # Needed for IControllerCore
         self.engines = self.controller.engines
         
-    def registerEngine(self, remoteEngine, id=None,
+    def register_engine(self, remoteEngine, id=None,
         ip=None, port=None, pid=None):
-        return self.controller.registerEngine(remoteEngine, 
+        return self.controller.register_engine(remoteEngine, 
             id, ip, port, pid)
     
-    def unregisterEngine(self, id):
-        return self.controller.unregisterEngine(id)
+    def unregister_engine(self, id):
+        return self.controller.unregister_engine(id)
 
-    def onRegisterEngineDo(self, f, includeID, *args, **kwargs):
-        return self.controller.onRegisterEngineDo(f, includeID, *args, **kwargs)
+    def on_register_engine_do(self, f, includeID, *args, **kwargs):
+        return self.controller.on_register_engine_do(f, includeID, *args, **kwargs)
 
-    def onUnregisterEngineDo(self, f, includeID, *args, **kwargs):
-        return self.controller.onUnregisterEngineDo(f, includeID, *args, **kwargs)        
+    def on_unregister_engine_do(self, f, includeID, *args, **kwargs):
+        return self.controller.on_unregister_engine_do(f, includeID, *args, **kwargs)        
     
-    def onRegisterEngineDoNot(self, f):
-        return self.controller.onRegisterEngineDoNot(f)
+    def on_register_engine_do_not(self, f):
+        return self.controller.on_register_engine_do_not(f)
     
-    def onUnregisterEngineDoNot(self, f):
-        return self.controller.onUnregisterEngineDoNot(f)        
+    def on_unregister_engine_do_not(self, f):
+        return self.controller.on_unregister_engine_do_not(f)        
 
-    def onNEnginesRegisteredDo(self, n, f, *args, **kwargs):
-        return self.controller.onNEnginesRegisteredDo(n, f, *args, **kwargs)
+    def on_n_engines_registered_do(self, n, f, *args, **kwargs):
+        return self.controller.on_n_engines_registered_do(n, f, *args, **kwargs)

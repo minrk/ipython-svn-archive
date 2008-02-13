@@ -31,7 +31,6 @@ from ipython1.kernel.twistedutil import blockingCallFromThread
 from ipython1.kernel import error
 from ipython1.kernel.parallelfunction import ParallelFunction
 from ipython1.kernel import map as Map
-from ipython1.kernel.pendingdeferred import PendingDeferredManager, twoPhase
 from ipython1.kernel import multiengine as me
 from ipython1.kernel.multiengine import \
     IFullMultiEngine, \
@@ -50,11 +49,11 @@ class IPendingResult(Interface):
     used in a synchronous context.
     """
     
-    resultID=Attribute("ID of the deferred on the other side")
+    result_id=Attribute("ID of the deferred on the other side")
     client=Attribute("A client that I came from")
-    r=Attribute("An attribute that is a property that calls and returns getResult")
+    r=Attribute("An attribute that is a property that calls and returns get_result")
     
-    def getResult(default=None, block=True):
+    def get_result(default=None, block=True):
         """Get a result that is pending.
                 
         :Parameters:
@@ -66,7 +65,7 @@ class IPendingResult(Interface):
         :Returns: The actual result or the default value.
         """
         
-    def addCallback(f, *args, **kwargs):
+    def add_callback(f, *args, **kwargs):
         """Add a callback that is called with the result.
         
         If the original result is foo, adding a callback will cause
@@ -76,7 +75,7 @@ class IPendingResult(Interface):
         
         Unlike Twisted's Deferred object, there is no errback chain.  Thus
         any exception raised will not be caught and handled.  User must 
-        catch these by hand when calling `getResult`.
+        catch these by hand when calling `get_result`.
         """
 
 
@@ -89,34 +88,34 @@ class PendingResult(object):
     Methods
     =======
     
-    * `getResult`
-    * `addCallback`
+    * `get_result`
+    * `add_callback`
     
     Properties
     ==========
     * `r`
     """
     
-    def __init__(self, client, resultID):
-        """Create a PendingResult with a resultID and a client instance.
+    def __init__(self, client, result_id):
+        """Create a PendingResult with a result_id and a client instance.
         
-        The client should implement `_getPendingResult(resultID, block)`.
+        The client should implement `_getPendingResult(result_id, block)`.
         """
         self.client = client
-        self.resultID = resultID
+        self.result_id = result_id
         self.called = False
         self.raised = False
         self.callbacks = []
         
-    def getResult(self, default=None, block=True):
+    def get_result(self, default=None, block=True):
         """Get a result that is pending.
                 
         This method will connect to an IMultiEngine adapted controller
         and see if the result is ready.  If the action triggers an exception
         raise it and record it.  This method records the result/exception once it is 
-        retrieved.  Calling `getResult` again will get this cached result or will
+        retrieved.  Calling `get_result` again will get this cached result or will
         re-raise the exception.  The .r attribute is a property that calls
-        `getResult` with block=True.
+        `get_result` with block=True.
         
         :Parameters:
             default
@@ -133,12 +132,12 @@ class PendingResult(object):
             else:
                 return self.result
         try:
-            result = self.client.getPendingDeferred(self.resultID, block)
+            result = self.client.get_pending_deferred(self.result_id, block)
         except error.ResultNotCompleted:
             return default
         except:
             # Reraise other error, but first record them so they can be reraised
-            # later if .r or getResult is called again.
+            # later if .r or get_result is called again.
             self.result = sys.exc_info()
             self.called = True
             self.raised = True
@@ -150,7 +149,7 @@ class PendingResult(object):
             self.called = True
             return result
         
-    def addCallback(self, f, *args, **kwargs):
+    def add_callback(self, f, *args, **kwargs):
         """Add a callback that is called with the result.
         
         If the original result is result, adding a callback will cause
@@ -160,22 +159,22 @@ class PendingResult(object):
         
         Unlike Twisted's Deferred object, there is no errback chain.  Thus
         any exception raised will not be caught and handled.  User must 
-        catch these by hand when calling `getResult`.
+        catch these by hand when calling `get_result`.
         """
         assert callable(f)
         self.callbacks.append((f, args, kwargs))
         
     def __cmp__(self, other):
-        if self.resultID < other.resultID:
+        if self.result_id < other.result_id:
             return -1
         else:
             return 1
             
     def _get_r(self):
-        return self.getResult(block=True)
+        return self.get_result(block=True)
     
     r = property(_get_r)
-    """This property is a shortcut to a `getResult(block=True)`."""
+    """This property is a shortcut to a `get_result(block=True)`."""
 
 
 #-------------------------------------------------------------------------------
@@ -183,7 +182,7 @@ class PendingResult(object):
 #-------------------------------------------------------------------------------    
     
 class ResultList(list):
-    """A subclass of list that pretty prints the output of `execute`/`getResult`."""
+    """A subclass of list that pretty prints the output of `execute`/`get_result`."""
     
     def __repr__(self):
         output = []
@@ -216,14 +215,14 @@ class ResultList(list):
 
 
 def wrapResultList(result):
-    """A function that wraps the output of `execute`/`getResult` -> `ResultList`."""
+    """A function that wraps the output of `execute`/`get_result` -> `ResultList`."""
     if len(result) == 0:
         result = [result]
     return ResultList(result)
 
 
 class QueueStatusList(list):
-    """A subclass of list that pretty prints the output of `queueStatus`."""
+    """A subclass of list that pretty prints the output of `queue_status`."""
     
     def __repr__(self):
         output = []
@@ -308,7 +307,7 @@ class InteractiveMultiEngineClient(object):
             
     def __len__(self):
         """Return the number of available engines."""
-        return len(self.getIDs())
+        return len(self.get_ids())
         
     def parallelize(self, func, targets=None, block=None):
         """Build a `ParallelFunction` object for functionName on engines.
@@ -321,7 +320,7 @@ class InteractiveMultiEngineClient(object):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
             functionName : str
                 A Python string that names a callable defined on the engines.
@@ -386,8 +385,8 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
             result = PendingResult(self, result)
         return result
     
-    def getPendingDeferred(self, deferredID, block):
-        return blockingCallFromThread(self.stpmultiengine.getPendingDeferred, deferredID, block)
+    def get_pending_deferred(self, deferredID, block):
+        return blockingCallFromThread(self.stpmultiengine.get_pending_deferred, deferredID, block)
     
     def barrier(self, pendingResults):
         """Synchronize a set of `PendingResults`.
@@ -396,15 +395,15 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
         `PendingResult` objects to complete.  More specifically, barier does
         the following.
         
-        * The `PendingResult`s are sorted by resultID.
-        * The `getResult` method is called for each `PendingResult` sequentially
+        * The `PendingResult`s are sorted by result_id.
+        * The `get_result` method is called for each `PendingResult` sequentially
           with block=True.
         * If a `PendingResult` gets a result that is an exception, it is 
-          trapped and can be re-raised later by calling `getResult` again.
+          trapped and can be re-raised later by calling `get_result` again.
         * The `PendingResult`s are flushed from the controller.
                 
         After barrier has been called on a `PendingResult`, its results can 
-        be retrieved by calling `getResult` again or accesing the `r` attribute
+        be retrieved by calling `get_result` again or accesing the `r` attribute
         of the instance.
         """
         
@@ -419,15 +418,15 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
         # Block on each PendingResult object
         for pr in prList:
             try:
-                result = pr.getResult(block=True)
+                result = pr.get_result(block=True)
             except Exception:
                 pass
     
     def flush(self, controller=False):
-        r1 = blockingCallFromThread(self.stpmultiengine.cleanOutDeferreds)
+        r1 = blockingCallFromThread(self.stpmultiengine.clean_out_deferreds)
         # Semi hack to get rid of the controllers pending deferreds as well.
         if controller:
-            r2 = blockingCallFromThread(self.stpmultiengine.multiengine.smultiengine.cleanOutDeferreds)
+            r2 = blockingCallFromThread(self.stpmultiengine.multiengine.smultiengine.clean_out_deferreds)
         return
     
     #---------------------------------------------------------------------------
@@ -442,7 +441,7 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
             result = ResultList(result)
         else:
             result = PendingResult(self, result)
-            result.addCallback(wrapResultList)
+            result.add_callback(wrapResultList)
         return result
     
     def push(self, namespace, targets=None, block=None):
@@ -454,30 +453,30 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
         targets, block = self._findTargetsAndBlock(targets, block)
         return self._blockFromThread(self.stpmultiengine.pull, keys, targets=targets, block=block)
     
-    def pushFunction(self, namespace, targets=None, block=None):
+    def push_function(self, namespace, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.pushFunction, namespace, targets=targets, block=block)
+        return self._blockFromThread(self.stpmultiengine.push_function, namespace, targets=targets, block=block)
     
-    def pullFunction(self, keys, targets=None, block=None):
+    def pull_function(self, keys, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.pullFunction, keys, targets=targets, block=block)
+        return self._blockFromThread(self.stpmultiengine.pull_function, keys, targets=targets, block=block)
     
-    def pushSerialized(self, namespace, targets=None, block=None):
+    def push_serialized(self, namespace, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.pushSerialized, namespace, targets=targets, block=block)
+        return self._blockFromThread(self.stpmultiengine.push_serialized, namespace, targets=targets, block=block)
     
-    def pullSerialized(self, keys, targets=None, block=None):
+    def pull_serialized(self, keys, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.pullSerialized, keys, targets=targets, block=block)
+        return self._blockFromThread(self.stpmultiengine.pull_serialized, keys, targets=targets, block=block)
     
-    def getResult(self, i=None, targets=None, block=None):
+    def get_result(self, i=None, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        result = blockingCallFromThread(self.stpmultiengine.getResult, i, targets=targets, block=block)
+        result = blockingCallFromThread(self.stpmultiengine.get_result, i, targets=targets, block=block)
         if block:
             result = ResultList(result)
         else:
             result = PendingResult(self, result)
-            result.addCallback(wrapResultList)
+            result.add_callback(wrapResultList)
         return result
     
     def reset(self, targets=None, block=None):
@@ -492,40 +491,40 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
         targets, block = self._findTargetsAndBlock(targets, block)
         return self._blockFromThread(self.stpmultiengine.kill, controller, targets=targets, block=block)
     
-    def clearQueue(self, targets=None, block=None):
+    def clear_queue(self, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.clearQueue, targets=targets, block=block)
+        return self._blockFromThread(self.stpmultiengine.clear_queue, targets=targets, block=block)
     
-    def queueStatus(self, targets=None, block=None):
+    def queue_status(self, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.queueStatus, targets=targets, block=block)
+        return self._blockFromThread(self.stpmultiengine.queue_status, targets=targets, block=block)
     
-    def setProperties(self, properties, targets=None, block=None):
+    def set_properties(self, properties, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.setProperties, properties, targets=targets, block=block)
+        return self._blockFromThread(self.stpmultiengine.set_properties, properties, targets=targets, block=block)
     
-    def getProperties(self, keys=None, targets=None, block=None):
+    def get_properties(self, keys=None, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.getProperties, keys, targets=targets, block=block)
+        return self._blockFromThread(self.stpmultiengine.get_properties, keys, targets=targets, block=block)
     
-    def hasProperties(self, keys, targets=None, block=None):
+    def has_properties(self, keys, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.hasProperties, keys, targets=targets, block=block)
+        return self._blockFromThread(self.stpmultiengine.has_properties, keys, targets=targets, block=block)
     
-    def delProperties(self, keys, targets=None, block=None):
+    def del_properties(self, keys, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.delProperties, keys, targets=targets, block=block)
+        return self._blockFromThread(self.stpmultiengine.del_properties, keys, targets=targets, block=block)
     
-    def clearProperties(self, targets=None, block=None):
+    def clear_properties(self, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.clearProperties, targets=targets, block=block)
+        return self._blockFromThread(self.stpmultiengine.clear_properties, targets=targets, block=block)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
-    def getIDs(self):
-        result = blockingCallFromThread(self.stpmultiengine.getIDs)
+    def get_ids(self):
+        result = blockingCallFromThread(self.stpmultiengine.get_ids)
         return result
         
     #---------------------------------------------------------------------------
@@ -551,9 +550,9 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
     # IMultiEngineExtras
     #---------------------------------------------------------------------------
     
-    def zipPull(self, keys, targets=None, block=None):
+    def zip_pull(self, keys, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
-        return self._blockFromThread(self.stpmultiengine.zipPull, keys, 
+        return self._blockFromThread(self.stpmultiengine.zip_pull, keys, 
             targets=targets, block=block)
     
     def run(self, fname, targets=None, block=None):

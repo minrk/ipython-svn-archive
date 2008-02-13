@@ -17,7 +17,7 @@ mec = client.MultiEngineController(('127.0.0.1',10105))
 
 mec.activate()
 mec.block = True
-mec.getIDs()
+mec.get_ids()
 n = len(mec)
 assert n >= 4, "Not Enough Engines: %i, 4 needed for this script"%n
 
@@ -46,7 +46,7 @@ mec.execute('import math')
 mec.execute('a = 2.0*math.pi')
 mec.execute('print a')
 
-for id in mec.getIDs():
+for id in mec.get_ids():
     mec.execute('b=%d' % id, targets=id)
 
 
@@ -91,13 +91,13 @@ mec.targets = 'all'
 
 mec.push(dict(a=10, b=30, c={'f':range(10)}))
 mec.pull(('a', 'b'))
-mec.zipPull(('a', 'b'))
+mec.zip_pull(('a', 'b'))
 
-for id in mec.getIDs():
+for id in mec.get_ids():
     mec.push(dict(a=id), targets=id)
 
 
-for id in mec.getIDs():
+for id in mec.get_ids():
     mec.pull('a', targets=id)
 
 
@@ -107,9 +107,9 @@ mec.pull('a')
 mec['a'] = 100
 mec['a']
 
-# getResult/reset/keys
+# get_result/reset/keys
 
-mec.getResult()
+mec.get_result()
 %result
 mec.keys()
 mec.reset()
@@ -122,7 +122,7 @@ except IndexError:
 
 
 %px a = 5
-mec.getResult(1)
+mec.get_result(1)
 mec.keys()
 
 # Queue management methods
@@ -131,12 +131,12 @@ mec.keys()
 prs = [mec.execute('time.sleep(2.0)',block=False) for x in range(5)]
 
 
-mec.queueStatus()
+mec.queue_status()
 time.sleep(3.0)
-mec.clearQueue()
-mec.queueStatus()
+mec.clear_queue()
+mec.queue_status()
 time.sleep(2.0)
-mec.queueStatus()
+mec.queue_status()
 
 mec.barrier(prs)
 
@@ -194,7 +194,7 @@ except ZeroDivisionError:
 # push/pull
 
 pr1 = mec.push(dict(a=10))
-pr1.getResult()
+pr1.get_result()
 pr2 = mec.pull('a')
 pr2.r
 
@@ -206,13 +206,13 @@ pd2 = mec.pull('a')
 mec.flush()
 
 try:
-    pd1.getResult()
+    pd1.get_result()
 except InvalidDeferredID:
     print "PendingResult object was cleared OK."
 
 
 try:
-    pd2.getResult()
+    pd2.get_result()
 except InvalidDeferredID:
     print "PendingResult object was cleared OK."
 

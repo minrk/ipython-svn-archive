@@ -440,7 +440,7 @@ Engine action that caused the error:
 
         self.user_ns.update(ns)
 
-    def pushFunction(self, ns):
+    def push_function(self, ns):
         # First set the func_globals for all functions to self.user_ns
         new_kwds = {}
         for k, v in ns.iteritems():
@@ -544,7 +544,7 @@ Engine action that caused the error:
             raise TypeError("keys must be a strong or a list/tuple of strings")
         return result
 
-    def pullFunction(self, keys):
+    def pull_function(self, keys):
         return self.pull(keys)
 
     #### Interactive user API ##################################################

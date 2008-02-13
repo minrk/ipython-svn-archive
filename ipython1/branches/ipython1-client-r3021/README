@@ -154,7 +154,7 @@ First import the ipython1 client and create a RemoteController instance::
 	
 Now you can see what engines are registered with the controller::
 
-	>>> rc.getIDs()
+	>>> rc.get_ids()
 	[0,1,2,3]
 
 If this works, you are ready to go.  Start next by looking at the docstrings

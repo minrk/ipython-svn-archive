@@ -204,7 +204,7 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
         response = waitForDeferred(put(source_stream, destination_filepath, destination_uri))
         yield response
         try:
-            response = response.getResult()
+            response = response.get_result()
         finally:
             source_stream.close()
             source_file.close()
@@ -219,7 +219,7 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
             #
             response = waitForDeferred(delete(destination_uri, destination_filepath))
             yield response
-            response = response.getResult()
+            response = response.get_result()
             checkResponse(response, "delete", responsecode.NO_CONTENT)
             success_code = responsecode.NO_CONTENT
         else:
@@ -286,7 +286,7 @@ def copy(source_filepath, destination_filepath, destination_uri, depth):
                 else:
                     response = waitForDeferred(copy(FilePath(source_path), FilePath(destination_path), destination_uri, depth))
                     yield response
-                    response = response.getResult()
+                    response = response.get_result()
                     checkResponse(response, "copy", responsecode.NO_CONTENT)
 
             for subdir in subdirs:
@@ -357,7 +357,7 @@ def move(source_filepath, source_uri, destination_filepath, destination_uri, dep
         #
         response = waitForDeferred(delete(destination_uri, destination_filepath))
         yield response
-        response = response.getResult()
+        response = response.get_result()
         checkResponse(response, "delete", responsecode.NO_CONTENT)
 
         success_code = responsecode.NO_CONTENT
@@ -383,12 +383,12 @@ def move(source_filepath, source_uri, destination_filepath, destination_uri, dep
 
     response = waitForDeferred(copy(source_filepath, destination_filepath, destination_uri, depth))
     yield response
-    response = response.getResult()
+    response = response.get_result()
     checkResponse(response, "copy", responsecode.CREATED, responsecode.NO_CONTENT)
 
     response = waitForDeferred(delete(source_uri, source_filepath))
     yield response
-    response = response.getResult()
+    response = response.get_result()
     checkResponse(response, "delete", responsecode.NO_CONTENT)
 
     yield success_code
@@ -434,7 +434,7 @@ def put(stream, filepath, uri=None):
         else:
             response = waitForDeferred(delete(uri, filepath))
             yield response
-            response = response.getResult()
+            response = response.get_result()
             checkResponse(response, "delete", responsecode.NO_CONTENT)
 
         success_code = responsecode.NO_CONTENT
@@ -456,7 +456,7 @@ def put(stream, filepath, uri=None):
     try:
         x = waitForDeferred(readIntoFile(stream, resource_file))
         yield x
-        x.getResult()
+        x.get_result()
     except:
         raise HTTPError(statusForFailure(
             Failure(),

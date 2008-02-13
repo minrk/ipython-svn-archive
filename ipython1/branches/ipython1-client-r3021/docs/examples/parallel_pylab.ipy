@@ -24,7 +24,7 @@ from ipython1.kernel import client
 
 # Get an IPython1 client
 rc = client.MultiEngineController(('127.0.0.1',10105))
-rc.getIDs()
+rc.get_ids()
 rc.activate()
 
 # Create random arrays on the engines

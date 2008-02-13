@@ -61,7 +61,7 @@ def report_DAV__expand_property(self, request, expand_property):
         if (namespace, name) == (dav_namespace, "allprop"):
             all_properties = waitForDeferred(self.listAllProp(request))
             yield all_properties
-            all_properties = all_properties.getResult()
+            all_properties = all_properties.get_result()
 
             for all_property in all_properties:
                 properties[all_property.qname()] = property
@@ -79,13 +79,13 @@ def report_DAV__expand_property(self, request, expand_property):
     for property in properties:
         my_properties = waitForDeferred(self.listProperties(request))
         yield my_properties
-        my_properties = my_properties.getResult()
+        my_properties = my_properties.get_result()
 
         if property in my_properties:
             try:
                 value = waitForDeferred(self.readProperty(property, request))
                 yield value
-                value = value.getResult()
+                value = value.get_result()
 
                 if isinstance(value, davxml.HRef):
                     raise NotImplementedError()
