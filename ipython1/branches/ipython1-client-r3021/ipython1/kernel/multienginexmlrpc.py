@@ -357,7 +357,8 @@ class XMLRPCSynchronousMultiEngineClient(object):
     
     def cleanOutDeferreds(self):
         d = self._proxy.callRemote('cleanOutDeferreds', deferredID, block)
-        d.addCallback(self.unpackage)        
+        d.addCallback(self.unpackage)
+        return d       
     
     def _addDeferredIDCallback(self, did, callback, *args, **kwargs):
         self._deferredIDCallbacks[did] = (callback, args, kwargs)

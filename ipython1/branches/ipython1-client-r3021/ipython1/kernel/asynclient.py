@@ -16,10 +16,17 @@ def AsynMultiEngineController(addr):
     smultiengine = SynchronousMultiEngine(addr)
     return me.IFullSynchronousTwoPhaseMultiEngine(smultiengine)
 
-AsynRemoteController = AsynMultiEngineController
-
 defaultAddress = (co['client']['connectToMultiEngineControllerOn']['ip'],
     co['client']['connectToMultiEngineControllerOn']['port'])
 """The (ip,port) tuple of the default MultiEngineController."""
 
+def AsynTaskController(addr):
+    """The default TaskController class obtained from config information."""
+    _task_controller = kernelConfigManager._import(co['client']['TaskControllerImplementation'])
+    return _task_controller(addr)
 
+defaultTaskAddress = (co['client']['connectToTaskControllerOn']['ip'],
+    co['client']['connectToTaskControllerOn']['port'])
+"""The (ip,port) tuple of the default task controller."""
+
+defaultTaskController = defaultTaskAddress

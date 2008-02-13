@@ -17,20 +17,18 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-# from twisted.python import failure
+from zope.interface import Interface, implements
+from twisted.python import components, log
 
-from ipython1.kernel import task
+from ipython1.kernel.twistedutil import blockingCallFromThread
+from ipython1.kernel import task, error
 
 #-------------------------------------------------------------------------------
 # Connecting Task Client
 #-------------------------------------------------------------------------------
 
 class InteractiveTaskClient(object):
-    """XML-RPC version of the Connecting TaskControllerClient"""
     
-    ############
-    # ConnectingTaskController
-    ############
     def irun(self, *args, **kwargs):
         """Run a task on the `TaskController`.
         
@@ -60,11 +58,47 @@ class InteractiveTaskClient(object):
             
         :Returns: A `TaskResult` object.      
         """
-        block = kwargs.pop('block', self.block)
+        block = kwargs.pop('block', False)
         if len(args) == 1 and isinstance(args[0], task.Task):
             t = args[0]
         else:
             t = task.Task(*args, **kwargs)
         taskID = self.run(t)
         print "TaskID = %i"%taskID
-        return self.getTaskResult(taskID, block)
+        if block:
+            return self.getTaskResult(taskID, block)
+        else:
+            return taskID
+
+class IBlockingTaskClient(Interface):
+    pass
+
+
+class BlockingTaskClient(InteractiveTaskClient):
+    
+    implements(IBlockingTaskClient)
+    
+    def __init__(self, task_controller):
+        self.task_controller = task_controller
+        self.block = True
+        
+    def run(self, task):
+        return blockingCallFromThread(self.task_controller.run, task)
+    
+    def getTaskResult(self, taskID, block=False):
+        return blockingCallFromThread(self.task_controller.getTaskResult,
+            taskID, block)
+    
+    def abort(self, taskID):
+        return blockingCallFromThread(self.task_controller.abort, taskID)
+    
+    def barrier(self, taskIDs):
+        return blockingCallFromThread(self.task_controller.barrier, taskIDs)
+    
+    def spin(self):
+        return blockingCallFromThread(self.task_controller.spin)
+
+components.registerAdapter(BlockingTaskClient,
+            task.ITaskController, IBlockingTaskClient)
+
+

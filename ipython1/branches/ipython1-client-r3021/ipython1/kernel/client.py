@@ -5,6 +5,8 @@
 from ipython1.kernel import codeutil
 import ipython1.kernel.magic
 from ipython1.kernel.multiengineclient import IFullBlockingMultiEngineClient
+from ipython1.kernel.taskclient import IBlockingTaskClient
+from ipython1.kernel.task import Task, Dependency
 from ipython1.kernel.twistedutil import ReactorInThread
 from ipython1.kernel.config import configManager as kernelConfigManager
 
@@ -28,16 +30,20 @@ defaultAddress = (co['client']['connectToMultiEngineControllerOn']['ip'],
 
 defaultRemoteController = defaultAddress
 
-from ipython1.kernel.task import Task, Dependency
 
-TaskController = kernelConfigManager._import(co['client']['TaskController'])
-"""The default TaskController class obtained from config information."""
+
+def TaskController(addr):
+    """The default TaskController class obtained from config information."""
+    _task_controller = kernelConfigManager._import(co['client']['TaskControllerImplementation'])
+    return IBlockingTaskClient(_task_controller(addr))
 
 defaultTaskAddress = (co['client']['connectToTaskControllerOn']['ip'],
     co['client']['connectToTaskControllerOn']['port'])
 """The (ip,port) tuple of the default task controller."""
 
 defaultTaskController = defaultTaskAddress
+
+
 
 rit = ReactorInThread()
 rit.setDaemon(True)

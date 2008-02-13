@@ -46,7 +46,7 @@ def main():
     (opts, args) = parser.parse_args()
     assert opts.tmax >= opts.tmin, "tmax must not be smaller than tmin"
     
-    rc = client.RemoteController((opts.controller, opts.meport))
+    rc = client.MultiEngineController((opts.controller, opts.meport))
     tc = client.TaskController((opts.controller, opts.tport))
     
     rc.block=True

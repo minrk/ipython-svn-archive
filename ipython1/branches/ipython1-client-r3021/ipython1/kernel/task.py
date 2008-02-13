@@ -574,7 +574,7 @@ class ITaskController(cs.IControllerBase):
         :Returns: the integer ID of the task
         """
     
-    def getTaskResult(taskID):
+    def getTaskResult(taskID, block=False):
         """Get the result of a task by its ID.
         
         :Parameters:

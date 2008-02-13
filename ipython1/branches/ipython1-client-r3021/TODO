@@ -4,6 +4,11 @@ Things To Do
 
 Actions:
 
-* Move all the IPython1 documentation to REST text files.
-* Refactor the exceptions in xmlrpcutil?
+* Decide if it should be barrier(*args) or barrier(args)
+* Write test_taskxmlrpc
+* Write tests for Properties in multiengine
+* Work on Task interfaces
+* Change coding conventions of interfaces
+* Update ChangeLog describing new APIs
+* Update documentation
 
