@@ -407,7 +407,7 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
         be retrieved by calling `getResult` again or accesing the `r` attribute
         of the instance.
         """
-
+        
         # Convert to list for sorting and check class type 
         prList = list(pendingResults)
         for pr in prList:
@@ -504,7 +504,7 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
         targets, block = self._findTargetsAndBlock(targets, block)
         return self._blockFromThread(self.stpmultiengine.setProperties, properties, targets=targets, block=block)
     
-    def getProperties(self, keys, targets=None, block=None):
+    def getProperties(self, keys=None, targets=None, block=None):
         targets, block = self._findTargetsAndBlock(targets, block)
         return self._blockFromThread(self.stpmultiengine.getProperties, keys, targets=targets, block=block)
     

@@ -162,7 +162,7 @@ class IEngineProperties(zi.Interface):
     def setProperties(properties):
         """set properties by key and value"""
     
-    def getProperties(keys):
+    def getProperties(keys=None):
         """get a list of properties by `keys`, if no keys specified, get all"""
     
     def delProperties(keys):
@@ -741,7 +741,7 @@ class QueuedEngine(object):
         pass
         
     @queue
-    def getProperties(self, keys):
+    def getProperties(self, keys=None):
         pass
     
     @queue

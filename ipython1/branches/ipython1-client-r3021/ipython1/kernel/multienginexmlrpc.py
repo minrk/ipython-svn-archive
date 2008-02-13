@@ -255,6 +255,8 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     
     @packageResult
     def xmlrpc_getProperties(self, request, keys, targets, block):
+        if keys=='None':
+            keys=None
         return self.smultiengine.getProperties(keys, targets=targets, block=block)
     
     @packageResult
@@ -266,8 +268,8 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         return self.smultiengine.delProperties(keys, targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_clearProperties(self, request, keys, targets, block):
-        return self.smultiengine.clearProperties(keys, targets=targets, block=block)
+    def xmlrpc_clearProperties(self, request, targets, block):
+        return self.smultiengine.clearProperties(targets=targets, block=block)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
@@ -455,7 +457,9 @@ class XMLRPCSynchronousMultiEngineClient(object):
         d.addCallback(self.unpackage)
         return d
     
-    def getProperties(self, keys, targets='all', block=True):
+    def getProperties(self, keys=None, targets='all', block=True):
+        if keys==None:
+            keys='None'
         d = self._proxy.callRemote('getProperties', keys, targets, block)
         d.addCallback(self.unpackage)
         return d
@@ -471,7 +475,7 @@ class XMLRPCSynchronousMultiEngineClient(object):
         return d
     
     def clearProperties(self, targets='all', block=True):
-        d = self._proxy.callRemote('clearProperties', keys, targets, block)
+        d = self._proxy.callRemote('clearProperties', targets, block)
         d.addCallback(self.unpackage)
         return d
     

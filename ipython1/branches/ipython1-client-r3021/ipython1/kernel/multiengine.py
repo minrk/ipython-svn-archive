@@ -183,7 +183,7 @@ class IEngineMultiplexer(Interface):
     def setProperties(properties, targets='all'):
         """set properties by key and value"""
     
-    def getProperties(keys, targets='all'):
+    def getProperties(keys=None, targets='all'):
         """get a list of properties by `keys`, if no keys specified, get all"""
     
     def delProperties(keys, targets='all'):
@@ -405,7 +405,7 @@ class MultiEngine(ControllerAdapterBase):
                               consumeErrors=1,
                               logErrors=0)  
     
-    def getProperties(self, keys, targets='all'):
+    def getProperties(self, keys=None, targets='all'):
         log.msg("Getting properties on %r" % targets)
         try:
             engines = self.engineList(targets)
@@ -586,7 +586,7 @@ class SynchronousMultiEngine(PendingDeferredManager):
         return self.multiengine.setProperties(properties, targets)
     
     @twoPhase
-    def getProperties(self, keys, targets='all'):
+    def getProperties(self, keys=None, targets='all'):
         return self.multiengine.getProperties(keys, targets)
     
     @twoPhase
@@ -598,8 +598,8 @@ class SynchronousMultiEngine(PendingDeferredManager):
         return self.multiengine.delProperties(keys, targets)
     
     @twoPhase
-    def clearProperties(self, keys, targets='all'):
-        return self.multiengine.clearProperties(keys, targets)
+    def clearProperties(self, targets='all'):
+        return self.multiengine.clearProperties(targets)
     
     #---------------------------------------------------------------------------
     # IMultiEngine methods
@@ -696,7 +696,7 @@ class TwoPhaseMultiEngineAdaptor(object):
     def setProperties(self, properties, targets='all'):
         return self._submitThenBlock('setProperties', properties, targets)
     
-    def getProperties(self, keys, targets='all'):
+    def getProperties(self, keys=None, targets='all'):
         return self._submitThenBlock('getProperties', keys, targets)
     
     def hasProperties(self, keys, targets='all'):

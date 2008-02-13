@@ -431,7 +431,7 @@ class PBEngineReferenceFromService(pb.Referenceable, object):
         else:
             return self.service.setProperties(namespace).addErrback(packageFailure)
     
-    def remote_getProperties(self, keys):
+    def remote_getProperties(self, keys=None):
         """Pull a subdict of the properties for this engine by keys"""
         d = self.service.getProperties(keys)
         d.addCallback(pickle.dumps, 2)
@@ -715,7 +715,7 @@ class EngineFromReference(object):
                 return d.addCallback(self.checkReturnForFailure)
         return d
     
-    def getProperties(self, keys):
+    def getProperties(self, keys=None):
         d = self.callRemote('getProperties', keys)
         d.addCallback(self.checkReturnForFailure)
         d.addCallback(pickle.loads)

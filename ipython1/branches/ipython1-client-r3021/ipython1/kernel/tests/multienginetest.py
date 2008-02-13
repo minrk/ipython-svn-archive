@@ -355,9 +355,36 @@ class IMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda r: self.assert_(isinstance(r[0],tuple)))
         return d
     
-    def testProperties(self):
-        """This test needs to be implemented!"""
-        pass
+    def testGetSetProperties(self):
+        self.addEngine(4)
+        dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
+        d = self.multiengine.setProperties(dikt)
+        d.addCallback(lambda r: self.multiengine.getProperties())
+        d.addCallback(lambda r: self.assertEquals(r, 4*[dikt]))
+        d.addCallback(lambda r: self.multiengine.getProperties(('c',)))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[{'c': dikt['c']}]))
+        d.addCallback(lambda r: self.multiengine.setProperties(dict(c=False)))
+        d.addCallback(lambda r: self.multiengine.getProperties(('c', 'd')))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[dict(c=False, d=None)]))
+        return d
+    
+    def testClearProperties(self):
+        self.addEngine(4)
+        dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
+        d = self.multiengine.setProperties(dikt)
+        d.addCallback(lambda r: self.multiengine.clearProperties())
+        d.addCallback(lambda r: self.multiengine.getProperties())
+        d.addCallback(lambda r: self.assertEquals(r, 4*[{}]))
+        return d
+    
+    def testDelHasProperties(self):
+        self.addEngine(4)
+        dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
+        d = self.multiengine.setProperties(dikt)
+        d.addCallback(lambda r: self.multiengine.delProperties(('b','e')))
+        d.addCallback(lambda r: self.multiengine.hasProperties(('a','b','c','d','e')))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[[True, False, True, True, False]]))
+        return d
 
 
 #-------------------------------------------------------------------------------
@@ -546,11 +573,7 @@ class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
         d.addCallback(lambda r: self.assert_(isinstance(r[0],tuple)))
         return d
-    
-    def testProperties(self):
-        """This test needs to be implemented!"""
-        pass
-    
+        
     def testGetIDs(self):
         self.addEngine(1)
         d = self.multiengine.getIDs()
@@ -558,6 +581,70 @@ class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda _: self.addEngine(3))
         d.addCallback(lambda _: self.multiengine.getIDs())
         d.addCallback(lambda r: self.assertEquals(r, [0,1,2,3]))
+        return d
+    
+    def testGetSetProperties(self):
+        self.addEngine(4)
+        dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
+        d = self.multiengine.setProperties(dikt)
+        d.addCallback(lambda r: self.multiengine.getProperties())
+        d.addCallback(lambda r: self.assertEquals(r, 4*[dikt]))
+        d.addCallback(lambda r: self.multiengine.getProperties(('c',)))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[{'c': dikt['c']}]))
+        d.addCallback(lambda r: self.multiengine.setProperties(dict(c=False)))
+        d.addCallback(lambda r: self.multiengine.getProperties(('c', 'd')))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[dict(c=False, d=None)]))
+        
+        # Non-blocking
+        d.addCallback(lambda r: self.multiengine.setProperties(dikt, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.multiengine.getProperties(block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[dikt]))
+        d.addCallback(lambda r: self.multiengine.getProperties(('c',), block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[{'c': dikt['c']}]))
+        d.addCallback(lambda r: self.multiengine.setProperties(dict(c=False), block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.multiengine.getProperties(('c', 'd'), block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[dict(c=False, d=None)]))
+        return d
+    
+    def testClearProperties(self):
+        self.addEngine(4)
+        dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
+        d = self.multiengine.setProperties(dikt)
+        d.addCallback(lambda r: self.multiengine.clearProperties())
+        d.addCallback(lambda r: self.multiengine.getProperties())
+        d.addCallback(lambda r: self.assertEquals(r, 4*[{}]))
+        
+        # Non-blocking
+        d.addCallback(lambda r: self.multiengine.setProperties(dikt, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.multiengine.clearProperties(block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.multiengine.getProperties(block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[{}]))
+        return d
+    
+    def testDelHasProperties(self):
+        self.addEngine(4)
+        dikt = dict(a=5, b='asdf', c=True, d=None, e=range(5))
+        d = self.multiengine.setProperties(dikt)
+        d.addCallback(lambda r: self.multiengine.delProperties(('b','e')))
+        d.addCallback(lambda r: self.multiengine.hasProperties(('a','b','c','d','e')))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[[True, False, True, True, False]]))
+
+        # Non-blocking
+        d.addCallback(lambda r: self.multiengine.setProperties(dikt, block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.multiengine.delProperties(('b','e'), block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.multiengine.hasProperties(('a','b','c','d','e'), block=False))
+        d.addCallback(lambda did: self.multiengine.getPendingDeferred(did, True))
+        d.addCallback(lambda r: self.assertEquals(r, 4*[[True, False, True, True, False]]))
         return d
 
 
