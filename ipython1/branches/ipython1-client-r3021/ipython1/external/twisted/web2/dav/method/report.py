@@ -53,7 +53,7 @@ def http_REPORT(self, request):
     try:
         doc = waitForDeferred(davXMLFromStream(request.stream))
         yield doc
-        doc = doc.get_result()
+        doc = doc.getResult()
     except ValueError, e:
         log.err("Error while handling REPORT body: %s" % (e,))
         raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, str(e)))

@@ -52,7 +52,7 @@ def http_PROPPATCH(self, request):
     try:
         doc = waitForDeferred(davXMLFromStream(request.stream))
         yield doc
-        doc = doc.get_result()
+        doc = doc.getResult()
     except ValueError, e:
         log.err("Error while handling PROPPATCH body: %s" % (e,))
         raise HTTPError(StatusResponse(responsecode.BAD_REQUEST, str(e)))
@@ -96,12 +96,12 @@ def http_PROPPATCH(self, request):
                 """
                 has = waitForDeferred(self.hasProperty(property, request))
                 yield has
-                has = has.get_result()
+                has = has.getResult()
 
                 if has:
                     oldProperty = waitForDeferred(self.readProperty(property, request))
                     yield oldProperty
-                    oldProperty.get_result()
+                    oldProperty.getResult()
 
                     def undo():
                         return self.writeProperty(oldProperty, request)
@@ -112,7 +112,7 @@ def http_PROPPATCH(self, request):
                 try:
                     x = waitForDeferred(action(property, request))
                     yield x
-                    x.get_result()
+                    x.getResult()
                 except ValueError, e:
                     # Convert ValueError exception into HTTPError
                     responses.add(
@@ -140,14 +140,14 @@ def http_PROPPATCH(self, request):
                 for property in properties:
                     ok = waitForDeferred(do(self.writeProperty, property))
                     yield ok
-                    ok = ok.get_result()
+                    ok = ok.getResult()
                     if not ok:
                         gotError = True
             elif isinstance(setOrRemove, davxml.Remove):
                 for property in properties:
                     ok = waitForDeferred(do(self.removeProperty, property))
                     yield ok
-                    ok = ok.get_result()
+                    ok = ok.getResult()
                     if not ok:
                         gotError = True
             else:
@@ -163,7 +163,7 @@ def http_PROPPATCH(self, request):
         for action in undoActions:
             x = waitForDeferred(action())
             yield x
-            x.get_result()
+            x.getResult()
         raise
 
     #
@@ -174,7 +174,7 @@ def http_PROPPATCH(self, request):
         for action in undoActions:
             x = waitForDeferred(action())
             yield x
-            x.get_result()
+            x.getResult()
         responses.error()
 
     #

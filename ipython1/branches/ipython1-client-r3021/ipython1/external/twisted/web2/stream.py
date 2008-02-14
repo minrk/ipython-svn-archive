@@ -974,7 +974,7 @@ class BufferedStream(object):
             newdata = self.stream.read()
             if isinstance(newdata, defer.Deferred):
                 newdata = defer.waitForDeferred(newdata)
-                yield newdata; newdata = newdata.get_result()
+                yield newdata; newdata = newdata.getResult()
             
             if newdata is None:
                 # End Of File
