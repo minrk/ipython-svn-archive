@@ -17,6 +17,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 from twisted.internet import defer
+from ipython1.kernel import error
 
 #-------------------------------------------------------------------------------
 # The main class of this module
@@ -149,36 +150,6 @@ class EngineGetResultTestGenerator(TestGenerator):
 #-------------------------------------------------------------------------------
 # Classes for testing multiengine methods
 #-------------------------------------------------------------------------------
-
-class MultiEngineExecuteAllTestGenerator(TestGenerator):
-    """A class for testing execute on the Engine."""
-    
-    def __init__(self, inputs, testCaseInstance, targets='all'):
-        self.targets = targets
-        self.shell = Interpreter()
-        outputs = [self.shell.execute(c) for c in inputs]
-        TestGenerator.__init__(self, inputs, outputs, testCaseInstance)
-        
-    def compare(self, actual, computed):
-        for c in computed:
-            actual['id'] = c['id']
-            self.testCaseInstance.assertEquals(actual, c)
-        
-    def computeOutput(self, i):
-        return self.testCaseInstance.multiengine.execute(i, targets=self.targets)
-        
-class MultiEngineFailingExecuteTestGenerator(TestGenerator):
-    """A class for testing execute on the Engine."""
-    
-    def __init__(self, inputs, outputs, testCaseInstance, targets='all'):
-        self.targets = targets
-        TestGenerator.__init__(self, inputs, outputs, testCaseInstance)
-        
-    def compare(self, actual, computed):
-        return self.testCaseInstance.assertRaises(actual, computed.raiseException)
-        
-    def computeOutput(self, i):
-        return self.testCaseInstance.multiengine.execute(i, targets=self.targets)
 
 class MultiEngineGetResultTestGenerator(TestGenerator):
     """A class for testing execute on the Engine."""

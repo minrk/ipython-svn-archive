@@ -16,6 +16,12 @@ from ipython1.kernel.util import printer
 # Tests
 #-------------------------------------------------------------------------------
 
+def _raise_it(f):
+    try:
+        f.raiseException()
+    except CompositeError, e:
+        e.raise_exception() 
+
 class TaskTestBase(object):
     
     def addEngine(self, n=1):
@@ -60,6 +66,8 @@ class ITaskControllerTestCase(TaskTestBase):
         d.addCallback(lambda _: self.tc.run(t))
         d.addCallback(lambda tid: self.tc.get_task_result(tid,block=True))
         d.addCallback(lambda tr: tr.failure)
+        # Why are these raising CompositeErrors, which should only be in the 
+        # multiengine?!?!
         d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
         d.addCallback(lambda _:self.multiengine.pull('a', targets=0))
         d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))

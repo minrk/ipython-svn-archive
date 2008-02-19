@@ -32,7 +32,7 @@ for K in K_vals:
     for sigma in sigma_vals:
         t = client.Task(task_string, 
             push=dict(sigma=sigma,K=K),
-            pull=['vp','ap','vc','ac','sigma','K'])
+            pull=('vp','ap','vc','ac','sigma','K'))
         taskids.append(tc.run(t))
 
 print "Submitted tasks: ", taskids

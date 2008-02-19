@@ -212,26 +212,8 @@ class Interpreter(object):
         that are loaded into self.tracback_trap.formatters.
         """
         tbinfo = self.tbHandler.text(et,ev,tb)
-
-        nv = ["""\
-%s
-***************************************************************************
-Exception in the IPython Engine.""" % ev]
-
-        if message:
-            nv.append("""
-
-Engine action that caused the error:
-
-%s
-
-""" % message )
-        nv.append("""Full traceback:
-%s
-***************************************************************************
-        """ % tbinfo)
-
-        return et, ''.join(nv), tb
+        ev._ipython_traceback_text = tbinfo
+        return et, ev, tb
         
     def execute(self, commands, raiseException=True):
         """ Execute some IPython commands.

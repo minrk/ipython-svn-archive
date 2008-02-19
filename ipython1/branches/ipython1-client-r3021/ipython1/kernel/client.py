@@ -9,6 +9,7 @@ from ipython1.kernel.taskclient import IBlockingTaskClient
 from ipython1.kernel.task import Task, Dependency
 from ipython1.kernel.twistedutil import ReactorInThread
 from ipython1.kernel.config import configManager as kernelConfigManager
+from ipython1.kernel.error import CompositeError
 
 co = kernelConfigManager.get_config_obj()
 

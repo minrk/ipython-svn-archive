@@ -290,7 +290,8 @@ class MultiEngine(ControllerAdapterBase):
                 If the method doesn't exist on one of the engines.
         """
         targets = kwargs.pop('targets')
-        log.msg("Performing %s on %r" % (methodName, targets))
+        # log.msg("Performing %s on %r" % (methodName, targets))
+        log.msg("Performing %s(%r, %r) on %r" % (methodName, args, kwargs, targets))
         # This will and should raise if targets is not valid!
         engines = self.engineList(targets)
         dList = []
@@ -301,7 +302,7 @@ class MultiEngine(ControllerAdapterBase):
             else:
                 raise AttributeError("Engine %i does not have method %s" % (e.id, methodName))
         return dList
-    
+        
     def _performOnEnginesAndGatherBoth(self, methodName, *args, **kwargs):
         """Called _performOnEngines and wraps result/exception into deferred."""
         try:
@@ -309,10 +310,18 @@ class MultiEngine(ControllerAdapterBase):
         except (error.InvalidEngineID, AttributeError, KeyError, error.NoEnginesRegistered):
             return defer.fail(failure.Failure())
         else:
-            return gatherBoth(dList, 
-                              fireOnOneErrback=1,
-                              consumeErrors=1,
-                              logErrors=0)
+            # Having fireOnOneErrback is causing problems with the determinacy
+            # of the system.  Basically, once a single engine has errbacked, this
+            # method returns.  In some cases, this will cause client to submit
+            # another command.  Because the previous command is still running
+            # on some engines, this command will be queued.  When those commands
+            # then errback, the second command will raise QueueCleared.  Ahhh!
+            d = gatherBoth(dList, 
+                           fireOnOneErrback=0,
+                           consumeErrors=1,
+                           logErrors=0)
+            d.addCallback(error.collect_exceptions, methodName)
+            return d
               
     #---------------------------------------------------------------------------
     # General IMultiEngine methods
@@ -374,10 +383,12 @@ class MultiEngine(ControllerAdapterBase):
         else:
             for d in dList:
                 d.addCallback(self._logSizes)
-            return gatherBoth(dList, 
-                              fireOnOneErrback=1,
-                              consumeErrors=1,
-                              logErrors=0)  
+            d = gatherBoth(dList, 
+                           fireOnOneErrback=0,
+                           consumeErrors=1,
+                           logErrors=0)
+            d.addCallback(error.collect_exceptions, 'pull_serialized')
+            return d  
                               
     def _logSizes(self, listOfSerialized):
         if isinstance(listOfSerialized, (list, tuple)):
@@ -400,10 +411,12 @@ class MultiEngine(ControllerAdapterBase):
             dList = []
             for e in engines:
                 dList.append(e.queue_status().addCallback(lambda s:(e.id, s)))
-            return gatherBoth(dList, 
-                              fireOnOneErrback=1,
-                              consumeErrors=1,
-                              logErrors=0)  
+            d = gatherBoth(dList, 
+                           fireOnOneErrback=0,
+                           consumeErrors=1,
+                           logErrors=0)
+            d.addCallback(error.collect_exceptions, 'queue_status')
+            return d 
     
     def get_properties(self, keys=None, targets='all'):
         log.msg("Getting properties on %r" % targets)
@@ -413,10 +426,12 @@ class MultiEngine(ControllerAdapterBase):
             return defer.fail(failure.Failure())            
         else:
             dList = [e.get_properties(keys) for e in engines]
-            return gatherBoth(dList, 
-                              fireOnOneErrback=1,
-                              consumeErrors=1,
-                              logErrors=0)
+            d = gatherBoth(dList, 
+                           fireOnOneErrback=0,
+                           consumeErrors=1,
+                           logErrors=0)
+            d.addCallback(error.collect_exceptions, 'get_properties')
+            return d
     
     def set_properties(self, properties, targets='all'):
         log.msg("Setting properties on %r" % targets)
@@ -426,10 +441,12 @@ class MultiEngine(ControllerAdapterBase):
             return defer.fail(failure.Failure())            
         else:
             dList = [e.set_properties(properties) for e in engines]
-            return gatherBoth(dList, 
-                              fireOnOneErrback=1,
-                              consumeErrors=1,
-                              logErrors=0)
+            d = gatherBoth(dList, 
+                           fireOnOneErrback=0,
+                           consumeErrors=1,
+                           logErrors=0)
+            d.addCallback(error.collect_exceptions, 'set_properties')
+            return d
     
     def has_properties(self, keys, targets='all'):
         log.msg("Checking properties on %r" % targets)
@@ -439,10 +456,12 @@ class MultiEngine(ControllerAdapterBase):
             return defer.fail(failure.Failure())            
         else:
             dList = [e.has_properties(keys) for e in engines]
-            return gatherBoth(dList, 
-                              fireOnOneErrback=1,
-                              consumeErrors=1,
-                              logErrors=0)
+            d = gatherBoth(dList, 
+                           fireOnOneErrback=0,
+                           consumeErrors=1,
+                           logErrors=0)
+            d.addCallback(error.collect_exceptions, 'has_properties')
+            return d
     
     def del_properties(self, keys, targets='all'):
         log.msg("Deleting properties on %r" % targets)
@@ -452,10 +471,12 @@ class MultiEngine(ControllerAdapterBase):
             return defer.fail(failure.Failure())            
         else:
             dList = [e.del_properties(keys) for e in engines]
-            return gatherBoth(dList, 
-                              fireOnOneErrback=1,
-                              consumeErrors=1,
-                              logErrors=0)
+            d = gatherBoth(dList, 
+                           fireOnOneErrback=0,
+                           consumeErrors=1,
+                           logErrors=0)
+            d.addCallback(error.collect_exceptions, 'del_properties')
+            return d
     
     def clear_properties(self, targets='all'):
         log.msg("Clearing properties on %r" % targets)
@@ -465,10 +486,12 @@ class MultiEngine(ControllerAdapterBase):
             return defer.fail(failure.Failure())            
         else:
             dList = [e.clear_properties() for e in engines]
-            return gatherBoth(dList, 
-                              fireOnOneErrback=1,
-                              consumeErrors=1,
-                              logErrors=0)
+            d = gatherBoth(dList, 
+                           fireOnOneErrback=0,
+                           consumeErrors=1,
+                           logErrors=0)
+            d.addCallback(error.collect_exceptions, 'clear_properties')
+            return d
 
 
 components.registerAdapter(MultiEngine,
@@ -845,9 +868,10 @@ class TwoPhaseMultiEngineCoordinator(object):
                 d.addCallback(lambda did: self.smultiengine.get_pending_deferred(did, True))
                 d_list.append(d)
             d = gatherBoth(d_list,
-                              fireOnOneErrback=1,
+                              fireOnOneErrback=0,
                               consumeErrors=1,
                               logErrors=0)
+            d.addCallback(error.collect_exceptions, 'scatter')
             d.addCallback(lambda lop: [i[0] for i in lop])
             return d
         
@@ -869,9 +893,10 @@ class TwoPhaseMultiEngineCoordinator(object):
             mapClass = Map.styles[style]
             mapObject = mapClass()
             d = gatherBoth(d_list,
-                           fireOnOneErrback=1,
+                           fireOnOneErrback=0,
                            consumeErrors=1,
                            logErrors=0)
+            d.addCallback(error.collect_exceptions, 'gather')
             d.addCallback(lambda lop: [i[0] for i in lop])
             return d.addCallback(mapObject.joinPartitions)
         

@@ -23,11 +23,11 @@ from ipython1.kernel.error import NotDefined
 from ipython1.testutils import util
 from ipython1.kernel import newserialized
 from ipython1.kernel.util import printer
-from ipython1.kernel.error import InvalidEngineID, NoEnginesRegistered
+from ipython1.kernel.error import (InvalidEngineID, 
+    NoEnginesRegistered,
+    CompositeError)
 from ipython1.kernel.tests.engineservicetest import validCommands, invalidCommands
-from ipython1.kernel.tests.tgenerator import (MultiEngineExecuteAllTestGenerator,
-    MultiEngineFailingExecuteTestGenerator,
-    MultiEngineGetResultTestGenerator)
+from ipython1.kernel.tests.tgenerator import MultiEngineGetResultTestGenerator
 from ipython1.core.interpreter import Interpreter
 
 
@@ -75,6 +75,12 @@ def isdid(did):
     return True
 
 
+def _raise_it(f):
+    try:
+        f.raiseException()
+    except CompositeError, e:
+        e.raise_exception()
+
 #-------------------------------------------------------------------------------
 # IMultiEngineTestCase
 #-------------------------------------------------------------------------------
@@ -119,8 +125,6 @@ class IMultiEngineTestCase(IMultiEngineBaseTestCase):
          d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
          d.addCallback(lambda _: self.multiengine.pull('a', targets=badID))     
          d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
-         # d.addCallback(lambda _: self.multiengine.get_result(targets=badID))   
-         # d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))
          d.addCallback(lambda _: self.multiengine.reset(targets=badID))     
          d.addErrback(lambda f: self.assertRaises(InvalidEngineID, f.raiseException))   
          d.addCallback(lambda _: self.multiengine.keys(targets=badID))     
@@ -154,35 +158,37 @@ class IMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda _: self.multiengine.queue_status(targets=badID))
         d.addErrback(lambda f: self.assertRaises(NoEnginesRegistered, f.raiseException))
         return d        
+        
+    def runExecuteAll(self, d, cmd, shell):
+        actual = shell.execute(cmd)
+        d.addCallback(lambda _: self.multiengine.execute(cmd))
+        def compare(result):
+            for r in result:
+                actual['id'] = r['id']
+                self.assertEquals(r, actual)            
+        d.addCallback(compare)
     
-    def testExecute(self):
+    def testExecuteAll(self):
         self.addEngine(4)
-        targets = [0,3]
-        eTester = MultiEngineExecuteAllTestGenerator(validCommands, self, targets)
-        d = eTester.performTests()
+        d = defer.Deferred()
+        shell = Interpreter()
+        for cmd in validCommands:
+                self.runExecuteAll(d, cmd, shell)
+        d.callback(None)
         return d
+    
+    # The following two methods show how to do parametrized
+    # tests.  This is really slick!  Same is used above.
+    def runExecuteFailures(self, d, cmd, exc):
+        d.addCallback(lambda _: self.multiengine.execute(cmd))
+        d.addErrback(lambda f: self.assertRaises(exc, _raise_it, f))
     
     def testExecuteFailures(self):
         self.addEngine(4)
-        targets = [0,2]
-        cmds = [x[0] for x in invalidCommands]
-        excpts = [x[1] for x in invalidCommands]
-        eTester = MultiEngineFailingExecuteTestGenerator(cmds, excpts, self, targets)
-        d = eTester.performTests()
-        return d
-    
-    def testExecuteAll(self):
-        self.addEngine(2)
-        eTester = MultiEngineExecuteAllTestGenerator(validCommands, self)
-        d = eTester.performTests()
-        return d
-    
-    def testExecuteAllFailures(self):
-        self.addEngine(4)
-        cmds = [x[0] for x in invalidCommands]
-        excpts = [x[1] for x in invalidCommands]
-        eTester = MultiEngineFailingExecuteTestGenerator(cmds, excpts, self)
-        d = eTester.performTests()
+        d = defer.Deferred()
+        for cmd, exc in invalidCommands:
+                self.runExecuteFailures(d, cmd, exc)
+        d.callback(None)
         return d
     
     def testPushPull(self):
@@ -202,7 +208,7 @@ class IMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda r: self.assertEquals(r, [objs[3]]))
         d.addCallback(lambda _: self.multiengine.reset(targets=0))
         d.addCallback(lambda _: self.multiengine.pull('a', targets=0))
-        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addErrback(lambda f: self.assertRaises(NameError, _raise_it, f))
         d.addCallback(lambda _: self.multiengine.push(dict(a=10,b=20)))
         d.addCallback(lambda _: self.multiengine.pull(('a','b')))
         d.addCallback(lambda r: self.assertEquals(r, [[10,20]]))
@@ -249,7 +255,7 @@ class IMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda r: self.assertEquals(r, [10, range(5)]))
         d.addCallback(lambda _: self.multiengine.reset(targets=0))
         d.addCallback(lambda _: self.multiengine.pull_serialized('a', targets=0))
-        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addErrback(lambda f: self.assertRaises(NameError, _raise_it, f))
         return d
         
         objs = [10,"hi there",1.2342354,{"p":(1,2)}]    
@@ -260,12 +266,24 @@ class IMultiEngineTestCase(IMultiEngineBaseTestCase):
             value.addCallback(lambda serial: newserialized.IUnSerialized(serial[0]).getObject())
             d = self.assertDeferredEquals(value,o,d)
         return d
-            
-    def testGetResult(self):
+    
+    def runGetResultAll(self, d, cmd, shell):
+        actual = shell.execute(cmd)
+        d.addCallback(lambda _: self.multiengine.execute(cmd))
+        d.addCallback(lambda _: self.multiengine.get_result())
+        def compare(result):
+            for r in result:
+                actual['id'] = r['id']
+                self.assertEquals(r, actual)            
+        d.addCallback(compare)
+    
+    def testGetResultAll(self):
         self.addEngine(4)
-        targets = [0,1,2]
-        eTester = MultiEngineGetResultTestGenerator(validCommands, self, targets)
-        d = eTester.performTests()
+        d = defer.Deferred()
+        shell = Interpreter()
+        for cmd in validCommands:
+                self.runGetResultAll(d, cmd, shell)
+        d.callback(None)
         return d
     
     def testGetResultDefault(self):
@@ -285,9 +303,9 @@ class IMultiEngineTestCase(IMultiEngineBaseTestCase):
     def testGetResultFailure(self):
         self.addEngine(1)
         d = self.multiengine.get_result(None, targets=0)
-        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
+        d.addErrback(lambda f: self.assertRaises(IndexError, _raise_it, f))
         d.addCallback(lambda _: self.multiengine.get_result(10, targets=0))
-        d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
+        d.addErrback(lambda f: self.assertRaises(IndexError, _raise_it, f))
         return d    
     
     def testPushFunction(self):
@@ -534,7 +552,7 @@ class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda r: self.assertEquals(r, dikt.values()))
         d.addCallback(lambda _: self.multiengine.reset(targets=0))
         d.addCallback(lambda _: self.multiengine.pull_serialized('a', targets=0))
-        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addErrback(lambda f: self.assertRaises(NameError, _raise_it, f))
         
         # Non-blocking mode
         d.addCallback(lambda r: self.multiengine.push_serialized(dict(a=sdikt['a']), targets=0, block=False))
@@ -554,7 +572,7 @@ class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda _: self.multiengine.reset(targets=0))
         d.addCallback(lambda _: self.multiengine.pull_serialized('a', targets=0, block=False))
         d.addCallback(lambda did: self.multiengine.get_pending_deferred(did, True))
-        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addErrback(lambda f: self.assertRaises(NameError, _raise_it, f))
         return d
     
     def testClearQueue(self):
@@ -664,6 +682,8 @@ class IMultiEngineCoordinatorTestCase(object):
         d = self.multiengine.scatter('a', range(16))
         d.addCallback(lambda r: self.multiengine.gather('a'))
         d.addCallback(lambda r: self.assertEquals(r, range(16)))
+        d.addCallback(lambda _: self.multiengine.gather('asdf'))
+        d.addErrback(lambda f: self.assertRaises(NameError, _raise_it, f))
         return d
     
     def testScatterGatherNumpy(self):

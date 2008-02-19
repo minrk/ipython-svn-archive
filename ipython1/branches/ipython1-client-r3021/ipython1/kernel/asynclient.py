@@ -5,6 +5,7 @@
 from ipython1.kernel import codeutil
 from ipython1.kernel.config import configManager as kernelConfigManager
 from ipython1.kernel import multiengine as me
+from ipython1.kernel.error import CompositeError
 
 co = kernelConfigManager.get_config_obj()
 

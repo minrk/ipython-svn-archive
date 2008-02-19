@@ -67,7 +67,11 @@ def blockingCallFromThread(f, *a, **kw):
     reactor.callFromThread(_callFromThread)
     result = queue.get()
     if isinstance(result, failure.Failure):
-        result.raiseException()
+        # This makes it easier for the debugger to get access to the instance
+        try:
+            result.raiseException()
+        except Exception, e:
+            raise e
     return result
 
 

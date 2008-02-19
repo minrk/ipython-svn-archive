@@ -15,6 +15,7 @@ mec = client.MultiEngineController(('127.0.0.1',10105))
 # Setup
 #-------------------------------------------------------------------------------
 
+mec.reset()
 mec.activate()
 mec.block = True
 mec.get_ids()
@@ -58,7 +59,7 @@ except InvalidEngineID:
     print "Caught invalid engine ID OK."
 
 try:
-    mec.execute('1/0')
+    mec.execute('a=5; 1/0')
 except ZeroDivisionError:
     print "Caught 1/0 correctly."
 
@@ -70,6 +71,7 @@ try:
 except ZeroDivisionError:
     print "Caught 1/0 correctly."
 
+
 %autopx
 
 import numpy
@@ -78,6 +80,7 @@ a = a+a.transpose()
 print numpy.linalg.eigvals(a)
 
 %autopx
+
 
 mec.targets = [0,2]
 %px a = 5
