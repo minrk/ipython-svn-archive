@@ -60,7 +60,7 @@ except InvalidEngineID:
 
 try:
     mec.execute('a=5; 1/0')
-except ZeroDivisionError:
+except CompositeError:
     print "Caught 1/0 correctly."
 
 
@@ -68,7 +68,7 @@ except ZeroDivisionError:
 %px print a, b
 try:
     %px 1/0
-except ZeroDivisionError:
+except CompositeError:
     print "Caught 1/0 correctly."
 
 
@@ -120,7 +120,7 @@ mec.keys()
 
 try:
     %result
-except IndexError:
+except CompositeError:
     print "Caught IndexError ok."
 
 
@@ -146,7 +146,7 @@ mec.barrier(prs)
 for pr in prs:
     try:
         pr.r
-    except QueueCleared:
+    except CompositeError:
         print "Caught QueueCleared OK."
 
 
@@ -176,7 +176,7 @@ pr2 = mec.execute('c = sets.Set()')
 mec.barrier((pr1, pr2))
 try:
     pr1.r
-except ZeroDivisionError:
+except CompositeError:
     print "Caught ZeroDivisionError OK."
 
 pr = mec.execute("print 'hi'")
@@ -185,13 +185,13 @@ pr.r
 pr = mec.execute('1/0')
 try:
     pr.r
-except ZeroDivisionError:
+except CompositeError:
     print "Caught ZeroDivisionError OK."
 
 # Make sure we can reraise it!
 try:
     pr.r
-except ZeroDivisionError:
+except CompositeError:
     print "Caught ZeroDivisionError OK."  
 
 # push/pull

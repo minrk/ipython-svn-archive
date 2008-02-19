@@ -4,6 +4,7 @@
 # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/511509
 
 import heapq
+from ipython1.kernel.error import CompositeError
 
 def mergesort(list_of_lists, key=None):
     """ Perform an N-way merge operation on sorted lists.
@@ -78,9 +79,14 @@ def remote_iterator(rc,engine,name):
     rc.execute('%s = iter(%s)' % (iter_name,name), targets=engine)
     tpl = '_tmp = %s.next()' % iter_name
     while True:
-        rc.execute(tpl, targets=engine)
-        yield rc.pull('_tmp', targets=engine)[0]
-
+        try:
+            rc.execute(tpl, targets=engine)
+            result = rc.pull('_tmp', targets=engine)[0]
+        # This causes the StopIteration exception to be raised.
+        except CompositeError, e:
+            e.raise_exception()
+        else:
+            yield result
 
 # Main, interactive testing
 if __name__ == '__main__':
