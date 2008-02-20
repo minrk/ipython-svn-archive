@@ -1,28 +1,25 @@
 ===========================
-IPython Kernel Installation
+IPython1 Installation
 ===========================
-
-:Author:  Brian E. Granger
-:Contact: ellisonbg@gmail.com
-:Date: September 20, 2007
 
 .. contents::
 
 Introduction
 ============
 
-IPython1 enables parallel applications to be developed in Python.  This INSTALL file describes the steps required to install ipython1.  For a description of ipython1, see the README file in this directory.
+IPython1 enables parallel applications to be developed in Python. This INSTALL
+file describes the steps required to install ipython1. For a description of
+ipython1, see the README file in this directory.
 
 Please let us know if you have problems installing ipython1 or any of its
-dependencies.  Currently we have tested ipython1 extensively with Python 2.4
-and 2.5.  It will not work on Python 2.3.
+dependencies. Currently we have tested ipython1 extensively with Python 2.4 and
+2.5. It will not work on Python 2.3.
 
 IPython1 kernel requires four things:
 
-1. Setuptools
-2. IPython
-3. Zope Interface
-4. Twisted
+1. IPython
+2. Zope Interface
+3. Twisted
 
 It also has the following optional dependencies:
 
@@ -31,11 +28,13 @@ It also has the following optional dependencies:
 3. sqlalchemy (used for the prototype ipython1 notebook)
 4. mpi4py (for MPI support)
 
-If you are comfortable using subversion and installing Python packages, you can probably just get and install these packages without further instructions If not, read on.
+If you are comfortable using subversion and installing Python packages, you can
+probably just get and install these packages without further instructions If not,
+read on.
 
-To get these packages, you will need Subversion (or svn).  Many systems will
-already have Subversion installed; if you need more information about
-Subversion, see http://svnbook.red-bean.com/.
+To get these packages, you will need Subversion (or svn). Many systems will
+already have Subversion installed; if you need more information about Subversion,
+see http://svnbook.red-bean.com/.
 
 Installation Instructions
 =========================
@@ -47,14 +46,9 @@ changing to their source directory and issuing the command:
 
 	python setup.py install
 	
-To install into the site-packages directory of your system Python you will need admin privileges.  More information about installing Python packages can be found in the Python documentation at http://docs.python.org/.
-
-Setuptools
-----------
-
-IPython1 uses setuptools for installation.  Currently this is required, but 
-eventually, we will likely make this optional.  We recommend using the latest
-development of setuptools (svn trunk).
+To install into the site-packages directory of your system Python you will need
+admin privileges. More information about installing Python packages can be found
+in the Python documentation at http://docs.python.org/.
 
 IPython
 -------
@@ -86,7 +80,9 @@ tarball) and twisted.
 IPython1
 ---------
 
-First, you should remove any old versions of ipython1 from your site-packages directory.  The latest prototype of the IPython kernel can be retrieved from the IPython Subversion repository with the command:
+First, you should remove any old versions of ipython1 from your site-packages
+directory. The latest prototype of the IPython kernel can be retrieved from the
+IPython Subversion repository with the command:
 
 ::
 
@@ -94,29 +90,34 @@ First, you should remove any old versions of ipython1 from your site-packages di
 
 If you want to do development on ipython1 and want to always run the svn version of ipython1, you should install using the command::
 
-	python setup.py develop
+	python setupegg.py develop
 	
-Then each time you do an "svn up" you will not need to reinstall ipython1.
+Then each time you do an "svn up" you will not need to reinstall ipython1.  This requires
+that you have setuptools installed.
 
 Configuration
 =============
 
-IPython1 has a configuration system.  When you run ipython1 for the first
-time, the default configuration files are written you your ~/.ipython directory.  The basic config files are ipython1.core.ini, ipython1.kernel.ini and ipython1.notebook.ini.  Command line options override these configuration files.
+IPython1 has a configuration system. When you run ipython1 for the first time,
+the default configuration files are written you your ~/.ipython directory. The
+basic config files are ipython1.core.ini, ipython1.kernel.ini and
+ipython1.notebook.ini. Command line options override these configuration files.
 
 Testing
 =======
 
-Once you have completed the installation of the IPython1 kernel you can run our test suite with the command:
-
-::
+Once you have completed the installation of the IPython1 kernel you can run our test suite with the command::
 
 	trial ipython1
 	
+Or::
+
+	nosetests -v ipython1
+	
 The trial command is part of Twisted and allows asynchronous network based
-applications to be tested using python's unittest framework.  Please let us
-know if the tests do not pass.  The best way to get in touch with us is on the
-IPython developer mailing list:
+applications to be tested using python's unittest framework. Please let us know
+if the tests do not pass. The best way to get in touch with us is on the IPython
+developer mailing list:
 
 http://projects.scipy.org/mailman/listinfo/ipython-dev
 
@@ -124,16 +125,18 @@ http://projects.scipy.org/mailman/listinfo/ipython-dev
 MPI Support
 ===========
 
-IPython1 includes MPI support, which enables the ipython1 engines to
-pass data between each other using MPI.  Our recommendation is to use mpi4py 
-for MPI support, but ipython1 supports any code (Python or in a compiled language) that uses MPI.  The simplest way of getting started with MPI is to 
-install an MPI implementation (we recommend OpenMPI) and mpi4py (mpi4py.scipy.org) and then start the engines using::
+IPython1 includes MPI support, which enables the ipython1 engines to pass data
+between each other using MPI. Our recommendation is to use mpi4py for MPI
+support, but ipython1 supports any code (Python or in a compiled language) that
+uses MPI. The simplest way of getting started with MPI is to install an MPI
+implementation (we recommend OpenMPI) and mpi4py (mpi4py.scipy.org) and then
+start the engines using::
 
 	mpirun -n 4 ipengine --mpi=mpi4py
 	
-This will automatically import mpi4py and make sure that MPI_Init is called
-at the right time.  We also have built in support for PyTrilinos, which
-can be used (assuming PyTrilinos is installed) by starting the engines with::
+This will automatically import mpi4py and make sure that MPI_Init is called at
+the right time. We also have built in support for PyTrilinos, which can be used
+(assuming PyTrilinos is installed) by starting the engines with::
 
 	mpirun -n 4 ipengine --mpi=pytrilinos
 
