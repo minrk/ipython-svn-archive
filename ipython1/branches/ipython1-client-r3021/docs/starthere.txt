@@ -1,0 +1,29 @@
+======================
+IPython1 documentation
+======================
+
+Welcome to the current documentation for IPython1.
+
+User documentation
+==================
+
+The following is a list of documentation that users of IPython1 should start
+with:
+
+	* `Installation guide`_
+	* `Parallel computing with IPython1`_
+	* `List of changes that are backwards incompatible`_
+
+.. _Installation guide: ./install
+.. _Parallel computing with IPython1: ./parallel_intro
+.. _List of changes that are backwards incompatible: ./backwards_incompatible
+
+Developer documentation
+=======================
+
+We also have documentation for people who want to contribute to the development of
+IPython1:
+
+	* `Developer's guide`_
+
+.. _Developer's guide: ./development

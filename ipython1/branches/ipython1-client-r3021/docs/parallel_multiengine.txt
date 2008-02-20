@@ -1,0 +1,32 @@
+=================================
+IPython1's MultiEngine Interface
+=================================
+
+The best source of documentation about how to use the controller and engines
+is the docstrings of kernel modules.  Eventually, we will provide more 
+details in this readme.
+
+The RemoteController client
+---------------------------
+
+Once a controller and engines are running you can connect to it using the 
+`RemoteController` class.  This class provides a client for the MultiEngine
+interface.  Don't worry about what this means for now, it will become
+clear as you use it.
+
+First import the ipython1 client and create a RemoteController instance::
+
+	>>> import ipython1.kernel.api as kernel
+	>>> rc = kernel.RemoteController(('127.0.0.1',10105))
+	
+Now you can see what engines are registered with the controller::
+
+	>>> rc.get_ids()
+	[0,1,2,3]
+
+If this works, you are ready to go.  Start next by looking at the docstrings
+for the following commands:
+
+1. execute
+2. push/pull
+3. scatter/gather

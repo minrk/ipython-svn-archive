@@ -1,0 +1,17 @@
+The TaskController interface to the controller presents the engines as a fault
+tolerant, dynamic load-balancing system.  You can even have a
+RemoteController and a TaskController simultaneously connected to the same
+controller.  But, be warned, the tasks will share the namespace on the 
+engines with the RemoteController.  But, this is actually a feature that allows
+you to do some really nice things.
+
+First create a TaskController objects::
+
+	>>> import ipython1.kernel.api as kernel
+	>>> tc = kernel.TaskController(('127.0.0.1',10113))
+	
+Note that the port is different than the RemoteController.  Now you can 
+start submitting tasks by passing instances of kernel.Task to tc.run.
+
+It is best to check out the examples of using the task farming stuff in 
+ipython1/doc/examples.

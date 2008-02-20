@@ -1,53 +1,91 @@
-Overview
-========
+======================================
+Using IPython1 For parallel computing
+======================================
 
-This file gives an overview of IPython1.  IPython1 has a sophisticated and powerful architecture for parallel and distributed computing.  This architecture abstracts out parallelism in a very general way.  This enables ipython1 to support many different styles of parallelism including::
+This file gives an overview of IPython1. IPython1 has a sophisticated and
+powerful architecture for parallel and distributed computing. This
+architecture abstracts out parallelism in a very general way, which
+enables IPython1 to support many different styles of parallelism
+including:
 
-1. Single program, multiple data (SPMD), message passing applications.
-2. Task farming.
-3. General Multiple Program, Multiple Data (MPMD) parallelism.
-4. Data parallel.
-5. Combinations of these approaches.
-5. Custom user defined approaches.
+	1. Single program, multiple data (SPMD) parallelism.
+	2. Multiple program, multiple data (MPMD) parallelism.
+	3. Message passing using ``MPI``.
+	4. Task farming.
+	5. Data parallel.
+	6. Combinations of these approaches.
+	7. Custom user defined approaches.
 
-For installation instructions, see the INSTALL file in this directory.
+Most importantly, IPython1 enables all types of parallel applications to
+be developed, executed, debugged and monitored *interactively*. Hence,
+the ``I`` in IPython.
 
-The IPython1 architecture consists of three components: the IPython Engine, the IPython Controller and various Controller Clients.
+Architecture overview
+=====================
 
-IPython Engine
---------------
+The IPython1 architecture consists of three components:
+
+	* The IPython Engine.
+	* The IPython Controller.
+	* Various Controller Clients.
+
+IPython engine
+---------------
 
 The IPython Engine is a Python instance that takes Python commands over a
-network connection.  Eventually, the IPython Engine will be a full IPython
-interpreter, but for now, it is a regular Python interpreter.  The Engine can also handle incoming and outgoing Python objects sent over a network connection.  When multiple Engines are started, parallel and distributed computing becomes possible.  An important feature of an IPython Engine is that it blocks while user code is being executed.  Read on for how the Controller solves this problem to expose a clean asynchronous API to the user.
+network connection. Eventually, the IPython Engine will be a full IPython
+interpreter, but for now, it is a regular Python interpreter. The Engine
+can also handle incoming and outgoing Python objects sent over a network
+connection.  When multiple Engines are started, parallel and distributed
+computing becomes possible. An important feature of an IPython Engine is
+that it blocks while user code is being executed. Read on for how the
+IPython Controller solves this problem to expose a clean asynchronous API
+to the user.
 
 IPython Controller
 ------------------
 
-The IPython Controller provides an interface for working with a set of Engines.  At an abstract level, the Controller is an object and process to which IPython Engines can connect.  For each connected Engine, the Controller manages a queue of commands in incoming/outgoing Python objects.  While the Engines themselves block when user code is run, the Controller hides that from the user to provide a fully asynchronous interface to a set of computing resources.  Because the Controller listens on a network port for Engines to connect to it, it must be started before any Engines are started.  
+The IPython Controller provides an interface for working with a set of
+Engines. At an general level, the Controller is a process to which
+IPython Engines can connect. For each connected Engine, the Controller
+manages a queue. All actions that can be performed on the Engine go
+through this queue. While the Engines themselves block when user code is
+run, the Controller hides that from the user to provide a fully
+asynchronous interface to a set of Engines. Because the Controller
+listens on a network port for Engines to connect to it, it must be
+started before any Engines are started.  
 
-The Controller also provides a single point of contact for users who wish to
-utilize the Engines connected to the Controller.  There are different ways 
-(ways=interfaces) of working with a controller.  Currently we have two
-default interfaces to the controller:  RemoteController and TaskController.
+The Controller also provides a single point of contact for users who wish
+to utilize the Engines connected to the Controller. There are different
+ways of working with a controller. In IPython these ways correspond to different interfaces that the Controller is adapted to.  Currently we have two default interfaces to the Controller: 
 
-Additional interfaces can be added to to enable other styles of parallelism.
+	* The MultiEngine interface.
+	* The Task interface.
+
+Advanced users can easily add new custom interfaces to enable other
+styles of parallelism. 
+
+.. note:: 
+
+	A single Controller and set of Engines can be accessed 
+	through multiple interfaces simultaneously.  This opens the
+	door for lots of interesting things.  
 
 Controller Clients
 ------------------
 
-For each controller interface, there is a corresponding client.  These clients
-allow users to interact with a set of engines through the interface that
-the controller exposes.
+For each Controller interface, there is a corresponding client. These
+clients allow users to interact with a set of engines through the
+interface.
 
 Getting Started
 ===============
 
-To use IPython1 for parallel computing, you need to start one instance of the
-controller and one or more instances of the engine.  The controller and each
-engine can run on different machines or on the same machine.  Because of this,
-there are many different possibilities for setting up the ip addresses and
-ports used by the various processes.
+To use IPython1 for parallel computing, you need to start one instance of
+the Controller and one or more instances of the Engine. The controller
+and each engine can run on different machines or on the same machine.
+Because of this, there are many different possibilities for setting up
+the ip addresses and ports used by the various processes.
 
 Starting the controller and engine on your local machine
 --------------------------------------------------------
@@ -58,14 +96,15 @@ easiest way of doing this is using the ``ipcluster`` command::
 
 	ipcluster -n 4
 	
-This will start an IPython controller and then 4 engines that connect to the 
-controller.  Lastly, the script will print out the Python commands that you
-can use to connect to the controller.  It is that easy.
+This will start an IPython controller and then 4 engines that connect to
+the controller. Lastly, the script will print out the Python commands
+that you can use to connect to the controller. It is that easy.
 
-Underneath the hood, the ``ipcluster`` script uses two other top-level scripts
-that you can also use yourself.  These scripts are ``ipcontroller``, which
-starts the controller and ``ipengine`` which starts an engine.  To use these
-scripts to start things on your local machine, do the following.
+Underneath the hood, the ``ipcluster`` script uses two other top-level
+scripts that you can also use yourself. These scripts are
+``ipcontroller``, which starts the controller and ``ipengine`` which
+starts an engine. To use these scripts to start things on your local
+machine, do the following.
 
 First start the controller::
 
@@ -75,9 +114,11 @@ Next, start however many instances of the engine you want to use::
 
 	ipengine &
 
-*WARNING*: the order of the above operations is very important.  You *must*
- start the controller before the engines, since the engines connect to the
- controller as they get started.
+.. warning:: 
+	
+	The order of the above operations is very important.  You *must*
+ 	start the Controller before the engines, since the Engines connect 
+	to the Controller as they get started.
 
 On some platforms you may need to give these commands in the form
 ``(ipcontroller &)`` and ``(ipengine &)`` for them to work properly.  The
@@ -120,57 +161,69 @@ don't call MPI_Init() or use the MPI API.  This is supported on modern MPI
 implementations like OpenMPI.  On a system with MPI installed you can do::
 
 	mpirun -n 4 ipengine --controller-port=10000 --controller-ip=host0
+
+Log files
+---------
+
+All of the components of IPython1 have log files associated with them.  These
+log files can be extremely useful in debugging problems with your setup
+of IPython1 and can be found in the directory ``~/.ipython/log``.
+
+Security
+--------
+
+
+
+Next Steps
+==========
+
+Once you have started the IPython Controller and one or more Engines, you are
+ready to use the Engines to do somnething useful.  To make sure everything is
+working correctly, try the following commands::
+
+	In [1]: from ipython1.kernel import client
 	
-
-Using the Controller and Engines from a Client
-==============================================
-
-The best source of documentation about how to use the controller and engines
-is the docstrings of kernel modules.  Eventually, we will provide more 
-details in this readme.
-
-The RemoteController client
----------------------------
-
-Once a controller and engines are running you can connect to it using the 
-`RemoteController` class.  This class provides a client for the MultiEngine
-interface.  Don't worry about what this means for now, it will become
-clear as you use it.
-
-First import the ipython1 client and create a RemoteController instance::
-
-	>>> import ipython1.kernel.api as kernel
-	>>> rc = kernel.RemoteController(('127.0.0.1',10105))
+	In [2]: mec = client.MultiEngineController(('127.0.0.1',10105))
 	
-Now you can see what engines are registered with the controller::
-
-	>>> rc.get_ids()
-	[0,1,2,3]
-
-If this works, you are ready to go.  Start next by looking at the docstrings
-for the following commands:
-
-1. execute
-2. push/pull
-3. scatter/gather
-
-The TaskController client
--------------------------
-
-The TaskController interface to the controller presents the engines as a fault
-tolerant, dynamic load-balancing system.  You can even have a
-RemoteController and a TaskController simultaneously connected to the same
-controller.  But, be warned, the tasks will share the namespace on the 
-engines with the RemoteController.  But, this is actually a feature that allows
-you to do some really nice things.
-
-First create a TaskController objects::
-
-	>>> import ipython1.kernel.api as kernel
-	>>> tc = kernel.TaskController(('127.0.0.1',10113))
+	In [4]: mec.get_ids()
+	Out[4]: [0, 1, 2, 3]
 	
-Note that the port is different than the RemoteController.  Now you can 
-start submitting tasks by passing instances of kernel.Task to tc.run.
+	In [5]: mec.execute('print "Hello World"')
+	Out[5]: 
+	<Results List>
+	[0] In [1]: print "Hello World"
+	[0] Out[1]: Hello World
 
-It is best to check out the examples of using the task farming stuff in 
-ipython1/doc/examples.
+	[1] In [1]: print "Hello World"
+	[1] Out[1]: Hello World
+
+	[2] In [1]: print "Hello World"
+	[2] Out[1]: Hello World
+
+	[3] In [1]: print "Hello World"
+	[3] Out[1]: Hello World
+
+If this works, you are ready to learn more about the `MultiEngine`_ and
+`Task`_ interfaces to the Controller.
+
+.. _MultiEngine: ./parallel_multiengine
+.. _Task: ./parallel_task
+
+
+The simplest way of getting started with MPI is to install an MPI implementation
+(we recommend `Open MPI`_) and `mpi4py`_ and then start the engines using the
+``mpirun`` command::
+
+	mpirun -n 4 ipengine --mpi=mpi4py
+	
+This will automatically import `mpi4py`_ and make sure that `MPI_Init` is called at
+the right time. We also have built in support for `PyTrilinos`_, which can be used
+(assuming `PyTrilinos`_ is installed) by starting the engines with::
+
+	mpirun -n 4 ipengine --mpi=pytrilinos
+
+.. _MPI: http://www-unix.mcs.anl.gov/mpi/
+.. _mpi4py: http://mpi4py.scipy.org/
+.. _Open MPI: http://www.open-mpi.org/
+.. _PyTrilinos: http://trilinos.sandia.gov/packages/pytrilinos/
+
