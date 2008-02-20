@@ -116,7 +116,8 @@ if frontend:
     add_package(packages, 'frontend', others=['snippets'])
 
 # Currently, sdist doesn't pick this stuff up.  How to handle it?
-package_data = {'ipython1': ['external/MochiKit/*.js']}
+package_data = {'ipython1': ['external/MochiKit/*.js'],
+    '': ['*.txt']}
 
 scripts = []
 
