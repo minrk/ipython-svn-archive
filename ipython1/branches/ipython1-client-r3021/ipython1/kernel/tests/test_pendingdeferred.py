@@ -70,7 +70,8 @@ class TwoPhaseFoo(pd.PendingDeferredManager):
             return d
         else:
             deferredID = self.get_next_deferred_id()
-            self.save_pending_deferred(deferredID, d, callback=process_it, arguments=(('extra1',), dict(extra2='extra2')))
+            self.save_pending_deferred(deferredID, d, callback=process_it, 
+                args=('extra1',),kwargs=dict(extra2='extra2'))
             return defer.succeed(deferredID)
 
 class PendingDeferredManagerTest(DeferredTestCase):

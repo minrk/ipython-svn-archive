@@ -57,7 +57,7 @@ class PendingDeferredManager(object):
 
         return guid.generate()
         
-    def save_pending_deferred(self, deferredID, d, callback=None, arguments=None):
+    def save_pending_deferred(self, deferredID, d, callback=None, args=None, kwargs=None):
         """Save a deferred to me by deferredID.
         
         :Parameters:
@@ -73,7 +73,7 @@ class PendingDeferredManager(object):
         pd = self.pendingDeferreds.get(deferredID)
         if pd is not None:
             self.remove_pending_deferred(deferredID)
-        self.pendingDeferreds[deferredID] = (d, callback, arguments)
+        self.pendingDeferreds[deferredID] = (d, callback, args, kwargs)
         
     def remove_pending_deferred(self, deferredID):
         """Remove a deferred I am tracking and add a null Errback.
@@ -82,7 +82,6 @@ class PendingDeferredManager(object):
             deferredID : str
                 The id of a deferred that I am tracking.
         """
-        
         pd_tuple = self.pendingDeferreds.get(deferredID)
         if pd_tuple is not None:
             pd = pd_tuple[0]
@@ -108,43 +107,40 @@ class PendingDeferredManager(object):
             block : boolean
                 Should I block until the deferred has fired.
         """
-        pd_tuple = self.pendingDeferreds.get(deferredID)
-        if pd_tuple is not None:
-            # Pull out the callback function and it args/kwargs
-            pd = pd_tuple[0]
-            cbfunc = pd_tuple[1]
-            cbfunc_args = pd_tuple[2]
-            if cbfunc_args is not None:
-                cbfunc_posargs = cbfunc_args[0]
-                cbfunc_kwargs = cbfunc_args[1]
-            
-            if not pd.called and block:    # pd has not fired and we should block
-                pd.addCallback(self._deleteAndPassThrough, deferredID)
-                # Previously, I was doing dToReturn = pd in this block.  But the following
-                # also seems to work and it solves the problems below.      
-                dToReturn = defer.Deferred()
-                pd.chainDeferred(dToReturn)
-            elif not pd.called and not block: # pd has not fired, but we should not block
-                return defer.fail(failure.Failure(error.ResultNotCompleted("Result not completed: %r" % deferredID)))
-            else:    # pd has fired
+        (pd, cbfunc, cbfunc_args, cbfunc_kwargs) = self.pendingDeferreds.get(deferredID,(None,None,None,None))
+        if pd is not None:
+            if pd.called: # called
                 if isinstance(pd.result, failure.Failure):
-                    dToReturn = defer.fail(pd.result)
+                    d_to_return = defer.fail(pd.result)
                 elif isinstance(pd.result, defer.Deferred):
-                    # This logic is extremely subtle.  For a while I was using
-                    # dToReturn=pd.result, but this was not working.  Chaining
-                    # dToReturn to pd.result (pd.result.chainDeferred(dToReturn))
-                    # also didn't work.  I am not sure why this works?
-                    dToReturn = defer.Deferred()
-                    pd.chainDeferred(dToReturn)
-                    # dToReturn = pd.result
+                    # This section is required because sometimes the original deferred (pd)
+                    # has fired, but its result is another deferred, which has not yet fired.
+                    if not block and not pd.result.called:
+                        return defer.fail(failure.Failure(error.ResultNotCompleted("result not completed: %r" % deferredID)))
+                    else:
+                        # I am still not sure why I need to chain things in this way.
+                        # But I know it works.
+                        d_to_return = defer.Deferred()
+                        pd.chainDeferred(d_to_return)
                 else:
-                    dToReturn = defer.succeed(pd.result)
-                # It has fired so remove it!
-                self.remove_pending_deferred(deferredID)
+                    d_to_return = defer.succeed(pd.result)
+            else: # not called
+                if block:
+                    pd.addCallback(self._deleteAndPassThrough, deferredID)
+                    d_to_return = defer.Deferred()
+                    pd.chainDeferred(d_to_return)
+                else: # not block
+                    return defer.fail(failure.Failure(error.ResultNotCompleted("result not completed: %r" % deferredID)))
+            
             # Register the callback function with its args/kwargs if needed
             if cbfunc is not None:
-                dToReturn.addCallback(cbfunc, *cbfunc_posargs, **cbfunc_kwargs)
-            return dToReturn
+                if cbfunc_args is None:
+                    cbfunc_args = ()
+                if cbfunc_kwargs is None:
+                    cbfunc_kwargs = {}
+                d_to_return.addCallback(cbfunc, *cbfunc_args, **cbfunc_kwargs)
+                
+            return d_to_return
         else:
             return defer.fail(failure.Failure(error.InvalidDeferredID('Invalid deferredID: ' + repr(deferredID))))
             
