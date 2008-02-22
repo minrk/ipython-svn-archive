@@ -92,7 +92,7 @@ def remote_iterator(rc,engine,name):
 if __name__ == '__main__':
 
     from ipython1.kernel import client
-    ipc = client.RemoteController(('127.0.0.1',10105))
+    ipc = client.MultiEngineClient(('127.0.0.1',10105))
     print 'Engine IDs:',ipc.get_ids()
 
     # Make a set of 'sorted datasets'

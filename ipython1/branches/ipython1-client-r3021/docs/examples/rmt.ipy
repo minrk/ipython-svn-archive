@@ -40,7 +40,7 @@ def parallelDiffs(rc, num, N):
 
 # Main code
 if __name__ == '__main__':
-    rc = client.MultiEngineController(('127.0.0.1',10105))
+    rc = client.MultiEngineClient(('127.0.0.1',10105))
     rc.run('rmtkernel.py')
     rc.block = False
 

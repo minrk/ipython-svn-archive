@@ -9,7 +9,7 @@ import ipython1.kernel.magic
 from ipython1.kernel import client
 from ipython1.kernel.error import *
 
-mec = client.MultiEngineController(('127.0.0.1',10105))
+mec = client.MultiEngineClient(('127.0.0.1',10105))
 
 #-------------------------------------------------------------------------------
 # Setup

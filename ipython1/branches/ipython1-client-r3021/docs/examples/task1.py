@@ -1,7 +1,7 @@
 from ipython1.kernel import client
 
-tc = client.TaskController(('127.0.0.1', 10113))
-rc = client.MultiEngineController(('127.0.0.1', 10105))
+tc = client.TaskClient(('127.0.0.1', 10113))
+rc = client.MultiEngineClient(('127.0.0.1', 10105))
 
 rc.push(dict(d=30))
 

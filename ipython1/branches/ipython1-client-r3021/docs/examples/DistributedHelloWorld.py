@@ -4,8 +4,8 @@ Ken Kinder <ken@kenkinder.com>
 """
 from ipython1.kernel import client
 
-tc = client.TaskController(('127.0.0.1', 10113))
-mec = client.MultiEngineController(('127.0.0.1', 10105))
+tc = client.TaskClient(('127.0.0.1', 10113))
+mec = client.MultiEngineClient(('127.0.0.1', 10105))
 
 mec.execute('import time')
 hello_taskid = tc.run(client.Task('time.sleep(3) ; word = "Hello,"', pull=('word')))

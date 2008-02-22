@@ -1,32 +1,147 @@
 =================================
-IPython1's MultiEngine Interface
+IPython1's MultiEngine interface
 =================================
 
-The best source of documentation about how to use the controller and engines
-is the docstrings of kernel modules.  Eventually, we will provide more 
-details in this readme.
+.. contents::
 
-The RemoteController client
+The MultiEngine interface represents one possible way of working with a
+set of IPython engines. The basic idea behind the MultiEngine interface is
+that the capabilities of each engine are explicitly exposed to the user.
+Thus, in the MultiEngine interface, each engine is given an id that is
+used to identify the engine and give it work to do. This interface is very
+intuitive and is designed with interactive usage in mind, and is thus the
+best place for new users of IPython1 to begin.
+
+Starting the IPython controller and engines
+===========================================
+
+To follow along with this tutorial, you will need to start the IPython
+controller and four IPython engines. The simplest way of doing this is to
+use the ``ipcluster`` command::
+
+	ipcluster -n 4
+	
+For more detailed information about starting the controller and engines, see our `introduction`_ to using IPython1 for parallel computing.
+
+.. _introduction: ./parallel_intro
+
+Creating a MultiEngineClient instance
+=====================================
+
+The first step is to import the IPython1 client module and then create a ``MultiEngineClient`` instance::
+
+	In [1]: from ipython1.kernel import client
+	
+	In [2]: mec = client.MultiEngineClient(('127.0.0.1',10105))
+
+To make sure there are engines connected to the controller, use can get a list of engine ids::
+
+	In [3]: mec.get_ids()
+	Out[3]: [0, 1, 2, 3]
+
+Here we see that there are four engines ready to do work for us.
+
+Running Python commands
+=======================
+
+The most basic type of operation that can be performed on the engines is to execute Python code. Executing Python code can be done in blocking or non-blocking mode (blocking is default) using the ``execute`` method.
+
+Blocking execution
+------------------
+
+In blocking mode, the ``MultiEngineClient`` object (called ``mec`` in
+these examples) submits the command to the controller, which places the
+command in the engines' queues for execution. The ``execute`` call then
+blocks until the engines are done executing the command::
+
+	# The default is to run on all engines
+	In [4]: mec.execute('a=5')
+	Out[4]: 
+	<Results List>
+	[0] In [1]: a=5
+	[1] In [1]: a=5
+	[2] In [1]: a=5
+	[3] In [1]: a=5
+
+	In [5]: mec.execute('b=10')
+	Out[5]: 
+	<Results List>
+	[0] In [2]: b=10
+	[1] In [2]: b=10
+	[2] In [2]: b=10
+	[3] In [2]: b=10
+
+Python commands can be executed on specific engines by calling execute using the ``targets`` keyword argument::
+
+	In [6]: mec.execute('c=a+b',targets=[0,2])
+	Out[6]: 
+	<Results List>
+	[0] In [3]: c=a+b
+	[2] In [3]: c=a+b
+
+
+	In [7]: mec.execute('c=a-b',targets=[1,3])
+	Out[7]: 
+	<Results List>
+	[1] In [3]: c=a-b
+	[3] In [3]: c=a-b
+
+
+	In [8]: mec.execute('print c')
+	Out[8]: 
+	<Results List>
+	[0] In [4]: print c
+	[0] Out[4]: 15
+
+	[1] In [4]: print c
+	[1] Out[4]: -5
+
+	[2] In [4]: print c
+	[2] Out[4]: 15
+
+	[3] In [4]: print c
+	[3] Out[4]: -5
+
+This example also shows one of the most important things about the IPython engines: they have a persistent user namespaces.  The ``execute`` method returns a Python ``dict`` that contains useful information::
+
+	In [9]: result_dict = mec.execute('d=10; print d')
+
+	In [10]: for r in result_dict:
+	   ....:     print r
+	   ....:     
+	   ....:     
+	{'input': {'translated': 'd=10; print d', 'raw': 'd=10; print d'}, 'number': 5, 'id': 0, 'stdout': '10\n'}
+	{'input': {'translated': 'd=10; print d', 'raw': 'd=10; print d'}, 'number': 5, 'id': 1, 'stdout': '10\n'}
+	{'input': {'translated': 'd=10; print d', 'raw': 'd=10; print d'}, 'number': 5, 'id': 2, 'stdout': '10\n'}
+	{'input': {'translated': 'd=10; print d', 'raw': 'd=10; print d'}, 'number': 5, 'id': 3, 'stdout': '10\n'}
+
+Non-blocking execution
+----------------------
+
+In non-blocking mode, ``execute`` submits the command to be executed and then returns a
+``PendingResult`` object immediately. The ``PendingResult`` object gives you a way of getting a
+result at a later time through its ``get_result`` method or ``r`` attribute. This allows you to
+quickly submit long running commands without blocking your local Python/IPython session.
+
+
+
+Parallel magic commands
+-----------------------
+
+Moving Python object around
+===========================
+
+Basic push and pull
+-------------------
+
+Push and pull for functions
 ---------------------------
 
-Once a controller and engines are running you can connect to it using the 
-`RemoteController` class.  This class provides a client for the MultiEngine
-interface.  Don't worry about what this means for now, it will become
-clear as you use it.
+Dictionary interface
+--------------------
 
-First import the ipython1 client and create a RemoteController instance::
+Scatter and gather
+------------------
 
-	>>> import ipython1.kernel.api as kernel
-	>>> rc = kernel.RemoteController(('127.0.0.1',10105))
-	
-Now you can see what engines are registered with the controller::
 
-	>>> rc.get_ids()
-	[0,1,2,3]
 
-If this works, you are ready to go.  Start next by looking at the docstrings
-for the following commands:
-
-1. execute
-2. push/pull
-3. scatter/gather

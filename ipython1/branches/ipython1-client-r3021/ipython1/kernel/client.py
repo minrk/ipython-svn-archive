@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+import sys
+
+from ipython1.tools import growl
+growl.start("IPython1 Client")
 
 from ipython1.kernel import codeutil
 import ipython1.kernel.magic
@@ -14,36 +18,30 @@ from ipython1.kernel.error import CompositeError
 co = kernelConfigManager.get_config_obj()
 
 SynchronousMultiEngine = kernelConfigManager._import(co['client']['MultiEngineImplementation'])
-"""The default MultiEngineController class obtained from config information."""
+"""The default MultiEngineClient class obtained from config information."""
 
-def MultiEngineController(addr):
-    """The default MultiEngineController class."""
+def MultiEngineClient(addr):
+    """The default MultiEngineClient class."""
     smultiengine = SynchronousMultiEngine(addr)
     return IFullBlockingMultiEngineClient(smultiengine)
 
 def RemoteController(addr):
-    print "The RemoteController class is deprecated, please use MultiEngineController instead"
-    return MultiEngineController(addr)
+    print "The RemoteController class is deprecated, please use MultiEngineClient instead"
+    return MultiEngineClient(addr)
 
 default_address = (co['client']['connectToMultiEngineControllerOn']['ip'],
     co['client']['connectToMultiEngineControllerOn']['port'])
-"""The (ip,port) tuple of the default MultiEngineController."""
-
-default_remote_controller = default_address
+"""The (ip,port) tuple of the default MultiEngineClient."""
 
 
-
-def TaskController(addr):
-    """The default TaskController class obtained from config information."""
+def TaskClient(addr):
+    """The default TaskClient class obtained from config information."""
     _task_controller = kernelConfigManager._import(co['client']['TaskControllerImplementation'])
     return IBlockingTaskClient(_task_controller(addr))
 
 default_task_address = (co['client']['connectToTaskControllerOn']['ip'],
     co['client']['connectToTaskControllerOn']['port'])
 """The (ip,port) tuple of the default task controller."""
-
-default_task_controller = default_task_address
-
 
 
 rit = ReactorInThread()

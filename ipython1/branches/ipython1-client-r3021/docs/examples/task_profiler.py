@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Test the performance of the task farming system.
 
-This script submits a set of tasks to the TaskController.  The tasks
+This script submits a set of tasks to the TaskClient.  The tasks
 are basically just a time.sleep(t), where t is a random number between
 two limits that can be configured at the command line.  To run 
 the script there must first be an IPython controller and engines running::
@@ -41,13 +41,13 @@ def main():
     parser.add_option("-p", type='int', dest='meport',
         help="the port on which the controller listens for the MultiEngine/RemoteController client")
     parser.add_option("-P", type='int', dest='tport',
-        help="the port on which the controller listens for the TaskController client")
+        help="the port on which the controller listens for the TaskClient client")
     
     (opts, args) = parser.parse_args()
     assert opts.tmax >= opts.tmin, "tmax must not be smaller than tmin"
     
-    rc = client.MultiEngineController((opts.controller, opts.meport))
-    tc = client.TaskController((opts.controller, opts.tport))
+    rc = client.MultiEngineClient((opts.controller, opts.meport))
+    tc = client.TaskClient((opts.controller, opts.tport))
     
     rc.block=True
     nengines = len(rc.get_ids())

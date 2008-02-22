@@ -22,6 +22,9 @@ from optparse import OptionParser
 from twisted.internet import reactor, error
 from twisted.python import log
 
+# from ipython1.tools import growl
+# growl.start("IPython1 Controller")
+
 from ipython1.kernel import controllerservice
 from ipython1.kernel.multiengine import IMultiEngine
 from ipython1.kernel.task import ITaskController

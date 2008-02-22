@@ -28,7 +28,7 @@ furthest along.
 This document describes IPython1 from the perspective of developers.  
 
 
-Project Organization
+Project organization
 ====================
 
 Subpackages
@@ -49,7 +49,7 @@ IPython1 is organized into semi self-contained subpackages.  Each of the subpack
 - **Scripts**.  Each subpackage should have its own ``scripts`` subdirectory that
   contains all of the command line scripts associated with the subpackage.
 
-Installation and Dependencies
+Installation and dependencies
 -----------------------------
    
 IPython1 will not use `setuptools`_ for installation. Instead, we will use standard
@@ -84,7 +84,7 @@ message.
 .. _distutils: http://docs.python.org/lib/module-distutils.html
 .. _Matplotlib: http://matplotlib.sourceforge.net/
 
-Specific Subpackages
+Specific subpackages
 --------------------
 
 ``core``
@@ -110,11 +110,9 @@ Specific Subpackages
 
 ``tools``
 	This is where general utilities go.
-	
 
 
-
-Version Control
+Version control
 ===============
 
 Currently IPython uses `Subversion`_ for its version control system. In the near
@@ -131,7 +129,7 @@ transition.
 Documentation
 =============
 
-Standalone Documentation
+Standalone documentation
 ------------------------
 
 All standalone documentation should be written in plain text (``.txt``) files using
@@ -147,7 +145,7 @@ as well as *pdf* documentation.
 
 .. _reStructuredText: http://docutils.sourceforge.net/rst.html
 
-Docstring Format
+Docstring format
 ----------------
 
 Good docstrings are very important. All new code will use `Epydoc`_ for generating API
@@ -168,7 +166,7 @@ Additional PEPs of interest regarding documentation of code:
 - `Docutils Design Specification <http://www.python.org/peps/pep-0258.html>`_
 
 
-Coding Conventions
+Coding conventions
 ==================
 
 General
@@ -188,7 +186,7 @@ Other comments:
   methods.  This is particularly true for classes that implement 
   similar interfaces and for interfaces that are similar.
 
-Naming Conventions
+Naming conventions
 ------------------
 
 In terms of naming conventions, we'll follow the guidelines from the `Style Guide for

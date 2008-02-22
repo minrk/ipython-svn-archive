@@ -7,8 +7,8 @@ import numpy as N
 from mcpricer import MCOptionPricer
 
 
-tc = client.TaskController(('127.0.0.1', 10113))
-rc = client.MultiEngineController(('127.0.0.1', 10105))
+tc = client.TaskClient(('127.0.0.1', 10113))
+rc = client.MultiEngineClient(('127.0.0.1', 10105))
 
 # Initialize the common code on the engines
 rc.run('mcpricer.py')

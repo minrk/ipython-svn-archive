@@ -34,6 +34,7 @@ from twisted.internet import defer, reactor
 from twisted.python import log, components, failure
 from zope.interface import Interface, implements, Attribute
 
+from ipython1.tools import growl
 from ipython1.kernel.util import printer
 from ipython1.kernel.twistedutil import gatherBoth
 from ipython1.kernel import map as Map
@@ -552,7 +553,8 @@ class SynchronousMultiEngine(PendingDeferredManager):
     
     @two_phase
     def execute(self, lines, targets='all'):
-        return self.multiengine.execute(lines, targets)
+        d = self.multiengine.execute(lines, targets)
+        return d
     
     @two_phase
     def push(self, namespace, targets='all'):
@@ -670,15 +672,16 @@ class TwoPhaseMultiEngineAdaptor(object):
         kwargs['block'] = False
         method = getattr(self.smultiengine, methodname)
         d = method(*args, **kwargs)
-        d.addCallback(lambda did: self.smultiengine.get_pending_deferred(did, True))
-        return d        
+        d.addCallback(self.smultiengine.get_pending_deferred, True)
+        return d
     
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
     
     def execute(self, lines, targets='all'):
-        return self._submitThenBlock('execute', lines, targets)
+        d = self._submitThenBlock('execute', lines, targets)
+        return d
     
     def push(self, namespace, targets='all'):
         return self._submitThenBlock('push', namespace, targets)
@@ -1072,7 +1075,7 @@ class FullSynchronousTwoPhaseMultiEngineAdaptor(SynchronousMultiEngine):
     # IMultiEngineCoordinator
     #---------------------------------------------------------------------------
     
-    @two_phase     
+    @two_phase
     def scatter(self, key, seq, style='basic', flatten=False, targets='all'):
         return self.tpmultiengine.scatter(key, seq, style, flatten, targets=targets)
     

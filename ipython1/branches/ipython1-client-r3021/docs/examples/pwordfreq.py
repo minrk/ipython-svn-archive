@@ -26,7 +26,7 @@ def pwordfreq(rc, text):
 if __name__ == '__main__':
     # Create a RemoteController
     from ipython1.kernel import client
-    ipc = client.MultiEngineController(('127.0.0.1',10105))
+    ipc = client.MultiEngineClient(('127.0.0.1',10105))
     
     # Run the wordfreq script on the engines.
     ipc.run('wordfreq.py')

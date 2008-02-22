@@ -2,7 +2,7 @@
 An exceptionally lousy site spider
 Ken Kinder <ken@kenkinder.com>
 
-This module gives an example of how the TaskController interface to the 
+This module gives an example of how the TaskClient interface to the 
 IPython controller works.  Before running this script start the IPython controller
 and some engines using something like::
 
@@ -38,8 +38,8 @@ class DistributedSpider(object):
     pollingDelay = 0.5
     
     def __init__(self, site):
-        self.tc = client.TaskController(('127.0.0.1', 10113))
-        self.rc = client.MultiEngineController(('127.0.0.1', 10105))
+        self.tc = client.TaskClient(('127.0.0.1', 10113))
+        self.rc = client.MultiEngineClient(('127.0.0.1', 10105))
         self.rc.execute(fetchParse)
         
         self.allLinks = []

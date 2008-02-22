@@ -37,7 +37,6 @@ from ipython1.kernel.multiengine import \
     IFullSynchronousMultiEngine, \
     IFullSynchronousTwoPhaseMultiEngine
 
-
 #-------------------------------------------------------------------------------
 # Pending Result things
 #-------------------------------------------------------------------------------

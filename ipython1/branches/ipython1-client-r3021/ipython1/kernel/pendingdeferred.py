@@ -28,7 +28,7 @@ from zope.interface import Interface, implements, Attribute
 
 from ipython1.kernel.twistedutil import gatherBoth
 from ipython1.kernel import error
-from ipython1.tools import guid
+from ipython1.tools import guid, growl
 
 
 class PendingDeferredManager(object):
@@ -70,7 +70,6 @@ class PendingDeferredManager(object):
             arguments: tuple
                 A two tuple of (args, kwargs) to pass to the function
         """
-        
         pd = self.pendingDeferreds.get(deferredID)
         if pd is not None:
             self.remove_pending_deferred(deferredID)
@@ -87,9 +86,10 @@ class PendingDeferredManager(object):
         pd_tuple = self.pendingDeferreds.get(deferredID)
         if pd_tuple is not None:
             pd = pd_tuple[0]
+            # Consume any remaining errors coming down the line.
             pd.addErrback(lambda f: None)
             del self.pendingDeferreds[deferredID]
-        
+    
     def clean_out_deferreds(self):
         """Remove all the deferreds I am tracking."""
         for k in self.pendingDeferreds.keys():
@@ -108,7 +108,6 @@ class PendingDeferredManager(object):
             block : boolean
                 Should I block until the deferred has fired.
         """
-        #log.msg("get_pending_deferred: %s %s" % (repr(deferredID), repr(block)))
         pd_tuple = self.pendingDeferreds.get(deferredID)
         if pd_tuple is not None:
             # Pull out the callback function and it args/kwargs
@@ -118,19 +117,26 @@ class PendingDeferredManager(object):
             if cbfunc_args is not None:
                 cbfunc_posargs = cbfunc_args[0]
                 cbfunc_kwargs = cbfunc_args[1]
-                
+            
             if not pd.called and block:    # pd has not fired and we should block
-                #log.msg("pendingDeferred has not been called: %s" % deferredID)
                 pd.addCallback(self._deleteAndPassThrough, deferredID)
-                dToReturn = pd
+                # Previously, I was doing dToReturn = pd in this block.  But the following
+                # also seems to work and it solves the problems below.      
+                dToReturn = defer.Deferred()
+                pd.chainDeferred(dToReturn)
             elif not pd.called and not block: # pd has not fired, but we should not block
                 return defer.fail(failure.Failure(error.ResultNotCompleted("Result not completed: %r" % deferredID)))
             else:    # pd has fired
-                #log.msg("pendingDeferred has been called: %s: %s" % (deferredID, repr(pd.result)))
                 if isinstance(pd.result, failure.Failure):
                     dToReturn = defer.fail(pd.result)
                 elif isinstance(pd.result, defer.Deferred):
-                    dToReturn = pd.result
+                    # This logic is extremely subtle.  For a while I was using
+                    # dToReturn=pd.result, but this was not working.  Chaining
+                    # dToReturn to pd.result (pd.result.chainDeferred(dToReturn))
+                    # also didn't work.  I am not sure why this works?
+                    dToReturn = defer.Deferred()
+                    pd.chainDeferred(dToReturn)
+                    # dToReturn = pd.result
                 else:
                     dToReturn = defer.succeed(pd.result)
                 # It has fired so remove it!
@@ -181,8 +187,7 @@ def two_phase(wrappedMethod):
             d = wrappedMethod(pendingDeferredManager, *args, **kwargs)
             pendingDeferredManager.save_pending_deferred(deferredID, d)
             return defer.succeed(deferredID)
-       
-                
+    
     return wrapperTwoPhase
                 
                 

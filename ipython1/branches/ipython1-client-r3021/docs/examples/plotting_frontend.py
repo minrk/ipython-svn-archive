@@ -21,7 +21,7 @@ from pylab import *
 from ipython1.kernel import client
 
 # Get an IPython1 client
-rc = client.RemoteController(('127.0.0.1',10105))
+rc = client.MultiEngineClient(('127.0.0.1',10105))
 rc.get_ids()
 
 # Run the simulation on all the engines

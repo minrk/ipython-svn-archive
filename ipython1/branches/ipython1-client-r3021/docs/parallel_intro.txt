@@ -1,5 +1,5 @@
 ======================================
-Using IPython1 For parallel computing
+Using IPython1 for parallel computing
 ======================================
 
 This file gives an overview of IPython1. IPython1 has a sophisticated and
@@ -8,56 +8,73 @@ architecture abstracts out parallelism in a very general way, which
 enables IPython1 to support many different styles of parallelism
 including:
 
-	1. Single program, multiple data (SPMD) parallelism.
-	2. Multiple program, multiple data (MPMD) parallelism.
-	3. Message passing using ``MPI``.
-	4. Task farming.
-	5. Data parallel.
-	6. Combinations of these approaches.
-	7. Custom user defined approaches.
+	* Single program, multiple data (SPMD) parallelism.
+	* Multiple program, multiple data (MPMD) parallelism.
+	* Message passing using ``MPI``.
+	* Task farming.
+	* Data parallel.
+	* Combinations of these approaches.
+	* Custom user defined approaches.
 
 Most importantly, IPython1 enables all types of parallel applications to
 be developed, executed, debugged and monitored *interactively*. Hence,
-the ``I`` in IPython.
+the ``I`` in IPython.  The following are some example usage cases for IPython1:
+
+	* Quickly parallelize algorithms that are embarrassingly parallel
+	  using a number of simple approaches.  Many simple things can be
+	  parallelized interactively in one or two lines of code.
+	* Steer traditional MPI applications on a supercomputer from an
+	  IPython session on your laptop.
+	* Analyze and visualize large datasets (that could be remote and/or
+	  distributed) interactively using IPython and tools like
+	  matplotlib/TVTK.
+	* Develop, test and debug new parallel algorithms 
+	  (that may use MPI) interactively.
+	* Tie together multiple MPI jobs running on different systems into
+	  one giant distributed and parallel system.
+	* Start a parallel job on your cluster and then have a remote 	
+	  collaborator connect to it and pull back data into their 
+	  local IPython session for plotting and analysis.
+	* Run a set of tasks on a set of CPUs using dynamic load balancing.
 
 Architecture overview
 =====================
 
 The IPython1 architecture consists of three components:
 
-	* The IPython Engine.
-	* The IPython Controller.
-	* Various Controller Clients.
+	* The IPython engine.
+	* The IPython controller.
+	* Various controller Clients.
 
 IPython engine
 ---------------
 
-The IPython Engine is a Python instance that takes Python commands over a
-network connection. Eventually, the IPython Engine will be a full IPython
-interpreter, but for now, it is a regular Python interpreter. The Engine
+The IPython engine is a Python instance that takes Python commands over a
+network connection. Eventually, the IPython engine will be a full IPython
+interpreter, but for now, it is a regular Python interpreter. The engine
 can also handle incoming and outgoing Python objects sent over a network
-connection.  When multiple Engines are started, parallel and distributed
-computing becomes possible. An important feature of an IPython Engine is
+connection.  When multiple engines are started, parallel and distributed
+computing becomes possible. An important feature of an IPython engine is
 that it blocks while user code is being executed. Read on for how the
-IPython Controller solves this problem to expose a clean asynchronous API
+IPython controller solves this problem to expose a clean asynchronous API
 to the user.
 
-IPython Controller
+IPython controller
 ------------------
 
-The IPython Controller provides an interface for working with a set of
-Engines. At an general level, the Controller is a process to which
-IPython Engines can connect. For each connected Engine, the Controller
-manages a queue. All actions that can be performed on the Engine go
-through this queue. While the Engines themselves block when user code is
-run, the Controller hides that from the user to provide a fully
-asynchronous interface to a set of Engines. Because the Controller
-listens on a network port for Engines to connect to it, it must be
-started before any Engines are started.  
+The IPython controller provides an interface for working with a set of
+engines. At an general level, the controller is a process to which
+IPython engines can connect. For each connected engine, the controller
+manages a queue. All actions that can be performed on the engine go
+through this queue. While the engines themselves block when user code is
+run, the controller hides that from the user to provide a fully
+asynchronous interface to a set of engines. Because the controller
+listens on a network port for engines to connect to it, it must be
+started before any engines are started.  
 
-The Controller also provides a single point of contact for users who wish
-to utilize the Engines connected to the Controller. There are different
-ways of working with a controller. In IPython these ways correspond to different interfaces that the Controller is adapted to.  Currently we have two default interfaces to the Controller: 
+The controller also provides a single point of contact for users who wish
+to utilize the engines connected to the controller. There are different
+ways of working with a controller. In IPython these ways correspond to different interfaces that the controller is adapted to.  Currently we have two default interfaces to the controller: 
 
 	* The MultiEngine interface.
 	* The Task interface.
@@ -67,14 +84,14 @@ styles of parallelism.
 
 .. note:: 
 
-	A single Controller and set of Engines can be accessed 
+	A single controller and set of engines can be accessed 
 	through multiple interfaces simultaneously.  This opens the
 	door for lots of interesting things.  
 
 Controller Clients
 ------------------
 
-For each Controller interface, there is a corresponding client. These
+For each controller interface, there is a corresponding client. These
 clients allow users to interact with a set of engines through the
 interface.
 
@@ -82,17 +99,18 @@ Getting Started
 ===============
 
 To use IPython1 for parallel computing, you need to start one instance of
-the Controller and one or more instances of the Engine. The controller
+the controller and one or more instances of the engine. The controller
 and each engine can run on different machines or on the same machine.
 Because of this, there are many different possibilities for setting up
-the ip addresses and ports used by the various processes.
+the IP addresses and ports used by the various processes.
 
 Starting the controller and engine on your local machine
 --------------------------------------------------------
 
-This is the simplest configuration that can be used and is useful for testing
-the system and on machines that have multiple cores and/or multple CPUs.  The
-easiest way of doing this is using the ``ipcluster`` command::
+This is the simplest configuration that can be used and is useful for
+testing the system and on machines that have multiple cores and/or
+multple CPUs. The easiest way of doing this is using the ``ipcluster``
+command::
 
 	ipcluster -n 4
 	
@@ -103,46 +121,44 @@ that you can use to connect to the controller. It is that easy.
 Underneath the hood, the ``ipcluster`` script uses two other top-level
 scripts that you can also use yourself. These scripts are
 ``ipcontroller``, which starts the controller and ``ipengine`` which
-starts an engine. To use these scripts to start things on your local
+starts one engine. To use these scripts to start things on your local
 machine, do the following.
 
 First start the controller::
 
 	ipcontroller &
 	
-Next, start however many instances of the engine you want to use::
+Next, start however many instances of the engine you want using (repeatedly) the command::
 
 	ipengine &
 
 .. warning:: 
 	
 	The order of the above operations is very important.  You *must*
- 	start the Controller before the engines, since the Engines connect 
-	to the Controller as they get started.
+ 	start the controller before the engines, since the engines connect 
+	to the controller as they get started.
 
 On some platforms you may need to give these commands in the form
-``(ipcontroller &)`` and ``(ipengine &)`` for them to work properly.  The
-engines should start and automatically connect to the controller on the default
-ports, which are chosen for this type of setup.  The logs are fairly verbose
-and you should see various messages about the engines being registered with the
-controller.  You are now ready to use the controller and engines from IPython.
+``(ipcontroller &)`` and ``(ipengine &)`` for them to work properly. The
+engines should start and automatically connect to the controller on the
+default ports, which are chosen for this type of setup. You are now ready
+to use the controller and engines from IPython.
 
 Starting the controller and engines on different machines
 ---------------------------------------------------------
 
-To start the engines and controller on different machines you simply need to
-specify the ip addresses where the controller is running.  Let's say you want
-to start the controller on host0 and the engines on hosts1 - host16.  First
-start the controller on host0::
+To start the engines and controller on different machines you simply need
+to specify the IP addresses where the controller is running. Let's say
+you want to start the controller on ``host0`` and the engines on ``host1``-``host16``. First start the controller on ``host0``::
 
 	host0> ipcontroller &
 	
-Next, start the engines on host1 - host16 specifying the where the controller
-is running::
+Next, start the engines on ``host1``-``host16`` specifying the where
+the controller is running::
 
 	host1> ipengine --controller-ip=host0 &
 	
-Repeat this on host2 - host16 and you should be ready to go.
+Repeat this on ``host2``-``host16`` and you should be ready to go.
 
 Specifying custom ports
 -----------------------
@@ -152,38 +168,64 @@ Both the controller and engines must be told to use the same port::
 
 	ipcontroller --engine-port=10001              # listen on 10001
 	ipengine --controller-port=10001              # connect to 10001
-	
-Starting engines using mpirun
------------------------------
 
-The IPython engine can be started using mpirun/mpiexec, even if the engines
-don't call MPI_Init() or use the MPI API.  This is supported on modern MPI
-implementations like OpenMPI.  On a system with MPI installed you can do::
+Starting engines using ``mpirun``
+---------------------------------
+
+The IPython engines can be started using ``mpirun``/``mpiexec``, even if
+the engines don't call MPI_Init() or use the MPI API in any way. This is
+supported on modern MPI implementations like `Open MPI`_.. This provides
+an really nice way of starting a bunch of engine. On a system with MPI
+installed you can do::
 
 	mpirun -n 4 ipengine --controller-port=10000 --controller-ip=host0
+
+.. _Open MPI: http://www.open-mpi.org/
+
+More details on using MPI with IPython can be found `here`_.
+
+.. _here: ./parallel_mpi
 
 Log files
 ---------
 
-All of the components of IPython1 have log files associated with them.  These
-log files can be extremely useful in debugging problems with your setup
-of IPython1 and can be found in the directory ``~/.ipython/log``.
+All of the components of IPython1 have log files associated with them.
+These log files can be extremely useful in debugging problems with
+IPython1 and can be found in the directory ``~/.ipython/log``.  Sending
+the log files to us will often help us to debug any problems.
 
-Security
---------
+Security and firewalls
+----------------------
 
+The only process in IPython1's architecture that listens on a network
+port is the controller. Thus the controller is the main security concern.
+Through the controller, an attacker can execute arbitrary code on the
+engines. Thus, we highly recommend taking the following precautions:
 
+	* Don't run the controller on a machine that is exposed to the
+	  internet.
+	* Don't run the controller on a machine that could have hostile
+	  users on it.
+	* If you need to connect to a controller that is behind a firewall,
+	  tunnel everything through ssh.
+
+Currently, IPython1 does not have any built-in security.  Thus, it 
+is up to you to be aware of the security risks associated with using IPython1 and to take steps to mitigate those risks.
+
+However, we do have plans to add security measures to IPython1 itself.
+This will probably take the form of using SSL for encryption and some
+authentication scheme.
 
 Next Steps
 ==========
 
-Once you have started the IPython Controller and one or more Engines, you are
-ready to use the Engines to do somnething useful.  To make sure everything is
-working correctly, try the following commands::
+Once you have started the IPython controller and one or more engines, you
+are ready to use the engines to do somnething useful. To make sure
+everything is working correctly, try the following commands::
 
 	In [1]: from ipython1.kernel import client
 	
-	In [2]: mec = client.MultiEngineController(('127.0.0.1',10105))
+	In [2]: mec = client.MultiEngineClient(('127.0.0.1',10105))
 	
 	In [4]: mec.get_ids()
 	Out[4]: [0, 1, 2, 3]
@@ -204,26 +246,11 @@ working correctly, try the following commands::
 	[3] Out[1]: Hello World
 
 If this works, you are ready to learn more about the `MultiEngine`_ and
-`Task`_ interfaces to the Controller.
+`Task`_ interfaces to the controller.
 
 .. _MultiEngine: ./parallel_multiengine
 .. _Task: ./parallel_task
 
 
-The simplest way of getting started with MPI is to install an MPI implementation
-(we recommend `Open MPI`_) and `mpi4py`_ and then start the engines using the
-``mpirun`` command::
 
-	mpirun -n 4 ipengine --mpi=mpi4py
-	
-This will automatically import `mpi4py`_ and make sure that `MPI_Init` is called at
-the right time. We also have built in support for `PyTrilinos`_, which can be used
-(assuming `PyTrilinos`_ is installed) by starting the engines with::
-
-	mpirun -n 4 ipengine --mpi=pytrilinos
-
-.. _MPI: http://www-unix.mcs.anl.gov/mpi/
-.. _mpi4py: http://mpi4py.scipy.org/
-.. _Open MPI: http://www.open-mpi.org/
-.. _PyTrilinos: http://trilinos.sandia.gov/packages/pytrilinos/
 
