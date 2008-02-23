@@ -558,7 +558,7 @@ class XMLRPCFullSynchronousMultiEngineClient(object):
                 return d
             else:
                 # Here we are going to use a _local_ PendingDeferredManager.
-                deferred_id = self.pdm.get_next_deferred_id()
+                deferred_id = self.pdm.get_deferred_id()
                 # This is the deferred we will return to the user that will fire
                 # with the local deferred_id AFTER we have received the list of 
                 # primary deferred_ids
@@ -571,7 +571,7 @@ class XMLRPCFullSynchronousMultiEngineClient(object):
                     return process_did_list(did_list)
                 d.addCallback(do_it)
                 # Now save the deferred to the final result
-                self.pdm.save_pending_deferred(deferred_id, d)
+                self.pdm.save_pending_deferred(d, deferred_id)
                 return d_to_return
 
         d = self._process_targets(targets)
@@ -617,7 +617,7 @@ class XMLRPCFullSynchronousMultiEngineClient(object):
                 return d
             else:
                 # Here we are going to use a _local_ PendingDeferredManager.
-                deferred_id = self.pdm.get_next_deferred_id()
+                deferred_id = self.pdm.get_deferred_id()
                 # This is the deferred we will return to the user that will fire
                 # with the local deferred_id AFTER we have received the list of 
                 # primary deferred_ids
@@ -630,7 +630,7 @@ class XMLRPCFullSynchronousMultiEngineClient(object):
                     return process_did_list(did_list)
                 d.addCallback(do_it)
                 # Now save the deferred to the final result
-                self.pdm.save_pending_deferred(deferred_id, d)
+                self.pdm.save_pending_deferred(d, deferred_id)
                 return d_to_return
 
         d = self._process_targets(targets)

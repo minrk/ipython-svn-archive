@@ -89,6 +89,9 @@ class NotAPendingResult(KernelError):
 class UnpickleableException(KernelError):
     pass
 
+class AbortedPendingDeferredError(KernelError):
+    pass
+
 class InvalidProperty(KernelError):
     pass
 

@@ -44,128 +44,111 @@ class PendingDeferredManager(object):
     def __init__(self):
         """Manage pending deferreds."""
 
-        self.pendingDeferreds = {}
+        self.results = {} # Populated when results are ready
+        self.deferred_ids = [] # List of deferred ids I am managing
+        self.deferreds_to_callback = {} # dict of lists of deferreds to callback
         
-    def get_next_deferred_id(self):
-        """Get the next available deferred id.
-        
-        :Returns:
-            deferredID : str
-                The deferred id that the client should use for the next
-                deferred is will save to me.
-        """
-
+    def get_deferred_id(self):
         return guid.generate()
-        
+    
     def quick_has_id(self, deferred_id):
-        return self.pendingDeferreds.has_key(deferred_id)
+        return deferred_id in self.deferred_ids
+    
+    def _save_result(self, result, deferred_id):
+        if self.quick_has_id(deferred_id):
+            self.results[deferred_id] = result
+            self._trigger_callbacks(deferred_id)
+    
+    def _trigger_callbacks(self, deferred_id):
+        # Go through and call the waiting callbacks
+        result = self.results.get(deferred_id)
+        if result is not None:  # Only trigger if there is a result
+            try:
+                d = self.deferreds_to_callback.pop(deferred_id)
+            except KeyError:
+                d = None
+            if d is not None:
+                if isinstance(result, failure.Failure):
+                    d.errback(result)
+                else:
+                    d.callback(result)
+                self.delete_pending_deferred(deferred_id)
+                   
+    def save_pending_deferred(self, d, deferred_id=None):
+        """Save the result of a deferred for later retrieval.
         
-    def save_pending_deferred(self, deferredID, d, callback=None, args=None, kwargs=None):
-        """Save a deferred to me by deferredID.
+        This works even if the deferred has not fired.
         
-        :Parameters:
-            deferredID : str
-                A deferred id the client got by calling `get_next_deferred_id`.
-            d : Deferred
-                The deferred to save.
-            callback : FunctionType
-                A function to add to the callback of d before returning.
-            arguments: tuple
-                A two tuple of (args, kwargs) to pass to the function
+        Only callbacks and errbacks applied to d before this method
+        is called will be called no the final result.
         """
-        pd = self.pendingDeferreds.get(deferredID)
-        if pd is not None:
-            self.remove_pending_deferred(deferredID)
-        self.pendingDeferreds[deferredID] = (d, callback, args, kwargs)
-        
-    def remove_pending_deferred(self, deferredID):
+        if deferred_id is None:
+            deferred_id = self.get_deferred_id()
+        self.deferred_ids.append(deferred_id)
+        d.addBoth(self._save_result, deferred_id)
+        return deferred_id
+    
+    def _protected_del(self, key, container):
+        try:
+            del container[key]
+        except Exception:
+            pass
+    
+    def delete_pending_deferred(self, deferred_id):
         """Remove a deferred I am tracking and add a null Errback.
         
         :Parameters:
             deferredID : str
                 The id of a deferred that I am tracking.
         """
-        pd_tuple = self.pendingDeferreds.get(deferredID)
-        if pd_tuple is not None:
-            pd = pd_tuple[0]
-            # Consume any remaining errors coming down the line.
-            pd.addErrback(lambda f: None)
-            del self.pendingDeferreds[deferredID]
+        if self.quick_has_id(deferred_id):
+            # First go through a errback any deferreds that are still waiting
+            d = self.deferreds_to_callback.get(deferred_id)
+            if d is not None:
+                d.errback(failure.Failure(error.AbortedPendingDeferredError("pending deferred has been deleted: %r"%deferred_id)))
+            # Now delete all references to this deferred_id
+            ind = self.deferred_ids.index(deferred_id)
+            self._protected_del(ind, self.deferred_ids)
+            self._protected_del(deferred_id, self.deferreds_to_callback)
+            self._protected_del(deferred_id, self.results)            
+        else:
+            raise error.InvalidDeferredID('invalid deferred_id: %r' % deferred_id)
     
     def clean_out_deferreds(self):
         """Remove all the deferreds I am tracking."""
-        for k in self.pendingDeferreds.keys():
-            self.remove_pending_deferred(k)
+        for did in self.deferred_ids:
+            self.delete_pending_deferred(did)
         
-    def _deleteAndPassThrough(self, r, deferredID):
-        self.remove_pending_deferred(deferredID)
+    def _delete_and_pass_through(self, r, deferred_id):
+        self.delete_pending_deferred(deferred_id)
         return r
         
-    def get_pending_deferred(self, deferredID, block):
-        """Get a pending deferred that I am tracking by deferredID.
-        
-        :Parameters:
-            deferredID : int
-                The id of a deferred I am tracking
-            block : boolean
-                Should I block until the deferred has fired.
-        """
-        (pd, cbfunc, cbfunc_args, cbfunc_kwargs) = self.pendingDeferreds.get(deferredID,(None,None,None,None))
-        if pd is not None:
-            if pd.called: # called
-                if isinstance(pd.result, failure.Failure):
-                    d_to_return = defer.fail(pd.result)
-                elif isinstance(pd.result, defer.Deferred):
-                    # This section is required because sometimes the original deferred (pd)
-                    # has fired, but its result is another deferred, which has not yet fired.
-                    if not block and not pd.result.called:
-                        return defer.fail(failure.Failure(error.ResultNotCompleted("result not completed: %r" % deferredID)))
-                    else:
-                        # I am still not sure why I need to chain things in this way.
-                        # But I know it works.
-                        d_to_return = defer.Deferred()
-                        pd.chainDeferred(d_to_return)
-                else:
-                    d_to_return = defer.succeed(pd.result)
-            else: # not called
-                if block:
-                    pd.addCallback(self._deleteAndPassThrough, deferredID)
-                    d_to_return = defer.Deferred()
-                    pd.chainDeferred(d_to_return)
-                else: # not block
-                    return defer.fail(failure.Failure(error.ResultNotCompleted("result not completed: %r" % deferredID)))
-            
-            # Register the callback function with its args/kwargs if needed
-            if cbfunc is not None:
-                if cbfunc_args is None:
-                    cbfunc_args = ()
-                if cbfunc_kwargs is None:
-                    cbfunc_kwargs = {}
-                d_to_return.addCallback(cbfunc, *cbfunc_args, **cbfunc_kwargs)
-                
-            return d_to_return
-        else:
-            return defer.fail(failure.Failure(error.InvalidDeferredID('Invalid deferredID: ' + repr(deferredID))))
-            
-    def getAllPendingDeferreds(self):
-        dList = []
-        keys = self.pdManager.pendingDeferreds.keys()
-        for k in keys:
-            dList.append(self.pdManager.get_pending_deferred(k, block=True))
-        if len(dList) > 0:  
-            return gatherBoth(dList, consumeErrors=1)
-        else:
-            return defer.succeed([None])
+    def get_pending_deferred(self, deferred_id, block):
+        if not self.quick_has_id(deferred_id) or self.deferreds_to_callback.get(deferred_id) is not None:
+            return defer.fail(failure.Failure(error.InvalidDeferredID('invalid deferred_id: %r' + deferred_id)))
+        result = self.results.get(deferred_id)
+        if result is not None:
+            self.delete_pending_deferred(deferred_id)
+            if isinstance(result, failure.Failure):
+                return defer.fail(result)
+            else:
+                return defer.succeed(result)
+        else:  # Result is not ready
+            if block:
+                d = defer.Deferred()
+                self.deferreds_to_callback[deferred_id] = d
+                return d
+            else:
+                return defer.fail(failure.Failure(error.ResultNotCompleted("result not completed: %r" % deferred_id)))
 
-
-def two_phase(wrappedMethod):
+def two_phase(wrapped_method):
     """Wrap methods that return a deferred into a two phase process.
     
     This transforms::
     
-        foo(arg1, arg2, ...) -> foo(block, arg1, arg2, ...).
+        foo(arg1, arg2, ...) -> foo(arg1, arg2,...,block=True).
     
-    The wrapped method will then return a deferred to a deferredID.  This will
+    The wrapped method will then return a deferred to a deferred id.  This will
     only work on method of classes that inherit from `PendingDeferredManager`,
     as that class provides an API for 
     
@@ -174,23 +157,21 @@ def two_phase(wrappedMethod):
     default and it probably won't.
     """
     
-    def wrapperTwoPhase(pendingDeferredManager, *args, **kwargs):
+    def wrapper_two_phase(pdm, *args, **kwargs):
         try:
             block = kwargs.pop('block')
         except KeyError:
             block = True  # The default if not specified
         if block:
-            return wrappedMethod(pendingDeferredManager, *args, **kwargs)
+            return wrapped_method(pdm, *args, **kwargs)
         else:
-            deferredID = pendingDeferredManager.get_next_deferred_id()
-            d = wrappedMethod(pendingDeferredManager, *args, **kwargs)
-            pendingDeferredManager.save_pending_deferred(deferredID, d)
-            return defer.succeed(deferredID)
+            d = wrapped_method(pdm, *args, **kwargs)
+            deferred_id=pdm.save_pending_deferred(d)
+            return defer.succeed(deferred_id)
     
-    return wrapperTwoPhase
+    return wrapper_two_phase
                 
                 
             
             
                 
-        
