@@ -57,6 +57,9 @@ class PendingDeferredManager(object):
 
         return guid.generate()
         
+    def quick_has_id(self, deferred_id):
+        return self.pendingDeferreds.has_key(deferred_id)
+        
     def save_pending_deferred(self, deferredID, d, callback=None, args=None, kwargs=None):
         """Save a deferred to me by deferredID.
         

@@ -41,7 +41,8 @@ def parallelDiffs(rc, num, N):
 # Main code
 if __name__ == '__main__':
     rc = client.MultiEngineClient(('127.0.0.1',10105))
-    rc.run('rmtkernel.py')
+    print "Distributing code to engines..."
+    r = rc.run('rmtkernel.py')
     rc.block = False
 
     # Simulation parameters

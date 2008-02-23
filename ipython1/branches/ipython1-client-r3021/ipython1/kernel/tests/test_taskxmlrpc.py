@@ -37,7 +37,7 @@ class TaskTest(DeferredTestCase, ITaskControllerTestCase):
         self.imultiengine = me.IMultiEngine(self.controller)
         self.imultiengine_factory = mexmlrpc.IXMLRPCMultiEngineFactory(self.imultiengine)
         self.servers.append(reactor.listenTCP(10105, self.imultiengine_factory))
-        self.multiengine = mexmlrpc.XMLRPCSynchronousMultiEngineClient(('localhost',10105))
+        self.multiengine = mexmlrpc.XMLRPCFullSynchronousMultiEngineClient(('localhost',10105))
         
         self.itc = task.ITaskController(self.controller)
         self.itc.failurePenalty = 0

@@ -336,7 +336,7 @@ class Dependency(_Dependency):
         try:
             return test(properties)
         except Exception, e:
-            log.msg("maybe bad strtest: %r"%e)
+            log.msg("Maybe bad strtest: %r"%e)
             return False
     
 
@@ -682,7 +682,7 @@ class TaskController(cs.ControllerAdapterBase):
         self.taskid += 1
         d = defer.Deferred()
         self.scheduler.add_task(task)
-        log.msg('queuing task #%i' %task.taskid)
+        log.msg('Queuing task: %i' % task.taskid)
         
         self.deferredResults[task.taskid] = []
         self.distributeTasks()
@@ -690,7 +690,7 @@ class TaskController(cs.ControllerAdapterBase):
     
     def get_task_result(self, taskid, block=False):
         """Returns a `Deferred` to a TaskResult tuple or None."""
-        log.msg("getting result %i"%taskid)
+        log.msg("Getting task result: %i" % taskid)
         if self.finishedResults.has_key(taskid):
             tr = self.finishedResults[taskid]
             return defer.succeed(tr)
@@ -741,7 +741,7 @@ class TaskController(cs.ControllerAdapterBase):
     
     def _doAbort(self, taskid):
         """Helper function for aborting a pending task."""
-        log.msg("Task #%i Aborted"%taskid)
+        log.msg("Task aborted: %i" % taskid)
         result = failure.Failure(error.TaskAborted())
         self._finishTask(taskid, result)
         if taskid in self.abortPending:
@@ -756,7 +756,7 @@ class TaskController(cs.ControllerAdapterBase):
     
     def distributeTasks(self):
         """Distribute tasks while self.scheduler has things to do."""
-        log.msg("distributing Tasks")
+        # log.msg("distributing Tasks")
         worker, task = self.scheduler.schedule()
         if not worker and not task:
             if self.idleLater and self.idleLater.called:# we are inside failIdle
@@ -771,7 +771,7 @@ class TaskController(cs.ControllerAdapterBase):
             self.pendingTasks[worker.workerID] = task
             # run/link callbacks
             d = worker.run(task)
-            log.msg("running task #%i on worker %i" %(task.taskid, worker.workerID))
+            log.msg("Running task %i on worker %i" %(task.taskid, worker.workerID))
             d.addBoth(self.taskCompleted, task.taskid, worker.workerID)
             worker, task = self.scheduler.schedule()
         # check for idle timeout:
@@ -791,9 +791,9 @@ class TaskController(cs.ControllerAdapterBase):
         if not self.distributeTasks():
             while self.scheduler.ntasks:
                 t = self.scheduler.pop_task()
-                msg = "Task %i failed to execute due to unmet dependencies"%t.taskid
+                msg = "task %i failed to execute due to unmet dependencies"%t.taskid
                 msg += " for %i seconds"%self.timeout
-                log.msg("Task %i Aborted by timeout"%t.taskid)
+                log.msg("Task aborted by timeout: %i" % t.taskid)
                 f = failure.Failure(error.TaskTimeout(msg))
                 self._finishTask(t.taskid, f)
         self.idleLater = None
@@ -805,9 +805,9 @@ class TaskController(cs.ControllerAdapterBase):
             task = self.pendingTasks.pop(workerID)
         except:
             # this should not happen
-            log.msg("tried to pop bad pending task#%i from worker #%i"%(taskid, workerID))
-            log.msg("result: %r"%result)
-            log.msg("pending tasks:%s"%self.pendingTasks)
+            log.msg("Tried to pop bad pending task %i from worker %i"%(taskid, workerID))
+            log.msg("Result: %r"%result)
+            log.msg("Pending tasks: %s"%self.pendingTasks)
             return
         
         # Check if aborted while pending
@@ -818,11 +818,11 @@ class TaskController(cs.ControllerAdapterBase):
         
         if not aborted:
             if result.failure is not None and isinstance(result.failure, failure.Failure): # we failed
-                log.msg("Task #%i failed on worker %i"% (taskid, workerID))
+                log.msg("Task %i failed on worker %i"% (taskid, workerID))
                 if task.retries > 0: # resubmit
                     task.retries -= 1
                     self.scheduler.add_task(task)
-                    s = "resubmitting task #%i, %i retries remaining" %(taskid, task.retries)
+                    s = "Resubmitting task %i, %i retries remaining" %(taskid, task.retries)
                     log.msg(s)
                     self.distributeTasks()
                 elif isinstance(task.recovery_task, Task) and \
@@ -832,7 +832,7 @@ class TaskController(cs.ControllerAdapterBase):
                     task.recovery_task.taskid = taskid
                     task = task.recovery_task
                     self.scheduler.add_task(task)
-                    s = "recovering task #%i, %i retries remaining" %(taskid, task.retries)
+                    s = "Recovering task %i, %i retries remaining" %(taskid, task.retries)
                     log.msg(s)
                     self.distributeTasks()
                 else: # done trying
@@ -841,7 +841,7 @@ class TaskController(cs.ControllerAdapterBase):
                 # it may have died, and not yet been unregistered
                 reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
             else: # we succeeded
-                log.msg("Task #%i completed "% taskid)
+                log.msg("Task completed: %i"% taskid)
                 self._finishTask(taskid, result)
                 self.readmitWorker(workerID)
         else:# we aborted the task

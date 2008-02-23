@@ -654,7 +654,7 @@ class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda r: self.multiengine.del_properties(('b','e')))
         d.addCallback(lambda r: self.multiengine.has_properties(('a','b','c','d','e')))
         d.addCallback(lambda r: self.assertEquals(r, 4*[[True, False, True, True, False]]))
-
+        
         # Non-blocking
         d.addCallback(lambda r: self.multiengine.set_properties(dikt, block=False))
         d.addCallback(lambda did: self.multiengine.get_pending_deferred(did, True))
@@ -664,11 +664,6 @@ class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda did: self.multiengine.get_pending_deferred(did, True))
         d.addCallback(lambda r: self.assertEquals(r, 4*[[True, False, True, True, False]]))
         return d
-
-
-class ITwoPhaseMultiEngineTestCase(IMultiEngineTestCase):
-    """From an interface perspective, this is just an IMultiEngine."""
-    pass
 
 
 #-------------------------------------------------------------------------------
@@ -710,19 +705,14 @@ class IMultiEngineCoordinatorTestCase(object):
         return d
 
 
-class ITwoPhaseMultiEngineCoordinatorTestCase(IMultiEngineCoordinatorTestCase):
-    pass
-            
-
-
 class ISynchronousMultiEngineCoordinatorTestCase(IMultiEngineCoordinatorTestCase):
     
     def testScatterGatherNonblocking(self):
         self.addEngine(4)
         d = self.multiengine.scatter('a', range(16), block=False)
-        d.addCallback(lambda did: self.multiengine.get_pending_deferred(did, True)) 
+        d.addCallback(lambda did: self.multiengine.get_pending_deferred(did, True))
         d.addCallback(lambda r: self.multiengine.gather('a', block=False))
-        d.addCallback(lambda did: self.multiengine.get_pending_deferred(did, True)) 
+        d.addCallback(lambda did: self.multiengine.get_pending_deferred(did, True))
         d.addCallback(lambda r: self.assertEquals(r, range(16)))
         return d
     
@@ -779,10 +769,6 @@ class IMultiEngineExtrasTestCase(object):
         return d
 
 
-class ITwoPhaseMultiEngineExtras(IMultiEngineExtrasTestCase):
-    pass
-
-
 class ISynchronousMultiEngineExtrasTestCase(IMultiEngineExtrasTestCase):
     
     def testZipPullNonblocking(self):
@@ -808,21 +794,10 @@ class ISynchronousMultiEngineExtrasTestCase(IMultiEngineExtrasTestCase):
 
 
 #-------------------------------------------------------------------------------
-# Full interfaces
+# IFullSynchronousMultiEngineTestCase
 #-------------------------------------------------------------------------------
 
-class IFullTwoPhaseMultiEngineTestCase(IMultiEngineTestCase, 
-    ITwoPhaseMultiEngineCoordinatorTestCase,
-    ITwoPhaseMultiEngineExtras):
-    pass
-
-
-class IFullSynchronousTwoPhaseMultiEngineTestCase(ISynchronousMultiEngineTestCase,
-    ISynchronousMultiEngineCoordinatorTestCase,
+class IFullSynchronousMultiEngineTestCase(ISynchronousMultiEngineTestCase, 
+    ISynchronousMultiEngineCoordinatorTestCase, 
     ISynchronousMultiEngineExtrasTestCase):
     pass
-
-
-
-
-
