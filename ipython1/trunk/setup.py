@@ -133,7 +133,7 @@ if notebook:
 
 setup(
     name = "ipython1",
-    version = "0.9alpha3",
+    version = "0.3alpha1",
     packages = packages,
     package_data = package_data,
     scripts = scripts,
