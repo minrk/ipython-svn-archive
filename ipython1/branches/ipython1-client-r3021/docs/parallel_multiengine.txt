@@ -25,10 +25,10 @@ For more detailed information about starting the controller and engines, see our
 
 .. _introduction: ./parallel_intro
 
-Creating a MultiEngineClient instance
-=====================================
+Creating a ``MultiEngineClient`` instance
+=========================================
 
-The first step is to import the IPython1 client module and then create a ``MultiEngineClient`` instance::
+The first step is to import the IPython1 ``client`` module and then create a ``MultiEngineClient`` instance::
 
 	In [1]: from ipython1.kernel import client
 	
@@ -159,6 +159,26 @@ quickly submit long running commands without blocking your local Python/IPython 
 	[2] In [3]: time.sleep(10)
 	[3] In [3]: time.sleep(10)
 
+Often, it is desirable to wait until a set of ``PendingResult`` objects are done.  For this, there is a the method ``barrier``.  This method takes a tuple of ``PendingResult`` objects and blocks until all of the associated results are ready:
+
+	In [72]: mec.block=False
+
+	# A trivial list of PendingResults objects
+	In [73]: pr_list = [mec.execute('time.sleep(3)') for i in range(10)]
+
+	# Wait until all of them are done
+	In [74]: mec.barrier(pr_list)
+
+	# Then, their results are ready using get_result or the r attribute
+	In [75]: pr_list[0].r
+	Out[75]: 
+	<Results List>
+	[0] In [20]: time.sleep(3)
+	[1] In [19]: time.sleep(3)
+	[2] In [20]: time.sleep(3)
+	[3] In [19]: time.sleep(3)
+
+
 The ``block`` and ``targets`` keyword arguments and attributes
 --------------------------------------------------------------
 
@@ -223,7 +243,7 @@ We provide a few IPython magic commands (``%px``, ``%autopx`` and ``%result``) t
 
 	In [26]: %px import numpy
 	Executing command on Controller
-	Out[26]: 
+	Out[26]:
 	<Results List>
 	[0] In [8]: import numpy
 	[1] In [7]: import numpy
@@ -233,17 +253,17 @@ We provide a few IPython magic commands (``%px``, ``%autopx`` and ``%result``) t
 
 	In [27]: %px a = numpy.random.rand(2,2)
 	Executing command on Controller
-	Out[27]: 
+	Out[27]:
 	<Results List>
 	[0] In [9]: a = numpy.random.rand(2,2)
 	[1] In [8]: a = numpy.random.rand(2,2)
 	[2] In [9]: a = numpy.random.rand(2,2)
 	[3] In [8]: a = numpy.random.rand(2,2)
- 
+
 
 	In [28]: %px print numpy.linalg.eigvals(a)
 	Executing command on Controller
-	Out[28]: 
+	Out[28]:
 	<Results List>
 	[0] In [10]: print numpy.linalg.eigvals(a)
 	[0] Out[10]: [ 1.28167017  0.14197338]
@@ -257,10 +277,10 @@ We provide a few IPython magic commands (``%px``, ``%autopx`` and ``%result``) t
 	[3] In [9]: print numpy.linalg.eigvals(a)
 	[3] Out[9]: [ 0.83664764 -0.25602658]
 
-The ``%result`` magic gets and prints the stdin/stdout/stderr of the last command executed on each engine.  It is simply a shortcut to the ``get_result`` method.
+The ``%result`` magic gets and prints the stdin/stdout/stderr of the last command executed on each engine.  It is simply a shortcut to the ``get_result`` method::
 
 	In [29]: %result
-	Out[29]: 
+	Out[29]:
 	<Results List>
 	[0] In [10]: print numpy.linalg.eigvals(a)
 	[0] Out[10]: [ 1.28167017  0.14197338]
@@ -290,8 +310,8 @@ The ``%autopx`` magic switches to a mode where everything you type is executed o
 	   ....:     a = a+a.transpose()
 	   ....:     evals = numpy.linalg.eigvals(a)
 	   ....:     max_evals.append(evals[0].real)
-	   ....:     
-	   ....:     
+	   ....:
+	   ....:
 	<ipython1.kernel.multiengineclient.PendingResult object at 0x17af8f0>
 
 	In [34]: %autopx
@@ -301,7 +321,7 @@ The ``%autopx`` magic switches to a mode where everything you type is executed o
 
 	In [36]: px print "Average max eigenvalue is: ", sum(max_evals)/len(max_evals)
 	Executing command on Controller
-	Out[36]: 
+	Out[36]:
 	<Results List>
 	[0] In [13]: print "Average max eigenvalue is: ", sum(max_evals)/len(max_evals)
 	[0] Out[13]: Average max eigenvalue is:  10.1387247332
@@ -314,6 +334,8 @@ The ``%autopx`` magic switches to a mode where everything you type is executed o
 
 	[3] In [12]: print "Average max eigenvalue is: ", sum(max_evals)/len(max_evals)
 	[3] Out[12]: Average max eigenvalue is:  10.1158837784
+
+
 
 
 Moving Python object around
@@ -460,9 +482,216 @@ Other things to look at
 Parallel map
 ------------
 
+Python's builtin ``map`` functions allows a function to be applied to a sequence element-by-element.  This type of code is typically trivial to parallelize.  In fact, the MultiEngine interface in IPython1 already has a parallel version of ``map`` that works just like its serial counterpart::
+
+	In [63]: serial_result = map(lambda x:x**10, range(32))
+
+	In [64]: parallel_result = mec.map(lambda x:x**10, range(32))
+
+	In [65]: serial_result==parallel_result
+	Out[65]: True
+
+As you would expect, the parallel version of ``map`` is also influenced by the ``block`` and ``targets`` keyword arguments and attributes.
+
 How to do parallel list comprehensions
 --------------------------------------
 
+In many cases list comprehensions are nicer than using the map function.  While we don't have fully parallel list comprehensions, it is simple to get the basic effect using ``scatter`` and ``gather``::
 
+	In [66]: mec.scatter('x',range(64))
+	Out[66]: [None, None, None, None]
+
+	In [67]: px y = [i**10 for i in x]
+	Executing command on Controller
+	Out[67]: 
+	<Results List>
+	[0] In [19]: y = [i**10 for i in x]
+	[1] In [18]: y = [i**10 for i in x]
+	[2] In [19]: y = [i**10 for i in x]
+	[3] In [18]: y = [i**10 for i in x]
+
+
+	In [68]: y = mec.gather('y')
+
+	In [69]: print y
+	[0, 1, 1024, 59049, 1048576, 9765625, 60466176, 282475249, 1073741824,...]
+
+Parallel Exceptions
+-------------------
+
+In the MultiEngine interface, parallel commands can raise Python exceptions, just like serial commands.  But, it is a little subtle, because a single parallel command can actually raise multiple exceptions (one for each engine the command was run on).  To express this idea, the MultiEngine interface has a ``CompositeError`` exception class that will be raised in most cases.  The ``CompositeError`` class is a special type of exception that wraps one or more other types of exceptions.  Here is how it works::
+
+	In [76]: mec.block=True
+
+	In [77]: mec.execute('1/0')
+	---------------------------------------------------------------------------
+	CompositeError                            Traceback (most recent call last)
+
+	/ipython1-client-r3021/docs/examples/<ipython console> in <module>()
+
+	/ipython1-client-r3021/ipython1/kernel/multiengineclient.pyc in execute(self, lines, targets, block)
+	    432         targets, block = self._findTargetsAndBlock(targets, block)
+	    433         result = blockingCallFromThread(self.smultiengine.execute, lines,
+	--> 434             targets=targets, block=block)
+	    435         if block:
+	    436             result = ResultList(result)
+
+	/ipython1-client-r3021/ipython1/kernel/twistedutil.pyc in blockingCallFromThread(f, *a, **kw)
+	     72             result.raiseException()
+	     73         except Exception, e:
+	---> 74             raise e
+	     75     return result
+	     76 
+
+	CompositeError: one or more exceptions from call to method: execute
+	[0:execute]: ZeroDivisionError: integer division or modulo by zero
+	[1:execute]: ZeroDivisionError: integer division or modulo by zero
+	[2:execute]: ZeroDivisionError: integer division or modulo by zero
+	[3:execute]: ZeroDivisionError: integer division or modulo by zero
+
+Notice how the error message printed when ``CompositeError`` is raised has information about the individual exceptions that were raised on each engine.  If you want, you can even raise one of these original exceptions::
+
+	In [80]: try:
+	   ....:     mec.execute('1/0')
+	   ....: except client.CompositeError, e:
+	   ....:     e.raise_exception()
+	   ....:     
+	   ....:     
+	---------------------------------------------------------------------------
+	ZeroDivisionError                         Traceback (most recent call last)
+
+	/ipython1-client-r3021/docs/examples/<ipython console> in <module>()
+
+	/ipython1-client-r3021/ipython1/kernel/error.pyc in raise_exception(self, excid)
+	    156             raise IndexError("an exception with index %i does not exist"%excid)
+	    157         else:
+	--> 158             raise et, ev, etb
+	    159 
+	    160 def collect_exceptions(rlist, method):
+
+	ZeroDivisionError: integer division or modulo by zero
+
+If you are working in IPython, you can simple type ``%debug`` after one of these ``CompositeError`` is raised, and inspect the exception instance::
+
+	In [81]: mec.execute('1/0')
+	---------------------------------------------------------------------------
+	CompositeError                            Traceback (most recent call last)
+
+	/ipython1-client-r3021/docs/examples/<ipython console> in <module>()
+
+	/ipython1-client-r3021/ipython1/kernel/multiengineclient.pyc in execute(self, lines, targets, block)
+	    432         targets, block = self._findTargetsAndBlock(targets, block)
+	    433         result = blockingCallFromThread(self.smultiengine.execute, lines,
+	--> 434             targets=targets, block=block)
+	    435         if block:
+	    436             result = ResultList(result)
+
+	/ipython1-client-r3021/ipython1/kernel/twistedutil.pyc in blockingCallFromThread(f, *a, **kw)
+	     72             result.raiseException()
+	     73         except Exception, e:
+	---> 74             raise e
+	     75     return result
+	     76 
+
+	CompositeError: one or more exceptions from call to method: execute
+	[0:execute]: ZeroDivisionError: integer division or modulo by zero
+	[1:execute]: ZeroDivisionError: integer division or modulo by zero
+	[2:execute]: ZeroDivisionError: integer division or modulo by zero
+	[3:execute]: ZeroDivisionError: integer division or modulo by zero
+
+	In [82]: %debug
+	> 
+	
+	/ipython1-client-r3021/ipython1/kernel/twistedutil.py(74)blockingCallFromThread()
+	     73         except Exception, e:
+	---> 74             raise e
+	     75     return result
+
+	# With the debugger running, e is the exceptions instance.  We can tab complete
+	# on it and see the extra methods that are available.
+	ipdb> e.
+	e.__class__         e.__getitem__       e.__new__           e.__setstate__      e.args
+	e.__delattr__       e.__getslice__      e.__reduce__        e.__str__           e.elist
+	e.__dict__          e.__hash__          e.__reduce_ex__     e.__weakref__       e.message
+	e.__doc__           e.__init__          e.__repr__          e._get_engine_str   e.print_tracebacks
+	e.__getattribute__  e.__module__        e.__setattr__       e._get_traceback    e.raise_exception
+	ipdb> e.print_tracebacks()
+	[0:execute]: 
+	---------------------------------------------------------------------------
+	ZeroDivisionError                         Traceback (most recent call last)
+
+	/ipython1-client-r3021/docs/examples/<string> in <module>()
+
+	ZeroDivisionError: integer division or modulo by zero
+
+	[1:execute]: 
+	---------------------------------------------------------------------------
+	ZeroDivisionError                         Traceback (most recent call last)
+
+	/ipython1-client-r3021/docs/examples/<string> in <module>()
+
+	ZeroDivisionError: integer division or modulo by zero
+
+	[2:execute]: 
+	---------------------------------------------------------------------------
+	ZeroDivisionError                         Traceback (most recent call last)
+
+	/ipython1-client-r3021/docs/examples/<string> in <module>()
+
+	ZeroDivisionError: integer division or modulo by zero
+
+	[3:execute]: 
+	---------------------------------------------------------------------------
+	ZeroDivisionError                         Traceback (most recent call last)
+
+	/ipython1-client-r3021/docs/examples/<string> in <module>()
+
+	ZeroDivisionError: integer division or modulo by zero
+
+All of this same error handling magic even works in non-blocking mode::
+
+	In [83]: mec.block=False
+
+	In [84]: pr = mec.execute('1/0')
+
+	In [85]: pr.r
+	---------------------------------------------------------------------------
+	CompositeError                            Traceback (most recent call last)
+
+	/ipython1-client-r3021/docs/examples/<ipython console> in <module>()
+
+	/ipython1-client-r3021/ipython1/kernel/multiengineclient.pyc in _get_r(self)
+	    170 
+	    171     def _get_r(self):
+	--> 172         return self.get_result(block=True)
+	    173 
+	    174     r = property(_get_r)
+
+	/ipython1-client-r3021/ipython1/kernel/multiengineclient.pyc in get_result(self, default, block)
+	    131                 return self.result
+	    132         try:
+	--> 133             result = self.client.get_pending_deferred(self.result_id, block)
+	    134         except error.ResultNotCompleted:
+	    135             return default
+
+	/ipython1-client-r3021/ipython1/kernel/multiengineclient.pyc in get_pending_deferred(self, deferredID, block)
+	    385 
+	    386     def get_pending_deferred(self, deferredID, block):
+	--> 387         return blockingCallFromThread(self.smultiengine.get_pending_deferred, deferredID, block)
+	    388 
+	    389     def barrier(self, pendingResults):
+
+	/ipython1-client-r3021/ipython1/kernel/twistedutil.pyc in blockingCallFromThread(f, *a, **kw)
+	     72             result.raiseException()
+	     73         except Exception, e:
+	---> 74             raise e
+	     75     return result
+	     76 
+
+	CompositeError: one or more exceptions from call to method: execute
+	[0:execute]: ZeroDivisionError: integer division or modulo by zero
+	[1:execute]: ZeroDivisionError: integer division or modulo by zero
+	[2:execute]: ZeroDivisionError: integer division or modulo by zero
+	[3:execute]: ZeroDivisionError: integer division or modulo by zero
 
 

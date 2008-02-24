@@ -15,7 +15,7 @@ SynchronousMultiEngine = kernelConfigManager._import(co['client']['MultiEngineIm
 def AsynMultiEngineClient(addr):
     """The default Asynch. MultiEngineClient class."""
     smultiengine = SynchronousMultiEngine(addr)
-    return me.IFullSynchronousTwoPhaseMultiEngine(smultiengine)
+    return smultiengine
 
 default_address = (co['client']['connectToMultiEngineControllerOn']['ip'],
     co['client']['connectToMultiEngineControllerOn']['port'])

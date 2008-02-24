@@ -12,11 +12,15 @@ with:
 
 	* `Installation guide`_
 	* `Parallel computing with IPython1`_
+	   - The `MultiEngine`_ interface
+	   - The `Task`_ interface 
 	* `List of changes that are backwards incompatible`_
 
 .. _Installation guide: ./install
 .. _Parallel computing with IPython1: ./parallel_intro
 .. _List of changes that are backwards incompatible: ./backwards_incompatible
+.. _MultiEngine: ./parallel_multiengine
+.. _Task: ./parallel_task
 
 Developer documentation
 =======================

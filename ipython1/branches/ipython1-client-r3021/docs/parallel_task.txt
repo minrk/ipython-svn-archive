@@ -1,17 +1,56 @@
-The TaskClient interface to the controller presents the engines as a fault
-tolerant, dynamic load-balancing system.  You can even have a
-RemoteController and a TaskClient simultaneously connected to the same
-controller.  But, be warned, the tasks will share the namespace on the 
-engines with the RemoteController.  But, this is actually a feature that allows
-you to do some really nice things.
+=================================
+IPython1's Task interface
+=================================
 
-First create a TaskClient objects::
+.. contents::
 
-	>>> import ipython1.kernel.api as kernel
-	>>> tc = kernel.TaskClient(('127.0.0.1',10113))
+The Task interface to the controller presents the engines as a fault tolerant,
+dynamic load-balanced system or workers. Unlike the MultiEngine interface, in the
+Task interface, you have no direct access to individual engines. In some ways,
+this interface is simpler, but in other ways it is more powerful. Best of all you
+can use both of these interfaces at the same time to take advantage or both of
+their strengths.
+
+Starting the IPython controller and engines
+===========================================
+
+To follow along with this tutorial, you will need to start the IPython
+controller and four IPython engines. The simplest way of doing this is to
+use the ``ipcluster`` command::
+
+	ipcluster -n 4
 	
-Note that the port is different than the RemoteController.  Now you can 
-start submitting tasks by passing instances of kernel.Task to tc.run.
+For more detailed information about starting the controller and engines, see our
+`introduction`_ to using IPython1 for parallel computing.
 
-It is best to check out the examples of using the task farming stuff in 
-ipython1/doc/examples.
+.. _introduction: ./parallel_intro
+
+The magic here is that this single controller and set of engines is running both the MultiEngine and Task interfaces simultaneously.
+
+Creating a TaskClient instance
+==============================
+
+The first step is to import the IPython1 ``client`` module and then create a ``TaskClient`` instance::
+
+	In [1]: from ipython1.kernel import client
+	
+	In [2]: tc = client.TaskClient(('localhost',10113))
+
+Next, you need to create a ``Task`` object that encapsulates a unit of work::
+
+	In [3]: t1 = client.Task('a=10')
+
+Then run the ``Task`` using the ``run`` method.  The result is the task id, that can be used to get the result of the task::
+
+	In [4]: tc.run(t1)
+	Out[4]: 0
+
+	In [5]: tc.get_task_result(0)
+	Out[5]: TaskResult[ID:0]:{}
+
+The ``get_task_result`` method returns a ``TaskResult`` object that contains the results of the ``Task``.
+
+There are many options for running and managing tasks. The best way to learn
+further about the Task interface is to study the examples in ``docs/examples``. If
+you do so and learn a lots about this interface, we encourage you to expand this
+documentation about the Task system.
