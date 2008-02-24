@@ -4,7 +4,7 @@
 
 import ipython1.kernel.api as kernel
 rc = kernel.RemoteController(('127.0.0.1',10105))
-rc.getIDs()                                         # get the IDs of the available engines
+rc.get_ids()                                         # get the IDs of the available engines
 rc.resetAll()                                       # REMOVE
 
 # Running Python Commands
@@ -25,10 +25,10 @@ for r in resultDict:
 
 rc.executeAll('import time')                        # blocking 
 pr = rc.executeAll('time.sleep(5)',block=False)    # non-blocking, returns a PendingResult object
-pr.getResult()                                      # now block for the result
+pr.get_result()                                      # now block for the result
 pr = rc.executeAll('time.sleep(5)', block=False)
-pr.getResult(block=False)                           # See if result is ready but don't block
-pr.r                                                # Shorthand for getResult(block=True)
+pr.get_result(block=False)                           # See if result is ready but don't block
+pr.r                                                # Shorthand for get_result(block=True)
 rc.block = False                                    # now commands won't block by default
 rc.executeAll('y = [x**4 for x in xrange(1000)]')   # non-blocking
 rc.executeAll('print sum(y)',block = True)          # blocking:  override rc.block=False

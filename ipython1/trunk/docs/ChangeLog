@@ -1,3 +1,51 @@
+2008-02-19  Brian Granger <ellisonbg@gmail.com>
+
+	* ipython1.kernel: Changed all of the public interfaces to use the
+	new coding conventions.  All future development should use the
+	lowercase_with_underscores convention.  This means that users of
+	ipython1 will have to update their code to reflect these changes.
+	
+	* ipython1.kernel:  Previously methods like push and pull, used
+	*args and **kwargs respectively.  This was becoming a problem as
+	we weren't able to introduce new keyword arguments.  We have moved
+	away from this, so now our core interfaces DO NOT use *args/**kwargs.
+	This has allowed us to get rid of the *All methods in the MultiEngine
+	interface.  Now all of the methods in this interface simply have
+	a targets keyword argument that defaults to 'all'.  Furthermore, this
+	also means we can have block as a keyword argument.  This means that
+	the public API is extremely different for users (but much better).
+	
+	* ipython1.kernel: Renamed RemoteController everywhere to 
+	MultiEngineController to better reflect what it actually is.
+	
+	* ipython1.kernel: Renamed the magicTargets attribute of the
+	RemoteController to simply targets.
+	
+	* ipython1.kernel: Fixed a bug in the MultiEngine interface.  
+	Previously, multi-engine actions were being collected with a 
+	DeferredList with fireononeerrback set to 1.  This meant that 
+	methods were returning before all engines had given their results.
+	This was causing extremely odd bugs in certain cases. To fix this 
+	problem, we have 1) set fireononeerrback=0 to make sure all results
+	(or exceptions) are in before returning, 2) introduced a CompositeError 
+	exception that wraps all of the engine exceptions.  This is a huge change
+	as it means that users will have to catch CompositeErrors rather than
+	the real exceptions.  But the CompositeError class has a number of methods
+	for introspecting the actual exceptions (see kernel.error.CompositeError).
+	As a part of all of this, we refactored how exceptions were being formatted.
+	Now, we are attaching additional attributes to exceptions (_ipython_*) 
+	that we use to carry additional info around.
+
+	* ipython1.kernel: The multienginexmlrpc and taskxmlrpc clients are now
+	twisted based.  We are doing this by running the reactor in a thread
+	and using blockingCallFromThread.  This makes it possible for different 
+	client to share most of the code and lets us have good test coverage of 
+	clients.  We have expanded our test coverage of these two interfaces.
+	Overall a huge win!
+	
+	* ipython1.kernel.task: Changed setupNS and resultNames to push and pull
+	respectively to better match the language we are using in IPython1.
+
 2008-02-05  Brian Granger <ellisonbg@gmail.com>
 
 	* ipython1.kernel.enginepb/multienginexmlrpc: Simplified certain 
@@ -5,7 +53,7 @@
 	interfaces that 1) are not part of the public API and 2)
 	only have one implementation (and always will).
 
-	* ipython1.kernel: Created new pushFunction/pullFunctions in the API
+	* ipython1.kernel: Created new push_function/pull_functions in the API
 	of the engines.  These functions now have all the needed logic for
 	pushing/pulling functions.  The logic has been removed from regular
 	push/pull to make things more robust.
@@ -31,7 +79,7 @@
 	to globals, but does not include closures.  The map/mapAll
 	methods have been adapted to take functions now.  This approach
 	doesn't work for classes that are callable though.  Still need
-	to add tests of how push/pullSerialized handle this.
+	to add tests of how push/pull_serialized handle this.
 
 
 2007-06-21  Brian Granger <ellisonbg@gmail.com>
@@ -47,16 +95,16 @@
 2007-06-17  Brian Granger <ellisonbg@gmail.com>
 
 	* ipython1.kernel.task.py: Created a new TaskResult object
-	that is returned when getTaskResult is called.  This new 
+	that is returned when get_task_result is called.  This new 
 	object provide a much simpler and intuitive way of accessing
 	the results of a task.  The variables that are pulled back
 	are available as attributes of the TaskResult object.  There
-	are also engineID, taskID attributes.  Failures are handled 
+	are also engineid, taskid attributes.  Failures are handled 
 	through a failure attribute, but remote exceptions can also
 	be reraised by calling the raiseException method.
 	
 	* ipython1.kernel.taskclient/taskxmlrpc.py:  Minor changes to reflect
-	new TaskResult object that is returned by getTaskResult.
+	new TaskResult object that is returned by get_task_result.
 	
 	* doc/examples: Updated TaskController examples to use new
 	TaskResult object.
@@ -71,7 +119,7 @@
 	* ipython1.core.interpreter.py: Added option for having execute
 	actually raise any exceptions that it gets.  Made sure that
 	SyntaxError/IndentationError is raised upon compilation.  Added
-	reset and getResult.  All the changes in core should eventually
+	reset and get_result.  All the changes in core should eventually
 	be merged in with core1.
 	
 	* ipython1.kernel.engineservice.py: Converted the basic engine
@@ -83,7 +131,7 @@
 	their code.
 	
 	* ipython1.test: updated tests to work with the new core.  
-	Added a new testgenerator.py to make writing tests easier.
+	Added a new tgenerator.py to make writing tests easier.
 
 
 2007-04-02  Brian Granger <ellisonbg@gmail.com>
@@ -97,7 +145,7 @@
 	
 	* ipython1.kernel.multiengineclient.py:  Got rid of ifoo methods
 	and replaced them by types with custom __repr__ methods.  ipull
-	is now zipPull.  Got rid of slicing and indexing notation in 
+	is now zip_pull.  Got rid of slicing and indexing notation in 
 	client class.  It led to an API that was simply too complex.
 
 

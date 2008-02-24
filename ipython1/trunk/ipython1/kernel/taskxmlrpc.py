@@ -26,6 +26,7 @@ import xmlrpclib
 from zope.interface import Interface, implements
 from twisted.internet import defer
 from twisted.python import components, failure
+from twisted.web import xmlrpc as webxmlrpc
 
 from ipython1.external.twisted.web2 import xmlrpc, server, channel
 
@@ -49,13 +50,13 @@ class IXMLRPCTaskController(Interface):
     def xmlrpc_run(request, binTask):
         """"""
     
-    def xmlrpc_abort(request, taskID):
+    def xmlrpc_abort(request, taskid):
         """"""
         
-    def xmlrpc_getTaskResult(request, taskID, block=False):
+    def xmlrpc_get_task_result(request, taskid, block=False):
         """"""
         
-    def xmlrpc_barrier(request, taskIDs):
+    def xmlrpc_barrier(request, taskids):
         """"""
     
     def xmlrpc_spin(request):
@@ -103,20 +104,20 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
         d.addErrback(self.packageFailure)
         return d
     
-    def xmlrpc_abort(self, request, taskID):
-        d = self.taskController.abort(taskID)
+    def xmlrpc_abort(self, request, taskid):
+        d = self.taskController.abort(taskid)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d
         
-    def xmlrpc_getTaskResult(self, request, taskID, block=False):
-        d = self.taskController.getTaskResult(taskID, block)
+    def xmlrpc_get_task_result(self, request, taskid, block=False):
+        d = self.taskController.get_task_result(taskid, block)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d
 
-    def xmlrpc_barrier(self, request, taskIDs):
-        d = self.taskController.barrier(taskIDs)
+    def xmlrpc_barrier(self, request, taskids):
+        d = self.taskController.barrier(taskids)
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d        
@@ -148,6 +149,9 @@ components.registerAdapter(XMLRPCServerFactoryFromTaskController,
 # The Client side of things
 #-------------------------------------------------------------------------------
 
+class IXMLRPCTaskClient(Interface):
+    pass
+
 class XMLRPCTaskClient(object):
     """XML-RPC based TaskController client that implements ITaskController.
         
@@ -155,47 +159,19 @@ class XMLRPCTaskClient(object):
         addr : (ip, port)
             The ip (str) and port (int) tuple of the `TaskController`.  
     """
-    implements(Task.ITaskController)
-    
-    #---------------------------------------------------------------------------
-    # Begin copy from XMLRPCMultiEngineClient
-    # Should these methods be in a base XMLRPCClient class?
-    #---------------------------------------------------------------------------
-    
+    implements(Task.ITaskController, IXMLRPCTaskClient)
+        
     def __init__(self, addr):
         self.addr = addr
         self.url = 'http://%s:%s/' % self.addr
-        self._server = xmlrpclib.ServerProxy(self.url, transport=Transport(), 
-            verbose=0)
-        self.block = True
+        self._proxy = webxmlrpc.Proxy(self.url)
     
     #---------------------------------------------------------------------------
     # Non interface methods
     #---------------------------------------------------------------------------
         
-    def _reallyBlock(self, block=None):
-        if block is None:
-            return self.block
-        else:
-            if block in (True, False):
-                return block
-            else:
-                raise ValueError("block must be True or False")
-    
-    def _executeRemoteMethod(self, f, *args):
-        rawResult = f(*args)
-        result = self._unpackageResult(rawResult)
-        return result
-    
-    def _unpackageResult(self, result):
-        result = pickle.loads(result.data)
-        return self._returnOrRaise(result)
-    
-    def _returnOrRaise(self, result):
-        if isinstance(result, failure.Failure):
-            result.raiseException()
-        else:
-            return result
+    def unpackage(self, r):
+        return pickle.loads(r.data)
       
     #---------------------------------------------------------------------------
     # ITaskController related methods
@@ -208,23 +184,23 @@ class XMLRPCTaskClient(object):
         
         The Task object is created using the following signature:
         
-        Task(expression, resultNames=None, setupNS={}, clearBefore=False, 
-            clearAfter=False, retries=0, **options):)
+        Task(expression, pull=None, push={}, clear_before=False, 
+            clear_after=False, retries=0, **options):)
 
         The meaning of the arguments is as follows:
 
         :Task Parameters:
             expression : str
                 A str that is valid python code that is the task.
-            resultNames : str or list of str 
+            pull : str or list of str 
                 The names of objects to be pulled as results.
-            setupNS : dict
+            push : dict
                 A dict of objects to be pushed into the engines namespace before
                 execution of the expression.
-            clearBefore : boolean
+            clear_before : boolean
                 Should the engine's namespace be cleared before the task is run.
                 Default=False.
-            clearAfter : boolean 
+            clear_after : boolean 
                 Should the engine's namespace be cleared after the task is run.
                 Default=False.
             retries : int
@@ -232,62 +208,61 @@ class XMLRPCTaskClient(object):
             options : dict
                 Any other keyword options for more elaborate uses of tasks
             
-        :Returns: The int taskID of the submitted task.  Pass this to 
-            `getTaskResult` to get the `TaskResult` object.
+        :Returns: The int taskid of the submitted task.  Pass this to 
+            `get_task_result` to get the `TaskResult` object.
         """
         assert isinstance(task, Task.Task), "task must be a Task object!"
         binTask = xmlrpc.Binary(pickle.dumps(task,2))
-        result = self._executeRemoteMethod(self._server.run, binTask)
-        return result
+        d = self._proxy.callRemote('run', binTask)
+        d.addCallback(self.unpackage)
+        return d
     
-    def getTaskResult(self, taskID, block=None):
-        """The task result by taskID.
+    def get_task_result(self, taskid, block=False):
+        """The task result by taskid.
         
         :Parameters:
-            taskID : int
-                The taskID of the task to be retrieved.
+            taskid : int
+                The taskid of the task to be retrieved.
             block : boolean
                 Should I block until the task is done?
         
         :Returns: A `TaskResult` object that encapsulates the task result.
         """
-        localBlock = self._reallyBlock(block)
-        result = self._executeRemoteMethod(self._server.getTaskResult, taskID, localBlock)
-        return result
+        d = self._proxy.callRemote('get_task_result', taskid, block)
+        d.addCallback(self.unpackage)
+        return d 
     
-    def abort(self, taskID):
-        """Abort a task by taskID.
+    def abort(self, taskid):
+        """Abort a task by taskid.
         
         :Parameters:
-            taskID : int
-                The taskID of the task to be aborted.
+            taskid : int
+                The taskid of the task to be aborted.
             block : boolean
                 Should I block until the task is aborted.        
         """
-        result = self._executeRemoteMethod(self._server.abort, taskID)
-        return result
+        d = self._proxy.callRemote('abort', taskid)
+        d.addCallback(self.unpackage)
+        return d 
         
-    def barrier(self, taskIDs):
+    def barrier(self, taskids):
         """Block until all tasks are completed.
         
         :Parameters:
-            taskIDs : list, tuple
-                A sequence of taskIDs to block on.
+            taskids : list, tuple
+                A sequence of taskids to block on.
         """
-        result = self._executeRemoteMethod(self._server.barrier, taskIDs)
-        return result
+        d = self._proxy.callRemote('barrier', taskids)
+        d.addCallback(self.unpackage)
+        return d 
     
     def spin(self):
         """touch the scheduler, to resume scheduling without submitting
         a task.
         """
-        result = self._executeRemoteMethod(self._server.spin)
+        d = self._proxy.callRemote('spin')
+        d.addCallback(self.unpackage)
+        return d
 
 
-components.registerAdapter(XMLRPCTaskClient, 
-        xmlrpclib.ServerProxy, Task.ITaskController)
-    
-
-class XMLRPCInteractiveTaskClient(XMLRPCTaskClient, taskclient.InteractiveTaskClient):
-    pass
 

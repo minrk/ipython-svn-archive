@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Test the performance of the task farming system.
 
-This script submits a set of tasks to the TaskController.  The tasks
+This script submits a set of tasks to the TaskClient.  The tasks
 are basically just a time.sleep(t), where t is a random number between
 two limits that can be configured at the command line.  To run 
 the script there must first be an IPython controller and engines running::
@@ -19,7 +19,7 @@ import random, sys
 from optparse import OptionParser
 
 from IPython.genutils import time
-from ipython1.kernel import api as kernel
+from ipython1.kernel import client
 
 def main():
     parser = OptionParser()
@@ -41,28 +41,28 @@ def main():
     parser.add_option("-p", type='int', dest='meport',
         help="the port on which the controller listens for the MultiEngine/RemoteController client")
     parser.add_option("-P", type='int', dest='tport',
-        help="the port on which the controller listens for the TaskController client")
+        help="the port on which the controller listens for the TaskClient client")
     
     (opts, args) = parser.parse_args()
     assert opts.tmax >= opts.tmin, "tmax must not be smaller than tmin"
     
-    rc = kernel.RemoteController((opts.controller, opts.meport))
-    tc = kernel.TaskController((opts.controller, opts.tport))
+    rc = client.MultiEngineClient((opts.controller, opts.meport))
+    tc = client.TaskClient((opts.controller, opts.tport))
     
     rc.block=True
-    nengines = len(rc.getIDs())
-    rc.executeAll('from IPython.genutils import time')
+    nengines = len(rc.get_ids())
+    rc.execute('from IPython.genutils import time')
 
     # the jobs should take a random time within a range
     times = [random.random()*(opts.tmax-opts.tmin)+opts.tmin for i in range(opts.n)]
-    tasks = [kernel.Task("time.sleep(%f)"%t) for t in times]
+    tasks = [client.Task("time.sleep(%f)"%t) for t in times]
     stime = sum(times)
     
     print "executing %i tasks, totalling %.1f secs on %i engines"%(opts.n, stime, nengines)
     time.sleep(1)
     start = time.time()
-    taskIDs = [tc.run(t) for t in tasks]
-    tc.barrier(taskIDs)
+    taskids = [tc.run(t) for t in tasks]
+    tc.barrier(taskids)
     stop = time.time()
 
     ptime = stop-start

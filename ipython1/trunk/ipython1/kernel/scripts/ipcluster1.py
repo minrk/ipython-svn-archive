@@ -143,15 +143,15 @@ def startMsg(control_host,control_port=10105):
     print
     print 'Your cluster is up and running.'
     print
-    print 'For interactive use, you can make a Remote Controller with:'
+    print 'For interactive use, you can make a MultiEngineClient with:'
     print
-    print 'import ipython1.kernel.api as kernel'
-    print "ipc = kernel.RemoteController((%r,%s))" % \
+    print 'from ipython1.kernel import client'
+    print "mec = client.MultiEngineClient((%r,%s))" % \
           (control_host,control_port)
     print
     print 'You can then cleanly stop the cluster from IPython using:'
     print
-    print 'ipc.killAll(controller=True)'
+    print 'mec.kill(controller=True)'
     print
 
 

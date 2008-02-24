@@ -51,11 +51,11 @@ class IControllerCoreTestCase(object):
     def testRegisterUnregisterEngine(self):
         engine = es.EngineService()
         qengine = es.QueuedEngine(engine)
-        regDict = self.controller.registerEngine(qengine, 0)
+        regDict = self.controller.register_engine(qengine, 0)
         self.assert_(isinstance(regDict, dict))
         self.assert_(regDict.has_key('id'))
         self.assert_(regDict['id']==0)
-        self.controller.unregisterEngine(0)
+        self.controller.unregister_engine(0)
         self.assert_(self.controller.engines.get(0, None) == None)
 
     def testRegisterUnregisterMultipleEngines(self):
@@ -63,18 +63,18 @@ class IControllerCoreTestCase(object):
         qe1 = es.QueuedEngine(e1)
         e2 = es.EngineService()
         qe2 = es.QueuedEngine(e2)
-        rd1 = self.controller.registerEngine(qe1, 0)
+        rd1 = self.controller.register_engine(qe1, 0)
         self.assertEquals(rd1['id'], 0)
-        rd2 = self.controller.registerEngine(qe2, 1)
+        rd2 = self.controller.register_engine(qe2, 1)
         self.assertEquals(rd2['id'], 1)
-        self.controller.unregisterEngine(0)
-        rd1 = self.controller.registerEngine(qe1, 0)
+        self.controller.unregister_engine(0)
+        rd1 = self.controller.register_engine(qe1, 0)
         self.assertEquals(rd1['id'], 0)
-        self.controller.unregisterEngine(1)
-        rd2 = self.controller.registerEngine(qe2, 0)
+        self.controller.unregister_engine(1)
+        rd2 = self.controller.register_engine(qe2, 0)
         self.assertEquals(rd2['id'], 1)
-        self.controller.unregisterEngine(0)
-        self.controller.unregisterEngine(1)
+        self.controller.unregister_engine(0)
+        self.controller.unregister_engine(1)
         self.assertEquals(self.controller.engines,{})
         
     def testRegisterCallables(self):
@@ -82,14 +82,14 @@ class IControllerCoreTestCase(object):
         qe1 = es.QueuedEngine(e1)
         self.registerCallableCalled = ';lkj'
         self.unregisterCallableCalled = ';lkj'
-        self.controller.onRegisterEngineDo(self._registerCallable, False)
-        self.controller.onUnregisterEngineDo(self._unregisterCallable, False)
-        self.controller.registerEngine(qe1, 0)
+        self.controller.on_register_engine_do(self._registerCallable, False)
+        self.controller.on_unregister_engine_do(self._unregisterCallable, False)
+        self.controller.register_engine(qe1, 0)
         self.assertEquals(self.registerCallableCalled, 'asdf')
-        self.controller.unregisterEngine(0)
+        self.controller.unregister_engine(0)
         self.assertEquals(self.unregisterCallableCalled, 'asdf')
-        self.controller.onRegisterEngineDoNot(self._registerCallable)
-        self.controller.onUnregisterEngineDoNot(self._unregisterCallable)
+        self.controller.on_register_engine_do_not(self._registerCallable)
+        self.controller.on_unregister_engine_do_not(self._unregisterCallable)
             
     def _registerCallable(self):
         self.registerCallableCalled = 'asdf'
@@ -98,4 +98,4 @@ class IControllerCoreTestCase(object):
         self.unregisterCallableCalled = 'asdf'
         
     def testBadUnregister(self):
-        self.assertRaises(AssertionError, self.controller.unregisterEngine, 'foo')
+        self.assertRaises(AssertionError, self.controller.unregister_engine, 'foo')

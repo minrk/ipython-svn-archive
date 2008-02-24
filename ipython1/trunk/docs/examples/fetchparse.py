@@ -2,14 +2,14 @@
 An exceptionally lousy site spider
 Ken Kinder <ken@kenkinder.com>
 
-This module gives an example of how the TaskController interface to the 
+This module gives an example of how the TaskClient interface to the 
 IPython controller works.  Before running this script start the IPython controller
 and some engines using something like::
 
     ipcluster -n 4
 """
 from twisted.python.failure import Failure
-import ipython1.kernel.api as kernel
+from ipython1.kernel import client
 import time
 
 fetchParse = """
@@ -38,9 +38,9 @@ class DistributedSpider(object):
     pollingDelay = 0.5
     
     def __init__(self, site):
-        self.tc = kernel.TaskController(('127.0.0.1', 10113))
-        self.rc = kernel.RemoteController(('127.0.0.1', 10105))
-        self.rc.execute('all', fetchParse)
+        self.tc = client.TaskClient(('127.0.0.1', 10113))
+        self.rc = client.MultiEngineClient(('127.0.0.1', 10105))
+        self.rc.execute(fetchParse)
         
         self.allLinks = []
         self.linksWorking = {}
@@ -53,7 +53,7 @@ class DistributedSpider(object):
             self.allLinks.append(url)
             if url.startswith(self.site):
                 print '    ', url
-                self.linksWorking[url] = self.tc.run(kernel.Task('links = fetchAndParse(url)', resultNames=['links'], setupNS={'url': url}))
+                self.linksWorking[url] = self.tc.run(client.Task('links = fetchAndParse(url)', pull=['links'], push={'url': url}))
         
     def onVisitDone(self, result, url):
         print url, ':'
@@ -64,7 +64,7 @@ class DistributedSpider(object):
             for line in txt.split('\n'):
                 print '    ', line
         else:
-            for link in result.links:
+            for link in result.ns.links:
                 self.visitLink(link)
                 
     def run(self):
@@ -76,9 +76,9 @@ class DistributedSpider(object):
     
     def synchronize(self):
         for url, taskId in self.linksWorking.items():
-            # Calling getTaskResult with block=False will return None if the
+            # Calling get_task_result with block=False will return None if the
             # task is not done yet.  This provides a simple way of polling.
-            result = self.tc.getTaskResult(taskId, block=False)
+            result = self.tc.get_task_result(taskId, block=False)
             if result is not None:
                 self.onVisitDone(result, url)
 

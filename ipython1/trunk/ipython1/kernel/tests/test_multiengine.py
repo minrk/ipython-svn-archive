@@ -18,62 +18,35 @@ __docformat__ = "restructuredtext en"
 from twisted.internet import defer
 from ipython1.testutils.util import DeferredTestCase
 from ipython1.kernel.controllerservice import ControllerService
-from ipython1.kernel.multiengine import IMultiEngine, ISynchronousMultiEngine
-from ipython1.kernel.tests.multienginetest import \
-    IEngineMultiplexerTestCase, \
-    IMultiEngineBaseTestCase
+from ipython1.kernel import multiengine as me
+from ipython1.kernel.tests.multienginetest import (IMultiEngineTestCase,
+    ISynchronousMultiEngineTestCase)
     
     
-class BasicMultiEngineTestCase(DeferredTestCase,
-    IEngineMultiplexerTestCase):
+class BasicMultiEngineTestCase(DeferredTestCase, IMultiEngineTestCase):
     
     def setUp(self):
         self.controller = ControllerService()
         self.controller.startService()
-        self.multiengine = IMultiEngine(self.controller)
+        self.multiengine = me.IMultiEngine(self.controller)
         self.engines = []
         
     def tearDown(self):
         self.controller.stopService()
         for e in self.engines:
             e.stopService()
-            
-class SynchronousMultiEngineTestCase(DeferredTestCase,
-    IMultiEngineBaseTestCase):
-            
-    def setUp(self):
-        self.controller = ControllerService()
-        self.controller.startService()
-        self.multiengine = IMultiEngine(self.controller)
-        self.smultiengine = ISynchronousMultiEngine(self.multiengine)
-        self.engines = []
-        
-    def tearDown(self):
-        self.controller.stopService()
-        for e in self.engines:
-            e.stopService()
-            
-    def testExecuteNoBlock(self):
-        nengines = 2
-        self.addEngine(nengines)
-        cmd = 'a=5'
-        results = [self.createShell().execute(cmd) for i in range(nengines)]
-        for i, s in enumerate(results):
-            s['id']=i
-        cid = self.smultiengine.registerClient()
-        d = self.smultiengine.execute(cid, False, 'all', cmd)
-        d.addCallback(lambda r: self.smultiengine.getPendingDeferred(cid, r, True))
-        d.addCallback(lambda r: self.assert_(r==results))
-        return d
 
-    def testExecuteBlock(self):
-        nengines = 2
-        self.addEngine(nengines)
-        cmd = 'a=5'
-        results = [self.createShell().execute(cmd) for i in range(nengines)]
-        for i, s in enumerate(results):
-            s['id']=i
-        cid = self.smultiengine.registerClient()
-        d = self.smultiengine.execute(cid, True, 'all', cmd)
-        d.addCallback(lambda r: self.assert_(r==results))
-        return d
+
+class SynchronousMultiEngineTestCase(DeferredTestCase, ISynchronousMultiEngineTestCase):
+    
+    def setUp(self):
+        self.controller = ControllerService()
+        self.controller.startService()
+        self.multiengine = me.ISynchronousMultiEngine(me.IMultiEngine(self.controller))
+        self.engines = []
+        
+    def tearDown(self):
+        self.controller.stopService()
+        for e in self.engines:
+            e.stopService()
+

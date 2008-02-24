@@ -22,31 +22,26 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import cPickle as pickle
-import xmlrpclib
+from types import FunctionType
 
 from zope.interface import Interface, implements
 from twisted.internet import defer
 from twisted.python import components, failure, log
-
+from twisted.web import xmlrpc as webxmlrpc
 from ipython1.external.twisted.web2 import xmlrpc, server, channel
 
 from ipython1.kernel import error 
 from ipython1.kernel.util import printer
-from ipython1.kernel.multiengine import MultiEngine, IMultiEngine
-from ipython1.kernel.multiengine import ISynchronousMultiEngine
-from ipython1.kernel.multiengineclient import PendingResult
-from ipython1.kernel.multiengineclient import ResultList, QueueStatusList
+from ipython1.kernel import map as Map
+from ipython1.kernel.twistedutil import gatherBoth
+from ipython1.kernel.multiengine import (MultiEngine,
+    IMultiEngine,
+    IFullSynchronousMultiEngine,
+    ISynchronousMultiEngine)
 from ipython1.kernel.multiengineclient import wrapResultList
-from ipython1.kernel.multiengineclient import InteractiveMultiEngineClient
-from ipython1.kernel.multiengineclient import MultiEngineCoordinator
-from ipython1.kernel.xmlrpcutil import Transport
-from ipython1.kernel.pickleutil import \
-    can, \
-    canDict, \
-    canSequence, \
-    uncan, \
-    uncanDict, \
-    uncanSequence
+from ipython1.kernel.pendingdeferred import PendingDeferredManager
+from ipython1.kernel.pickleutil import (can, canDict,
+    canSequence, uncan, uncanDict, uncanSequence)
 
 # Needed to access the true globals from __main__.__dict__ 
 import __main__
@@ -58,33 +53,6 @@ import __main__
 
 # This sets the timeout that twisted/web2 uses between requests.
 BETWEEN_REQUESTS_TIMEOUT = 15*60
-
-
-class IXMLRPCMultiEngine(Interface):
-    """XML-RPC interface to `ISynchronousMultiEngine`.  
-
-    The methods in this interface are similar to those of 
-    `ISynchronousMultiEngine`, but their arguments and return values are pickled
-    if they are not already simple Python types that can be send over XML-RPC.
-
-    See the documentation of `ISynchronousMultiEngine` and `IMultiEngine` for 
-    documentation about the methods.
-
-    The methods here take one additional argument (request) that is required
-    by XML-RPC, but is not used.
-    
-    Most methods in this interface act like the `ISynchronousMultiEngine`
-    versions and can be called in blocking or non-blocking mode.  There are 
-    three methods that always block:
-    
-    * xmlrpc_queueStatus
-    * xmlrpc_clearQueue
-    * xmlrpc_getIDs
-    
-    These methods should always return actual results as they don't need to
-    touch the actual engines and can be completed instantly.
-    """
-    pass
 
 
 def packageResult(wrappedMethod):
@@ -102,11 +70,38 @@ def packageResult(wrappedMethod):
     return wrappedPackageResult
 
 
-class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
-    """Adapt `IMultiEngine` -> `ISynchronousMultiEngine` -> `IXMLRPCMultiEngine`.
+class IXMLRPCSynchronousMultiEngine(Interface):
+    """XML-RPC interface to `ISynchronousMultiEngine`.  
+    
+    The methods in this interface are similar to those of 
+    `ISynchronousMultiEngine`, but their arguments and return values are pickled
+    if they are not already simple Python types that can be send over XML-RPC.
+    
+    See the documentation of `ISynchronousMultiEngine` and `IMultiEngine` for 
+    documentation about the methods.
+    
+    The methods here take one additional argument (request) that is required
+    by XML-RPC, but is not used.
+    
+    Most methods in this interface act like the `ISynchronousMultiEngine`
+    versions and can be called in blocking or non-blocking mode.  There are 
+    three methods that always block:
+    
+    * xmlrpc_queue_status
+    * xmlrpc_clear_queue
+    * xmlrpc_get_ids
+    
+    These methods should always return actual results as they don't need to
+    touch the actual engines and can be completed instantly.
+    """
+    pass
+
+
+class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
+    """Adapt `IMultiEngine` -> `ISynchronousMultiEngine` -> `IXMLRPCSynchronousMultiEngine`.
     """
     
-    implements(IXMLRPCMultiEngine)
+    implements(IXMLRPCSynchronousMultiEngine)
     
     addSlash = True
     
@@ -114,8 +109,10 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         xmlrpc.XMLRPC.__init__(self)
         # Adapt the raw multiengine to `ISynchronousMultiEngine` before saving
         # it.  This allow this class to do two adaptation steps.
+        log.msg("Adapting: %r"%multiengine)
         self.smultiengine = ISynchronousMultiEngine(multiengine)
-
+        self._deferredIDCallbacks = {}
+    
     #---------------------------------------------------------------------------
     # Non interface methods
     #---------------------------------------------------------------------------
@@ -123,183 +120,183 @@ class XMLRPCMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
     def packageFailure(self, f):
         f.cleanFailure()
         return self.packageSuccess(f)
-
+    
     def packageSuccess(self, obj):
         serial = pickle.dumps(obj, 2)
         return xmlrpc.Binary(serial)
+    
+    #---------------------------------------------------------------------------
+    # Things related to PendingDeferredManager
+    #---------------------------------------------------------------------------
+    
+    @packageResult
+    def xmlrpc_get_pending_deferred(self, request, deferredID, block):
+        d = self.smultiengine.get_pending_deferred(deferredID, block)
+        try:
+            callback = self._deferredIDCallbacks.pop(deferredID)
+        except KeyError:
+            callback = None
+        if callback is not None:
+            d.addCallback(callback[0], *callback[1], **callback[2])
+        return d
        
+    @packageResult
+    def xmlrpc_clear_pending_deferreds(self, request):
+        return defer.maybeDeferred(self.smultiengine.clear_pending_deferreds)
+    
+    def _addDeferredIDCallback(self, did, callback, *args, **kwargs):
+        self._deferredIDCallbacks[did] = (callback, args, kwargs)
+        return did
+        
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
     
     @packageResult
-    def xmlrpc_execute(self, request, clientID, block, targets, lines):     
-        return self.smultiengine.execute(clientID, block, targets, lines)
+    def xmlrpc_execute(self, request, lines, targets, block):
+        return self.smultiengine.execute(lines, targets=targets, block=block)
     
     @packageResult    
-    def xmlrpc_push(self, request, clientID, block, targets, binaryNS):
+    def xmlrpc_push(self, request, binaryNS, targets, block):
         try:
             namespace = pickle.loads(binaryNS.data)
         except:
             d = defer.fail(failure.Failure())
         else:
-            d = self.smultiengine.push(clientID, block, targets, **namespace)
+            d = self.smultiengine.push(namespace, targets=targets, block=block)
         return d
-
+    
     @packageResult
-    def xmlrpc_pull(self, request, clientID, block, targets, *keys):
-        d = self.smultiengine.pull(clientID, block, targets, *keys)
+    def xmlrpc_pull(self, request, keys, targets, block):
+        d = self.smultiengine.pull(keys, targets=targets, block=block)
         return d
-
+    
     @packageResult    
-    def xmlrpc_pushFunction(self, request, clientID, block, targets, binaryNS):
+    def xmlrpc_push_function(self, request, binaryNS, targets, block):
         try:
             namespace = pickle.loads(binaryNS.data)
         except:
             d = defer.fail(failure.Failure())
         else:
             namespace = uncanDict(namespace)
-            d = self.smultiengine.pushFunction(clientID, block, targets, **namespace)
+            d = self.smultiengine.push_function(namespace, targets=targets, block=block)
         return d
-  
+    
     def _canMultipleKeys(self, result):
         return [canSequence(r) for r in result]
-  
+    
     @packageResult
-    def xmlrpc_pullFunction(self, request, clientID, block, targets, *keys):
-        d = self.smultiengine.pullFunction(clientID, block, targets, *keys)
-        if len(keys)==1:
-            d.addCallback(canSequence)
-        elif len(keys)>1:
-            d.addCallback(self._canMultipleKeys)
+    def xmlrpc_pull_function(self, request, keys, targets, block):
+        def can_functions(r, keys):
+            if len(keys)==1 or isinstance(keys, str):
+                result = canSequence(r)
+            elif len(keys)>1:
+                result = [canSequence(s) for s in r]
+            return result
+        d = self.smultiengine.pull_function(keys, targets=targets, block=block)
+        if block:
+            d.addCallback(can_functions, keys)
+        else:
+            d.addCallback(lambda did: self._addDeferredIDCallback(did, can_functions, keys))
+        return d
+    
+    @packageResult    
+    def xmlrpc_push_serialized(self, request, binaryNS, targets, block):
+        try:
+            namespace = pickle.loads(binaryNS.data)
+        except:
+            d = defer.fail(failure.Failure())
+        else:
+            d = self.smultiengine.push_serialized(namespace, targets=targets, block=block)
         return d
     
     @packageResult
-    def xmlrpc_getResult(self, request, clientID, block, targets, i=None):
+    def xmlrpc_pull_serialized(self, request, keys, targets, block):
+        d = self.smultiengine.pull_serialized(keys, targets=targets, block=block)
+        return d
+    
+    @packageResult
+    def xmlrpc_get_result(self, request, i, targets, block):
         if i == 'None':
             i = None
-        return self.smultiengine.getResult(clientID, block, targets, i)
+        return self.smultiengine.get_result(i, targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_reset(self, request, clientID, block, targets):
-        return self.smultiengine.reset(clientID, block, targets)
+    def xmlrpc_reset(self, request, targets, block):
+        return self.smultiengine.reset(targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_keys(self, request, clientID, block, targets):
-        return self.smultiengine.keys(clientID, block, targets)
+    def xmlrpc_keys(self, request, targets, block):
+        return self.smultiengine.keys(targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_kill(self, request, clientID, block, targets, controller=False):
-        return self.smultiengine.kill(clientID, block, targets, controller)
-
-    @packageResult
-    def xmlrpc_clearQueue(self, request, clientID, targets):
-        """Clear the queue on targets.
-        
-        This method always blocks.  This means that it will always waits for
-        the queues to be cleared before returning.  This method will never
-        return the id of a pending deferred.
-        """
-        return self.smultiengine.clearQueue(clientID, True, targets)
-
-    @packageResult
-    def xmlrpc_queueStatus(self, request, clientID, targets):
-        """Get the queue status on targets.
-        
-        This method always blocks.  This means that it will always return
-        the queues status's.  This method will never return the id of a pending 
-        deferred.    
-        """
-        return self.smultiengine.queueStatus(clientID, True, targets)
+    def xmlrpc_kill(self, request, controller, targets, block):
+        return self.smultiengine.kill(controller, targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_setProperties(self, request, clientID, block, targets, binaryNS):
+    def xmlrpc_clear_queue(self, request, targets, block):
+        return self.smultiengine.clear_queue(targets=targets, block=block)
+    
+    @packageResult
+    def xmlrpc_queue_status(self, request, targets, block):
+        return self.smultiengine.queue_status(targets=targets, block=block)
+    
+    @packageResult
+    def xmlrpc_set_properties(self, request, binaryNS, targets, block):
         try:
             ns = pickle.loads(binaryNS.data)
         except:
             d = defer.fail(failure.Failure())
         else:
-            d = self.smultiengine.setProperties(clientID, block, targets, **ns)
+            d = self.smultiengine.set_properties(ns, targets=targets, block=block)
         return d
     
     @packageResult
-    def xmlrpc_getProperties(self, request, clientID, block, targets, *keys):
-        return self.smultiengine.getProperties(clientID, block, targets, *keys)
+    def xmlrpc_get_properties(self, request, keys, targets, block):
+        if keys=='None':
+            keys=None
+        return self.smultiengine.get_properties(keys, targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_hasProperties(self, request, clientID, block, targets, *keys):
-        return self.smultiengine.hasProperties(clientID, block, targets, *keys)
+    def xmlrpc_has_properties(self, request, keys, targets, block):
+        return self.smultiengine.has_properties(keys, targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_delProperties(self, request, clientID, block, targets, *keys):
-        return self.smultiengine.delProperties(clientID, block, targets, *keys)
+    def xmlrpc_del_properties(self, request, keys, targets, block):
+        return self.smultiengine.del_properties(keys, targets=targets, block=block)
     
     @packageResult
-    def xmlrpc_clearProperties(self, request, clientID, block, targets, *keys):
-        return self.smultiengine.clearProperties(clientID, block, targets, *keys)
+    def xmlrpc_clear_properties(self, request, targets, block):
+        return self.smultiengine.clear_properties(targets=targets, block=block)
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
-    def xmlrpc_getIDs(self, request):
+    def xmlrpc_get_ids(self, request):
         """Get the ids of the registered engines.
         
         This method always blocks.
         """
-        return self.smultiengine.getIDs()
-         
-    #---------------------------------------------------------------------------
-    # Pending Deferred related methods
-    #---------------------------------------------------------------------------            
-    
-    def xmlrpc_registerClient(self, request):
-        """"""
-        clientID = self.smultiengine.registerClient()
-        return clientID
-        
-    def xmlrpc_unregisterClient(self, request, clientID):
-        """"""
-        try:
-            self.smultiengine.unregisterClient(clientID)
-        except error.InvalidClientID:
-            f = failure.Failure()
-            return self.packageFailure(f)
-        else:
-            return True
-            
-    @packageResult
-    def xmlrpc_getPendingResult(self, request, clientID, resultID, block):
-        """"""
-        return self.smultiengine.getPendingDeferred(clientID, resultID, block)
-        
-    @packageResult
-    def xmlrpc_getAllPendingResults(self, request, clientID):
-        """"""    
-        return self.smultiengine.getAllPendingDeferreds(clientID)
+        return self.smultiengine.get_ids()
 
-    @packageResult
-    def xmlrpc_flush(self, request, clientID):
-        """"""    
-        return self.smultiengine.flush(clientID)
-    
 
 # The __init__ method of `XMLRPCMultiEngineFromMultiEngine` first adapts the
 # `IMultiEngine` to `ISynchronousMultiEngine` so this is actually doing a
 # two phase adaptation.
-components.registerAdapter(XMLRPCMultiEngineFromMultiEngine,
-            IMultiEngine, IXMLRPCMultiEngine)
-
+components.registerAdapter(XMLRPCSynchronousMultiEngineFromMultiEngine,
+            IMultiEngine, IXMLRPCSynchronousMultiEngine)
 
 class IXMLRPCMultiEngineFactory(Interface):
     pass
-    
-    
+
+
 def XMLRPCServerFactoryFromMultiEngine(multiengine):
     """Adapt a MultiEngine to a XMLRPCServerFactory."""
-    s = server.Site(IXMLRPCMultiEngine(multiengine))
+    s = server.Site(IXMLRPCSynchronousMultiEngine(multiengine))
     cf = channel.HTTPFactory(s, betweenRequestsTimeOut=BETWEEN_REQUESTS_TIMEOUT)
     return cf
+
 
 # This adaptation does the final step in:
 # `IMultiEngine` -> `ISynchronousMultiEngine` ->
@@ -313,22 +310,13 @@ components.registerAdapter(XMLRPCServerFactoryFromMultiEngine,
 # The Client side of things
 #-------------------------------------------------------------------------------
 
-class XMLRPCMultiEngineClient(MultiEngineCoordinator):
-    """Client that talks to a IMultiEngine adapted controller over XML-RPC.
+class IXMLRPCFullSynchronousMultiEngineClient(Interface):
+    pass
+
+
+class XMLRPCFullSynchronousMultiEngineClient(object):
     
-    This class is usually aliased to RemoteController in ipython1.kernel.api
-    so create one like this:
-    
-    >>> import ipython1.kernel.api as kernel
-    >>> rc = kernel.RemoteController(('myhost.work.com', 10105))
-    
-    This class has a attribute named block that controls how most methods
-    work.  If block=True (default) all methods will actually block until
-    their action has been completed.  Then they will return their result
-    or raise any Exceptions.  If block=False, the method will simply
-    return a `PendingResult` object whose `getResult` method or `r` attribute
-    can then be used to later retrieve the result.
-    """
+    implements(IFullSynchronousMultiEngine, IXMLRPCFullSynchronousMultiEngineClient)
     
     def __init__(self, addr):
         """Create a client that will connect to addr.
@@ -342,576 +330,377 @@ class XMLRPCMultiEngineClient(MultiEngineCoordinator):
         """
         self.addr = addr
         self.url = 'http://%s:%s/' % self.addr
-        self._server = xmlrpclib.ServerProxy(self.url, transport=Transport(), 
-            verbose=0)
-        self._clientID = None
-        self.block = True
-
+        self._proxy = webxmlrpc.Proxy(self.url)
+        self._deferredIDCallbacks = {}
+        # This class manages some pending deferreds through this instance.  This
+        # is required for methods like gather/scatter as it enables us to
+        # create our own pending deferreds for composite operations.
+        self.pdm = PendingDeferredManager()
+    
     #---------------------------------------------------------------------------
     # Non interface methods
     #---------------------------------------------------------------------------
-        
-    def _reallyBlock(self, block=None):
-        if block is None:
-            return self.block
-        else:
-            if block in (True, False):
-                return block
-            else:
-                raise ValueError("block must be True or False")
-
-    def _executeRemoteMethod(self, f, *args):
-        try:
-            rawResult = f(*args)
-            result = self._unpackageResult(rawResult)
-        except error.InvalidClientID:
-            self._getClientID()
-            rawResult = f(*args)
-            result = self._unpackageResult(rawResult)
-        return result
-
-    def _unpackageResult(self, result):
-        result = pickle.loads(result.data)
-        return self._returnOrRaise(result)
-        
-    def _returnOrRaise(self, result):
-        if isinstance(result, failure.Failure):
-            result.raiseException()
-        else:
-            return result
-        
-    def _checkClientID(self):
-        if self._clientID is None:
-            self._getClientID()
-            
-    def _getClientID(self):
-        clientID = self._server.registerClient()
-        self._clientID = clientID
-
-    def _getPendingResult(self, resultID, block=True):
-        self._checkClientID()
-        return self._executeRemoteMethod(self._server.getPendingResult,
-            self._clientID, resultID, block)
+                 
+    def unpackage(self, r):
+        return pickle.loads(r.data)
     
     #---------------------------------------------------------------------------
-    # Methods to help manage pending results
-    #--------------------------------------------------------------------------- 
-     
-    def barrier(self, *pendingResults):
-        """Synchronize a set of `PendingResults`.
+    # Things related to PendingDeferredManager
+    #---------------------------------------------------------------------------
+    
+    def get_pending_deferred(self, deferredID, block=True):
         
-        This method is a synchronization primitive that waits for a set of
-        `PendingResult` objects to complete.  More specifically, barier does
-        the following.
-        
-        * The `PendingResult`s are sorted by resultID.
-        * The `getResult` method is called for each `PendingResult` sequentially
-          with block=True.
-        * If a `PendingResult` gets a result that is an exception, it is 
-          trapped and can be re-raised later by calling `getResult` again.
-        * The `PendingResult`s are flushed from the controller.
-                
-        After barrier has been called on a `PendingResult`, its results can 
-        be retrieved by calling `getResult` again or accesing the `r` attribute
-        of the instance.
-        """
-        self._checkClientID()
-
-        # Convert to list for sorting and check class type 
-        prList = list(pendingResults)
-        for pr in prList:
-            if not isinstance(pr, PendingResult):
-                raise error.NotAPendingResult("Objects passed to barrier must be PendingResult instances")
-                            
-        # Sort the PendingResults so they are in order
-        prList.sort()
-        # Block on each PendingResult object
-        for pr in prList:
+        # Because we are managing some pending deferreds locally (through
+        # self.pdm) and some remotely (on the controller), we first try the 
+        # local one and then the remote one.
+        if self.pdm.quick_has_id(deferredID):
+            d = self.pdm.get_pending_deferred(deferredID, block)
+            return d
+        else:
+            d = self._proxy.callRemote('get_pending_deferred', deferredID, block)
+            d.addCallback(self.unpackage)
             try:
-                result = pr.getResult(block=True)
-            except Exception:
-                pass
+                callback = self._deferredIDCallbacks.pop(deferredID)
+            except KeyError:
+                callback = None
+            if callback is not None:
+                d.addCallback(callback[0], *callback[1], **callback[2])
+            return d
+    
+    def clear_pending_deferreds(self):
         
-    def flush(self, clientID=None):
-        """Flush the PendingResults in the controller.
-        
-        :Parameters:
-            clientID : None, int or 'all'
-                Which clients `PendingResult` references shoould be deleted
-                in the controller.  None means the current client.  An
-                int is used to specify a particular clientID.  The string
-                'all' is used to specify all clients. 
-        
-        This method is needed because the controller keeps track of
-        all the `PendingResult` the client has been handed.  There are two
-        ways that these references go away:
-        
-        * If `getResult` is called on a `PendingResult` the controller 
-          deletes the reference to it.
-        * If `flush` is called the controller deletes all refereces to the 
-          `PendingResults` it is tracking.
-        
-        Once the flush method has been called, any existing `PendingResult`
-        object will have become stale and raise an `InvalidDeferredID`
-        exception.  One way to think about `flush` is that is is a way
-        of telling the controller you are not interested in any 
-        the results attached to any existing `PendingResult` object.
-        
-        Another important point is that this method does not block in any
-        way.  The asynchronous results the `PendingResult` is hooked up 
-        to still happens, but the result and any failures are simply 
-        discarded.
-        """
-        self._checkClientID()
-        if clientID is None:
-            cid = self._clientID
-        result = self._executeRemoteMethod(self._server.flush, cid)
-        return result
-        
+        # This clear both the local (self.pdm) and remote pending deferreds
+        self.pdm.clear_pending_deferreds()
+        d2 = self._proxy.callRemote('clear_pending_deferreds')
+        d2.addCallback(self.unpackage)
+        return d2
+    
+    def _addDeferredIDCallback(self, did, callback, *args, **kwargs):
+        self._deferredIDCallbacks[did] = (callback, args, kwargs)
+        return did
+       
     #---------------------------------------------------------------------------
     # IEngineMultiplexer related methods
     #---------------------------------------------------------------------------
         
-    def execute(self, targets, lines, block=None):
-        """Execute lines of code on targets and possibly block.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines. 
-            lines : str
-                A string of Python code to execute.
-            block : boolean
-                Should I block or not.  If block=True, wait for the action to
-                complete and return the result.  If block=False, return a
-                `PendingResult` object that can be used to later get the
-                result.  If block is not specified, the block attribute 
-                will be used instead.
-            
-        :Returns: A list of dictionaries with the stdin/stdout/stderr of the 
-        command on each targets.
-        """
-        self._checkClientID()
-        localBlock = self._reallyBlock(block)
-        result = self._executeRemoteMethod(self._server.execute, self._clientID, localBlock, targets, lines)
-        if not localBlock:
-            result = PendingResult(self, result)
-            result.addCallback(wrapResultList)
-        else:
-            result = ResultList(result)
-        return result
+    def execute(self, lines, targets='all', block=True):
+        d = self._proxy.callRemote('execute', lines, targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def executeAll(self, lines, block=None):
-        """Execute lines of code on all targets.
-        
-        See the docstring for `execute` for full details.
-        """
-        return self.execute('all', lines, block)
-    
-    def push(self, targets, **namespace):
-        """Push Python objects by key to targets.
-        
-        This method takes all key/value pairs passed in as keyword arguments
-        and pushes (sends) them to the engines specified in targets.  Most Python objects
-        are pickled, but numpy arrays are send using their raw buffers.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            namespace : dict
-                The keyword arguments of that contain the key/value pairs
-                that will be pushed.
-                
-        Examples
-        ========
-        
-        >>> rc.push('all', a=5)    # pushes 5 to all engines as 'a'
-        >>> rc.push(0, b=30)       # pushes 30 to 0 as 'b'
-        """
-        
-        self._checkClientID()
+    def push(self, namespace, targets='all', block=True):
         binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.push, self._clientID, localBlock, targets, binPackage)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result
+        d =  self._proxy.callRemote('push', binPackage, targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def pushAll(self, **ns):
-        """Push Python objects by key to all targets.
-        
-        See the docstring for `push` for full details.
-        """
-        return self.push('all', **ns)
+    def pull(self, keys, targets='all', block=True):
+        d = self._proxy.callRemote('pull', keys, targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def pull(self, targets, *keys):
-        """Pull Python objects by key from targets.
-        
-        This method gets the Python objects specified in keys from the engines specified
-        in targets.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            keys: list or tuple of str
-                A list of variable names as string of the Python objects to be pulled
-                back to the client.
-                
-        :Returns: A list of pulled Python objects for each target.
-        
-        Examples
-        ========
-        
-        >> rc.pullAll('a')
-        [10,10,10,10]
-        """
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        userGlobals = __main__.__dict__
-        
-        def processPullResult(rawResult):
-            result = pickle.loads(rawResult.data)
-            if isinstance(result, failure.Failure):
-                result.raiseException()
-            else:
-                if not localBlock:
-                    return PendingResult(self, result) 
-                else:
-                    return result
-
-        try:
-            rawResult = self._server.pull(self._clientID, localBlock, targets, *keys)
-            return processPullResult(rawResult)
-        except error.InvalidClientID:
-            self._getClientID()
-            rawResult = self._server.pull(self._clientID, localBlock, targets, *keys)
-            return processPullResult(rawResult)
-    
-    def pullAll(self, *keys):
-        """Pull Python objects by key from all targets.
-        
-        See the docstring for `pull` for full details.
-        """
-        return self.pull('all', *keys)
-    
-    def pushFunction(self, targets, **namespace):
-        """Push Python functions by key to targets.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            namespace : dict
-                The keyword arguments of that contain the key/value pairs
-                that will be pushed.
-        """
-        
-        self._checkClientID()
+    def push_function(self, namespace, targets='all', block=True):
         cannedNamespace = canDict(namespace)
         binPackage = xmlrpc.Binary(pickle.dumps(cannedNamespace, 2))
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.pushFunction, self._clientID, 
-            localBlock, targets, binPackage)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result
+        d = self._proxy.callRemote('push_function', binPackage, targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def pushFunctionAll(self, **ns):
-        """Push Python functions by key to all targets.
-        
-        See the docstring for `pushFunction` for full details.
-        """
-        return self.pushFunction('all', **ns)
-
-    def pullFunction(self, targets, *keys):
-        """Pull Python functions by key from targets.
-        
-        This method gets the Python functions specified in keys from the engines specified
-        in targets.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            keys: list or tuple of str
-                A list of variable names as string of the Python funcs to be pulled
-                back to the client.
-                
-        :Returns: A list of pulled Python functions for each target.
-        
-        Examples
-        ========
-        
-        >> rc.pullAll('a')
-        [10,10,10,10]
-        """
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        userGlobals = __main__.__dict__
-        
-        def processPullResult(rawResult):
-            result = pickle.loads(rawResult.data)
-            if isinstance(result, failure.Failure):
-                result.raiseException()
-            else:
-                if not localBlock:
-                    return PendingResult(self, result) 
-                else:
-                    if len(keys)==1:
-                        uncannedResult = [uncan(r, userGlobals) for r in result]
-                    elif len(keys)>1:
-                        uncannedResult = [uncanSequence(r, userGlobals) for r in result]
-                    return uncannedResult
-
-        try:
-            rawResult = self._server.pullFunction(self._clientID, localBlock, targets, *keys)
-            return processPullResult(rawResult)
-        except error.InvalidClientID:
-            self._getClientID()
-            rawResult = self._server.pullFunction(self._clientID, localBlock, targets, *keys)
-            return processPullResult(rawResult)
+    def pull_function(self, keys, targets='all', block=True):
+        def uncan_functions(r, keys):
+            if len(keys)==1 or isinstance(keys, str):
+                return uncanSequence(r)
+            elif len(keys)>1:
+                return [uncanSequence(s) for s in r]
+        d = self._proxy.callRemote('pull_function', keys, targets, block)
+        if block:
+            d.addCallback(self.unpackage)
+            d.addCallback(uncan_functions, keys)
+        else:
+            d.addCallback(self.unpackage)
+            d.addCallback(lambda did: self._addDeferredIDCallback(did, uncan_functions, keys))
+        return d
     
-    def pullFunctionAll(self, *keys):
-        """Pull Python objects by key from all targets.
+    def push_serialized(self, namespace, targets='all', block=True):
+        binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
+        d =  self._proxy.callRemote('push_serialized', binPackage, targets, block)
+        d.addCallback(self.unpackage)
+        return d
+    
+    def pull_serialized(self, keys, targets='all', block=True):
+        d = self._proxy.callRemote('pull_serialized', keys, targets, block)
+        d.addCallback(self.unpackage)
+        return d
         
-        See the docstring for `pull` for full details.
-        """
-        return self.pullFunction('all', *keys)
-
-    def getResult(self, targets, i=None):
-        """Get the stdin/stdout/stderr of a previously executed command on targets.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            i : None or int
-                The command number to retrieve.  The default will retrieve the most recent
-                command.
-                
-        :Returns: The result dict for the command.
-        """
+    def get_result(self, i=None, targets='all', block=True):
         if i is None: # This is because None cannot be marshalled by xml-rpc
             i = 'None'
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.getResult, self._clientID, localBlock, targets, i)
-        if not localBlock:
-            result = PendingResult(self, result)
-            result.addCallback(wrapResultList)
-        else:
-            result = ResultList(result)
-        return result
+        d = self._proxy.callRemote('get_result', i, targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def getResultAll(self, i=None):
-        """Get the stdin/stdout/stderr of a previously executed command on all targets.
-        
-       See the docstring for `getResult` for full details.     
-        """
-        return self.getResult('all', i)
+    def reset(self, targets='all', block=True):
+        d = self._proxy.callRemote('reset', targets, block)
+        d.addCallback(self.unpackage)
+        return d        
     
-    def reset(self, targets):
-        """Reset the namespace on targets.
-        
-        This method resets the persistent namespace in which computations are done in the
-        each engine.  This is is sort of like a soft reset.  Use `kill` to actually stop
-        the engines.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-        """
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.reset, self._clientID, localBlock, targets)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result    
+    def keys(self, targets='all', block=True):
+        d = self._proxy.callRemote('keys', targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def resetAll(self):
-        """Reset the namespace on all targets.
-        
-       See the docstring for `reset` for full details.         
-        """
-        return self.reset('all')
+    def kill(self, controller=False, targets='all', block=True):
+        d = self._proxy.callRemote('kill', controller, targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def keys(self, targets):
-        """List all the variable names defined on each target.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-        
-        :Returns: A list of the variables names on each engine.
-        """
-        
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.keys, self._clientID, localBlock, targets)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result 
+    def clear_queue(self, targets='all', block=True):
+        d = self._proxy.callRemote('clear_queue', targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def keysAll(self):
-        """List all the variable names defined on each engine/target.
-        
-        See the docstring for `keys` for full details.         
-        """
-        return self.keys('all')
+    def queue_status(self, targets='all', block=True):
+        d = self._proxy.callRemote('queue_status', targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def kill(self, targets, controller=False):
-        """Kill the engines/targets specified.
-        
-        This actually stops the engine processes for good.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-            controller : boolean
-                Kill the controller process as well?
-        """
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.kill, self._clientID, localBlock, targets, controller)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result
-    
-    def killAll(self, controller=False):
-        """Kill all the engines/targets.
-        
-        See the docstring for `kill` for full details.
-        """
-        return self.kill('all', controller)
-    
-    def clearQueue(self, targets):
-        """Clear the command queue on targets.
-        
-        Each engine has a queue associated with it.  This queue lives in the controller
-        process.  This command is used to kill all commmands that are waiting in the queue.
-        These commands will then errback with `QueueCleared`.  Use `queueStatus` to see the
-        commands in the queues.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.    
-        """
-        
-        self._checkClientID()
-        result = self._executeRemoteMethod(self._server.clearQueue, self._clientID, targets)
-        return result
-    
-    def clearQueueAll(self):
-        """Clear the command queue on all targets.
-        
-        See the docstring for `clearQueue` for full details.
-        """
-        return self.clearQueue('all')
-    
-    def queueStatus(self, targets):
-        """Get the status of the command queue on targets.
-        
-        :Parameters:
-            targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
-                a list of currently available engines.
-        
-        :Returns:  A list of dicts that describe each queue.
-        """
-        self._checkClientID()
-        result = self._executeRemoteMethod(self._server.queueStatus, self._clientID, targets)
-        return QueueStatusList(result)
-    
-    def queueStatusAll(self):
-        """Get the status of the command queue on all targets/engines.
-        
-        See the docstring for `queueStatus` for full details.
-        """
-        return self.queueStatus('all')
-    
-    def setProperties(self, targets, **properties):
-        """Set properties on targets by key/value"""
-        self._checkClientID()
+    def set_properties(self, properties, targets='all', block=True):
         binPackage = xmlrpc.Binary(pickle.dumps(properties, 2))
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.setProperties, self._clientID, localBlock, targets, binPackage)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result
+        d = self._proxy.callRemote('set_properties', binPackage, targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def setPropertiesAll(self, **properties):
-        return self.setProperties('all', **properties)
+    def get_properties(self, keys=None, targets='all', block=True):
+        if keys==None:
+            keys='None'
+        d = self._proxy.callRemote('get_properties', keys, targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def getProperties(self, targets, *keys):
-        """Get properties from targets by keys, defaulting to all"""
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.getProperties, self._clientID, localBlock, targets, *keys)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result
+    def has_properties(self, keys, targets='all', block=True):
+        d = self._proxy.callRemote('has_properties', keys, targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def getPropertiesAll(self, *keys):
-        return self.getProperties('all', *keys)
+    def del_properties(self, keys, targets='all', block=True):
+        d = self._proxy.callRemote('del_properties', keys, targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
-    def hasProperties(self, targets, *keys):
-        """Check properties on targets by keys"""
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.hasProperties, self._clientID, localBlock, targets, *keys)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result
-    
-    def hasPropertiesAll(self, *keys):
-        return self.hasProperties('all', *keys)
-    
-    def delProperties(self, targets, *keys):
-        """Delete properties from targets by keys"""
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.delProperties, self._clientID, localBlock, targets, *keys)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result
-    
-    def delPropertiesAll(self, *keys):
-        return self.delProperties('all', *keys)
-    
-    def clearProperties(self, targets):
-        """Clear properties from targets"""
-        self._checkClientID()
-        localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod(self._server.clearProperties, self._clientID, localBlock, targets)
-        if not localBlock:
-            result = PendingResult(self, result)
-        return result
-    
-    def clearPropertiesAll(self):
-        return self.clearProperties('all')
+    def clear_properties(self, targets='all', block=True):
+        d = self._proxy.callRemote('clear_properties', targets, block)
+        d.addCallback(self.unpackage)
+        return d
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
-    def getIDs(self):
-        """Get a list of the ids of the engines that are registered."""
-        return self._server.getIDs()
-
-
-class XMLRPCInteractiveMultiEngineClient(XMLRPCMultiEngineClient, InteractiveMultiEngineClient):
+    def get_ids(self):
+        d = self._proxy.callRemote('get_ids')
+        return d
     
-    __doc__ = XMLRPCMultiEngineClient.__doc__
-    
-    def __init__(self, addr):
-        XMLRPCMultiEngineClient.__init__(self, addr)
-        InteractiveMultiEngineClient.__init__(self)
+    #---------------------------------------------------------------------------
+    # ISynchronousMultiEngineCoordinator related methods
+    #---------------------------------------------------------------------------
 
-    __init__.__doc__ = XMLRPCMultiEngineClient.__init__.__doc__
+    def _process_targets(self, targets):
+        def create_targets(ids):
+            if isinstance(targets, int):
+                engines = [targets]
+            elif targets=='all':
+                engines = ids
+            elif isinstance(targets, (list, tuple)):
+                engines = targets
+            for t in engines:
+                if not t in ids:
+                    raise error.InvalidEngineID("engine with id %r does not exist"%t)
+            return engines
+        
+        d = self.get_ids()
+        d.addCallback(create_targets)
+        return d
     
+    def scatter(self, key, seq, style='basic', flatten=False, targets='all', block=True):
+        
+        # Note: scatter and gather handle pending deferreds locally through self.pdm.
+        # This enables us to collect a bunch fo deferred ids and make a secondary 
+        # deferred id that corresponds to the entire group.  This logic is extremely
+        # difficult to get right though.
+        def do_scatter(engines):
+            nEngines = len(engines)
+            mapClass = Map.styles[style]
+            mapObject = mapClass()
+            d_list = []
+            # Loop through and push to each engine in non-blocking mode.
+            # This returns a set of deferreds to deferred_ids
+            for index, engineid in enumerate(engines):
+                partition = mapObject.getPartition(seq, index, nEngines)
+                if flatten and len(partition) == 1:
+                    d = self.push({key: partition[0]}, targets=engineid, block=False)
+                else:
+                    d = self.push({key: partition}, targets=engineid, block=False)
+                d_list.append(d)
+            # Collect the deferred to deferred_ids
+            d = gatherBoth(d_list,
+                           fireOnOneErrback=0,
+                           consumeErrors=1,
+                           logErrors=0)
+            # Now d has a list of deferred_ids or Failures coming
+            d.addCallback(error.collect_exceptions, 'scatter')
+            def process_did_list(did_list):
+                """Turn a list of deferred_ids into a final result or failure."""
+                new_d_list = [self.get_pending_deferred(did, True) for did in did_list]
+                final_d = gatherBoth(new_d_list,
+                                     fireOnOneErrback=0,
+                                     consumeErrors=1,
+                                     logErrors=0)
+                final_d.addCallback(error.collect_exceptions, 'scatter')
+                final_d.addCallback(lambda lop: [i[0] for i in lop])
+                return final_d
+            # Now, depending on block, we need to handle the list deferred_ids
+            # coming down the pipe diferently.
+            if block:
+                # If we are blocking register a callback that will transform the
+                # list of deferred_ids into the final result.
+                d.addCallback(process_did_list)
+                return d
+            else:
+                # Here we are going to use a _local_ PendingDeferredManager.
+                deferred_id = self.pdm.get_deferred_id()
+                # This is the deferred we will return to the user that will fire
+                # with the local deferred_id AFTER we have received the list of 
+                # primary deferred_ids
+                d_to_return = defer.Deferred()
+                def do_it(did_list):
+                    """Produce a deferred to the final result, but first fire the
+                    deferred we will return to the user that has the local
+                    deferred id."""
+                    d_to_return.callback(deferred_id)
+                    return process_did_list(did_list)
+                d.addCallback(do_it)
+                # Now save the deferred to the final result
+                self.pdm.save_pending_deferred(d, deferred_id)
+                return d_to_return
+
+        d = self._process_targets(targets)
+        d.addCallback(do_scatter)
+        return d
+
+    def gather(self, key, style='basic', targets='all', block=True):
+        
+        # Note: scatter and gather handle pending deferreds locally through self.pdm.
+        # This enables us to collect a bunch fo deferred ids and make a secondary 
+        # deferred id that corresponds to the entire group.  This logic is extremely
+        # difficult to get right though.
+        def do_gather(engines):
+            nEngines = len(engines)
+            mapClass = Map.styles[style]
+            mapObject = mapClass()
+            d_list = []
+            # Loop through and push to each engine in non-blocking mode.
+            # This returns a set of deferreds to deferred_ids
+            for index, engineid in enumerate(engines):
+                d = self.pull(key, targets=engineid, block=False)
+                d_list.append(d)
+            # Collect the deferred to deferred_ids
+            d = gatherBoth(d_list,
+                           fireOnOneErrback=0,
+                           consumeErrors=1,
+                           logErrors=0)
+            # Now d has a list of deferred_ids or Failures coming
+            d.addCallback(error.collect_exceptions, 'scatter')
+            def process_did_list(did_list):
+                """Turn a list of deferred_ids into a final result or failure."""
+                new_d_list = [self.get_pending_deferred(did, True) for did in did_list]
+                final_d = gatherBoth(new_d_list,
+                                     fireOnOneErrback=0,
+                                     consumeErrors=1,
+                                     logErrors=0)
+                final_d.addCallback(error.collect_exceptions, 'gather')
+                final_d.addCallback(lambda lop: [i[0] for i in lop])
+                final_d.addCallback(mapObject.joinPartitions)
+                return final_d
+            # Now, depending on block, we need to handle the list deferred_ids
+            # coming down the pipe diferently.
+            if block:
+                # If we are blocking register a callback that will transform the
+                # list of deferred_ids into the final result.
+                d.addCallback(process_did_list)
+                return d
+            else:
+                # Here we are going to use a _local_ PendingDeferredManager.
+                deferred_id = self.pdm.get_deferred_id()
+                # This is the deferred we will return to the user that will fire
+                # with the local deferred_id AFTER we have received the list of 
+                # primary deferred_ids
+                d_to_return = defer.Deferred()
+                def do_it(did_list):
+                    """Produce a deferred to the final result, but first fire the
+                    deferred we will return to the user that has the local
+                    deferred id."""
+                    d_to_return.callback(deferred_id)
+                    return process_did_list(did_list)
+                d.addCallback(do_it)
+                # Now save the deferred to the final result
+                self.pdm.save_pending_deferred(d, deferred_id)
+                return d_to_return
+
+        d = self._process_targets(targets)
+        d.addCallback(do_gather)
+        return d
+
+    def map(self, func, seq, style='basic', targets='all', block=True):
+        d_list = []
+        if isinstance(func, FunctionType):
+            d = self.push_function(dict(_ipython_map_func=func), targets=targets, block=False)
+            d.addCallback(lambda did: self.get_pending_deferred(did, True))
+            sourceToRun = '_ipython_map_seq_result = map(_ipython_map_func, _ipython_map_seq)'
+        elif isinstance(func, str):
+            d = defer.succeed(None)
+            sourceToRun = \
+                '_ipython_map_seq_result = map(%s, _ipython_map_seq)' % func
+        else:
+            raise TypeError("func must be a function or str")
+        
+        d.addCallback(lambda _: self.scatter('_ipython_map_seq', seq, style, targets=targets))
+        d.addCallback(lambda _: self.execute(sourceToRun, targets=targets, block=False))
+        d.addCallback(lambda did: self.get_pending_deferred(did, True))
+        d.addCallback(lambda _: self.gather('_ipython_map_seq_result', style, targets=targets, block=block))
+        return d
+
+    #---------------------------------------------------------------------------
+    # ISynchronousMultiEngineExtras related methods
+    #---------------------------------------------------------------------------
+    
+    def _transformPullResult(self, pushResult, multitargets, lenKeys):
+        if not multitargets:
+            result = pushResult[0]
+        elif lenKeys > 1:
+            result = zip(*pushResult)
+        elif lenKeys is 1:
+            result = list(pushResult)
+        return result
+        
+    def zip_pull(self, keys, targets='all', block=True):
+        multitargets = not isinstance(targets, int) and len(targets) > 1
+        lenKeys = len(keys)
+        d = self.pull(keys, targets=targets, block=block)
+        if block:
+            d.addCallback(self._transformPullResult, multitargets, lenKeys)
+        else:
+            d.addCallback(lambda did: self._addDeferredIDCallback(did, self._transformPullResult, multitargets, lenKeys))
+        return d
+    
+    def run(self, fname, targets='all', block=True):
+        fileobj = open(fname,'r')
+        source = fileobj.read()
+        fileobj.close()
+        # if the compilation blows, we get a local error right away
+        try:
+            code = compile(source,fname,'exec')
+        except:
+            return defer.fail(failure.Failure()) 
+        # Now run the code
+        d = self.execute(source, targets=targets, block=block)
+        return d

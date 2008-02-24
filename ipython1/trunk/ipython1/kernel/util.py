@@ -92,8 +92,8 @@ def curry(f, *curryArgs, **curryKWargs):
 def catcher(r):
     pass
 
-def printer(r):
-    print r
+def printer(r, msg=''):
+    print "%s\n%r" % (msg, r)
     return r
 
 

@@ -162,15 +162,15 @@ def startMsg(control_host,control_port=10105):
     print
     print 'Your cluster is up and running.'
     print
-    print 'For interactive use, you can make a Remote Controller with:'
+    print 'For interactive use, you can make a MultiEngineClient with:'
     print
-    print 'import ipython1.kernel.api as kernel'
-    print "rc = kernel.RemoteController((%r,%s))" % \
+    print 'from ipython1.kernel import client'
+    print "mec = client.MultiEngineClient((%r,%s))" % \
           (control_host,control_port)
     print
     print 'You can then cleanly stop the cluster from IPython using:'
     print
-    print 'ipc.killAll(controller=True)'
+    print 'mec.kill(controller=True)'
     print
 
     
@@ -178,7 +178,7 @@ def clusterLocal(opt,arg):
     """Start a cluster on the local machine."""
     
     # Store all logs inside the ipython directory
-    ipdir = cutils.getIpythonDir()
+    ipdir = cutils.get_ipython_dir()
     pjoin = os.path.join
 
     logfile = opt.logfile
@@ -257,7 +257,7 @@ def clusterRemote(opt,arg):
     sshx = clConfig.get('sshx',os.environ.get('IPYTHON_SSHX','sshx'))
     
     # Store all logs inside the ipython directory
-    ipdir = cutils.getIpythonDir()
+    ipdir = cutils.get_ipython_dir()
     pjoin = os.path.join
 
     logfile = opt.logfile

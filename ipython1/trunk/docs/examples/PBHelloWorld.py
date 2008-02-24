@@ -18,8 +18,8 @@ def failure(error):
 
 def connected(perspective):
     client = PBTaskClient(perspective)
-    client.run(kernel.Task('x = "hello"', resultNames=['x'])).addCallbacks(success, failure)
-    client.run(kernel.Task('raise ValueError, "pants"', resultNames=['x'])).addCallbacks(success, failure)
+    client.run(kernel.Task('x = "hello"', pull=['x'])).addCallbacks(success, failure)
+    client.run(kernel.Task('raise ValueError, "pants"', pull=['x'])).addCallbacks(success, failure)
     print "connected."
 
 factory = pb.PBClientFactory()

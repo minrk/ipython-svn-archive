@@ -35,21 +35,21 @@ class Task(object):
     :Parameters:
         expression : str
             A str that is valid python code that is the task.
-        resultNames : str or list of str 
+        pull : str or list of str 
             The names of objects to be pulled as results.  If not specified, 
             will return {'result', None}
-        setupNS : dict
+        push : dict
             A dict of objects to be pushed into the engines namespace before
             execution of the expression.
-        clearBefore : boolean
+        clear_before : boolean
             Should the engine's namespace be cleared before the task is run.
             Default=False.
-        clearAfter : boolean 
+        clear_after : boolean 
             Should the engine's namespace be cleared after the task is run.
             Default=False.
         retries : int
             The number of times to resumbit the task if it fails.  Default=0.
-        recoveryTask : Task
+        recovery_task : Task
             This is the Task to be run when the task has exhausted its retries
             Default=None.
         depends : Dependency, dict, list, str
@@ -65,23 +65,23 @@ class Task(object):
     --------
     
     >>> t = Task('dostuff(args)')
-    >>> t = Task('a=5', resultNames='a')
-    >>> t = Task('a=5\nb=4', resultNames=['a','b'])
+    >>> t = Task('a=5', pull='a')
+    >>> t = Task('a=5\nb=4', pull=['a','b'])
     >>> t = Task('os.kill(os.getpid(),9)', retries=100) # this is a bad idea
     """
-    def __init__(self, expression, resultNames=None, setupNS=None,
-            clearBefore=False, clearAfter=False, retries=0, 
-            recoveryTask=None, depends=None, **options):
+    def __init__(self, expression, pull=None, push=None,
+            clear_before=False, clear_after=False, retries=0, 
+            recovery_task=None, depends=None, **options):
         self.expression = expression
-        if isinstance(resultNames, str):
-            self.resultNames = [resultNames]
+        if isinstance(pull, str):
+            self.pull = [pull]
         else:
-            self.resultNames = resultNames
-        self.setupNS = setupNS
-        self.clearBefore = clearBefore
-        self.clearAfter = clearAfter
+            self.pull = pull
+        self.push = push
+        self.clear_before = clear_before
+        self.clear_after = clear_after
         self.retries=retries
-        self.recoveryTask = recoveryTask
+        self.recovery_task = recovery_task
         if depends is None:
             self.dependency = _Dependency()
         elif isinstance(depends, Dependency):
@@ -89,9 +89,9 @@ class Task(object):
         else:
             self.dependency = Dependency(depends)
         self.options = options
-        self.taskID = None
+        self.taskid = None
 
-class resultNS:
+class ResultNS:
     """The result namespace object for use in TaskResult objects as tr.ns.
     It builds an object from a dictionary, such that it has attributes
     according to the key,value pairs of the dictionary.
@@ -104,7 +104,7 @@ class resultNS:
     Example
     --------
     
-    >>> ns = resultNS({'a':17,'foo':range(3)})
+    >>> ns = ResultNS({'a':17,'foo':range(3)})
     >>> print ns
         NS{'a':17,'foo':range(3)}
     >>> ns.a
@@ -144,19 +144,19 @@ class TaskResult(object):
         session.
         
         The TaskResult has a .ns member, which is a property for access
-        to the results.  If the Task had resultNames=['a', 'b'], then the 
+        to the results.  If the Task had pull=['a', 'b'], then the 
         Task Result will have attributes tr.ns.a, tr.ns.b for those values.
         Accessing tr.ns will raise the remote failure if the task failed.
         
-        The engineID attribute should have the engineID of the engine
+        The engineid attribute should have the engineid of the engine
         that ran the task.  But, because engines can come and go in
-        the ipython task system, the engineID may not continue to be
+        the ipython task system, the engineid may not continue to be
         valid or accurate.
         
-        The taskID attribute simply gives the taskID that the task
+        The taskid attribute simply gives the taskid that the task
         is tracked under.
     """
-    taskID = None
+    taskid = None
     
     def _getNS(self):
         if isinstance(self.failure, failure.Failure):
@@ -169,8 +169,8 @@ class TaskResult(object):
     
     ns = property(_getNS, _setNS)
     
-    def __init__(self, results, engineID):
-        self.engineID = engineID
+    def __init__(self, results, engineid):
+        self.engineid = engineid
         if isinstance(results, failure.Failure):
             self.failure = results
             self.results = {}
@@ -178,7 +178,7 @@ class TaskResult(object):
             self.results = results
             self.failure = None
         
-        self._ns = resultNS(self.results)
+        self._ns = ResultNS(self.results)
         
         self.keys = self.results.keys()
     
@@ -187,7 +187,7 @@ class TaskResult(object):
             contents = self.failure
         else:
             contents = self.results
-        return "TaskResult[ID:%r]:%r"%(self.taskID, contents)
+        return "TaskResult[ID:%r]:%r"%(self.taskid, contents)
     
     def __getitem__(self, key):
         if self.failure is not None:
@@ -336,7 +336,7 @@ class Dependency(_Dependency):
         try:
             return test(properties)
         except Exception, e:
-            log.msg("maybe bad strtest: %r"%e)
+            log.msg("Maybe bad strtest: %r"%e)
             return False
     
 
@@ -363,10 +363,10 @@ class WorkerFromQueuedEngine(object):
         self.queuedEngine = qe
         self.workerID = None
     
-    def _getProperties(self):
+    def _get_properties(self):
         return self.queuedEngine.properties
     
-    properties = property(_getProperties, lambda self, _:None)
+    properties = property(_get_properties, lambda self, _:None)
     
     def run(self, task):
         """Run task in worker's namespace.
@@ -376,18 +376,18 @@ class WorkerFromQueuedEngine(object):
         
         :Returns: `Deferred` to a `TaskResult` object.
         """
-        if task.clearBefore:
+        if task.clear_before:
             d = self.queuedEngine.reset()
         else:
             d = defer.succeed(None)
             
-        if task.setupNS is not None:
-            d.addCallback(lambda r: self.queuedEngine.push(**task.setupNS))
+        if task.push is not None:
+            d.addCallback(lambda r: self.queuedEngine.push(task.push))
         
         d.addCallback(lambda r: self.queuedEngine.execute(task.expression))
         
-        if task.resultNames is not None:
-            d.addCallback(lambda r: self.queuedEngine.pull(*task.resultNames))
+        if task.pull is not None:
+            d.addCallback(lambda r: self.queuedEngine.pull(task.pull))
         else:
             d.addCallback(lambda r: None)
         
@@ -395,10 +395,10 @@ class WorkerFromQueuedEngine(object):
             self.queuedEngine.reset()
             return result
             
-        if task.clearAfter:
+        if task.clear_after:
             d.addBoth(reseter)
         
-        return d.addBoth(self._zipResults, task.resultNames)
+        return d.addBoth(self._zipResults, task.pull)
     
     def _zipResults(self, result, names):
         """Callback for construting the TaskResult object."""
@@ -422,7 +422,7 @@ class IScheduler(zi.Interface):
     zi.Attribute("nworkers", "the number of unassigned workers")
     zi.Attribute("ntasks", "the number of unscheduled tasks")
     
-    def addTask(task, **flags):
+    def add_task(task, **flags):
         """Add a task to the queue of the Scheduler.
         
         :Parameters:
@@ -432,7 +432,7 @@ class IScheduler(zi.Interface):
                 General keywords for more sophisticated scheduling
         """
     
-    def popTask(id=None):
+    def pop_task(id=None):
         """Pops a Task object.
         
         This gets the next task to be run.  If no `id` is requested, the highest priority
@@ -446,10 +446,10 @@ class IScheduler(zi.Interface):
         :Returns: a `Task` object
         
         :Exceptions:
-            IndexError : raised if no taskID in queue
+            IndexError : raised if no taskid in queue
         """
     
-    def addWorker(worker, **flags):
+    def add_worker(worker, **flags):
         """Add a worker to the worker queue.
         
         :Parameters:
@@ -457,7 +457,7 @@ class IScheduler(zi.Interface):
             flags : General keywords for more sophisticated scheduling
         """
     
-    def popWorker(id=None):
+    def pop_worker(id=None):
         """Pops an IWorker object that is ready to do work.
         
         This gets the next IWorker that is ready to do work. 
@@ -503,23 +503,23 @@ class FIFOScheduler(object):
     ntasks = property(_ntasks, lambda self, _:None)
     nworkers = property(_nworkers, lambda self, _:None)
     
-    def addTask(self, task, **flags):    
+    def add_task(self, task, **flags):    
         self.tasks.append(task)
     
-    def popTask(self, id=None):
+    def pop_task(self, id=None):
         if id is None:
             return self.tasks.pop(0)
         else:
             for i in range(len(self.tasks)):
-                taskID = self.tasks[i].taskID
-                if id == taskID:
+                taskid = self.tasks[i].taskid
+                if id == taskid:
                     return self.tasks.pop(i)
             raise IndexError("No task #%i"%id)
     
-    def addWorker(self, worker, **flags):
+    def add_worker(self, worker, **flags):
         self.workers.append(worker)
     
-    def popWorker(self, id=None):
+    def pop_worker(self, id=None):
         if id is None:
             return self.workers.pop(0)
         else:
@@ -537,7 +537,7 @@ class FIFOScheduler(object):
                 except:
                     cando = False
                 if cando:
-                    return self.popWorker(w.workerID), self.popTask(t.taskID)
+                    return self.pop_worker(w.workerID), self.pop_task(t.taskid)
         return None, None
     
 
@@ -548,12 +548,12 @@ class LIFOScheduler(FIFOScheduler):
     only in cases with low load, where starvation does not really matter.
     """
     
-    def addTask(self, task, **flags):
+    def add_task(self, task, **flags):
         self.tasks.reverse()
         self.tasks.append(task)
         self.tasks.reverse()
     
-    def addWorker(self, worker, **flags):
+    def add_worker(self, worker, **flags):
         self.workers.reverse()
         self.workers.append(worker)
         self.workers.reverse()
@@ -574,28 +574,28 @@ class ITaskController(cs.IControllerBase):
         :Returns: the integer ID of the task
         """
     
-    def getTaskResult(taskID):
+    def get_task_result(taskid, block=False):
         """Get the result of a task by its ID.
         
         :Parameters:
-            taskID : int
+            taskid : int
                 the id of the task whose result is requested
         
-        :Returns: `Deferred` to (taskID, actualResult) if the task is done, and None
+        :Returns: `Deferred` to (taskid, actualResult) if the task is done, and None
             if not.
         
         :Exceptions:
             actualResult will be an `IndexError` if no such task has been submitted
         """
     
-    def abort(taskID):
+    def abort(taskid):
         """Remove task from queue if task is has not been submitted.
         
         If the task has already been submitted, wait for it to finish and discard 
         results and prevent resubmission.
         
         :Parameters:
-            taskID : the id of the task to be aborted
+            taskid : the id of the task to be aborted
         
         :Returns:
             `Deferred` to abort attempt completion.  Will be None on success.
@@ -605,8 +605,8 @@ class ITaskController(cs.IControllerBase):
             or the task has already completed.
         """
     
-    def barrier(taskIDs):
-        """Block until the list of taskIDs are completed.
+    def barrier(taskids):
+        """Block until the list of taskids are completed.
         
         Returns None on success.
         """
@@ -631,102 +631,102 @@ class TaskController(cs.ControllerAdapterBase):
     
     def __init__(self, controller):
         self.controller = controller
-        self.controller.onRegisterEngineDo(self.registerWorker, True)
-        self.controller.onUnregisterEngineDo(self.unregisterWorker, True)
-        self.taskID = 0
+        self.controller.on_register_engine_do(self.registerWorker, True)
+        self.controller.on_unregister_engine_do(self.unregisterWorker, True)
+        self.taskid = 0
         self.failurePenalty = 1 # the time in seconds to penalize
                                 # a worker for failing a task
-        self.pendingTasks = {} # dict of {workerID:(taskID, task)}
-        self.deferredResults = {} # dict of {taskID:deferred}
-        self.finishedResults = {} # dict of {taskID:actualResult}
+        self.pendingTasks = {} # dict of {workerID:(taskid, task)}
+        self.deferredResults = {} # dict of {taskid:deferred}
+        self.finishedResults = {} # dict of {taskid:actualResult}
         self.workers = {} # dict of {workerID:worker}
-        self.abortPending = [] # dict of {taskID:abortDeferred}
+        self.abortPending = [] # dict of {taskid:abortDeferred}
         self.idleLater = None # delayed call object for timeout
         self.scheduler = self.SchedulerClass()
         
         for id in self.controller.engines.keys():
                 self.workers[id] = IWorker(self.controller.engines[id])
                 self.workers[id].workerID = id
-                self.schedule.addWorker(self.workers[id])
+                self.schedule.add_worker(self.workers[id])
     
     def registerWorker(self, id):
-        """Called by controller.registerEngine."""
+        """Called by controller.register_engine."""
         if self.workers.get(id):
             raise "We already have one!  This should not happen."
         self.workers[id] = IWorker(self.controller.engines[id])
         self.workers[id].workerID = id
         if not self.pendingTasks.has_key(id):# if not working
-            self.scheduler.addWorker(self.workers[id])
+            self.scheduler.add_worker(self.workers[id])
         self.distributeTasks()
     
     def unregisterWorker(self, id):
-        """Called by controller.unregisterEngine"""
+        """Called by controller.unregister_engine"""
         
         if self.workers.has_key(id):
             try:
-                self.scheduler.popWorker(id)
+                self.scheduler.pop_worker(id)
             except IndexError:
                 pass
             self.workers.pop(id)
     
     def _pendingTaskIDs(self):
-        return [t.taskID for t in self.pendingTasks.values()]
+        return [t.taskid for t in self.pendingTasks.values()]
     
     #---------------------------------------------------------------------------
     # Interface methods
     #---------------------------------------------------------------------------
     
     def run(self, task):
-        """Run a task and return `Deferred` to its taskID."""
-        task.taskID = self.taskID
-        self.taskID += 1
+        """Run a task and return `Deferred` to its taskid."""
+        task.taskid = self.taskid
+        self.taskid += 1
         d = defer.Deferred()
-        self.scheduler.addTask(task)
-        log.msg('queuing task #%i' %task.taskID)
+        self.scheduler.add_task(task)
+        log.msg('Queuing task: %i' % task.taskid)
         
-        self.deferredResults[task.taskID] = []
+        self.deferredResults[task.taskid] = []
         self.distributeTasks()
-        return defer.succeed(task.taskID)
+        return defer.succeed(task.taskid)
     
-    def getTaskResult(self, taskID, block=False):
+    def get_task_result(self, taskid, block=False):
         """Returns a `Deferred` to a TaskResult tuple or None."""
-        log.msg("getting result %i"%taskID)
-        if self.finishedResults.has_key(taskID):
-            tr = self.finishedResults[taskID]
+        log.msg("Getting task result: %i" % taskid)
+        if self.finishedResults.has_key(taskid):
+            tr = self.finishedResults[taskid]
             return defer.succeed(tr)
-        elif self.deferredResults.has_key(taskID):
+        elif self.deferredResults.has_key(taskid):
             if block:
                 d = defer.Deferred()
-                self.deferredResults[taskID].append(d)
+                self.deferredResults[taskid].append(d)
                 return d
             else:
                 return defer.succeed(None)
         else:
-            return defer.fail(IndexError("task ID not registered: %r" % taskID))
+            return defer.fail(IndexError("task ID not registered: %r" % taskid))
     
-    def abort(self, taskID):
+    def abort(self, taskid):
         """Remove a task from the queue if it has not been run already."""
         try:
-            self.scheduler.popTask(taskID)
+            self.scheduler.pop_task(taskid)
         except IndexError, e:
-            if taskID in self.finishedResults.keys():
+            if taskid in self.finishedResults.keys():
                 d = defer.fail(IndexError("Task Already Completed"))
-            elif taskID in self.abortPending:
+            elif taskid in self.abortPending:
                 d = defer.fail(IndexError("Task Already Aborted"))
-            elif taskID in self._pendingTaskIDs():# task is pending
-                self.abortPending.append(taskID)
+            elif taskid in self._pendingTaskIDs():# task is pending
+                self.abortPending.append(taskid)
                 d = defer.succeed(None)
             else:
                 d = defer.fail(e)
         else:
-            d = defer.execute(self._doAbort, taskID)
+            d = defer.execute(self._doAbort, taskid)
         
         return d
     
-    def barrier(self, taskIDs):
+    def barrier(self, taskids):
         dList = []
-        for id in taskIDs:
-            d = self.getTaskResult(id, block=True)
+        for id in taskids:
+            d = self.get_task_result(id, block=True)
             dList.append(d)
         d = DeferredList(dList, consumeErrors=1)
         d.addCallbacks(lambda r: None)
@@ -739,24 +739,24 @@ class TaskController(cs.ControllerAdapterBase):
     # Queue methods
     #---------------------------------------------------------------------------
     
-    def _doAbort(self, taskID):
+    def _doAbort(self, taskid):
         """Helper function for aborting a pending task."""
-        log.msg("Task #%i Aborted"%taskID)
+        log.msg("Task aborted: %i" % taskid)
         result = failure.Failure(error.TaskAborted())
-        self._finishTask(taskID, result)
-        if taskID in self.abortPending:
-            self.abortPending.remove(taskID)
+        self._finishTask(taskid, result)
+        if taskid in self.abortPending:
+            self.abortPending.remove(taskid)
     
-    def _finishTask(self, taskID, result):
-        dlist = self.deferredResults.pop(taskID)
-        result.taskID = taskID   # The TaskResult should save the taskID
-        self.finishedResults[taskID] = result
+    def _finishTask(self, taskid, result):
+        dlist = self.deferredResults.pop(taskid)
+        result.taskid = taskid   # The TaskResult should save the taskid
+        self.finishedResults[taskid] = result
         for d in dlist:
             d.callback(result)
     
     def distributeTasks(self):
         """Distribute tasks while self.scheduler has things to do."""
-        log.msg("distributing Tasks")
+        # log.msg("distributing Tasks")
         worker, task = self.scheduler.schedule()
         if not worker and not task:
             if self.idleLater and self.idleLater.called:# we are inside failIdle
@@ -771,8 +771,8 @@ class TaskController(cs.ControllerAdapterBase):
             self.pendingTasks[worker.workerID] = task
             # run/link callbacks
             d = worker.run(task)
-            log.msg("running task #%i on worker %i" %(task.taskID, worker.workerID))
-            d.addBoth(self.taskCompleted, task.taskID, worker.workerID)
+            log.msg("Running task %i on worker %i" %(task.taskid, worker.workerID))
+            d.addBoth(self.taskCompleted, task.taskid, worker.workerID)
             worker, task = self.scheduler.schedule()
         # check for idle timeout:
         self.checkIdle()
@@ -790,59 +790,59 @@ class TaskController(cs.ControllerAdapterBase):
     def failIdle(self):
         if not self.distributeTasks():
             while self.scheduler.ntasks:
-                t = self.scheduler.popTask()
-                msg = "Task %i failed to execute due to unmet dependencies"%t.taskID
+                t = self.scheduler.pop_task()
+                msg = "task %i failed to execute due to unmet dependencies"%t.taskid
                 msg += " for %i seconds"%self.timeout
-                log.msg("Task %i Aborted by timeout"%t.taskID)
+                log.msg("Task aborted by timeout: %i" % t.taskid)
                 f = failure.Failure(error.TaskTimeout(msg))
-                self._finishTask(t.taskID, f)
+                self._finishTask(t.taskid, f)
         self.idleLater = None
                 
     
-    def taskCompleted(self, result, taskID, workerID):
+    def taskCompleted(self, result, taskid, workerID):
         """This is the err/callback for a completed task."""
         try:
             task = self.pendingTasks.pop(workerID)
         except:
             # this should not happen
-            log.msg("tried to pop bad pending task#%i from worker #%i"%(taskID, workerID))
-            log.msg("result: %r"%result)
-            log.msg("pending tasks:%s"%self.pendingTasks)
+            log.msg("Tried to pop bad pending task %i from worker %i"%(taskid, workerID))
+            log.msg("Result: %r"%result)
+            log.msg("Pending tasks: %s"%self.pendingTasks)
             return
         
         # Check if aborted while pending
         aborted = False
-        if taskID in self.abortPending:
-            self._doAbort(taskID)
+        if taskid in self.abortPending:
+            self._doAbort(taskid)
             aborted = True
         
         if not aborted:
             if result.failure is not None and isinstance(result.failure, failure.Failure): # we failed
-                log.msg("Task #%i failed on worker %i"% (taskID, workerID))
+                log.msg("Task %i failed on worker %i"% (taskid, workerID))
                 if task.retries > 0: # resubmit
                     task.retries -= 1
-                    self.scheduler.addTask(task)
-                    s = "resubmitting task #%i, %i retries remaining" %(taskID, task.retries)
+                    self.scheduler.add_task(task)
+                    s = "Resubmitting task %i, %i retries remaining" %(taskid, task.retries)
                     log.msg(s)
                     self.distributeTasks()
-                elif isinstance(task.recoveryTask, Task) and \
-                                    task.recoveryTask.retries > -1:
-                    # retries = -1 is to prevent infinite recoveryTask loop
+                elif isinstance(task.recovery_task, Task) and \
+                                    task.recovery_task.retries > -1:
+                    # retries = -1 is to prevent infinite recovery_task loop
                     task.retries = -1 
-                    task.recoveryTask.taskID = taskID
-                    task = task.recoveryTask
-                    self.scheduler.addTask(task)
-                    s = "recovering task #%i, %i retries remaining" %(taskID, task.retries)
+                    task.recovery_task.taskid = taskid
+                    task = task.recovery_task
+                    self.scheduler.add_task(task)
+                    s = "Recovering task %i, %i retries remaining" %(taskid, task.retries)
                     log.msg(s)
                     self.distributeTasks()
                 else: # done trying
-                    self._finishTask(taskID, result)
+                    self._finishTask(taskid, result)
                 # wait a second before readmitting a worker that failed
                 # it may have died, and not yet been unregistered
                 reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
             else: # we succeeded
-                log.msg("Task #%i completed "% taskID)
-                self._finishTask(taskID, result)
+                log.msg("Task completed: %i"% taskid)
+                self._finishTask(taskid, result)
                 self.readmitWorker(workerID)
         else:# we aborted the task
             if result.failure is not None and isinstance(result.failure, failure.Failure): # it failed, penalize worker
@@ -858,7 +858,7 @@ class TaskController(cs.ControllerAdapterBase):
         """
         
         if workerID in self.workers.keys() and workerID not in self.pendingTasks.keys():
-            self.scheduler.addWorker(self.workers[workerID])
+            self.scheduler.add_worker(self.workers[workerID])
             self.distributeTasks()
         
     

@@ -67,7 +67,7 @@ def checkMessageSize(m, info):
     """Check string m to see if it violates banana.SIZE_LIMIT.
     
     This should be used on the client side of things for push, scatter
-    and pushSerialized and on the other end for pull, gather and pullSerialized.
+    and push_serialized and on the other end for pull, gather and pull_serialized.
     
     :Parameters:
         `m` : string

@@ -60,20 +60,20 @@ class HTTPMultiEngineRoot(resource.Resource):
         self.child_execute = HTTPMultiEngineExecute(self.smultiengine)
         self.child_push = HTTPMultiEnginePush(self.smultiengine)
         self.child_pull = HTTPMultiEnginePull(self.smultiengine)
-        self.child_getResult = HTTPMultiEngineGetResult(self.smultiengine)
+        self.child_get_result = HTTPMultiEngineGetResult(self.smultiengine)
         self.child_reset = HTTPMultiEngineReset(self.smultiengine)
         self.child_keys = HTTPMultiEngineKeys(self.smultiengine)
         self.child_kill = HTTPMultiEngineKill(self.smultiengine)
-        self.child_clearQueue = HTTPMultiEngineClearQueue(self.smultiengine)
-        self.child_queueStatus = HTTPMultiEngineQueueStatus(self.smultiengine)
-        self.child_getProperties = HTTPMultiEngineGetProperties(self.smultiengine)
-        self.child_getIDs = HTTPMultiEngineGetIDs(self.smultiengine)
+        self.child_clear_queue = HTTPMultiEngineClearQueue(self.smultiengine)
+        self.child_queue_status = HTTPMultiEngineQueueStatus(self.smultiengine)
+        self.child_get_properties = HTTPMultiEngineGetProperties(self.smultiengine)
+        self.child_get_ids = HTTPMultiEngineGetIDs(self.smultiengine)
         
-        self.child_getProperties = HTTPMultiEngineGetProperties(self.smultiengine)
-        self.child_setProperties = HTTPMultiEngineSetProperties(self.smultiengine)
-        self.child_hasProperties = HTTPMultiEngineHasProperties(self.smultiengine)
-        self.child_delProperties = HTTPMultiEngineDelProperties(self.smultiengine)
-        self.child_clearProperties = HTTPMultiEngineClearProperties(self.smultiengine)
+        self.child_get_properties = HTTPMultiEngineGetProperties(self.smultiengine)
+        self.child_set_properties = HTTPMultiEngineSetProperties(self.smultiengine)
+        self.child_has_properties = HTTPMultiEngineHasProperties(self.smultiengine)
+        self.child_del_properties = HTTPMultiEngineDelProperties(self.smultiengine)
+        self.child_clear_properties = HTTPMultiEngineClearProperties(self.smultiengine)
         
         
         self.child_getPendingResult = HTTPMultiEngineGetPendingResult(self.smultiengine)
@@ -110,7 +110,7 @@ class HTTPMultiEngineBaseMethod(resource.Resource):
         if targets == 'all':
             return targets
         elif isinstance(targets, str):
-            engines = self.smultiengine.getIDs()
+            engines = self.smultiengine.get_ids()
             try:
                 target = int(targets)
             except ValueError:
@@ -249,7 +249,7 @@ class HTTPMultiEngineGetResult(HTTPMultiEngineBaseMethod):
             return self._badRequest(request)
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
-            d = self.smultiengine.getResult(clientID, block, targetsArg, id)
+            d = self.smultiengine.get_result(clientID, block, targetsArg, id)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
         else:
@@ -321,7 +321,7 @@ class HTTPMultiEngineClearQueue(HTTPMultiEngineBaseMethod):
             return self._badRequest(request)
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
-            d = self.smultiengine.clearQueue(clientID, True, targetsArg)
+            d = self.smultiengine.clear_queue(clientID, True, targetsArg)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
         else:
@@ -339,7 +339,7 @@ class HTTPMultiEngineQueueStatus(HTTPMultiEngineBaseMethod):
             return self._badRequest(request)
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
-            d = self.smultiengine.queueStatus(clientID, True, targetsArg)
+            d = self.smultiengine.queue_status(clientID, True, targetsArg)
             # d.addBoth(_printer)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
@@ -360,7 +360,7 @@ class HTTPMultiEngineSetProperties(HTTPMultiEngineBaseMethod):
             return self._badRequest(request)
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
-            d = self.smultiengine.setProperties(clientID, block, targetsArg, **ns)
+            d = self.smultiengine.set_properties(clientID, block, targetsArg, **ns)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
         else:
@@ -379,7 +379,7 @@ class HTTPMultiEngineGetProperties(HTTPMultiEngineBaseMethod):
             return self._badRequest(request)
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
-            d = self.smultiengine.getProperties(clientID, block, targetsArg, *keys)
+            d = self.smultiengine.get_properties(clientID, block, targetsArg, *keys)
             # d.addBoth(_printer)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
@@ -399,7 +399,7 @@ class HTTPMultiEngineHasProperties(HTTPMultiEngineBaseMethod):
             return self._badRequest(request)
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
-            d = self.smultiengine.hasProperties(clientID, block, targetsArg, *keys)
+            d = self.smultiengine.has_properties(clientID, block, targetsArg, *keys)
             # d.addBoth(_printer)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
@@ -419,7 +419,7 @@ class HTTPMultiEngineDelProperties(HTTPMultiEngineBaseMethod):
             return self._badRequest(request)
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
-            d = self.smultiengine.delProperties(clientID, block, targetsArg, *keys)
+            d = self.smultiengine.del_properties(clientID, block, targetsArg, *keys)
             # d.addBoth(_printer)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
@@ -439,7 +439,7 @@ class HTTPMultiEngineClearProperties(HTTPMultiEngineBaseMethod):
             return self._badRequest(request)
         targetsArg = self.parseTargets(targetsString)
         if targetsArg is not False:
-            d = self.smultiengine.clearProperties(clientID, block, targetsArg)
+            d = self.smultiengine.clear_properties(clientID, block, targetsArg)
             # d.addBoth(_printer)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
@@ -450,7 +450,7 @@ class HTTPMultiEngineClearProperties(HTTPMultiEngineBaseMethod):
 class HTTPMultiEngineGetIDs(HTTPMultiEngineBaseMethod):
     
     def renderHTTP(self, request):
-        d = defer.execute(self.smultiengine.getIDs)
+        d = defer.execute(self.smultiengine.get_ids)
         d.addCallbacks(self.packageSuccess, self.packageFailure)
         return d
     
@@ -469,7 +469,7 @@ class HTTPMultiEngineGetPendingResult(HTTPMultiEngineBaseMethod):
                 id = int(ids)
         except:
             return self._badRequest(request)
-        d = self.smultiengine.getPendingDeferred(clientID, id, block)
+        d = self.smultiengine.get_pending_deferred(clientID, id, block)
         d.addCallbacks(self.packageSuccess, self.packageFailure)
         return d
     
@@ -533,7 +533,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
     work.  If block=True (default) all methods will actually block until
     their action has been completed.  Then they will return their result
     or raise any Exceptions.  If block=False, the method will simply
-    return a `PendingResult` object whose `getResult` method or `r` attribute
+    return a `PendingResult` object whose `get_result` method or `r` attribute
     can then be used to later retrieve the result.
     """
     
@@ -601,10 +601,10 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         header, response = self._server.request(self.url+'registerClient')
         self._clientID = self._unpackageResult(header, response)
     
-    def _getPendingResult(self, resultID, block=True):
+    def _getPendingResult(self, result_id, block=True):
         self._checkClientID()
         return self._executeRemoteMethod('getPendingResult',
-            clientID=self._clientID, resultid=resultID, block=block)
+            clientID=self._clientID, resultid=result_id, block=block)
     
     #---------------------------------------------------------------------------
     # Methods to help manage pending results
@@ -617,15 +617,15 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         `PendingResult` objects to complete.  More specifically, barier does
         the following.
         
-        * The `PendingResult`s are sorted by resultID.
-        * The `getResult` method is called for each `PendingResult` sequentially
+        * The `PendingResult`s are sorted by result_id.
+        * The `get_result` method is called for each `PendingResult` sequentially
           with block=True.
         * If a `PendingResult` gets a result that is an exception, it is 
-          trapped and can be re-raised later by calling `getResult` again.
+          trapped and can be re-raised later by calling `get_result` again.
         * The `PendingResult`s are flushed from the controller.
                 
         After barrier has been called on a `PendingResult`, its results can 
-        be retrieved by calling `getResult` again or accesing the `r` attribute
+        be retrieved by calling `get_result` again or accesing the `r` attribute
         of the instance.
         """
         self._checkClientID()
@@ -641,7 +641,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         # Block on each PendingResult object
         for pr in prList:
             try:
-                result = pr.getResult(block=True)
+                result = pr.get_result(block=True)
             except Exception:
                 pass
         
@@ -654,7 +654,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines. 
             lines : str
                 A string of Python code to execute.
@@ -695,7 +695,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
             namespace : dict
                 The keyword arguments of that contain the key/value pairs
@@ -732,7 +732,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
             keys: list or tuple of str
                 A list of variable names as string of the Python objects to be pulled
@@ -761,12 +761,12 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         """
         return self.pull('all', *keys)
     
-    def getResult(self, targets, i=None):
+    def get_result(self, targets, i=None):
         """Get the stdin/stdout/stderr of a previously executed command on targets.
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
             i : None or int
                 The command number to retrieve.  The default will retrieve the most recent
@@ -776,7 +776,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         """
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod('getResult', targets, 
+        result = self._executeRemoteMethod('get_result', targets, 
                 clientID=self._clientID, block=localBlock, id=i)
         if not localBlock:
             result = PendingResult(self, result)
@@ -785,12 +785,12 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
             result = ResultList(result)
         return result
     
-    def getResultAll(self, i=None):
+    def get_resultAll(self, i=None):
         """Get the stdin/stdout/stderr of a previously executed command on all targets.
         
-       See the docstring for `getResult` for full details.     
+       See the docstring for `get_result` for full details.     
         """
-        return self.getResult('all', i)
+        return self.get_result('all', i)
     
     def reset(self, targets):
         """Reset the namespace on targets.
@@ -801,7 +801,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
         """
         self._checkClientID()
@@ -824,7 +824,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
         
         :Returns: A list of the variables names on each engine.
@@ -852,7 +852,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
             controller : boolean
                 Kill the controller process as well?
@@ -872,57 +872,57 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         """
         return self.kill('all', controller)
     
-    def clearQueue(self, targets):
+    def clear_queue(self, targets):
         """Clear the command queue on targets.
         
         Each engine has a queue associated with it.  This queue lives in the controller
         process.  This command is used to kill all commmands that are waiting in the queue.
-        These commands will then errback with `QueueCleared`.  Use `queueStatus` to see the
+        These commands will then errback with `QueueCleared`.  Use `queue_status` to see the
         commands in the queues.
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.    
         """
         
         self._checkClientID()
-        result = self._executeRemoteMethod('clearQueue', targets, 
+        result = self._executeRemoteMethod('clear_queue', targets, 
                 clientID = self._clientID, block=False)
         return result
     
-    def clearQueueAll(self):
+    def clear_queueAll(self):
         """Clear the command queue on all targets.
         
-        See the docstring for `clearQueue` for full details.
+        See the docstring for `clear_queue` for full details.
         """
-        return self.clearQueue('all')
+        return self.clear_queue('all')
     
-    def queueStatus(self, targets):
+    def queue_status(self, targets):
         """Get the status of the command queue on targets.
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
         
         :Returns:  A list of dicts that describe each queue.
         """
         self._checkClientID()
-        result = self._executeRemoteMethod('queueStatus', targets, 
+        result = self._executeRemoteMethod('queue_status', targets, 
                 clientID=self._clientID, block=False)
         # print result
         return QueueStatusList(result)
     
-    def queueStatusAll(self):
+    def queue_statusAll(self):
         """Get the status of the command queue on all targets/engines.
         
-        See the docstring for `queueStatus` for full details.
+        See the docstring for `queue_status` for full details.
         """
-        return self.queueStatus('all')
+        return self.queue_status('all')
     
     
-    def setProperties(self, targets, **namespace):
+    def set_properties(self, targets, **namespace):
         """Update the properties with key/value pairs.
         
         This method takes all key/value pairs passed in as keyword arguments
@@ -931,7 +931,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
             namespace : dict
                 The keyword arguments of that contain the key/value pairs
@@ -940,27 +940,27 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         Examples
         ========
         
-        >>> rc.setProperties('all', a=5)    # sets e.properties['a'] = 5 on all
-        >>> rc.setProperties(0, b=30)       # sets e.properties['b'] = 30 on 0
+        >>> rc.set_properties('all', a=5)    # sets e.properties['a'] = 5 on all
+        >>> rc.set_properties(0, b=30)       # sets e.properties['b'] = 30 on 0
         """
         
         self._checkClientID()
         # binPackage = xmlrpc.Binary(pickle.dumps(namespace, 2))
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod('setProperties', targets, 
+        result = self._executeRemoteMethod('set_properties', targets, 
             clientID=self._clientID, block=localBlock, namespace=namespace)
         if not localBlock:
             result = PendingResult(self, result)
         return result
     
-    def setPropertiesAll(self, **ns):
+    def set_propertiesAll(self, **ns):
         """update properties on all targets.
         
-        See the docstring for `setProperties` for full details.
+        See the docstring for `set_properties` for full details.
         """
-        return self.setProperties('all', **ns)
+        return self.set_properties('all', **ns)
     
-    def hasProperties(self, targets, *keys):
+    def has_properties(self, targets, *keys):
         """check the properties dicts of engines for keys.
         
         This method gets the Python objects specified in keys from the engines specified
@@ -968,7 +968,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
             keys: list or tuple of str
                 A list of variable names as string of the properties to be
@@ -980,25 +980,25 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         Examples
         ========
         
-        >> rc.hasPropertiesAll('a', 'b')
+        >> rc.has_propertiesAll('a', 'b')
         [[True, False],[False, True],[True, True]]
         """
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod('hasProperties', targets, 
+        result = self._executeRemoteMethod('has_properties', targets, 
             clientID=self._clientID, block=localBlock, keys=keys)
         if not localBlock:
             result = PendingResult(self, result)
         return result
     
-    def hasPropertiesAll(self, *keys):
+    def has_propertiesAll(self, *keys):
         """check if values exist on properties objects on all engines by keys.
         
-        See the docstring for `hasProperties` for full details.
+        See the docstring for `has_properties` for full details.
         """
-        return self.hasProperties('all', *keys)
+        return self.has_properties('all', *keys)
     
-    def getProperties(self, targets, *keys):
+    def get_properties(self, targets, *keys):
         """Pull subdicts of properties objects on engines by keys.
         
         This method gets the Python objects specified in keys from the engines specified
@@ -1006,7 +1006,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
             keys: list or tuple of str
                 A list of variable names as string of the Python objects to be pulled
@@ -1018,30 +1018,30 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         Examples
         ========
         
-        >> rc.getPropertiesAll('a')
+        >> rc.get_propertiesAll('a')
         [{'a':10},{'a':10},{'a':10}]
         """
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod('getProperties', targets, 
+        result = self._executeRemoteMethod('get_properties', targets, 
             clientID=self._clientID, block=localBlock, keys=keys)
         if not localBlock:
             result = PendingResult(self, result)
         return result
     
-    def getPropertiesAll(self, *keys):
+    def get_propertiesAll(self, *keys):
         """Pull subdicts of properties objects on all engines by keys.
         
-        See the docstring for `getProperties` for full details.
+        See the docstring for `get_properties` for full details.
         """
-        return self.getProperties('all', *keys)
+        return self.get_properties('all', *keys)
     
-    def delProperties(self, targets, *keys):
+    def del_properties(self, targets, *keys):
         """remove elements from properties objects on engines by keys.
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
             keys: list or tuple of str
                 A list of property labels to be cleared
@@ -1051,30 +1051,30 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         Examples
         ========
         
-        >> rc.delPropertiesAll('a')
+        >> rc.del_propertiesAll('a')
         [None, None]
         """
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod('delProperties', targets, 
+        result = self._executeRemoteMethod('del_properties', targets, 
             clientID=self._clientID, block=localBlock, keys=keys)
         if not localBlock:
             result = PendingResult(self, result)
         return result
     
-    def delPropertiesAll(self, *keys):
+    def del_propertiesAll(self, *keys):
         """remove elements from properties objects on all engines by keys.
         
-        See the docstring for `delProperties` for full details.
+        See the docstring for `del_properties` for full details.
         """
-        return self.delProperties('all', *keys)
+        return self.del_properties('all', *keys)
     
-    def clearProperties(self, targets):
+    def clear_properties(self, targets):
         """clear the properties objects on engines.
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
                 
         :Returns: None for each engine
@@ -1082,35 +1082,35 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         Examples
         ========
         
-        >> rc.clearPropertiesAll()
+        >> rc.clear_propertiesAll()
         [None, None, None]
-        >> rc.getPropertiesAll()
+        >> rc.get_propertiesAll()
         [{}, {}, {}]
         """
         self._checkClientID()
         localBlock = self._reallyBlock()
-        result = self._executeRemoteMethod('clearProperties', targets, 
+        result = self._executeRemoteMethod('clear_properties', targets, 
             clientID=self._clientID, block=localBlock)
         if not localBlock:
             result = PendingResult(self, result)
         return result
     
-    def clearPropertiesAll(self, *keys):
+    def clear_propertiesAll(self, *keys):
         """clear the properties objects on all engines.
         
-        See the docstring for `clearProperties` for full details.
+        See the docstring for `clear_properties` for full details.
         """
-        return self.clearProperties('all', *keys)
+        return self.clear_properties('all', *keys)
     
     
     #---------------------------------------------------------------------------
     # IMultiEngine related methods
     #---------------------------------------------------------------------------
     
-    def getIDs(self):
+    def get_ids(self):
         """Get a list of the ids of the engines that are registered."""
         self._checkClientID()
-        return self._executeRemoteMethod('getIDs', clientID=self._clientID, block=False)
+        return self._executeRemoteMethod('get_ids', clientID=self._clientID, block=False)
     
     #---------------------------------------------------------------------------
     # IEngineCoordinator related methods
@@ -1124,7 +1124,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
             key : str
                 What to call the partitions on the engines.
@@ -1161,7 +1161,7 @@ class HTTPMultiEngineClient(MultiEngineCoordinator):
         
         :Parameters:
             targets : int, list or 'all'
-                The engine ids the action will apply to.  Call `getIDs` to see
+                The engine ids the action will apply to.  Call `get_ids` to see
                 a list of currently available engines.
             key : str
                 The name of the sequences on the engines.

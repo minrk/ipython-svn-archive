@@ -64,7 +64,7 @@ class EnginePBTest(DeferredTestCase,
         self.services.append(self.engineService)
         self.engineService.startService()
 
-        # Create and returna Deferred that will fire when self.registerEngine
+        # Create and returna Deferred that will fire when self.register_engine
         # is called.  By returning this deferred, the actual tests will not
         # be run until the client has connected and is registered.
         self.setUpDeferred = defer.Deferred()
@@ -92,14 +92,14 @@ class EnginePBTest(DeferredTestCase,
     # Make me look like a basic controller
     #---------------------------------------------------------------------------
     
-    def registerEngine(self, remoteEngine, id=None, ip=None, port=None, pid=None):
+    def register_engine(self, remoteEngine, id=None, ip=None, port=None, pid=None):
         self.engine = remoteEngine
         # This fires the callbackchain to allow the tests to run
         # The time delay seems to be important
         reactor.callLater(0.1, self.setUpDeferred.callback, None)
         return {'id':id}
     
-    def unregisterEngine(self, id):
+    def unregister_engine(self, id):
         pass
 
     #---------------------------------------------------------------------------
@@ -112,7 +112,7 @@ class EnginePBTest(DeferredTestCase,
         pbconfig.banana.SIZE_LIMIT = sizeLimit
         # Test that smaller size is allows
         toSend = (sizeLimit-1)*'0'
-        d = self.engine.push(a=toSend)
+        d = self.engine.push(dict(a=toSend))
         d.addCallback(lambda _: self.engine.pull('a'))
         d.addCallback(lambda r: self.assert_(r==toSend))
         d.addCallback(lambda _: self.engine.execute("a=%i*'0'" % sizeLimit-1))
@@ -120,7 +120,7 @@ class EnginePBTest(DeferredTestCase,
         d.addCallback(lambda r: self.assert_(r==toSend))
         # Test for failure at the SIZE_LIMIT
         toSend = (sizeLimit)*'0'
-        d.addCallback(lambda _: self.engine.push(a=toSend))
+        d.addCallback(lambda _: self.engine.push(dict(a=toSend)))
         d.addErrback(lambda f: self.assertRaises(PBMessageSizeError, f.raiseException))
         d.addCallback(lambda _: self.engine.execute("a=%i*'0'" % ((sizeLimit-1),)))
         d.addCallback(lambda _: self.engine.pull('a'))

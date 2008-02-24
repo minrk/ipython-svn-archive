@@ -1,0 +1,147 @@
+===================
+Installing IPython1
+===================
+
+.. contents::
+
+Introduction
+============
+
+IPython1 enables parallel applications to be developed in Python. This document describes the steps required to install IPython1. For an overview of IPython1's architecture as it relates to parallel computing, see our `introduction to parallel computing with IPython1`_.
+
+.. _introduction to parallel computing with IPython1: ./parallel_intro
+
+Please let us know if you have problems installing IPython1 or any of its
+dependencies. We have tested IPython1 extensively with Python 2.4 and 2.5. 
+
+.. warning::
+
+	IPython1 will not work with Python 2.3 or below.
+
+IPython1 has three required dependencies:
+
+	1. `IPython`_
+	2. `Twisted`_
+	3. Zope Interface (comes with Twisted)
+
+.. _IPython: http://ipython.scipy.org
+.. _Twisted: http://twistedmatrix.com
+
+It also has the following optional dependencies:
+
+	1. pexpect (used for certain tests)
+	2. nose (used to run our test suite)
+	3. sqlalchemy (used for database support)
+	4. mpi4py (for MPI support)
+
+If you are comfortable using Subversion and installing Python packages, you can
+probably just get and install these packages without further instructions. If
+not, read on.
+
+To get these packages, you will need Subversion (or ``svn``). Many systems will
+already have Subversion installed; if you need more information about Subversion,
+see http://svnbook.red-bean.com/.
+
+Detailed instructions
+=====================
+
+Unless otherwise stated, all of the following packages can be installed by
+changing to their source directory and issuing the command::
+
+	python setup.py install
+	
+This will install everything info the ``site-packages`` directory of your Python distribution.  If this is the system wide Python, you will likely need admin privileges. For information about installing Python packages to other locations (that don't require admin privileges) see the Python documentation at http://docs.python.org/.
+
+IPython
+-------
+
+Download and install the `current version of IPython`_. You can also get the
+latest development version using Subversion::
+
+	svn co http://ipython.scipy.org/svn/ipython/ipython/trunk ipython
+
+.. _current version of IPython: http://ipython.scipy.org
+
+Twisted and Zope Interface
+--------------------------
+
+You will need Twisted 2.5.0 and the version of Zope Interface that comes
+with the `Twisted 2.5.0 tarball`_.
+
+.. _Twisted 2.5.0 tarball: http://tmrc.mit.edu/mirror/twisted/Twisted/2.5/Twisted-2.5.0.tar.bz2
+
+Be sure to remove any old version of Twisted and Zope Interface from your
+``site-packages`` directory. Now install Zope Interface (located in a subdirectory
+of the Twisted tarball) and then Twisted.
+
+IPython1
+---------
+
+First, you should remove any old versions of IPython1 from your ``site-packages``
+directory. The latest version of IPython can be retrieved from the IPython
+Subversion repository with the command::
+
+    svn co http://ipython.scipy.org/svn/ipython/ipython1/trunk ipython1
+
+If you want to do development on IPython1 and want to always run the svn version of
+IPython1, you should install using the command::
+
+	python setupegg.py develop
+	
+Then each time you do an "svn up" you will not need to reinstall IPython1. This
+requires that you have `setuptools`_ installed.
+
+.. _setuptools: http://peak.telecommunity.com/DevCenter/setuptools
+
+
+Configuration
+=============
+
+IPython1 has a configuration system. When you run IPython1 for the first time, the
+default configuration files are written you your ``~/.ipython`` directory. The
+basic configuration files are:
+
+ 	* ``ipython1.core.ini``
+	* ``ipython1.kernel.ini``
+	* ``ipython1.notebook.ini``
+
+In general, command line options override these configuration files. If you are
+running into problems with IPython1, you might try deleting these configuration
+files.
+
+Testing
+=======
+
+Once you have completed the installation of the IPython1 kernel you can run our test suite with the command::
+
+	trial ipython1
+	
+Or if you have `nose`_ installed::
+
+	nosetests -v ipython1
+	
+The ``trial`` command is part of Twisted and allows asynchronous network based
+applications to be tested using Python's unittest framework. Please let us know
+if the tests do not pass. The best way to get in touch with us is on the `IPython
+developer mailing list`_.
+
+.. _nose: http://somethingaboutorange.com/mrl/projects/nose/
+.. _IPython developer mailing list: http://projects.scipy.org/mailman/listinfo/ipython-dev
+
+MPI Support
+===========
+
+IPython1 includes optional support for the Message Passing Interface (`MPI`_),
+which enables the IPython1 Engines to pass data between each other using `MPI`_.  To use MPI with IPython1, the minimal requirements are:
+
+	* An MPI implementation (we recommend `Open MPI`_)
+	* A way to call MPI (we recommend `mpi4py`_)
+
+But, IPython1 should work with any MPI implementation and with any code
+(Python/C/C++/Fortran) that uses MPI. Please contact us for more information about
+this.
+
+.. _MPI: http://www-unix.mcs.anl.gov/mpi/
+.. _mpi4py: http://mpi4py.scipy.org/
+.. _Open MPI: http://www.open-mpi.org/
+

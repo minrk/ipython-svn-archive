@@ -44,6 +44,7 @@ import zope.interface as zi
 
 from ipython1.core.interpreter import Interpreter
 from ipython1.kernel import newserialized, error, util
+from ipython1.kernel.util import printer
 from ipython1.kernel.twistedutil import gatherBoth, DeferredList
 from ipython1.kernel import codeutil
 
@@ -82,13 +83,13 @@ class IEngineCore(zi.Interface):
         Returns a failure object if the execution of lines raises an exception.
         """
     
-    def push(**namespace):
+    def push(namespace):
         """Push dict namespace into the user's namespace.
         
         Returns a deferred to None or a failure.
         """
     
-    def pull(*keys):
+    def pull(keys):
         """Pulls values out of the user's namespace by keys.
         
         Returns a deferred to a tuple objects or a single object.
@@ -96,12 +97,12 @@ class IEngineCore(zi.Interface):
         Raises NameError if any one of objects doess not exist.
         """
     
-    def pushFunction(**namespace):
+    def push_function(namespace):
         """Push a dict of key, function pairs into the user's namespace.
         
         Returns a deferred to None or a failure."""
     
-    def pullFunction(*keys):
+    def pull_function(keys):
         """Pulls functions out of the user's namespace by keys.
         
         Returns a deferred to a tuple of functions or a single function.
@@ -109,7 +110,7 @@ class IEngineCore(zi.Interface):
         Raises NameError if any one of the functions does not exist.
         """
     
-    def getResult(i=None):
+    def get_result(i=None):
         """Get the stdin/stdout/stderr of command i.
         
         Returns a deferred to a dict with keys
@@ -141,10 +142,10 @@ class IEngineSerialized(zi.Interface):
     All methods should return deferreds.
     """
     
-    def pushSerialized(**namespace):
+    def push_serialized(namespace):
         """Push a dict of keys and Serialized objects into the user's namespace."""
     
-    def pullSerialized(*keys):
+    def pull_serialized(keys):
         """Pull objects by key from the user's namespace as Serialized.
         
         Returns a list of or one Serialized.
@@ -158,19 +159,19 @@ class IEngineProperties(zi.Interface):
     
     properties = zi.Attribute("A StrictDict object, containing the properties")
     
-    def setProperties(**properties):
+    def set_properties(properties):
         """set properties by key and value"""
     
-    def getProperties(*keys):
+    def get_properties(keys=None):
         """get a list of properties by `keys`, if no keys specified, get all"""
     
-    def delProperties(*keys):
+    def del_properties(keys):
         """delete properties by `keys`"""
     
-    def hasProperties(*keys):
+    def has_properties(keys):
         """get a list of bool values for whether `properties` has `keys`"""
 
-    def clearProperties():
+    def clear_properties():
         """clear the properties dict"""
     
 class IEngineBase(IEngineCore, IEngineSerialized, IEngineProperties):
@@ -192,19 +193,19 @@ class IEngineQueued(IEngineBase):
     All methods should return deferreds.
     """
     
-    def clearQueue():
+    def clear_queue():
         """Clear the queue."""
     
-    def queueStatus():
+    def queue_status():
         """Get the queued and pending commands in the queue."""
     
-    def registerFailureObserver(obs):
+    def register_failure_observer(obs):
         """Register an observer of pending Failures.
         
         The observer must implement IFailureObserver.
         """
     
-    def unregisterFailureObserver(obs):
+    def unregister_failure_observer(obs):
         """Unregister an observer of pending Failures."""
     
 
@@ -229,7 +230,7 @@ class StrictDict(dict):
         when you request them.  The only way to change properties os explicitly
         through the setitem and getitem of the dictionary interface.
         Example:
-        >>> e = kernel.getEngine(id)
+        >>> e = kernel.get_engine(id)
         >>> L = someList
         >>> e.properties['L'] = L
         >>> L == e.properties['L']
@@ -319,7 +320,7 @@ class EngineAPI(object):
 
 _apiDict = {}
 
-def getEngine(id):
+def get_engine(id):
     """Get the Engine API object, whcih currently just provides the properties 
     object, by ID"""
     global _apiDict
@@ -327,7 +328,7 @@ def getEngine(id):
         _apiDict[id] = EngineAPI(id)
     return _apiDict[id]
 
-def dropEngine(id):
+def drop_engine(id):
     """remove an engine"""
     global _apiDict
     if _apiDict.has_key(id):
@@ -347,7 +348,7 @@ class EngineService(object, service.Service):
         self.shell = self.shellClass()
         self.mpi = mpi
         self.id = None
-        self.properties = getEngine(self.id).properties
+        self.properties = get_engine(self.id).properties
         if self.mpi is not None:
             log.msg("MPI started with rank = %i and size = %i" % 
                 (self.mpi.rank, self.mpi.size))
@@ -357,8 +358,8 @@ class EngineService(object, service.Service):
         
     def _setID(self, id):
         self._id = id
-        self.properties = getEngine(id).properties
-        self.shell.push(**{'id': id})
+        self.properties = get_engine(id).properties
+        self.shell.push({'id': id})
     
     def _getID(self):
         return self._id
@@ -366,7 +367,7 @@ class EngineService(object, service.Service):
     id = property(_getID, _setID)
     
     def _seedNamespace(self):
-        self.shell.push(**{'mpi': self.mpi, 'id' : self.id})
+        self.shell.push({'mpi': self.mpi, 'id' : self.id})
     
     def executeAndRaise(self, msg, callable, *args, **kwargs):
         """Call a method of self.shell and wrap any exception."""
@@ -374,8 +375,15 @@ class EngineService(object, service.Service):
         try:
             result = callable(*args, **kwargs)
         except:
+            # This gives the following:
+            # et=exception class
+            # ev=exception class instance
+            # tb=traceback object
             et,ev,tb = sys.exc_info()
+            # This call adds attributes to the exception value
             et,ev,tb = self.shell.formatTraceback(et,ev,tb,msg)
+            # Add another attribute
+            ev._ipython_engine_info = msg
             f = failure.Failure(ev,et,None)
             d.errback(f)
         else:
@@ -392,9 +400,9 @@ class EngineService(object, service.Service):
     # The IEngine methods.  See the interface for documentation.
     
     def execute(self, lines):
-        msg = """engine: %r
-method: execute(lines)
-lines = %s""" % (self.id, lines)
+        msg = {'engineid':self.id,
+               'method':'execute',
+               'args':[lines]}
         d = self.executeAndRaise(msg, self.shell.execute, lines)
         d.addCallback(self.addIDToResult)
         return d
@@ -403,72 +411,46 @@ lines = %s""" % (self.id, lines)
         result['id'] = self.id
         return result
     
-    def push(self, **namespace):
-        msg = """engine: %r
-method: push(**namespace)
-namespace.keys() = %r""" % (self.id, namespace.keys())
-        d = self.executeAndRaise(msg, self.shell.push, **namespace)
+    def push(self, namespace):
+        msg = {'engineid':self.id,
+               'method':'push',
+               'args':[repr(namespace.keys())]}
+        d = self.executeAndRaise(msg, self.shell.push, namespace)
         return d
     
-    def pull(self, *keys):
-        msg = """engine %r
-method: pull(*keys)
-keys = %r""" % (self.id, keys)
-        
-        if len(keys)==1:
-            return self.executeAndRaise(msg, self.shell.pull, keys[0])
-        elif len(keys) > 1:
-            pulledDeferreds = []
-            for key in keys:
-                d = self.executeAndRaise(msg, self.shell.pull, key)
-                pulledDeferreds.append(d)
-            # This will fire on the first failure and log the rest.
-            dTotal = gatherBoth(pulledDeferreds, 
-                           fireOnOneErrback=1,
-                           logErrors=1, 
-                           consumeErrors=1)
-            return dTotal
-        else:
-            return self.executeAndRaise(msg, self.shell.pull, None)
-    
-    def pushFunction(self, **namespace):
-        msg = """engine: %r
-method: pushFunction(**namespace)
-namespace.keys() = %r""" % (self.id, namespace.keys())
-        d = self.executeAndRaise(msg, self.shell.pushFunction, **namespace)
+    def pull(self, keys):
+        msg = {'engineid':self.id,
+               'method':'pull',
+               'args':[repr(keys)]}
+        d = self.executeAndRaise(msg, self.shell.pull, keys)
         return d
     
-    def pullFunction(self, *keys):
-        msg = """engine %r
-method: pullFunction(*keys)
-keys = %r""" % (self.id, keys)
-        if len(keys)==1:
-            return self.executeAndRaise(msg, self.shell.pullFunction, keys[0])
-        elif len(keys) > 1:
-            pulledDeferreds = []
-            for key in keys:
-                d = self.executeAndRaise(msg, self.shell.pullFunction, key)
-                pulledDeferreds.append(d)
-            # This will fire on the first failure and log the rest.
-            dTotal = gatherBoth(pulledDeferreds, 
-                           fireOnOneErrback=1,
-                           logErrors=1, 
-                           consumeErrors=1)
-            return dTotal
-        else:
-            return self.executeAndRaise(msg, self.shell.pullFunction, None)        
+    def push_function(self, namespace):
+        msg = {'engineid':self.id,
+               'method':'push_function',
+               'args':[repr(namespace.keys())]}
+        d = self.executeAndRaise(msg, self.shell.push_function, namespace)
+        return d
     
-    def getResult(self, i=None):
-        msg = """engine %r
-method: getResult(i=None)
-i = %r""" % (self.id, i)
+    def pull_function(self, keys):
+        msg = {'engineid':self.id,
+               'method':'pull_function',
+               'args':[repr(keys)]}
+        d = self.executeAndRaise(msg, self.shell.pull_function, keys)
+        return d
+    
+    def get_result(self, i=None):
+        msg = {'engineid':self.id,
+               'method':'get_result',
+               'args':[repr(i)]}
         d = self.executeAndRaise(msg, self.shell.getCommand, i)
         d.addCallback(self.addIDToResult)
         return d
     
     def reset(self):
-        msg = """engine %r
-method: reset()""" % self.id
+        msg = {'engineid':self.id,
+               'method':'reset',
+               'args':[]}
         del self.shell
         self.shell = self.shellClass()
         self.properties.clear()
@@ -476,7 +458,7 @@ method: reset()""" % self.id
         return d
     
     def kill(self):
-        dropEngine(self.id)
+        drop_engine(self.id)
         try:
             reactor.stop()
         except RuntimeError:
@@ -500,48 +482,49 @@ method: reset()""" % self.id
                 remotes.append(k)
         return defer.succeed(remotes)
     
-    def setProperties(self, **properties):
-        msg = """engine: %r
-method: setProperties(**properties)
-properties.keys() = %r""" % (self.id, properties.keys())
+    def set_properties(self, properties):
+        msg = {'engineid':self.id,
+               'method':'set_properties',
+               'args':[repr(properties.keys())]}
         return self.executeAndRaise(msg, self.properties.update, properties)
     
-    def getProperties(self, *keys):
-        msg = """engine %r
-method: getProperties(*keys)
-keys = %r""" % (self.id, keys)
-        if not keys:
+    def get_properties(self, keys=None):
+        msg = {'engineid':self.id,
+               'method':'get_properties',
+               'args':[repr(keys)]}
+        if keys is None:
             keys = self.properties.keys()
         return self.executeAndRaise(msg, self.properties.subDict, *keys)
     
-    def _doDel(self, *keys):
+    def _doDel(self, keys):
         for key in keys:
             del self.properties[key]
     
-    def delProperties(self, *keys):
-        msg = """engine %r
-method: delProperties(*keys)
-keys = %r""" % (self.id, keys)
-        return self.executeAndRaise(msg, self._doDel, *keys)
+    def del_properties(self, keys):
+        msg = {'engineid':self.id,
+               'method':'del_properties',
+               'args':[repr(keys)]}
+        return self.executeAndRaise(msg, self._doDel, keys)
     
-    def _doHas(self, *keys):
+    def _doHas(self, keys):
         return [self.properties.has_key(key) for key in keys]
     
-    def hasProperties(self, *keys):
-        msg = """engine %r
-method: hasProperties(*keys)
-keys = %r""" % (self.id, keys)
-        return self.executeAndRaise(msg, self._doHas, *keys)
+    def has_properties(self, keys):
+        msg = {'engineid':self.id,
+               'method':'has_properties',
+               'args':[repr(keys)]}
+        return self.executeAndRaise(msg, self._doHas, keys)
     
-    def clearProperties(self):
-        msg = """engine %r
-method: clearProperties()""" % (self.id)
+    def clear_properties(self):
+        msg = {'engineid':self.id,
+               'method':'clear_properties',
+               'args':[]}
         return self.executeAndRaise(msg, self.properties.clear)
     
-    def pushSerialized(self, **sNamespace):
-        msg = """engine %r
-method: pushSerialized(**sNamespace)
-sNamespace.keys() = %r""" % (self.id, sNamespace.keys())        
+    def push_serialized(self, sNamespace):
+        msg = {'engineid':self.id,
+               'method':'push_serialized',
+               'args':[repr(sNamespace.keys())]}       
         ns = {}
         for k,v in sNamespace.iteritems():
             try:
@@ -549,28 +532,21 @@ sNamespace.keys() = %r""" % (self.id, sNamespace.keys())
                 ns[k] = unserialized.getObject()
             except:
                 return defer.fail()
-        return self.executeAndRaise(msg, self.shell.push, **ns)
+        return self.executeAndRaise(msg, self.shell.push, ns)
     
-    def pullSerialized(self, *keys):
-        msg = """engine %r
-method: pullSerialized(*keys)
-keys = %r""" % (self.id, keys)
+    def pull_serialized(self, keys):
+        msg = {'engineid':self.id,
+               'method':'pull_serialized',
+               'args':[repr(keys)]}
+        if isinstance(keys, str):
+            keys = [keys]
         if len(keys)==1:
-            key = keys[0]
-            d = self.executeAndRaise(msg, self.shell.pull, key)
+            d = self.executeAndRaise(msg, self.shell.pull, keys)
             d.addCallback(newserialized.serialize)
             return d
-        elif len(keys)>1:            
-            pulledDeferreds = []
-            for key in keys:
-                d = self.executeAndRaise(msg, self.shell.pull, key)
-                pulledDeferreds.append(d)
-            # This will fire on the first failure and log the rest.
-            dList = gatherBoth(pulledDeferreds, 
-                              fireOnOneErrback=1,
-                              logErrors=0, 
-                              consumeErrors=1)
-            @dList.addCallback
+        elif len(keys)>1:
+            d = self.executeAndRaise(msg, self.shell.pull, keys)         
+            @d.addCallback
             def packThemUp(values):
                 serials = []
                 for v in values:
@@ -578,7 +554,7 @@ keys = %r""" % (self.id, keys)
                         serials.append(newserialized.serialize(v))
                     except:
                         return defer.fail(failure.Failure())
-                return dict(zip(keys, serials))
+                return serials
             return packThemUp
 
 
@@ -625,10 +601,10 @@ class QueuedEngine(object):
         self.currentCommand = None
         self.failureObservers = []
     
-    def _getProperties(self):
+    def _get_properties(self):
         return self.engine.properties
     
-    properties = property(_getProperties, lambda self, _: None)
+    properties = property(_get_properties, lambda self, _: None)
     # Queue management methods.  You should not call these directly
     
     def submitCommand(self, cmd):
@@ -638,11 +614,15 @@ class QueuedEngine(object):
         cmd.setDeferred(d)
         if self.currentCommand is not None:
             if self.currentCommand.finished:
+                # log.msg("Running command immediately: %r" % cmd)
                 self.currentCommand = cmd
                 self.runCurrentCommand()
             else:  # command is still running  
+                # log.msg("Command is running: %r" % self.currentCommand)
+                # log.msg("Queueing: %r" % cmd)
                 self.queued.append(cmd)
         else:
+            # log.msg("No current commands, running: %r" % cmd)
             self.currentCommand = cmd
             self.runCurrentCommand()
         return d
@@ -699,7 +679,8 @@ class QueuedEngine(object):
         # queue before we clear it.  We should clear ONLY the commands that were in
         # the queue when the error occured. 
         self.currentCommand.finished = True
-        self.clearQueue()
+        s = "%r %r %r" % (self.currentCommand.remoteMethod, self.currentCommand.args, self.currentCommand.kwargs)
+        self.clear_queue(msg=s)
         self.currentCommand.handleError(reason)
         
         return None
@@ -713,22 +694,22 @@ class QueuedEngine(object):
         pass
 
     @queue
-    def push(self, **namespace):
+    def push(self, namespace):
         pass      
     
     @queue
-    def pull(self, *keys):
+    def pull(self, keys):
         pass
         
     @queue
-    def pushFunction(self, **namespace):
+    def push_function(self, namespace):
         pass      
     
     @queue
-    def pullFunction(self, *keys):
+    def pull_function(self, keys):
         pass        
 
-    def getResult(self, i=None):
+    def get_result(self, i=None):
         if i is None:
             i = max(self.history.keys()+[None])
 
@@ -736,17 +717,17 @@ class QueuedEngine(object):
         # Uncomment this line to disable chaching of results
         #cmd = None
         if cmd is None:
-            return self.submitCommand(Command('getResult', i))
+            return self.submitCommand(Command('get_result', i))
         else:
             return defer.succeed(cmd)
         
     def reset(self):
-        self.clearQueue()
+        self.clear_queue()
         self.history = {}  # reset the cache - I am not sure we should do this
         return self.submitCommand(Command('reset'))
     
     def kill(self):
-        self.clearQueue()
+        self.clear_queue()
         return self.submitCommand(Command('kill'))
     
     @queue
@@ -758,11 +739,11 @@ class QueuedEngine(object):
     #---------------------------------------------------------------------------
 
     @queue
-    def pushSerialized(self, **namespace):
+    def push_serialized(self, namespace):
         pass
         
     @queue
-    def pullSerialized(self, *keys):
+    def pull_serialized(self, keys):
         pass
     
     #---------------------------------------------------------------------------
@@ -770,38 +751,38 @@ class QueuedEngine(object):
     #---------------------------------------------------------------------------
 
     @queue
-    def setProperties(self, **namespace):
+    def set_properties(self, namespace):
         pass
         
     @queue
-    def getProperties(self, *keys):
+    def get_properties(self, keys=None):
         pass
     
     @queue
-    def delProperties(self, *keys):
+    def del_properties(self, keys):
         pass
     
     @queue
-    def hasProperties(self, *keys):
+    def has_properties(self, keys):
         pass
     
     @queue
-    def clearProperties(self):
+    def clear_properties(self):
         pass
     
     #---------------------------------------------------------------------------
     # IQueuedEngine methods
     #---------------------------------------------------------------------------
     
-    def clearQueue(self):
+    def clear_queue(self, msg=''):
         """Clear the queue, but doesn't cancel the currently running commmand."""
         
         for cmd in self.queued:
-            cmd.deferred.errback(failure.Failure(error.QueueCleared()))
+            cmd.deferred.errback(failure.Failure(error.QueueCleared(msg)))
         self.queued = []
-        return defer.succeed(True)
+        return defer.succeed(None)
     
-    def queueStatus(self):
+    def queue_status(self):
         if self.currentCommand is not None:
             if self.currentCommand.finished:
                 pending = repr(None)
@@ -812,10 +793,10 @@ class QueuedEngine(object):
         dikt = {'queue':map(repr,self.queued), 'pending':pending}
         return defer.succeed(dikt)
         
-    def registerFailureObserver(self, obs):
+    def register_failure_observer(self, obs):
         self.failureObservers.append(obs)
     
-    def unregisterFailureObserver(self, obs):
+    def unregister_failure_observer(self, obs):
         self.failureObservers.remove(obs)
     
 

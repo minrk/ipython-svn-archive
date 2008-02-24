@@ -15,10 +15,10 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-import threading
+import threading, Queue, atexit
 
 from twisted.internet import defer, reactor
-from twisted.python import log
+from twisted.python import log, failure
 
 #-------------------------------------------------------------------------------
 # Classes related to twisted and threads
@@ -26,9 +26,24 @@ from twisted.python import log
 
 
 class ReactorInThread(threading.Thread):
-    """Run the twisted reactor in a different thread."""
+    """Run the twisted reactor in a different thread.
+    
+    For the process to be able to exit cleanly, do the following:
+    
+    rit = ReactorInThread()
+    rit.setDaemon(True)
+    rit.start()
+    
+    """
+    
     def run(self):
         reactor.run(installSignalHandlers=0)
+        # self.join()
+        
+    def stop(self):
+        # I don't think this does anything useful.
+        blockingCallFromThread(reactor.stop)
+        self.join()
 
 def blockingCallFromThread(f, *a, **kw):
     """
@@ -52,7 +67,11 @@ def blockingCallFromThread(f, *a, **kw):
     reactor.callFromThread(_callFromThread)
     result = queue.get()
     if isinstance(result, failure.Failure):
-        result.raiseException()
+        # This makes it easier for the debugger to get access to the instance
+        try:
+            result.raiseException()
+        except Exception, e:
+            raise e
     return result
 
 

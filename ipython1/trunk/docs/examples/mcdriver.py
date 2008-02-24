@@ -2,19 +2,19 @@
 # encoding: utf-8
 """Run a Monte-Carlo options pricer in parallel."""
 
-import ipython1.kernel.api as kernel
+from ipython1.kernel import client
 import numpy as N
 from mcpricer import MCOptionPricer
 
 
-tc = kernel.TaskController(('127.0.0.1', 10113))
-rc = kernel.RemoteController(('127.0.0.1', 10105))
+tc = client.TaskClient(('127.0.0.1', 10113))
+rc = client.MultiEngineClient(('127.0.0.1', 10105))
 
 # Initialize the common code on the engines
-rc.runAll('mcpricer.py')
+rc.run('mcpricer.py')
 
 # Push the variables that won't change (stock print, interest rate, days and MC paths)
-rc.pushAll(S=100.0, r=0.05, days=260, paths=10000)
+rc.push(dict(S=100.0, r=0.05, days=260, paths=10000))
 
 task_string = """\
 op = MCOptionPricer(S,K,sigma,r,days,paths)
@@ -27,21 +27,21 @@ K_vals = N.arange(90.0,110.0,2.0)
 sigma_vals = N.arange(0.02, 0.3, 0.02)
 
 # Submit tasks
-taskIDs = []
+taskids = []
 for K in K_vals:
     for sigma in sigma_vals:
-        t = kernel.Task(task_string, 
-            setupNS=dict(sigma=sigma,K=K),
-            resultNames=['vp','ap','vc','ac','sigma','K'])
-        taskIDs.append(tc.run(t))
+        t = client.Task(task_string, 
+            push=dict(sigma=sigma,K=K),
+            pull=('vp','ap','vc','ac','sigma','K'))
+        taskids.append(tc.run(t))
 
-print "Submitted tasks: ", taskIDs
+print "Submitted tasks: ", taskids
 
 # Block until tasks are completed
-tc.barrier(taskIDs)
+tc.barrier(taskids)
 
 # Get the results
-results = [tc.getTaskResult(tid) for tid in taskIDs]
+results = [tc.get_task_result(tid) for tid in taskids]
 
 # Assemble the result
 vc = N.empty(K_vals.shape[0]*sigma_vals.shape[0],dtype='float64')

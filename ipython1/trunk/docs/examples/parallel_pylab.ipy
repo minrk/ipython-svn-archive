@@ -20,11 +20,11 @@ example.
 
 import numpy as N
 from pylab import *
-import ipython1.kernel.api as kernel
+from ipython1.kernel import client
 
 # Get an IPython1 client
-rc = kernel.RemoteController(('127.0.0.1',10105))
-rc.getIDs()
+rc = client.MultiEngineClient(('127.0.0.1',10105))
+rc.get_ids()
 rc.activate()
 
 # Create random arrays on the engines
@@ -39,8 +39,8 @@ rc.activate()
 %px print y[0:10]
 
 # Bring back the data
-x_local = rc.gatherAll('x')
-y_local = rc.gatherAll('y')
+x_local = rc.gather('x')
+y_local = rc.gather('y')
 
 # Make a scatter plot of the gathered data
-scatter(x_local, y_local)
+plot(x_local, y_local,'ro')

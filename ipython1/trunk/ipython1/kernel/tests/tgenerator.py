@@ -17,6 +17,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 from twisted.internet import defer
+from ipython1.kernel import error
 
 #-------------------------------------------------------------------------------
 # The main class of this module
@@ -124,7 +125,7 @@ class EnginePushPullTestGenerator(TestGenerator):
         return self.testCaseInstance.assertEquals(actual, computed)
         
     def computeOutput(self, i):
-        d = self.testCaseInstance.engine.push(a=i)
+        d = self.testCaseInstance.engine.push(dict(a=i))
         d.addCallback(lambda r: self.testCaseInstance.engine.pull('a'))
         return d
 
@@ -142,43 +143,13 @@ class EngineGetResultTestGenerator(TestGenerator):
         
     def computeOutput(self, i):
         d = self.testCaseInstance.engine.execute(i)
-        d.addCallback(lambda r: self.testCaseInstance.engine.getResult(r['number']))
+        d.addCallback(lambda r: self.testCaseInstance.engine.get_result(r['number']))
         return d
 
 
 #-------------------------------------------------------------------------------
 # Classes for testing multiengine methods
 #-------------------------------------------------------------------------------
-
-class MultiEngineExecuteAllTestGenerator(TestGenerator):
-    """A class for testing execute on the Engine."""
-    
-    def __init__(self, inputs, testCaseInstance, targets='all'):
-        self.targets = targets
-        self.shell = Interpreter()
-        outputs = [self.shell.execute(c) for c in inputs]
-        TestGenerator.__init__(self, inputs, outputs, testCaseInstance)
-        
-    def compare(self, actual, computed):
-        for c in computed:
-            actual['id'] = c['id']
-            self.testCaseInstance.assertEquals(actual, c)
-        
-    def computeOutput(self, i):
-        return self.testCaseInstance.multiengine.execute(self.targets, i)
-        
-class MultiEngineFailingExecuteTestGenerator(TestGenerator):
-    """A class for testing execute on the Engine."""
-    
-    def __init__(self, inputs, outputs, testCaseInstance, targets='all'):
-        self.targets = targets
-        TestGenerator.__init__(self, inputs, outputs, testCaseInstance)
-        
-    def compare(self, actual, computed):
-        return self.testCaseInstance.assertRaises(actual, computed.raiseException)
-        
-    def computeOutput(self, i):
-        return self.testCaseInstance.multiengine.execute(self.targets, i)
 
 class MultiEngineGetResultTestGenerator(TestGenerator):
     """A class for testing execute on the Engine."""
@@ -195,6 +166,6 @@ class MultiEngineGetResultTestGenerator(TestGenerator):
             return self.testCaseInstance.assertEquals(actual, c)
         
     def computeOutput(self, i):
-        d = self.testCaseInstance.multiengine.execute(self.targets, i)
-        # d.addCallback(lambda r: self.testCaseInstance.multiengine.getResult(self.targets, r[0]['number']))
+        d = self.testCaseInstance.multiengine.execute(i, targets=self.targets)
+        # d.addCallback(lambda r: self.testCaseInstance.multiengine.get_result(self.targets, r[0]['number']))
         return d

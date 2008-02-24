@@ -63,18 +63,18 @@ class PBTaskControllerFromTaskController(pb.Avatar):
         d.addCallback(self.packageFailure)
         return d
     
-    def perspective_getTaskResult(self, taskID):
-        d = self.staskcontroller.getTaskResult(taskID)
+    def perspective_get_task_result(self, taskid):
+        d = self.staskcontroller.get_task_result(taskid)
         d.addCallback(self.packageFailure)
         return d
     
-    def perspective_abort(self, taskID):
-        d = self.staskcontroller.abort(taskID)
+    def perspective_abort(self, taskid):
+        d = self.staskcontroller.abort(taskid)
         d.addCallback(self.packageFailure)
         return d
     
-    def perspective_barrier(self, taskIDs):
-        d = self.staskcontroller.barrier(taskIDs)
+    def perspective_barrier(self, taskids):
+        d = self.staskcontroller.barrier(taskids)
         d.addCallback(self.packageFailure)
         return d
     
@@ -133,12 +133,12 @@ class PBTaskClient(taskclient.TaskClient):
         d.addCallback(unpackageFailure)
         return d
     
-    def getTaskResult(self, taskID):
-        d = self.perspective.callRemote('getTaskResult', taskID)
+    def get_task_result(self, taskid):
+        d = self.perspective.callRemote('get_task_result', taskid)
         d.addCallback(unpackageFailure)
         return d
     
-    def abort(self, taskID):
+    def abort(self, taskid):
         d = self.perspective.callRemote('spin')
         d.addCallback(unpackageFailure)
         return d
@@ -148,7 +148,7 @@ class PBTaskClient(taskclient.TaskClient):
         d.addCallback(unpackageFailure)
         return d
     
-    def barrier(self, taskIDs):
+    def barrier(self, taskids):
         raise NotImplementedError
         # d = self.perspective.callRemote('spin')
         # d.addCallback(unpackageFailure)

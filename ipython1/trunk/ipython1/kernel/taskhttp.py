@@ -122,11 +122,11 @@ class HTTPTaskAbort(HTTPTaskBaseMethod):
     
     def renderHTTP(self, request):
         try:
-            taskID = int(request.args['taskID'][0])
+            taskid = int(request.args['taskid'][0])
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
-            d = self.tc.abort(taskID)
+            d = self.tc.abort(taskid)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
     
@@ -135,11 +135,11 @@ class HTTPTaskGetResult(HTTPTaskBaseMethod):
     
     def renderHTTP(self, request):
         try:
-            taskID = int(request.args['taskID'][0])
+            taskid = int(request.args['taskid'][0])
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
-            d = self.tc.getTaskResult(taskID)
+            d = self.tc.get_task_result(taskid)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
     
@@ -148,11 +148,11 @@ class HTTPTaskBarrier(HTTPTaskBaseMethod):
     
     def renderHTTP(self, request):
         try:
-            taskID = map(int,request.args['taskIDs'])
+            taskid = map(int,request.args['taskids'])
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
-            d = self.tc.barrier(taskIDs)
+            d = self.tc.barrier(taskids)
             d.addCallbacks(self.packageSuccess, self.packageFailure)
             return d
     
@@ -233,14 +233,14 @@ class HTTPTaskClient(object):
         pTask = pickle.dumps(task,2)
         return self._executeRemoteMethod('run', pTask=pTask)
     
-    def abort(self, taskID):
-        return self._executeRemoteMethod('abort', taskID=taskID)
+    def abort(self, taskid):
+        return self._executeRemoteMethod('abort', taskid=taskid)
     
-    def getTaskResult(self, taskID, block=None):
-        return self._executeRemoteMethod('getresult', taskID=taskID)
+    def get_task_result(self, taskid, block=None):
+        return self._executeRemoteMethod('getresult', taskid=taskid)
     
-    def barrier(self, taskIDs):
-        return self._executeRemoteMethod('barrier', taskIDs=taskIDs)
+    def barrier(self, taskids):
+        return self._executeRemoteMethod('barrier', taskids=taskids)
     
     def spin(self):
         return self._executeRemoteMethod('spin')

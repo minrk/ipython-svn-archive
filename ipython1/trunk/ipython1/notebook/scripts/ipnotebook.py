@@ -29,8 +29,8 @@ from ipython1.notebook.config import configManager as notebookConfigManager
 from ipython1.core.config import configManager as coreConfigManager
 
 def main(logfile):
-    nco = notebookConfigManager.getConfigObj()
-    cco = coreConfigManager.getConfigObj()
+    nco = notebookConfigManager.get_config_obj()
+    cco = coreConfigManager.get_config_obj()
     
     if logfile:
         logfile = logfile + str(os.getpid()) + '.log'
@@ -99,10 +99,10 @@ def start(n=1):
     # elif options.rcfile and not options.profile:
     #     config.updateConfigWithFile(options.rcfile, options.ipythondir)
     # else:
-    notebookConfigManager.updateConfigObjFromDefaultFile(options.ipythondir)
-    coreConfigManager.updateConfigObjFromDefaultFile(options.ipythondir)
+    notebookConfigManager.update_config_obj_from_default_file(options.ipythondir)
+    coreConfigManager.update_config_obj_from_default_file(options.ipythondir)
     
-    nco = notebookConfigManager.getConfigObj()
+    nco = notebookConfigManager.get_config_obj()
     
     for dbname in args:
         if "://" not in dbname:
@@ -112,7 +112,7 @@ def start(n=1):
         if dbname not in exdbs:
             exdbs.append(dbname)
             nco['notebook']['externalDBs'] = exdbs
-            notebookConfigManager.updateConfigObj(nco)
+            notebookConfigManager.update_config_obj(nco)
         
     # Now override with command line options
     main(options.logfile)

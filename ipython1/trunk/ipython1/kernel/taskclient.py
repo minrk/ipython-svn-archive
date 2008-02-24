@@ -17,20 +17,18 @@ __docformat__ = "restructuredtext en"
 # Imports
 #-------------------------------------------------------------------------------
 
-# from twisted.python import failure
+from zope.interface import Interface, implements
+from twisted.python import components, log
 
-from ipython1.kernel import task
+from ipython1.kernel.twistedutil import blockingCallFromThread
+from ipython1.kernel import task, error
 
 #-------------------------------------------------------------------------------
 # Connecting Task Client
 #-------------------------------------------------------------------------------
 
 class InteractiveTaskClient(object):
-    """XML-RPC version of the Connecting TaskControllerClient"""
     
-    ############
-    # ConnectingTaskController
-    ############
     def irun(self, *args, **kwargs):
         """Run a task on the `TaskController`.
         
@@ -42,15 +40,15 @@ class InteractiveTaskClient(object):
         :Parameters:
             expression : str
                 A str that is valid python code that is the task.
-            resultNames : str or list of str 
+            pull : str or list of str 
                 The names of objects to be pulled as results.
-            setupNS : dict
+            push : dict
                 A dict of objects to be pushed into the engines namespace before
                 execution of the expression.
-            clearBefore : boolean
+            clear_before : boolean
                 Should the engine's namespace be cleared before the task is run.
                 Default=False.
-            clearAfter : boolean 
+            clear_after : boolean 
                 Should the engine's namespace be cleared after the task is run.
                 Default=False.
             retries : int
@@ -60,11 +58,47 @@ class InteractiveTaskClient(object):
             
         :Returns: A `TaskResult` object.      
         """
-        block = kwargs.pop('block', self.block)
+        block = kwargs.pop('block', False)
         if len(args) == 1 and isinstance(args[0], task.Task):
             t = args[0]
         else:
             t = task.Task(*args, **kwargs)
-        taskID = self.run(t)
-        print "TaskID = %i"%taskID
-        return self.getTaskResult(taskID, block)
+        taskid = self.run(t)
+        print "TaskID = %i"%taskid
+        if block:
+            return self.get_task_result(taskid, block)
+        else:
+            return taskid
+
+class IBlockingTaskClient(Interface):
+    pass
+
+
+class BlockingTaskClient(InteractiveTaskClient):
+    
+    implements(IBlockingTaskClient)
+    
+    def __init__(self, task_controller):
+        self.task_controller = task_controller
+        self.block = True
+        
+    def run(self, task):
+        return blockingCallFromThread(self.task_controller.run, task)
+    
+    def get_task_result(self, taskid, block=False):
+        return blockingCallFromThread(self.task_controller.get_task_result,
+            taskid, block)
+    
+    def abort(self, taskid):
+        return blockingCallFromThread(self.task_controller.abort, taskid)
+    
+    def barrier(self, taskids):
+        return blockingCallFromThread(self.task_controller.barrier, taskids)
+    
+    def spin(self):
+        return blockingCallFromThread(self.task_controller.spin)
+
+components.registerAdapter(BlockingTaskClient,
+            task.ITaskController, IBlockingTaskClient)
+
+

@@ -57,12 +57,11 @@ def magic_result(self,parameter_s=''):
     except AttributeError:
         print NO_ACTIVE_CONTROLLER
     else:
-        targets = activeController.magicTargets
         try:
             index = int(parameter_s)
         except:
             index = None
-        result = activeController.getResult(targets, index)
+        result = activeController.get_result(index)
         return result
 
 def magic_px(self,parameter_s=''):
@@ -81,9 +80,8 @@ def magic_px(self,parameter_s=''):
     except AttributeError:
         print NO_ACTIVE_CONTROLLER
     else:
-        targets = activeController.magicTargets
         print "Executing command on Controller"
-        result = activeController.execute(targets, parameter_s)
+        result = activeController.execute(parameter_s)
         return result
 
 def pxrunsource(self, source, filename="<input>", symbol="single"):
@@ -107,7 +105,7 @@ def pxrunsource(self, source, filename="<input>", symbol="single"):
         return False
     else:
         try:
-            result = self.activeController.execute(self.activeController.magicTargets, source)
+            result = self.activeController.execute(source)
         except:
             self.showtraceback()
         else:

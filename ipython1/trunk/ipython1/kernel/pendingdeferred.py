@@ -28,309 +28,150 @@ from zope.interface import Interface, implements, Attribute
 
 from ipython1.kernel.twistedutil import gatherBoth
 from ipython1.kernel import error
+from ipython1.tools import guid, growl
 
 
 class PendingDeferredManager(object):
     """A class to track pending deferreds.
     
     To track a pending deferred, the user of this class must first
-    get a deferredID by calling `getNextDeferredID`.  Then the user
-    calls `savePendingDeferred` passing that id and the deferred to
+    get a deferredID by calling `get_next_deferred_id`.  Then the user
+    calls `save_pending_deferred` passing that id and the deferred to
     be tracked.  To later retrieve it, the user calls
-    `getPendingDeferred` passing the id.
+    `get_pending_deferred` passing the id.
     """
     
-    def __init__(self, clientID):
-        """Manage pending deferreds for a client.
-        
-        :Parameters:
-            clientID : int
-                This is not used currently inside this class
-        """
+    def __init__(self):
+        """Manage pending deferreds."""
 
-        self.clientID = clientID
-        self.deferredID = 0
-        self.pendingDeferreds = {}
+        self.results = {} # Populated when results are ready
+        self.deferred_ids = [] # List of deferred ids I am managing
+        self.deferreds_to_callback = {} # dict of lists of deferreds to callback
         
-    def getNextDeferredID(self):
-        """Get the next available deferred id.
+    def get_deferred_id(self):
+        return guid.generate()
+    
+    def quick_has_id(self, deferred_id):
+        return deferred_id in self.deferred_ids
+    
+    def _save_result(self, result, deferred_id):
+        if self.quick_has_id(deferred_id):
+            self.results[deferred_id] = result
+            self._trigger_callbacks(deferred_id)
+    
+    def _trigger_callbacks(self, deferred_id):
+        # Go through and call the waiting callbacks
+        result = self.results.get(deferred_id)
+        if result is not None:  # Only trigger if there is a result
+            try:
+                d = self.deferreds_to_callback.pop(deferred_id)
+            except KeyError:
+                d = None
+            if d is not None:
+                if isinstance(result, failure.Failure):
+                    d.errback(result)
+                else:
+                    d.callback(result)
+                self.delete_pending_deferred(deferred_id)
+                   
+    def save_pending_deferred(self, d, deferred_id=None):
+        """Save the result of a deferred for later retrieval.
         
-        :Returns:
-            deferredID : int
-                The deferred id that the client should use for the next
-                deferred is will save to me.
+        This works even if the deferred has not fired.
+        
+        Only callbacks and errbacks applied to d before this method
+        is called will be called no the final result.
         """
-
-        did = self.deferredID
-        self.deferredID += 1
-        return did
-        
-    def savePendingDeferred(self, deferredID, d):
-        """Save a deferred to me by deferredID.
-        
-        :Parameters:
-            deferredID : int
-                A deferred id the client got by calling `getNextDeferredID`.
-            d : Deferred
-                The deferred to save.
-        """
-        
-        pd = self.pendingDeferreds.get(deferredID)
-        if pd is not None:
-            self.removePendingDeferred(deferredID)
-        self.pendingDeferreds[deferredID] = d
-        
-    def removePendingDeferred(self, deferredID):
+        if deferred_id is None:
+            deferred_id = self.get_deferred_id()
+        self.deferred_ids.append(deferred_id)
+        d.addBoth(self._save_result, deferred_id)
+        return deferred_id
+    
+    def _protected_del(self, key, container):
+        try:
+            del container[key]
+        except Exception:
+            pass
+    
+    def delete_pending_deferred(self, deferred_id):
         """Remove a deferred I am tracking and add a null Errback.
         
         :Parameters:
-            deferredID : int
+            deferredID : str
                 The id of a deferred that I am tracking.
         """
-        
-        pd = self.pendingDeferreds.get(deferredID)
-        if pd is not None:
-            pd.addErrback(lambda f: None)
-            del self.pendingDeferreds[deferredID]
-        
-    def cleanOutDeferreds(self):
+        if self.quick_has_id(deferred_id):
+            # First go through a errback any deferreds that are still waiting
+            d = self.deferreds_to_callback.get(deferred_id)
+            if d is not None:
+                d.errback(failure.Failure(error.AbortedPendingDeferredError("pending deferred has been deleted: %r"%deferred_id)))
+            # Now delete all references to this deferred_id
+            ind = self.deferred_ids.index(deferred_id)
+            self._protected_del(ind, self.deferred_ids)
+            self._protected_del(deferred_id, self.deferreds_to_callback)
+            self._protected_del(deferred_id, self.results)            
+        else:
+            raise error.InvalidDeferredID('invalid deferred_id: %r' % deferred_id)
+    
+    def clear_pending_deferreds(self):
         """Remove all the deferreds I am tracking."""
-        for k in self.pendingDeferreds.keys():
-            self.removePendingDeferred(k)
+        for did in self.deferred_ids:
+            self.delete_pending_deferred(did)
         
-    def _deleteAndPassThrough(self, r, deferredID):
-        self.removePendingDeferred(deferredID)
+    def _delete_and_pass_through(self, r, deferred_id):
+        self.delete_pending_deferred(deferred_id)
         return r
         
-    def getPendingDeferred(self, deferredID, block):
-        """Get a pending deferred that I am tracking by deferredID.
-        
-        :Parameters:
-            deferredID : int
-                The id of a deferred I am tracking
-            block : boolean
-                Should I block until the deferred has fired.
-        """
-        #log.msg("getPendingDeferred: %s %s" % (repr(deferredID), repr(block)))
-        pd = self.pendingDeferreds.get(deferredID)
-        if pd is not None:
-            if not pd.called and block:    # pd has not fired and we should block
-                #log.msg("pendingDeferred has not been called: %s" % deferredID)
-                pd.addCallback(self._deleteAndPassThrough, deferredID)
-                return pd
-            elif not pd.called and not block: # pd has not fired, but we should not block
-                return defer.fail(failure.Failure(error.ResultNotCompleted("Result not completed: %i" % deferredID)))
-            else:    # pd has fired
-                #log.msg("pendingDeferred has been called: %s: %s" % (deferredID, repr(pd.result)))
-                if isinstance(pd.result, failure.Failure):
-                    dToReturn = defer.fail(pd.result)
-                elif isinstance(pd.result, defer.Deferred):
-                    dToReturn = pd.result
-                else:
-                    dToReturn = defer.succeed(pd.result)
-                # It has fired so remove it!
-                self.removePendingDeferred(deferredID)
-            return dToReturn
-        else:
-            return defer.fail(failure.Failure(error.InvalidDeferredID('Invalid deferredID: ' + repr(deferredID))))
-            
+    def get_pending_deferred(self, deferred_id, block):
+        if not self.quick_has_id(deferred_id) or self.deferreds_to_callback.get(deferred_id) is not None:
+            return defer.fail(failure.Failure(error.InvalidDeferredID('invalid deferred_id: %r' + deferred_id)))
+        result = self.results.get(deferred_id)
+        if result is not None:
+            self.delete_pending_deferred(deferred_id)
+            if isinstance(result, failure.Failure):
+                return defer.fail(result)
+            else:
+                return defer.succeed(result)
+        else:  # Result is not ready
+            if block:
+                d = defer.Deferred()
+                self.deferreds_to_callback[deferred_id] = d
+                return d
+            else:
+                return defer.fail(failure.Failure(error.ResultNotCompleted("result not completed: %r" % deferred_id)))
 
-def twoPhase(wrappedMethod):
+def two_phase(wrapped_method):
     """Wrap methods that return a deferred into a two phase process.
     
     This transforms::
     
-        foo(arg1, arg2, ...) -> foo(clientID, block, arg1, arg2, ...).
+        foo(arg1, arg2, ...) -> foo(arg1, arg2,...,block=True).
     
-    The wrapped method will then return a deferred to a deferredID.  This will
-    only work on method of classes that inherit from `PendingDeferredAdapter`,
+    The wrapped method will then return a deferred to a deferred id.  This will
+    only work on method of classes that inherit from `PendingDeferredManager`,
     as that class provides an API for 
-    
-    clientID is the id of the client making the request.  Each client's pending
-    deferreds are tracked independently.  The client id is usually gotten by 
-    calling the `registerClient` method of `PendingDeferredAdapter`.
     
     block is a boolean to determine if we should use the two phase process or
     just simply call the wrapped method.  At this point block does not have a
     default and it probably won't.
     """
     
-    def wrapperTwoPhase(pendingDeferredAdapter, *args, **kwargs):
-        clientID = args[0]
-        block = args[1]
-        if pendingDeferredAdapter._isValidClientID(clientID):
-            if block:
-                return wrappedMethod(pendingDeferredAdapter, *args[2:], **kwargs)
-            else:
-                deferredID = pendingDeferredAdapter.getNextPendingDeferredID(clientID)
-                d = wrappedMethod(pendingDeferredAdapter, *args[2:], **kwargs)
-                pendingDeferredAdapter.savePendingDeferred(clientID, deferredID, d)
-                return defer.succeed(deferredID)
-        else:  
-            return defer.fail(failure.Failure(
-                error.InvalidClientID("Client with ID %r has not been registered." % clientID)))        
-                
-    return wrapperTwoPhase
-
-class IPendingDeferredAdapter(Interface):
+    def wrapper_two_phase(pdm, *args, **kwargs):
+        try:
+            block = kwargs.pop('block')
+        except KeyError:
+            block = True  # The default if not specified
+        if block:
+            return wrapped_method(pdm, *args, **kwargs)
+        else:
+            d = wrapped_method(pdm, *args, **kwargs)
+            deferred_id=pdm.save_pending_deferred(d)
+            return defer.succeed(deferred_id)
     
-    def registerClient():
-        """Register a new client of this class.
-        
-        :Returns:
-            clientID : int
-                The id the client is given.
-        """
-        
-    def unregisterClient(clientID):
-        """Unregister a client by its clientID.
-        
-        :Parameters:
-            clientID : int
-                The id that the client was given.
-        """
-        
-    def getPendingDeferred(clientID, deferredID, block):
-        """Get a pending deferred by it id.
-        
-        :Parameters:
-            clientID : int
-                The id that the client was given.
-            deferredID : int
-                The id of the deferred that was returned by the client calling
-                one of the wrapped methods.
-            block : boolean
-                Should I wait until the deferred has fired to just return
-                the unfired deferred immediately.
-        """
-
-    def getAllPendingDeferreds(clientID):
-        """Get a deferred to a list of result of all the pending deferreds.
-        
-        If there are pending deferreds d1, d2, this will return a deferred
-        to [d1.result, d2.result].
-        """
-        
-    def flush(clientID):
-        """Flush out all pending deferreds for clientID.
-        
-        :Parameters:
-            clientID : int
-                Flush PD's for this client.  If clientID is 'all' then
-                flush the PD's for all clients.
-        """
-
-class PendingDeferredAdapter(object):
-    """Convert a class to using pending deferreds."""
-    
-    implements(IPendingDeferredAdapter)
-    
-    def __init__(self):
-        self.clientID = 0
-        self.pdManagers = {}
-        
-    #---------------------------------------------------------------------------
-    # Internal methods
-    #---------------------------------------------------------------------------
-        
-    def _isValidClientID(self, clientID):
-        """Check to see if a clientID is valid.
-        
-        :Parameters:
-            clientID : int
-                The clientID to verify.
-            
-        :Returns: True if clientID is valid, False if not.
-        """
-        if self.pdManagers.has_key(clientID):
-            return True
-        else:
-            return False
-            
-    def getNextPendingDeferredID(self, clientID):
-        """Get the next deferredID for clientID.
-        
-        The caller of this method should first call _isValidClientID to verfiy that
-        clientID is valid.
-
-        :Parameters:
-            clientID : int
-                The id the client was given.
-            
-        :Returns:
-            deferredID : int
-                The next deferred id that will be used.
-        """
-        return self.pdManagers[clientID].getNextDeferredID()
- 
-        
-    def savePendingDeferred(self, clientID, deferredID, d):
-        """Save d for clientID under deferredID.
-        
-        The caller of this method should first call _isValidClientID to verfiy that
-        clientID is valid.
-        
-        :Parameters:
-            clientID : int
-                The client's id.
-            deferredID : int
-                The id under which d will be saved.  
-            d : Deferred
-                The deferred to save.
-        
-        """
-        return self.pdManagers[clientID].savePendingDeferred(deferredID, d)
- 
-        
-    #--------------------------------------------------------------------------
-    # Methods related to pending deferreds
-    # See the docstrings for IPendingDeferredAdapter for details.
-    #--------------------------------------------------------------------------
-        
-    def registerClient(self):
-        cid = self.clientID
-        self.clientID += 1
-        self.pdManagers[cid] = PendingDeferredManager(cid)
-        return cid
-        
-    def unregisterClient(self, clientID):
-        if self._isValidClientID(clientID):
-            self.pdManagers[clientID].cleanOutDeferreds()
-            del self.pdManagers[clientID]
-        else:
-            raise error.InvalidClientID("Client with ID %i has not been registered." % clientID)
-        
-    def getPendingDeferred(self, clientID, deferredID, block):
-        if self._isValidClientID(clientID):
-            return self.pdManagers[clientID].getPendingDeferred(deferredID, block)
-        else:
-            return defer.fail(failure.Failure(
-                error.InvalidClientID("Client with ID %i has not been registered." % clientID)))
-                
-    def getAllPendingDeferreds(self, clientID):
-        dList = []
-        keys = self.pdManagers[clientID].pendingDeferreds.keys()
-        for k in keys:
-            dList.append(self.pdManagers[clientID].getPendingDeferred(k, block=True))
-        if len(dList) > 0:  
-            return gatherBoth(dList, consumeErrors=1)
-        else:
-            return defer.succeed([None])
-    
-    def flush(self, clientID):
-        if clientID == 'all':
-            for pdm in self.pdManagers.values():
-                pdm.cleanOutDeferreds()
-        else:
-            if self._isValidClientID(clientID):
-                self.pdManagers[clientID].cleanOutDeferreds()
-                return defer.succeed(None)
-            else:
-                return defer.fail(failure.Failure(
-                    error.InvalidClientID("Client with ID %i has not been registered." % clientID)))
+    return wrapper_two_phase
                 
                 
             
             
                 
-        

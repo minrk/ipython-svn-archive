@@ -26,7 +26,7 @@ import sys
 class HomeDirError(Exception):
     pass
 
-def getHomeDir():
+def get_home_dir():
     """Return the closest possible equivalent to a 'home' directory.
 
     We first try $HOME.  Absent that, on NT it's $HOMEDRIVE\$HOMEPATH.
@@ -81,9 +81,9 @@ def getHomeDir():
         else:
             raise HomeDirError,'support for your operating system not implemented.'
 
-def getIpythonDir():
+def get_ipython_dir():
     ipdir_def = '.ipython'
-    home_dir = getHomeDir()
+    home_dir = get_home_dir()
     ipdir = os.path.abspath(os.environ.get('IPYTHONDIR',
                                            os.path.join(home_dir,ipdir_def)))
     return ipdir

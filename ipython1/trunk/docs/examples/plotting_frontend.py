@@ -18,22 +18,22 @@ are available in IPython, so for example you can make additional plots.
 
 import numpy as N
 from pylab import *
-import ipython1.kernel.api as kernel
+from ipython1.kernel import client
 
 # Get an IPython1 client
-rc = kernel.RemoteController(('127.0.0.1',10105))
-rc.getIDs()
+rc = client.MultiEngineClient(('127.0.0.1',10105))
+rc.get_ids()
 
 # Run the simulation on all the engines
-rc.runAll('plotting_backend.py')
+rc.run('plotting_backend.py')
 
 # Bring back the data
-number = rc.pullAll('number')
-d_number = rc.pullAll('d_number')
-downx = rc.gatherAll('downx')
-downy = rc.gatherAll('downy')
-downpx = rc.gatherAll('downpx')
-downpy = rc.gatherAll('downpy')
+number = rc.pull('number')
+d_number = rc.pull('d_number')
+downx = rc.gather('downx')
+downy = rc.gather('downy')
+downpx = rc.gather('downpx')
+downpy = rc.gather('downpy')
 
 print "number: ", sum(number)
 print "downsampled number: ", sum(d_number)
