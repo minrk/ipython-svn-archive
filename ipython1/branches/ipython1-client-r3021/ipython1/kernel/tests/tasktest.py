@@ -11,6 +11,7 @@ import time
 
 from ipython1.kernel import task, engineservice as es
 from ipython1.kernel.util import printer
+from ipython1.kernel import error
 
 #-------------------------------------------------------------------------------
 # Tests
@@ -66,11 +67,9 @@ class ITaskControllerTestCase(TaskTestBase):
         d.addCallback(lambda _: self.tc.run(t))
         d.addCallback(lambda tid: self.tc.get_task_result(tid,block=True))
         d.addCallback(lambda tr: tr.failure)
-        # Why are these raising CompositeErrors, which should only be in the 
-        # multiengine?!?!
         d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
         d.addCallback(lambda _:self.multiengine.pull('a', targets=0))
-        d.addErrback(lambda f: self.assertRaises(NameError, f.raiseException))
+        d.addErrback(lambda f: self.assertRaises(NameError, _raise_it, f))
         return d
     
     def testSimpleRetries(self):

@@ -514,7 +514,7 @@ class ISynchronousMultiEngine(ISynchronousEngineMultiplexer):
     Methods in this interface are identical to those of IMultiEngine, but they
     take one additional argument:
     
-    execute(targets, lines) -> execute(block, targets, lines)
+    execute(lines, targets='all') -> execute(lines, targets='all, block=True)
     
     :Parameters:
         block : boolean
@@ -526,7 +526,7 @@ class ISynchronousMultiEngine(ISynchronousEngineMultiplexer):
     def get_pending_deferred(deferredID, block=True):
         """"""
     
-    def clean_out_deferreds():
+    def clear_pending_deferreds():
         """"""
 
 

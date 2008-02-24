@@ -421,7 +421,7 @@ class FullBlockingMultiEngineClient(InteractiveMultiEngineClient):
                 pass
     
     def flush(self):
-        r = blockingCallFromThread(self.smultiengine.clean_out_deferreds)
+        r = blockingCallFromThread(self.smultiengine.clear_pending_deferreds)
         return r
     
     #---------------------------------------------------------------------------

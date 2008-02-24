@@ -141,8 +141,8 @@ class XMLRPCSynchronousMultiEngineFromMultiEngine(xmlrpc.XMLRPC):
         return d
        
     @packageResult
-    def xmlrpc_clean_out_deferreds(self, request):
-        return defer.maybeDeferred(self.smultiengine.clean_out_deferreds)
+    def xmlrpc_clear_pending_deferreds(self, request):
+        return defer.maybeDeferred(self.smultiengine.clear_pending_deferreds)
     
     def _addDeferredIDCallback(self, did, callback, *args, **kwargs):
         self._deferredIDCallbacks[did] = (callback, args, kwargs)
@@ -332,6 +332,9 @@ class XMLRPCFullSynchronousMultiEngineClient(object):
         self.url = 'http://%s:%s/' % self.addr
         self._proxy = webxmlrpc.Proxy(self.url)
         self._deferredIDCallbacks = {}
+        # This class manages some pending deferreds through this instance.  This
+        # is required for methods like gather/scatter as it enables us to
+        # create our own pending deferreds for composite operations.
         self.pdm = PendingDeferredManager()
     
     #---------------------------------------------------------------------------
@@ -346,13 +349,14 @@ class XMLRPCFullSynchronousMultiEngineClient(object):
     #---------------------------------------------------------------------------
     
     def get_pending_deferred(self, deferredID, block=True):
-        # See if this deferred_id is being held locally
+        
+        # Because we are managing some pending deferreds locally (through
+        # self.pdm) and some remotely (on the controller), we first try the 
+        # local one and then the remote one.
         if self.pdm.quick_has_id(deferredID):
             d = self.pdm.get_pending_deferred(deferredID, block)
             return d
         else:
-            # This code needs to be run if the deferredID is not being held
-            # locally
             d = self._proxy.callRemote('get_pending_deferred', deferredID, block)
             d.addCallback(self.unpackage)
             try:
@@ -363,10 +367,11 @@ class XMLRPCFullSynchronousMultiEngineClient(object):
                 d.addCallback(callback[0], *callback[1], **callback[2])
             return d
     
-    def clean_out_deferreds(self):
-        # First clean out local deferreds
-        self.pdm.clean_out_deferreds()
-        d2 = self._proxy.callRemote('clean_out_deferreds')
+    def clear_pending_deferreds(self):
+        
+        # This clear both the local (self.pdm) and remote pending deferreds
+        self.pdm.clear_pending_deferreds()
+        d2 = self._proxy.callRemote('clear_pending_deferreds')
         d2.addCallback(self.unpackage)
         return d2
     
@@ -518,6 +523,10 @@ class XMLRPCFullSynchronousMultiEngineClient(object):
     
     def scatter(self, key, seq, style='basic', flatten=False, targets='all', block=True):
         
+        # Note: scatter and gather handle pending deferreds locally through self.pdm.
+        # This enables us to collect a bunch fo deferred ids and make a secondary 
+        # deferred id that corresponds to the entire group.  This logic is extremely
+        # difficult to get right though.
         def do_scatter(engines):
             nEngines = len(engines)
             mapClass = Map.styles[style]
@@ -580,6 +589,10 @@ class XMLRPCFullSynchronousMultiEngineClient(object):
 
     def gather(self, key, style='basic', targets='all', block=True):
         
+        # Note: scatter and gather handle pending deferreds locally through self.pdm.
+        # This enables us to collect a bunch fo deferred ids and make a secondary 
+        # deferred id that corresponds to the entire group.  This logic is extremely
+        # difficult to get right though.
         def do_gather(engines):
             nEngines = len(engines)
             mapClass = Map.styles[style]

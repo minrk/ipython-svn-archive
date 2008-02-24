@@ -25,7 +25,8 @@ from ipython1.kernel import newserialized
 from ipython1.kernel.util import printer
 from ipython1.kernel.error import (InvalidEngineID, 
     NoEnginesRegistered,
-    CompositeError)
+    CompositeError,
+    InvalidDeferredID)
 from ipython1.kernel.tests.engineservicetest import validCommands, invalidCommands
 from ipython1.kernel.tests.tgenerator import MultiEngineGetResultTestGenerator
 from ipython1.core.interpreter import Interpreter
@@ -664,8 +665,25 @@ class ISynchronousMultiEngineTestCase(IMultiEngineBaseTestCase):
         d.addCallback(lambda did: self.multiengine.get_pending_deferred(did, True))
         d.addCallback(lambda r: self.assertEquals(r, 4*[[True, False, True, True, False]]))
         return d
-
-
+    
+    def test_clear_pending_deferreds(self):
+        self.addEngine(4)
+        did_list = []
+        d = self.multiengine.execute('a=10',block=False)
+        d.addCallback(lambda did: did_list.append(did))
+        d.addCallback(lambda _: self.multiengine.push(dict(b=10),block=False))
+        d.addCallback(lambda did: did_list.append(did))
+        d.addCallback(lambda _: self.multiengine.pull(('a','b'),block=False))
+        d.addCallback(lambda did: did_list.append(did))
+        d.addCallback(lambda _: self.multiengine.clear_pending_deferreds())
+        d.addCallback(lambda _: self.multiengine.get_pending_deferred(did_list[0],True))
+        d.addErrback(lambda f: self.assertRaises(InvalidDeferredID, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.get_pending_deferred(did_list[1],True))
+        d.addErrback(lambda f: self.assertRaises(InvalidDeferredID, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.get_pending_deferred(did_list[2],True))
+        d.addErrback(lambda f: self.assertRaises(InvalidDeferredID, f.raiseException))
+        return d
+    
 #-------------------------------------------------------------------------------
 # Coordinator test cases
 #-------------------------------------------------------------------------------
@@ -742,6 +760,23 @@ class ISynchronousMultiEngineCoordinatorTestCase(IMultiEngineCoordinatorTestCase
         d.addCallback(lambda r: self.assertEquals(r,[f(x) for x in data]))
         return d
 
+    def test_clear_pending_deferreds(self):
+        self.addEngine(4)
+        did_list = []
+        d = self.multiengine.scatter('a',range(16),block=False)
+        d.addCallback(lambda did: did_list.append(did))
+        d.addCallback(lambda _: self.multiengine.gather('a',block=False))
+        d.addCallback(lambda did: did_list.append(did))
+        d.addCallback(lambda _: self.multiengine.map(lambda x: x, range(16),block=False))
+        d.addCallback(lambda did: did_list.append(did))
+        d.addCallback(lambda _: self.multiengine.clear_pending_deferreds())
+        d.addCallback(lambda _: self.multiengine.get_pending_deferred(did_list[0],True))
+        d.addErrback(lambda f: self.assertRaises(InvalidDeferredID, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.get_pending_deferred(did_list[1],True))
+        d.addErrback(lambda f: self.assertRaises(InvalidDeferredID, f.raiseException))
+        d.addCallback(lambda _: self.multiengine.get_pending_deferred(did_list[2],True))
+        d.addErrback(lambda f: self.assertRaises(InvalidDeferredID, f.raiseException))
+        return d
 
 #-------------------------------------------------------------------------------
 # Extras test cases

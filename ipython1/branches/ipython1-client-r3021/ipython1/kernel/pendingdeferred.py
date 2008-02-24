@@ -114,7 +114,7 @@ class PendingDeferredManager(object):
         else:
             raise error.InvalidDeferredID('invalid deferred_id: %r' % deferred_id)
     
-    def clean_out_deferreds(self):
+    def clear_pending_deferreds(self):
         """Remove all the deferreds I am tracking."""
         for did in self.deferred_ids:
             self.delete_pending_deferred(did)
