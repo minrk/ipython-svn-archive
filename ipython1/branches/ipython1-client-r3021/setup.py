@@ -21,8 +21,6 @@ if os.path.exists('MANIFEST'): os.remove('MANIFEST')
 
 from distutils.core import setup
 
-
-
 #---------------------------------------------------------------------------
 # Test for dependencies
 #---------------------------------------------------------------------------

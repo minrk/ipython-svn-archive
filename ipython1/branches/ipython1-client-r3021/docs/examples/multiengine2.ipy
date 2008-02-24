@@ -28,7 +28,6 @@ mec.block=False
 pr1 = mec.execute('import time')
 pr2 = mec.execute('time.sleep(5)')
 pr3 = mec.push(dict(a=10,b=30,c=range(20000),d='The dog went swimming.'))
-# pr3 = mec.push(dict(a=10))
 pr4 = mec.pull(('a','b','d'))
 
 print "Try a non-blocking get_result"
