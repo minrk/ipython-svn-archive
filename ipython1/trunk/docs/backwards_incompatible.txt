@@ -2,3 +2,25 @@
 Backwards Incompatible Changes in IPython1
 ==========================================
 
+Changes made with version 0.3
+=============================
+
+	* New methods ``push_function``/``pull_function`` for pushing/pulling
+	  functions to/from engines.
+	* Everything has been renamed to conform to the lowercase_with_underscore
+	  convention.
+	* Methods like ``push``/``pull`` no longer use ``*args``/``**kwargs``.
+	* The ``targets`` argument in the multiengine interface is now an optional keyword
+	  argument.
+	* The ``magicTargets`` attribute of the multiengine client has been renamed to
+	  ``targets``. 
+	* All methods in the MultiEngine interface now accept the optional keyword argument
+	  ``block``.
+	* Renamed RemoteController to MultiEngineClient and TaskController to
+	  TaskClient.
+	* Renamed the top-level module from api.py to client.py.
+	* Most methods in the multiengine interface now raise a ``CompositeError`` exception
+	  that wraps the user's exceptions.
+	* Changes the ``setupNS`` and ``resultNames`` in the ``Task`` class to ``push`` 
+	  and ``pull``.
+	

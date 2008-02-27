@@ -16,7 +16,8 @@
 	the public API is extremely different for users (but much better).
 	
 	* ipython1.kernel: Renamed RemoteController everywhere to 
-	MultiEngineController to better reflect what it actually is.
+	MultiEngineClient and TaskController to TaskClient to better reflect
+	what they actually are.
 	
 	* ipython1.kernel: Renamed the magicTargets attribute of the
 	RemoteController to simply targets.
