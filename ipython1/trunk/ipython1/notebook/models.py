@@ -16,6 +16,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 import sqlalchemy
 from sqlalchemy import *
+from sqlalchemy.orm import *
 import datetime
 try:
     import simplejson

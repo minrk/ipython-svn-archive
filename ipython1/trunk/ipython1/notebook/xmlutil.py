@@ -17,6 +17,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import sqlalchemy as sqla
+from sqlalchemy import orm
 import StringIO, datetime
 try:
     import xml.etree.ElementTree as ET

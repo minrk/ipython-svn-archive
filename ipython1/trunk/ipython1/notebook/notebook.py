@@ -18,6 +18,7 @@ __docformat__ = "restructuredtext en"
 
 import zope.interface as zi
 import sqlalchemy as sqla
+from sqlalchemy import orm
 from twisted.python.failure import Failure
 from ipython1.kernel.error import NotFoundError
 from ipython1.notebook import models, dbutil, xmlutil, sparseutil
@@ -101,7 +102,7 @@ class NotebookController(object):
     
     def __init__(self, engine=None, session=None):
         if session is None:
-            session = sqla.create_session()
+            session = orm.create_session()
         self.session = session
         self.engine = engine
         self.userQuery = session.query(models.User)
