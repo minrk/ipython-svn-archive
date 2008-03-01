@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.kernel.test.test_task -*-
+# -*- test-case-name: ipython1.kernel.tests.test_task -*-
 """Task farming representation of the ControllerService.
 """
 __docformat__ = "restructuredtext en"
@@ -15,7 +15,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 # Imports
 #-------------------------------------------------------------------------------
-
+import copy
 from types import FunctionType as function
 
 import zope.interface as zi, string
@@ -25,6 +25,24 @@ from twisted.python import components, log, failure
 from ipython1.kernel import engineservice as es, error
 from ipython1.kernel import controllerservice as cs
 from ipython1.kernel.twistedutil import gatherBoth, DeferredList
+
+from ipython1.kernel.pickleutil import can,uncan, CannedFunction
+
+def canTask(task):
+    t = copy.copy(task)
+    t.depend = can(t.depend)
+    if t.recovery_task:
+        t.recovery_task = canTask(t.recovery_task)
+    return t
+
+def uncanTask(task):
+    t = copy.copy(task)
+    t.depend = uncan(t.depend)
+    if t.recovery_task and t.recovery_task is not task:
+        t.recovery_task = uncanTask(t.recovery_task)
+    return t
+
+
 
 class Task(object):
     """Our representation of a task for the `TaskController` interface.
@@ -52,12 +70,13 @@ class Task(object):
         recovery_task : Task
             This is the Task to be run when the task has exhausted its retries
             Default=None.
-        depends : Dependency, dict, list, str
-            This is the dependency structure for the Task, which determines
-            whether a task can be run on a Worker.  If depends is given as
-            a dict, list, or str, then it is passed to the constructor
-            for a Dependency.  See the Dependency doc for details.
-            Default=None
+        depend : bool function(properties)
+            This is the dependency function for the Task, which determines
+            whether a task can be run on a Worker.  `depend` is called with
+            one argument, the worker's properties dict, and should return
+            True if the worker meets the dependencies or False if it does
+            not.
+            Default=None - run on any worker
         options : dict
             Any other keyword options for more elaborate uses of tasks
     
@@ -68,10 +87,15 @@ class Task(object):
     >>> t = Task('a=5', pull='a')
     >>> t = Task('a=5\nb=4', pull=['a','b'])
     >>> t = Task('os.kill(os.getpid(),9)', retries=100) # this is a bad idea
+        # A dependency case:
+    >>> def hasMPI(props):
+    ...     return props.get('mpi') is not None
+    >>> t = Task('mpi.send(blah,blah)', depend = hasMPI)
     """
+    
     def __init__(self, expression, pull=None, push=None,
             clear_before=False, clear_after=False, retries=0, 
-            recovery_task=None, depends=None, **options):
+            recovery_task=None, depend=None, **options):
         self.expression = expression
         if isinstance(pull, str):
             self.pull = [pull]
@@ -82,12 +106,12 @@ class Task(object):
         self.clear_after = clear_after
         self.retries=retries
         self.recovery_task = recovery_task
-        if depends is None:
-            self.dependency = _Dependency()
-        elif isinstance(depends, Dependency):
-            self.dependency = depends
-        else:
-            self.dependency = Dependency(depends)
+        # if depend is not None:
+            # self.dependency = _Dependency()
+        # elif isinstance(depends, Dependency):
+        #     self.dependency = depends
+        # else:
+        self.depend = depend
         self.options = options
         self.taskid = None
 
@@ -199,6 +223,10 @@ class TaskResult(object):
         if self.failure is not None:
             self.failure.raiseException()
 
+
+#
+####  The Dependency object is being removed in favor of arbitrary functions
+#
 
 class _Dependency(object):
     """an empty Dependency that provides only the `test` method, 
@@ -533,7 +561,7 @@ class FIFOScheduler(object):
         for t in self.tasks:
             for w in self.workers:
                 try:# do not allow exceptions to break this
-                    cando = t.dependency.test(w.properties)
+                    cando = t.depend is None or t.depend(w.properties)
                 except:
                     cando = False
                 if cando:
@@ -549,14 +577,14 @@ class LIFOScheduler(FIFOScheduler):
     """
     
     def add_task(self, task, **flags):
-        self.tasks.reverse()
-        self.tasks.append(task)
-        self.tasks.reverse()
+        # self.tasks.reverse()
+        self.tasks.insert(0, task)
+        # self.tasks.reverse()
     
     def add_worker(self, worker, **flags):
-        self.workers.reverse()
-        self.workers.append(worker)
-        self.workers.reverse()
+        # self.workers.reverse()
+        self.workers.insert(0, worker)
+        # self.workers.reverse()
     
 
 class ITaskController(cs.IControllerBase):

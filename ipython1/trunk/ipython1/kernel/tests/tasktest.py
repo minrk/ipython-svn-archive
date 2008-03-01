@@ -99,18 +99,19 @@ class ITaskControllerTestCase(TaskTestBase):
         d.addCallback(lambda r: self.assertEquals(r, 16))
         return d
     
-    def testInfiniteRecoveryLoop(self):
-        self.addEngine(1)
-        t = task.Task("raise Exception", retries = 5)
-        t2 = task.Task("assert False", retries = 2, recovery_task = t)
-        t.recovery_task = t2
-        
-        d = self.tc.run(t)
-        d.addCallback(self.tc.get_task_result, block=True)
-        d.addCallback(lambda tr: tr.ns.i)
-        d.addErrback(lambda f: self.assertRaises(AssertionError, f.raiseException))
-        return d
-    
+    # def testInfiniteRecoveryLoop(self):
+    #     self.addEngine(1)
+    #     t = task.Task("raise Exception", retries = 5)
+    #     t2 = task.Task("assert True", retries = 2, recovery_task = t)
+    #     t.recovery_task = t2
+    #     
+    #     d = self.tc.run(t)
+    #     d.addCallback(self.tc.get_task_result, block=True)
+    #     d.addCallback(lambda tr: tr.ns.i)
+    #     d.addBoth(printer)
+    #     d.addErrback(lambda f: self.assertRaises(AssertionError, f.raiseException))
+    #     return d
+    # 
     def testSetupNS(self):
         self.addEngine(1)
         d = self.multiengine.execute('a=0', targets=0)

@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.kernel.test.test_taskcontrollerxmlrpc -*-
+# -*- test-case-name: ipython1.kernel.tests.test_taskxmlrpc -*-
 """An XML-RPC interface to a TaskController.
 
 This class lets XML-RPC clients talk to a TaskController.
@@ -21,7 +21,7 @@ __docformat__ = "restructuredtext en"
 #-------------------------------------------------------------------------------
 
 import cPickle as pickle
-import xmlrpclib
+import xmlrpclib, copy
 
 from zope.interface import Interface, implements
 from twisted.internet import defer
@@ -31,6 +31,7 @@ from twisted.web import xmlrpc as webxmlrpc
 from ipython1.external.twisted.web2 import xmlrpc, server, channel
 
 from ipython1.kernel import error, task as Task, taskclient
+from ipython1.kernel.pickleutil import can, uncan
 from ipython1.kernel.xmlrpcutil import Transport
 
 #-------------------------------------------------------------------------------
@@ -96,6 +97,7 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
     def xmlrpc_run(self, request, binTask):
         try:
             task = pickle.loads(binTask.data)
+            task = Task.uncanTask(task)
         except:
             d = defer.fail(pickle.UnpickleableError("Could not unmarshal task"))
         else:
@@ -212,7 +214,9 @@ class XMLRPCTaskClient(object):
             `get_task_result` to get the `TaskResult` object.
         """
         assert isinstance(task, Task.Task), "task must be a Task object!"
-        binTask = xmlrpc.Binary(pickle.dumps(task,2))
+        ctask = Task.canTask(task) # handles arbitrary function in .depend
+                                # as well as arbitrary recovery_task chains
+        binTask = xmlrpc.Binary(pickle.dumps(ctask,2))
         d = self._proxy.callRemote('run', binTask)
         d.addCallback(self.unpackage)
         return d

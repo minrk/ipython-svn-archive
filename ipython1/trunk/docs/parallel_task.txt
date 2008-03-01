@@ -36,11 +36,15 @@ The first step is to import the IPython1 ``client`` module and then create a ``T
 	
 	In [2]: tc = client.TaskClient(('localhost',10113))
 
+Running Basic Tasks
+===================
+
+
 Next, you need to create a ``Task`` object that encapsulates a unit of work::
 
 	In [3]: t1 = client.Task('a=10')
 
-Then run the ``Task`` using the ``run`` method.  The result is the task id, that can be used to get the result of the task::
+Then run the ``Task`` using the ``run`` method of the ``TaskClient`` object.  The result is the task id, that can be used to get the result of the task::
 
 	In [4]: tc.run(t1)
 	Out[4]: 0
@@ -49,6 +53,12 @@ Then run the ``Task`` using the ``run`` method.  The result is the task id, that
 	Out[5]: TaskResult[ID:0]:{}
 
 The ``get_task_result`` method returns a ``TaskResult`` object that contains the results of the ``Task``.
+
+Basic Task Overview
+===================
+The Task system has three basic objects:  The ``TaskClient``, the ``Task``, and the ``TaskResult``.  The names of 
+    
+
 
 There are many options for running and managing tasks. The best way to learn
 further about the Task interface is to study the examples in ``docs/examples``. If

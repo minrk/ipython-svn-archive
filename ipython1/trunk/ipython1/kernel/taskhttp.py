@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.kernel.test.test_multiengine -*-
+# -*- test-case-name: ipython1.kernel.tests.test_multiengine -*-
 """REST web service interface to an ITaskController
 """
 __docformat__ = "restructuredtext en"
@@ -28,7 +28,7 @@ from ipython1.external.twisted.web2 import http, resource
 from ipython1.external.twisted.web2 import stream
 from ipython1.external.twisted.web2 import http_headers
 
-from ipython1.kernel.task import ITaskController
+from ipython1.kernel.task import ITaskController, canTask, uncanTask
 from ipython1.kernel.taskclient import InteractiveTaskClient
 
 #-------------------------------------------------------------------------------
@@ -110,6 +110,7 @@ class HTTPTaskRun(HTTPTaskBaseMethod):
         try:
             pTask = request.args['pTask'][0]
             task = pickle.loads(pTask)
+            task = uncanTask(task)
         except Exception, e:
             return self.packageFailure(failure.Failure(e))
         else:
@@ -230,7 +231,8 @@ class HTTPTaskClient(object):
     ##########  Interface Methods  ##########
     
     def run(self, task):
-        pTask = pickle.dumps(task,2)
+        ctask = canTask(task)
+        pTask = pickle.dumps(ctask,2)
         return self._executeRemoteMethod('run', pTask=pTask)
     
     def abort(self, taskid):

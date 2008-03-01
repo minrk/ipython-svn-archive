@@ -122,6 +122,9 @@ def parse_args():
            help="the TCP ip address the controller will listen on "
            "for engine connections")
 
+    newopt("--mpi", type="string", dest="mpi",
+           help="use mpi with package:  for instance --mpi=mpi4py")
+    
     newopt("-l", "--logfile", type="string", dest="logfile",
            help="log file name")
 
@@ -195,8 +198,12 @@ def clusterLocal(opt,arg):
     time.sleep(3)
 
     englogfile = '%s%s-' % (logfile,controller.pid)
-    engines = [ Popen(['ipengine','--logfile',englogfile])
-                for i in range(opt.n) ]
+    mpi = opt.mpi
+    if mpi: # start with mpi - killing the engines with sigterm will not work if you do this
+        engines = [Popen(['mpirun', '-np', str(opt.n), 'ipengine', '--mpi', mpi, '--logfile',englogfile])]
+    else: # do what we would normally do
+        engines = [ Popen(['ipengine','--logfile',englogfile])
+                    for i in range(opt.n) ]
     eids = [e.pid for e in engines]
     print 'Engines PIDs:  ',eids
     print 'Log files: %s*' % englogfile

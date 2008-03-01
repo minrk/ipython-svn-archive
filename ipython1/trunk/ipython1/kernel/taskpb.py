@@ -1,5 +1,5 @@
 # encoding: utf-8
-# -*- test-case-name: ipython1.kernel.test.test_taskcontrollerpb -*-
+# -*- test-case-name: ipython1.kernel.tests.test_taskcontrollerpb -*-
 """
 A PB interface to a TaskController.
 Ken Kinder <ken@kenkinder.com>
@@ -59,6 +59,7 @@ class PBTaskControllerFromTaskController(pb.Avatar):
     
     def perspective_run(self, task):
         d = defer.execute(pickle.loads, task)
+        d.addCallback(Task.uncanTask)
         d.addCallback(self.staskcontroller.run)
         d.addCallback(self.packageFailure)
         return d
@@ -129,7 +130,7 @@ class PBTaskClient(taskclient.TaskClient):
     
     def run(self, task):
         assert isinstance(task, Task.Task), "task must be a Task object!"
-        d = self.perspective.callRemote('run', pickle.dumps(task, 2))
+        d = self.perspective.callRemote('run', pickle.dumps(Task.canTask(task), 2))
         d.addCallback(unpackageFailure)
         return d
     
