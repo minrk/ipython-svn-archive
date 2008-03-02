@@ -7,7 +7,8 @@ Sprint
 	* How to create latex documentation (Ondrej)
 	* Configuration and traits discussion (FP)
 	X Version control and hosting discussion (ALL, then TV)
-	* Task interfaces work: few API changes, docs, tests (Min)
+	X Task interfaces work: few API changes (BG)
+	* Task docs, tests (Min)
 	* Refactor notebook into backend/frontend (Brian)
 	* Growl stuff
 

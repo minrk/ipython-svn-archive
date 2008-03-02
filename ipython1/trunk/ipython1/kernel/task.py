@@ -106,11 +106,6 @@ class Task(object):
         self.clear_after = clear_after
         self.retries=retries
         self.recovery_task = recovery_task
-        # if depend is not None:
-            # self.dependency = _Dependency()
-        # elif isinstance(depends, Dependency):
-        #     self.dependency = depends
-        # else:
         self.depend = depend
         self.options = options
         self.taskid = None
@@ -224,150 +219,6 @@ class TaskResult(object):
             self.failure.raiseException()
 
 
-#
-####  The Dependency object is being removed in favor of arbitrary functions
-#
-
-class _Dependency(object):
-    """an empty Dependency that provides only the `test` method, 
-    for defaulting in a Task"""
-    def test(self, properties):
-        return True
-    
-
-class Dependency(_Dependency):
-    """an object to enable elaborate dependency tests against the properites
-    of a worker.
-    Standard form is a list of the form [(key, value, test),].  The primary
-    method of this object is this.test(properties), where properties is a 
-    dictionary of the properties of a worker.  Tests are made of the form:
-    if properties.get(key) `test` value: True
-    this.test() will return True if 
-    
-    `key` is a string, by which values will be pulled from the properties dict.
-    `value` is the target value against which the property is tested.
-        Default: True
-    `test` is a simple comparison operator: '==', '<', '>=' etc.
-        Default: '=='
-    
-    a Dependency object can be constructed with a dict, list, or string:
-    >>>d = Dependency(dict(a=True,b='asdf'))
-        is equivalent to:
-    >>>d = Dependency([('a', True, '=='), ('b', 'asdf', '==')])
-        is equivalent to:
-    >>>d = Dependency(['a', ('b', 'asdf')])
-    another example:
-    >>>d = Dependency([('memory', '2GB', '>=')])
-    >>>d.test(properties)
-        will only return true of properties.get('memory') >= '2GB'
-    
-    string construction is different.  String construction allows the user
-    to define an analytic test function in one of two ways.
-    First, a function called test, taking one argument, and returning True|False
-    >>>d = Dependency('''def test(properties):
-                ...
-                return True # or False
-                ''')
-    or a boolean expression in terms of a dict called 'properties':
-    >>>d = Dependency("properties['a'] == True and properties['mem'] > '1GB'")
-    
-    dependencies can be added through d.depend(key, value, test) in the same way
-    as the constructor, unless the dependency was constructed from a string.
-    >>>d.depends(['a', ('b', False)])
-        is equivalent to
-    >>>d.depends('a') # also d.depends('a', True, '==')
-    >>>d.depends('b', False)
-    
-    """
-    validTests = ['==', '<=', '>=', '<', '>', 'in', 'not in']
-    
-    def __init__(self, init=None):
-        self.dependencies = []
-        if init is None:
-            return
-        if isinstance(init, (dict, list, tuple)):
-            self.depend(init)
-        elif isinstance(init, str):
-            if "def test" not in init:
-                # guess it is a boolean test
-                # i.e. "properties['a'] == 5 and properties.has_key('b')"
-                self.dependencies = "def test(properties):  return %s"%init
-            else:
-                # guess it was defined as a 'def test(properties)' function
-                self.dependencies = init
-            # check for valid dependency string
-            exec(self.dependencies)
-            try:
-                test({})
-            except Exception, e:
-                raise TypeError("Bad Strtest: %r"%e)
-            self.test = self.strtest
-        else:
-            raise TypeError("Dependencies incorrectly formatted")
-    
-    def depend(self, key, value=True, test='=='):
-        assert isinstance(self.dependencies, list), "cannot edit dependencies of strtest"
-        assert test in self.validTests, "%r not valid test, use %s"%(test, self.validTests)
-        # print 'depending:%s'%key
-        if isinstance(key, dict):
-            [self.depend(k, v, '==') for k,v in key.iteritems()]
-        elif isinstance(key, (list, tuple)):
-            for d in key:
-                if isinstance(d, (list, tuple)):
-                    self.depend(*d)
-                elif isinstance(d, str):
-                    self.depend(d)
-                else:
-                    raise TypeError("Bad Dependency list:%s"%key)
-        else:
-            self.dependencies.append((key, value, test))
-    
-    def undepend(self, key):
-        assert isinstance(self.dependencies, list), "cannot edit dependencies of strtest"
-        zipd = zip(*self.dependencies)
-        if key in zipd[0]:
-            self.dependencies.pop(list(zipd[0]).index(key))
-    
-    def test(self, properties):
-        for key, target, test in self.dependencies:
-            if test == 'in':
-                # print 'intest'
-                try:
-                    if properties.get(key) not in target:
-                        return False
-                except TypeError:
-                    return False
-            elif test == 'not in':
-                try:
-                    if properties.get(key) in target:
-                        return False
-                except TypeError:
-                    return False
-            else:
-                c = cmp(properties.get(key), target)
-                # print c, key, target, test
-                if c == 0 and '=' in test:
-                    continue
-                elif c == 1 and '>' in test:
-                    continue
-                elif c == -1 and '<' in test:
-                    continue
-                else:
-                    # print "failing:"
-                    return False
-                    
-        # print 'returning'
-        return True
-    
-    def strtest(self, properties):
-        exec self.dependencies
-        try:
-            return test(properties)
-        except Exception, e:
-            log.msg("Maybe bad strtest: %r"%e)
-            return False
-    
-
 class IWorker(zi.Interface):
     """The Basic Worker Interface. 
     
@@ -384,7 +235,7 @@ class IWorker(zi.Interface):
         
         :Returns: `Deferred` to a `TaskResult` object.
         """
-    
+
 
 class WorkerFromQueuedEngine(object):
     """Adapt an `IQueuedEngine` to an `IWorker` object"""
@@ -791,9 +642,7 @@ class TaskController(cs.ControllerAdapterBase):
         failed = []
         succeeded = []
         for k,v in self.finishedResults.iteritems():
-            if isinstance(v, failure.Failure):
-                failed.append(k)
-            else:
+            if not isinstance(v, failure.Failure):
                 if hasattr(v,'failure'):
                     if v.failure is None:
                         succeeded.append(k)

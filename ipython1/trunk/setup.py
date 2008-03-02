@@ -107,7 +107,11 @@ add_package(packages, 'testutils', tests=True)
 add_package(packages, 'tools', tests=True)
 
 if notebook:
-    add_package(packages, 'notebook', config=True, tests=True, scripts=True)
+    packages.append('ipython1.frontends')
+    packages.append('ipython1.frontends.wx')
+    packages.append('ipython1.frontends.web')
+    pacakges.append('ipython1.frontends.terminal')
+    packages.append('ipython1.frontends.snippets')
 if kernel:
     add_package(packages, 'kernel', config=True, tests=True, scripts=True)
 if frontend:

@@ -10,7 +10,7 @@ from ipython1.kernel import codeutil
 import ipython1.kernel.magic
 from ipython1.kernel.multiengineclient import IFullBlockingMultiEngineClient
 from ipython1.kernel.taskclient import IBlockingTaskClient
-from ipython1.kernel.task import Task, Dependency
+from ipython1.kernel.task import Task
 from ipython1.kernel.twistedutil import ReactorInThread
 from ipython1.kernel.config import configManager as kernelConfigManager
 from ipython1.kernel.error import CompositeError
