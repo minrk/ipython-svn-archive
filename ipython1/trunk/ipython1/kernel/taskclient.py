@@ -97,6 +97,14 @@ class BlockingTaskClient(InteractiveTaskClient):
     
     def spin(self):
         return blockingCallFromThread(self.task_controller.spin)
+    
+    def queue_status(self, verbose=False):
+        """Get a dictionary with the current state of the task queue.
+        
+        If verbose is True, then return lists of taskids, otherwise, 
+        return the number of tasks with each status.
+        """
+        return blockingCallFromThread(self.task_controller.queue_status, verbose)
 
 components.registerAdapter(BlockingTaskClient,
             task.ITaskController, IBlockingTaskClient)

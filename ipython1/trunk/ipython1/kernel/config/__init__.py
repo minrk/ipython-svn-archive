@@ -40,9 +40,9 @@ engineConfig = {
 
 mpiConfig = {
     'mpi4py': """from mpi4py import MPI as mpi
-mpi.rank = mpi.COMM_WORLD.Get_size()
-mpi.size = mpi.COMM_WORLD.Get_rank()
-""",    
+mpi.size = mpi.COMM_WORLD.Get_size()
+mpi.rank = mpi.COMM_WORLD.Get_rank()
+""",
     'pytrilinos': """from PyTrilinos import Epetra
 class SimpleStruct:
     pass

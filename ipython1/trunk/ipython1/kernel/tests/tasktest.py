@@ -60,6 +60,12 @@ class ITaskControllerTestCase(TaskTestBase):
         d.addErrback(lambda f: self.assertRaises(IndexError, f.raiseException))
         return d
     
+    def testAbortType(self):
+        self.addEngine(1)
+        d = self.tc.abort('asdfadsf')
+        d.addErrback(lambda f: self.assertRaises(TypeError, f.raiseException))
+        return d
+    
     def testClears(self):
         self.addEngine(1)
         t = task.Task('a=1', clear_before=True, pull='b', clear_after=True)

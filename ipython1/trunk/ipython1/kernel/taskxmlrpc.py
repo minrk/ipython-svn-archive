@@ -63,6 +63,9 @@ class IXMLRPCTaskController(Interface):
     def xmlrpc_spin(request):
         """"""
     
+    def xmlrpc_queue_status(request, verbose):
+        """"""
+    
 
 class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
     """XML-RPC attachmeot for controller.
@@ -129,6 +132,12 @@ class XMLRPCTaskControllerFromTaskController(xmlrpc.XMLRPC):
         d.addCallback(self.packageSuccess)
         d.addErrback(self.packageFailure)
         return d        
+
+    def xmlrpc_queue_status(self, request, verbose):
+        d = self.taskController.queue_status(verbose)
+        d.addCallback(self.packageSuccess)
+        d.addErrback(self.packageFailure)
+        return d 
 
 components.registerAdapter(XMLRPCTaskControllerFromTaskController,
             Task.TaskController, IXMLRPCTaskController)
@@ -267,6 +276,11 @@ class XMLRPCTaskClient(object):
         d = self._proxy.callRemote('spin')
         d.addCallback(self.unpackage)
         return d
-
+    
+    def queue_status(self, verbose=False):
+        """Return a dict with the status of the task queue."""
+        d = self._proxy.callRemote('queue_status', verbose)
+        d.addCallback(self.unpackage)
+        return d
 
 

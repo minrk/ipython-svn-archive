@@ -373,6 +373,9 @@ class IWorker(zi.Interface):
     
     A worked is a representation of an Engine that is ready to run tasks.
     """
+    
+    zi.Attribute("workerid", "the id of the worker")
+    
     def run(task):
         """Run task in worker's namespace.
         
@@ -389,7 +392,7 @@ class WorkerFromQueuedEngine(object):
     
     def __init__(self, qe):
         self.queuedEngine = qe
-        self.workerID = None
+        self.workerid = None
     
     def _get_properties(self):
         return self.queuedEngine.properties
@@ -449,6 +452,8 @@ class IScheduler(zi.Interface):
     """
     zi.Attribute("nworkers", "the number of unassigned workers")
     zi.Attribute("ntasks", "the number of unscheduled tasks")
+    zi.Attribute("workerids", "a list of the worker ids")
+    zi.Attribute("taskids", "a list of the task ids")
     
     def add_task(task, **flags):
         """Add a task to the queue of the Scheduler.
@@ -491,14 +496,14 @@ class IScheduler(zi.Interface):
         This gets the next IWorker that is ready to do work. 
         
         :Parameters:
-            id : if specified, will pop worker with workerID=id, else pops
+            id : if specified, will pop worker with workerid=id, else pops
                  highest priority worker.  Defaults to None.
         
         :Returns:
             an IWorker object
         
         :Exceptions:
-            IndexError : raised if no workerID in queue
+            IndexError : raised if no workerid in queue
         """
     
     def ready():
@@ -531,6 +536,15 @@ class FIFOScheduler(object):
     ntasks = property(_ntasks, lambda self, _:None)
     nworkers = property(_nworkers, lambda self, _:None)
     
+    def _taskids(self):
+        return [t.taskid for t in self.tasks]
+    
+    def _workerids(self):
+        return [w.workerid for w in self.workers]
+    
+    taskids = property(_taskids, lambda self,_:None)
+    workerids = property(_workerids, lambda self,_:None)
+    
     def add_task(self, task, **flags):    
         self.tasks.append(task)
     
@@ -552,8 +566,8 @@ class FIFOScheduler(object):
             return self.workers.pop(0)
         else:
             for i in range(len(self.workers)):
-                workerID = self.workers[i].workerID
-                if id == workerID:
+                workerid = self.workers[i].workerid
+                if id == workerid:
                     return self.workers.pop(i)
             raise IndexError("No worker #%i"%id)
     
@@ -565,7 +579,7 @@ class FIFOScheduler(object):
                 except:
                     cando = False
                 if cando:
-                    return self.pop_worker(w.workerID), self.pop_task(t.taskid)
+                    return self.pop_worker(w.workerid), self.pop_task(t.taskid)
         return None, None
     
 
@@ -644,6 +658,13 @@ class ITaskController(cs.IControllerBase):
         a task.
         """
     
+    def queue_status(self, verbose=False):
+        """Get a dictionary with the current state of the task queue.
+        
+        If verbose is True, then return lists of taskids, otherwise, 
+        return the number of tasks with each status.
+        """
+    
 
 class TaskController(cs.ControllerAdapterBase):
     """The Task based interface to a Controller object.
@@ -664,17 +685,17 @@ class TaskController(cs.ControllerAdapterBase):
         self.taskid = 0
         self.failurePenalty = 1 # the time in seconds to penalize
                                 # a worker for failing a task
-        self.pendingTasks = {} # dict of {workerID:(taskid, task)}
+        self.pendingTasks = {} # dict of {workerid:(taskid, task)}
         self.deferredResults = {} # dict of {taskid:deferred}
         self.finishedResults = {} # dict of {taskid:actualResult}
-        self.workers = {} # dict of {workerID:worker}
+        self.workers = {} # dict of {workerid:worker}
         self.abortPending = [] # dict of {taskid:abortDeferred}
         self.idleLater = None # delayed call object for timeout
         self.scheduler = self.SchedulerClass()
         
         for id in self.controller.engines.keys():
                 self.workers[id] = IWorker(self.controller.engines[id])
-                self.workers[id].workerID = id
+                self.workers[id].workerid = id
                 self.schedule.add_worker(self.workers[id])
     
     def registerWorker(self, id):
@@ -682,7 +703,7 @@ class TaskController(cs.ControllerAdapterBase):
         if self.workers.get(id):
             raise "We already have one!  This should not happen."
         self.workers[id] = IWorker(self.controller.engines[id])
-        self.workers[id].workerID = id
+        self.workers[id].workerid = id
         if not self.pendingTasks.has_key(id):# if not working
             self.scheduler.add_worker(self.workers[id])
         self.distributeTasks()
@@ -734,6 +755,8 @@ class TaskController(cs.ControllerAdapterBase):
     
     def abort(self, taskid):
         """Remove a task from the queue if it has not been run already."""
+        if not isinstance(taskid, int):
+            return defer.fail(failure.Failure(TypeError("an integer task id expected: %r" % taskid)))
         try:
             self.scheduler.pop_task(taskid)
         except IndexError, e:
@@ -762,6 +785,28 @@ class TaskController(cs.ControllerAdapterBase):
     
     def spin(self):
         return defer.succeed(self.distributeTasks())
+    
+    def queue_status(self, verbose=False):
+        pending = self._pendingTaskIDs()
+        failed = []
+        succeeded = []
+        for k,v in self.finishedResults.iteritems():
+            if isinstance(v, failure.Failure):
+                failed.append(k)
+            else:
+                if hasattr(v,'failure'):
+                    if v.failure is None:
+                        succeeded.append(k)
+                    else:
+                        failed.append(k)
+        scheduled = self.scheduler.taskids
+        if verbose:
+            result = dict(pending=pending, failed=failed, 
+                succeeded=succeeded, scheduled=scheduled)
+        else:
+            result = dict(pending=len(pending),failed=len(failed),
+                succeeded=len(succeeded),scheduled=len(scheduled))
+        return defer.succeed(result)
     
     #---------------------------------------------------------------------------
     # Queue methods
@@ -796,11 +841,11 @@ class TaskController(cs.ControllerAdapterBase):
         while worker and task:
             # get worker and task
             # add to pending
-            self.pendingTasks[worker.workerID] = task
+            self.pendingTasks[worker.workerid] = task
             # run/link callbacks
             d = worker.run(task)
-            log.msg("Running task %i on worker %i" %(task.taskid, worker.workerID))
-            d.addBoth(self.taskCompleted, task.taskid, worker.workerID)
+            log.msg("Running task %i on worker %i" %(task.taskid, worker.workerid))
+            d.addBoth(self.taskCompleted, task.taskid, worker.workerid)
             worker, task = self.scheduler.schedule()
         # check for idle timeout:
         self.checkIdle()
@@ -827,13 +872,13 @@ class TaskController(cs.ControllerAdapterBase):
         self.idleLater = None
                 
     
-    def taskCompleted(self, result, taskid, workerID):
+    def taskCompleted(self, result, taskid, workerid):
         """This is the err/callback for a completed task."""
         try:
-            task = self.pendingTasks.pop(workerID)
+            task = self.pendingTasks.pop(workerid)
         except:
             # this should not happen
-            log.msg("Tried to pop bad pending task %i from worker %i"%(taskid, workerID))
+            log.msg("Tried to pop bad pending task %i from worker %i"%(taskid, workerid))
             log.msg("Result: %r"%result)
             log.msg("Pending tasks: %s"%self.pendingTasks)
             return
@@ -846,7 +891,7 @@ class TaskController(cs.ControllerAdapterBase):
         
         if not aborted:
             if result.failure is not None and isinstance(result.failure, failure.Failure): # we failed
-                log.msg("Task %i failed on worker %i"% (taskid, workerID))
+                log.msg("Task %i failed on worker %i"% (taskid, workerid))
                 if task.retries > 0: # resubmit
                     task.retries -= 1
                     self.scheduler.add_task(task)
@@ -867,26 +912,26 @@ class TaskController(cs.ControllerAdapterBase):
                     self._finishTask(taskid, result)
                 # wait a second before readmitting a worker that failed
                 # it may have died, and not yet been unregistered
-                reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
+                reactor.callLater(self.failurePenalty, self.readmitWorker, workerid)
             else: # we succeeded
                 log.msg("Task completed: %i"% taskid)
                 self._finishTask(taskid, result)
-                self.readmitWorker(workerID)
+                self.readmitWorker(workerid)
         else:# we aborted the task
             if result.failure is not None and isinstance(result.failure, failure.Failure): # it failed, penalize worker
-                reactor.callLater(self.failurePenalty, self.readmitWorker, workerID)
+                reactor.callLater(self.failurePenalty, self.readmitWorker, workerid)
             else:
-                self.readmitWorker(workerID)
+                self.readmitWorker(workerid)
     
-    def readmitWorker(self, workerID):
+    def readmitWorker(self, workerid):
         """Readmit a worker to the scheduler.  
         
         This is outside `taskCompleted` because of the `failurePenalty` being 
         implemented through `reactor.callLater`.
         """
         
-        if workerID in self.workers.keys() and workerID not in self.pendingTasks.keys():
-            self.scheduler.add_worker(self.workers[workerID])
+        if workerid in self.workers.keys() and workerid not in self.pendingTasks.keys():
+            self.scheduler.add_worker(self.workers[workerid])
             self.distributeTasks()
         
     

@@ -2,14 +2,13 @@ Sprint
 ======
 
 	* Fixes in MANIFEST.in for setup.py (FP)
-	* How do we want to handle externals (?)
 	* Parametric testing (Stefan)
 	* Process control and heartbeat monitor (BG, Min)
 	* How to create latex documentation (Ondrej)
-	* Configuration and traits discusssion (FP)
+	* Configuration and traits discussion (FP)
 	X Version control and hosting discussion (ALL, then TV)
 	* Task interfaces work: few API changes, docs, tests (Min)
-	* Refactor notebook into backend/frontend
+	* Refactor notebook into backend/frontend (Brian)
 	* Growl stuff
 
 Big Todo
