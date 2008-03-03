@@ -107,15 +107,14 @@ add_package(packages, 'testutils', tests=True)
 add_package(packages, 'tools', tests=True)
 
 if notebook:
-    packages.append('ipython1.frontends')
-    packages.append('ipython1.frontends.wx')
-    packages.append('ipython1.frontends.web')
-    pacakges.append('ipython1.frontends.terminal')
-    packages.append('ipython1.frontends.snippets')
+    add_package(packages, 'notebook', config=True, scripts=True, tests=True)
 if kernel:
     add_package(packages, 'kernel', config=True, tests=True, scripts=True)
 if frontend:
     add_package(packages, 'frontend', others=['snippets'])
+    add_package(packages, 'frontend.wx')
+    add_package(packages, 'frontend.terminal')
+    add_package(packages, 'frontend.web')
 
 # Currently, sdist doesn't pick this stuff up.  How to handle it?
 package_data = {'ipython1': ['external/MochiKit/*.js'],
