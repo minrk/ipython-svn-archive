@@ -2,37 +2,33 @@
 # Imports
 #----------------------------------------------------------------------------
 
+import sys
 from mpi4py import MPI
 import numpy as np
 
 from ipythondistarray.mpi import mpibase
 from ipythondistarray.core import maps
 from ipythondistarray import utils
+from ipythondistarray.core.error import (InvalidBaseCommError,
+    InvalidGridShapeError,
+    GridShapeError,
+    DistError,
+    DistMatrixError,
+    IncompatibleArrayError)
 
 from ipythondistarray.utils import _raise_nie
 
 
 #----------------------------------------------------------------------------
-# Exceptions
+# Exports
 #----------------------------------------------------------------------------
 
-class InvalidBaseCommError(Exception):
-    pass
+__all__ = ['DistArray']
 
-class InvalidGridShapeError(Exception):
-    pass
-
-class GridShapeError(Exception):
-    pass
-
-class DistError(Exception):
-    pass
-
-class DistMatrixError(Exception):
-    pass
-
+#----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
 # Stateless functions for initializing various aspects of DistArray objects
+#----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
 
 # These are functions rather than methods because they need to be both
@@ -151,34 +147,15 @@ def grid_shape(shape, dist={0:'b'}, grid_shape=None, comm_size=None):
     return grid_shape
     
     
-
+#----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
 # Base DistArray class
 #----------------------------------------------------------------------------
+#----------------------------------------------------------------------------
+
 
 class DistArray(object):
-    """
-    
-    Attributes from ndarray:
-    
-    - flags (no) - not needed
-    - shape (yes)
-    - strides (yes) - not needed
-    - ndim (no)
-    - data (yes)
-    - size (no)
-    - itemsize (no) 
-    - nbytes (no)
-    - base (no)
-    - dtype (yes)
-    - real (yes)
-    - imag (yes)
-    - flat (yes)
-    - ctypes (no)
-    - __array_interface__ (no)
-    - __array_struct_ (no)
-    - __array_priority (no)
-    """
+    """Distribute memory Python arrays."""
     
     __array_priority__ = 20.0
     
@@ -199,7 +176,7 @@ class DistArray(object):
         # This order is extremely important and is shown by the arguments passed on to
         # subsequent _init_* methods.  It is critical that these _init_* methods are free
         # of side effects and stateless.  This means that they cannot set or get class or
-        # instance attributes.  I should probably make them standalone functions.
+        # instance attributes
         self.base_comm = _init_base_comm(comm)
         self.comm_size = self.base_comm.Get_size()
         self.comm_rank = self.base_comm.Get_rank()
@@ -345,6 +322,9 @@ class DistArray(object):
     def reshape(self, newshape):
         _raise_nie()
         
+    def redist(self, newshape, newdist={0:'b'}, newgrid_shape=None):
+        _raise_nie()
+        
     def resize(self, newshape, refcheck=1, order='C'):
         _raise_nie()
         
@@ -364,50 +344,59 @@ class DistArray(object):
         _raise_nie()
      
     def asdist(self, shape, dist={0:'b'}, grid_shape=None):
-        new_da = DistArray(shape, self.dtype, dist, grid_shape, self.base_comm)
-        base_comm = self.base_comm
-        local_array = self.local_array
-        new_local_array = da.local_array
-        recv_counts = np.zeros(self.comm_size, dtype=int)
-
-        status = MPI.Status()
-        MPI.Attach_buffer(np.empty(128+MPI.BSEND_OVERHEAD,dtype=float))
-        done_count = 0
-        
-        for old_local_inds, item in np.ndenumerate(local_array):
-
-            # Compute the new owner
-            global_inds = self.global_ind(new_da.comm_rank, old_local_inds)
-            new_owner = new_da.owner_rank(global_inds)
-            if new_owner==self.owner_rank:
-                pass
-                # Just move the data to the right place in new_local_array
-            else:
-                # Send to the new owner with default tag
-                # Bsend is probably best, but Isend is also a possibility.
-                request = comm.Isend(item, dest=new_owner)
-
-            # Recv
-            incoming = comm.Iprobe(MPI.ANY_SOURCE, MPI.ANY_TAG, status)
-            if incoming:
-                old_owner = status.Get_source()
-                tag = status.Get_tag()
-                data = comm.Recv(old_owner, tag)
-                if tag==2:
-                    done_count += 1
-                # Figure out where new location of old_owner, tag
-                new_local_ind = local_ind_by_owner_and_location(old_owner, location)
-                new_local_array[new_local_ind] = y
-                recv_counts[old_owner] = recv_counts[old_owner]+1
-        
-        while done_count < self.comm_size:
-            pass
-            
-        
-        MPI.Detach_buffer()
-            
-     
-     
+        pass
+        # new_da = DistArray(shape, self.dtype, dist, grid_shape, self.base_comm)
+        # base_comm = self.base_comm
+        # local_array = self.local_array
+        # new_local_array = da.local_array
+        # recv_counts = np.zeros(self.comm_size, dtype=int)
+        # 
+        # status = MPI.Status()
+        # MPI.Attach_buffer(np.empty(128+MPI.BSEND_OVERHEAD,dtype=float))
+        # done_count = 0
+        # 
+        # for old_local_inds, item in np.ndenumerate(local_array):
+        # 
+        #     # Compute the new owner
+        #     global_inds = self.global_ind(new_da.comm_rank, old_local_inds)
+        #     new_owner = new_da.owner_rank(global_inds)
+        #     if new_owner==self.owner_rank:
+        #         pass
+        #         # Just move the data to the right place in new_local_array
+        #     else:
+        #         # Send to the new owner with default tag
+        #         # Bsend is probably best, but Isend is also a possibility.
+        #         request = comm.Isend(item, dest=new_owner)
+        # 
+        #     # Recv
+        #     incoming = comm.Iprobe(MPI.ANY_SOURCE, MPI.ANY_TAG, status)
+        #     if incoming:
+        #         old_owner = status.Get_source()
+        #         tag = status.Get_tag()
+        #         data = comm.Recv(old_owner, tag)
+        #         if tag==2:
+        #             done_count += 1
+        #         # Figure out where new location of old_owner, tag
+        #         new_local_ind = local_ind_by_owner_and_location(old_owner, location)
+        #         new_local_array[new_local_ind] = y
+        #         recv_counts[old_owner] = recv_counts[old_owner]+1
+        # 
+        # while done_count < self.comm_size:
+        #     pass
+        #     
+        # 
+        # MPI.Detach_buffer()
+    
+    def asdist_like(self, other):
+        """
+        Return a version of self that has shape, dist and grid_shape like other.
+        """
+        if arecompatible(self, other):
+            return self
+        else:
+            raise IncompatibleArrayError("DistArrays have incompatible shape, dist or grid_shape")
+    
+    
     #----------------------------------------------------------------------------
     # 3.2.3 Array item selection and manipulation
     #----------------------------------------------------------------------------   
@@ -712,8 +701,281 @@ class DistArray(object):
     
     def __invert__(self):
         _raise_nie()
-        
 
-        
+
+#----------------------------------------------------------------------------
+#----------------------------------------------------------------------------
+# Functions that are friends of DistArray
+#
+# I would really like these functions to be in a separate file, but that
+# is not possible because of circular import problems.  Basically, these
+# functions need accees to the DistArray object in this module, and the 
+# DistArray object needs to use these functions.  There are 3 options for
+# solving this problem:
+# 
+#     * Put everything in one file
+#     * Put the functions needed by DistArray in distarray, others elsewhere
+#     * Make a subclass of DistArray that has methods that use the functions
+#----------------------------------------------------------------------------
+#----------------------------------------------------------------------------
+
+#----------------------------------------------------------------------------
+# Utilities needed to implement things below
+#----------------------------------------------------------------------------
+
+#----------------------------------------------------------------------------
+# 4 Basic routines 
+#----------------------------------------------------------------------------
+
+#----------------------------------------------------------------------------
+# 4.1 Creating arrays 
+#----------------------------------------------------------------------------
+
+# Here is DistArray.__init__ for reference
+# def __init__(self, shape, dtype=float, dist={0:'b'} , grid_shape=None,
+#              comm=None, buf=None, offset=0):
+
+def distarray(object, dtype=None, copy=True, order=None, subok=False, ndmin=0):
+    _raise_nie()
+    
+def asdistarray(object, dtype=None, order=None):
+    _raise_nie()
+    
+def arange(start, stop=None, step=1, dtype=None, dist={0:'b'}, 
+    grid_shape=None, comm=None):
+    _raise_nie()
+    
+
+def empty(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
+    return DistArray(shape, dtype, dist, grid_shape, comm)
+
+def empty_like(arr):
+    if not isinstance(arr, DistArray):
+        raise TypeError("a DistArray or subclass is expected")
+    return empty(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)
+    
+def zeros(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
+    local_shape = distarray.local_shape(shape, dist, grid_shape, comm.Get_size())
+    local_zeros = np.zeros(local_shape, dtype=dtype)
+    return DistArray(shape, dtype, dist, grid_shape, comm, buf=local_zeros)
+
+def zeros_like(arr):
+    if not isinstance(arr, DistArray):
+        raise TypeError("a DistArray or subclass is expected")
+    return zeros(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)
+    
+def ones(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
+    local_shape = distarray.local_shape(shape, dist, grid_shape, comm.Get_size())
+    local_ones = np.ones(local_shape, dtype=dtype)
+    return DistArray(shape, dtype, dist, grid_shape, comm, buf=local_ones)
+
+def fromfunction(function, **kwargs):
+    dtype = kwargs.pop('dtype', int)
+    dist = kwargs.pop('dist', {0:'b'})
+    grid_shape = kwargs.pop('grid_shape', None)
+    comm = kwargs.pop('comm', None)
+    da = empty(shape, dtype, dist, grid_shape, comm)
+    local_view = da.local_view()
+    for local_inds, x in np.ndenumerate(local_view):
+        global_inds = da.global_inds(*local_inds)
+        local_view[local_inds] = function(*global_inds, **kwargs)
+    
+def identity(n, dtype=np.intp):
+    _raise_nie()
+
+def where(condition, x=None, y=None):
+    _raise_nie()
+
+
+#----------------------------------------------------------------------------
+# 4.2 Operations on two or more arrays 
+#----------------------------------------------------------------------------
+
+def concatenate(seq, axis=0):
+    _raise_nie()
+
+def correlate(x, y, mode='valid'):
+    _raise_nie()
+
+def convolve(x, y, mode='valid'):
+    _raise_nie()
+
+def outer(a, b):
+    _raise_nie()
+
+def inner(a, b):
+    _raise_nie()
+
+def dot(a, b):
+    _raise_nie()
+
+def vdot(a, b):
+    _raise_nie()
+
+def tensordot(a, b, axes=(-1,0)):
+    _raise_nie()
+
+def cross(a, b, axisa=-1, axisb=-1, axisc=-1, axis=None):
+    _raise_nie()
+
+def allclose(a, b, rtol=10e-5, atom=10e-8):
+    _raise_nie()
+
+
+#----------------------------------------------------------------------------
+# 4.3 Printing arrays 
+#----------------------------------------------------------------------------
+
+def distarray2string(a):
+    _raise_nie()
+
+def set_printoptions(precision=None, threshold=None, edgeitems=None, 
+                     linewidth=None, suppress=None):
+    return np.set_printoptions(precision, threshold, edgeitems, linewidth, suppress)
+
+def get_printoptions():
+    return np.get_printoptions()
+
+
+#----------------------------------------------------------------------------
+# 4.5 Dealing with data types
+#----------------------------------------------------------------------------  
+
+dtype = np.dtype
+maximum_sctype = np.maximum_sctype
+issctype = np.issctype
+obj2sctype = np.obj2sctype
+sctype2char = np.sctype2char
+can_cast = np.can_cast
+
+
+#----------------------------------------------------------------------------
+# 5 Additional convenience routines
+#----------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------
+# 5.1 Shape functions
+#----------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------
+# 5.2 Basic functions
+#----------------------------------------------------------------------------
+
+def average(a, axis=None, weights=None, returned=0):
+    _raise_nie()
+    
+def cov(x, y=None, rowvar=1, bias=0):
+    _raise_nie()
+    
+def corrcoef(x, y=None, rowvar=1, bias=0):
+    _raise_nie()
+
+def median(m):
+    _raise_nie()
+
+def digitize(x, bins):
+    _raise_nie()
+
+def histogram(x, bins=None, range=None, normed=False):
+    _raise_nie()
+
+def histogram2d(x, y, bins, normed=False):
+    _raise_nie()
+
+def logspace(start, stop, num=50, endpoint=True, base=10.0):
+    _raise_nie()
+
+def linspace(start, stop, num=50, endpoint=True, retstep=False):
+    _raise_nie()
+
+
+
+#----------------------------------------------------------------------------
+# 5.3 Polynomial functions
+#----------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------
+# 5.4 Set operations
+#----------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------
+# 5.5 Array construction using index tricks
+#----------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------
+# 5.6 Other indexing devices
+#----------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------
+# 5.7 Two-dimensional functions
+#----------------------------------------------------------------------------
+
+def eye(n, m=None, k=0, dtype=float):
+    _raise_nie()
+
+def diag(v, k=0):
+    _raise_nie()
+
+#----------------------------------------------------------------------------
+# 5.8 More data type functions
+#----------------------------------------------------------------------------
+
+issubclass_ = np.issubclass_
+issubdtype = np.issubdtype
+iscomplexobj = np.iscomplexobj
+isrealobj = np.isrealobj
+isscalar = np.isscalar
+nan_to_num = np.nan_to_num
+real_if_close = np.real_if_close
+cast = np.cast
+mintypecode = np.mintypecode
+finfo = np.finfo
+
+
+
+#----------------------------------------------------------------------------
+# 5.9 Functions that behave like ufuncs
+#----------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------
+# 5.10 Misc functions
+#----------------------------------------------------------------------------
+
+
+#----------------------------------------------------------------------------
+# 5.11 Utility functions
+#----------------------------------------------------------------------------
+
+def arecompatible(self, a, b):
+    """Do these arrays have the same shape and dist?"""
+    
+    shape = a.shape == b.shape
+    dist = a.dist == b.dist
+    grid_shape = a.grid_shape == b.grid_shape
+    return shape and dist and grid_shape
+
+
+#----------------------------------------------------------------------------
+#----------------------------------------------------------------------------
+# Universal Functions
+#
+# I would really like these functions to be in a separate file, but that
+# is not possible because of circular import problems.  Basically, these
+# functions need accees to the DistArray object in this module, and the 
+# DistArray object needs to use these functions.  There are 3 options for
+# solving this problem:
+# 
+#     * Put everything in one file
+#     * Put the functions needed by DistArray in distarray, others elsewhere
+#     * Make a subclass of DistArray that has methods that use the functions
+#----------------------------------------------------------------------------
+#----------------------------------------------------------------------------
 
 
