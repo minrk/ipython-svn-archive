@@ -8,13 +8,11 @@ import numpy as np
 
 from ipythondistarray.mpi import mpibase
 from ipythondistarray.core import maps
+from ipythondistarray.core.error import *
+from ipythondistarray.core.nulldistarray import NullDistArray, null_like, isnull
+from ipythondistarray.core.base import BaseDistArray
 from ipythondistarray import utils
-from ipythondistarray.core.error import (InvalidBaseCommError,
-    InvalidGridShapeError,
-    GridShapeError,
-    DistError,
-    DistMatrixError,
-    IncompatibleArrayError)
+
 
 from ipythondistarray.utils import _raise_nie
 
@@ -23,7 +21,33 @@ from ipythondistarray.utils import _raise_nie
 # Exports
 #----------------------------------------------------------------------------
 
-__all__ = ['DistArray']
+__all__ = [
+    'DistArray',
+    'empty',
+    'empty_like',
+    'zeros',
+    'zeros_like',
+    'ones',
+    'fromfunction',
+    'set_printoptions',
+    'get_printoptions',
+    'dtype',
+    'maximum_sctype',
+    'issctype',
+    'obj2sctype',
+    'sctype2char',
+    'can_cast',
+    'issubclass_',
+    'issubdtype',
+    'iscomplexobj',
+    'isrealobj',
+    'isscalar',
+    'nan_to_num',
+    'real_if_close',
+    'cast',
+    'mintypecode',
+    'finfo',
+    'arecompatible']
 
 #----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
@@ -40,13 +64,14 @@ __all__ = ['DistArray']
 
 def _init_base_comm(comm):
     if comm==MPI.COMM_NULL:
-        raise MPICommError("Cannot create a DistArray with a MPI_COMM_NULL")
+        raise MPICommError("Cannot create a DistArray with a MPI COMM_NULL")
     elif comm is None:
         return mpibase.COMM_PRIVATE
     elif isinstance(comm, MPI.Comm):
         return comm
     else:
         raise InvalidBaseCommError("Not an MPI.Comm instance")
+
 
 def _init_dist(dist, ndim):
     if isinstance(dist, str):
@@ -58,6 +83,7 @@ def _init_dist(dist, ndim):
     else:
         DistError("dist must be a string, tuple/list or dict") 
 
+
 def _init_distdims(dist, ndim):
     reduced_dist = [d for d in dist if d is not None]
     ndistdim = len(reduced_dist)
@@ -65,12 +91,14 @@ def _init_distdims(dist, ndim):
         raise DistError("Too many distributed dimensions")
     distdims = [i for i in range(ndim) if dist[i] is not None]
     return tuple(distdims)
-    
+
+
 def _init_map_classes(dist):
     reduced_dist = [d for d in dist if d is not None]
     map_classes = [maps.get_map_class(d) for d in reduced_dist]
     return tuple(map_classes)
-             
+
+
 def _init_grid_shape(shape, grid_shape, distdims, comm_size):
     ndistdim = len(distdims)
     if grid_shape is None:
@@ -86,6 +114,7 @@ def _init_grid_shape(shape, grid_shape, distdims, comm_size):
     if ngriddim != comm_size:
         raise InvalidGridShapeError("grid_shape is incompatible with the number of processors")
     return grid_shape
+
 
 def _optimize_grid_shape(shape, grid_shape, distdims, comm_size):
     ndistdim = len(distdims)
@@ -105,13 +134,16 @@ def _optimize_grid_shape(shape, grid_shape, distdims, comm_size):
         else:
             raise GridShapeError("Cannot distribute array over processors")
     return grid_shape
-    
+
+
 def _compute_grid_ratios(shape):
     n = len(shape)
     return np.array([float(shape[i])/shape[j] for i in range(n) for j in range(n) if i < j])
 
+
 def _init_comm(base_comm, grid_shape, ndistdim):
     return base_comm.Create_cart(grid_shape,ndistdim*(False,),False)
+
 
 def _init_local_shape_and_maps(shape, grid_shape, distdims, map_classes):
     maps = []
@@ -121,6 +153,7 @@ def _init_local_shape_and_maps(shape, grid_shape, distdims, map_classes):
         local_shape.append(minst.local_shape)
         maps.append(minst)
     return tuple(local_shape), tuple(maps)
+
 
 def local_shape(shape, dist={0:'b'}, grid_shape=None, comm_size=None):
     if comm_size is None:
@@ -135,6 +168,7 @@ def local_shape(shape, dist={0:'b'}, grid_shape=None, comm_size=None):
         grid_shape, distdims, map_classes)
     return local_shape
 
+
 def grid_shape(shape, dist={0:'b'}, grid_shape=None, comm_size=None):
     if comm_size is None:
         raise ValueError("comm_size can't be None")
@@ -145,8 +179,8 @@ def grid_shape(shape, dist={0:'b'}, grid_shape=None, comm_size=None):
     map_classes = _init_map_classes(dist)   
     grid_shape = _init_grid_shape(shape, grid_shape, distdims, comm_size)
     return grid_shape
-    
-    
+
+
 #----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
 # Base DistArray class
@@ -154,7 +188,7 @@ def grid_shape(shape, dist={0:'b'}, grid_shape=None, comm_size=None):
 #----------------------------------------------------------------------------
 
 
-class DistArray(object):
+class DenseDistArray(BaseDistArray):
     """Distribute memory Python arrays."""
     
     __array_priority__ = 20.0
@@ -172,7 +206,7 @@ class DistArray(object):
         self.data = None
         self.base = None
         self.ctypes = None
-                
+        
         # This order is extremely important and is shown by the arguments passed on to
         # subsequent _init_* methods.  It is critical that these _init_* methods are free
         # of side effects and stateless.  This means that they cannot set or get class or
@@ -180,12 +214,12 @@ class DistArray(object):
         self.base_comm = _init_base_comm(comm)
         self.comm_size = self.base_comm.Get_size()
         self.comm_rank = self.base_comm.Get_rank()
-            
+        
         self.dist = _init_dist(dist, self.ndim)
         self.distdims = _init_distdims(self.dist, self.ndim)
         self.ndistdim = len(self.distdims)
         self.map_classes = _init_map_classes(self.dist)
-                
+        
         self.grid_shape = _init_grid_shape(self.shape, grid_shape, 
             self.distdims, self.comm_size)
         self.comm = _init_comm(self.base_comm, self.grid_shape, self.ndistdim)
@@ -196,15 +230,23 @@ class DistArray(object):
         
         # At this point, everything is setup, but the memory has not been allocated.
         self._allocate(buf, offset)
-             
+    
     def __del__(self):
         if self.comm is not None:
             self.comm.Free()
-             
+    
+    
+    #----------------------------------------------------------------------------
+    # Misc methods
+    #---------------------------------------------------------------------------- 
+    
+    def isnull(self):
+        return False
+    
     #----------------------------------------------------------------------------
     # Methods used at initialization
     #----------------------------------------------------------------------------   
-            
+    
     def _allocate(self, buf=None, offset=0):
         if buf is None:
             # Allocate a new array and use its data attribute as my own
@@ -221,14 +263,14 @@ class DistArray(object):
                 self.data = self.local_array.data
             except ValueError:
                 raise ValueError("the buffer is smaller than needed for this array")
-            
+    
     #----------------------------------------------------------------------------
     # Methods related to distributed indexing
     #----------------------------------------------------------------------------   
-        
+    
     def get_localarray(self):
         return self.local_view()
-        
+    
     def set_localarray(self, a):
         a = np.asarray(a, dtype=self.dtype, order='C')
         if a.shape != self.local_shape:
@@ -236,11 +278,11 @@ class DistArray(object):
         b = buffer(a)
         self.local_array = np.frombuffer(b,dtype=self.dtype)
         self.local_array.shape = self.local_shape
-        
+    
     def owner_rank(self, *indices):
         owners = [self.maps[i].owner(indices[self.distdims[i]]) for i in range(self.ndistdim)]
         return self.comm.Get_cart_rank(owners)
-        
+    
     def owner_coords(self, *indices):
         owners = [self.maps[i].owner(indices[self.distdims[i]]) for i in range(self.ndistdim)]
         return owners          
@@ -250,14 +292,14 @@ class DistArray(object):
     
     def coords_to_rank(self, coords):
         return self.comm.Get_cart_rank(coords)
-        
+    
     def local_ind(self, *global_ind):
         local_ind = list(global_ind)
         for i in range(self.ndistdim):
             dd = self.distdims[i]
             local_ind[dd] = self.maps[i].local_index(global_ind[dd])
         return tuple(local_ind)
-
+    
     def global_ind(self, owner, *local_ind):
         if isinstance(owner, int):
             owner_coords = self.rank_to_coords(owner)
@@ -268,7 +310,7 @@ class DistArray(object):
             dd = self.distdims[i]
             global_ind[dd] = self.maps[i].global_index(owner_coords[i], local_ind[dd])
         return tuple(global_ind)
-        
+    
     def get_dist_matrix(self):
         if self.ndim==2:
             a = np.empty(self.shape,dtype=int)
@@ -278,15 +320,15 @@ class DistArray(object):
             return a
         else:
             raise DistMatrixError("The dist matrix can only be created for a 2d array")        
-
+    
     #----------------------------------------------------------------------------
     # 3.2 ndarray methods
     #----------------------------------------------------------------------------   
-
+    
     #----------------------------------------------------------------------------
     # 3.2.1 Array conversion
     #---------------------------------------------------------------------------- 
-        
+    
     def astype(self, dtype):
         if dtype is None:
             return self.copy()
@@ -295,48 +337,48 @@ class DistArray(object):
             new_da = DistArray(self.shape, dtype=self.dtype, dist=self.dist,
                 grid_shape=self.grid_shape, comm=self.base_comm, buf=local_copy)
             return new_da
-                            
+    
     def copy(self):
         local_copy = self.local_array.copy()
         new_da = DistArray(self.shape, dtype=self.dtype, dist=self.dist,
             grid_shape=self.grid_shape, comm=self.base_comm, buf=local_copy)
-        
+    
     def local_view(self, dtype=None):
         return self.local_array.view(dtype)
-        
+    
     def view(self, dtype=None):
         new_da = DistArray(self.shape, self.dtype, self.dist,
             self.grid_shape, self.base_comm, buf=self.data)
         return new_da
-        
+    
     def __distarray__(dtype=None):
         return self
-        
+    
     def fill(self, scalar):
         self.local_array.fill(scalar)
-
+    
     #----------------------------------------------------------------------------
     # 3.2.2 Array shape manipulation
     #---------------------------------------------------------------------------- 
-
+    
     def reshape(self, newshape):
         _raise_nie()
-        
+    
     def redist(self, newshape, newdist={0:'b'}, newgrid_shape=None):
         _raise_nie()
-        
+    
     def resize(self, newshape, refcheck=1, order='C'):
         _raise_nie()
-        
+    
     def transpose(self, arg):
         _raise_nie()
-        
+    
     def swapaxes(self, axis1, axis2):
         _raise_nie()
-        
+    
     def flatten(self, order='C'):
         _raise_nie()
-        
+    
     def ravel(self, order='C'):
         _raise_nie()
     
@@ -396,149 +438,148 @@ class DistArray(object):
         else:
             raise IncompatibleArrayError("DistArrays have incompatible shape, dist or grid_shape")
     
-    
     #----------------------------------------------------------------------------
     # 3.2.3 Array item selection and manipulation
     #----------------------------------------------------------------------------   
     
     def take(self, indices, axis=None, out=None, mode='raise'):
         _raise_nie()
-        
+    
     def put(self, values, indices, mode='raise'):
         _raise_nie()
-        
+    
     def putmask(self, values, mask):
         _raise_nie()
-            
+    
     def repeat(self, repeats, axis=None):
         _raise_nie()
-                
+    
     def choose(self, choices, out=None, mode='raise'):
         _raise_nie()
-                
+    
     def sort(self, axis=-1, kind='quick'):
         _raise_nie()
-                
+    
     def argsort(self, axis=-1, kind='quick'):
         _raise_nie()
-                
+    
     def searchsorted(self, values):
         _raise_nie()
-
+    
     def nonzero(self):
         _raise_nie()
-                
+    
     def compress(self, condition, axis=None, out=None):
         _raise_nie()
-                
+    
     def diagonal(self, offset=0, axis1=0, axis2=1):
         _raise_nie()
-            
+    
     #----------------------------------------------------------------------------
     # 3.2.4 Array item selection and manipulation
     #---------------------------------------------------------------------------- 
     
     def max(self, axis=None, out=None):
         _raise_nie()
-                
+    
     def argmax(self, axis=None, out=None):
         _raise_nie()
-                
+    
     def min(axis=None, out=None):
         _raise_nie()
-                
+    
     def argmin(self, axis=None, out=None):
         _raise_nie()
-        
+    
     def ptp(self, axis=None, out=None):
         _raise_nie()
-                
+    
     def clip(self, min, max, out=None):
         _raise_nie()
-            
+    
     def conj(self, out=None):
         _raise_nie()
-                
+    
     congugate = conj
     
     def round(self, decimals=0, out=None):
         _raise_nie()
-                
+    
     def trace(self, offset=0, axis1=0, axis2=1, dtype=None, out=None):
         _raise_nie()
-                
+    
     def sum(self, axis=None, dtype=None, out=None):
         _raise_nie()
-        
+    
     def cumsum(self, axis=None, dtype=None, out=None):        
         _raise_nie()
-        
+    
     def mean(self, axis=None, dtype=None, out=None):
         _raise_nie()
-        
+    
     def var(self, axis=None, dtype=None, out=None):
         _raise_nie()
-          
+     
     def std(self, axis=None, dtype=None, out=None):
         _raise_nie()
-        
+    
     def prod(self, axis=None, dtype=None, out=None):
         _raise_nie()
-        
+    
     def cumprod(self, axis=None, dtype=None, out=None):
         _raise_nie()
-        
+    
     def all(self, axis=None, out=None):
         _raise_nie()
-        
+    
     def any(self, axis=None, out=None):    
         _raise_nie()
-
+    
     #----------------------------------------------------------------------------
     # 3.3 Array special methods
     #---------------------------------------------------------------------------- 
-
+    
     #----------------------------------------------------------------------------
     # 3.3.1 Methods for standard library functions
     #----------------------------------------------------------------------------
-
+    
     def __copy__(self):
         _raise_nie()
-            
+    
     def __deepcopy__(self):
         _raise_nie()
-        
+    
     #----------------------------------------------------------------------------
     # 3.3.2 Basic customization
     #----------------------------------------------------------------------------
-        
+    
     def __lt__(self, other):
         _raise_nie()
-        
+    
     def __le__(self, other):
         _raise_nie()
-        
+    
     def __gt__(self, other):
         _raise_nie()
-        
+    
     def __ge__(self, other):
         _raise_nie()
-        
+    
     def __eq__(self, other):
         _raise_nie()
-        
+    
     def __ne__(self, other):
         _raise_nie()
-        
+    
     def __str__(self):
         _raise_nie()
-        
+    
     def __repr__(self):
         _raise_nie()
-        
+    
     def __nonzero__(self):
         _raise_nie()
-        
+    
     #----------------------------------------------------------------------------
     # 3.3.3 Container customization
     #----------------------------------------------------------------------------    
@@ -548,159 +589,173 @@ class DistArray(object):
     
     def __getitem__(self, key):
         _raise_nie()
-        
+    
     def __setitem__(self, key, value):
         _raise_nie()
-        
+    
     def __contains__(self, item):
         _raise_nie()
-        
+    
     #----------------------------------------------------------------------------
     # 3.3.4 Arithmetic customization - binary
     #---------------------------------------------------------------------------- 
-
+    
     # Binary
-
+    
     def __add__(self, other):
         _raise_nie()
-        
+    
     def __sub__(self, other):
         _raise_nie()
-        
+    
     def __mul__(self, other):
         _raise_nie()
-        
+    
     def __div__(self, other):
         _raise_nie()
-        
+    
     def __truediv__(self, other):
         _raise_nie()
-        
+    
     def __floordiv__(self, other):
         _raise_nie()
-        
+    
     def __mod__(self, other):
         _raise_nie()
-        
+    
     def __divmod__(self, other):
         _raise_nie()
-        
+    
     def __pow__(self, other, modulo=None):
         _raise_nie()
-        
+    
     def __lshift__(self, other):
         _raise_nie()
-        
+    
     def __rshift__(self, other):
         _raise_nie()
-        
+    
     def __and__(self, other):
         _raise_nie()
-        
+    
     def __or__(self, other):
         _raise_nie()
-        
+    
     def __xor__(self, other):
         _raise_nie()
-
+        
     # Binary - right versions
-
+    
     def __radd__(self, other):
         _raise_nie()
-        
+    
     def __rsub__(self, other):
         _raise_nie()
-        
+    
     def __rmul__(self, other):
         _raise_nie()
-        
+    
     def __rdiv__(self, other):
         _raise_nie()
-        
+    
     def __rtruediv__(self, other):
         _raise_nie()
-        
+    
     def __rfloordiv__(self, other):
         _raise_nie()
-        
+    
     def __rmod__(self, other):
         _raise_nie()
-        
+    
     def __rdivmod__(self, other):
         _raise_nie()
-        
+    
     def __rpow__(self, other, modulo=None):
         _raise_nie()
-        
+    
     def __rlshift__(self, other):
         _raise_nie()
-        
+    
     def __rrshift__(self, other):
         _raise_nie()
-        
+    
     def __rand__(self, other):
         _raise_nie()
-        
+    
     def __ror__(self, other):
         _raise_nie()
-        
+    
     def __rxor__(self, other):
         _raise_nie()
-        
+    
     # Inplace
     
     def __iadd__(self, other):
         _raise_nie()
-        
+    
     def __isub__(self, other):
         _raise_nie()
-        
+    
     def __imul__(self, other):
         _raise_nie()
-        
+    
     def __idiv__(self, other):
         _raise_nie()
-        
+    
     def __itruediv__(self, other):
         _raise_nie()
-        
+    
     def __ifloordiv__(self, other):
         _raise_nie()
-        
+    
     def __imod__(self, other):
         _raise_nie()
-                
+    
     def __ipow__(self, other, modulo=None):
         _raise_nie()
-        
+    
     def __ilshift__(self, other):
         _raise_nie()
-        
+    
     def __irshift__(self, other):
         _raise_nie()
-        
+    
     def __iand__(self, other):
         _raise_nie()
-        
+    
     def __ior__(self, other):
         _raise_nie()
-        
+    
     def __ixor__(self, other):
         _raise_nie()
-        
+    
     # Unary
     
     def __neg__(self):
         _raise_nie()
-        
+    
     def __pos__(self):
         _raise_nie()
-        
+    
     def __abs__(self):
         _raise_nie()
     
     def __invert__(self):
         _raise_nie()
+
+
+
+
+def DistArray(shape, dtype=float, dist={0:'b'} , grid_shape=None, comm=None, buf=None, offset=0):
+    """
+    Create a DistArray of the correct type.
+    """
+    if comm==MPI.COMM_NULL:
+        return NullDistArray(shape, dtype, dist, grid_shape,
+            comm, bug, offset)
+    else:
+        return DenseDistArray(shape, dtype, dist, grid_shape,
+            comm, bug, offset)
 
 
 #----------------------------------------------------------------------------
@@ -735,39 +790,47 @@ class DistArray(object):
 # def __init__(self, shape, dtype=float, dist={0:'b'} , grid_shape=None,
 #              comm=None, buf=None, offset=0):
 
+
 def distarray(object, dtype=None, copy=True, order=None, subok=False, ndmin=0):
     _raise_nie()
+
     
 def asdistarray(object, dtype=None, order=None):
     _raise_nie()
+
     
 def arange(start, stop=None, step=1, dtype=None, dist={0:'b'}, 
     grid_shape=None, comm=None):
     _raise_nie()
-    
+
 
 def empty(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
     return DistArray(shape, dtype, dist, grid_shape, comm)
+
 
 def empty_like(arr):
     if not isinstance(arr, DistArray):
         raise TypeError("a DistArray or subclass is expected")
     return empty(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)
-    
+
+
 def zeros(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
     local_shape = distarray.local_shape(shape, dist, grid_shape, comm.Get_size())
     local_zeros = np.zeros(local_shape, dtype=dtype)
     return DistArray(shape, dtype, dist, grid_shape, comm, buf=local_zeros)
 
+
 def zeros_like(arr):
     if not isinstance(arr, DistArray):
         raise TypeError("a DistArray or subclass is expected")
     return zeros(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)
-    
+
+
 def ones(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
     local_shape = distarray.local_shape(shape, dist, grid_shape, comm.Get_size())
     local_ones = np.ones(local_shape, dtype=dtype)
     return DistArray(shape, dtype, dist, grid_shape, comm, buf=local_ones)
+
 
 def fromfunction(function, **kwargs):
     dtype = kwargs.pop('dtype', int)
@@ -779,9 +842,11 @@ def fromfunction(function, **kwargs):
     for local_inds, x in np.ndenumerate(local_view):
         global_inds = da.global_inds(*local_inds)
         local_view[local_inds] = function(*global_inds, **kwargs)
-    
+
+
 def identity(n, dtype=np.intp):
     _raise_nie()
+
 
 def where(condition, x=None, y=None):
     _raise_nie()
@@ -791,32 +856,42 @@ def where(condition, x=None, y=None):
 # 4.2 Operations on two or more arrays 
 #----------------------------------------------------------------------------
 
+
 def concatenate(seq, axis=0):
     _raise_nie()
+
 
 def correlate(x, y, mode='valid'):
     _raise_nie()
 
+
 def convolve(x, y, mode='valid'):
     _raise_nie()
+
 
 def outer(a, b):
     _raise_nie()
 
+
 def inner(a, b):
     _raise_nie()
+
 
 def dot(a, b):
     _raise_nie()
 
+
 def vdot(a, b):
     _raise_nie()
+
 
 def tensordot(a, b, axes=(-1,0)):
     _raise_nie()
 
+
 def cross(a, b, axisa=-1, axisb=-1, axisc=-1, axis=None):
     _raise_nie()
+
 
 def allclose(a, b, rtol=10e-5, atom=10e-8):
     _raise_nie()
@@ -826,12 +901,15 @@ def allclose(a, b, rtol=10e-5, atom=10e-8):
 # 4.3 Printing arrays 
 #----------------------------------------------------------------------------
 
+
 def distarray2string(a):
     _raise_nie()
+
 
 def set_printoptions(precision=None, threshold=None, edgeitems=None, 
                      linewidth=None, suppress=None):
     return np.set_printoptions(precision, threshold, edgeitems, linewidth, suppress)
+
 
 def get_printoptions():
     return np.get_printoptions()
@@ -840,6 +918,7 @@ def get_printoptions():
 #----------------------------------------------------------------------------
 # 4.5 Dealing with data types
 #----------------------------------------------------------------------------  
+
 
 dtype = np.dtype
 maximum_sctype = np.maximum_sctype
@@ -863,33 +942,41 @@ can_cast = np.can_cast
 # 5.2 Basic functions
 #----------------------------------------------------------------------------
 
+
 def average(a, axis=None, weights=None, returned=0):
     _raise_nie()
-    
+
+
 def cov(x, y=None, rowvar=1, bias=0):
     _raise_nie()
-    
+
+
 def corrcoef(x, y=None, rowvar=1, bias=0):
     _raise_nie()
+
 
 def median(m):
     _raise_nie()
 
+
 def digitize(x, bins):
     _raise_nie()
+
 
 def histogram(x, bins=None, range=None, normed=False):
     _raise_nie()
 
+
 def histogram2d(x, y, bins, normed=False):
     _raise_nie()
+
 
 def logspace(start, stop, num=50, endpoint=True, base=10.0):
     _raise_nie()
 
+
 def linspace(start, stop, num=50, endpoint=True, retstep=False):
     _raise_nie()
-
 
 
 #----------------------------------------------------------------------------
@@ -916,15 +1003,19 @@ def linspace(start, stop, num=50, endpoint=True, retstep=False):
 # 5.7 Two-dimensional functions
 #----------------------------------------------------------------------------
 
+
 def eye(n, m=None, k=0, dtype=float):
     _raise_nie()
+
 
 def diag(v, k=0):
     _raise_nie()
 
+
 #----------------------------------------------------------------------------
 # 5.8 More data type functions
 #----------------------------------------------------------------------------
+
 
 issubclass_ = np.issubclass_
 issubdtype = np.issubdtype
@@ -936,7 +1027,6 @@ real_if_close = np.real_if_close
 cast = np.cast
 mintypecode = np.mintypecode
 finfo = np.finfo
-
 
 
 #----------------------------------------------------------------------------
@@ -953,7 +1043,8 @@ finfo = np.finfo
 # 5.11 Utility functions
 #----------------------------------------------------------------------------
 
-def arecompatible(self, a, b):
+
+def arecompatible(a, b):
     """Do these arrays have the same shape and dist?"""
     
     shape = a.shape == b.shape
@@ -977,5 +1068,280 @@ def arecompatible(self, a, b):
 #     * Make a subclass of DistArray that has methods that use the functions
 #----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
+
+
+def _prepare_three_arrays(x1, x2, y=None):
+    x2_new = x1.asdist_like(x2)
+    if y is None:
+        y = empty_like(x1)
+    else:
+        if not arecompatible(x1, y):
+            raise IncompatibleArrayError("destination DistArray %r must be compatible with first DistArray argument" % y)
+    return x1, x2, y
+
+
+def _prepare_two_arrays(x1, y=None):
+    if y is None:
+        y = empty_like(x1)
+    else:
+        if not arecompatible(x1, y):
+            raise IncompatibleArrayError("destination DistArray %r must be compatible with first DistArray argument" % y)
+    return x1, y
+
+
+def add(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = np.add(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def subtract(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = np.subtract(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def divide(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = np.divide(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def true_divide(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = np.true_divide(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def floor_divide(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = np.floor_divide(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def power(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = power.floor_divide(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def remainder(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = power.remainder(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def fmod(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = fmod.remainder(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def arctan2(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = arctan2.remainder(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def hypot(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = hypot.remainder(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def bitwise_and(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = hypot.bitwise_and(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def bitwise_or(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = hypot.bitwise_or(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def bitwise_xor(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = hypot.bitwise_xor(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def left_shift(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = hypot.left_shift(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def right_shift(x1, x2, y=None):
+    x1, x2, y = _prepare_three_arrays(x1, x2, y)
+    y.local_array = hypot.right_shift(x1.local_array, x2.local_array, y.local_array)
+    return y
+
+
+def negative(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.negative(x1, y)
+    return y
+
+
+def absolute(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.absolute(x1, y)
+    return y
+
+
+def rint(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.rint(x1, y)
+    return y
+
+
+def sign(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.sign(x1, y)
+    return y
+
+
+def conjugate(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.conjugate(x1, y)
+    return y
+
+
+def exp(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.exp(x1, y)
+    return y
+
+
+def log(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.log(x1, y)
+    return y
+
+
+def expm1(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.expm1(x1, y)
+    return y
+
+
+def log1p(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.log1p(x1, y)
+    return y
+
+
+def log10(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.log10(x1, y)
+    return y
+
+
+def sqrt(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.sqrt(x1, y)
+    return y
+
+
+def square(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.square(x1, y)
+    return y
+
+
+def reciprocal(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.reciprocal(x1, y)
+    return y
+
+
+def sin(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.sin(x1, y)
+    return y
+
+
+def cos(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.cos(x1, y)
+    return y
+
+
+def tan(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.tan(x1, y)
+    return y
+
+
+def arcsin(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.arcsin(x1, y)
+    return y
+
+
+def arccos(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.arccos(x1, y)
+    return y
+
+
+def arctan(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.arctan(x1, y)
+    return y
+
+
+def sinh(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.sinh(x1, y)
+    return y
+
+
+def cosh(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.cosh(x1, y)
+    return y
+
+
+def tanh(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.tanh(x1, y)
+    return y
+
+
+def arcsinh(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.arcsinh(x1, y)
+    return y
+
+
+def arccosh(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.arccosh(x1, y)
+    return y
+
+
+def arctanh(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.arctanh(x1, y)
+    return y
+
+
+def invert(x1, y=None):
+    x1, y = _prepare_two_arrays(x1, y)
+    y.local_array = np.invert(x1, y)
+    return y
+
+
+
+
+
+
+
+
+
+
 
 

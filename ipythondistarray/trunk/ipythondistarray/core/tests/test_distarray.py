@@ -1,11 +1,23 @@
-from ipythondistarray.core.tests.common import *
+import unittest
+import numpy as np
+from numpy.testing.utils import assert_array_equal, assert_array_almost_equal
+
+from ipythondistarray.mpi import mpibase
+MPI = mpibase.MPI
 
 from ipythondistarray.core import maps, distarray
+from ipythondistarray.core.error import *
 from ipythondistarray import utils
 
 class TestInit(unittest.TestCase):
+    """
+    Is the __init__ method working properly?
+    """
     
     def test_basic(self):
+        """
+        Test basic DistArray creation.
+        """
         comm = create_comm(4)
         if not comm==MPI.COMM_NULL:
             da = distarray.DistArray((16,16), grid_shape=(4,),comm=comm)
@@ -27,8 +39,12 @@ class TestInit(unittest.TestCase):
             self.assertEquals(da.local_array.shape, da.local_shape)
             self.assertEquals(da.local_array.dtype, da.dtype)
             comm.Free()
-        
+    
+    
     def test_localarray(self):
+        """
+        Can the local_array be set and get?
+        """
         comm = create_comm(4)
         if not comm==MPI.COMM_NULL:
             da = distarray.DistArray((16,16), grid_shape=(4,),comm=comm)
@@ -38,8 +54,12 @@ class TestInit(unittest.TestCase):
             da.set_localarray(la)
             new_la = da.get_localarray()
             comm.Free()
-
+    
+    
     def test_grid_shape(self):
+        """
+        Test various ways of setting the grid_shape.
+        """
         comm = create_comm(12)
         if not comm==MPI.COMM_NULL:
             da = distarray.DistArray((20,20),dist='b',comm=comm)
@@ -54,8 +74,13 @@ class TestInit(unittest.TestCase):
             self.assertEquals(da.grid_shape,(2,2,3))                  
             comm.Free()
 
-class TestDistMatrix(unittest.TestCase):
 
+class TestDistMatrix(unittest.TestCase):
+    """
+    Can we create and possibly plot a dist_matrix?
+    """
+    
+    
     def test_plot_dist_matrix(self):
         comm = create_comm(12)
         if not comm==MPI.COMM_NULL:
@@ -70,6 +95,7 @@ class TestDistMatrix(unittest.TestCase):
             #     pylab.show()
             comm.Free()
 
+
 class TestLocalInd(unittest.TestCase):
     
     def test_block(self):
@@ -83,7 +109,8 @@ class TestLocalInd(unittest.TestCase):
                 calc_row_result = [da.local_ind(row,col) for col in range(da.shape[1])]
                 self.assertEquals(row_result, calc_row_result)
             comm.Free()
-            
+    
+    
     def test_cyclic(self):
         comm = create_comm(4)
         if not comm==MPI.COMM_NULL:
@@ -96,6 +123,7 @@ class TestLocalInd(unittest.TestCase):
             self.assertEquals(result,calc_result)
             comm.Free()
 
+
 class TestGlobalInd(unittest.TestCase):
     
     def round_trip(self, da):
@@ -105,26 +133,46 @@ class TestGlobalInd(unittest.TestCase):
             gi = da.global_ind(owner_rank,*li)
             self.assertEquals(gi,indices)
     
+    
     def test_block(self):
         comm = create_comm(4)
         if not comm==MPI.COMM_NULL:
             da = distarray.DistArray((4,4),comm=comm)
             self.round_trip(da)
             comm.Free()
-             
+    
+    
     def test_cyclic(self):
         comm = create_comm(4)
         if not comm==MPI.COMM_NULL:
             da = distarray.DistArray((8,8),dist=('c',None),comm=comm)
             self.round_trip(da)
             comm.Free()
-
+    
+    
     def test_crazy(self):
         comm = create_comm(4)
         if not comm==MPI.COMM_NULL:
             da = distarray.DistArray((10,100,20),dist=('b','c',None),comm=comm)
             self.round_trip(da)
             comm.Free()
+
+
+class TestDistArrayMethods(unittest.TestCase):
+    
+    def test_asdist_like(self):
+        """
+        Test asdist_like for success and failure.
+        """
+        comm = create_comm(4)
+        if not comm==MPI.COMM_NULL:
+            a = distarray.DistArray((16,16), dist=('b',None),comm=comm)
+            b = distarray.DistArray((16,16), dist=('b',None),comm=comm)
+            new_a = a.asdist_like(b)
+            self.assertEquals(id(a),id(new_a))
+            a = distarray.DistArray((16,16), dist=('b',None),comm=comm)
+            b = distarray.DistArray((16,16), dist=(None,'b'),comm=comm)
+            self.assertRaises(IncompatibleArrayError, a.asdist_like, b)     
 
                 
 

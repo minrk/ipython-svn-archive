@@ -7,7 +7,9 @@ __all__ = ['InvalidBaseCommError',
     'GridShapeError',
     'DistError',
     'DistMatrixError',
-    'IncompatibleArrayError']
+    'IncompatibleArrayError',
+    'NullArrayError',
+    'NullArrayAttributeError']
 
 #----------------------------------------------------------------------------
 # Exceptions
@@ -32,4 +34,10 @@ class DistMatrixError(DistArrayError):
     pass
 
 class IncompatibleArrayError(DistArrayError):
+    pass
+
+class NullArrayError(DistArrayError):
+    pass
+
+class NullArrayAttributeError(NullArrayError):
     pass

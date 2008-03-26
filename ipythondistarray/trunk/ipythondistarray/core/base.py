@@ -1,0 +1,3 @@
+
+class BaseDistArray(object):
+    pass
