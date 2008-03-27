@@ -3,6 +3,12 @@ import numpy as np
 
 from ipythondistarray.core.error import *
 
+
+__all__ = [
+    'NullDistArray',
+    'null_like',
+    'isnull']
+
 class NullDistArray(object):
     """
     A null DistArray for COMM_NULL communicators.

@@ -3,23 +3,23 @@
 #----------------------------------------------------------------------------
 
 import sys
-from mpi4py import MPI
+
 import numpy as np
 
 from ipythondistarray.mpi import mpibase
+from ipythondistarray.mpi.mpibase import MPI
 from ipythondistarray.core import maps
 from ipythondistarray.core.error import *
 from ipythondistarray.core.nulldistarray import NullDistArray, null_like, isnull
 from ipythondistarray.core.base import BaseDistArray
 from ipythondistarray import utils
-
-
 from ipythondistarray.utils import _raise_nie
 
 
 #----------------------------------------------------------------------------
 # Exports
 #----------------------------------------------------------------------------
+
 
 __all__ = [
     'DistArray',
@@ -49,6 +49,7 @@ __all__ = [
     'finfo',
     'arecompatible']
 
+
 #----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
 # Stateless functions for initializing various aspects of DistArray objects
@@ -61,6 +62,7 @@ __all__ = [
 # of a DistArray object's lifetime (for example upon a reshape or redist).
 # The simplest and most robust way of insuring this is to get rid of 'self'
 # (which holds all state) and make them standalone functions.
+
 
 def _init_base_comm(comm):
     if comm==MPI.COMM_NULL:
@@ -744,8 +746,6 @@ class DenseDistArray(BaseDistArray):
         _raise_nie()
 
 
-
-
 def DistArray(shape, dtype=float, dist={0:'b'} , grid_shape=None, comm=None, buf=None, offset=0):
     """
     Create a DistArray of the correct type.
@@ -809,9 +809,12 @@ def empty(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
 
 
 def empty_like(arr):
-    if not isinstance(arr, DistArray):
+    if arr.isnull():
+        return null_like(arr)
+    elif isinstance(arr, DenseDistArray):
+        return empty(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)        
+    else:
         raise TypeError("a DistArray or subclass is expected")
-    return empty(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)
 
 
 def zeros(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
@@ -821,9 +824,12 @@ def zeros(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
 
 
 def zeros_like(arr):
-    if not isinstance(arr, DistArray):
+    if arr.isnull():
+        return null_like(arr)
+    elif isinstance(arr, DenseDistArray):
+        return zeros(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)
+    else:
         raise TypeError("a DistArray or subclass is expected")
-    return zeros(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)
 
 
 def ones(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
@@ -838,10 +844,12 @@ def fromfunction(function, **kwargs):
     grid_shape = kwargs.pop('grid_shape', None)
     comm = kwargs.pop('comm', None)
     da = empty(shape, dtype, dist, grid_shape, comm)
-    local_view = da.local_view()
-    for local_inds, x in np.ndenumerate(local_view):
-        global_inds = da.global_inds(*local_inds)
-        local_view[local_inds] = function(*global_inds, **kwargs)
+    if not da.isnull():
+        local_view = da.local_view()
+        for local_inds, x in np.ndenumerate(local_view):
+            global_inds = da.global_inds(*local_inds)
+            local_view[local_inds] = function(*global_inds, **kwargs)
+    return da
 
 
 def identity(n, dtype=np.intp):
@@ -1045,13 +1053,20 @@ finfo = np.finfo
 
 
 def arecompatible(a, b):
-    """Do these arrays have the same shape and dist?"""
-    
-    shape = a.shape == b.shape
-    dist = a.dist == b.dist
-    grid_shape = a.grid_shape == b.grid_shape
-    return shape and dist and grid_shape
-
+    """
+    Do these arrays have the same shape, dist, grid_shape and nullity?
+    """
+    anull = a.isnull()
+    bnull = b.isnull()
+    if not (anull or bnull):    # Neither are null
+        shape = a.shape == b.shape
+        dist = a.dist == b.dist
+        grid_shape = a.grid_shape == b.grid_shape
+        return shape and dist and grid_shape
+    elif anull and bnull:    # Both are null
+        return True
+    else:  # one is null one is not
+        return False
 
 #----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
@@ -1070,278 +1085,213 @@ def arecompatible(a, b):
 #----------------------------------------------------------------------------
 
 
-def _prepare_three_arrays(x1, x2, y=None):
-    x2_new = x1.asdist_like(x2)
-    if y is None:
-        y = empty_like(x1)
-    else:
-        if not arecompatible(x1, y):
-            raise IncompatibleArrayError("destination DistArray %r must be compatible with first DistArray argument" % y)
-    return x1, x2, y
+def _fromlocalarray_like(local_arr, like_arr):
+    """
+    Create a new DistArray using a given local array (+its dtype).
+    """
+    return DistArray(like_arr.shape, local_arr.dtype, like_arr.dist, like_arr.grid_shape, 
+        like_arr.base_comm, buf=local_arr)
 
 
-def _prepare_two_arrays(x1, y=None):
+def _unary_ufunc(func, x1, y):
     if y is None:
-        y = empty_like(x1)
+        if x1.isnull():
+            return null_like(x1)
+        else:
+            local_result = func(x1.local_array)
+            return _fromlocalarray_like(local_result, x1)
     else:
         if not arecompatible(x1, y):
-            raise IncompatibleArrayError("destination DistArray %r must be compatible with first DistArray argument" % y)
-    return x1, y
+            raise IncompatibleArrayError("destination DistArray not compatible with first DistArray argument" % y)
+        if x1.isnull():
+            return null_like(x1)
+        else:
+            y.local_array = func(x1.local_array, y.local_array)
+            return y
+
+
+def _binary_ufunc(func, x1, x2, y):
+    x2_new = x1.asdist_like(x2)    # This raises if they are not compatible
+    if y is None:            
+        if x1.isnull():
+            return null_like(x1)
+        else:
+            local_result = func(x1.local_array, x2.local_array)
+            return _fromlocalarray_like(local_result, x1)
+    else:
+        if not arecompatible(x1, y):
+            raise IncompatibleArrayError("destination DistArray not compatible with first DistArray argument" % y)
+        if x1.isnull():
+            return null_like(x1)
+        else:
+            y.local_array = func(x1.local_array, x2.local_array, y.local_array)
+            return y
 
 
 def add(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = np.add(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.add, x1, x2, y)
 
 
 def subtract(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = np.subtract(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.subtract, x1, x2, y)
 
 
 def divide(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = np.divide(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.divide, x1, x2, y)
 
 
 def true_divide(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = np.true_divide(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.divide, x1, x2, y)
 
 
 def floor_divide(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = np.floor_divide(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.floor_divide, x1, x2, y)
 
 
 def power(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = power.floor_divide(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.power, x1, x2, y)
 
 
 def remainder(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = power.remainder(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.remainder, x1, x2, y)
 
 
 def fmod(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = fmod.remainder(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.fmod, x1, x2, y)
 
 
 def arctan2(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = arctan2.remainder(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.arctan2, x1, x2, y)
 
 
 def hypot(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = hypot.remainder(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.hypot, x1, x2, y)
 
 
 def bitwise_and(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = hypot.bitwise_and(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.bitwise_and, x1, x2, y)
 
 
 def bitwise_or(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = hypot.bitwise_or(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.bitwise_or, x1, x2, y)
 
 
 def bitwise_xor(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = hypot.bitwise_xor(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.bitwise_xor, x1, x2, y)
 
 
 def left_shift(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = hypot.left_shift(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.left_shift, x1, x2, y)
 
 
 def right_shift(x1, x2, y=None):
-    x1, x2, y = _prepare_three_arrays(x1, x2, y)
-    y.local_array = hypot.right_shift(x1.local_array, x2.local_array, y.local_array)
-    return y
+    return _binary_ufunc(np.right_shift, x1, x2, y)
+
+
+
 
 
 def negative(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.negative(x1, y)
-    return y
+    return _unary_ufunc(np.negative, x1, y)
 
 
 def absolute(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.absolute(x1, y)
-    return y
+    return _unary_ufunc(np.absolute, x1, y)
 
 
 def rint(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.rint(x1, y)
-    return y
+    return _unary_ufunc(np.rint, x1, y)
 
 
 def sign(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.sign(x1, y)
-    return y
+    return _unary_ufunc(np.sign, x1, y)
 
 
 def conjugate(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.conjugate(x1, y)
-    return y
+    return _unary_ufunc(np.conjugate, x1, y)
 
 
 def exp(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.exp(x1, y)
-    return y
+    return _unary_ufunc(np.exp, x1, y)
 
 
 def log(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.log(x1, y)
-    return y
+    return _unary_ufunc(np.log, x1, y)
 
 
 def expm1(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.expm1(x1, y)
-    return y
+    return _unary_ufunc(np.expm1, x1, y)
 
 
 def log1p(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.log1p(x1, y)
-    return y
+    return _unary_ufunc(np.log1p, x1, y)
 
 
 def log10(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.log10(x1, y)
-    return y
+    return _unary_ufunc(np.log10, x1, y)
 
 
 def sqrt(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.sqrt(x1, y)
-    return y
+    return _unary_ufunc(np.sqrt, x1, y)
 
 
 def square(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.square(x1, y)
-    return y
+    return _unary_ufunc(np.square, x1, y)
 
 
 def reciprocal(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.reciprocal(x1, y)
-    return y
+    return _unary_ufunc(np.reciprocal, x1, y)
 
 
 def sin(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.sin(x1, y)
-    return y
+    return _unary_ufunc(np.sin, x1, y)
 
 
 def cos(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.cos(x1, y)
-    return y
+    return _unary_ufunc(np.cos, x1, y)
 
 
 def tan(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.tan(x1, y)
-    return y
+    return _unary_ufunc(np.tan, x1, y)
 
 
 def arcsin(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.arcsin(x1, y)
-    return y
+    return _unary_ufunc(np.arcsin, x1, y)
 
 
 def arccos(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.arccos(x1, y)
-    return y
+    return _unary_ufunc(np.arccos, x1, y)
 
 
 def arctan(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.arctan(x1, y)
-    return y
+    return _unary_ufunc(np.arctan, x1, y)
 
 
 def sinh(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.sinh(x1, y)
-    return y
+    return _unary_ufunc(np.sinh, x1, y)
 
 
 def cosh(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.cosh(x1, y)
-    return y
+    return _unary_ufunc(np.cosh, x1, y)
 
 
 def tanh(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.tanh(x1, y)
-    return y
+    return _unary_ufunc(np.tanh, x1, y)
 
 
 def arcsinh(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.arcsinh(x1, y)
-    return y
+    return _unary_ufunc(np.arcsinh, x1, y)
 
 
 def arccosh(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.arccosh(x1, y)
-    return y
+    return _unary_ufunc(np.arccosh, x1, y)
 
 
 def arctanh(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.arctanh(x1, y)
-    return y
+    return _unary_ufunc(np.arctanh, x1, y)
 
 
 def invert(x1, y=None):
-    x1, y = _prepare_two_arrays(x1, y)
-    y.local_array = np.invert(x1, y)
-    return y
-
-
-
-
-
-
-
-
-
-
+    return _unary_ufunc(np.invert, x1, y)
 
 
