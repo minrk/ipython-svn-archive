@@ -2,11 +2,14 @@ import unittest
 import numpy as np
 from numpy.testing.utils import assert_array_equal, assert_array_almost_equal
 
-from ipythondistarray.mpi import mpibase
-MPI = mpibase.MPI
-
-from ipythondistarray.core import maps, distarray
 from ipythondistarray.core.error import *
+from ipythondistarray.mpi.error import *
+from ipythondistarray.mpi import mpibase
+from ipythondistarray.mpi.mpibase import (
+    MPI, 
+    create_comm_of_size,
+    create_comm_with_list)
+from ipythondistarray.core import maps, distarray
 from ipythondistarray import utils
 
 class TestInit(unittest.TestCase):
@@ -18,113 +21,162 @@ class TestInit(unittest.TestCase):
         """
         Test basic DistArray creation.
         """
-        comm = create_comm(4)
-        if not comm==MPI.COMM_NULL:
+        try:
+            comm = create_comm_of_size(4)
+        except InvalidCommSizeError:
+            pass
+        else:
             da = distarray.DistArray((16,16), grid_shape=(4,),comm=comm)
-            self.assertEquals(da.shape, (16,16))
-            self.assertEquals(da.dist, ('b',None))
-            self.assertEquals(da.grid_shape,(4,))
-            self.assertEquals(da.base_comm, comm)
-            self.assertEquals(da.comm_size, 4)
-            self.assert_(da.comm_rank in range(4))
-            self.assertEquals(da.ndistdim, 1)
-            self.assertEquals(da.distdims, (0,))
-            self.assertEquals(da.map_classes, (maps.BlockMap,))
-            self.assertEquals(da.comm.Get_topo(), (da.grid_shape,(0,),(da.comm_rank,)))
-            self.assertEquals(len(da.maps),1)
-            self.assertEquals(da.maps[0].local_shape, 4)
-            self.assertEquals(da.maps[0].shape, 16)
-            self.assertEquals(da.maps[0].grid_shape, 4)
-            self.assertEquals(da.local_shape,(4,))
-            self.assertEquals(da.local_array.shape, da.local_shape)
-            self.assertEquals(da.local_array.dtype, da.dtype)
-            comm.Free()
+            if not da.isnull():
+                self.assertEquals(da.shape, (16,16))
+                self.assertEquals(da.dist, ('b',None))
+                self.assertEquals(da.grid_shape, (4,))
+                self.assertEquals(da.base_comm, comm)
+                self.assertEquals(da.comm_size, 4)
+                self.assert_(da.comm_rank in range(4))
+                self.assertEquals(da.ndistdim, 1)
+                self.assertEquals(da.distdims, (0,))
+                self.assertEquals(da.map_classes, (maps.BlockMap,))
+                self.assertEquals(da.comm.Get_topo(), (da.grid_shape,(0,),(da.comm_rank,)))
+                self.assertEquals(len(da.maps), 1)
+                self.assertEquals(da.maps[0].local_shape, 4)
+                self.assertEquals(da.maps[0].shape, 16)
+                self.assertEquals(da.maps[0].grid_shape, 4)
+                self.assertEquals(da.local_shape, (4,))
+                self.assertEquals(da.local_array.shape, da.local_shape)
+                self.assertEquals(da.local_array.dtype, da.dtype)
+            if not comm==MPI.COMM_NULL:
+                comm.Free()
     
     
     def test_localarray(self):
         """
         Can the local_array be set and get?
         """
-        comm = create_comm(4)
-        if not comm==MPI.COMM_NULL:
-            da = distarray.DistArray((16,16), grid_shape=(4,),comm=comm)
-            da.get_localarray()
-            la = np.random.random(da.local_shape)
-            la = np.asarray(la, dtype=da.dtype)
-            da.set_localarray(la)
-            new_la = da.get_localarray()
-            comm.Free()
+        try:
+            comm = create_comm_of_size(4)
+        except InvalidCommSizeError:
+            pass
+        else:
+            da = distarray.DistArray((16,16), grid_shape=(4,), comm=comm)
+            try:
+                da.get_localarray()
+                la = np.random.random(da.local_shape)
+                la = np.asarray(la, dtype=da.dtype)
+                da.set_localarray(la)
+                new_la = da.get_localarray()
+            except NullArrayError:
+                pass
+            if not comm==MPI.COMM_NULL:
+                comm.Free()
     
     
     def test_grid_shape(self):
         """
         Test various ways of setting the grid_shape.
         """
-        comm = create_comm(12)
-        if not comm==MPI.COMM_NULL:
-            da = distarray.DistArray((20,20),dist='b',comm=comm)
-            self.assertEquals(da.grid_shape,(3,4))
-            da = distarray.DistArray((2*10,6*10),dist='b',comm=comm)
-            self.assertEquals(da.grid_shape,(2,6))
-            da = distarray.DistArray((6*10,2*10),dist='b',comm=comm)
-            self.assertEquals(da.grid_shape,(6,2))
-            da = distarray.DistArray((100,10,300),dist=('b',None,'c'),comm=comm)
-            self.assertEquals(da.grid_shape,(2,6))
-            da = distarray.DistArray((100,50,300),dist='b',comm=comm)
-            self.assertEquals(da.grid_shape,(2,2,3))                  
-            comm.Free()
+        try:
+            comm = create_comm_of_size(12)
+        except InvalidCommSizeError:
+            pass
+        else:
+            try:
+                da = distarray.DistArray((20,20), dist='b', comm=comm)
+                self.assertEquals(da.grid_shape, (3,4))
+                da = distarray.DistArray((2*10,6*10), dist='b', comm=comm)
+                self.assertEquals(da.grid_shape, (2,6))
+                da = distarray.DistArray((6*10,2*10), dist='b', comm=comm)
+                self.assertEquals(da.grid_shape, (6,2))
+                da = distarray.DistArray((100,10,300), dist=('b',None,'c'), comm=comm)
+                self.assertEquals(da.grid_shape, (2,6))
+                da = distarray.DistArray((100,50,300), dist='b', comm=comm)
+                self.assertEquals(da.grid_shape, (2,2,3))                  
+            except NullArrayError:
+                pass
+            if not comm==MPI.COMM_NULL:
+                comm.Free()
 
 
 class TestDistMatrix(unittest.TestCase):
     """
-    Can we create and possibly plot a dist_matrix?
+    Test the dist_matrix.
     """
-    
-    
+
     def test_plot_dist_matrix(self):
-        comm = create_comm(12)
-        if not comm==MPI.COMM_NULL:
-            da = distarray.DistArray((10,10), dist=('c','c'),comm=comm)
-            a = da.get_dist_matrix()
-            # if comm.Get_rank()==0:
-            #     import pylab
-            #     pylab.ion()
-            #     pylab.matshow(a)
-            #     pylab.colorbar()
-            #     pylab.draw() 
-            #     pylab.show()
-            comm.Free()
+        """
+        Can we create and possibly plot a dist_matrix?
+        """
+        try:
+            comm = create_comm_of_size(12)
+        except InvalidCommSizeError:
+            pass
+        else:
+            da = distarray.DistArray((10,10), dist=('c','c'), comm=comm)
+            if not da.isnull():
+                a = da.get_dist_matrix()
+                if False:
+                    if comm.Get_rank()==0:
+                        import pylab
+                        pylab.ion()
+                        pylab.matshow(a)
+                        pylab.colorbar()
+                        pylab.draw() 
+                        pylab.show()
+            if not comm==MPI.COMM_NULL:
+                comm.Free()
 
 
 class TestLocalInd(unittest.TestCase):
+    """
+    Test the computation of local indices.
+    """
     
     def test_block(self):
-        comm = create_comm(4)
-        if not comm==MPI.COMM_NULL:
+        """
+        Can we compute local incides for a BlockMap?
+        """
+        try:
+            comm = create_comm_of_size(4)
+        except InvalidCommSizeError:
+            pass
+        else:
             da = distarray.DistArray((4,4),comm=comm)
-            self.assertEquals(da.shape,(4,4))
-            self.assertEquals(da.grid_shape,(4,))
-            row_result = [(0,0),(0,1),(0,2),(0,3)]
-            for row in range(da.shape[0]):
-                calc_row_result = [da.local_ind(row,col) for col in range(da.shape[1])]
-                self.assertEquals(row_result, calc_row_result)
-            comm.Free()
+            if not da.isnull():
+                self.assertEquals(da.shape,(4,4))
+                self.assertEquals(da.grid_shape,(4,))
+                row_result = [(0,0),(0,1),(0,2),(0,3)]
+                for row in range(da.shape[0]):
+                    calc_row_result = [da.local_ind(row,col) for col in range(da.shape[1])]
+                    self.assertEquals(row_result, calc_row_result)
+            if not comm==MPI.COMM_NULL:
+                comm.Free()
     
     
     def test_cyclic(self):
-        comm = create_comm(4)
-        if not comm==MPI.COMM_NULL:
+        """
+        Can we compute local incides for a CyclicMap?
+        """
+        try:
+            comm = create_comm_of_size(4)
+        except InvalidCommSizeError:
+            pass
+        else:
             da = distarray.DistArray((8,8),dist={0:'c'},comm=comm)
-            self.assertEquals(da.shape,(8,8))
-            self.assertEquals(da.grid_shape,(4,))
-            self.assertEquals(da.map_classes, (maps.CyclicMap,))
-            result = utils.outer_zip(4*(0,)+4*(1,),range(8))
-            calc_result = [[da.local_ind(row,col) for col in range(da.shape[1])] for row in range(da.shape[0])]
-            self.assertEquals(result,calc_result)
-            comm.Free()
+            if not da.isnull():
+                self.assertEquals(da.shape,(8,8))
+                self.assertEquals(da.grid_shape,(4,))
+                self.assertEquals(da.map_classes, (maps.CyclicMap,))
+                result = utils.outer_zip(4*(0,)+4*(1,),range(8))
+                calc_result = [[da.local_ind(row,col) for col in range(da.shape[1])] for row in range(da.shape[0])]
+                self.assertEquals(result,calc_result)
+            if not comm==MPI.COMM_NULL:
+                comm.Free()
 
 
 class TestGlobalInd(unittest.TestCase):
+    """
+    Test the computation of global indices.
+    """
     
     def round_trip(self, da):
         for indices in utils.multi_for( [xrange(s) for s in da.shape] ):
@@ -135,27 +187,51 @@ class TestGlobalInd(unittest.TestCase):
     
     
     def test_block(self):
-        comm = create_comm(4)
-        if not comm==MPI.COMM_NULL:
+        """
+        Can we go from global to local indices and back for BlockMap?
+        """
+        try:
+            comm = create_comm_of_size(4)
+        except InvalidCommSizeError:
+            pass
+        else:
             da = distarray.DistArray((4,4),comm=comm)
-            self.round_trip(da)
-            comm.Free()
+            if not da.isnull():
+                self.round_trip(da)
+            if not comm==MPI.COMM_NULL:
+                comm.Free()
     
     
     def test_cyclic(self):
-        comm = create_comm(4)
-        if not comm==MPI.COMM_NULL:
+        """
+        Can we go from global to local indices and back for CyclicMap?
+        """
+        try:
+            comm = create_comm_of_size(4)
+        except InvalidCommSizeError:
+            pass
+        else:
             da = distarray.DistArray((8,8),dist=('c',None),comm=comm)
-            self.round_trip(da)
-            comm.Free()
+            if not da.isnull():
+                self.round_trip(da)
+            if not comm==MPI.COMM_NULL:
+                comm.Free()
     
     
     def test_crazy(self):
-        comm = create_comm(4)
-        if not comm==MPI.COMM_NULL:
+        """
+        Can we go from global to local indices and back for a complex case?
+        """
+        try:
+            comm = create_comm_of_size(4)
+        except InvalidCommSizeError:
+            pass
+        else:
             da = distarray.DistArray((10,100,20),dist=('b','c',None),comm=comm)
-            self.round_trip(da)
-            comm.Free()
+            if not da.isnull():
+                self.round_trip(da)
+            if not comm==MPI.COMM_NULL:
+                comm.Free()
 
 
 class TestDistArrayMethods(unittest.TestCase):
@@ -164,17 +240,24 @@ class TestDistArrayMethods(unittest.TestCase):
         """
         Test asdist_like for success and failure.
         """
-        comm = create_comm(4)
-        if not comm==MPI.COMM_NULL:
-            a = distarray.DistArray((16,16), dist=('b',None),comm=comm)
-            b = distarray.DistArray((16,16), dist=('b',None),comm=comm)
-            new_a = a.asdist_like(b)
-            self.assertEquals(id(a),id(new_a))
-            a = distarray.DistArray((16,16), dist=('b',None),comm=comm)
-            b = distarray.DistArray((16,16), dist=(None,'b'),comm=comm)
-            self.assertRaises(IncompatibleArrayError, a.asdist_like, b)     
+        try:
+            comm = create_comm_of_size(4)
+        except InvalidCommSizeError:
+            pass
+        else:
+            try:
+                a = distarray.DistArray((16,16), dist=('b',None),comm=comm)
+                b = distarray.DistArray((16,16), dist=('b',None),comm=comm)
+                new_a = a.asdist_like(b)
+                self.assertEquals(id(a),id(new_a))
+                a = distarray.DistArray((16,16), dist=('b',None),comm=comm)
+                b = distarray.DistArray((16,16), dist=(None,'b'),comm=comm)
+                self.assertRaises(IncompatibleArrayError, a.asdist_like, b)
+            except NullArrayError:
+                pass
+            if not comm==MPI.COMM_NULL:
+                comm.Free()
 
-                
 
 if __name__ == '__main__':
     try:

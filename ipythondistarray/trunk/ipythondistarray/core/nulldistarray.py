@@ -1,44 +1,88 @@
+#----------------------------------------------------------------------------
+# Imports
+#----------------------------------------------------------------------------
+
+
 from mpi4py import MPI
 import numpy as np
 
+from ipythondistarray.core.base import BaseDistArray, arecompatible
 from ipythondistarray.core.error import *
+from ipythondistarray.core.construct import (
+    init_base_comm,
+    init_dist,
+    init_distdims,
+    init_map_classes,
+    init_grid_shape,
+    optimize_grid_shape,
+    init_comm,
+    init_local_shape_and_maps,
+    find_local_shape,
+    find_grid_shape)
+
+
+#----------------------------------------------------------------------------
+# Exports
+#----------------------------------------------------------------------------
 
 
 __all__ = [
     'NullDistArray',
     'null_like',
-    'isnull']
+    'isnull',
+    'anynull',
+    'nonenull',
+    'allnull']
 
-class NullDistArray(object):
+
+#----------------------------------------------------------------------------
+# The NullDistArray things
+#----------------------------------------------------------------------------
+
+
+class NullDistArray(BaseDistArray):
     """
     A null DistArray for COMM_NULL communicators.
+    
+    All attribute access should raise NullArrayAttributeError, except for base
+    and base_comm, which should return COMM_NULL.  Attributes (shape, dist, etc.)
+    that are set in __init__ are saved with single underscores.  This is because
+    these attributes are useful internally, but shouldn't be available to users.
+    
+    Methods that return None or a DistArray should return None or a NullDistArray.
+    This behavior is mostly implemented, but I still haven't gone through all the
+    methods yet.
     """
     
     __array_priority__ = 20.0
     
     
-    def __init__(self, shape, dtype=float, dist={0:'b'} , grid_shape=None,
+    def __init__(self, shape=None, dtype=float, dist={0:'b'} , grid_shape=None,
                  comm=None, buf=None, offset=0):
         """Create a distributed memory array on a set of processors.
         """
-        object.__setattr__(self, 'shape', shape)
-        object.__setattr__(self, 'ndim', len(shape))
-        object.__setattr__(self, 'dtype', np.dtype(dtype))
-        object.__setattr__(self, 'size', reduce(lambda x,y: x*y, shape))
-        object.__setattr__(self, 'itemsize', self.dtype.itemsize)
-        object.__setattr__(self, 'nbytes', self.size*self.itemsize)
         
-        if comm==MPI.COMM_NULL:
-            object.__setattr__(self, 'base_comm', comm)
-        elif comm is None:
+        self._setit('_shape', shape)
+        self._setit('_ndim', len(shape))
+        self._setit('_dtype', np.dtype(dtype))
+        self._setit('_size', reduce(lambda x,y: x*y, shape))
+        self._setit('_itemsize', self._dtype.itemsize)
+        self._setit('_nbytes', self._size*self._itemsize)
+                
+        if comm==MPI.COMM_NULL or comm is None:
             object.__setattr__(self, 'base_comm', MPI.COMM_NULL)
+            object.__setattr__(self, 'comm', MPI.COMM_NULL)
         else:
-            InvalidBaseCommError("a NullDistArray can only be created with MPI.COMM_NULL")
-        
-        object.__setattr__(self, 'comm_size', 0)
-        object.__setattr__(self, 'comm_rank', 0)
-        object.__setattr__(self, 'comm', self.base_comm)
+            raise InvalidBaseCommError("a NullDistArray can only be created with MPI.COMM_NULL")
     
+        self._setit('_dist', init_dist(dist, self._ndim))
+        self._setit('_distdims', init_distdims(self._dist, self._ndim))
+        self._setit('_ndistdim', len(self._distdims))
+        
+        self._setit('_grid_shape', grid_shape)
+    
+    def _setit(self, name, value):
+        object.__setattr__(self, name, value)
     
     #----------------------------------------------------------------------------
     # Methods related to this classes null nature
@@ -50,7 +94,7 @@ class NullDistArray(object):
     def isnull(self):
         return True
     
-    def __getattr__(self, name):
+    def __getattr__(self, name): 
         raise NullArrayAttributeError("cannot get attribute on NullDistArray: %s" % name)
     
     def __setattr__(self, name, value):
@@ -58,6 +102,10 @@ class NullDistArray(object):
     
     def __delattr__(self, name):
         raise NullArrayAttributeError("cannot del attribute on NullDistArray: %s" % name)
+    
+    def compatibility_hash(self):
+        return hash((self._shape, self._dist, self._grid_shape, True))
+        
     
     #----------------------------------------------------------------------------
     # Methods related to distributed indexing
@@ -67,7 +115,7 @@ class NullDistArray(object):
         self._raise_null_array()
     
     def set_localarray(self, a):
-        self._raise_null_array()
+        return None
     
     def owner_rank(self, *indices):
         self._raise_null_array()
@@ -99,10 +147,10 @@ class NullDistArray(object):
     #---------------------------------------------------------------------------- 
     
     def astype(self, dtype):
-        self._raise_null_array()
+        return null_like(self)
     
     def copy(self):
-        self._raise_null_array()
+        return null_like(self)
     
     def local_view(self, dtype=None):
         self._raise_null_array()
@@ -111,66 +159,73 @@ class NullDistArray(object):
         self._raise_null_array()
     
     def __distarray__(dtype=None):
-        self._raise_null_array()
+        return self
     
     def fill(self, scalar):
-        self._raise_null_array()
+        return None
     
     #----------------------------------------------------------------------------
     # 3.2.2 Array shape manipulation
     #---------------------------------------------------------------------------- 
     
     def reshape(self, newshape):
-        self._raise_null_array()
+        return null_like(self)
     
     def redist(self, newshape, newdist={0:'b'}, newgrid_shape=None):
-        self._raise_null_array()
+        return None
     
     def resize(self, newshape, refcheck=1, order='C'):
-        self._raise_null_array()
+        return None
     
     def transpose(self, arg):
-        self._raise_null_array()
+        return null_like(self)
     
     def swapaxes(self, axis1, axis2):
-        self._raise_null_array()
+        return self
     
     def flatten(self, order='C'):
-        self._raise_null_array()
+        return null_like(self)
     
     def ravel(self, order='C'):
-        self._raise_null_array()
+        return self
     
     def squeeze(self):
-        self._raise_null_array()
+        return self
      
     def asdist(self, shape, dist={0:'b'}, grid_shape=None):
-        self._raise_null_array()
+        return self
     
     def asdist_like(self, other):
-        self._raise_null_array()
+        """
+        Return a version of self that has shape, dist and grid_shape like other.
+        """
+        if arecompatible(self, other):
+            return self
+        else:
+            raise IncompatibleArrayError("DistArrays have incompatible shape, dist or grid_shape")
+
     
     #----------------------------------------------------------------------------
     # 3.2.3 Array item selection and manipulation
     #----------------------------------------------------------------------------   
     
     def take(self, indices, axis=None, out=None, mode='raise'):
-        self._raise_null_array()
+        return null_like(self)
     
     def put(self, values, indices, mode='raise'):
-        self._raise_null_array()
+        return None
     
     def putmask(self, values, mask):
-        self._raise_null_array()
+        return None
     
     def repeat(self, repeats, axis=None):
-        self._raise_null_array()
+        return None
     
     def choose(self, choices, out=None, mode='raise'):
-        self._raise_null_array()
+        return null_like(self)
     
     def sort(self, axis=-1, kind='quick'):
-        self._raise_null_array()
+        return None
     
     def argsort(self, axis=-1, kind='quick'):
         self._raise_null_array()
@@ -185,7 +240,7 @@ class NullDistArray(object):
         self._raise_null_array()
     
     def diagonal(self, offset=0, axis1=0, axis2=1):
-        self._raise_null_array()
+        return null_like(self)
     
     #----------------------------------------------------------------------------
     # 3.2.4 Array item selection and manipulation
@@ -284,10 +339,10 @@ class NullDistArray(object):
         self._raise_null_array()
     
     def __str__(self):
-        self._raise_null_array()
+        return self.__repr__()
     
     def __repr__(self):
-        self._raise_null_array()
+        return "<%s at %s>" % (self.__class__.__name__, hex(id(self)))
     
     def __nonzero__(self):
         self._raise_null_array()
@@ -457,8 +512,34 @@ class NullDistArray(object):
 
 
 def null_like(a):
-    return NullDistArray(a.shape, a.dtype, comm=a.base_comm)
+    return NullDistArray(shape=a._shape, dtype=a._dtype, dist=a._dist, 
+        grid_shape=a._grid_shape, comm=a.base_comm)
 
 
 def isnull(a):
     return a.isnull()
+
+
+def allnull(*args):
+    result = True
+    for arr in args:
+        if not arr.isnull():
+            result = False
+    return result
+
+
+def anynull(*args):
+    result = False
+    for arr in args:
+        if arr.isnull():
+            result = True
+    return result
+
+
+def nonenull(*args):
+    result = True
+    for arr in args:
+        if arr.isnull():
+            result = False
+    return result
+

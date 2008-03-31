@@ -36,6 +36,9 @@ class DistMatrixError(DistArrayError):
 class IncompatibleArrayError(DistArrayError):
     pass
 
+class NullCommunicatorError(DistArrayError):
+    pass
+
 class NullArrayError(DistArrayError):
     pass
 

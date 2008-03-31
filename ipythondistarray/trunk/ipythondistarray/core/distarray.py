@@ -11,8 +11,18 @@ from ipythondistarray.mpi.mpibase import MPI
 from ipythondistarray.core import maps
 from ipythondistarray.core.error import *
 from ipythondistarray.core.nulldistarray import NullDistArray, null_like, isnull
-from ipythondistarray.core.base import BaseDistArray
-from ipythondistarray import utils
+from ipythondistarray.core.base import BaseDistArray, arecompatible
+from ipythondistarray.core.construct import (
+    init_base_comm,
+    init_dist,
+    init_distdims,
+    init_map_classes,
+    init_grid_shape,
+    optimize_grid_shape,
+    init_comm,
+    init_local_shape_and_maps,
+    find_local_shape,
+    find_grid_shape)
 from ipythondistarray.utils import _raise_nie
 
 
@@ -47,140 +57,9 @@ __all__ = [
     'cast',
     'mintypecode',
     'finfo',
-    'arecompatible']
-
-
-#----------------------------------------------------------------------------
-#----------------------------------------------------------------------------
-# Stateless functions for initializing various aspects of DistArray objects
-#----------------------------------------------------------------------------
-#----------------------------------------------------------------------------
-
-# These are functions rather than methods because they need to be both
-# stateless and free of side-effects.  It is possible that they could be
-# called multiple times and in multiple different contexts in the course
-# of a DistArray object's lifetime (for example upon a reshape or redist).
-# The simplest and most robust way of insuring this is to get rid of 'self'
-# (which holds all state) and make them standalone functions.
-
-
-def _init_base_comm(comm):
-    if comm==MPI.COMM_NULL:
-        raise MPICommError("Cannot create a DistArray with a MPI COMM_NULL")
-    elif comm is None:
-        return mpibase.COMM_PRIVATE
-    elif isinstance(comm, MPI.Comm):
-        return comm
-    else:
-        raise InvalidBaseCommError("Not an MPI.Comm instance")
-
-
-def _init_dist(dist, ndim):
-    if isinstance(dist, str):
-        return ndim*(dist,)
-    elif isinstance(dist, (list, tuple)):
-        return tuple(dist)
-    elif isinstance(dist, dict):
-        return tuple([dist.get(i) for i in range(ndim)])
-    else:
-        DistError("dist must be a string, tuple/list or dict") 
-
-
-def _init_distdims(dist, ndim):
-    reduced_dist = [d for d in dist if d is not None]
-    ndistdim = len(reduced_dist)
-    if ndistdim > ndim:
-        raise DistError("Too many distributed dimensions")
-    distdims = [i for i in range(ndim) if dist[i] is not None]
-    return tuple(distdims)
-
-
-def _init_map_classes(dist):
-    reduced_dist = [d for d in dist if d is not None]
-    map_classes = [maps.get_map_class(d) for d in reduced_dist]
-    return tuple(map_classes)
-
-
-def _init_grid_shape(shape, grid_shape, distdims, comm_size):
-    ndistdim = len(distdims)
-    if grid_shape is None:
-        grid_shape = _optimize_grid_shape(shape, grid_shape, distdims, comm_size)
-    else:
-        try:
-            grid_shape = tuple(grid_shape)
-        except:
-            raise InvalidGridShapeError("grid_shape not castable to a tuple")
-    if len(grid_shape)!=ndistdim:
-        raise InvalidGridShapeError("grid_shape has the wrong length")
-    ngriddim = reduce(lambda x,y: x*y, grid_shape)
-    if ngriddim != comm_size:
-        raise InvalidGridShapeError("grid_shape is incompatible with the number of processors")
-    return grid_shape
-
-
-def _optimize_grid_shape(shape, grid_shape, distdims, comm_size):
-    ndistdim = len(distdims)
-    if ndistdim==1:
-        grid_shape = (comm_size,)
-    else:
-        factors = utils.mult_partitions(comm_size, ndistdim)
-        if factors != []:
-            reduced_shape = [shape[i] for i in distdims]
-            factors = [utils.mirror_sort(f, reduced_shape) for f in factors]
-            rs_ratio = _compute_grid_ratios(reduced_shape)
-            f_ratios = [_compute_grid_ratios(f) for f in factors]
-            distances = [rs_ratio-f_ratio for f_ratio in f_ratios]
-            norms = np.array([np.linalg.norm(d,2) for d in distances])
-            index = norms.argmin()
-            grid_shape = tuple(factors[index])
-        else:
-            raise GridShapeError("Cannot distribute array over processors")
-    return grid_shape
-
-
-def _compute_grid_ratios(shape):
-    n = len(shape)
-    return np.array([float(shape[i])/shape[j] for i in range(n) for j in range(n) if i < j])
-
-
-def _init_comm(base_comm, grid_shape, ndistdim):
-    return base_comm.Create_cart(grid_shape,ndistdim*(False,),False)
-
-
-def _init_local_shape_and_maps(shape, grid_shape, distdims, map_classes):
-    maps = []
-    local_shape = []
-    for i, distdim in enumerate(distdims):
-        minst = map_classes[i](shape[distdim], grid_shape[i])
-        local_shape.append(minst.local_shape)
-        maps.append(minst)
-    return tuple(local_shape), tuple(maps)
-
-
-def local_shape(shape, dist={0:'b'}, grid_shape=None, comm_size=None):
-    if comm_size is None:
-        raise ValueError("comm_size can't be None")
-    ndim = len(shape)
-    dist = _init_dist(dist, ndim)
-    distdims = _init_distdims(dist, ndim)
-    ndistdim = len(distdims)
-    map_classes = _init_map_classes(dist)   
-    grid_shape = _init_grid_shape(shape, grid_shape, distdims, comm_size)
-    local_shape, maps = _init_local_shape_and_maps(shape, 
-        grid_shape, distdims, map_classes)
-    return local_shape
-
-
-def grid_shape(shape, dist={0:'b'}, grid_shape=None, comm_size=None):
-    if comm_size is None:
-        raise ValueError("comm_size can't be None")
-    ndim = len(shape)
-    dist = _init_dist(dist, ndim)
-    distdims = _init_distdims(dist, ndim)
-    ndistdim = len(distdims)
-    map_classes = _init_map_classes(dist)   
-    grid_shape = _init_grid_shape(shape, grid_shape, distdims, comm_size)
-    return grid_shape
+    'arecompatible',
+    'sin',
+    'cos']
 
 
 #----------------------------------------------------------------------------
@@ -213,20 +92,20 @@ class DenseDistArray(BaseDistArray):
         # subsequent _init_* methods.  It is critical that these _init_* methods are free
         # of side effects and stateless.  This means that they cannot set or get class or
         # instance attributes
-        self.base_comm = _init_base_comm(comm)
+        self.base_comm = init_base_comm(comm)
         self.comm_size = self.base_comm.Get_size()
         self.comm_rank = self.base_comm.Get_rank()
         
-        self.dist = _init_dist(dist, self.ndim)
-        self.distdims = _init_distdims(self.dist, self.ndim)
+        self.dist = init_dist(dist, self.ndim)
+        self.distdims = init_distdims(self.dist, self.ndim)
         self.ndistdim = len(self.distdims)
-        self.map_classes = _init_map_classes(self.dist)
+        self.map_classes = init_map_classes(self.dist)
         
-        self.grid_shape = _init_grid_shape(self.shape, grid_shape, 
+        self.grid_shape = init_grid_shape(self.shape, grid_shape, 
             self.distdims, self.comm_size)
-        self.comm = _init_comm(self.base_comm, self.grid_shape, self.ndistdim)
+        self.comm = init_comm(self.base_comm, self.grid_shape, self.ndistdim)
         self.cart_coords = self.comm.Get_coords(self.comm_rank)
-        self.local_shape, self.maps = _init_local_shape_and_maps(self.shape, 
+        self.local_shape, self.maps = init_local_shape_and_maps(self.shape, 
             self.grid_shape, self.distdims, self.map_classes)
         self.local_size = reduce(lambda x,y: x*y, self.local_shape)
         
@@ -237,6 +116,8 @@ class DenseDistArray(BaseDistArray):
         if self.comm is not None:
             self.comm.Free()
     
+    def compatibility_hash(self):
+        return hash((self.shape, self.dist, self.grid_shape, True))
     
     #----------------------------------------------------------------------------
     # Misc methods
@@ -574,10 +455,10 @@ class DenseDistArray(BaseDistArray):
         _raise_nie()
     
     def __str__(self):
-        _raise_nie()
+        return str(self.local_array)
     
     def __repr__(self):
-        _raise_nie()
+        return str(self.local_array)
     
     def __nonzero__(self):
         _raise_nie()
@@ -603,15 +484,39 @@ class DenseDistArray(BaseDistArray):
     #---------------------------------------------------------------------------- 
     
     # Binary
+        
+    def _binary_op_from_ufunc(self, other, func, rfunc):
+        if hasattr(other, '__array_priority__'):
+            if other.__array_priority__ > self.__array_priority__:
+                return rfunc(self)
+            else:
+                if ininstance(other, BaseDistArray) or isscalar(other):
+                    return func(self, other)
+                else:
+                    raise TypeError("invalid type for ufunc operation")
+        else:
+            raise TypeError("invalid type for ufunc operation")
+    
+    def _rbinary_op_from_ufunc(self, other, func, rfunc):
+        if hasattr(other, '__array_priority__'):
+            if other.__array_priority__ > self.__array_priority__:
+                return rfunc(self)
+            else:
+                if ininstance(other, BaseDistArray) or isscalar(other):
+                    return func(self, other)
+                else:
+                    raise TypeError("invalid type for ufunc operation")
+        else:
+            raise TypeError("invalid type for ufunc operation")
     
     def __add__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, add, other.__radd__)
     
     def __sub__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, subtract, other.__rsub__)
     
     def __mul__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, mutiply, other.__rmul__)
     
     def __div__(self, other):
         _raise_nie()
@@ -649,13 +554,49 @@ class DenseDistArray(BaseDistArray):
     # Binary - right versions
     
     def __radd__(self, other):
-        _raise_nie()
+        """
+        x.__radd__(y) => y + x
+        """
+        if hasattr(other, '__array_priority__'):
+            if other.__array_priority__ > self.__array_priority__:
+                return other.__add__(self)
+            else:
+                return add(other, self)
+        elif isscalar(other):
+                local_result = other + self.local_array
+                return fromlocalarray_like(local_result, self)
+        else:
+            raise Exception("invalid type for operator")
     
     def __rsub__(self, other):
-        _raise_nie()
+        """
+        x.__rsub__(y) => y - x
+        """
+        if hasattr(other, '__array_priority__'):
+            if other.__array_priority__ > self.__array_priority__:
+                return other.__sub__(self)
+            else:
+                return subtract(other, self)
+        elif isscalar(other):
+                local_result = other - self.local_array
+                return fromlocalarray_like(local_result, self)
+        else:
+            raise Exception("invalid type for operator")
     
     def __rmul__(self, other):
-        _raise_nie()
+        """
+        x.__rmul__(y) => y * x
+        """
+        if hasattr(other, '__array_priority__'):
+            if other.__array_priority__ > self.__array_priority__:
+                return other.__mul__(self)
+            else:
+                return multiply(other, self)
+        elif isscalar(other):
+                local_result = other * self.local_array
+                return fromlocalarray_like(local_result, self)
+        else:
+            raise Exception("invalid type for operator")
     
     def __rdiv__(self, other):
         _raise_nie()
@@ -751,11 +692,10 @@ def DistArray(shape, dtype=float, dist={0:'b'} , grid_shape=None, comm=None, buf
     Create a DistArray of the correct type.
     """
     if comm==MPI.COMM_NULL:
-        return NullDistArray(shape, dtype, dist, grid_shape,
-            comm, bug, offset)
+        raise NullCommunicatorError("cannot create a DistArray with COMM_NULL")
     else:
         return DenseDistArray(shape, dtype, dist, grid_shape,
-            comm, bug, offset)
+            comm, buf, offset)
 
 
 #----------------------------------------------------------------------------
@@ -814,11 +754,12 @@ def empty_like(arr):
     elif isinstance(arr, DenseDistArray):
         return empty(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)        
     else:
-        raise TypeError("a DistArray or subclass is expected")
+        raise TypeError("a DenseDistArray or subclass is expected")
 
 
 def zeros(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
-    local_shape = distarray.local_shape(shape, dist, grid_shape, comm.Get_size())
+    base_comm = init_base_comm(comm)
+    local_shape = find_local_shape(shape, dist, grid_shape, base_comm.Get_size())
     local_zeros = np.zeros(local_shape, dtype=dtype)
     return DistArray(shape, dtype, dist, grid_shape, comm, buf=local_zeros)
 
@@ -829,11 +770,12 @@ def zeros_like(arr):
     elif isinstance(arr, DenseDistArray):
         return zeros(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)
     else:
-        raise TypeError("a DistArray or subclass is expected")
+        raise TypeError("a DenseDistArray or subclass is expected")
 
 
 def ones(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
-    local_shape = distarray.local_shape(shape, dist, grid_shape, comm.Get_size())
+    base_comm = init_base_comm(comm)
+    local_shape = find_local_shape(shape, dist, grid_shape, base_comm.Get_size())
     local_ones = np.ones(local_shape, dtype=dtype)
     return DistArray(shape, dtype, dist, grid_shape, comm, buf=local_ones)
 
@@ -850,6 +792,14 @@ def fromfunction(function, **kwargs):
             global_inds = da.global_inds(*local_inds)
             local_view[local_inds] = function(*global_inds, **kwargs)
     return da
+
+
+def fromlocalarray_like(local_arr, like_arr):
+    """
+    Create a new DistArray using a given local array (+its dtype).
+    """
+    return DistArray(like_arr.shape, local_arr.dtype, like_arr.dist, like_arr.grid_shape, 
+        like_arr.base_comm, buf=local_arr)
 
 
 def identity(n, dtype=np.intp):
@@ -1052,22 +1002,6 @@ finfo = np.finfo
 #----------------------------------------------------------------------------
 
 
-def arecompatible(a, b):
-    """
-    Do these arrays have the same shape, dist, grid_shape and nullity?
-    """
-    anull = a.isnull()
-    bnull = b.isnull()
-    if not (anull or bnull):    # Neither are null
-        shape = a.shape == b.shape
-        dist = a.dist == b.dist
-        grid_shape = a.grid_shape == b.grid_shape
-        return shape and dist and grid_shape
-    elif anull and bnull:    # Both are null
-        return True
-    else:  # one is null one is not
-        return False
-
 #----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
 # Universal Functions
@@ -1085,40 +1019,61 @@ def arecompatible(a, b):
 #----------------------------------------------------------------------------
 
 
-def _fromlocalarray_like(local_arr, like_arr):
-    """
-    Create a new DistArray using a given local array (+its dtype).
-    """
-    return DistArray(like_arr.shape, local_arr.dtype, like_arr.dist, like_arr.grid_shape, 
-        like_arr.base_comm, buf=local_arr)
-
-
 def _unary_ufunc(func, x1, y):
     if y is None:
+        # Now walk through the types for x1
         if x1.isnull():
             return null_like(x1)
-        else:
+        elif isscalar(x1):
+            return func(x1)
+        elif isinstance(x1, BaseDistArray):
             local_result = func(x1.local_array)
-            return _fromlocalarray_like(local_result, x1)
-    else:
-        if not arecompatible(x1, y):
-            raise IncompatibleArrayError("destination DistArray not compatible with first DistArray argument" % y)
-        if x1.isnull():
-            return null_like(x1)
+            return fromlocalarray_like(local_result, x1)
         else:
-            y.local_array = func(x1.local_array, y.local_array)
-            return y
+            raise TypeError("invalid type for unary ufunc")
+    else:
+        if not isinstance(y, BaseDistArray):
+            raise TypeError("return array must be a BaseDistArray")
+        # Now walk through the types for x1
+        if isscalar(x1):
+            return func(x1)
+        elif isinstance(x1, BaseDistArray):
+            if not arecompatible(x1, y):
+                raise IncompatibleArrayError("destination DistArray not compatible with first DistArray argument" % y)
+            if x1.isnull():
+                return null_like(x1)
+            else:
+                y.local_array = func(x1.local_array, y.local_array)
+                return y
+        else:
+            raise TypeError("invalid type for unary ufunc")
 
 
 def _binary_ufunc(func, x1, x2, y):
-    x2_new = x1.asdist_like(x2)    # This raises if they are not compatible
-    if y is None:            
-        if x1.isnull():
-            return null_like(x1)
+    if y is None:
+        if isscalar(x1) and not isscalar(x2):
+            if x2.isnull():
+                return null_like(x2)
+            else:
+                local_result = func(x1, x2.local_array)
+                return fromlocalarray_like(local_result, x2)
+        elif isscalar(x2) and not isscalar(x1)
+            if x1.isnull()
+                return null_like(x1)
+            else:
+                local_result = func(x1.local_array, x2)
+                return fromlocalarray_like(local_result, x1)
+        elif isscalar(x1) and isscalar(x2):
+            return func(x1, x2)
         else:
-            local_result = func(x1.local_array, x2.local_array)
-            return _fromlocalarray_like(local_result, x1)
+            x2_new = x1.asdist_like(x2)    # This raises if they are not compatible
+            if x1.isnull():
+                return null_like(x1)
+            else:
+                local_result = func(x1.local_array, x2.local_array)
+                return fromlocalarray_like(local_result, x1)
     else:
+        x2_new = x1.asdist_like(x2)    # This raises if they are not compatible
         if not arecompatible(x1, y):
             raise IncompatibleArrayError("destination DistArray not compatible with first DistArray argument" % y)
         if x1.isnull():
