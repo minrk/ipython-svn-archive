@@ -10,7 +10,6 @@ from ipythondistarray.mpi import mpibase
 from ipythondistarray.mpi.mpibase import MPI
 from ipythondistarray.core import maps
 from ipythondistarray.core.error import *
-from ipythondistarray.core.nulldistarray import NullDistArray, null_like, isnull
 from ipythondistarray.core.base import BaseDistArray, arecompatible
 from ipythondistarray.core.construct import (
     init_base_comm,
@@ -57,10 +56,47 @@ __all__ = [
     'cast',
     'mintypecode',
     'finfo',
-    'arecompatible',
+    'add',
+    'subtract',
+    'divide',
+    'true_divide',
+    'floor_divide',
+    'power',
+    'remainder',
+    'fmod',
+    'arctan2',
+    'hypot',
+    'bitwise_and',
+    'bitwise_or',
+    'bitwise_xor',
+    'left_shift',
+    'right_shift',
+    'negative',
+    'absolute',
+    'rint',
+    'sign',
+    'conjugate',
+    'exp',
+    'log',
+    'expm1',
+    'log1p',
+    'log10',
+    'sqrt',
+    'square',
+    'reciprocal',
     'sin',
-    'cos']
-
+    'cos',
+    'tan',
+    'arcsin',
+    'arccos',
+    'arctan',
+    'sinh',
+    'cosh',
+    'tanh',
+    'arcsinh',
+    'arccosh',
+    'arctanh',
+    'invert']
 
 #----------------------------------------------------------------------------
 #----------------------------------------------------------------------------
@@ -122,9 +158,6 @@ class DenseDistArray(BaseDistArray):
     #----------------------------------------------------------------------------
     # Misc methods
     #---------------------------------------------------------------------------- 
-    
-    def isnull(self):
-        return False
     
     #----------------------------------------------------------------------------
     # Methods used at initialization
@@ -234,8 +267,29 @@ class DenseDistArray(BaseDistArray):
             self.grid_shape, self.base_comm, buf=self.data)
         return new_da
     
-    def __distarray__(dtype=None):
+    def __distarray__(self, dtype=None):
         return self
+    
+    def __array__(self, dtype=None):
+        if dtype is None:
+            return self.local_array
+        elif np.dtype(dtype)==self.dtype:
+            return self.local_array
+        else:
+            return self.local_array.astype(dtype)
+    
+    def __array_wrap__(self, obj, context=None):
+        """
+        Return a DistArray based on obj.
+        
+        This method constructs a new DistArray object using (shape, dist,
+        grid_shape and base_comm) from self and dtype, buffer from obj.
+        
+        This is used to construct return arrays for ufuncs.
+        """
+        return DistArray(self.shape, obj.dtype, self.dist, self.grid_shape, 
+            self.base_comm, buf=obj)
+    
     
     def fill(self, scalar):
         self.local_array.fill(scalar)
@@ -485,151 +539,105 @@ class DenseDistArray(BaseDistArray):
     
     # Binary
         
-    def _binary_op_from_ufunc(self, other, func, rfunc):
-        if hasattr(other, '__array_priority__'):
+    def _binary_op_from_ufunc(self, other, func, rop_str=None):
+        if hasattr(other, '__array_priority__') and hasattr(other, rop_str):
             if other.__array_priority__ > self.__array_priority__:
-                return rfunc(self)
-            else:
-                if ininstance(other, BaseDistArray) or isscalar(other):
-                    return func(self, other)
-                else:
-                    raise TypeError("invalid type for ufunc operation")
-        else:
-            raise TypeError("invalid type for ufunc operation")
+                rop = getattr(other, rop_str)
+                return rop(self)
+        return func(self, other)
     
-    def _rbinary_op_from_ufunc(self, other, func, rfunc):
-        if hasattr(other, '__array_priority__'):
+    def _rbinary_op_from_ufunc(self, other, func, lop_str):
+        if hasattr(other, '__array_priority__') and hasattr(other, lop_str):
             if other.__array_priority__ > self.__array_priority__:
-                return rfunc(self)
-            else:
-                if ininstance(other, BaseDistArray) or isscalar(other):
-                    return func(self, other)
-                else:
-                    raise TypeError("invalid type for ufunc operation")
-        else:
-            raise TypeError("invalid type for ufunc operation")
+                lop = getattr(other, lop_str)
+                return lop(self)
+        return func(other, self)
     
     def __add__(self, other):
-        return self._binary_op_from_ufunc(other, add, other.__radd__)
+        return self._binary_op_from_ufunc(other, add, '__radd__')
     
     def __sub__(self, other):
-        return self._binary_op_from_ufunc(other, subtract, other.__rsub__)
+        return self._binary_op_from_ufunc(other, subtract, '__rsub__')
     
     def __mul__(self, other):
-        return self._binary_op_from_ufunc(other, mutiply, other.__rmul__)
+        return self._binary_op_from_ufunc(other, multiply, '__rmul__')
     
     def __div__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, divide, '__rdiv__')
     
     def __truediv__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, true_divide, '__rtruediv__')
     
     def __floordiv__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, floor_divide, '__rfloordiv__')
     
     def __mod__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, mod, '__rdiv__')
     
     def __divmod__(self, other):
         _raise_nie()
     
     def __pow__(self, other, modulo=None):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, power, '__rpower__')
     
     def __lshift__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, left_shift, '__rlshift__')
     
     def __rshift__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, right_shift, '__rrshift__')
     
     def __and__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, bitwise_and, '__rand__')
     
     def __or__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, binary_or, '__ror__')
     
     def __xor__(self, other):
-        _raise_nie()
+        return self._binary_op_from_ufunc(other, binary_xor, '__rxor__')
         
     # Binary - right versions
     
     def __radd__(self, other):
-        """
-        x.__radd__(y) => y + x
-        """
-        if hasattr(other, '__array_priority__'):
-            if other.__array_priority__ > self.__array_priority__:
-                return other.__add__(self)
-            else:
-                return add(other, self)
-        elif isscalar(other):
-                local_result = other + self.local_array
-                return fromlocalarray_like(local_result, self)
-        else:
-            raise Exception("invalid type for operator")
+        return self._rbinary_op_from_ufunc(other, add, '__add__')
     
     def __rsub__(self, other):
-        """
-        x.__rsub__(y) => y - x
-        """
-        if hasattr(other, '__array_priority__'):
-            if other.__array_priority__ > self.__array_priority__:
-                return other.__sub__(self)
-            else:
-                return subtract(other, self)
-        elif isscalar(other):
-                local_result = other - self.local_array
-                return fromlocalarray_like(local_result, self)
-        else:
-            raise Exception("invalid type for operator")
+        return self._rbinary_op_from_ufunc(other, subtract, '__sub__')
     
     def __rmul__(self, other):
-        """
-        x.__rmul__(y) => y * x
-        """
-        if hasattr(other, '__array_priority__'):
-            if other.__array_priority__ > self.__array_priority__:
-                return other.__mul__(self)
-            else:
-                return multiply(other, self)
-        elif isscalar(other):
-                local_result = other * self.local_array
-                return fromlocalarray_like(local_result, self)
-        else:
-            raise Exception("invalid type for operator")
+        return self._rbinary_op_from_ufunc(other, multiply, '__mul__')
     
     def __rdiv__(self, other):
-        _raise_nie()
+        return self._rbinary_op_from_ufunc(other, divide, '__div__')
     
     def __rtruediv__(self, other):
-        _raise_nie()
+        return self._rbinary_op_from_ufunc(other, true_divide, '__truediv__')
     
     def __rfloordiv__(self, other):
-        _raise_nie()
+        return self._rbinary_op_from_ufunc(other, floor_divide, '__floordiv__')
     
     def __rmod__(self, other):
-        _raise_nie()
+        return self._rbinary_op_from_ufunc(other, mod, '__mod__')
     
     def __rdivmod__(self, other):
         _raise_nie()
     
     def __rpow__(self, other, modulo=None):
-        _raise_nie()
+        return self._rbinary_op_from_ufunc(other, power, '__pow__')
     
     def __rlshift__(self, other):
-        _raise_nie()
+        return self._rbinary_op_from_ufunc(other, left_shift, '__lshift__')
     
     def __rrshift__(self, other):
-        _raise_nie()
+        return self._rbinary_op_from_ufunc(other, right_shift, '__rshift__')
     
     def __rand__(self, other):
-        _raise_nie()
+        return self._rbinary_op_from_ufunc(other, bitwise_and, '__and__')
     
     def __ror__(self, other):
-        _raise_nie()
+        return self._rbinary_op_from_ufunc(other, bitwise_or, '__or__')
     
     def __rxor__(self, other):
-        _raise_nie()
+        return self._rbinary_op_from_ufunc(other, bitwise_xor, '__xor__')
     
     # Inplace
     
@@ -675,16 +683,16 @@ class DenseDistArray(BaseDistArray):
     # Unary
     
     def __neg__(self):
-        _raise_nie()
+        return negative(self)
     
     def __pos__(self):
-        _raise_nie()
+        return self
     
     def __abs__(self):
-        _raise_nie()
+        return abs(self)
     
     def __invert__(self):
-        _raise_nie()
+        return invert(self)
 
 
 def DistArray(shape, dtype=float, dist={0:'b'} , grid_shape=None, comm=None, buf=None, offset=0):
@@ -692,7 +700,7 @@ def DistArray(shape, dtype=float, dist={0:'b'} , grid_shape=None, comm=None, buf
     Create a DistArray of the correct type.
     """
     if comm==MPI.COMM_NULL:
-        raise NullCommunicatorError("cannot create a DistArray with COMM_NULL")
+        raise NullCommError("cannot create a DistArray with COMM_NULL")
     else:
         return DenseDistArray(shape, dtype, dist, grid_shape,
             comm, buf, offset)
@@ -749,9 +757,7 @@ def empty(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
 
 
 def empty_like(arr):
-    if arr.isnull():
-        return null_like(arr)
-    elif isinstance(arr, DenseDistArray):
+    if isinstance(arr, DenseDistArray):
         return empty(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)        
     else:
         raise TypeError("a DenseDistArray or subclass is expected")
@@ -765,9 +771,7 @@ def zeros(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
 
 
 def zeros_like(arr):
-    if arr.isnull():
-        return null_like(arr)
-    elif isinstance(arr, DenseDistArray):
+    if isinstance(arr, DenseDistArray):
         return zeros(arr.shape, arr.dtype, arr.dist, arr.grid_shape, arr.base_comm)
     else:
         raise TypeError("a DenseDistArray or subclass is expected")
@@ -786,11 +790,10 @@ def fromfunction(function, **kwargs):
     grid_shape = kwargs.pop('grid_shape', None)
     comm = kwargs.pop('comm', None)
     da = empty(shape, dtype, dist, grid_shape, comm)
-    if not da.isnull():
-        local_view = da.local_view()
-        for local_inds, x in np.ndenumerate(local_view):
-            global_inds = da.global_inds(*local_inds)
-            local_view[local_inds] = function(*global_inds, **kwargs)
+    local_view = da.local_view()
+    for local_inds, x in np.ndenumerate(local_view):
+        global_inds = da.global_inds(*local_inds)
+        local_view[local_inds] = function(*global_inds, **kwargs)
     return da
 
 
@@ -1019,234 +1022,139 @@ finfo = np.finfo
 #----------------------------------------------------------------------------
 
 
-def _unary_ufunc(func, x1, y):
-    if y is None:
-        # Now walk through the types for x1
-        if x1.isnull():
-            return null_like(x1)
-        elif isscalar(x1):
-            return func(x1)
-        elif isinstance(x1, BaseDistArray):
-            local_result = func(x1.local_array)
-            return fromlocalarray_like(local_result, x1)
-        else:
-            raise TypeError("invalid type for unary ufunc")
+# Functions for manpulating shapes according to the broadcast rules.
+
+def _expand_shape(s, length, element=1):
+    add = length - len(s)
+    if add > 0:
+        return add*(element,)+s
     else:
-        if not isinstance(y, BaseDistArray):
-            raise TypeError("return array must be a BaseDistArray")
-        # Now walk through the types for x1
-        if isscalar(x1):
-            return func(x1)
-        elif isinstance(x1, BaseDistArray):
-            if not arecompatible(x1, y):
-                raise IncompatibleArrayError("destination DistArray not compatible with first DistArray argument" % y)
-            if x1.isnull():
-                return null_like(x1)
-            else:
-                y.local_array = func(x1.local_array, y.local_array)
-                return y
-        else:
-            raise TypeError("invalid type for unary ufunc")
+        return s
+
+def _prepend_ones(*args):
+    max_length = max(len(a) for a in args)
+    return [_expand_shape(s, max_length, 1) for s in args]
+
+def _prepend_nones(*args):
+    max_length = max(len(a) for a in args)
+    return [_expand_shape(s, max_length, None) for s in args]
+
+def _return_shape(*args):
+    return tuple([max(i) for i in zip(*args)])
+
+def _are_shapes_bcast(shape, target_shape):
+    for si, tsi in zip(shape, target_shape):
+        if not si == 1 and not si==tsi:
+            return False
+    return True
 
 
-def _binary_ufunc(func, x1, x2, y):
-    if y is None:
-        if isscalar(x1) and not isscalar(x2):
-            if x2.isnull():
-                return null_like(x2)
-            else:
-                local_result = func(x1, x2.local_array)
-                return fromlocalarray_like(local_result, x2)
-        elif isscalar(x2) and not isscalar(x1)
-            if x1.isnull()
-                return null_like(x1)
-            else:
-                local_result = func(x1.local_array, x2)
-                return fromlocalarray_like(local_result, x1)
-        elif isscalar(x1) and isscalar(x2):
-            return func(x1, x2)
-        else:
-            x2_new = x1.asdist_like(x2)    # This raises if they are not compatible
-            if x1.isnull():
-                return null_like(x1)
-            else:
-                local_result = func(x1.local_array, x2.local_array)
-                return fromlocalarray_like(local_result, x1)
-    else:
-        x2_new = x1.asdist_like(x2)    # This raises if they are not compatible
-        if not arecompatible(x1, y):
-            raise IncompatibleArrayError("destination DistArray not compatible with first DistArray argument" % y)
-        if x1.isnull():
-            return null_like(x1)
-        else:
-            y.local_array = func(x1.local_array, x2.local_array, y.local_array)
+class DistArrayUnaryOperation(object):
+    
+    def __init__(self, numpy_ufunc):
+        self.func = numpy_ufunc
+        self.__doc__ = getattr(numpy_ufunc, "__doc__", str(numpy_ufunc))
+        self.__name__ = getattr(numpy_ufunc, "__name__", str(numpy_ufunc))
+        
+    def __call__(self, x1, y=None):
+        # What types of input are allowed?
+        x1_isdda = isinstance(x1, DenseDistArray)
+        y_isdda = isinstance(y, DenseDistArray)
+        assert x1_isdda or isscalar(x1), "invalid type for unary ufunc"
+        assert y is None or y_isdda, "invalid return array type"
+        if y is None:
+            return self.func(x1)
+        elif y_isdda:
+            if x1_isdda:
+                if not arecompatible(x1, y):
+                    raise IncompatibleArrayError("return DistArray not compatible with DistArray argument" % y)
+            local_result = self.func(x1, y.local_array)
             return y
-
-
-def add(x1, x2, y=None):
-    return _binary_ufunc(np.add, x1, x2, y)
-
-
-def subtract(x1, x2, y=None):
-    return _binary_ufunc(np.subtract, x1, x2, y)
-
-
-def divide(x1, x2, y=None):
-    return _binary_ufunc(np.divide, x1, x2, y)
-
-
-def true_divide(x1, x2, y=None):
-    return _binary_ufunc(np.divide, x1, x2, y)
-
-
-def floor_divide(x1, x2, y=None):
-    return _binary_ufunc(np.floor_divide, x1, x2, y)
-
-
-def power(x1, x2, y=None):
-    return _binary_ufunc(np.power, x1, x2, y)
-
-
-def remainder(x1, x2, y=None):
-    return _binary_ufunc(np.remainder, x1, x2, y)
-
-
-def fmod(x1, x2, y=None):
-    return _binary_ufunc(np.fmod, x1, x2, y)
-
-
-def arctan2(x1, x2, y=None):
-    return _binary_ufunc(np.arctan2, x1, x2, y)
-
-
-def hypot(x1, x2, y=None):
-    return _binary_ufunc(np.hypot, x1, x2, y)
-
-
-def bitwise_and(x1, x2, y=None):
-    return _binary_ufunc(np.bitwise_and, x1, x2, y)
-
-
-def bitwise_or(x1, x2, y=None):
-    return _binary_ufunc(np.bitwise_or, x1, x2, y)
-
-
-def bitwise_xor(x1, x2, y=None):
-    return _binary_ufunc(np.bitwise_xor, x1, x2, y)
-
-
-def left_shift(x1, x2, y=None):
-    return _binary_ufunc(np.left_shift, x1, x2, y)
-
-
-def right_shift(x1, x2, y=None):
-    return _binary_ufunc(np.right_shift, x1, x2, y)
-
-
-
-
-
-def negative(x1, y=None):
-    return _unary_ufunc(np.negative, x1, y)
-
-
-def absolute(x1, y=None):
-    return _unary_ufunc(np.absolute, x1, y)
-
-
-def rint(x1, y=None):
-    return _unary_ufunc(np.rint, x1, y)
-
-
-def sign(x1, y=None):
-    return _unary_ufunc(np.sign, x1, y)
-
-
-def conjugate(x1, y=None):
-    return _unary_ufunc(np.conjugate, x1, y)
-
-
-def exp(x1, y=None):
-    return _unary_ufunc(np.exp, x1, y)
-
-
-def log(x1, y=None):
-    return _unary_ufunc(np.log, x1, y)
-
-
-def expm1(x1, y=None):
-    return _unary_ufunc(np.expm1, x1, y)
-
-
-def log1p(x1, y=None):
-    return _unary_ufunc(np.log1p, x1, y)
-
-
-def log10(x1, y=None):
-    return _unary_ufunc(np.log10, x1, y)
-
-
-def sqrt(x1, y=None):
-    return _unary_ufunc(np.sqrt, x1, y)
-
-
-def square(x1, y=None):
-    return _unary_ufunc(np.square, x1, y)
-
-
-def reciprocal(x1, y=None):
-    return _unary_ufunc(np.reciprocal, x1, y)
-
-
-def sin(x1, y=None):
-    return _unary_ufunc(np.sin, x1, y)
-
-
-def cos(x1, y=None):
-    return _unary_ufunc(np.cos, x1, y)
-
-
-def tan(x1, y=None):
-    return _unary_ufunc(np.tan, x1, y)
-
-
-def arcsin(x1, y=None):
-    return _unary_ufunc(np.arcsin, x1, y)
-
-
-def arccos(x1, y=None):
-    return _unary_ufunc(np.arccos, x1, y)
-
-
-def arctan(x1, y=None):
-    return _unary_ufunc(np.arctan, x1, y)
-
-
-def sinh(x1, y=None):
-    return _unary_ufunc(np.sinh, x1, y)
-
-
-def cosh(x1, y=None):
-    return _unary_ufunc(np.cosh, x1, y)
-
-
-def tanh(x1, y=None):
-    return _unary_ufunc(np.tanh, x1, y)
-
-
-def arcsinh(x1, y=None):
-    return _unary_ufunc(np.arcsinh, x1, y)
-
-
-def arccosh(x1, y=None):
-    return _unary_ufunc(np.arccosh, x1, y)
-
-
-def arctanh(x1, y=None):
-    return _unary_ufunc(np.arctanh, x1, y)
-
-
-def invert(x1, y=None):
-    return _unary_ufunc(np.invert, x1, y)
+        else:
+            raise TypeError("invalid return type for unary ufunc")
+    
+    def __str__(self):
+        return "DistArray version of " + str(self.func)
+
+
+class DistArrayBinaryOperation(object):
+    
+    def __init__(self, numpy_ufunc):
+        self.func = numpy_ufunc
+        self.__doc__ = getattr(numpy_ufunc, "__doc__", str(numpy_ufunc))
+        self.__name__ = getattr(numpy_ufunc, "__name__", str(numpy_ufunc))
+    
+    def __call__(self, x1, x2, y=None):
+        # What types of input are allowed?
+        x1_isdda = isinstance(x1, DenseDistArray)
+        x2_isdda = isinstance(x2, DenseDistArray)
+        y_isdda = isinstance(y, DenseDistArray)
+        assert x1_isdda or isscalar(x1), "invalid type for binary ufunc"
+        assert x2_isdda or isscalar(x2), "invalid type for binary ufunc"
+        assert y is None or y_isdda
+        if y is None:
+                if x1_isdda and x2_isdda:
+                    if not arecompatible(x1, x2):
+                        raise IncompatibleArrayError("incompatible DistArrays")
+                return self.func(x1, x2)
+        elif y_isdda:
+            if x1_isdda:
+                if not arecompatible(x1, y):
+                    raise IncompatibleArrayError("incompatible DistArrays")
+            if x2_isdda:
+                if not arecompatible(x2, y):
+                    raise IncompatibleArrayError("incompatible DistArrays")
+            local_result = self.func(x1, x2, y.local_array)
+            return y
+        else:
+            raise TypeError("invalid return type for unary ufunc")
+    
+    def __str__(self):
+        return "DistArray version of " + str(self.func)
+
+
+add = DistArrayBinaryOperation(np.add)
+subtract = DistArrayBinaryOperation(np.subtract)
+divide = DistArrayBinaryOperation(np.divide)
+true_divide = DistArrayBinaryOperation(np.true_divide)
+floor_divide = DistArrayBinaryOperation(np.floor_divide)
+power = DistArrayBinaryOperation(np.power)
+remainder = DistArrayBinaryOperation(np.remainder)
+fmod = DistArrayBinaryOperation(np.fmod)
+arctan2 = DistArrayBinaryOperation(np.arctan2)
+hypot = DistArrayBinaryOperation(np.hypot)
+bitwise_and = DistArrayBinaryOperation(np.bitwise_and)
+bitwise_or = DistArrayBinaryOperation(np.bitwise_or)
+bitwise_xor = DistArrayBinaryOperation(np.bitwise_xor)
+left_shift = DistArrayBinaryOperation(np.left_shift)
+right_shift = DistArrayBinaryOperation(np.right_shift)
+
+
+negative = DistArrayUnaryOperation(np.negative)
+absolute = DistArrayUnaryOperation(np.absolute)
+rint = DistArrayUnaryOperation(np.rint)
+sign = DistArrayUnaryOperation(np.sign)
+conjugate = DistArrayUnaryOperation(np.conjugate)
+exp = DistArrayUnaryOperation(np.exp)
+log = DistArrayUnaryOperation(np.log)
+expm1 = DistArrayUnaryOperation(np.expm1)
+log1p = DistArrayUnaryOperation(np.log1p)
+log10 = DistArrayUnaryOperation(np.log10)
+sqrt = DistArrayUnaryOperation(np.sqrt)
+square = DistArrayUnaryOperation(np.square)
+reciprocal = DistArrayUnaryOperation(np.reciprocal)
+sin = DistArrayUnaryOperation(np.sin)
+cos = DistArrayUnaryOperation(np.cos)
+tan = DistArrayUnaryOperation(np.tan)
+arcsin = DistArrayUnaryOperation(np.arcsin)
+arccos = DistArrayUnaryOperation(np.arccos)
+arctan = DistArrayUnaryOperation(np.arctan)
+sinh = DistArrayUnaryOperation(np.sinh)
+cosh = DistArrayUnaryOperation(np.cosh)
+tanh = DistArrayUnaryOperation(np.tanh)
+arcsinh = DistArrayUnaryOperation(np.arcsinh)
+arccosh = DistArrayUnaryOperation(np.arccosh)
+arctanh = DistArrayUnaryOperation(np.arctanh)
+invert = DistArrayUnaryOperation(np.invert)
 
 

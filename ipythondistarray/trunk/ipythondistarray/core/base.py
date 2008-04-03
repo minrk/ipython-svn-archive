@@ -13,3 +13,4 @@ def arecompatible(a, b):
     Do these arrays have the same compatibility hash?
     """
     return a.compatibility_hash() == b.compatibility_hash()
+    

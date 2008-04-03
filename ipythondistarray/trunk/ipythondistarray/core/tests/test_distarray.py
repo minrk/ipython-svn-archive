@@ -26,8 +26,11 @@ class TestInit(unittest.TestCase):
         except InvalidCommSizeError:
             pass
         else:
-            da = distarray.DistArray((16,16), grid_shape=(4,),comm=comm)
-            if not da.isnull():
+            try:
+                da = distarray.DistArray((16,16), grid_shape=(4,),comm=comm)
+            except NullCommError:
+                pass
+            else:
                 self.assertEquals(da.shape, (16,16))
                 self.assertEquals(da.dist, ('b',None))
                 self.assertEquals(da.grid_shape, (4,))
@@ -45,7 +48,6 @@ class TestInit(unittest.TestCase):
                 self.assertEquals(da.local_shape, (4,))
                 self.assertEquals(da.local_array.shape, da.local_shape)
                 self.assertEquals(da.local_array.dtype, da.dtype)
-            if not comm==MPI.COMM_NULL:
                 comm.Free()
     
     
@@ -58,16 +60,16 @@ class TestInit(unittest.TestCase):
         except InvalidCommSizeError:
             pass
         else:
-            da = distarray.DistArray((16,16), grid_shape=(4,), comm=comm)
             try:
+                da = distarray.DistArray((16,16), grid_shape=(4,), comm=comm)
+            except NullCommError:
+                pass
+            else:
                 da.get_localarray()
                 la = np.random.random(da.local_shape)
                 la = np.asarray(la, dtype=da.dtype)
                 da.set_localarray(la)
                 new_la = da.get_localarray()
-            except NullArrayError:
-                pass
-            if not comm==MPI.COMM_NULL:
                 comm.Free()
     
     
@@ -82,6 +84,9 @@ class TestInit(unittest.TestCase):
         else:
             try:
                 da = distarray.DistArray((20,20), dist='b', comm=comm)
+            except NullCommError:
+                pass
+            else:
                 self.assertEquals(da.grid_shape, (3,4))
                 da = distarray.DistArray((2*10,6*10), dist='b', comm=comm)
                 self.assertEquals(da.grid_shape, (2,6))
@@ -91,9 +96,6 @@ class TestInit(unittest.TestCase):
                 self.assertEquals(da.grid_shape, (2,6))
                 da = distarray.DistArray((100,50,300), dist='b', comm=comm)
                 self.assertEquals(da.grid_shape, (2,2,3))                  
-            except NullArrayError:
-                pass
-            if not comm==MPI.COMM_NULL:
                 comm.Free()
 
 
@@ -111,9 +113,11 @@ class TestDistMatrix(unittest.TestCase):
         except InvalidCommSizeError:
             pass
         else:
-            da = distarray.DistArray((10,10), dist=('c','c'), comm=comm)
-            if not da.isnull():
-                a = da.get_dist_matrix()
+            try:
+                da = distarray.DistArray((10,10), dist=('c','c'), comm=comm)
+            except NullCommError:
+                pass
+            else:
                 if False:
                     if comm.Get_rank()==0:
                         import pylab
@@ -122,7 +126,6 @@ class TestDistMatrix(unittest.TestCase):
                         pylab.colorbar()
                         pylab.draw() 
                         pylab.show()
-            if not comm==MPI.COMM_NULL:
                 comm.Free()
 
 
@@ -140,15 +143,15 @@ class TestLocalInd(unittest.TestCase):
         except InvalidCommSizeError:
             pass
         else:
-            da = distarray.DistArray((4,4),comm=comm)
-            if not da.isnull():
+            try:
+                da = distarray.DistArray((4,4),comm=comm)
+            except NullCommError:
                 self.assertEquals(da.shape,(4,4))
                 self.assertEquals(da.grid_shape,(4,))
                 row_result = [(0,0),(0,1),(0,2),(0,3)]
                 for row in range(da.shape[0]):
                     calc_row_result = [da.local_ind(row,col) for col in range(da.shape[1])]
                     self.assertEquals(row_result, calc_row_result)
-            if not comm==MPI.COMM_NULL:
                 comm.Free()
     
     
@@ -161,15 +164,17 @@ class TestLocalInd(unittest.TestCase):
         except InvalidCommSizeError:
             pass
         else:
-            da = distarray.DistArray((8,8),dist={0:'c'},comm=comm)
-            if not da.isnull():
+            try:
+                da = distarray.DistArray((8,8),dist={0:'c'},comm=comm)
+            except NullCommError:
+                pass
+            else:
                 self.assertEquals(da.shape,(8,8))
                 self.assertEquals(da.grid_shape,(4,))
                 self.assertEquals(da.map_classes, (maps.CyclicMap,))
                 result = utils.outer_zip(4*(0,)+4*(1,),range(8))
                 calc_result = [[da.local_ind(row,col) for col in range(da.shape[1])] for row in range(da.shape[0])]
                 self.assertEquals(result,calc_result)
-            if not comm==MPI.COMM_NULL:
                 comm.Free()
 
 
@@ -195,10 +200,12 @@ class TestGlobalInd(unittest.TestCase):
         except InvalidCommSizeError:
             pass
         else:
-            da = distarray.DistArray((4,4),comm=comm)
-            if not da.isnull():
+            try:
+                da = distarray.DistArray((4,4),comm=comm)
+            except NullCommError:
+                pass
+            else:
                 self.round_trip(da)
-            if not comm==MPI.COMM_NULL:
                 comm.Free()
     
     
@@ -211,10 +218,12 @@ class TestGlobalInd(unittest.TestCase):
         except InvalidCommSizeError:
             pass
         else:
-            da = distarray.DistArray((8,8),dist=('c',None),comm=comm)
-            if not da.isnull():
+            try:
+                da = distarray.DistArray((8,8),dist=('c',None),comm=comm)
+            except NullCommError:
+                pass
+            else:
                 self.round_trip(da)
-            if not comm==MPI.COMM_NULL:
                 comm.Free()
     
     
@@ -227,10 +236,12 @@ class TestGlobalInd(unittest.TestCase):
         except InvalidCommSizeError:
             pass
         else:
-            da = distarray.DistArray((10,100,20),dist=('b','c',None),comm=comm)
-            if not da.isnull():
+            try:
+                da = distarray.DistArray((10,100,20),dist=('b','c',None),comm=comm)
+            except NullCommError:
+                pass
+            else:
                 self.round_trip(da)
-            if not comm==MPI.COMM_NULL:
                 comm.Free()
 
 
@@ -248,14 +259,14 @@ class TestDistArrayMethods(unittest.TestCase):
             try:
                 a = distarray.DistArray((16,16), dist=('b',None),comm=comm)
                 b = distarray.DistArray((16,16), dist=('b',None),comm=comm)
+            except NullCommError:
+                pass
+            else:
                 new_a = a.asdist_like(b)
                 self.assertEquals(id(a),id(new_a))
                 a = distarray.DistArray((16,16), dist=('b',None),comm=comm)
                 b = distarray.DistArray((16,16), dist=(None,'b'),comm=comm)
                 self.assertRaises(IncompatibleArrayError, a.asdist_like, b)
-            except NullArrayError:
-                pass
-            if not comm==MPI.COMM_NULL:
                 comm.Free()
 
 
