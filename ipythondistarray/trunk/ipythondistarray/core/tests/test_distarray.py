@@ -45,7 +45,7 @@ class TestInit(unittest.TestCase):
                 self.assertEquals(da.maps[0].local_shape, 4)
                 self.assertEquals(da.maps[0].shape, 16)
                 self.assertEquals(da.maps[0].grid_shape, 4)
-                self.assertEquals(da.local_shape, (4,))
+                self.assertEquals(da.local_shape, (4,16))
                 self.assertEquals(da.local_array.shape, da.local_shape)
                 self.assertEquals(da.local_array.dtype, da.dtype)
                 comm.Free()
@@ -146,6 +146,8 @@ class TestLocalInd(unittest.TestCase):
             try:
                 da = distarray.DistArray((4,4),comm=comm)
             except NullCommError:
+                pass
+            else:
                 self.assertEquals(da.shape,(4,4))
                 self.assertEquals(da.grid_shape,(4,))
                 row_result = [(0,0),(0,1),(0,2),(0,3)]

@@ -1,5 +1,5 @@
-from ipythondistarray.random import rand
-from ipythondistarray.random.rand import *
+from ipythondistarray.random import nprand
+from ipythondistarray.random.nprand import *
 
 __all__ = []
-__all__ += rand.__all__
+__all__ += nprand.__all__

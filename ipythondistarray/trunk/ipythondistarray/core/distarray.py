@@ -3,6 +3,7 @@
 #----------------------------------------------------------------------------
 
 import sys
+import math
 
 import numpy as np
 
@@ -56,6 +57,7 @@ __all__ = [
     'cast',
     'mintypecode',
     'finfo',
+    'sum',
     'add',
     'subtract',
     'divide',
@@ -237,6 +239,28 @@ class DenseDistArray(BaseDistArray):
         else:
             raise DistMatrixError("The dist matrix can only be created for a 2d array")        
     
+    def plot_dist_matrix(self):
+        try:
+            dm = self.get_dist_matrix()
+        except DistMatrixError:
+            pass
+        else:
+            if self.comm_rank==0:
+                try:
+                    import pylab
+                except ImportError:
+                    print "Matplotlib is not installed so the dist_matrix cannot be plotted"
+                else:
+                    pylab.ion()
+                    pylab.matshow(dm)
+                    pylab.colorbar()
+                    pylab.xlabel('columns')
+                    pylab.ylabel('rows')
+                    pylab.title('Memory Distribution Plot')
+                    pylab.draw() 
+                    pylab.show()
+                    
+    
     #----------------------------------------------------------------------------
     # 3.2 ndarray methods
     #----------------------------------------------------------------------------   
@@ -260,11 +284,18 @@ class DenseDistArray(BaseDistArray):
             grid_shape=self.grid_shape, comm=self.base_comm, buf=local_copy)
     
     def local_view(self, dtype=None):
-        return self.local_array.view(dtype)
-    
+        if dtype is None:
+            return self.local_array.view()
+        else:
+            return self.local_array.view(dtype)
+            
     def view(self, dtype=None):
-        new_da = DistArray(self.shape, self.dtype, self.dist,
-            self.grid_shape, self.base_comm, buf=self.data)
+        if dtype is None:
+            new_da = DistArray(self.shape, self.dtype, self.dist,
+                self.grid_shape, self.base_comm, buf=self.data)
+        else:
+            new_da = DistArray(self.shape, dtype, self.dist,
+                self.grid_shape, self.base_comm, buf=self.data)
         return new_da
     
     def __distarray__(self, dtype=None):
@@ -445,20 +476,23 @@ class DenseDistArray(BaseDistArray):
     def trace(self, offset=0, axis1=0, axis2=1, dtype=None, out=None):
         _raise_nie()
     
+    # def sum(self, axis=None, dtype=None, out=None):    
     def sum(self, axis=None, dtype=None, out=None):
-        _raise_nie()
+        return sum(self, dtype)
     
     def cumsum(self, axis=None, dtype=None, out=None):        
         _raise_nie()
     
     def mean(self, axis=None, dtype=None, out=None):
-        _raise_nie()
+        return self.sum(dtype=dtype)/self.size
     
     def var(self, axis=None, dtype=None, out=None):
-        _raise_nie()
+        mu = self.mean()
+        temp = (self - mu)**2
+        return temp.mean()
      
     def std(self, axis=None, dtype=None, out=None):
-        _raise_nie()
+        return math.sqrt(self.var())
     
     def prod(self, axis=None, dtype=None, out=None):
         _raise_nie()
@@ -752,7 +786,7 @@ def arange(start, stop=None, step=1, dtype=None, dist={0:'b'},
     _raise_nie()
 
 
-def empty(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
+def empty(shape, dtype=float, dist={0:'b'}, grid_shape=None, comm=None):
     return DistArray(shape, dtype, dist, grid_shape, comm)
 
 
@@ -763,7 +797,7 @@ def empty_like(arr):
         raise TypeError("a DenseDistArray or subclass is expected")
 
 
-def zeros(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
+def zeros(shape, dtype=float, dist={0:'b'}, grid_shape=None, comm=None):
     base_comm = init_base_comm(comm)
     local_shape = find_local_shape(shape, dist, grid_shape, base_comm.Get_size())
     local_zeros = np.zeros(local_shape, dtype=dtype)
@@ -777,14 +811,14 @@ def zeros_like(arr):
         raise TypeError("a DenseDistArray or subclass is expected")
 
 
-def ones(shape, dtype=int, dist={0:'b'}, grid_shape=None, comm=None):
+def ones(shape, dtype=float, dist={0:'b'}, grid_shape=None, comm=None):
     base_comm = init_base_comm(comm)
     local_shape = find_local_shape(shape, dist, grid_shape, base_comm.Get_size())
     local_ones = np.ones(local_shape, dtype=dtype)
     return DistArray(shape, dtype, dist, grid_shape, comm, buf=local_ones)
 
 
-def fromfunction(function, **kwargs):
+def fromfunction(function, shape, **kwargs):
     dtype = kwargs.pop('dtype', int)
     dist = kwargs.pop('dist', {0:'b'})
     grid_shape = kwargs.pop('grid_shape', None)
@@ -792,7 +826,7 @@ def fromfunction(function, **kwargs):
     da = empty(shape, dtype, dist, grid_shape, comm)
     local_view = da.local_view()
     for local_inds, x in np.ndenumerate(local_view):
-        global_inds = da.global_inds(*local_inds)
+        global_inds = da.global_ind(da.comm_rank, *local_inds)
         local_view[local_inds] = function(*global_inds, **kwargs)
     return da
 
@@ -903,6 +937,11 @@ can_cast = np.can_cast
 # 5.2 Basic functions
 #----------------------------------------------------------------------------
 
+
+def sum(a, dtype=None):
+    local_sum = a.local_array.sum(dtype)
+    global_sum = a.comm.Allreduce(local_sum, op=MPI.SUM)
+    return global_sum
 
 def average(a, axis=None, weights=None, returned=0):
     _raise_nie()
