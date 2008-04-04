@@ -1,8 +1,6 @@
 import ipythondistarray as ipda
 
-# Default is block row distributed
-# Here, the processor grid shape is picked automatically
-a = ipda.DistArray((100,100))
+a = ipda.DistArray((64,64), dtype='int32', dist=(None,'b'))
 a.plot_dist_matrix()
 
 
