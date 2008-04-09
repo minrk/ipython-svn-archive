@@ -1154,6 +1154,7 @@ class DistArrayBinaryOperation(object):
 
 add = DistArrayBinaryOperation(np.add)
 subtract = DistArrayBinaryOperation(np.subtract)
+multiply = DistArrayBinaryOperation(np.multiply)
 divide = DistArrayBinaryOperation(np.divide)
 true_divide = DistArrayBinaryOperation(np.true_divide)
 floor_divide = DistArrayBinaryOperation(np.floor_divide)
