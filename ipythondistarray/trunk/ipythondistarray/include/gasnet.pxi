@@ -39,7 +39,7 @@ cdef extern from "gasnet.h":
     # Function to init the gasnet library, like MPI_Init
     int gasnet_init(int *argc, char ***argv)
     int gasnet_attach(gasnet_handlerentry_t *table, int numentries,
-    uintptr_t segsize, uintptr_t minheapoﬀset)
+    uintptr_t segsize, uintptr_t minheapoffset)
     uintptr_t gasnet_getMaxLocalSegmentSize()
     uintptr_t gasnet_getMaxGlobalSegmentSize()
     void gasnet_exit(int exitcode)
@@ -47,5 +47,5 @@ cdef extern from "gasnet.h":
     # Job environment queries
     gasnet_node_t gasnet_mynode()
     gasnet_node_t gasnet_nodes()
-    int gasnet_getSegmentInfo(gasnet_seginfo_t *seginfo table, int numentries)
-    char *gasnet_getenv(const char *name)
+    int gasnet_getSegmentInfo(gasnet_seginfo_t *seginfo_table, int numentries)
+    char *gasnet_getenv(char *name)

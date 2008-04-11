@@ -13,3 +13,16 @@ Next Steps
 	* Begin to work on operator overloading.
 	* Begin to work on other simple functions and methods.
 	* Write example scripts.
+	
+Here is an example of how this might worK::
+
+for i in rows:
+	for j in cols:
+		a.prefetch(i,j)
+a.sync()
+
+for p in stuff:
+	for q in things:
+		b[p,q] = a[p,q]
+b.sync()
+		
