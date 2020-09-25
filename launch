@@ -1,0 +1,4 @@
+#!/bin/bash
+ipcluster start -n 1 &
+ipwebserver
+fg
