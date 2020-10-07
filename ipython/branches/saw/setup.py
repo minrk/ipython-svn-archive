@@ -22,10 +22,10 @@ setup(
     zip_safe = False,
     include_package_data = True,
     entry_points = {
-            'console_scripts': ['ipengine = ipython1.kernel.scripts.ipengine:start',
-                                'ipcontroller = ipython1.kernel.scripts.ipcontroller:start',
-                                'ipnotebook = ipython1.notebook.scripts.ipnotebook:start',
-                                'ipcluster = ipython1.kernel.scripts.ipcluster:main']
+            'console_scripts': ['ipengine = ipython1.scripts.ipengine:start',
+                                'ipcontroller = ipython1.scripts.ipcontroller:start',
+                                'ipnotebook = ipython1.scripts.ipnotebook:start',
+                                'ipcluster = ipython1.scripts.ipcluster:main']
         },
 
     author = "Fernando Perez / Brian Granger",

@@ -60,23 +60,23 @@ __docformat__ = "restructuredtext en"
 #  the file COPYING, distributed as part of this software.
 #-------------------------------------------------------------------------------
 
-from ipython1.kernel.config import configManager as kernelConfigManager
-co = kernelConfigManager.getConfigObj()
+import ipython1.config.api as config
+clientConfig = config.getConfigObject('client')
 
 import ipython1.kernel.magic
 
-RemoteController = kernelConfigManager._import(co['client']['RemoteController'])
+RemoteController = clientConfig.RemoteController
 """The default RemoteController class obtained from config information."""
 
-defaultRemoteController = (co['client']['connectToRemoteControllerOn']['ip'],
-    co['client']['connectToRemoteControllerOn']['port'])
+defaultRemoteController = (clientConfig.connectToRemoteControllerOn['ip'],
+    clientConfig.connectToRemoteControllerOn['port'])
 """The (ip,port) tuple of the default controller."""
 
 from ipython1.kernel.task import Task
 
-TaskController = kernelConfigManager._import(co['client']['TaskController'])
+TaskController = clientConfig.TaskController
 """The default TaskController class obtained from config information."""
 
-defaultTaskController = (co['client']['connectToTaskControllerOn']['ip'],
-    co['client']['connectToTaskControllerOn']['port'])
+defaultTaskController = (clientConfig.connectToTaskControllerOn['ip'],
+    clientConfig.connectToTaskControllerOn['port'])
 """The (ip,port) tuple of the default task controller."""
