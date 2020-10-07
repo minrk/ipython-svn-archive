@@ -303,7 +303,10 @@ table.sidebar tfoot td, table.sidebar tfoot th {
 .mochi-template { display: none; }
 .mochi-example { display: none; }
 
-
+textarea {
+  /* 2020: default box-sizing has changed to border-box! */
+  box-sizing: content-box;
+}
 
 td.collapse{
   width: 5px; /* width should be same as div.inOut margin-right */
