@@ -29,7 +29,7 @@ notebookConfig = {
         }
     },
     'defaultDBMode': "sqlite///",
-    'activeDB': "sqlite:///%s/ipnotebooks.db"%(get_ipython_dir()),
+    'activeDB': "sqlite://%s/ipnotebooks.db"%(get_ipython_dir()),
     'externalDBs': []
 }
 

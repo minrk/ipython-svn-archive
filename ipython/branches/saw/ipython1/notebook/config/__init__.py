@@ -28,7 +28,7 @@ notebookConfig = {
             'port'  : 8008
         }
     },
-    'defaultDBMode': "sqlite///",
+    'defaultDBMode': "sqlite:///",
     'activeDB': "sqlite:///%s/ipnotebooks.db"%(getIpythonDir()),
     'externalDBs': []
 }

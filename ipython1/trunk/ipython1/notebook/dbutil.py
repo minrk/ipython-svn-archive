@@ -75,6 +75,7 @@ def initDB(dburi='sqlite://', echo=False, clear=False):
     """create an engine, and connect our metadata object to it.  Then, 
     create our tables in the engine.  
     Defaults to an in-memory sqlite engine."""
+    print(dburi, echo, clear)
     engine = sqla.create_engine(dburi)
     engine.echo=echo
     metadata.connect(engine)
